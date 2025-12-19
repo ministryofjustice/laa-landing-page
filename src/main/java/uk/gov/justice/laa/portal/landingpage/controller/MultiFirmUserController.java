@@ -98,6 +98,7 @@ public class MultiFirmUserController {
 
     private final AppEnvironment appEnv;
 
+
     @GetMapping("/user/add/profile/select/firm")
     public String selectDelegateFirmselectDelegateFirm(@RequestParam(value = "q", required = false) String query,
                                      Model model,
@@ -113,44 +114,57 @@ public class MultiFirmUserController {
             }
             childFirms = firmService.getFilteredChildFirms(parentFirm, query);
             includeParent = firmService.includeParentFirm(parentFirm, query);
-        } else {
-            //parentFirm = firmService.getById()
-            MultiFirmUserForm multiFirmUserForm = (MultiFirmUserForm) session.getAttribute("multiFirmUserForm");
-            Optional<EntraUser> entraUserOptional = userService.findEntraUserByEmail(multiFirmUserForm.getEmail());
+            model.addAttribute("parentFirm", mapper.map(parentFirm, FirmDto.class));
+            model.addAttribute("childFirms", childFirms.stream().map(f -> mapper.map(f, FirmDto.class)).toList());
+            model.addAttribute("includeParent", includeParent);
 
-            parentFirm = entraUserOptional.get().getUserProfiles().
-/*            childFirms.add(Firm.builder()
-                    .name("childFirm Test")
-                    .build());*/
+        } else {
+            List<FirmDto> firmList = firmService.getAllFirmsFromCache()
+                    .stream()
+                    .filter(firm -> query == null || query.isBlank()
+                            // no filter -> keep all
+                            || matchesFirm(firm, query)) // filter when query present
+                    .toList();
+            model.addAttribute("firmList", firmList);
         }
 
 
-        model.addAttribute("parentFirm", mapper.map(parentFirm, FirmDto.class));
-        model.addAttribute("childFirms", childFirms.stream().map(f -> mapper.map(f, FirmDto.class)).toList());
-        model.addAttribute("includeParent", includeParent);
+
+
         model.addAttribute("query", query == null ? "" : query);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Choose the firm you are delegating access to");
         return "multi-firm-user/select-firm";
+    }
+
+    // Example match logic (case-insensitive contains)
+    private boolean matchesFirm(FirmDto firm, String q) {
+        String queryString = q.toLowerCase();
+        return (firm.getName() != null && firm.getName().toLowerCase().contains(queryString))
+                || (firm.getCode() != null && firm.getCode().toLowerCase().contains(queryString));
+
     }
 
     @PostMapping("/user/add/profile/select/firm")
     public String selectDelegateFirmPost(@RequestParam("firmId") String firmId,
                                          HttpSession session,
                                          Authentication authentication) {
-        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
-        Firm parentFirm = currentUserProfile.getFirm();
+        UUID selectedId = UUID.fromString(firmId);
         if (appEnv.isProdEnv()){
+            UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
+            Firm parentFirm = currentUserProfile.getFirm();
             if (parentFirm == null || parentFirm.getChildFirms() == null || parentFirm.getChildFirms().isEmpty()) {
                 return "redirect:/admin/multi-firm/user/add/profile";
             }
+            boolean isChild = parentFirm.getChildFirms().stream().anyMatch(f -> selectedId.equals(f.getId()));
+            boolean isParent = parentFirm.getId() != null && parentFirm.getId().equals(selectedId);
+            if (!isChild && !isParent) {
+                return "redirect:/admin/multi-firm/user/add/profile/select/firm";
+            }
+        } else {
+            session.setAttribute("delegateTargetFirmId", selectedId.toString());
+            return "redirect:/admin/multi-firm/user/add/profile/select/apps";
         }
 
-        UUID selectedId = UUID.fromString(firmId);
-        boolean isChild = parentFirm.getChildFirms().stream().anyMatch(f -> selectedId.equals(f.getId()));
-        boolean isParent = parentFirm.getId() != null && parentFirm.getId().equals(selectedId);
-        if (!isChild && !isParent) {
-            return "redirect:/admin/multi-firm/user/add/profile/select/firm";
-        }
 
         session.setAttribute("delegateTargetFirmId", selectedId.toString());
         return "redirect:/admin/multi-firm/user/add/profile";
@@ -282,7 +296,7 @@ public class MultiFirmUserController {
             session.setAttribute("entraUser", entraUserDto);
 
             model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile - " + entraUserDto.getFullName());
-            if (!appEnv.isProdEnv()){
+           if (!appEnv.isProdEnv()){
                 return "redirect:/admin/multi-firm/user/add/profile/select/firm";
             }
             return "redirect:/admin/multi-firm/user/add/profile/select/apps";
