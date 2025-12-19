@@ -945,7 +945,8 @@ public class UserService {
                     .filter(appRole -> Arrays.stream(appRole.getUserTypeRestriction())
                             .anyMatch(roleUserType -> roleUserType == userType))
                     .filter(appRole -> appRole.getFirmTypeRestriction() == null
-                            || appRole.getFirmTypeRestriction().equals(userFirmType))
+                            || Arrays.stream(appRole.getFirmTypeRestriction())
+                            .anyMatch(roleFirmType -> roleFirmType == userFirmType))
                     .map(appRole -> mapper.map(appRole, AppRoleDto.class)).sorted().toList();
         }
         return appRoles;

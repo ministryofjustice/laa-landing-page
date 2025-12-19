@@ -62,9 +62,10 @@ public class AppRole extends BaseEntity {
     @NotNull(message = "Application role legacy sync flag must be provided")
     private boolean legacySync;
 
+    @JdbcTypeCode(SqlTypes.ARRAY)
     @Enumerated(EnumType.STRING)
-    @Column(name = "firm_type_restriction", nullable = true, length = 255)
-    private FirmType firmTypeRestriction;
+    @Column(name = "firm_type_restriction", nullable = true, columnDefinition = "firm_type_enum[]")
+    private FirmType[] firmTypeRestriction;
 
     @ManyToOne
     @JoinColumn(name = "app_id", nullable = false, foreignKey = @ForeignKey(name = "FK_app_role_app_id"))
