@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.dto;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,6 +19,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AuditUserDetailDto implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     /**
      * User ID
@@ -112,6 +116,9 @@ public class AuditUserDetailDto implements Serializable {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class AuditProfileDto implements Serializable {
+
+        @Serial
+        private static final long serialVersionUID = 1L;
 
         /**
          * Profile ID

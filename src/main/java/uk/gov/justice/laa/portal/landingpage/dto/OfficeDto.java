@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.dto;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.UUID;
 
@@ -14,6 +15,8 @@ import uk.gov.justice.laa.portal.landingpage.utils.AddressFormatter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class OfficeDto implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     private UUID id;
     private String code;
     private AddressDto address;
@@ -23,6 +26,8 @@ public class OfficeDto implements Serializable {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class AddressDto implements Serializable {
+        @Serial
+        private static final long serialVersionUID = 1L;
         private String addressLine1;
         private String addressLine2;
         private String addressLine3;

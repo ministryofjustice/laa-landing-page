@@ -1490,7 +1490,7 @@ class UserServiceTest {
                 .name("Chambers Only Role")
                 .ordinal(1)
                 .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
-                .firmTypeRestriction(FirmType.CHAMBERS)
+                .firmTypeRestriction(new FirmType[] { FirmType.CHAMBERS })
                 .app(testApp)
                 .build();
 
@@ -1498,7 +1498,7 @@ class UserServiceTest {
                 .name("Advocate Only Role")
                 .ordinal(2)
                 .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
-                .firmTypeRestriction(FirmType.ADVOCATE)
+                .firmTypeRestriction(new FirmType[] { FirmType.ADVOCATE })
                 .app(testApp)
                 .build();
 
@@ -1533,7 +1533,7 @@ class UserServiceTest {
                 .name("Chambers Only Role")
                 .ordinal(1)
                 .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
-                .firmTypeRestriction(FirmType.CHAMBERS)
+                .firmTypeRestriction(new FirmType[] { FirmType.CHAMBERS })
                 .app(testApp)
                 .build();
 
@@ -1541,7 +1541,7 @@ class UserServiceTest {
                 .name("Advocate Only Role")
                 .ordinal(2)
                 .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
-                .firmTypeRestriction(FirmType.ADVOCATE)
+                .firmTypeRestriction(new FirmType[] { FirmType.ADVOCATE })
                 .app(testApp)
                 .build();
 
@@ -1576,7 +1576,7 @@ class UserServiceTest {
                 .name("Chambers Only Role")
                 .ordinal(1)
                 .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
-                .firmTypeRestriction(FirmType.CHAMBERS)
+                .firmTypeRestriction(new FirmType[] { FirmType.CHAMBERS })
                 .app(testApp)
                 .build();
 
@@ -1584,7 +1584,7 @@ class UserServiceTest {
                 .name("Advocate Only Role")
                 .ordinal(2)
                 .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
-                .firmTypeRestriction(FirmType.ADVOCATE)
+                .firmTypeRestriction(new FirmType[] { FirmType.ADVOCATE })
                 .app(testApp)
                 .build();
 
@@ -1621,7 +1621,7 @@ class UserServiceTest {
                 .name("Chambers Only Role")
                 .ordinal(1)
                 .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
-                .firmTypeRestriction(FirmType.CHAMBERS)
+                .firmTypeRestriction(new FirmType[] { FirmType.CHAMBERS })
                 .app(testApp)
                 .build();
 
@@ -1629,7 +1629,7 @@ class UserServiceTest {
                 .name("Advocate Only Role")
                 .ordinal(2)
                 .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
-                .firmTypeRestriction(FirmType.ADVOCATE)
+                .firmTypeRestriction(new FirmType[] { FirmType.ADVOCATE })
                 .app(testApp)
                 .build();
 
@@ -1663,7 +1663,7 @@ class UserServiceTest {
                 .name("Internal Chambers Role")
                 .ordinal(1)
                 .userTypeRestriction(new UserType[] { UserType.INTERNAL })
-                .firmTypeRestriction(FirmType.CHAMBERS)
+                .firmTypeRestriction(new FirmType[] { FirmType.CHAMBERS })
                 .app(testApp)
                 .build();
 
@@ -1671,7 +1671,7 @@ class UserServiceTest {
                 .name("External Chambers Role")
                 .ordinal(2)
                 .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
-                .firmTypeRestriction(FirmType.CHAMBERS)
+                .firmTypeRestriction(new FirmType[] { FirmType.CHAMBERS })
                 .app(testApp)
                 .build();
 
@@ -1679,7 +1679,7 @@ class UserServiceTest {
                 .name("External Advocate Role")
                 .ordinal(3)
                 .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
-                .firmTypeRestriction(FirmType.ADVOCATE)
+                .firmTypeRestriction(new FirmType[] { FirmType.ADVOCATE })
                 .app(testApp)
                 .build();
 

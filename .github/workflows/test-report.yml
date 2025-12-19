@@ -60,3 +60,7 @@ jobs:
       - name: Run IntegrationTest
         run: |
           ./gradlew integrationTest
+
+      - name: Run PlaywrightTest
+        run: |
+          APP_PLAYWRIGHT_HEADLESS=true ./gradlew playwrightTest
