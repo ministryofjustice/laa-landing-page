@@ -50,6 +50,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.environment.AppEnvironment;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmUserForm;
 import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
@@ -76,7 +77,7 @@ import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 @Controller
 @RequiredArgsConstructor
 @RequestMapping("/admin/multi-firm")
-@PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).DELEGATE_EXTERNAL_USER_ACCESS)")
+//@PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).DELEGATE_EXTERNAL_USER_ACCESS)")
 public class MultiFirmUserController {
 
     private final UserService userService;
@@ -95,20 +96,34 @@ public class MultiFirmUserController {
 
     private final FirmService firmService;
 
+    private final AppEnvironment appEnv;
+
     @GetMapping("/user/add/profile/select/firm")
-    public String selectDelegateFirm(@RequestParam(value = "q", required = false) String query,
+    public String selectDelegateFirmselectDelegateFirm(@RequestParam(value = "q", required = false) String query,
                                      Model model,
                                      HttpSession session,
                                      Authentication authentication) {
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
         Firm parentFirm = currentUserProfile.getFirm();
+        List<Firm> childFirms = new ArrayList<>();
+        boolean includeParent = false;
+        if (appEnv.isProdEnv()) {
+            if (parentFirm == null || parentFirm.getChildFirms() == null || parentFirm.getChildFirms().isEmpty()) {
+                return "redirect:/admin/multi-firm/user/add/profile";
+            }
+            childFirms = firmService.getFilteredChildFirms(parentFirm, query);
+            includeParent = firmService.includeParentFirm(parentFirm, query);
+        } else {
+            //parentFirm = firmService.getById()
+            MultiFirmUserForm multiFirmUserForm = (MultiFirmUserForm) session.getAttribute("multiFirmUserForm");
+            Optional<EntraUser> entraUserOptional = userService.findEntraUserByEmail(multiFirmUserForm.getEmail());
 
-        if (parentFirm == null || parentFirm.getChildFirms() == null || parentFirm.getChildFirms().isEmpty()) {
-            return "redirect:/admin/multi-firm/user/add/profile";
+            parentFirm = entraUserOptional.get().getUserProfiles().
+/*            childFirms.add(Firm.builder()
+                    .name("childFirm Test")
+                    .build());*/
         }
 
-        List<Firm> childFirms = firmService.getFilteredChildFirms(parentFirm, query);
-        boolean includeParent = firmService.includeParentFirm(parentFirm, query);
 
         model.addAttribute("parentFirm", mapper.map(parentFirm, FirmDto.class));
         model.addAttribute("childFirms", childFirms.stream().map(f -> mapper.map(f, FirmDto.class)).toList());
@@ -124,8 +139,10 @@ public class MultiFirmUserController {
                                          Authentication authentication) {
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
         Firm parentFirm = currentUserProfile.getFirm();
-        if (parentFirm == null || parentFirm.getChildFirms() == null || parentFirm.getChildFirms().isEmpty()) {
-            return "redirect:/admin/multi-firm/user/add/profile";
+        if (appEnv.isProdEnv()){
+            if (parentFirm == null || parentFirm.getChildFirms() == null || parentFirm.getChildFirms().isEmpty()) {
+                return "redirect:/admin/multi-firm/user/add/profile";
+            }
         }
 
         UUID selectedId = UUID.fromString(firmId);
@@ -265,6 +282,9 @@ public class MultiFirmUserController {
             session.setAttribute("entraUser", entraUserDto);
 
             model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile - " + entraUserDto.getFullName());
+            if (!appEnv.isProdEnv()){
+                return "redirect:/admin/multi-firm/user/add/profile/select/firm";
+            }
             return "redirect:/admin/multi-firm/user/add/profile/select/apps";
 
         } else {
