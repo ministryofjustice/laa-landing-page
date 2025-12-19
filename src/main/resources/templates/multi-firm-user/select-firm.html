@@ -18,7 +18,7 @@
         <div class="govuk-grid-column-full">
             <h1 class="govuk-heading-l">Choose the firm you are delegating access to</h1>
 
-            <div class="govuk-!-margin-bottom-5" th:if="${parentFirm != null}">
+            <div class="govuk-!-margin-bottom-5">
                 <p class="govuk-body">Parent firm: <strong th:text="${parentFirm.displayName}">Parent Firm</strong></p>
             </div>
 
@@ -41,12 +41,6 @@
                 </tr>
                 </thead>
                 <tbody class="govuk-table__body">
-                <tr class="govuk-table__row" th:if="${firmList != null }" th:each="firm : ${firmList}">
-                    <td class="govuk-table__cell">
-                        <a class="govuk-link" th:href="@{'/admin/multi-firm/user/add/profile/select/firm/choose'(firmId=${firm.id})}" th:text="${firm.name}">Firm name</a>
-                    </td>
-                    <td class="govuk-table__cell" th:text="${firm.code}">Code</td>
-                </tr>
                 <tr class="govuk-table__row" th:if="${includeParent}">
                     <td class="govuk-table__cell">
                         <a class="govuk-link" th:href="@{'/admin/multi-firm/user/add/profile/select/firm/choose'(firmId=${parentFirm.id})}" th:text="${parentFirm.name}">Parent Firm</a>
@@ -54,7 +48,7 @@
                     </td>
                     <td class="govuk-table__cell" th:text="${parentFirm.code}">Code</td>
                 </tr>
-                <tr class="govuk-table__row"  th:if="${firmList == null }" th:each="firm : ${childFirms}">
+                <tr class="govuk-table__row" th:each="firm : ${childFirms}">
                     <td class="govuk-table__cell">
                         <a class="govuk-link" th:href="@{'/admin/multi-firm/user/add/profile/select/firm/choose'(firmId=${firm.id})}" th:text="${firm.name}">Firm name</a>
                     </td>
@@ -62,8 +56,8 @@
                 </tr>
                 </tbody>
             </table>
-            <p class="govuk-body" th:if="${#lists.isEmpty(firmList)}">No firms found.</p>
-            <p class="govuk-body" th:if="${firmList == null && #lists.isEmpty(childFirms)}">No firms found.</p>
+
+            <p class="govuk-body" th:if="${#lists.isEmpty(childFirms)}">No firms found.</p>
         </div>
     </div>
 </main>

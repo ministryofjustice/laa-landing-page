@@ -52,6 +52,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.environment.AppEnvironment;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
+import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmUserForm;
 import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
@@ -66,6 +67,7 @@ import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
 
+import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
@@ -161,8 +163,7 @@ public class MultiFirmUserController {
                 return "redirect:/admin/multi-firm/user/add/profile/select/firm";
             }
         } else {
-            session.setAttribute("delegateTargetFirmId", selectedId.toString());
-            return "redirect:/admin/multi-firm/user/add/profile/select/apps";
+
         }
 
 
@@ -297,7 +298,7 @@ public class MultiFirmUserController {
 
             model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile - " + entraUserDto.getFullName());
            if (!appEnv.isProdEnv()){
-                return "redirect:/admin/multi-firm/user/add/profile/select/firm";
+                return "redirect:/admin/multi-firm/user/add/profile/select/firmAdmin";
             }
             return "redirect:/admin/multi-firm/user/add/profile/select/apps";
 
@@ -820,6 +821,87 @@ public class MultiFirmUserController {
         clearSessionAttributes(session);
 
         return "redirect:/admin/users";
+    }
+
+    @GetMapping("/user/add/profile/select/firmAdmin")
+    public String createUserFirm(FirmSearchForm firmSearchForm, HttpSession session, Model model,
+                                 @RequestParam(value = "firmSearchResultCount", defaultValue = "10") Integer count) {
+
+        Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
+
+        // If firmSearchForm is already populated from session (e.g., validation
+        // errors), keep it
+        FirmSearchForm existingForm = (FirmSearchForm) session.getAttribute("firmSearchForm");
+        if (existingForm != null) {
+            firmSearchForm = existingForm;
+        } else if (session.getAttribute("firm") != null) {
+            // Grab firm search details from session firm if coming here from the
+            // confirmation screen.
+            FirmDto firm = (FirmDto) session.getAttribute("firm");
+            firmSearchForm = FirmSearchForm.builder()
+                    .selectedFirmId(firm.getId())
+                    .firmSearch(firm.getName())
+                    .build();
+        }
+        int validatedCount = Math.max(10, Math.min(count, 100));
+        boolean showSkipFirmSelection = Boolean.TRUE.equals(isMultiFirmUser);
+        model.addAttribute("firmSearchForm", firmSearchForm);
+        model.addAttribute("firmSearchResultCount", validatedCount);
+        model.addAttribute("showSkipFirmSelection", showSkipFirmSelection);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Select firm");
+        return "multi-firm-user/add-user-firm-admin";
+    }
+
+    @PostMapping("/user/add/profile/select/firmAdmin")
+    public String postUserFirm(@Valid FirmSearchForm firmSearchForm, BindingResult result,
+                               HttpSession session, Model model) {
+
+        if (result.hasErrors()) {
+            log.debug("Validation errors occurred while searching for firm: {}", result.getAllErrors());
+            Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
+            boolean showSkipFirmSelection = Boolean.TRUE.equals(isMultiFirmUser);
+            model.addAttribute("showSkipFirmSelection", showSkipFirmSelection);
+            // Store the form in session to preserve input on redirect
+            session.setAttribute("firmSearchForm", firmSearchForm);
+            return "multi-firm-user/add-user-firm-admin";
+        }
+
+        session.removeAttribute("firm");
+
+        if (firmSearchForm.getSelectedFirmId() != null) {
+            try {
+                FirmDto selectedFirm = firmService.getFirm(firmSearchForm.getSelectedFirmId());
+                selectedFirm.setSkipFirmSelection(firmSearchForm.isSkipFirmSelection());
+                session.setAttribute("firm", selectedFirm);
+            } catch (Exception e) {
+                log.error("Error retrieving selected firm: {}", e.getMessage());
+                result.rejectValue("firmSearch", "error.firm", "Invalid firm selection. Please try again.");
+                return "multi-firm-user/add-user-firm-admin";
+            }
+        } else if (firmSearchForm.getFirmSearch() != null && !firmSearchForm.getFirmSearch().isBlank()) {
+            // Fallback: search by name if no specific firm was selected
+            List<FirmDto> firms = firmService.getAllFirmsFromCache();
+            FirmDto selectedFirm = firms.stream()
+                    .filter(firm -> firm.getName().toLowerCase().contains(firmSearchForm.getFirmSearch().toLowerCase()))
+                    .sorted((s1, s2) -> Integer.compare(relevance(s2, firmSearchForm.getFirmSearch()),
+                            relevance(s1, firmSearchForm.getFirmSearch())))
+                    .findFirst()
+                    .orElse(null);
+
+            if (selectedFirm == null) {
+                result.rejectValue("firmSearch", "error.firm",
+                        "No firm found with that name. Please select from the dropdown.");
+                return "multi-firm-user/add-user-firm-admin";
+            }
+            firmSearchForm.setFirmSearch(selectedFirm.getName());
+            firmSearchForm.setSelectedFirmId(selectedFirm.getId());
+            session.setAttribute("firm", selectedFirm);
+
+        }
+
+        session.setAttribute("firmSearchForm", firmSearchForm);
+        session.setAttribute("delegateTargetFirmId", firmSearchForm.getSelectedFirmId().toString());
+        return "redirect:/admin/multi-firm/user/add/profile/select/apps";
     }
 
     private void clearSessionAttributes(HttpSession session) {
