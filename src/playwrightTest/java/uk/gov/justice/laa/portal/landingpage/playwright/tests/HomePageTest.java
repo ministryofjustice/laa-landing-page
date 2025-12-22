@@ -36,7 +36,7 @@ public class HomePageTest extends BaseFrontEndTest {
     @Test
     @DisplayName("Manage Users panel is visible with correct text")
     void manageUsersPanelVisible() {
-        HomePage home = loginAndGetHome(TestUser.GLOBAL_ADMIN);
+        HomePage home = loginAndGetHome(TestUser.NO_ROLES);
 
         // Assert panel elements are visible
         home.assertManageUsersPanelVisible();
