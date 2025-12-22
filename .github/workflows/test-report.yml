@@ -63,6 +63,7 @@ jobs:
 
       - name: Run PlaywrightTest
         id: playwright
+        continue-on-error: true
         run: |
           APP_PLAYWRIGHT_HEADLESS=true ./gradlew playwrightTest
 
@@ -74,3 +75,7 @@ jobs:
           path: |
             screenshots/**
             build/playwright-report.html
+
+      - name: Fail job if Playwright tests failed
+        if: steps.playwright.outcome == 'failure'
+        run: exit 1
