@@ -62,5 +62,15 @@ jobs:
           ./gradlew integrationTest
 
       - name: Run PlaywrightTest
+        id: playwright
         run: |
           APP_PLAYWRIGHT_HEADLESS=true ./gradlew playwrightTest
+
+      - name: Upload Playwright failure artifacts
+        if: steps.playwright.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failures
+          path: |
+            screenshots/**
+            build/playwright-report.html
