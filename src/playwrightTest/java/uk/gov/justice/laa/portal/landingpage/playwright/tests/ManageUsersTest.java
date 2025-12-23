@@ -112,6 +112,30 @@ public class ManageUsersTest extends BaseFrontEndTest {
     }
 
     @Test
+    @DisplayName("Delete a new provider admin user with non multi-firm access")
+    void deleteUserAndVerify() {
+        //Create new user
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+        manageUsersPage.clickCreateUser();
+        String email = manageUsersPage.fillInUserDetails(true);
+        manageUsersPage.selectMultiFirmAccess(false);
+        manageUsersPage.searchAndSelectFirmByCode("90001");
+        manageUsersPage.clickContinueFirmSelectPage();
+        manageUsersPage.clickConfirmNewUserButton();
+        manageUsersPage.clickGoBackToManageUsers();
+        manageUsersPage.searchAndVerifyUser(email);
+
+        // Delete and confirm newly created user
+        manageUsersPage.clickManageUser();
+        manageUsersPage.confirmAndDeleteUser();
+
+        //Verify user deleted
+        manageUsersPage.clickGoBackToManageUsers();
+        manageUsersPage.searchAndVerifyUserNotExists(email);
+    }
+
+
+    @Test
     @DisplayName("Show validation error for incorrectly formatted email address")
     void testEmailFormatError() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
