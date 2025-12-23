@@ -53,6 +53,11 @@ public class ManageUsersPage {
     private final Locator confirmButton;
     private final Locator goBackToManageYourUsersButton;
 
+    private final Locator deleteUserLink;
+    private final Locator confirmAndDeleteUserButton;
+    private final Locator deleteUserReason;
+    private final Locator deleteUserMessageHeading;
+
     private final Locator firmSearchInput;
     private final Locator firmSearchListbox;
     private final Locator firmOptionRows;
@@ -99,6 +104,11 @@ public class ManageUsersPage {
         this.confirmButton = page.locator("button:has-text(\"Confirm\")");
         this.goBackToManageYourUsersButton = page.locator("a.govuk-button, button.govuk-button").filter(new Locator.FilterOptions().setHasText("Go back to manage your users"));
 
+        this.deleteUserLink = page.locator("a.govuk-link[href*='/admin/users/manage/'][href$='delete']");
+        this.confirmAndDeleteUserButton = page.locator("button:has-text(\"Confirm and delete user\")");
+        this.deleteUserReason = page.locator("textarea[name='reason']");
+        this.deleteUserMessageHeading = page.locator("h1.govuk-panel__title");
+
         this.firmSearchInput = page.locator("input#firmSearch");
         this.firmSearchListbox = page.locator("ul#firmSearch__listbox");
         this.firmOptionRows = page.locator("ul#firmSearch__listbox li.autocomplete__option");
@@ -123,6 +133,22 @@ public class ManageUsersPage {
     public void clickCreateUser() {
         createNewUserButton.click();
     }
+
+    public void clickManageUser() {
+        userFullNameLink.click();
+    }
+
+    public void confirmAndDeleteUser() {
+        deleteUserLink.click();
+        deleteUserReason.fill("reason for deleting user");
+        confirmAndDeleteUserButton.click();
+
+        assertEquals(
+                "User deleted",
+                deleteUserMessageHeading.textContent().trim()
+        );
+    }
+
 
     // Edit user - backwards compatible
     public void clickEditUser() {
@@ -203,6 +229,16 @@ public class ManageUsersPage {
                 new Locator.FilterOptions().setHasText(currentUser.email)
         );
         assertThat(row).isVisible();
+    }
+
+    public void searchAndVerifyUserNotExists(String email) {
+        searchForUser(email);
+
+        Locator row = page.locator("tbody tr").filter(
+                new Locator.FilterOptions().setHasText(email)
+        );
+
+        assertThat(row).not().isVisible();
     }
 
     // Add user details
