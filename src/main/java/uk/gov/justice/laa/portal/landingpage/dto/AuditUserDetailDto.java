@@ -3,7 +3,10 @@ package uk.gov.justice.laa.portal.landingpage.dto;
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -159,5 +162,19 @@ public class AuditUserDetailDto implements Serializable {
          * Whether this is the active profile
          */
         private boolean activeProfile;
+
+        public Map<String, List<String>> getRolesGroupByAppName() {
+            return roles.stream()
+                    .collect(Collectors.groupingBy(
+                                    role -> role.getApp().getName(),
+                                    // Map role -> role name
+                                    Collectors.collectingAndThen(
+                                            Collectors.mapping(AppRoleDto::getName, Collectors.toList()),
+                                            ArrayList::new
+                                    )
+                            )
+                    );
+
+        }
     }
 }
