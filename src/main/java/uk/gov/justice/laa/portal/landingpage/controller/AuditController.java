@@ -57,7 +57,7 @@ public class AuditController {
         // Get audit users
         PaginatedAuditUsers paginatedUsers = userService.getAuditUsers(
                 criteria.getSearch(), criteria.getSelectedFirmId(), criteria.getSilasRole(),
-                criteria.getSelectedAppId(), criteria.getSelectedUserType(), criteria.getMultiFirm(),
+                criteria.getSelectedAppId(), criteria.getSelectedUserType(),
                 criteria.getPage(), criteria.getSize(), criteria.getSort(), criteria.getDirection());
         // Build firm search form
         FirmSearchForm firmSearchForm = new FirmSearchForm(criteria.getFirmSearch(), criteria.getSelectedFirmId());
@@ -87,7 +87,6 @@ public class AuditController {
                 criteria.getSelectedAppId() != null ? criteria.getSelectedAppId().toString() : "");
         model.addAttribute("selectedUserType",
                 criteria.getSelectedUserType() != null ? criteria.getSelectedUserType().toString() : "");
-        model.addAttribute("multiFirm", criteria.getMultiFirm() != null ? criteria.getMultiFirm().toString() : "");
         model.addAttribute("sort", criteria.getSort());
         model.addAttribute("direction", criteria.getDirection());
     }
