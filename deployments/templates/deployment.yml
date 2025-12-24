@@ -244,3 +244,5 @@ spec:
               value: "${APP_MEANS_AND_MATCH_UI2_URL}"
             - name: APP_MEANS_AND_MATCH_UI2_DETAILS
               value: "${APP_MEANS_AND_MATCH_UI2_DETAILS}"
+            - name: NOTIFICATION_DELEGATE_FIRM_ACCESS_TEMPLATE_ID
+              value: "${NOTIFICATION_DELEGATE_FIRM_ACCESS_TEMPLATE_ID}"
