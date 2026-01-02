@@ -50,7 +50,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.environment.AppEnvironment;
+import uk.gov.justice.laa.portal.landingpage.environment.AccessGuard;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmUserForm;
@@ -80,7 +80,7 @@ import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 @RequiredArgsConstructor
 @RequestMapping("/admin/multi-firm")
 @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).DELEGATE_EXTERNAL_USER_ACCESS)" +
-        "or !@appEnvironment.isProdEnv()")
+        "or @accessGuard.canDelegate(authentication)")
 public class MultiFirmUserController {
 
     private final UserService userService;
@@ -99,8 +99,7 @@ public class MultiFirmUserController {
 
     private final FirmService firmService;
 
-    private final AppEnvironment appEnv;
-
+    private final AccessGuard accessGuard;
 
     @GetMapping("/user/add/profile/select/firm")
     public String selectDelegateFirm(@RequestParam(value = "q", required = false) String query,
@@ -111,7 +110,7 @@ public class MultiFirmUserController {
         Firm parentFirm = currentUserProfile.getFirm();
         List<Firm> childFirms;
         boolean includeParent;
-        if (appEnv.isProdEnv()) {
+        if (accessGuard.isProdEnv()) {
             if (parentFirm == null || parentFirm.getChildFirms() == null || parentFirm.getChildFirms().isEmpty()) {
                 return "redirect:/admin/multi-firm/user/add/profile";
             }
@@ -130,10 +129,6 @@ public class MultiFirmUserController {
                     .toList();
             model.addAttribute("firmList", firmList);
         }
-
-
-
-
         model.addAttribute("query", query == null ? "" : query);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Choose the firm you are delegating access to");
         return "multi-firm-user/select-firm";
@@ -294,7 +289,7 @@ public class MultiFirmUserController {
             session.setAttribute("entraUser", entraUserDto);
 
             model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile - " + entraUserDto.getFullName());
-           if (!appEnv.isProdEnv()){
+           if (!accessGuard.isProdEnv()){
                 return "redirect:/admin/multi-firm/user/add/profile/select/firmAdmin";
             }
             return "redirect:/admin/multi-firm/user/add/profile/select/apps";

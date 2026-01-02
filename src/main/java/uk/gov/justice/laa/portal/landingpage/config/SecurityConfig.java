@@ -36,7 +36,7 @@ import org.springframework.security.web.util.matcher.IpAddressMatcher;
 import org.springframework.session.config.SessionRepositoryCustomizer;
 import org.springframework.session.jdbc.JdbcIndexedSessionRepository;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
-import uk.gov.justice.laa.portal.landingpage.environment.AppEnvironment;
+import uk.gov.justice.laa.portal.landingpage.environment.AccessGuard;
 import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
 import uk.gov.justice.laa.portal.landingpage.service.CustomLogoutHandler;
 
@@ -52,13 +52,13 @@ public class SecurityConfig {
     private final AuthzOidcUserDetailsService authzOidcUserDetailsService;
     private final CustomLogoutHandler logoutHandler;
     private final Environment environment;
-    private final AppEnvironment appEnvironment;
+    private final AccessGuard accessGuard;
 
-    public SecurityConfig(AuthzOidcUserDetailsService authzOidcUserDetailsService, CustomLogoutHandler logoutHandler, Environment environment, AppEnvironment appEnvironment) {
+    public SecurityConfig(AuthzOidcUserDetailsService authzOidcUserDetailsService, CustomLogoutHandler logoutHandler, Environment environment, AccessGuard accessGuard) {
         this.authzOidcUserDetailsService = authzOidcUserDetailsService;
         this.logoutHandler = logoutHandler;
         this.environment = environment;
-        this.appEnvironment = appEnvironment;
+        this.accessGuard = accessGuard;
     }
 
     @Bean
@@ -134,7 +134,7 @@ public class SecurityConfig {
             ClientRegistrationRepository clientRegistrationRepository) throws Exception {
         // Only this path changes based on environment:
         AuthorizationManager<RequestAuthorizationContext> userPathManager =
-                appEnvironment.isProdEnv()
+                accessGuard.isProdEnv()
                         ? AuthorityAuthorizationManager.hasAnyAuthority(Permission.DELEGATE_EXTERNAL_USER_ACCESS.name())
                         : AuthorityAuthorizationManager.hasAnyAuthority(Permission.ADMIN_PERMISSIONS);
         http.authorizeHttpRequests((authorize) -> authorize
