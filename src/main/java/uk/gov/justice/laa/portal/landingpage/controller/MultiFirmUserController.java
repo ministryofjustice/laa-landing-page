@@ -79,7 +79,8 @@ import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 @Controller
 @RequiredArgsConstructor
 @RequestMapping("/admin/multi-firm")
-@PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).DELEGATE_EXTERNAL_USER_ACCESS)")
+@PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).DELEGATE_EXTERNAL_USER_ACCESS)" +
+        "or !@appEnvironment.isProdEnv()")
 public class MultiFirmUserController {
 
     private final UserService userService;
@@ -102,14 +103,14 @@ public class MultiFirmUserController {
 
 
     @GetMapping("/user/add/profile/select/firm")
-    public String selectDelegateFirmselectDelegateFirm(@RequestParam(value = "q", required = false) String query,
+    public String selectDelegateFirm(@RequestParam(value = "q", required = false) String query,
                                      Model model,
                                      HttpSession session,
                                      Authentication authentication) {
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
         Firm parentFirm = currentUserProfile.getFirm();
-        List<Firm> childFirms = new ArrayList<>();
-        boolean includeParent = false;
+        List<Firm> childFirms;
+        boolean includeParent;
         if (appEnv.isProdEnv()) {
             if (parentFirm == null || parentFirm.getChildFirms() == null || parentFirm.getChildFirms().isEmpty()) {
                 return "redirect:/admin/multi-firm/user/add/profile";
@@ -151,21 +152,17 @@ public class MultiFirmUserController {
                                          HttpSession session,
                                          Authentication authentication) {
         UUID selectedId = UUID.fromString(firmId);
-        if (appEnv.isProdEnv()){
-            UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
-            Firm parentFirm = currentUserProfile.getFirm();
-            if (parentFirm == null || parentFirm.getChildFirms() == null || parentFirm.getChildFirms().isEmpty()) {
-                return "redirect:/admin/multi-firm/user/add/profile";
-            }
-            boolean isChild = parentFirm.getChildFirms().stream().anyMatch(f -> selectedId.equals(f.getId()));
-            boolean isParent = parentFirm.getId() != null && parentFirm.getId().equals(selectedId);
-            if (!isChild && !isParent) {
-                return "redirect:/admin/multi-firm/user/add/profile/select/firm";
-            }
-        } else {
 
+        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
+        Firm parentFirm = currentUserProfile.getFirm();
+        if (parentFirm == null || parentFirm.getChildFirms() == null || parentFirm.getChildFirms().isEmpty()) {
+            return "redirect:/admin/multi-firm/user/add/profile";
         }
-
+        boolean isChild = parentFirm.getChildFirms().stream().anyMatch(f -> selectedId.equals(f.getId()));
+        boolean isParent = parentFirm.getId() != null && parentFirm.getId().equals(selectedId);
+        if (!isChild && !isParent) {
+            return "redirect:/admin/multi-firm/user/add/profile/select/firm";
+        }
 
         session.setAttribute("delegateTargetFirmId", selectedId.toString());
         return "redirect:/admin/multi-firm/user/add/profile";

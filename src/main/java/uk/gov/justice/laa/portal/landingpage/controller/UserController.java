@@ -62,6 +62,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.environment.AppEnvironment;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
@@ -111,6 +112,7 @@ public class UserController {
     private final RoleAssignmentService roleAssignmentService;
     private final EmailValidationService emailValidationService;
     private final AppRoleService appRoleService;
+    private final AppEnvironment appEnv;
 
     @GetMapping("/users")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
@@ -194,7 +196,9 @@ public class UserController {
         }
 
         boolean allowDelegateUserAccess = accessControlService
-                .authenticatedUserHasAnyGivenPermissions(Permission.DELEGATE_EXTERNAL_USER_ACCESS);
+                .authenticatedUserHasAnyGivenPermissions(Permission.DELEGATE_EXTERNAL_USER_ACCESS) ||
+                (!appEnv.isProdEnv()
+                        && internal);
 
         model.addAttribute("users", paginatedUsers.getUsers());
         model.addAttribute("requestedPageSize", size);
@@ -209,7 +213,7 @@ public class UserController {
         model.addAttribute("usertype", usertype);
         model.addAttribute("internal", internal);
         model.addAttribute("showFirmAdmins", showFirmAdmins);
-        model.addAttribute("allowDelegateUserAccess", true);
+        model.addAttribute("allowDelegateUserAccess", allowDelegateUserAccess);
         model.addAttribute("showMultiFirmUsers", showMultiFirmUsers);
         boolean allowCreateUser = accessControlService.authenticatedUserHasPermission(Permission.CREATE_EXTERNAL_USER);
         model.addAttribute("allowCreateUser", allowCreateUser);
