@@ -81,7 +81,7 @@ class UserProfileDtoTest {
         UserProfileDto userProfile = new UserProfileDto(
                 id, activeProfile, userType, legacyUserId, userProfileStatus,
                 entraUser, firm, offices, appRoles,
-                createdDate, createdBy, lastModified, lastModifiedBy
+                createdDate, createdBy, lastModified, lastModifiedBy, true
         );
 
         // Then
