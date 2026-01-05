@@ -22,6 +22,7 @@ public class NotificationService {
     private final Map<String, String> customProps = new HashMap<>();
     private static final String REFERENCE_TEMPLATE_NEW_USER = "laa-portal-notice-of-new-user-%s";
     private static final String REFERENCE_TEMPLATE_ADD_MF_PROFILE = "laa-portal-notice-of-delegate-firm-access-%s";
+    private static final String REFERENCE_TEMPLATE_REVOKE_FIRM_ACCESS = "laa-portal-notice-of-revoke-firm-access-%s";
     private static final String USER_NAME = "name";
     private static final String INVITATION_URL = "invitationURL";
     private static final String PORTAL_URL = "portalURL";
@@ -55,6 +56,22 @@ public class NotificationService {
                     )
             );
             log.info("Multi Firm profile created notification sent to: {} for User ID: {}", email, userProfileId);
+        }
+    }
+
+    public void notifyRevokeFirmAccess(UUID userProfileId, String firstName, String email, String firmName) {
+        log.info("Sending revoke firm access notification for User: {}", userProfileId);
+        if (null != email) {
+            emailService.sendMail(
+                    email,
+                    notificationProperties.getRevokeFirmAccessEmailTemplate(),
+                    Map.of("first_name", firmName, "firm_name", firmName),
+                    String.format(
+                            REFERENCE_TEMPLATE_REVOKE_FIRM_ACCESS,
+                            firstName
+                    )
+            );
+            log.info("Revoke firm access notification sent to: {} for User ID: {}", email, userProfileId);
         }
     }
 
