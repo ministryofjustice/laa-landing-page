@@ -13,6 +13,7 @@ import uk.gov.justice.laa.portal.landingpage.config.NotificationsProperties;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -68,6 +69,44 @@ public class NotificationServiceTest {
 
         // Then
         // Check send mail was not invoked and only one info log was generated.
+        Mockito.verify(emailService, Mockito.times(0)).sendMail(any(), any(), any(), any());
+        List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
+        assertEquals(1, infoLogs.size());
+    }
+
+    @Test
+    public void notifyDeleteFirmAccessShouldSendMailWhenEmailPresent() {
+        // Arrange
+        UUID userProfileId = UUID.randomUUID();
+        String firstName = "Alice";
+        String email = "alice@example.com";
+        String firmName = "Contoso LLP";
+        // Add list appender to logger to capture and verify logs
+        ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(NotificationService.class);
+
+        // Act
+        notificationService.notifyDeleteFirmAccess(userProfileId, firstName, email, firmName);
+
+        // Assert – capture and verify emailService.sendMail() params
+        Mockito.verify(emailService, Mockito.times(1)).sendMail(any(), any(), any(), any());
+        List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
+        assertEquals(2, infoLogs.size());
+    }
+
+    @Test
+    public void notifyDeleteFirmAccessShouldNotSendMailWhenEmailIsNull() {
+        // Arrange
+        UUID userProfileId = UUID.randomUUID();
+        String firstName = "Bob";
+        String email = null; // <- important
+        String firmName = "Fabrikam Inc";
+        // Add list appender to logger to capture and verify logs
+        ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(NotificationService.class);
+
+        // Act
+        notificationService.notifyDeleteFirmAccess(userProfileId, firstName, email, firmName);
+
+        // Assert – emailService must not be called
         Mockito.verify(emailService, Mockito.times(0)).sendMail(any(), any(), any(), any());
         List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
         assertEquals(1, infoLogs.size());
