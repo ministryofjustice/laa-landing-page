@@ -477,6 +477,10 @@ public class UserService {
             }
         }
 
+        // Notify revoke firm access
+        notificationService.notifyRevokeFirmAccess(UUID.fromString(userProfileId), entraUser.getFirstName(),
+                entraUser.getEmail(), firmName);
+
         return true;
     }
 
