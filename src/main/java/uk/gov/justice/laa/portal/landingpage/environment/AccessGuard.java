@@ -26,7 +26,7 @@ public class AccessGuard {
         return Arrays.asList(env.getActiveProfiles()).contains("prod");
     }
 
-    public boolean canDelegate(Authentication authentication){
+    public boolean canDelegateInNonProd(Authentication authentication){
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         boolean internal = userService.isInternal(entraUser.getId());
         return !isProdEnv() && internal;
