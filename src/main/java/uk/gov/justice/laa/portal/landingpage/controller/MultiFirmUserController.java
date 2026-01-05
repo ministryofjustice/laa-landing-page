@@ -849,10 +849,6 @@ public class MultiFirmUserController {
                                HttpSession session, Model model) {
 
         MultiFirmUserForm multiFirmUserForm = (MultiFirmUserForm) session.getAttribute("multiFirmUserForm");
-
-
-
-
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while searching for firm: {}", result.getAllErrors());
             Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
@@ -865,34 +861,7 @@ public class MultiFirmUserController {
 
         session.removeAttribute("firm");
 
-        if (firmSearchForm.getSelectedFirmId() != null) {
-            try {
-                FirmDto selectedFirm = firmService.getFirm(firmSearchForm.getSelectedFirmId());
-                selectedFirm.setSkipFirmSelection(firmSearchForm.isSkipFirmSelection());
-
-                Optional<EntraUser> entraUserOptional = userService.findEntraUserByEmail(multiFirmUserForm.getEmail());
-                if (entraUserOptional.isPresent()) {
-                    EntraUser entraUser = entraUserOptional.get();
-                    boolean firmAlreadyAssigned = entraUser.getUserProfiles().stream()
-                            .anyMatch(profile -> profile.getFirm() != null
-                                    && profile.getFirm().getId().equals(selectedFirm.getId()));
-
-                    if (firmAlreadyAssigned) {
-                        result.rejectValue("firmSearch", "error.firm",
-                                "No firm found with that name. Please select from the dropdown.");
-                        ;
-                        return "multi-firm-user/add-user-firm-admin";
-                    }
-                }
-
-
-                session.setAttribute("firm", selectedFirm);
-            } catch (Exception e) {
-                log.error("Error retrieving selected firm: {}", e.getMessage());
-                result.rejectValue("firmSearch", "error.firm", "Invalid firm selection. Please try again.");
-                return "multi-firm-user/add-user-firm-admin";
-            }
-        } else if (firmSearchForm.getFirmSearch() != null && !firmSearchForm.getFirmSearch().isBlank()) {
+        if (firmSearchForm.getFirmSearch() != null && !firmSearchForm.getFirmSearch().isBlank()) {
             // Fallback: search by name if no specific firm was selected
             List<FirmDto> firms = firmService.getAllFirmsFromCache();
             FirmDto selectedFirm = firms.stream()
@@ -906,14 +875,19 @@ public class MultiFirmUserController {
                 result.rejectValue("firmSearch", "error.firm",
                         "No firm found with that name. Please select from the dropdown.");
                 return "multi-firm-user/add-user-firm-admin";
-            } else {
-
             }
             firmSearchForm.setFirmSearch(selectedFirm.getName());
             firmSearchForm.setSelectedFirmId(selectedFirm.getId());
             session.setAttribute("firm", selectedFirm);
-
         }
+
+        //check if the user has the Firm Already Assigned
+        if (userService.hasUserFirmAlreadyAssigned(multiFirmUserForm.getEmail(), firmSearchForm.getSelectedFirmId())) {
+            result.rejectValue("firmSearch", "error.firm",
+                    "User profile already exists for this firm.");
+            return "multi-firm-user/add-user-firm-admin";
+        }
+
 
         session.setAttribute("firmSearchForm", firmSearchForm);
         session.setAttribute("delegateTargetFirmId", firmSearchForm.getSelectedFirmId().toString());

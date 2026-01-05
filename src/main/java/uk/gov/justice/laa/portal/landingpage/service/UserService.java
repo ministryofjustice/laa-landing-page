@@ -920,6 +920,18 @@ public class UserService {
         return entraUserRepository.findByEmailIgnoreCase(email);
     }
 
+    public boolean hasUserFirmAlreadyAssigned(String email, UUID firmId) {
+        Optional<EntraUser> entraUserOptional = entraUserRepository.findByEmailIgnoreCase(email);
+        if (entraUserOptional.isPresent()) {
+            EntraUser entraUser = entraUserOptional.get();
+            return entraUser.getUserProfiles().stream()
+                    .anyMatch(profile -> profile.getFirm() != null
+                            && profile.getFirm().getId().equals(firmId));
+        }
+
+        return false;
+    }
+
     public List<AppRoleDto> getAppRolesByAppId(String appId) {
         UUID appUuid = UUID.fromString(appId);
         Optional<App> optionalApp = appRepository.findById(appUuid);
