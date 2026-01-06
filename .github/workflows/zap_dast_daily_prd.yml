@@ -20,7 +20,7 @@ jobs:
           issue_title: ZAP Scan Baseline Report - prd
 
       - name: Upload ZAP Daily Homepage Baseline Run Report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: daily-zap-homepage-report
           path: |
