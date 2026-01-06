@@ -57,7 +57,7 @@ jobs:
         if: env.ZAP_SHOULD_NOTIFY == 'true'
         uses: slackapi/slack-github-action@v2.1.1
         with:
-          webhook: ${{ secrets.ZAP_SLACK_WEBHOOK_URL }}  # TODO - set up webhook, add env var
+          webhook: ${{ secrets.ZAP_SLACK_WEBHOOK_URL }}
           webhook-type: incoming-webhook
           payload: |
             {
