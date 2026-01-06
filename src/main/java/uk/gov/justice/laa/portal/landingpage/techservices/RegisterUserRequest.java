@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Set;
 
@@ -14,6 +15,8 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RegisterUserRequest implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     @JsonProperty("givenName")
     private String firstName;
     @JsonProperty("surname")
@@ -30,6 +33,8 @@ public class RegisterUserRequest implements Serializable {
     @Data
     @Builder
     private static class Address implements Serializable {
+        @Serial
+        private static final long serialVersionUID = 1L;
         @JsonProperty("line1")
         private String addressLine1;
         @JsonProperty("line2")

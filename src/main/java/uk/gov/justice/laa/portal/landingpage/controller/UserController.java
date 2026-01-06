@@ -1377,10 +1377,11 @@ public class UserController {
         final List<OfficeModel> officeData = allOffices.stream()
                 .map(office -> new OfficeModel(
                         office.getCode(),
-                        new OfficeModel.Address(office.getAddress().getAddressLine1(),
-                                office.getAddress().getAddressLine2(),
-                                office.getAddress().getAddressLine3(),
-                                office.getAddress().getCity(), office.getAddress().getPostcode()),
+                        office.getAddress() == null ? null :
+                                new OfficeModel.Address(office.getAddress().getAddressLine1(),
+                                        office.getAddress().getAddressLine2(),
+                                        office.getAddress().getAddressLine3(),
+                                        office.getAddress().getCity(), office.getAddress().getPostcode()),
                         office.getId().toString(),
                         finalUserOfficeIds.contains(office.getId().toString())))
                 .collect(Collectors.toList());
@@ -1929,11 +1930,12 @@ public class UserController {
         final List<OfficeModel> officeData = allOffices.stream()
                 .map(office -> new OfficeModel(
                         office.getCode(),
-                        OfficeModel.Address.builder().addressLine1(office.getAddress().getAddressLine1())
-                                .addressLine2(office.getAddress().getAddressLine2())
-                                .addressLine3(office.getAddress().getAddressLine3())
-                                .city(office.getAddress().getCity())
-                                .postcode(office.getAddress().getPostcode()).build(),
+                        office.getAddress() == null ? null :
+                                OfficeModel.Address.builder().addressLine1(office.getAddress().getAddressLine1())
+                                        .addressLine2(office.getAddress().getAddressLine2())
+                                        .addressLine3(office.getAddress().getAddressLine3())
+                                        .city(office.getAddress().getCity())
+                                        .postcode(office.getAddress().getPostcode()).build(),
                         office.getId().toString(),
                         userOfficeIds.contains(office.getId().toString())))
                 .collect(Collectors.toList());

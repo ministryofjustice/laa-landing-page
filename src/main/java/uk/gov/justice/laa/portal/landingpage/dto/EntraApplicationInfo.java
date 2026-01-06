@@ -11,6 +11,7 @@ import java.io.Serializable;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Deprecated
 public class EntraApplicationInfo implements Serializable {
     private String id;
     private String displayName;
