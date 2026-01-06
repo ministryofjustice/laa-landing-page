@@ -154,11 +154,11 @@
                     </div>
                 </div>
 
-                <!-- Profile Information Section -->
-                <h2 class="govuk-heading-m govuk-!-margin-top-6" th:unless="${user.hasNoProfile}">Profile information</h2>
+                <!-- Profile Information Section - Only show for external users -->
+                <h2 class="govuk-heading-m govuk-!-margin-top-6" th:unless="${user.hasNoProfile or user.userType == 'Internal'}">Profile information</h2>
 
-                <!-- Show message for users without profiles -->
-                <div th:if="${user.hasNoProfile}"
+                <!-- Show message for users without profiles (external users only) -->
+                <div th:if="${user.hasNoProfile and user.userType != 'Internal'}"
                     style="display: flex; align-items: flex-start; gap: 0.5rem; margin-top: 2rem; margin-bottom: 1.5rem; padding: 15px; background-color: #f3f2f1; border-left: 5px solid #0b0c0c;">
                     <div
                         style="background-color: #0b0c0c; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.5rem; font-weight: bold; line-height: 1;">
@@ -168,8 +168,8 @@
                     </p>
                 </div>
 
-                <!-- Multi-firm user: show nested table with all profiles -->
-                <div th:if="${user.isMultiFirmUser && !user.hasNoProfile && user.profiles.size() > 0}">
+                <!-- Multi-firm user: show nested table with all profiles (external users only) -->
+                <div th:if="${user.isMultiFirmUser && !user.hasNoProfile && user.profiles.size() > 0 && user.userType != 'Internal'}">
                     <table class="govuk-table">
                         <caption class="govuk-table__caption govuk-visually-hidden">User profiles</caption>
                         <thead class="govuk-table__head">
@@ -292,8 +292,8 @@
                     </nav>
                 </div>
 
-                <!-- Single firm user: show traditional card view -->
-                <div th:if="${!user.hasNoProfile && !user.isMultiFirmUser}">
+                <!-- Single firm user: show traditional card view (external users only) -->
+                <div th:if="${!user.hasNoProfile && !user.isMultiFirmUser && user.userType != 'Internal'}">
                     <div th:each="profile, iterStat : ${user.profiles}" th:if="${iterStat.index == 0}">
                         <!-- Firm Association Card -->
                         <div class="govuk-summary-card">
