@@ -64,7 +64,7 @@
                                     <input class="govuk-checkboxes__input" th:id="${office.id}" name="offices"
                                         type="checkbox" th:value="${office.id}" th:checked="${office.selected}">
                                     <label class="govuk-label govuk-checkboxes__label">
-                                        <span th:text="${office.address.formattedAddress}"></span>
+                                        <span th:text="${office.address?.formattedAddress ?: 'Unknown'}"></span>
                                         (<span th:text="${office.code}"></span>)
                                     </label>
                                 </div>

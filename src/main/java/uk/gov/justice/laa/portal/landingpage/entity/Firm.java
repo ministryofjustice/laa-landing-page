@@ -21,6 +21,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.util.Set;
 
@@ -37,7 +39,8 @@ import java.util.Set;
 public class Firm extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "type", nullable = false, length = 255)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "type", nullable = false, length = 255, columnDefinition = "firm_type_enum")
     @NotNull(message = "Firm type must be provided")
     private FirmType type;
 
