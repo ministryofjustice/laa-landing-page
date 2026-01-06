@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.forms;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.UUID;
 
@@ -14,6 +15,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class FirmSearchForm implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     private String firmSearch;
 

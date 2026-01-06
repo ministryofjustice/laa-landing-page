@@ -2,10 +2,13 @@ package uk.gov.justice.laa.portal.landingpage.dto;
 
 import uk.gov.justice.laa.portal.landingpage.entity.EventType;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.UUID;
 
 public class SwitchProfileAuditEvent extends AuditEvent implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     private final String oldFirm;
     private final String newFirm;
 
