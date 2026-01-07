@@ -97,6 +97,7 @@ public class HomeController {
         model.addAttribute("firm", firmDto);
         model.addAttribute("appAssignments", appAssignments);
         model.addAttribute("isInternalUser", currentUserProfile.getUserType().equals(UserType.INTERNAL));
+        model.addAttribute("unrestrictedOfficeAccess", currentUserProfile.isUnrestrictedOfficeAccess());
 
         model.addAttribute(ModelAttributes.PAGE_TITLE, "My Account - " + user.getFullName());
 

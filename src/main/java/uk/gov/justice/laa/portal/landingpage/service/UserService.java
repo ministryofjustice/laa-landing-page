@@ -1123,14 +1123,20 @@ public class UserService {
         if (optionalUserProfile.isPresent()) {
             UserProfile userProfile = optionalUserProfile.get();
             if (selectedOffices.contains("ALL")) {
-                diff = diffOffices(userProfile.getOffices(), null);
+                diff = diffOffices(userProfile.getOffices(), null, true);
                 userProfile.setOffices(null);
+                userProfile.setUnrestrictedOfficeAccess(true);
+            } else if (selectedOffices.contains("NO_OFFICES")) {
+                diff = diffOffices(userProfile.getOffices(), null, false);
+                userProfile.setOffices(null);
+                userProfile.setUnrestrictedOfficeAccess(false);
             } else {
                 List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).collect(Collectors.toList());
                 Set<Office> offices = validateOfficesByUserFirm(userProfile, officeIds);
-                diff = diffOffices(userProfile.getOffices(), offices);
+                diff = diffOffices(userProfile.getOffices(), offices, null);
                 // Update user profile offices
                 userProfile.setOffices(offices);
+                userProfile.setUnrestrictedOfficeAccess(false);
             }
             userProfileRepository.saveAndFlush(userProfile);
             logger.info("Successfully updated user offices for user ID: {}", userId);
@@ -1141,18 +1147,18 @@ public class UserService {
         return diff;
     }
 
-    protected String diffOffices(Set<Office> oldOffices, Set<Office> newOffices) {
+    protected String diffOffices(Set<Office> oldOffices, Set<Office> newOffices, Boolean isUnrestrictedAccess) {
         String removed = "";
         String added = "";
         if (Objects.isNull(oldOffices) || oldOffices.isEmpty()) {
-            removed = "Removed : All";
+            removed = String.format("Removed : Unrestricted access %s", isUnrestrictedAccess);
             if (!Objects.isNull(newOffices)) {
                 added = "Added : " + newOffices.stream().map(Office::getCode)
                         .collect(Collectors.joining(", "));
             }
         }
         if (Objects.isNull(newOffices) || newOffices.isEmpty()) {
-            added = "Added : All";
+            added = String.format("Added : Unrestricted access %s", isUnrestrictedAccess);
             if (!Objects.isNull(oldOffices)) {
                 removed = "Removed : " + oldOffices.stream().map(Office::getCode)
                         .collect(Collectors.joining(", "));

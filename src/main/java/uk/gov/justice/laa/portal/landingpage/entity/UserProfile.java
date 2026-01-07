@@ -95,6 +95,9 @@ public class UserProfile extends AuditableEntity {
     @Column(name = "last_sync_successful", nullable = false)
     private boolean lastCcmsSyncSuccessful;
 
+    @Column(name = "unrestricted_office_access", nullable = false)
+    private boolean unrestrictedOfficeAccess;
+
     @PrePersist
     public void prePersist() {
         if (legacyUserId == null) {

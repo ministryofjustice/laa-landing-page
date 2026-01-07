@@ -76,9 +76,13 @@
                                     <dt class="govuk-summary-list__key govuk-visually-hidden"></dt>
                                 </div>
                             </dl>
-                            <div th:if="${(userOffices == null or userOffices.isEmpty()) and externalUser}"
+                            <div th:if="${(userOffices == null or userOffices.isEmpty()) and externalUser and hasAllOffices}"
                                 class="govuk-inset-text">
                                 Access to All Offices
+                            </div>
+                            <div th:if="${(userOffices == null or userOffices.isEmpty()) and externalUser and hasNoOffices}"
+                                 class="govuk-inset-text">
+                                No Office Access
                             </div>
                             <div th:if="${(userOffices == null or userOffices.isEmpty()) and !externalUser}"
                                 class="govuk-inset-text">
