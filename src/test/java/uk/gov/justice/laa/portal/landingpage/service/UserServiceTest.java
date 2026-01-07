@@ -33,8 +33,11 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -131,6 +134,8 @@ class UserServiceTest {
     private RoleChangeNotificationService mockRoleChangeNotificationService;
     @Mock
     private FirmService firmService;
+    @Mock
+    private NotificationService notificationService;
 
     @BeforeEach
     void setUp() {
@@ -145,7 +150,8 @@ class UserServiceTest {
                 techServicesClient,
                 mockUserProfileRepository,
                 mockRoleChangeNotificationService,
-                firmService);
+                firmService,
+                notificationService);
     }
 
     @Test
@@ -4216,6 +4222,9 @@ class UserServiceTest {
         @Mock
         private RoleChangeNotificationService mockRoleChangeNotificationService;
 
+        @Mock
+        private NotificationService notificationService;
+
         @InjectMocks
         private UserService userService;
 
@@ -4229,6 +4238,7 @@ class UserServiceTest {
             assertThat(ex.getMessage()).contains("is not a multi-firm user");
             verify(userProfileRepository, never()).save(any());
             verify(entraUserRepository, never()).save(any());
+            verify(notificationService, never()).notifyDeleteFirmAccess(any(UUID.class), anyString(), anyString(), anyString());
             verify(techServicesClient, never()).updateRoleAssignment(any(UUID.class));
         }
 
@@ -4246,6 +4256,7 @@ class UserServiceTest {
             verify(userProfileRepository, never()).save(any());
             verify(entraUserRepository, never()).save(any());
             verify(techServicesClient, never()).updateRoleAssignment(any(UUID.class));
+            verify(notificationService, never()).notifyDeleteFirmAccess(any(UUID.class), anyString(), anyString(), anyString());
         }
 
         @Test
@@ -4259,6 +4270,7 @@ class UserServiceTest {
             verify(userProfileRepository, never()).save(any());
             verify(entraUserRepository, never()).save(any());
             verify(techServicesClient, never()).updateRoleAssignment(any(UUID.class));
+            verify(notificationService, never()).notifyDeleteFirmAccess(any(UUID.class), anyString(), anyString(), anyString());
         }
 
         @Test
@@ -4287,6 +4299,7 @@ class UserServiceTest {
             verify(userProfileRepository, never()).save(any());
             verify(entraUserRepository, never()).save(any());
             verify(techServicesClient, never()).updateRoleAssignment(any(UUID.class));
+            verify(notificationService, never()).notifyDeleteFirmAccess(any(UUID.class), anyString(), anyString(), anyString());
         }
 
         @Test
@@ -4307,23 +4320,22 @@ class UserServiceTest {
             verify(userProfileRepository, never()).save(any());
             verify(entraUserRepository, never()).save(any());
             verify(techServicesClient, never()).updateRoleAssignment(any(UUID.class));
+            verify(notificationService, never()).notifyDeleteFirmAccess(any(UUID.class), anyString(), anyString(), anyString());
         }
 
         @Test
         void shouldCreateActiveProfileIfNoExistingProfiles() {
             UUID firmId = UUID.randomUUID();
-            FirmDto firmDto = new FirmDto();
-            firmDto.setId(firmId);
-
-            UUID existingFirmId = UUID.randomUUID();
-            Firm firm = Firm.builder().id(existingFirmId).build();
+            FirmDto firmDto = FirmDto.builder().id(firmId).name("Test Firm").build();
 
             UUID entraUserId = UUID.randomUUID();
-            EntraUserDto userDto = EntraUserDto.builder().id(entraUserId.toString()).multiFirmUser(true).build();
+            EntraUserDto userDto = EntraUserDto.builder().id(entraUserId.toString()).firstName("FirstName")
+                    .email("test@email.com").multiFirmUser(true).build();
             EntraUser entraUser = EntraUser.builder().id(entraUserId).multiFirmUser(true).build();
 
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
             when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
+            doNothing().when(notificationService).notifyDeleteFirmAccess(isNull(), anyString(), anyString(), anyString());
 
             UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null, null, "admin");
 
@@ -4331,15 +4343,16 @@ class UserServiceTest {
             verify(userProfileRepository, times(2)).save(result);
             verify(entraUserRepository).save(entraUser);
             verify(techServicesClient).updateRoleAssignment(any(UUID.class));
+            verify(notificationService).notifyDeleteFirmAccess(eq(null), eq(userDto.getFirstName()), eq(userDto.getEmail()), eq(firmDto.getName()));
         }
 
         @Test
         void shouldCreateInactiveProfileIfExistingProfilesPresent() {
             UUID firmId = UUID.randomUUID();
-            Firm existingFirm = Firm.builder().id(firmId).build();
+            Firm existingFirm = Firm.builder().id(firmId).name("Test Firm").build();
 
             UUID entraUserId = UUID.randomUUID();
-            EntraUser entraUser = EntraUser.builder().id(entraUserId).multiFirmUser(true).build();
+            EntraUser entraUser = EntraUser.builder().id(entraUserId).firstName("FirstName").email("test@email.com").multiFirmUser(true).build();
             UserProfile existingProfile = UserProfile.builder().firm(existingFirm).build();
             entraUser.setUserProfiles(new HashSet<>(Set.of(existingProfile)));
 
@@ -4347,14 +4360,16 @@ class UserServiceTest {
             OfficeDto officeDto = new OfficeDto();
             AppRole appRole = AppRole.builder().id(UUID.randomUUID()).name("role").build();
             AppRoleDto appRoleDto = AppRoleDto.builder().id(UUID.randomUUID().toString()).build();
-            FirmDto newFirmDto = FirmDto.builder().id(UUID.randomUUID()).build();
+            FirmDto newFirmDto = FirmDto.builder().id(UUID.randomUUID()).name("Test Firm").build();
 
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
             when(officeRepository.findById(any())).thenReturn(Optional.ofNullable(office));
             when(appRoleRepository.findById(any())).thenReturn(Optional.ofNullable(appRole));
             when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
+            doNothing().when(notificationService).notifyDeleteFirmAccess(isNull(), anyString(), anyString(), anyString());
 
-            EntraUserDto user = EntraUserDto.builder().id(entraUserId.toString()).multiFirmUser(true).build();
+            EntraUserDto user = EntraUserDto.builder().id(entraUserId.toString())
+                    .firstName("FirstName").email("test@email.com").multiFirmUser(true).build();
 
             UserProfile result = userService.addMultiFirmUserProfile(user, newFirmDto, List.of(officeDto),
                     List.of(appRoleDto), "admin");
@@ -4363,6 +4378,8 @@ class UserServiceTest {
             verify(userProfileRepository, times(2)).save(result);
             verify(entraUserRepository).save(entraUser);
             verify(techServicesClient).updateRoleAssignment(any(UUID.class));
+            verify(notificationService).notifyDeleteFirmAccess(eq(null), eq(entraUser.getFirstName()),
+                    eq(entraUser.getEmail()), eq(existingFirm.getName()));
         }
 
         @Test
@@ -4373,11 +4390,14 @@ class UserServiceTest {
 
             EntraUserDto userDto = EntraUserDto.builder()
                     .id(entraUserId.toString())
+                    .firstName("FirstName")
+                    .email("test@email.com")
                     .multiFirmUser(true)
                     .build();
 
             FirmDto firmDto = FirmDto.builder()
                     .id(firmId)
+                    .name("Test Firm")
                     .build();
 
             AppRoleDto appRoleDto = AppRoleDto.builder()
@@ -4387,6 +4407,8 @@ class UserServiceTest {
 
             EntraUser entraUser = EntraUser.builder()
                     .id(entraUserId)
+                    .firstName("FirstName")
+                    .email("test@email.com")
                     .multiFirmUser(true)
                     .build();
 
@@ -4402,6 +4424,7 @@ class UserServiceTest {
             when(appRoleRepository.findById(appRoleId)).thenReturn(Optional.of(puiRole));
             when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), any(Set.class), any(Set.class)))
                     .thenReturn(true);
+            doNothing().when(notificationService).notifyDeleteFirmAccess(isNull(), anyString(), anyString(), anyString());
 
             UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null,
                     List.of(appRoleDto), "admin");
@@ -4412,6 +4435,8 @@ class UserServiceTest {
             assertThat(result.isLastCcmsSyncSuccessful()).isTrue();
             verify(userProfileRepository, times(2)).save(result);
             verify(entraUserRepository, times(1)).save(entraUser);
+            verify(notificationService).notifyDeleteFirmAccess(eq(null), eq(entraUser.getFirstName()),
+                    eq(entraUser.getEmail()), eq(firmDto.getName()));
         }
 
         @Test
@@ -4422,11 +4447,14 @@ class UserServiceTest {
 
             EntraUserDto userDto = EntraUserDto.builder()
                     .id(entraUserId.toString())
+                    .firstName("FirstName")
+                    .email("test@email.com")
                     .multiFirmUser(true)
                     .build();
 
             FirmDto firmDto = FirmDto.builder()
                     .id(firmId)
+                    .name("Test Firm")
                     .build();
 
             AppRoleDto appRoleDto = AppRoleDto.builder()
@@ -4436,6 +4464,8 @@ class UserServiceTest {
 
             EntraUser entraUser = EntraUser.builder()
                     .id(entraUserId)
+                    .firstName("FirstName")
+                    .email("test@email.com")
                     .multiFirmUser(true)
                     .build();
 
@@ -4448,6 +4478,7 @@ class UserServiceTest {
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
             when(appRoleRepository.findById(appRoleId)).thenReturn(Optional.of(nonPuiRole));
             when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
+            doNothing().when(notificationService).notifyDeleteFirmAccess(isNull(), anyString(), anyString(), anyString());
 
             UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null,
                     List.of(appRoleDto), "admin");
@@ -4457,6 +4488,8 @@ class UserServiceTest {
 
             verify(userProfileRepository, times(2)).save(result);
             verify(entraUserRepository, times(1)).save(entraUser);
+            verify(notificationService).notifyDeleteFirmAccess(eq(null), eq(entraUser.getFirstName()),
+                    eq(entraUser.getEmail()), eq(firmDto.getName()));
         }
 
         @Test
@@ -4467,11 +4500,14 @@ class UserServiceTest {
 
             EntraUserDto userDto = EntraUserDto.builder()
                     .id(entraUserId.toString())
+                    .firstName("FirstName")
+                    .email("test@email.com")
                     .multiFirmUser(true)
                     .build();
 
             FirmDto firmDto = FirmDto.builder()
                     .id(firmId)
+                    .name("Test Firm")
                     .build();
 
             AppRoleDto appRoleDto = AppRoleDto.builder()
@@ -4481,6 +4517,8 @@ class UserServiceTest {
 
             EntraUser entraUser = EntraUser.builder()
                     .id(entraUserId)
+                    .firstName("FirstName")
+                    .email("test@email.com")
                     .multiFirmUser(true)
                     .build();
 
@@ -4495,6 +4533,7 @@ class UserServiceTest {
             when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), any(Set.class), any(Set.class)))
                     .thenReturn(false);
             when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
+            doNothing().when(notificationService).notifyDeleteFirmAccess(isNull(), anyString(), anyString(), anyString());
 
             UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null,
                     List.of(appRoleDto), "admin");
@@ -4506,6 +4545,8 @@ class UserServiceTest {
             verify(userProfileRepository, times(2)).save(result);
             verify(entraUserRepository, times(1)).save(entraUser);
             verify(techServicesClient, times(1)).updateRoleAssignment(entraUserId);
+            verify(notificationService).notifyDeleteFirmAccess(eq(null), eq(entraUser.getFirstName()),
+                    eq(entraUser.getEmail()), eq(firmDto.getName()));
         }
 
         @Test
@@ -4518,11 +4559,14 @@ class UserServiceTest {
 
             EntraUserDto userDto = EntraUserDto.builder()
                     .id(entraUserId.toString())
+                    .firstName("FirstName")
+                    .email("test@email.com")
                     .multiFirmUser(true)
                     .build();
 
             FirmDto firmDto = FirmDto.builder()
                     .id(firmId)
+                    .name("Test Firm")
                     .build();
 
             List<AppRoleDto> appRoleDtos = List.of(
@@ -4533,6 +4577,8 @@ class UserServiceTest {
 
             EntraUser entraUser = EntraUser.builder()
                     .id(entraUserId)
+                    .firstName("FirstName")
+                    .email("test@email.com")
                     .multiFirmUser(true)
                     .build();
 
@@ -4563,6 +4609,7 @@ class UserServiceTest {
             when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
             when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), any(Set.class), any(Set.class)))
                     .thenReturn(true);
+            doNothing().when(notificationService).notifyDeleteFirmAccess(isNull(), anyString(), anyString(), anyString());
 
             UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null,
                     appRoleDtos, "admin");
@@ -4585,20 +4632,26 @@ class UserServiceTest {
 
             EntraUserDto userDto = EntraUserDto.builder()
                     .id(entraUserId.toString())
+                    .firstName("FirstName")
+                    .email("test@email.com")
                     .multiFirmUser(true)
                     .build();
 
             FirmDto firmDto = FirmDto.builder()
                     .id(firmId)
+                    .name("Test Firm")
                     .build();
 
             EntraUser entraUser = EntraUser.builder()
                     .id(entraUserId)
+                    .firstName("FirstName")
+                    .email("test@email.com")
                     .multiFirmUser(true)
                     .build();
 
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
             when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
+            doNothing().when(notificationService).notifyDeleteFirmAccess(isNull(), anyString(), anyString(), anyString());
 
             UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null,
                     null, "admin");
@@ -4608,6 +4661,8 @@ class UserServiceTest {
 
             verify(userProfileRepository, times(2)).save(result);
             verify(entraUserRepository, times(1)).save(entraUser);
+            verify(notificationService).notifyDeleteFirmAccess(eq(null), eq(entraUser.getFirstName()),
+                    eq(entraUser.getEmail()), eq(firmDto.getName()));
         }
 
         @Test
