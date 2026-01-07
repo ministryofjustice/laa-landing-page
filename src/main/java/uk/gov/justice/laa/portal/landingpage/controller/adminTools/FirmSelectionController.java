@@ -65,8 +65,6 @@ public class FirmSelectionController {
 
     private final FirmService firmService;
 
-    private final AccessGuard accessGuard;
-
     @GetMapping("/selectUser")
     public String selectUserGet(Model model, HttpSession session, Authentication authentication) {
         MultiFirmUserForm multiFirmUserForm = getObjectFromHttpSession(session, "multiFirmUserForm",
