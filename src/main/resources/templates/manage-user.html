@@ -254,8 +254,11 @@
                                 <div th:if="${#lists.isEmpty(userOffices) and !isAccessGranted}">
                                     <p class="govuk-body">No offices assigned</p>
                                 </div>
-                                <div th:if="${#lists.isEmpty(userOffices) and isAccessGranted and externalUser}">
+                                <div th:if="${#lists.isEmpty(userOffices) and isAccessGranted and externalUser and user.unrestrictedOfficeAccess}">
                                     <p class="govuk-body">Access to All Offices</p>
+                                </div>
+                                <div th:if="${#lists.isEmpty(userOffices) and isAccessGranted and externalUser and !user.unrestrictedOfficeAccess}">
+                                    <p class="govuk-body">No Office Access</p>
                                 </div>
                             </div>
                         </div>

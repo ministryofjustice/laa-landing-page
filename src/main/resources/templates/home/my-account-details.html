@@ -131,7 +131,9 @@
                                 </tr>
                             </tbody>
                         </table>
-                        <p th:if="${#lists.isEmpty(userOffices)}" class="govuk-body">Access to all offices</p>
+                        <p th:if="${#lists.isEmpty(userOffices) and unrestrictedOfficeAccess}" class="govuk-body">Access to all offices</p>
+                        <p th:if="${#lists.isEmpty(userOffices) and !unrestrictedOfficeAccess}" class="govuk-body">No Office Access</p>
+
                     </div>
                 </div>
 
