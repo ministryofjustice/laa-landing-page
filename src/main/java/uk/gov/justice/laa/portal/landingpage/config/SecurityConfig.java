@@ -8,9 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcOperations;
-import org.springframework.security.authorization.AuthorityAuthorizationManager;
 import org.springframework.security.authorization.AuthorizationDecision;
-import org.springframework.security.authorization.AuthorizationManager;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -27,7 +25,6 @@ import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequest
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
@@ -36,7 +33,6 @@ import org.springframework.security.web.util.matcher.IpAddressMatcher;
 import org.springframework.session.config.SessionRepositoryCustomizer;
 import org.springframework.session.jdbc.JdbcIndexedSessionRepository;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
-import uk.gov.justice.laa.portal.landingpage.environment.AccessGuard;
 import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
 import uk.gov.justice.laa.portal.landingpage.service.CustomLogoutHandler;
 
@@ -52,13 +48,11 @@ public class SecurityConfig {
     private final AuthzOidcUserDetailsService authzOidcUserDetailsService;
     private final CustomLogoutHandler logoutHandler;
     private final Environment environment;
-    private final AccessGuard accessGuard;
 
-    public SecurityConfig(AuthzOidcUserDetailsService authzOidcUserDetailsService, CustomLogoutHandler logoutHandler, Environment environment, AccessGuard accessGuard) {
+    public SecurityConfig(AuthzOidcUserDetailsService authzOidcUserDetailsService, CustomLogoutHandler logoutHandler, Environment environment) {
         this.authzOidcUserDetailsService = authzOidcUserDetailsService;
         this.logoutHandler = logoutHandler;
         this.environment = environment;
-        this.accessGuard = accessGuard;
     }
 
     @Bean
@@ -132,18 +126,13 @@ public class SecurityConfig {
     @Order(2)
     public SecurityFilterChain webSecurityFilterChain(HttpSecurity http, 
             ClientRegistrationRepository clientRegistrationRepository) throws Exception {
-        // Only this path changes based on environment:
-        AuthorizationManager<RequestAuthorizationContext> userPathManager =
-                accessGuard.isProdEnv()
-                        ? AuthorityAuthorizationManager.hasAnyAuthority(Permission.DELEGATE_EXTERNAL_USER_ACCESS.name())
-                        : AuthorityAuthorizationManager.hasAnyAuthority(Permission.ADMIN_PERMISSIONS);
         http.authorizeHttpRequests((authorize) -> authorize
                 .requestMatchers("/admin/users/**", "/pda/**")
                 .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
-                .requestMatchers("/admin/user/**")
+                .requestMatchers("/admin/user/**", "/adminFirmSelection/**")
                 .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
                 .requestMatchers("/admin/multi-firm/user/**")
-                .access(userPathManager)
+                .hasAnyAuthority(Permission.DELEGATE_EXTERNAL_USER_ACCESS.name())
                 .requestMatchers("/", "/login", "/logout-success", "/cookies", "/css/**", "/js/**", "/assets/**"
                 ).permitAll()
                 .requestMatchers("/actuator/**", "/playwright/login")
