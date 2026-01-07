@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'login'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns="http://www.w3.org/1999/html">
+
+<head>
+    <title>User details</title>
+</head>
+
+<body>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs" style="margin-bottom: -24px;">
+        <a class="govuk-back-link govuk-!-margin-bottom-0" th:href="${backUrl}" href="/admin/users">Back</a>
+    </nav>
+    <main class="govuk-main-wrapper" id="main-content">
+        <div class="govuk-grid-row">
+            <div class="govuk-grid-column-two-thirds">
+                <form th:action="@{/adminTools/user/add/profile}" th:method="post"
+                    th:object="${multiFirmUserForm}">
+                    <div th:if="${#fields.hasErrors()}">
+                        <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
+                            data-module="govuk-error-summary">
+                            <h2 class="govuk-error-summary__title" id="error-summary-title">
+                                There is a problem
+                            </h2>
+                            <div class="govuk-error-summary__body">
+                                <ul class="govuk-list govuk-error-summary__list">
+                                    <li th:each="error : ${#fields.errors()}">
+                                        <a href="#email" th:text="${error}"></a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h1 class="govuk-heading-l govuk-!-margin-top-0">Giving access to third-party users</h1>
+                    <div class="govuk-hint"> The user you want to give access to must already have an account.
+                    <br><br>
+                    Third party users are professionals instructed by providers, such as cost drafters and barristers.
+                    <br><br>
+                    You will need to assign these users with relevant access on behalf of your firm, even if they already have access
+                        to the same services for another firm that they work for.
+                    </div>
+
+                    <div class="govuk-button-group">
+                        <a href="/admin/users" class="govuk-link">Manage users who work within your firm</a>
+                    </div>
+
+                    <h1 class="govuk-heading-l">What is the third-party user's email?</h1>
+
+                    <div class="govuk-form-group"
+                        th:classappend="${#fields.hasErrors('email')} ? 'govuk-form-group--error'">
+                        <label class="govuk-label govuk-visually-hidden" for="email">
+                            Email address
+                        </label>
+                        <div th:if="${#fields.hasErrors('email')}" id="email-error" class="govuk-error-message">
+                            <span class="govuk-visually-hidden">Error:</span>
+                            <span th:each="err : ${#fields.errors('email')}" th:text="${err}"></span>
+                        </div>
+                        <input class="govuk-input govuk-!-width-two-thirds"
+                            th:classappend="${#fields.hasErrors('email')} ? 'govuk-input--error'" name="email"
+                            type="email" th:value="*{email}" id="email"
+                            th:attr="aria-describedby=${#fields.hasErrors('email')} ? 'email-hint email-error' : 'email-hint'"
+                            autocomplete="email" spellcheck="false" />
+                    </div>
+
+                    <div class="govuk-button-group">
+                        <button type="submit" class="govuk-button" data-module="govuk-button">
+                            Continue
+                        </button>
+                        <a href="/admin/multi-firm/user/cancel" class="govuk-link">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>
