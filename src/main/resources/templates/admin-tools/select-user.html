@@ -16,7 +16,7 @@
     <main class="govuk-main-wrapper" id="main-content">
         <div class="govuk-grid-row">
             <div class="govuk-grid-column-two-thirds">
-                <form th:action="@{/adminTools/user/add/profile}" th:method="post"
+                <form th:action="@{/adminFirmSelection/selectUser}" th:method="post"
                     th:object="${multiFirmUserForm}">
                     <div th:if="${#fields.hasErrors()}">
                         <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
@@ -69,7 +69,7 @@
                         <button type="submit" class="govuk-button" data-module="govuk-button">
                             Continue
                         </button>
-                        <a href="/admin/multi-firm/user/cancel" class="govuk-link">Cancel</a>
+                        <a href="/adminFirmSelection/cancel" class="govuk-link">Cancel</a>
                     </div>
                 </form>
             </div>
