@@ -92,6 +92,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
     void editUserAndVerify() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
         // Click the first user link in the list and assert we navigated to the manage-user page
+        manageUsersPage.searchForUser("playwright-informationassurance@playwrighttest.com");
         manageUsersPage.clickFirstUserLink();
         assertTrue(page.url().contains("/admin/users/manage/"));
         manageUsersPage.clickServicesTab();
@@ -106,6 +107,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickContinueUserDetails();
         manageUsersPage.clickConfirmButton();
         manageUsersPage.clickGoBackToManageUsers();
+        manageUsersPage.searchForUser("playwright-informationassurance@playwrighttest.com");
         manageUsersPage.clickFirstUserLink();
         manageUsersPage.clickServicesTab();
         manageUsersPage.verifySelectedUserServices(roles);
