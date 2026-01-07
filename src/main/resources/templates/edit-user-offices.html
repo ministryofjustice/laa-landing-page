@@ -61,9 +61,22 @@
                                         th:checked="${hasAllOffices != true && office.selected}">
                                     <label class="govuk-label govuk-checkboxes__label" th:for="${office.id}">
                                         <label class="govuk-label govuk-checkboxes__label">
-                                            <span th:text="${office.address.formattedAddress}"></span>
+                                            <span th:text="${office.address?.formattedAddress ?: 'Unknown'}"></span>
                                             (<span th:text="${office.code}"></span>)
                                         </label>
+                                    </label>
+                                </div>
+                            </div>
+                            <div th:if="${shouldShowNoOffice}">
+                                <div class="govuk-checkboxes__divider">or</div>
+                                <div class="govuk-checkboxes__item">
+                                    <input class="govuk-checkboxes__input" id="no-offices" name="offices" type="checkbox"
+                                           value="NO_OFFICES" data-behaviour="exclusive" th:checked="${hasNoOffices}">
+                                    <label class="govuk-label govuk-checkboxes__label" for="no-offices">
+                                        No access to offices
+                                        <div id="no-offices-hint" class="govuk-hint">
+                                            This can be added by Provider Admins later
+                                        </div>
                                     </label>
                                 </div>
                             </div>

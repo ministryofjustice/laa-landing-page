@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.forms;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.List;
 
@@ -8,6 +9,8 @@ import lombok.Data;
 
 @Data
 public class RolesForm implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     @NotNull(message = "At least one role must be selected")
     List<String> roles;
 }

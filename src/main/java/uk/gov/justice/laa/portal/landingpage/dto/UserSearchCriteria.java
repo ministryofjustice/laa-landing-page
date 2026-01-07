@@ -5,8 +5,8 @@ import lombok.Setter;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 
+import java.io.Serial;
 import java.io.Serializable;
-import java.util.List;
 
 /**
  * Data Transfer Object for user search criteria
@@ -14,6 +14,8 @@ import java.util.List;
 @Setter
 @Getter
 public class UserSearchCriteria implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     private String searchTerm;
     private FirmSearchForm firmSearch;
     private UserType userType;
