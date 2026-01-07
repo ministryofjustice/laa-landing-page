@@ -98,75 +98,6 @@ public class AdminToolsController {
 
     private final AccessGuard accessGuard;
 
-    @GetMapping("/user/add/profile/select/firm")
-    public String selectDelegateFirm(@RequestParam(value = "q", required = false) String query,
-                                     Model model,
-                                     HttpSession session,
-                                     Authentication authentication) {
-        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
-        Firm parentFirm = currentUserProfile.getFirm();
-        List<Firm> childFirms;
-        boolean includeParent;
-        if (accessGuard.isProdEnv()) {
-            if (parentFirm == null || parentFirm.getChildFirms() == null || parentFirm.getChildFirms().isEmpty()) {
-                return "redirect:/admin/multi-firm/user/add/profile";
-            }
-            childFirms = firmService.getFilteredChildFirms(parentFirm, query);
-            includeParent = firmService.includeParentFirm(parentFirm, query);
-            model.addAttribute("parentFirm", mapper.map(parentFirm, FirmDto.class));
-            model.addAttribute("childFirms", childFirms.stream().map(f -> mapper.map(f, FirmDto.class)).toList());
-            model.addAttribute("includeParent", includeParent);
-
-        } else {
-            List<FirmDto> firmList = firmService.getAllFirmsFromCache()
-                    .stream()
-                    .filter(firm -> query == null || query.isBlank()
-                            // no filter -> keep all
-                            || matchesFirm(firm, query)) // filter when query present
-                    .toList();
-            model.addAttribute("firmList", firmList);
-        }
-        model.addAttribute("query", query == null ? "" : query);
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Choose the firm you are delegating access to");
-        return "multi-firm-user/select-firm";
-    }
-
-    // Example match logic (case-insensitive contains)
-    private boolean matchesFirm(FirmDto firm, String q) {
-        String queryString = q.toLowerCase();
-        return (firm.getName() != null && firm.getName().toLowerCase().contains(queryString))
-                || (firm.getCode() != null && firm.getCode().toLowerCase().contains(queryString));
-
-    }
-
-    @PostMapping("/user/add/profile/select/firm")
-    public String selectDelegateFirmPost(@RequestParam("firmId") String firmId,
-                                         HttpSession session,
-                                         Authentication authentication) {
-        UUID selectedId = UUID.fromString(firmId);
-
-        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
-        Firm parentFirm = currentUserProfile.getFirm();
-        if (parentFirm == null || parentFirm.getChildFirms() == null || parentFirm.getChildFirms().isEmpty()) {
-            return "redirect:/admin/multi-firm/user/add/profile";
-        }
-        boolean isChild = parentFirm.getChildFirms().stream().anyMatch(f -> selectedId.equals(f.getId()));
-        boolean isParent = parentFirm.getId() != null && parentFirm.getId().equals(selectedId);
-        if (!isChild && !isParent) {
-            return "redirect:/admin/multi-firm/user/add/profile/select/firm";
-        }
-
-        session.setAttribute("delegateTargetFirmId", selectedId.toString());
-        return "redirect:/admin/multi-firm/user/add/profile";
-    }
-
-    @GetMapping("/user/add/profile/select/firm/choose")
-    public String selectDelegateFirmGet(@RequestParam("firmId") String firmId,
-                                        HttpSession session,
-                                        Authentication authentication) {
-        return selectDelegateFirmPost(firmId, session, authentication);
-    }
-
     @GetMapping("/user/add/profile")
     public String addUserProfile(Model model, HttpSession session, Authentication authentication) {
         String targetFirmId = (String) session.getAttribute("delegateTargetFirmId");
@@ -286,7 +217,7 @@ public class AdminToolsController {
             session.setAttribute("entraUser", entraUserDto);
 
             model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile - " + entraUserDto.getFullName());
-            return "redirect:/admin-tools/user/add/profile/select/firmAdmin";
+            return "redirect:/adminTools/user/add/profile/select/firm";
         } else {
             log.debug("User not found for the given user email: {}", multiFirmUserForm.getEmail());
             result.rejectValue("email", "error.email",
@@ -718,76 +649,48 @@ public class AdminToolsController {
         model.addAttribute("isMultiFirmUser", true);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile - Check your answers - " + user.getFullName());
 
-        return "multi-firm-user/add-profile-check-answers";
+        return "admin-tools/add-profile-check-answers";
     }
 
     @PostMapping("/user/add/profile/check-answers")
     public String checkAnswerAndAddProfilePost(Authentication authentication, HttpSession session, Model model) {
         EntraUserDto user = getObjectFromHttpSession(session, "entraUser", EntraUserDto.class).orElseThrow();
-
-        Map<Integer, List<String>> appRolesByPage = (Map<Integer, List<String>>) session
-                .getAttribute("addUserProfileAllSelectedRoles");
-        if (appRolesByPage == null) {
-            appRolesByPage = new HashMap<>();
-        }
-
-        List<AppRoleDto> appRoleDtoList = appRoleService
-                .getByIds(appRolesByPage.values().stream().filter(Objects::nonNull).flatMap(List::stream).toList());
-
-        // Validate if app role assignment is fully permitted
-        UserProfile userProfile = loginService.getCurrentProfile(authentication);
-        if (!roleAssignmentService.canAssignRole(userProfile.getAppRoles(),
-                appRoleDtoList.stream().map(AppRoleDto::getId).toList())) {
-            log.error(
-                    "User does not have sufficient permissions to assign the selected roles: userId={}, attemptedRoleIds={}",
-                    userProfile.getId(),
-                    appRoleDtoList.stream().map(AppRoleDto::getId).toList());
-            throw new RuntimeException("User does not have sufficient permissions to assign the selected roles");
-        }
-
-        // Validate if the office assignment is fully permitted
-        List<String> userOfficeIds = getListFromHttpSession(session, "userOffices", String.class).orElse(List.of());
-        List<OfficeDto> userOfficeDtos = userOfficeIds.contains("ALL") ? List.of()
-                : officeService.getOfficesByIds(userOfficeIds);
-        if (!userOfficeDtos.isEmpty()) {
-            String targetFirmId = (String) session.getAttribute("delegateTargetFirmId");
-            Firm validationFirm = targetFirmId != null ? firmService.getById(UUID.fromString(targetFirmId)) : userProfile.getFirm();
-            if (validationFirm == null || validationFirm.getOffices() == null
-                    || !validationFirm.getOffices().stream().map(Office::getCode).allMatch(code -> userProfile.getFirm()
-                            .getOffices().stream().map(Office::getCode).anyMatch(code::equals))) {
-                log.error(
-                        "User does not have sufficient permissions to assign the selected offices: userId={}, attemptedOfficeIds={}",
-                        userProfile.getId(),
-                        userOfficeDtos.stream().map(OfficeDto::getId).toList());
-                throw new RuntimeException("Office assignment is not permitted");
-            }
-        }
-
+        EntraUser entraUser = userService.findEntraUserByEmail(user.getEmail()).get();
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-        UserProfileDto currentUserProfileDto = mapper.map(userProfile, UserProfileDto.class);
         String targetFirmIdForCreation = (String) session.getAttribute("delegateTargetFirmId");
-        FirmDto firmDto = targetFirmIdForCreation != null ? firmService.getFirm(UUID.fromString(targetFirmIdForCreation)) : currentUserProfileDto.getFirm();
+        FirmDto firmDto = firmService.getFirm(UUID.fromString(targetFirmIdForCreation));
 
         try {
-            UserProfile newUserProfile = userService.addMultiFirmUserProfile(user, firmDto, userOfficeDtos,
-                    appRoleDtoList, currentUserDto.getName());
+            //get offices
+            List<OfficeDto> offices = entraUser.getUserProfiles().stream()
+                    .filter(UserProfile::isActiveProfile)
+                    .flatMap(profile -> profile.getOffices().stream())
+                    .map(office -> mapper.map(office, OfficeDto.class))
+                    .toList();
+            //get Roles
+            List<AppRoleDto> roles = entraUser.getUserProfiles().stream()
+                    .filter(UserProfile::isActiveProfile)
+                    .flatMap(profile -> profile.getAppRoles().stream())
+                    .map(role -> mapper.map(role, AppRoleDto.class))
+                    .toList();
 
-            String rolesAdded = appRoleDtoList.stream().map(AppRoleDto::getName)
-                    .collect(Collectors.joining(",", "(", ")"));
+            UserProfile newUserProfile = userService.addMultiFirmUserProfile(user, firmDto, offices,
+                    roles, currentUserDto.getName());
+
             AddUserProfileAuditEvent addUserProfileAuditEvent = new AddUserProfileAuditEvent(
                     currentUserDto,
                     newUserProfile.getId(),
                     user,
                     firmDto.getId(),
-                    "roles",
-                    rolesAdded);
+                    "Firm",
+                    firmDto.getName());
             eventService.logEvent(addUserProfileAuditEvent);
         } catch (Exception ex) {
             log.error("Error creating new profile for user: {}", user.getFullName(), ex);
             throw ex;
         }
 
-        return "redirect:/admin/multi-firm/user/add/profile/confirmation";
+        return "redirect:/adminTools/user/add/profile/confirmation";
     }
 
     @GetMapping("/user/add/profile/confirmation")
@@ -808,7 +711,7 @@ public class AdminToolsController {
         return "redirect:/admin/users";
     }
 
-    @GetMapping("/user/add/profile/select/firmAdmin")
+    @GetMapping("/user/add/profile/select/firm")
     public String createUserFirm(FirmSearchForm firmSearchForm, HttpSession session, Model model,
                                  @RequestParam(value = "firmSearchResultCount", defaultValue = "10") Integer count) {
 
@@ -834,10 +737,10 @@ public class AdminToolsController {
         model.addAttribute("firmSearchResultCount", validatedCount);
         model.addAttribute("showSkipFirmSelection", showSkipFirmSelection);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Select firm");
-        return "multi-firm-user/add-user-firm-admin";
+        return "admin-tools/add-user-firm";
     }
 
-    @PostMapping("/user/add/profile/select/firmAdmin")
+    @PostMapping("/user/add/profile/select/firm")
     public String postUserFirm(@Valid FirmSearchForm firmSearchForm, BindingResult result,
                                HttpSession session, Model model) {
 
@@ -849,7 +752,7 @@ public class AdminToolsController {
             model.addAttribute("showSkipFirmSelection", showSkipFirmSelection);
             // Store the form in session to preserve input on redirect
             session.setAttribute("firmSearchForm", firmSearchForm);
-            return "multi-firm-user/add-user-firm-admin";
+            return "admin-tools/add-user-firm";
         }
 
         session.removeAttribute("firm");
@@ -867,7 +770,7 @@ public class AdminToolsController {
             if (selectedFirm == null) {
                 result.rejectValue("firmSearch", "error.firm",
                         "No firm found with that name. Please select from the dropdown.");
-                return "multi-firm-user/add-user-firm-admin";
+                return "admin-tools/add-user-firm";
             }
             firmSearchForm.setFirmSearch(selectedFirm.getName());
             firmSearchForm.setSelectedFirmId(selectedFirm.getId());
@@ -878,13 +781,13 @@ public class AdminToolsController {
         if (userService.hasUserFirmAlreadyAssigned(multiFirmUserForm.getEmail(), firmSearchForm.getSelectedFirmId())) {
             result.rejectValue("firmSearch", "error.firm",
                     "User profile already exists for this firm.");
-            return "multi-firm-user/add-user-firm-admin";
+            return "admin-tools/add-user-firm";
         }
 
 
         session.setAttribute("firmSearchForm", firmSearchForm);
         session.setAttribute("delegateTargetFirmId", firmSearchForm.getSelectedFirmId().toString());
-        return "redirect:/admin/multi-firm/user/add/profile/select/apps";
+        return "redirect:/adminTools/user/add/profile/check-answers";
     }
 
     private void clearSessionAttributes(HttpSession session) {
