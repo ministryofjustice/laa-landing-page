@@ -17,6 +17,7 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
+import uk.gov.justice.laa.portal.landingpage.playwright.pages.ManageUsersPage;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -96,5 +97,11 @@ public abstract class BaseFrontEndTest {
             LOGGER.log(Level.SEVERE, "Login failed for " + userEmail, e);
             throw e;
         }
+    }
+
+    protected ManageUsersPage loginAndGetManageUsersPage(TestUser user) {
+        loginAs(user.email);
+        page.navigate(String.format("http://localhost:%d/admin/users", port));
+        return new ManageUsersPage(page, port);
     }
 }

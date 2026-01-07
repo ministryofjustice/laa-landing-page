@@ -134,6 +134,12 @@ public class ManageUsersPage {
         createNewUserButton.click();
     }
 
+    // Create user
+    public boolean isCreateUserVisible() {
+        return createNewUserButton.isVisible();
+
+    }
+
     public void clickManageUser() {
         userFullNameLink.click();
     }
@@ -213,14 +219,16 @@ public class ManageUsersPage {
         searchButton.click();
     }
 
-    public void searchAndVerifyUser(String email) {
+
+
+    public boolean searchAndVerifyUser(String email) {
         searchForUser(email);
 
         Locator row = page.locator("tbody tr").filter(
                 new Locator.FilterOptions().setHasText(email)
         );
 
-        assertThat(row).isVisible();
+        return row.isVisible();
     }
 
     public void searchForCurrentUser(TestUser currentUser) {
