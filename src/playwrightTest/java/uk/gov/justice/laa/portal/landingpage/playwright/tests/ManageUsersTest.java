@@ -33,13 +33,13 @@ public class ManageUsersTest extends BaseFrontEndTest {
     void createUserAndVerifyItAppears() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
         manageUsersPage.clickCreateUser();
-        String email = manageUsersPage.fillInUserDetails(true);
+        final String email = manageUsersPage.fillInUserDetails(true);
         manageUsersPage.selectMultiFirmAccess(false);
         manageUsersPage.searchAndSelectFirmByCode("90001");
         manageUsersPage.clickContinueFirmSelectPage();
         manageUsersPage.clickConfirmNewUserButton();
         manageUsersPage.clickGoBackToManageUsers();
-        manageUsersPage.searchAndVerifyUser(email);
+        assertTrue(manageUsersPage.searchAndVerifyUser(email));
     }
 
     @Test
@@ -68,7 +68,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickContinueFirmSelectPage();
         manageUsersPage.clickConfirmNewUserButton();
         manageUsersPage.clickGoBackToManageUsers();
-        manageUsersPage.searchAndVerifyUser(email);
+        assertTrue(manageUsersPage.searchAndVerifyUser(email));
     }
 
     @Test
@@ -92,6 +92,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
     void editUserAndVerify() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
         // Click the first user link in the list and assert we navigated to the manage-user page
+        manageUsersPage.searchForUser("playwright-informationassurance@playwrighttest.com");
         manageUsersPage.clickFirstUserLink();
         assertTrue(page.url().contains("/admin/users/manage/"));
         manageUsersPage.clickServicesTab();
@@ -106,6 +107,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickContinueUserDetails();
         manageUsersPage.clickConfirmButton();
         manageUsersPage.clickGoBackToManageUsers();
+        manageUsersPage.searchForUser("playwright-informationassurance@playwrighttest.com");
         manageUsersPage.clickFirstUserLink();
         manageUsersPage.clickServicesTab();
         manageUsersPage.verifySelectedUserServices(roles);
@@ -117,13 +119,13 @@ public class ManageUsersTest extends BaseFrontEndTest {
         //Create new user
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
         manageUsersPage.clickCreateUser();
-        String email = manageUsersPage.fillInUserDetails(true);
+        final String email = manageUsersPage.fillInUserDetails(true);
         manageUsersPage.selectMultiFirmAccess(false);
         manageUsersPage.searchAndSelectFirmByCode("90001");
         manageUsersPage.clickContinueFirmSelectPage();
         manageUsersPage.clickConfirmNewUserButton();
         manageUsersPage.clickGoBackToManageUsers();
-        manageUsersPage.searchAndVerifyUser(email);
+        assertTrue(manageUsersPage.searchAndVerifyUser(email));
 
         // Delete and confirm newly created user
         manageUsersPage.clickManageUser();
@@ -157,14 +159,5 @@ public class ManageUsersTest extends BaseFrontEndTest {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
         manageUsersPage.clickCreateUser();
         manageUsersPage.enterInvalidNameAndVerifyError();
-    }
-
-    /**
-     * Logs in as the specified user and navigates to the Manage Users page.
-     */
-    private ManageUsersPage loginAndGetManageUsersPage(TestUser user) {
-        loginAs(user.email);
-        page.navigate(String.format("http://localhost:%d/admin/users", port));
-        return new ManageUsersPage(page, port);
     }
 }
