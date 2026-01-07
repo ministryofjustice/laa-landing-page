@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -68,6 +69,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
+import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
@@ -1401,8 +1403,11 @@ public class UserService {
      * @return Paginated audit users
      */
     public PaginatedAuditUsers getAuditUsers(
-            String searchTerm, UUID firmId, String silasRole, UUID appId, UserType userType, Boolean multiFirm,
+            String searchTerm, UUID firmId, String silasRole, UUID appId, UserTypeForm userTypeForm,
             int page, int pageSize, String sort, String direction) {
+        Boolean multiFirm = userTypeForm == null ? null : userTypeForm.getMultiFirm();
+        UserType userType = userTypeForm == null ? null : userTypeForm.getUserType();
+        String userTypeStr = userType == null ? null : userType.name();
 
         // Check if sorting by profile count, firm, or account status (special cases -
         // require different queries)
@@ -1429,17 +1434,17 @@ public class UserService {
             PageRequest pageRequest = PageRequest.of(page - 1, pageSize, sortObj);
             // UserType must be treated as a string because we are using native queries
             // here.
-            String userTypeString = userType != null ? userType.toString() : null;
+
             Page<? extends UserAuditProjection> resultPage;
             if (sortByProfileCount) {
                 resultPage = entraUserRepository.findAllUsersForAuditWithProfileCount(
-                        searchTerm, firmId, silasRole, appId, userTypeString, multiFirm, pageRequest);
+                        searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm, pageRequest);
             } else if (sortByFirm) {
                 resultPage = entraUserRepository.findAllUsersForAuditWithFirm(
-                        searchTerm, firmId, silasRole, appId, userTypeString, multiFirm, pageRequest);
+                        searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm, pageRequest);
             } else {
                 resultPage = entraUserRepository.findAllUsersForAuditWithAccountStatus(
-                        searchTerm, firmId, silasRole, appId, userTypeString, multiFirm, pageRequest);
+                        searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm, pageRequest);
             }
 
             // Extract user IDs in order
@@ -1449,7 +1454,7 @@ public class UserService {
             List<EntraUser> users = Collections.emptyList();
             if (!userIds.isEmpty()) {
                 List<EntraUser> fetchedUsers = entraUserRepository
-                        .findUsersWithProfilesAndRoles(new java.util.LinkedHashSet<>(userIds));
+                        .findUsersWithProfilesAndRoles(new LinkedHashSet<>(userIds));
 
                 // Sort users to match the order from the query result
                 Map<UUID, Integer> orderMap = new HashMap<>();
