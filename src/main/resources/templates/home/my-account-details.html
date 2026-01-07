@@ -125,7 +125,7 @@
                             </thead>
                             <tbody class="govuk-table__body">
                                 <tr th:each="office : ${userOffices}" class="govuk-table__row">
-                                    <td class="govuk-table__cell" th:text="${office.address?.formattedAddress}">123 Main
+                                    <td class="govuk-table__cell" th:text="${office.address?.formattedAddress ?: 'Unknown'}">123 Main
                                         Street, London, SW1A 1AA</td>
                                     <td class="govuk-table__cell" th:text="${office.code}">12345</td>
                                 </tr>

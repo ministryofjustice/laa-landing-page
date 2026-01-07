@@ -61,7 +61,7 @@
                                         th:checked="${hasAllOffices != true && office.selected}">
                                     <label class="govuk-label govuk-checkboxes__label" th:for="${office.id}">
                                         <label class="govuk-label govuk-checkboxes__label">
-                                            <span th:text="${office.address.formattedAddress}"></span>
+                                            <span th:text="${office.address?.formattedAddress ?: 'Unknown'}"></span>
                                             (<span th:text="${office.code}"></span>)
                                         </label>
                                     </label>
