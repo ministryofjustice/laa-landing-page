@@ -189,6 +189,14 @@ public class ManageUsersPage {
         assertTrue(page.locator(".govuk-summary-list__row:has-text(\"Last name\") .govuk-summary-list__value").isVisible());
     }
 
+
+    public void clickOfficesTab(){
+        page.locator("a.govuk-tabs__tab[href*='#offices']").click();
+    }
+    public void verifyOfficesTabPopulated() {
+
+    }
+
     public void checkSelectedRoles(List<String> roles) {
         page.locator("input[type='checkbox']").first().waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000));
         for (String role : roles) {

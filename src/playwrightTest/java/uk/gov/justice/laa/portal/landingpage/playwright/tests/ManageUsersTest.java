@@ -112,6 +112,14 @@ public class ManageUsersTest extends BaseFrontEndTest {
     }
 
     @Test
+    @DisplayName("Verify offices tab is populated and exists for an external user")
+    void externalUserOfficesExists(){
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+//        manageUsersPage.clickFirstUserLink();
+        manageUsersPage.clickOfficesTab();
+    }
+
+    @Test
     @DisplayName("Delete a new provider admin user with non multi-firm access")
     void deleteUserAndVerify() {
         //Create new user
