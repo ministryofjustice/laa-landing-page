@@ -189,7 +189,7 @@ public class AdminToolsController {
         String backUrl = (firm != null && firm.getChildFirms() != null && !firm.getChildFirms().isEmpty())
                 ? "/admin/multi-firm/user/add/profile/select/firm" : "/admin/users";
         model.addAttribute("backUrl", backUrl);
-        return "multi-firm-user/select-user";
+        return "admin-tools/select-user";
     }
 
     @PostMapping("/user/add/profile")
@@ -205,7 +205,7 @@ public class AdminToolsController {
             String backUrl = (firm != null && firm.getChildFirms() != null && !firm.getChildFirms().isEmpty())
                     ? "/admin/multi-firm/user/add/profile/select/firm" : "/admin/users";
             model.addAttribute("backUrl", backUrl);
-            return "multi-firm-user/select-user";
+            return "admin-tools/select-user";
         }
 
         session.setAttribute("multiFirmUserForm", multiFirmUserForm);
@@ -220,7 +220,7 @@ public class AdminToolsController {
                 log.debug("The user is not a multi firm user: {}.", multiFirmUserForm.getEmail());
                 result.rejectValue("email", "error.email",
                         "This user cannot be added at this time. Contact your Contract Manager to check their access permissions.");
-                return "multi-firm-user/select-user";
+                return "admin-tools/select-user";
             }
 
             if (entraUser.getUserProfiles() != null && !entraUser.getUserProfiles().isEmpty()) {
@@ -244,7 +244,7 @@ public class AdminToolsController {
                     String backUrl = (f != null && f.getChildFirms() != null && !f.getChildFirms().isEmpty())
                             ? "/admin/multi-firm/user/add/profile/select/firm" : "/admin/users";
                     model.addAttribute("backUrl", backUrl);
-                    return "multi-firm-user/select-user";
+                    return "admin-tools/select-user";
                 }
 
                 Firm targetFirm;
@@ -266,7 +266,7 @@ public class AdminToolsController {
                         String backUrl2 = (f2 != null && f2.getChildFirms() != null && !f2.getChildFirms().isEmpty())
                                 ? "/admin/multi-firm/user/add/profile/select/firm" : "/admin/users";
                         model.addAttribute("backUrl", backUrl2);
-                        return "multi-firm-user/select-user";
+                        return "admin-tools/select-user";
                     }
                     if (isAncestor(targetFirm, existingFirm)) {
                         result.rejectValue("email", "error.email", "This user already belongs to a child firm in this hierarchy and cannot be assigned to a parent firm.");
@@ -275,7 +275,7 @@ public class AdminToolsController {
                         String backUrl3 = (f3 != null && f3.getChildFirms() != null && !f3.getChildFirms().isEmpty())
                                 ? "/admin/multi-firm/user/add/profile/select/firm" : "/admin/users";
                         model.addAttribute("backUrl", backUrl3);
-                        return "multi-firm-user/select-user";
+                        return "admin-tools/select-user";
                     }
                 }
             }
@@ -286,12 +286,12 @@ public class AdminToolsController {
             session.setAttribute("entraUser", entraUserDto);
 
             model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile - " + entraUserDto.getFullName());
-            return "redirect:/user/add/profile/select/firmAdmin";
+            return "redirect:/admin-tools/user/add/profile/select/firmAdmin";
         } else {
             log.debug("User not found for the given user email: {}", multiFirmUserForm.getEmail());
             result.rejectValue("email", "error.email",
                     "We could not find this user. Try again or ask the Legal Aid Agency to create a new account for them.");
-            return "multi-firm-user/select-user";
+            return "admin-tools/select-user";
         }
     }
 
