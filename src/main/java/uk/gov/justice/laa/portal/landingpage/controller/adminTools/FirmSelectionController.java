@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -49,6 +50,8 @@ import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFro
 @Slf4j
 @Controller
 @RequiredArgsConstructor
+@PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).ADMIN_PERMISSIONS)" +
+        "or @accessGuard.canDelegate(authentication)")
 @RequestMapping("/adminFirmSelection")
 public class FirmSelectionController {
 
@@ -85,8 +88,6 @@ public class FirmSelectionController {
             log.debug("Validation errors occurred while searching for user: {}", result.getAllErrors());
             session.setAttribute("multiFirmUserForm", multiFirmUserForm);
             model.addAttribute("multiFirmUserForm", multiFirmUserForm);
-            UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
-
             String backUrl = "/admin/users";
             model.addAttribute("backUrl", backUrl);
             return "admin-tools/select-user";
@@ -125,8 +126,7 @@ public class FirmSelectionController {
                             "This user already has a profile for this firm. You can amend their access from the Manage your users table.");
                     UserProfile cur = loginService.getCurrentProfile(authentication);
                     Firm f = cur.getFirm();
-                    String backUrl = (f != null && f.getChildFirms() != null && !f.getChildFirms().isEmpty())
-                            ? "/admin/multi-firm/user/add/profile/select/firm" : "/admin/users";
+                    String backUrl = "/admin/users";
                     model.addAttribute("backUrl", backUrl);
                     return "admin-tools/select-user";
                 }
@@ -145,19 +145,13 @@ public class FirmSelectionController {
                     }
                     if (isAncestor(existingFirm, targetFirm)) {
                         result.rejectValue("email", "error.email", "This user already belongs to a parent firm in this hierarchy and cannot be assigned to a child firm.");
-                        UserProfile cur2 = loginService.getCurrentProfile(authentication);
-                        Firm f2 = cur2.getFirm();
-                        String backUrl2 = (f2 != null && f2.getChildFirms() != null && !f2.getChildFirms().isEmpty())
-                                ? "/admin/multi-firm/user/add/profile/select/firm" : "/admin/users";
+                        String backUrl2 = "/admin/users";
                         model.addAttribute("backUrl", backUrl2);
                         return "admin-tools/select-user";
                     }
                     if (isAncestor(targetFirm, existingFirm)) {
                         result.rejectValue("email", "error.email", "This user already belongs to a child firm in this hierarchy and cannot be assigned to a parent firm.");
-                        UserProfile cur3 = loginService.getCurrentProfile(authentication);
-                        Firm f3 = cur3.getFirm();
-                        String backUrl3 = (f3 != null && f3.getChildFirms() != null && !f3.getChildFirms().isEmpty())
-                                ? "/admin/multi-firm/user/add/profile/select/firm" : "/admin/users";
+                        String backUrl3 = "/admin/users";
                         model.addAttribute("backUrl", backUrl3);
                         return "admin-tools/select-user";
                     }
@@ -170,7 +164,7 @@ public class FirmSelectionController {
             session.setAttribute("entraUser", entraUserDto);
 
             model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile - " + entraUserDto.getFullName());
-            return "redirect:/adminTools/user/add/profile/select/firm";
+            return "redirect:/adminFirmSelection/selectFirm";
         } else {
             log.debug("User not found for the given user email: {}", multiFirmUserForm.getEmail());
             result.rejectValue("email", "error.email",
@@ -205,7 +199,7 @@ public class FirmSelectionController {
         model.addAttribute("firmSearchResultCount", validatedCount);
         model.addAttribute("showSkipFirmSelection", showSkipFirmSelection);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Select firm");
-        return "adminFirmSelection/selectFirm";
+        return "admin-tools/add-user-firm";
     }
 
     @PostMapping("/selectFirm")
@@ -333,6 +327,7 @@ public class FirmSelectionController {
         session.removeAttribute("entraUser");
         session.removeAttribute("multiFirmUserForm");
         session.removeAttribute("firmSearchForm");
+        session.removeAttribute("firm");
         session.removeAttribute("delegateTargetFirmId");
     }
 

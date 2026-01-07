@@ -14,14 +14,14 @@
         <ol class="govuk-breadcrumbs__list">
             <li class="govuk-breadcrumbs__list-item">
                 <a class="govuk-breadcrumbs__link"
-                   href="/adminFirmSelection/user/add/profile">
+                   href="/adminFirmSelection/selectFirm">
 
                     < Back</a>
             </li>
         </ol>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
-        <form th:action="@{/adminTools/user/add/profile/select/firm}" th:method="post" th:object="${firmSearchForm}">
+        <form th:action="@{/adminFirmSelection/selectFirm}" th:method="post" th:object="${firmSearchForm}">
             <div th:if="${#fields.hasErrors()}">
                 <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
                     aria-describedby="error-summary-description" data-module="govuk-error-summary">
@@ -93,7 +93,7 @@
 
             <div class="govuk-button-group">
                 <button type="submit" class="govuk-button">Continue</button>
-                <a href="/adminFirmSelection/user/create/cancel" class="govuk-link">Cancel</a>
+                <a href="/adminFirmSelection/cancel" class="govuk-link">Cancel</a>
             </div>
         </form>
 

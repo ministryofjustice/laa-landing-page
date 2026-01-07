@@ -24,7 +24,7 @@
                 <h1 class="govuk-heading-l">
                     Check your answers and confirm
                 </h1>
-                <form th:action="@{/adminTools/user/add/profile/check-answers}" th:method="post">
+                <form th:action="@{/adminFirmSelection/check-answers}" th:method="post">
                     <div th:if="${errorMessage}">
                         <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
                             aria-describedby="error-summary-description" data-module="govuk-error-summary">
@@ -100,7 +100,7 @@
                     <div class="govuk-button-group">
                         <button type="submit" class="govuk-button"
                             onclick="this.disabled=true; this.form.submit();">Confirm</button>
-                        <a href="/adminFirmSelection/user/cancel" class="govuk-link">Cancel</a>
+                        <a href="/adminFirmSelection/cancel" class="govuk-link">Cancel</a>
                     </div>
 
                 </form>
