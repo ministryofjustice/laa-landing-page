@@ -115,20 +115,20 @@ public class ManageUsersTest extends BaseFrontEndTest {
 
     @Test
     @DisplayName("Verify offices tab is populated and exists for an external user")
-    void editUserOfficesAndVerify(){
+    void editUserOfficesAndVerify() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
-        manageUsersPage.clickFirstUserLink();
+        manageUsersPage.clickExternalUserLink();
         manageUsersPage.clickOfficesTab();
         assertTrue(page.locator(".govuk-summary-card:has-text('Access to All Offices') .govuk-summary-card__content").isVisible());
         manageUsersPage.clickOfficeChange();
         assertTrue(page.url().contains("/admin/users/edit/"));
         List<String> offices = List.of("Automation Office 1, City1, 12345 ()", "Automation Office 2, City2, 23456 ()");
         manageUsersPage.checkSelectedOffices(offices);
-        manageUsersPage.clickContinueOffices();
-        manageUsersPage.clickConfirmOffices();
+        manageUsersPage.clickContinueUserDetails();
+        manageUsersPage.clickConfirmButton();
         assertTrue(page.locator(".govuk-panel__title:has-text('User detail updated')").isVisible());
         manageUsersPage.clickGoBackToManageUsers();
-        manageUsersPage.clickFirstUserLink();
+        manageUsersPage.clickExternalUserLink();
         manageUsersPage.clickOfficesTab();
         assertTrue(page.locator(".govuk-table__header:has-text('Office Address')").isVisible());
         assertTrue(page.locator(".govuk-table__header:has-text('Account number')").isVisible());

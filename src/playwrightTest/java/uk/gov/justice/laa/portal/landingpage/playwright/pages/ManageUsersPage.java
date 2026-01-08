@@ -170,6 +170,14 @@ public class ManageUsersPage {
         firstLink.click();
     }
 
+    public void clickExternalUserLink() {
+        Locator externalUserLink = page.locator("a.govuk-link[href*='/admin/users/manage/']").getByText("Playwright FirmUserManager");
+        externalUserLink.waitFor(new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.VISIBLE)
+                .setTimeout(10000));
+        externalUserLink.click();
+    }
+
     public void clickServicesTab() {
         page.locator("a.govuk-tabs__tab[href*='#services']").click();
     }
@@ -195,11 +203,11 @@ public class ManageUsersPage {
         assertTrue(page.locator(".govuk-summary-list__row:has-text(\"Last name\") .govuk-summary-list__value").isVisible());
     }
 
-    public void clickOfficesTab(){
+    public void clickOfficesTab() {
         page.locator(".govuk-tabs__tab[href*='#offices']").click();
     }
 
-    public void clickOfficeChange(){
+    public void clickOfficeChange() {
         page.locator("#offices .govuk-link:has-text(\"Change\")").click();
     }
 
@@ -211,14 +219,6 @@ public class ManageUsersPage {
                 checkbox.check();
             }
         }
-    }
-
-    public void clickContinueOffices(){
-        continueButton.click();
-    }
-
-    public void clickConfirmOffices(){
-        confirmButton.click();
     }
 
     public void checkSelectedRoles(List<String> roles) {
