@@ -785,7 +785,7 @@ public class UserController {
 
     @GetMapping("/user/create/cancel/confirmation")
     public String confirmCancelCreateUser() {
-        return "cancel-add-user-confirmation.html";
+        return "cancel-add-user-confirmation";
     }
 
     @GetMapping("/user/create/cancel")
