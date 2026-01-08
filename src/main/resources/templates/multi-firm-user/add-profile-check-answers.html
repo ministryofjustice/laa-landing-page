@@ -131,7 +131,7 @@
                             <dl class="govuk-summary-list" th:if="${userOffices != null and !userOffices.isEmpty()}">
                                 <div th:each="office : ${userOffices}" class="govuk-summary-list__row">
                                     <dd class="govuk-summary-list__value">
-                                        <span th:text="${office.address.formattedAddress}"></span>
+                                        <span th:text="${office.address?.formattedAddress ?: 'Unknown'}"></span>
                                         (<span th:text="${office.code}"></span>)
                                     </dd>
                                     <dd class="govuk-summary-list__actions">

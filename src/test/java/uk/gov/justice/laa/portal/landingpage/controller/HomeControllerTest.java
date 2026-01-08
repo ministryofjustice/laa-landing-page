@@ -146,6 +146,91 @@ class HomeControllerTest {
         assertThat(model.getAttribute("user")).isNotNull();
         assertThat(model.getAttribute("userOffices")).isNotNull();
         assertThat(model.getAttribute("firm")).isNotNull();
+        assertThat(model.getAttribute("unrestrictedOfficeAccess")).isEqualTo(false);
+
+        @SuppressWarnings("unchecked")
+        Map<String, List<String>> appAssignments = (Map<String, List<String>>) model.getAttribute("appAssignments");
+        assertThat(appAssignments).hasSize(1)
+                .containsKey(appDto.getName())
+                .containsValues(List.of("Access"));
+
+        assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE))
+                .isEqualTo("My Account - first last");
+    }
+
+    @Test
+    void testMyAccountDetails_ReturnsCorrectViewAndModelAttributesWithAllOfficeSelected() {
+        // Arrange: Set up test data
+        Office office = Office.builder()
+                .code("OF1")
+                .address(Office.Address.builder().addressLine1("AL1").build())
+                .build();
+
+        Firm firm = Firm.builder()
+                .name("Firm one")
+                .code("F1")
+                .offices(Set.of(office))
+                .build();
+
+        EntraUser entraUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .firstName("first")
+                .lastName("last")
+                .email("test@email.com")
+                .build();
+
+        UserProfile userProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .firm(firm)
+                .offices(Set.of())
+                .userType(UserType.EXTERNAL)
+                .entraUser(entraUser)
+                .build();
+
+        App app = App.builder()
+                .id(UUID.randomUUID())
+                .name("App one")
+                .build();
+
+        AppRole appRole = AppRole.builder()
+                .id(UUID.randomUUID())
+                .name("Role one")
+                .authzRole(false)
+                .app(app)
+                .build();
+
+        app.setAppRoles(Set.of(appRole));
+        userProfile.setAppRoles(Set.of(appRole));
+        userProfile.setUnrestrictedOfficeAccess(true);
+
+        AppDto appDto = AppDto.builder()
+                .id(app.getId().toString())
+                .name("App one")
+                .build();
+
+        AppRoleDto appRoleDto = AppRoleDto.builder()
+                .id(appRole.getId().toString())
+                .name("Role one")
+                .app(appDto)
+                .build();
+
+        // Arrange: Mock service responses
+        when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
+        when(userService.getUserAppsByUserId(any())).thenReturn(Set.of(appDto));
+        when(userService.getUserAppRolesByUserId(any())).thenReturn(List.of(appRoleDto));
+        when(appService.getById(any())).thenReturn(Optional.of(app));
+
+        // Act
+        String viewName = homeController.myAccountDetails(model, authentication);
+
+        // Assert: Verify view name
+        assertEquals("home/my-account-details", viewName);
+
+        // Assert: Verify model attributes
+        assertThat(model.getAttribute("user")).isNotNull();
+        assertThat(model.getAttribute("userOffices")).isNotNull();
+        assertThat(model.getAttribute("firm")).isNotNull();
+        assertThat(model.getAttribute("unrestrictedOfficeAccess")).isEqualTo(true);
 
         @SuppressWarnings("unchecked")
         Map<String, List<String>> appAssignments = (Map<String, List<String>>) model.getAttribute("appAssignments");

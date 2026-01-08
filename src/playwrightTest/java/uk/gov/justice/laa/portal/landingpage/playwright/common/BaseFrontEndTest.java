@@ -10,7 +10,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.api.extension.TestWatcher;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -18,6 +17,8 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
+import uk.gov.justice.laa.portal.landingpage.playwright.pages.ManageUsersPage;
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -51,7 +52,10 @@ public abstract class BaseFrontEndTest {
     }
 
     @RegisterExtension
-    TestWatcher screenshotOnFailure = new ScreenshotWatcher();
+    ScreenshotWatcher screenshotOnFailure =
+            new ScreenshotWatcher(() -> page);
+
+
 
     @BeforeAll
     void beforeAll() {
@@ -93,5 +97,11 @@ public abstract class BaseFrontEndTest {
             LOGGER.log(Level.SEVERE, "Login failed for " + userEmail, e);
             throw e;
         }
+    }
+
+    protected ManageUsersPage loginAndGetManageUsersPage(TestUser user) {
+        loginAs(user.email);
+        page.navigate(String.format("http://localhost:%d/admin/users", port));
+        return new ManageUsersPage(page, port);
     }
 }

@@ -20,6 +20,8 @@ import org.springframework.stereotype.Service;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -99,10 +101,15 @@ public class LoginService {
         session.setAttribute("accessToken", tokenValue);
 
         EntraUserDto entraUser = userService.findUserByUserEntraId(principal.getAttribute("oid"));
-
-        List<UserType> userTypes = userService.findUserTypeByUserEntraId(entraUser.getEntraOid());
-
-        Set<LaaApplicationForView> userApps = userService.getUserAssignedAppsforLandingPage(entraUser.getId());
+        List<UserType> userTypes;
+        Set<LaaApplicationForView> userApps;
+        try {
+            userTypes = userService.findUserTypeByUserEntraId(entraUser.getEntraOid());
+            userApps = userService.getUserAssignedAppsforLandingPage(entraUser.getId());
+        } catch (Exception e) {
+            userTypes = new ArrayList<>();
+            userApps = new HashSet<>();
+        }
 
         return new UserSessionData(name, tokenValue, entraUser, userApps, userTypes);
     }

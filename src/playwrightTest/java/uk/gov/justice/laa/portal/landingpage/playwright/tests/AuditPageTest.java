@@ -24,7 +24,6 @@ public class AuditPageTest extends BaseFrontEndTest {
         return new AuditPage(page, port);
     }
 
-
     @Test
     @DisplayName("Filter audit table by Internal users only")
     void filterByUserType_internal() {
