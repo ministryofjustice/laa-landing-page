@@ -1338,12 +1338,13 @@ public class UserController {
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
         boolean isFirmUserManager = currentUserProfile.getAppRoles().stream()
                 .anyMatch(role -> "Firm User Manager".equals(role.getName()));
+        boolean shouldShowNoOffice = shouldShowNoOfficeOption(currentUserProfile, session);
         model.addAttribute("user", user);
         model.addAttribute("officesForm", officesForm);
         model.addAttribute("officeData", officeData);
         model.addAttribute("hasAllOffices", result.hasAllOffices());
         model.addAttribute("hasNoOffices", result.hasNoOffices());
-        model.addAttribute("shouldShowNoOffice", !isFirmUserManager);
+        model.addAttribute("shouldShowNoOffice", shouldShowNoOffice);
         // Store the model in session to handle validation errors later
         session.setAttribute("editUserOfficesModel", model);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user offices - " + user.getFullName());
@@ -1911,18 +1912,37 @@ public class UserController {
 
         officesForm.setOffices(selectedOffices);
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
-        boolean isFirmUserManager = currentUserProfile.getAppRoles().stream()
-                .anyMatch(role -> "Firm User Manager".equals(role.getName()));
+        boolean shouldShowNoOffice = shouldShowNoOfficeOption(currentUserProfile, session);
+
         model.addAttribute("user", user);
         model.addAttribute("officesForm", officesForm);
         model.addAttribute("officeData", officeData);
         model.addAttribute("hasAllOffices", result.hasAllOffices());
         model.addAttribute("hasNoOffices", result.hasNoOffices());
-        model.addAttribute("shouldShowNoOffice", !isFirmUserManager);
+        model.addAttribute("shouldShowNoOffice", shouldShowNoOffice );
         // Store the model in session to handle validation errors later
         session.setAttribute("grantAccessUserOfficesModel", model);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Select offices - " + user.getFullName());
         return "grant-access-user-offices";
+    }
+
+    private boolean shouldShowNoOfficeOption(UserProfile currentUserProfile,HttpSession session ) {
+        boolean shouldShowNoOffice =  false;
+        boolean isExternalUserAdmin = currentUserProfile.getAppRoles().stream()
+                .anyMatch(role -> "External User Admin".equals(role.getName()));
+        if(isExternalUserAdmin){
+            Set<String> allSelectedRoles = getSetFromHttpSession(session, "allSelectedRoles", String.class)
+                    .orElseThrow(() -> new RuntimeException("No roles selected for assignment"));
+
+            List<AppRoleDto> userAppRoles = appRoleService.getByIds(allSelectedRoles);
+            boolean isUserManager =  userAppRoles.stream()
+                    .anyMatch(role -> "Firm User Manager".equals(role.getName()));
+            if (!isUserManager) {
+                shouldShowNoOffice = true;
+            }
+
+        }
+        return shouldShowNoOffice;
     }
 
     private static AllOfficesNoOffice verifyAllOffices(Optional<List<String>> selectedOfficesOptional, UserProfileDto user, List<OfficeDto> userOffices) {
