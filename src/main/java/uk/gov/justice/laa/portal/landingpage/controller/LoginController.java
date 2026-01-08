@@ -120,6 +120,11 @@ public class LoginController {
         return new RedirectView("/error");
     }
 
+    @GetMapping("/logout/confirmation")
+    public String logoutConfirmation() {
+        return "logout-confirmation";
+    }
+
     @GetMapping("/logout-success")
     public String logoutSuccess() {
         return "logout";
