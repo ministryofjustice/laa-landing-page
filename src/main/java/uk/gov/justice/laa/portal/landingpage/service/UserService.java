@@ -54,6 +54,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
+import uk.gov.justice.laa.portal.landingpage.dto.UserFirmReassignmentEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
@@ -1908,8 +1909,8 @@ public class UserService {
         userProfileRepository.save(userProfile);
 
         // Log the reassignment event
-        uk.gov.justice.laa.portal.landingpage.dto.UserFirmReassignmentEvent reassignmentEvent =
-            new uk.gov.justice.laa.portal.landingpage.dto.UserFirmReassignmentEvent(
+        UserFirmReassignmentEvent reassignmentEvent =
+            new UserFirmReassignmentEvent(
                 performedByEntraUserId,
                 performedByName,
                 userProfile.getId().toString(),
