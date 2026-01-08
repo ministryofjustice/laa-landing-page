@@ -49,7 +49,7 @@ public class NotificationService {
             emailService.sendMail(
                     email,
                     notificationProperties.getDelegateFirmAccessEmailTemplate(),
-                    Map.of("first_name", firmName, "firm_name", firmName),
+                    Map.of("first_name", firstName, "firm_name", firmName),
                     String.format(
                             REFERENCE_TEMPLATE_ADD_MF_PROFILE,
                             firstName
@@ -65,7 +65,7 @@ public class NotificationService {
             emailService.sendMail(
                     email,
                     notificationProperties.getRevokeFirmAccessEmailTemplate(),
-                    Map.of("first_name", firmName, "firm_name", firmName),
+                    Map.of("first_name", firstName, "firm_name", firmName),
                     String.format(
                             REFERENCE_TEMPLATE_REVOKE_FIRM_ACCESS,
                             firstName
