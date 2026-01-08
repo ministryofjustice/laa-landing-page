@@ -83,7 +83,8 @@ databaseChangeLog:
                   VALUES (gen_random_uuid(), 'playwright-externalusermanager@playwrighttest.com', 'Playwright', 'ExternalUserManager', gen_random_uuid(), 'ACTIVE', false, 'System', 'System', NOW(), NOW())"
         - sql:
             dbms: postgresql
-            sql: "INSERT INTO user_profile (id, entra_user_id, active_profile, status, user_type, created_date, last_modified_date, created_by, last_modified_by, last_sync_successful)
+            sql: "INSERT INTO user_profile (id, entra_user_id, active_profile, status, user_type, created_date, 
+            last_modified_date, created_by, last_modified_by, last_sync_successful)
                   VALUES (gen_random_uuid(), (SELECT id FROM entra_user WHERE email = 'playwright-externalusermanager@playwrighttest.com'),
                   true, 'COMPLETE', 'INTERNAL', NOW(), NOW(), 'System', 'System', false)"
         - sql:
@@ -290,7 +291,8 @@ databaseChangeLog:
                 last_modified_date,
                 created_by,
                 last_modified_by,
-                last_sync_successful
+                last_sync_successful,
+                unrestricted_office_access
               )
               VALUES (
                 gen_random_uuid(),
@@ -304,7 +306,8 @@ databaseChangeLog:
                 NOW(),
                 'System',
                 'System',
-                false
+                false,
+                true
               );
 
         # Assign Firm User Manager role

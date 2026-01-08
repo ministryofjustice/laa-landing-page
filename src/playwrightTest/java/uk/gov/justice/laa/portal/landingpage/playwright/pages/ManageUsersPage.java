@@ -195,12 +195,30 @@ public class ManageUsersPage {
         assertTrue(page.locator(".govuk-summary-list__row:has-text(\"Last name\") .govuk-summary-list__value").isVisible());
     }
 
-
     public void clickOfficesTab(){
-        page.locator("a.govuk-tabs__tab[href*='#offices']").click();
+        page.locator(".govuk-tabs__tab[href*='#offices']").click();
     }
-    public void verifyOfficesTabPopulated() {
 
+    public void clickOfficeChange(){
+        page.locator("#offices .govuk-link:has-text(\"Change\")").click();
+    }
+
+    public void checkSelectedOffices(List<String> offices) {
+
+        for (String office : offices) {
+            Locator checkbox = page.getByLabel(office);
+            if (!checkbox.isChecked()) {
+                checkbox.check();
+            }
+        }
+    }
+
+    public void clickContinueOffices(){
+        continueButton.click();
+    }
+
+    public void clickConfirmOffices(){
+        confirmButton.click();
     }
 
     public void checkSelectedRoles(List<String> roles) {
