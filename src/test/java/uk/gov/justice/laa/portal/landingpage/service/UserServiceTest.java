@@ -69,7 +69,6 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import okhttp3.Request;
-import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -82,6 +81,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
@@ -94,7 +94,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
-import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
@@ -116,7 +115,7 @@ class UserServiceTest {
     @InjectMocks
     private UserService userService;
     @Mock
-    private LaaAppsConfig.LaaApplicationsList laaApplicationsList;
+    private AppService appService;
     @Mock
     private GraphServiceClient mockGraphServiceClient;
     @Mock
@@ -151,7 +150,7 @@ class UserServiceTest {
                 mockAppRoleRepository,
                 new MapperConfig().modelMapper(),
                 mockOfficeRepository,
-                laaApplicationsList,
+                appService,
                 techServicesClient,
                 mockUserProfileRepository,
                 mockRoleChangeNotificationService,
@@ -825,10 +824,14 @@ class UserServiceTest {
         App app1 = App.builder()
                 .id(appId1)
                 .name("Test App 1")
+                .ordinal(1)
+                .appType(AppType.LAA)
                 .build();
         App app2 = App.builder()
                 .id(appId2)
                 .name("Test App 2")
+                .ordinal(2)
+                .appType(AppType.LAA)
                 .build();
         AppRole appRole1 = AppRole.builder()
                 .id(appRoleId1)
@@ -855,11 +858,11 @@ class UserServiceTest {
                 .build();
         when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
         when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
-        List<LaaApplication> applications = Arrays.asList(
-                LaaApplication.builder().name("Test App 1").laaApplicationDetails("a//b//c").ordinal(0).build(),
-                LaaApplication.builder().name("Test App 2").laaApplicationDetails("d//e//f").ordinal(1).build(),
-                LaaApplication.builder().name("Test App 3").laaApplicationDetails("g//h//i").ordinal(2).build());
-        when(laaApplicationsList.getApplications()).thenReturn(applications);
+        List<AppDto> applications = Arrays.asList(
+                AppDto.builder().name("Test App 1").appType(AppType.LAA).ordinal(0).build(),
+                AppDto.builder().name("Test App 2").appType(AppType.LAA).ordinal(1).build(),
+                AppDto.builder().name("Test App 3").appType(AppType.LAA).ordinal(2).build());
+        when(appService.getAllAppsFromCache()).thenReturn(applications);
         // When
         Set<LaaApplicationForView> returnedApps = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
 
@@ -2443,8 +2446,8 @@ class UserServiceTest {
             UUID appId1 = UUID.randomUUID();
             UUID appId2 = UUID.randomUUID();
 
-            App app1 = App.builder().id(appId1).name("Test App 1").build();
-            App app2 = App.builder().id(appId2).name("Test App 2").build();
+            App app1 = App.builder().id(appId1).name("Test App 1").ordinal(1).appType(AppType.LAA).build();
+            App app2 = App.builder().id(appId2).name("Test App 2").ordinal(2).appType(AppType.LAA).build();
 
             AppRole role1 = AppRole.builder().app(app1).build();
             AppRole role2 = AppRole.builder().app(app2).build();
@@ -2463,12 +2466,12 @@ class UserServiceTest {
             when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
-            List<LaaApplication> configuredApps = List.of(
-                    LaaApplication.builder().name("Test App 1").ordinal(1).build(),
-                    LaaApplication.builder().name("Test App 2").ordinal(2).build(),
-                    LaaApplication.builder().name("Test App 3").ordinal(3).build(),
-                    LaaApplication.builder().name("Non-matching App").ordinal(4).build());
-            when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
+            List<AppDto> configuredApps = List.of(
+                    AppDto.builder().name("Test App 1").appType(AppType.LAA).ordinal(1).build(),
+                    AppDto.builder().name("Test App 2").appType(AppType.LAA).ordinal(2).build(),
+                    AppDto.builder().name("Test App 3").appType(AppType.LAA).ordinal(3).build(),
+                    AppDto.builder().name("Non-matching App").appType(AppType.LAA).ordinal(4).build());
+            when(appService.getAllAppsFromCache()).thenReturn(configuredApps);
 
             // Act
             Set<LaaApplicationForView> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
@@ -2501,9 +2504,9 @@ class UserServiceTest {
             when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
-            List<LaaApplication> configuredApps = List.of(
-                    LaaApplication.builder().name("Different App").ordinal(1).build());
-            when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
+            List<AppDto> configuredApps = List.of(
+                    AppDto.builder().name("Different App").appType(AppType.LAA).ordinal(1).build());
+            when(appService.getAllAppsFromCache()).thenReturn(configuredApps);
 
             // Act
             Set<LaaApplicationForView> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
@@ -2517,9 +2520,9 @@ class UserServiceTest {
             // Arrange
             UUID entraUserId = UUID.randomUUID();
             UUID userProfileId = UUID.randomUUID();
-            App app1 = App.builder().name("App C").build();
-            App app2 = App.builder().name("App A").build();
-            App app3 = App.builder().name("App B").build();
+            App app1 = App.builder().name("App C").ordinal(3).appType(AppType.LAA).build();
+            App app2 = App.builder().name("App A").ordinal(1).appType(AppType.LAA).build();
+            App app3 = App.builder().name("App B").ordinal(2).appType(AppType.LAA).build();
 
             AppRole role1 = AppRole.builder().app(app1).build();
             AppRole role2 = AppRole.builder().app(app2).build();
@@ -2539,11 +2542,11 @@ class UserServiceTest {
             when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
-            List<LaaApplication> configuredApps = List.of(
-                    LaaApplication.builder().name("App C").ordinal(3).build(),
-                    LaaApplication.builder().name("App A").ordinal(1).build(),
-                    LaaApplication.builder().name("App B").ordinal(2).build());
-            when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
+            List<AppDto> configuredApps = List.of(
+                    AppDto.builder().name("App C").ordinal(3).build(),
+                    AppDto.builder().name("App A").ordinal(1).build(),
+                    AppDto.builder().name("App B").ordinal(2).build());
+            when(appService.getAllAppsFromCache()).thenReturn(configuredApps);
 
             // Act
             Set<LaaApplicationForView> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
@@ -2559,10 +2562,17 @@ class UserServiceTest {
         @Test
         void getUserAssignedAppsforLandingPage_returnsDefaultDescription() {
             // Arrange
+            UUID appAsId = UUID.randomUUID();
+            UUID appBsId = UUID.randomUUID();
+            UUID appCsId = UUID.randomUUID();
             UUID entraUserId = UUID.randomUUID();
             UUID userProfileId = UUID.randomUUID();
-            App app1 = App.builder().name("App C").build();
-            App app2 = App.builder().name("App A").build();
+            App app1 = App.builder().id(appCsId).name("App C").description("Default description for App C").ordinal(3).appType(AppType.LAA).build();
+            App app2 = App.builder().id(appAsId).name("App A").description("Default description for App A").ordinal(1).appType(AppType.LAA)
+                    .alternativeAppDescription(App.AlternativeAppDescription.builder()
+                            .assignedAppId(appBsId)
+                            .alternativeDescription("Alternative description for App A").build())
+                    .build();
 
             AppRole role1 = AppRole.builder().app(app1).build();
             AppRole role2 = AppRole.builder().app(app2).build();
@@ -2581,15 +2591,15 @@ class UserServiceTest {
             when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
-            List<LaaApplication> configuredApps = List.of(
-                    LaaApplication.builder().name("App C").ordinal(3).build(),
-                    LaaApplication.builder().name("App A").ordinal(1).description("Default description for App A")
-                            .descriptionIfAppAssigned(LaaApplication.DescriptionIfAppAssigned.builder()
-                                    .appAssigned("App B")
-                                    .description("Alternative description for App A").build())
+            List<AppDto> configuredApps = List.of(
+                    AppDto.builder().id(appCsId.toString()).name("App C").ordinal(3).description("Default description for App C").build(),
+                    AppDto.builder().id(appAsId.toString()).name("App A").ordinal(1).description("Default description for App A")
+                            .alternativeAppDescription(AppDto.AlternativeAppDescriptionDto.builder()
+                                    .assignedAppId(appBsId.toString())
+                                    .alternativeDescription("Alternative description for App A").build())
                             .build(),
-                    LaaApplication.builder().name("App B").ordinal(2).build());
-            when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
+                    AppDto.builder().id(appBsId.toString()).name("App B").ordinal(2).description("Default description for App B").build());
+            when(appService.getAllAppsFromCache()).thenReturn(configuredApps);
 
             // Act
             Set<LaaApplicationForView> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
@@ -2605,11 +2615,18 @@ class UserServiceTest {
         @Test
         void getUserAssignedAppsforLandingPage_returnsWithAlternativeDescription() {
             // Arrange
+            UUID appAsId = UUID.randomUUID();
+            UUID appBsId = UUID.randomUUID();
+            UUID appCsId = UUID.randomUUID();
             UUID entraUserId = UUID.randomUUID();
             UUID userProfileId = UUID.randomUUID();
-            App app1 = App.builder().name("App C").build();
-            App app2 = App.builder().name("App A").build();
-            App app3 = App.builder().name("App B").build();
+            App app1 = App.builder().id(appCsId).name("App C").ordinal(3).appType(AppType.LAA).build();
+            App app2 = App.builder().id(appAsId).name("App A").ordinal(1).appType(AppType.LAA)
+                    .alternativeAppDescription(App.AlternativeAppDescription.builder()
+                            .assignedAppId(appBsId)
+                            .alternativeDescription("Alternative description for App A").build())
+                    .build();
+            App app3 = App.builder().id(appBsId).name("App B").ordinal(2).appType(AppType.LAA).build();
 
             AppRole role1 = AppRole.builder().app(app1).build();
             AppRole role2 = AppRole.builder().app(app2).build();
@@ -2629,15 +2646,15 @@ class UserServiceTest {
             when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
-            List<LaaApplication> configuredApps = List.of(
-                    LaaApplication.builder().name("App C").ordinal(3).build(),
-                    LaaApplication.builder().name("App A").ordinal(1)
-                            .descriptionIfAppAssigned(LaaApplication.DescriptionIfAppAssigned.builder()
-                                    .appAssigned("App B")
-                                    .description("Alternative description for App A").build())
+            List<AppDto> configuredApps = List.of(
+                    AppDto.builder().id(appCsId.toString()).name("App C").ordinal(3).build(),
+                    AppDto.builder().id(appAsId.toString()).name("App A").ordinal(1)
+                            .alternativeAppDescription(AppDto.AlternativeAppDescriptionDto.builder()
+                                    .assignedAppId(appBsId.toString())
+                                    .alternativeDescription("Alternative description for App A").build())
                             .build(),
-                    LaaApplication.builder().name("App B").ordinal(2).build());
-            when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
+                    AppDto.builder().id(appBsId.toString()).name("App B").ordinal(2).build());
+            when(appService.getAllAppsFromCache()).thenReturn(configuredApps);
 
             // Act
             Set<LaaApplicationForView> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
