@@ -1936,7 +1936,7 @@ public class UserController {
         boolean isAdminRoles = RolesUtils.isCurrentProfileExternalUserAdmin(currentUserProfile)
                 || RolesUtils.isCurrentProfileGlobalAdmin(currentUserProfile);
         if (isAdminRoles) {
-            //when is manage access and the user arrives in the office screen we need to look what option the user selects in the role screen previously when is
+            // When the user is still pending, we need to use the option they previously selected on the role screen
             if (selectedUser.getUserProfileStatus().equals(UserProfileStatus.PENDING)) {
                 Optional<Set<String>> allSelectedRoles = getSetFromHttpSession(session, "allSelectedRoles", String.class);
                 List<AppRoleDto> userAppRoles = appRoleService.getByIds(allSelectedRoles.get());
