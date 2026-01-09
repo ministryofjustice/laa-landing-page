@@ -1,17 +1,26 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.modelmapper.ModelMapper;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
+import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -20,8 +29,34 @@ class AppServiceTest {
     @Mock
     private AppRepository appRepository;
 
-    @InjectMocks
+    @Mock
+    private CacheManager cacheManager;
+
+    @Mock
+    private Cache cache;
+
     private AppService appService;
+
+    private App app;
+
+    private AppDto appDto;
+
+    @BeforeEach
+    void setUp() {
+        appService = new AppService(appRepository, new ModelMapper(), cacheManager);
+        UUID id = UUID.randomUUID();
+        app = App.builder()
+                .id(id)
+                .name("Test App")
+                .description("Sample description")
+                .build();
+
+        appDto = AppDto.builder()
+                .name("Test App")
+                .description("Sample description")
+                .build();
+    }
+
 
     @Test
     void getById_ReturnsApp_WhenFound() {
@@ -50,4 +85,63 @@ class AppServiceTest {
         // Assert
         assertThat(result).isEmpty();
     }
+
+
+    @Test
+    void testFindAll_ShouldReturnMappedDtos() {
+        when(appRepository.findAll()).thenReturn(Collections.singletonList(app));
+
+        List<AppDto> result = appService.findAll();
+
+        assertThat(result)
+                .isNotNull()
+                .hasSize(1)
+                .containsExactly(appDto);
+
+        verify(appRepository).findAll();
+    }
+
+    @Test
+    void testClearCache_ShouldClearAllAppsCache() {
+        when(cacheManager.getCache("all_apps")).thenReturn(cache);
+
+        appService.clearCache();
+
+        verify(cacheManager).getCache("all_apps");
+        verify(cache).clear();
+    }
+
+    @Test
+    void testGetAllAppsFromCache_WhenCacheHit_ShouldReturnCachedApps() {
+        when(cacheManager.getCache(CachingConfig.LIST_OF_APPS_CACHE)).thenReturn(cache);
+        when(cache.get("all_apps")).thenReturn(() -> Collections.singletonList(appDto));
+
+        List<AppDto> result = appService.getAllAppsFromCache();
+
+        assertThat(result)
+                .isNotNull()
+                .hasSize(1)
+                .containsExactly(appDto);
+
+        verify(cache).get("all_apps");
+        verify(appRepository, never()).findAll();
+    }
+
+    @Test
+    void testGetAllAppsFromCache_WhenCacheMiss_ShouldFetchFromRepositoryAndPutInCache() {
+        when(cacheManager.getCache(CachingConfig.LIST_OF_APPS_CACHE)).thenReturn(cache);
+        when(cache.get("all_apps")).thenReturn(null);
+        when(appRepository.findAll()).thenReturn(Collections.singletonList(app));
+
+        List<AppDto> result = appService.getAllAppsFromCache();
+
+        assertThat(result)
+                .isNotNull()
+                .hasSize(1)
+                .containsExactly(appDto);
+
+        verify(appRepository).findAll();
+        verify(cache).put("all_apps", result);
+    }
+
 }
