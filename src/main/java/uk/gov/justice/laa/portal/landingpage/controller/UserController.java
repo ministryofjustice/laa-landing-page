@@ -61,6 +61,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
@@ -1926,21 +1927,22 @@ public class UserController {
         return "grant-access-user-offices";
     }
 
-    private boolean shouldShowNoOfficeOption(UserProfile currentUserProfile,UserProfileDto selectedUser, HttpSession session ) {
+    private boolean shouldShowNoOfficeOption(UserProfile currentUserProfile,UserProfileDto selectedUser, HttpSession session) {
+        if (selectedUser.getEntraUser().isMultiFirmUser()){
+            return false;
+        }
         boolean shouldShowNoOffice = false;
         boolean isProvideAdmin = false;
         boolean isAdminRoles = RolesUtils.isCurrentProfileExternalUserAdmin(currentUserProfile)
                 || RolesUtils.isCurrentProfileGlobalAdmin(currentUserProfile);
         if (isAdminRoles) {
-
-            //get user selection
-            Optional<Set<String>> allSelectedRoles = getSetFromHttpSession(session, "allSelectedRoles", String.class);
-
-            if (allSelectedRoles.isEmpty()) {
-                isProvideAdmin = RolesUtils.isProvideAdmin(selectedUser.getAppRoles());
-            } else {
+            //when is manage access and the user arrives in the office screen we need to look what option the user selects in the role screen previously when is
+            if (selectedUser.getUserProfileStatus().equals(UserProfileStatus.PENDING)) {
+                Optional<Set<String>> allSelectedRoles = getSetFromHttpSession(session, "allSelectedRoles", String.class);
                 List<AppRoleDto> userAppRoles = appRoleService.getByIds(allSelectedRoles.get());
                 isProvideAdmin = RolesUtils.isProvideAdmin(userAppRoles);
+            } else {
+                isProvideAdmin = RolesUtils.isProvideAdmin(selectedUser.getAppRoles());
             }
 
             if (!isProvideAdmin) {
