@@ -77,7 +77,7 @@
                                         You can search using one or both boxes
                                     </div>
 
-                                    <form method="get" th:action="@{/admin/users}" role="search" id="search-form">
+                                    <form method="get" th:action="@{/admin/users}" role="search" id="search-form" aria-label="Search by firm name or code">
                                         <div class="search-inputs-container">
 
                                             <!-- Search by firm name or firm code -->
@@ -109,7 +109,6 @@
                                                                 autocomplete="off" aria-autocomplete="list"
                                                                 aria-expanded="false"
                                                                 aria-controls="firmSearch__listbox"
-                                                                aria-describedby="firm-hint"
                                                                 aria-owns="firmSearch__listbox" role="combobox"
                                                                 th:value="${firmSearch.firmSearch}">
                                                             <input type="hidden" id="selectedFirmId"
@@ -170,7 +169,7 @@
 
                         <!-- Show firm admins checkbox -->
                         <div class="govuk-!-padding-top-2 govuk-!-padding-left-2">
-                            <form method="get" th:action="@{/admin/users}" role="search" id="firm-admins-form">
+                            <form method="get" th:action="@{/admin/users}" role="search" id="firm-admins-form" aria-label="Filter users by type">
                                 <!-- Hidden inputs to preserve current search state -->
                                 <input th:if="${sort != null and sort != ''}" type="hidden" name="sort"
                                     th:value="${sort}">
@@ -734,6 +733,12 @@
             <div class="table-container" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
                 <table class="govuk-table" data-id-prefix="users-"
                     style="table-layout: fixed; min-width: 768px; width: 100%;">
+                    <caption class="govuk-table__caption">
+                        User list
+                        <span class="govuk-visually-hidden">
+                            (column headers with buttons are sortable)
+                        </span>
+                    </caption>
                     <thead class="govuk-table__head">
                         <tr class="govuk-table__row">
                             <th scope="col" class="govuk-table__header"

@@ -56,7 +56,10 @@
                                         <span th:text="${user.email}"></span>
                                     </dd>
                                     <dd class="govuk-summary-list__actions">
-                                        <a class="govuk-link" href="/admin/user/create/details">Change</a>
+                                        <a class="govuk-link" href="/admin/user/create/details">
+                                            Change
+                                            <span class="govuk-visually-hidden"> email</span>
+                                        </a>
                                     </dd>
                                 </div>
                                 <div class="govuk-summary-list__row">
@@ -65,7 +68,10 @@
                                         <span th:text="${user.firstName}"></span>
                                     </dd>
                                     <dd class="govuk-summary-list__actions">
-                                        <a class="govuk-link" href="/admin/user/create/details">Change</a>
+                                        <a class="govuk-link" href="/admin/user/create/details">
+                                            Change
+                                            <span class="govuk-visually-hidden"> first name</span>
+                                        </a>
                                     </dd>
                                 </div>
                                 <div class="govuk-summary-list__row">
@@ -74,7 +80,10 @@
                                         <span th:text="${user.lastName}"></span>
                                     </dd>
                                     <dd class="govuk-summary-list__actions">
-                                        <a class="govuk-link" href="/admin/user/create/details">Change</a>
+                                        <a class="govuk-link" href="/admin/user/create/details">
+                                            Change
+                                            <span class="govuk-visually-hidden"> last name</span>
+                                        </a>
                                     </dd>
                                 </div>
                                 <div class="govuk-summary-list__row">
@@ -83,7 +92,10 @@
                                         <span th:text="${isUserManager} ? 'Provider Admin' : 'Provider User'"></span>
                                     </dd>
                                     <dd class="govuk-summary-list__actions">
-                                        <a class="govuk-link" href="/admin/user/create/details">Change</a>
+                                        <a class="govuk-link" href="/admin/user/create/details">
+                                            Change
+                                            <span class="govuk-visually-hidden"> is user manager</span>
+                                        </a>
                                     </dd>
                                 </div>
                                 <div class="govuk-summary-list__row">
@@ -92,7 +104,10 @@
                                         <span th:text="${isMultiFirmUser} ? 'Yes' : 'No'"></span>
                                     </dd>
                                     <dd class="govuk-summary-list__actions">
-                                        <a class="govuk-link" href="/admin/user/create/multi-firm">Change</a>
+                                        <a class="govuk-link" href="/admin/user/create/multi-firm">
+                                            Change
+                                            <span class="govuk-visually-hidden"> is multi firm user</span>
+                                        </a>
                                     </dd>
                                 </div>
                                 <div class="govuk-summary-list__row"
@@ -107,7 +122,7 @@
                                     </dd>
                                     <dd class="govuk-summary-list__actions">
                                         <a class="govuk-link" href="/admin/user/create/firm">
-                                            <span>Change</span>
+                                            Change
                                             <span class="govuk-visually-hidden"> firm</span>
                                         </a>
                                     </dd>
@@ -122,9 +137,8 @@
                     <div class="govuk-button-group">
                         <button type="submit" class="govuk-button"
                             onclick="this.disabled=true; this.form.submit();">Create new user</button>
-                        <a href="/admin/user/create/cancel" class="govuk-link">Cancel</a>
+                        <a th:href="@{cancel/confirmation}" class="govuk-link">Cancel</a>
                     </div>
-
                 </form>
             </div>
         </div>

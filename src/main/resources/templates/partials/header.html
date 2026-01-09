@@ -29,9 +29,9 @@
             </a>
         </div>
         <div sec:authorize="isAuthenticated()" class="logout">
-            <strong><form th:action="@{/home/my-account-details}" method="get"  style="display: inline;"><button type="submit"><span th:text="${currentUser.name}"></span></button></form></strong>
+            <strong><a th:href="@{/home/my-account-details}" style="display: inline;" class="govuk-header__link"><span class="govuk-visually-hidden">Open account page for</span><span th:text="${currentUser.name}"></span></a></strong>
             <strong> | </strong>
-            <strong><form th:action="@{/logout}" method="post"  style="display: inline;"><button type="submit">Sign out</button></form></strong>
+            <strong><a th:href="@{/logout/confirmation}" style="display: inline;" class="govuk-header__link"><span>Sign out</span></a></strong>
         </div>
     </div>
 </header>

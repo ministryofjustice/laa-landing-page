@@ -55,7 +55,7 @@
                         Email
                     </label>
                     <div th:if="${#fields.hasErrors('email')}" class="govuk-error-message">
-                        <p th:each="err : ${#fields.errors('email')}" th:text="${err}"></p>
+                        <p id="email-error" th:each="err : ${#fields.errors('email')}" th:text="${err}"></p>
                     </div>
                     <input class="govuk-input govuk-!-width-one-third" name="email" th:value="*{email}" id="email"
                         th:aria-describedby="${#fields.hasErrors('email')} ? 'email-error' : null" />
@@ -67,7 +67,7 @@
                         First name
                     </label>
                     <div th:if="${#fields.hasErrors('firstName')}" class="govuk-error-message">
-                        <p th:each="err : ${#fields.errors('firstName')}" th:text="${err}"></p>
+                        <p id="firstName-error" th:each="err : ${#fields.errors('firstName')}" th:text="${err}"></p>
                     </div>
                     <input class="govuk-input govuk-!-width-one-third" name="firstName" type="text"
                         th:value="*{firstName}" id="firstName"
@@ -79,7 +79,7 @@
                         Last name
                     </label>
                     <div th:if="${#fields.hasErrors('lastName')}" class="govuk-error-message">
-                        <p th:each="err : ${#fields.errors('lastName')}" th:text="${err}"></p>
+                        <p id="lastName-error" th:each="err : ${#fields.errors('lastName')}" th:text="${err}"></p>
                     </div>
                     <input class="govuk-input govuk-!-width-one-third" name="lastName" type="text"
                         th:value="*{lastName}" id="lastName"
@@ -121,7 +121,7 @@
 
                 <div class="govuk-button-group">
                     <button type="submit" class="govuk-button">Continue</button>
-                    <a href="/admin/user/create/cancel" class="govuk-link">Cancel</a>
+                    <a th:href="@{cancel/confirmation}" class="govuk-link">Cancel</a>
                 </div>
             </form>
         </fieldset>

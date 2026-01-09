@@ -36,7 +36,7 @@
             <label class="govuk-label" for="reason" th:if="${fieldErrorMessage == null || fieldErrorMessage == ''}">>Please enter a reason (minimum 10 characters).</label>
             <span class="govuk-error-message" th:if="${fieldErrorMessage}">
                 <span class="govuk-visually-hidden">Error:</span>
-                <span th:text="${fieldErrorMessage}"></span>
+                <span id="reason-error" th:text="${fieldErrorMessage}"></span>
             </span>
             <textarea class="govuk-textarea" id="reason" name="reason" rows="7" th:classappend="${fieldErrorMessage} ? 'govuk-textarea--error' : ''" th:attr="aria-describedby=${fieldErrorMessage} ? 'reason-error' : null"></textarea>
         </div>
