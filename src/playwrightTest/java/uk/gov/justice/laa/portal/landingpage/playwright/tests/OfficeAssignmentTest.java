@@ -31,7 +31,7 @@ public class OfficeAssignmentTest extends BaseFrontEndTest {
     @Order(2)
     void showOfficeTabForExternalUser() {
         UserProfilePage userProfilePage =
-                loginAndGetUserProfilePage(TestUser.GLOBAL_ADMIN, "playwright-firmusermanager@playwrighttest.com");
+                loginAndGetUserProfilePage(TestUser.GLOBAL_ADMIN, "playwright-extofficeuser@playwrighttest.com");
 
         assertTrue(userProfilePage.getOfficesTab().isVisible());
     }
@@ -40,7 +40,7 @@ public class OfficeAssignmentTest extends BaseFrontEndTest {
     @Order(3)
     void assignNoOfficeForExternalUser() {
         UserProfilePage userProfilePage =
-                loginAndGetUserProfilePage(TestUser.GLOBAL_ADMIN, "playwright-firmusermanager@playwrighttest.com");
+                loginAndGetUserProfilePage(TestUser.GLOBAL_ADMIN, "playwright-extofficeuser@playwrighttest.com");
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
         assertTrue(userProfilePage.getOfficesTab().isVisible());
@@ -77,7 +77,7 @@ public class OfficeAssignmentTest extends BaseFrontEndTest {
     @Order(4)
     void assignAllOfficesForExternalUser() {
         UserProfilePage userProfilePage =
-                loginAndGetUserProfilePage(TestUser.GLOBAL_ADMIN, "playwright-firmusermanager@playwrighttest.com");
+                loginAndGetUserProfilePage(TestUser.GLOBAL_ADMIN, "playwright-extofficeuser@playwrighttest.com");
 
         assertTrue(userProfilePage.getOfficesTab().isVisible());
         userProfilePage.getOfficesTab().click();
@@ -117,7 +117,7 @@ public class OfficeAssignmentTest extends BaseFrontEndTest {
     @Order(5)
     void externalUserViewerCanNotChangeOffice(){
         UserProfilePage userProfilePage =
-                loginAndGetUserProfilePage(TestUser.EXTERNAL_USER_VIEWER, "playwright-firmusermanager@playwrighttest.com");
+                loginAndGetUserProfilePage(TestUser.EXTERNAL_USER_VIEWER, "playwright-extofficeuser@playwrighttest.com");
 
         assertTrue(userProfilePage.getOfficesTab().isVisible());
         userProfilePage.getOfficesTab().click();
