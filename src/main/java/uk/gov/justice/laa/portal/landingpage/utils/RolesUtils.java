@@ -11,20 +11,20 @@ import static uk.gov.justice.laa.portal.landingpage.utils.UserRoleType.GLOBAL_AD
 
 public class RolesUtils {
 
-    public static boolean isCurrentProfileExternalUserAdmin(UserProfile currentUserProfile){
+    public static boolean isCurrentProfileExternalUserAdmin(UserProfile currentUserProfile) {
         return currentUserProfile.getAppRoles().stream()
                 .anyMatch(role -> EXTERNAL_USER_ADMIN.getDescription().equals(role.getName()));
 
     }
 
-    public static boolean isCurrentProfileGlobalAdmin(UserProfile currentUserProfile){
+    public static boolean isCurrentProfileGlobalAdmin(UserProfile currentUserProfile) {
         return currentUserProfile.getAppRoles().stream()
                 .anyMatch(role -> GLOBAL_ADMIN.getDescription().equals(role.getName()));
 
     }
 
     public static boolean isProvideAdmin(List<AppRoleDto> userAppRoles) {
-    return userAppRoles.stream()
-            .anyMatch(role -> FIRM_USER_MANAGER.getDescription().equals(role.getName()));
+        return userAppRoles.stream()
+                .anyMatch(role -> FIRM_USER_MANAGER.getDescription().equals(role.getName()));
     }
 }

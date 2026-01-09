@@ -1920,15 +1920,15 @@ public class UserController {
         model.addAttribute("officeData", officeData);
         model.addAttribute("hasAllOffices", result.hasAllOffices());
         model.addAttribute("hasNoOffices", result.hasNoOffices());
-        model.addAttribute("shouldShowNoOffice", shouldShowNoOffice );
+        model.addAttribute("shouldShowNoOffice", shouldShowNoOffice);
         // Store the model in session to handle validation errors later
         session.setAttribute("grantAccessUserOfficesModel", model);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Select offices - " + user.getFullName());
         return "grant-access-user-offices";
     }
 
-    private boolean shouldShowNoOfficeOption(UserProfile currentUserProfile,UserProfileDto selectedUser, HttpSession session) {
-        if (selectedUser.getEntraUser().isMultiFirmUser()){
+    private boolean shouldShowNoOfficeOption(UserProfile currentUserProfile, UserProfileDto selectedUser, HttpSession session) {
+        if (selectedUser.getEntraUser().isMultiFirmUser()) {
             return false;
         }
         boolean shouldShowNoOffice = false;
