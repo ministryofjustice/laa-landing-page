@@ -34,8 +34,13 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Value;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -67,9 +72,11 @@ import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientExcepti
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
+import uk.gov.justice.laa.portal.landingpage.forms.FirmReassignmentForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm;
 import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
+import uk.gov.justice.laa.portal.landingpage.forms.ReassignmentReasonForm;
 import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
@@ -345,6 +352,12 @@ public class UserController {
         model.addAttribute("isInternalUser", isInternalUser);
 
         model.addAttribute("canEditUser", canEditUser);
+        
+        // Check if current user can reassign firms (External User Admin permission + target is external user)
+        boolean canReassignFirm = externalUser
+                && accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_FIRM);
+        model.addAttribute("canReassignFirm", canReassignFirm);
+        
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
         final boolean canDeleteUser = accessControlService.canDeleteUser(id);
         model.addAttribute("canDeleteUser", canDeleteUser);
@@ -1243,7 +1256,7 @@ public class UserController {
                 .flatMap(List::stream)
                 .toList();
         List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
-                .filter(role -> !roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, role.getApp()))
+                .filter(role -> !roleAssignmentService.canAssignRole(editorUserProfile.getAppRoles(), List.of(role.getId())))
                 .map(AppRoleDto::getId)
                 .toList();
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
@@ -1678,7 +1691,7 @@ public class UserController {
 
         session.setAttribute("grantAccessSelectedApps", selectedApps);
         List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
-                .filter(role -> !roleAssignmentService.canUserAssignRolesForApp(currentUserProfile, role.getApp()))
+                .filter(role -> !roleAssignmentService.canAssignRole(currentUserProfile.getAppRoles(), List.of(role.toString())))
                 .map(AppRoleDto::getId)
                 .toList();
         session.setAttribute("nonEditableRoles", nonEditableRoles);
@@ -2292,6 +2305,422 @@ public class UserController {
         } catch (RuntimeException runtimeException) {
             log.error("Error sending activation code for user profile: {}", id, runtimeException);
             throw runtimeException;
+        }
+    }
+
+    /**
+     * Display firm reassignment page for external users
+     * Only available to users with EDIT_USER_FIRM permission (External User Admins)
+     */
+    @GetMapping("/users/reassign-firm/{id}")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_FIRM)")
+    public String showFirmReassignmentPage(@PathVariable String id,
+            @RequestParam(value = "selectedFirmId", required = false) String selectedFirmId,
+            @RequestParam(value = "selectedFirmName", required = false) String selectedFirmName,
+            @RequestParam(value = "reason", required = false) String reason,
+            Model model) {
+        try {
+            Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
+
+            if (optionalUser.isEmpty()) {
+                log.warn("User not found for reassignment: {}", id);
+                model.addAttribute("errorMessage", "User not found");
+                return "error";
+            }
+
+            UserProfileDto user = optionalUser.get();
+
+            if (user.getUserType() != UserType.EXTERNAL) {
+                log.warn("Attempted to reassign internal user: {}", id);
+                model.addAttribute("errorMessage", "Only external users can be reassigned to different firms");
+                return "error";
+            }
+
+            FirmReassignmentForm form = new FirmReassignmentForm();
+            if (selectedFirmId != null && selectedFirmName != null) {
+                form.setSelectedFirmId(UUID.fromString(selectedFirmId));
+                form.setFirmSearch(selectedFirmName);
+            }
+
+            model.addAttribute("user", user);
+            model.addAttribute("firmReassignmentForm", form);
+
+            if (reason != null && !reason.trim().isEmpty()) {
+                model.addAttribute("preservedReason", reason);
+            }
+
+            return "reassign-firm/select-firm";
+
+        } catch (Exception e) {
+            log.error("Error loading firm reassignment page for user {}: {}", id, e.getMessage(), e);
+            model.addAttribute("errorMessage", "An error occurred while loading the page");
+            return "error";
+        }
+    }
+
+    /**
+     * Handle firm selection step of reassignment process
+     */
+    @PostMapping("/users/reassign-firm/{id}/select-firm")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_FIRM)")
+    public String processFirmSelection(@PathVariable String id,
+            @Valid @ModelAttribute("firmReassignmentForm") FirmReassignmentForm form,
+            BindingResult bindingResult,
+            Model model,
+            RedirectAttributes redirectAttributes) {
+        try {
+            Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
+
+            if (optionalUser.isEmpty()) {
+                log.warn("User not found for reassignment: {}", id);
+                redirectAttributes.addFlashAttribute("errorMessage", "User not found");
+                return "redirect:/admin/users/manage/" + id;
+            }
+
+            UserProfileDto user = optionalUser.get();
+
+            if (user.getUserType() != UserType.EXTERNAL) {
+                log.warn("Attempted to reassign internal user: {}", id);
+                model.addAttribute("errorMessage", "Only external users can be reassigned to different firms");
+                model.addAttribute("user", user);
+                return "reassign-firm/select-firm";
+            }
+
+            if (bindingResult.hasFieldErrors("firmSearch") || bindingResult.hasFieldErrors("selectedFirmId")) {
+                model.addAttribute("user", user);
+                return "reassign-firm/select-firm";
+            }
+
+            if (form.getSelectedFirmId() == null) {
+                model.addAttribute("errorMessage", "Please select a firm from the search results");
+                model.addAttribute("user", user);
+                return "reassign-firm/select-firm";
+            }
+
+            FirmDto selectedFirm = firmService.getFirm(form.getSelectedFirmId());
+
+            if (selectedFirm == null) {
+                model.addAttribute("errorMessage", "Selected firm not found");
+                model.addAttribute("user", user);
+                return "reassign-firm/select-firm";
+            }
+
+            redirectAttributes.addAttribute("selectedFirmId", form.getSelectedFirmId());
+            redirectAttributes.addAttribute("selectedFirmName", selectedFirm.getName());
+
+            return "redirect:/admin/users/reassign-firm/" + id + "/reason";
+
+        } catch (Exception e) {
+            log.error("Error processing firm selection for user {}: {}", id, e.getMessage(), e);
+            model.addAttribute("errorMessage", "An error occurred while processing your selection");
+            userService.getUserProfileById(id).ifPresent(u -> model.addAttribute("user", u));
+            return "reassign-firm/select-firm";
+        }
+    }
+
+    /**
+     * Display reason page for firm reassignment
+     */
+    @GetMapping("/users/reassign-firm/{id}/reason")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_FIRM)")
+    public String showReassignmentReasonPage(@PathVariable String id,
+            @RequestParam("selectedFirmId") String selectedFirmId,
+            @RequestParam("selectedFirmName") String selectedFirmName,
+            @RequestParam(value = "reason", required = false) String existingReason,
+            Model model) {
+        try {
+            Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
+
+            if (optionalUser.isEmpty()) {
+                log.warn("User not found for reassignment: {}", id);
+                model.addAttribute("errorMessage", "User not found");
+                return "error";
+            }
+
+            UserProfileDto user = optionalUser.get();
+
+            if (user.getUserType() != UserType.EXTERNAL) {
+                log.warn("Attempted to reassign internal user: {}", id);
+                model.addAttribute("errorMessage", "Only external users can be reassigned to different firms");
+                return "error";
+            }
+
+            ReassignmentReasonForm reasonForm = new ReassignmentReasonForm();
+            if (existingReason != null && !existingReason.trim().isEmpty()) {
+                reasonForm.setReason(existingReason);
+            }
+
+            model.addAttribute("user", user);
+            model.addAttribute("selectedFirmId", selectedFirmId);
+            model.addAttribute("selectedFirmName", selectedFirmName);
+            model.addAttribute("reassignmentReasonForm", reasonForm);
+
+            return "reassign-firm/reason";
+
+        } catch (Exception e) {
+            log.error("Error loading reason page for user {}: {}", id, e.getMessage(), e);
+            model.addAttribute("errorMessage", "An error occurred while loading the page");
+            return "error";
+        }
+    }
+
+    /**
+     * Process reason submission and redirect to check answers
+     */
+    @PostMapping("/users/reassign-firm/{id}/reason")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_FIRM)")
+    public String processReasonSubmission(@PathVariable String id,
+            @RequestParam("selectedFirmId") String selectedFirmId,
+            @RequestParam("firmSearch") String selectedFirmName,
+            @Valid @ModelAttribute("reassignmentReasonForm") ReassignmentReasonForm reasonForm,
+            BindingResult bindingResult,
+            Model model,
+            RedirectAttributes redirectAttributes) {
+        try {
+            Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
+
+            if (optionalUser.isEmpty()) {
+                log.warn("User not found for reassignment: {}", id);
+                redirectAttributes.addFlashAttribute("errorMessage", "User not found");
+                return "redirect:/admin/users/manage/" + id;
+            }
+
+            UserProfileDto user = optionalUser.get();
+            model.addAttribute("user", user);
+            model.addAttribute("selectedFirmId", selectedFirmId);
+            model.addAttribute("selectedFirmName", selectedFirmName);
+
+            if (user.getUserType() != UserType.EXTERNAL) {
+                log.warn("Attempted to reassign internal user: {}", id);
+                model.addAttribute("errorMessage", "Only external users can be reassigned to different firms");
+                return "error";
+            }
+
+            if (bindingResult.hasFieldErrors("reason")) {
+                return "reassign-firm/reason";
+            }
+
+            if (reasonForm.getReason() == null || reasonForm.getReason().trim().isEmpty()) {
+                model.addAttribute("errorMessage", "Please provide a reason for the reassignment");
+                return "reassign-firm/reason";
+            }
+
+            redirectAttributes.addAttribute("selectedFirmId", selectedFirmId);
+            redirectAttributes.addAttribute("selectedFirmName", selectedFirmName);
+            redirectAttributes.addAttribute("reason", reasonForm.getReason().trim());
+
+            return "redirect:/admin/users/reassign-firm/" + id + "/check-answers";
+
+        } catch (Exception e) {
+            log.error("Error processing reason for user {}: {}", id, e.getMessage(), e);
+            model.addAttribute("errorMessage", "An error occurred while processing your reason");
+            model.addAttribute("selectedFirmId", selectedFirmId);
+            model.addAttribute("selectedFirmName", selectedFirmName);
+            return "reassign-firm/reason";
+        }
+    }
+
+    /**
+     * Display check answers page for firm reassignment
+     */
+    @GetMapping("/users/reassign-firm/{id}/check-answers")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_FIRM)")
+    public String showCheckAnswersPage(@PathVariable String id,
+            @RequestParam("selectedFirmId") String selectedFirmId,
+            @RequestParam("selectedFirmName") String selectedFirmName,
+            @RequestParam("reason") String reason,
+            Model model) {
+        try {
+            Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
+
+            if (optionalUser.isEmpty()) {
+                log.warn("User not found for reassignment: {}", id);
+                model.addAttribute("errorMessage", "User not found");
+                return "error";
+            }
+
+            UserProfileDto user = optionalUser.get();
+
+            if (user.getUserType() != UserType.EXTERNAL) {
+                log.warn("Attempted to reassign internal user: {}", id);
+                model.addAttribute("errorMessage", "Only external users can be reassigned to different firms");
+                return "error";
+            }
+
+            model.addAttribute("user", user);
+            model.addAttribute("selectedFirmId", selectedFirmId);
+            model.addAttribute("selectedFirmName", selectedFirmName);
+            model.addAttribute("reason", reason);
+
+            return "reassign-firm/check-answers";
+
+        } catch (Exception e) {
+            log.error("Error loading check answers page for user {}: {}", id, e.getMessage(), e);
+            model.addAttribute("errorMessage", "An error occurred while loading the page");
+            return "error";
+        }
+    }
+
+    /**
+     * Process final confirmation and perform firm reassignment
+     */
+    @PostMapping("/users/reassign-firm/{id}/confirmation")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_FIRM)")
+    public String processFirmReassignment(@PathVariable String id,
+            @RequestParam("selectedFirmId") String selectedFirmId,
+            @RequestParam("selectedFirmName") String selectedFirmName,
+            @RequestParam("reason") String reason,
+            Model model,
+            Authentication authentication,
+            RedirectAttributes redirectAttributes) {
+        try {
+            Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
+
+            if (optionalUser.isEmpty()) {
+                log.warn("User not found for reassignment: {}", id);
+                redirectAttributes.addFlashAttribute("errorMessage", "User not found");
+                return "redirect:/admin/users/manage/" + id;
+            }
+
+            UserProfileDto user = optionalUser.get();
+
+            if (user.getUserType() != UserType.EXTERNAL) {
+                log.warn("Attempted to reassign internal user: {}", id);
+                model.addAttribute("errorMessage", "Only external users can be reassigned to different firms");
+                model.addAttribute("user", user);
+                model.addAttribute("selectedFirmId", selectedFirmId);
+                model.addAttribute("selectedFirmName", selectedFirmName);
+                model.addAttribute("reason", reason);
+                return "reassign-firm/check-answers";
+            }
+
+            if (reason == null || reason.trim().isEmpty()) {
+                model.addAttribute("errorMessage", "Please provide a reason for the reassignment");
+                model.addAttribute("user", user);
+                model.addAttribute("selectedFirmId", selectedFirmId);
+                model.addAttribute("selectedFirmName", selectedFirmName);
+                model.addAttribute("reason", reason);
+                return "reassign-firm/check-answers";
+            }
+
+            CurrentUserDto currentUser = loginService.getCurrentUser(authentication);
+            EntraUser currentEntraUser = loginService.getCurrentEntraUser(authentication);
+
+            userService.reassignUserFirm(
+                    id,
+                    UUID.fromString(selectedFirmId),
+                    reason.trim(),
+                    currentEntraUser.getId(),
+                    currentUser.getName());
+
+            return "redirect:/admin/users/reassign-firm/" + id + "/confirmation";
+
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid reassignment request for user {}: {}", id, e.getMessage());
+            model.addAttribute("errorMessage", e.getMessage());
+            model.addAttribute("user", userService.getUserProfileById(id).orElse(null));
+            model.addAttribute("selectedFirmId", selectedFirmId);
+            model.addAttribute("selectedFirmName", selectedFirmName);
+            model.addAttribute("reason", reason);
+            return "reassign-firm/check-answers";
+
+        } catch (IllegalStateException e) {
+            log.warn("Invalid state for reassignment of user {}: {}", id, e.getMessage());
+            model.addAttribute("errorMessage", e.getMessage());
+            model.addAttribute("user", userService.getUserProfileById(id).orElse(null));
+            model.addAttribute("selectedFirmId", selectedFirmId);
+            model.addAttribute("selectedFirmName", selectedFirmName);
+            model.addAttribute("reason", reason);
+            return "reassign-firm/check-answers";
+
+        } catch (Exception e) {
+            log.error("Error reassigning firm for user {}: {}", id, e.getMessage(), e);
+            model.addAttribute("errorMessage", "An error occurred while reassigning the user");
+            model.addAttribute("user", userService.getUserProfileById(id).orElse(null));
+            model.addAttribute("selectedFirmId", selectedFirmId);
+            model.addAttribute("selectedFirmName", selectedFirmName);
+            model.addAttribute("reason", reason);
+            return "reassign-firm/check-answers";
+        }
+    }
+
+    /**
+     * Display confirmation page after successful firm reassignment
+     */
+    @GetMapping("/users/reassign-firm/{id}/confirmation")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_FIRM)")
+    public String showConfirmationPage(@PathVariable String id, Model model) {
+        try {
+            Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
+
+            if (optionalUser.isEmpty()) {
+                log.warn("User not found for confirmation page: {}", id);
+                model.addAttribute("errorMessage", "User not found");
+                return "error";
+            }
+
+            UserProfileDto user = optionalUser.get();
+            model.addAttribute("user", user);
+
+            return "reassign-firm/confirmation";
+
+        } catch (Exception e) {
+            log.error("Error loading confirmation page for user {}: {}", id, e.getMessage(), e);
+            model.addAttribute("errorMessage", "An error occurred while loading the page");
+            return "error";
+        }
+    }
+
+    /**
+     * Handle firm reassignment for external users (API endpoint)
+     * Only available to users with EDIT_USER_FIRM permission (External User Admins)
+     */
+    @PostMapping("/users/reassign-firm/{id}/api")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_FIRM)")
+    @ResponseBody
+    public ResponseEntity<?> reassignUserFirmApi(@PathVariable String id,
+            @RequestParam("newFirmId") String newFirmId,
+            @RequestParam("reason") String reason,
+            Authentication authentication) {
+        try {
+            CurrentUserDto currentUser = loginService.getCurrentUser(authentication);
+            EntraUser currentEntraUser = loginService.getCurrentEntraUser(authentication);
+
+            if (reason == null || reason.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("success", false, "message", "Reason for reassignment is required"));
+            }
+
+            if (newFirmId == null || newFirmId.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("success", false, "message", "New firm selection is required"));
+            }
+
+            userService.reassignUserFirm(
+                    id,
+                    UUID.fromString(newFirmId),
+                    reason.trim(),
+                    currentEntraUser.getId(),
+                    currentUser.getName());
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "User successfully reassigned to new firm"));
+
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid reassignment request for user {}: {}", id, e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", e.getMessage()));
+
+        } catch (IllegalStateException e) {
+            log.warn("Invalid state for reassignment of user {}: {}", id, e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", e.getMessage()));
+
+        } catch (Exception e) {
+            log.error("Error reassigning firm for user {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", "An error occurred while reassigning the user"));
         }
     }
 }
