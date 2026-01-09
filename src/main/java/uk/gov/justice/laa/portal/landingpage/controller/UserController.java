@@ -67,6 +67,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.environment.AccessGuard;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
@@ -120,6 +121,7 @@ public class UserController {
     private final RoleAssignmentService roleAssignmentService;
     private final EmailValidationService emailValidationService;
     private final AppRoleService appRoleService;
+    private final AccessGuard accessGuard;
 
     @GetMapping("/users")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
@@ -202,8 +204,16 @@ public class UserController {
             session.removeAttribute("successMessage");
         }
 
-        boolean allowDelegateUserAccess = accessControlService
-                .authenticatedUserHasAnyGivenPermissions(Permission.DELEGATE_EXTERNAL_USER_ACCESS);
+        boolean allowDelegateUserAccess;
+        boolean isNonProdEnv = false;
+
+        if(accessGuard.canDelegateInNonProd(authentication)){
+            allowDelegateUserAccess =  true;
+            isNonProdEnv = true;
+        } else {
+            allowDelegateUserAccess = accessControlService
+                    .authenticatedUserHasAnyGivenPermissions(Permission.DELEGATE_EXTERNAL_USER_ACCESS);
+        }
 
         model.addAttribute("users", paginatedUsers.getUsers());
         model.addAttribute("requestedPageSize", size);
@@ -219,6 +229,7 @@ public class UserController {
         model.addAttribute("internal", internal);
         model.addAttribute("showFirmAdmins", showFirmAdmins);
         model.addAttribute("allowDelegateUserAccess", allowDelegateUserAccess);
+        model.addAttribute("isNonProdEnv", isNonProdEnv);
         model.addAttribute("showMultiFirmUsers", showMultiFirmUsers);
         boolean allowCreateUser = accessControlService.authenticatedUserHasPermission(Permission.CREATE_EXTERNAL_USER);
         model.addAttribute("allowCreateUser", allowCreateUser);

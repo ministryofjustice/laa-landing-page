@@ -88,6 +88,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.environment.AccessGuard;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
@@ -122,6 +123,8 @@ class UserControllerTest {
     @Mock
     private LoginService loginService;
     @Mock
+    private AccessGuard accessGuard;
+    @Mock
     private UserService userService;
     @Mock
     private OfficeService officeService;
@@ -150,7 +153,7 @@ class UserControllerTest {
     void setUp() {
         userController = new UserController(loginService, userService, officeService, eventService, firmService,
                 new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService,
-                appRoleService);
+                appRoleService, accessGuard);
         model = new ExtendedModelMap();
         firmSearchForm = FirmSearchForm.builder().build();
     }
