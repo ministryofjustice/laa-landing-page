@@ -52,7 +52,7 @@ public class App extends BaseEntity {
     private String description;
 
     @Embedded
-    private AlternativeDescriptionIfAppAssigned alternativeDescriptionIfAppAssigned;
+    private AlternativeAppDescription alternativeAppDescription;
 
     @Column(name = "oid_group_name", nullable = false, length = 255, unique = true)
     @NotBlank(message = "Application OID Group Name must be provided")
@@ -100,7 +100,7 @@ public class App extends BaseEntity {
     @NoArgsConstructor
     @SuperBuilder
     @Getter
-    public static class AlternativeDescriptionIfAppAssigned {
+    public static class AlternativeAppDescription {
 
         @Column(name = "assigned_app_id", nullable = false, length = 255)
         private UUID assignedAppId;

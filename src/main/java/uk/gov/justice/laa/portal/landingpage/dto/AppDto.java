@@ -1,10 +1,11 @@
 package uk.gov.justice.laa.portal.landingpage.dto;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.jetbrains.annotations.NotNull;
+import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 
 import java.io.Serializable;
 import java.util.Objects;
@@ -16,8 +17,13 @@ import java.util.Objects;
 public class AppDto implements Comparable<AppDto>, Serializable {
     private String id;
     private String name;
+    private String title;
+    private String description;
+    private String url;
     private int ordinal;
     private boolean selected;
+    private AppType appType;
+    private AlternativeAppDescriptionDto alternativeAppDescription;
 
     @Override
     public boolean equals(Object obj) {
@@ -34,6 +40,21 @@ public class AppDto implements Comparable<AppDto>, Serializable {
 
     @Override
     public int compareTo(@NotNull AppDto o) {
-        return this.ordinal - o.ordinal;
+        int cmp = ordinal - o.ordinal;
+
+        if (cmp == 0) {
+            return o.name.compareToIgnoreCase(name);
+        }
+
+        return cmp;
+    }
+
+    @Data
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class AlternativeAppDescriptionDto {
+        private String assignedAppId;
+        private String alternativeDescription;
     }
 }
