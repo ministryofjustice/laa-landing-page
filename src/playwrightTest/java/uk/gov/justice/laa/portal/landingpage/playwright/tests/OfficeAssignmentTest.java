@@ -115,7 +115,7 @@ public class OfficeAssignmentTest extends BaseFrontEndTest {
 
     @Test
     @Order(5)
-    void externalUserViewerCanNotChangeOffice(){
+    void externalUserViewerCanNotChangeOffice() {
         UserProfilePage userProfilePage =
                 loginAndGetUserProfilePage(TestUser.EXTERNAL_USER_VIEWER, "playwright-extofficeuser@playwrighttest.com");
 
