@@ -89,6 +89,7 @@ import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
+import uk.gov.justice.laa.portal.landingpage.utils.RolesUtils;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
@@ -1336,9 +1337,7 @@ public class UserController {
                         finalUserOfficeIds.contains(office.getId().toString())))
                 .collect(Collectors.toList());
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
-        boolean isFirmUserManager = currentUserProfile.getAppRoles().stream()
-                .anyMatch(role -> "Firm User Manager".equals(role.getName()));
-        boolean shouldShowNoOffice = shouldShowNoOfficeOption(currentUserProfile, session);
+        boolean shouldShowNoOffice = shouldShowNoOfficeOption(currentUserProfile, user, session);
         model.addAttribute("user", user);
         model.addAttribute("officesForm", officesForm);
         model.addAttribute("officeData", officeData);
@@ -1912,7 +1911,8 @@ public class UserController {
 
         officesForm.setOffices(selectedOffices);
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
-        boolean shouldShowNoOffice = shouldShowNoOfficeOption(currentUserProfile, session);
+
+        boolean shouldShowNoOffice = shouldShowNoOfficeOption(currentUserProfile, user, session);
 
         model.addAttribute("user", user);
         model.addAttribute("officesForm", officesForm);
@@ -1926,21 +1926,26 @@ public class UserController {
         return "grant-access-user-offices";
     }
 
-    private boolean shouldShowNoOfficeOption(UserProfile currentUserProfile,HttpSession session ) {
-        boolean shouldShowNoOffice =  false;
-        boolean isExternalUserAdmin = currentUserProfile.getAppRoles().stream()
-                .anyMatch(role -> "External User Admin".equals(role.getName()));
-        if(isExternalUserAdmin){
-            Set<String> allSelectedRoles = getSetFromHttpSession(session, "allSelectedRoles", String.class)
-                    .orElseThrow(() -> new RuntimeException("No roles selected for assignment"));
+    private boolean shouldShowNoOfficeOption(UserProfile currentUserProfile,UserProfileDto selectedUser, HttpSession session ) {
+        boolean shouldShowNoOffice = false;
+        boolean isProvideAdmin = false;
+        boolean isAdminRoles = RolesUtils.isCurrentProfileExternalUserAdmin(currentUserProfile)
+                || RolesUtils.isCurrentProfileGlobalAdmin(currentUserProfile);
+        if (isAdminRoles) {
 
-            List<AppRoleDto> userAppRoles = appRoleService.getByIds(allSelectedRoles);
-            boolean isUserManager =  userAppRoles.stream()
-                    .anyMatch(role -> "Firm User Manager".equals(role.getName()));
-            if (!isUserManager) {
-                shouldShowNoOffice = true;
+            //get user selection
+            Optional<Set<String>> allSelectedRoles = getSetFromHttpSession(session, "allSelectedRoles", String.class);
+
+            if (allSelectedRoles.isEmpty()) {
+                isProvideAdmin = RolesUtils.isProvideAdmin(selectedUser.getAppRoles());
+            } else {
+                List<AppRoleDto> userAppRoles = appRoleService.getByIds(allSelectedRoles.get());
+                isProvideAdmin = RolesUtils.isProvideAdmin(userAppRoles);
             }
 
+            if (!isProvideAdmin) {
+                shouldShowNoOffice = true;
+            }
         }
         return shouldShowNoOffice;
     }
