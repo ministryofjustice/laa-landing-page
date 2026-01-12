@@ -65,8 +65,8 @@ class RolesUtilsTest {
     @Test
     void isNotProvideAdmin() {
 
-        assertTrue(RolesUtils.isProvideAdmin(List.of(AppRoleDto.builder()
-                .name(FIRM_USER_MANAGER.getDescription())
+        assertFalse(RolesUtils.isProvideAdmin(List.of(AppRoleDto.builder()
+                .name("no provide admin role")
                 .build())));
     }
 }
