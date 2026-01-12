@@ -17,8 +17,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 
 import jakarta.servlet.http.HttpSession;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
+import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
@@ -84,15 +87,21 @@ public class LoginController {
                 model.addAttribute("laaApplications", userSessionData.getLaaApplications());
                 boolean isAdmin = false;
                 boolean canViewAuditTable = false;
+                boolean hasSilasAdminRole = false;
                 if (userSessionData.getUser() != null) {
                     Set<Permission> permissions = userService
                             .getUserPermissionsByUserId(userSessionData.getUser().getId());
                     isAdmin = permissions.contains(Permission.VIEW_EXTERNAL_USER)
                             || permissions.contains(Permission.VIEW_INTERNAL_USER);
                     canViewAuditTable = permissions.contains(Permission.VIEW_AUDIT_TABLE);
+
+                    // Check if user has SiLAS Administration role
+                    EntraUser currentUser = loginService.getCurrentEntraUser(authentication);
+                    hasSilasAdminRole = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.GLOBAL_ADMIN.getRoleName());
                 }
                 model.addAttribute("isAdminUser", isAdmin);
                 model.addAttribute("canViewAuditTable", canViewAuditTable);
+                model.addAttribute("hasSilasAdminRole", hasSilasAdminRole);
 
                 // Check if user has no roles assigned and determine user type for custom
                 // message
