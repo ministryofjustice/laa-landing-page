@@ -85,8 +85,8 @@ public class FirmSelectionController {
             log.debug("Validation errors occurred while searching for user: {}", result.getAllErrors());
             session.setAttribute("multiFirmUserForm", multiFirmUserForm);
             model.addAttribute("multiFirmUserForm", multiFirmUserForm);
-            String backUrl = "/admin/users";
-            model.addAttribute("backUrl", backUrl);
+            model.addAttribute("backUrl", "/admin/users");
+
             return "admin-tools/select-user";
         }
 
@@ -102,6 +102,9 @@ public class FirmSelectionController {
                 log.debug("The user is not a multi firm user: {}.", multiFirmUserForm.getEmail());
                 result.rejectValue("email", "error.email",
                         "This user cannot be added at this time. Contact your Contract Manager to check their access permissions.");
+                model.addAttribute("multiFirmUserForm", multiFirmUserForm);
+                model.addAttribute("backUrl", "/admin/users");
+
                 return "admin-tools/select-user";
             }
 
@@ -109,6 +112,7 @@ public class FirmSelectionController {
                 UserProfile authenticatedUserProfile = loginService.getCurrentProfile(authentication);
 
                 String targetFirmIdForSameFirmCheck = (String) session.getAttribute("delegateTargetFirmId");
+
                 Firm compareFirm = targetFirmIdForSameFirmCheck != null
                         ? firmService.getById(UUID.fromString(targetFirmIdForSameFirmCheck))
                         : authenticatedUserProfile.getFirm();
@@ -121,10 +125,7 @@ public class FirmSelectionController {
                             "This user already has access for your firm. Manage them from the Manage Your Users screen.");
                     result.rejectValue("email", "error.email",
                             "This user already has a profile for this firm. You can amend their access from the Manage your users table.");
-                    UserProfile cur = loginService.getCurrentProfile(authentication);
-                    Firm f = cur.getFirm();
-                    String backUrl = "/admin/users";
-                    model.addAttribute("backUrl", backUrl);
+                    model.addAttribute("backUrl", "/admin/users");
                     return "admin-tools/select-user";
                 }
 
