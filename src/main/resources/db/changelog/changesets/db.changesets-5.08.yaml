@@ -1,0 +1,40 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-ordinal-column-to-app-table
+      author: paul.snowdon
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - columnExists:
+                tableName: app
+                columnName: ordinal
+      changes:
+        - addColumn:
+            tableName: app
+            columns:
+              - column:
+                  name: ordinal
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: add-ordinal-column-to-app_role-table
+      author: paul.snowdon
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - columnExists:
+                tableName: app_role
+                columnName: ordinal
+      changes:
+        - addColumn:
+            tableName: app_role
+            columns:
+              - column:
+                  name: ordinal
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
