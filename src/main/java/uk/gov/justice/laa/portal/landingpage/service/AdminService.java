@@ -42,6 +42,17 @@ public class AdminService {
     }
 
     /**
+     * Get admin service apps only
+     */
+    public List<AppAdminDto> getAdminApps() {
+        return appRepository.findAll().stream()
+                .filter(app -> app.getAppType() != null && "AUTHZ".equals(app.getAppType().name()))
+                .map(this::mapToAppAdminDto)
+                .sorted((a, b) -> Integer.compare(a.getOrdinal(), b.getOrdinal()))
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Get all app roles for administration display
      */
     public List<AppRoleAdminDto> getAllAppRoles() {

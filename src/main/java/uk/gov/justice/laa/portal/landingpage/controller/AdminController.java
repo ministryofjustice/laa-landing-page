@@ -31,16 +31,23 @@ public class AdminController {
     private final AdminService adminService;
 
     /**
-     * Display SiLAS Administration landing page with Apps tab by default
+     * Display SiLAS Administration landing page with Admin Services tab by default
      */
     @GetMapping("")
     public String showAdministration(
-            @RequestParam(defaultValue = "apps") String tab,
+            @RequestParam(defaultValue = "admin-apps") String tab,
             @RequestParam(required = false) String appFilter,
             Model model) {
 
         model.addAttribute(ModelAttributes.PAGE_TITLE, "SiLAS Administration");
         model.addAttribute("activeTab", tab);
+
+        // Load all apps data for both tabs
+        List<AppAdminDto> adminApps = adminService.getAdminApps();
+        model.addAttribute("adminApps", adminApps);
+
+        List<AppAdminDto> apps = adminService.getAllApps();
+        model.addAttribute("apps", apps);
 
         // Load data based on active tab
         switch (tab) {
@@ -68,10 +75,7 @@ public class AdminController {
                 model.addAttribute("assignments", assignments);
                 break;
 
-            case "apps":
             default:
-                List<AppAdminDto> apps = adminService.getAllApps();
-                model.addAttribute("apps", apps);
                 break;
         }
 
