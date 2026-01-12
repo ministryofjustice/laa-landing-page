@@ -66,6 +66,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
@@ -96,6 +97,7 @@ import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
+import uk.gov.justice.laa.portal.landingpage.utils.RolesUtils;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
@@ -1349,14 +1351,13 @@ public class UserController {
                         finalUserOfficeIds.contains(office.getId().toString())))
                 .collect(Collectors.toList());
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
-        boolean isFirmUserManager = currentUserProfile.getAppRoles().stream()
-                .anyMatch(role -> "Firm User Manager".equals(role.getName()));
+        boolean shouldShowNoOffice = shouldShowNoOfficeOption(currentUserProfile, user, session);
         model.addAttribute("user", user);
         model.addAttribute("officesForm", officesForm);
         model.addAttribute("officeData", officeData);
         model.addAttribute("hasAllOffices", result.hasAllOffices());
         model.addAttribute("hasNoOffices", result.hasNoOffices());
-        model.addAttribute("shouldShowNoOffice", !isFirmUserManager);
+        model.addAttribute("shouldShowNoOffice", shouldShowNoOffice);
         // Store the model in session to handle validation errors later
         session.setAttribute("editUserOfficesModel", model);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user offices - " + user.getFullName());
@@ -1924,18 +1925,44 @@ public class UserController {
 
         officesForm.setOffices(selectedOffices);
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
-        boolean isFirmUserManager = currentUserProfile.getAppRoles().stream()
-                .anyMatch(role -> "Firm User Manager".equals(role.getName()));
+
+        boolean shouldShowNoOffice = shouldShowNoOfficeOption(currentUserProfile, user, session);
+
         model.addAttribute("user", user);
         model.addAttribute("officesForm", officesForm);
         model.addAttribute("officeData", officeData);
         model.addAttribute("hasAllOffices", result.hasAllOffices());
         model.addAttribute("hasNoOffices", result.hasNoOffices());
-        model.addAttribute("shouldShowNoOffice", !isFirmUserManager);
+        model.addAttribute("shouldShowNoOffice", shouldShowNoOffice);
         // Store the model in session to handle validation errors later
         session.setAttribute("grantAccessUserOfficesModel", model);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Select offices - " + user.getFullName());
         return "grant-access-user-offices";
+    }
+
+    private boolean shouldShowNoOfficeOption(UserProfile currentUserProfile, UserProfileDto selectedUser, HttpSession session) {
+        if (selectedUser.getEntraUser().isMultiFirmUser()) {
+            return false;
+        }
+        boolean shouldShowNoOffice = false;
+        boolean isProvideAdmin = false;
+        boolean isAdminRoles = RolesUtils.isCurrentProfileExternalUserAdmin(currentUserProfile)
+                || RolesUtils.isCurrentProfileGlobalAdmin(currentUserProfile);
+        if (isAdminRoles) {
+            // When the user is still pending, we need to use the option they previously selected on the role screen
+            if (selectedUser.getUserProfileStatus().equals(UserProfileStatus.PENDING)) {
+                Optional<Set<String>> allSelectedRoles = getSetFromHttpSession(session, "allSelectedRoles", String.class);
+                List<AppRoleDto> userAppRoles = appRoleService.getByIds(allSelectedRoles.get());
+                isProvideAdmin = RolesUtils.isProvideAdmin(userAppRoles);
+            } else {
+                isProvideAdmin = RolesUtils.isProvideAdmin(selectedUser.getAppRoles());
+            }
+
+            if (!isProvideAdmin) {
+                shouldShowNoOffice = true;
+            }
+        }
+        return shouldShowNoOffice;
     }
 
     private static AllOfficesNoOffice verifyAllOffices(Optional<List<String>> selectedOfficesOptional, UserProfileDto user, List<OfficeDto> userOffices) {
