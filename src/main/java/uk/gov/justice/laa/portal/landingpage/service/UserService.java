@@ -54,6 +54,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
+import uk.gov.justice.laa.portal.landingpage.dto.UserFirmReassignmentEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
@@ -77,6 +78,7 @@ import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditProjection;
@@ -102,17 +104,20 @@ public class UserService {
     private final UserProfileRepository userProfileRepository;
     private final RoleChangeNotificationService roleChangeNotificationService;
     private final FirmService firmService;
+    private final FirmRepository firmRepository;
+    private final EventService eventService;
     private final NotificationService notificationService;
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
-                       EntraUserRepository entraUserRepository, AppRepository appRepository,
-                       AppRoleRepository appRoleRepository, ModelMapper mapper,
-                       OfficeRepository officeRepository,
-                       LaaAppsConfig.LaaApplicationsList laaApplicationsList,
-                       TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
-                       RoleChangeNotificationService roleChangeNotificationService, FirmService firmService,
-                       NotificationService notificationService) {
+            EntraUserRepository entraUserRepository, AppRepository appRepository,
+            AppRoleRepository appRoleRepository, ModelMapper mapper,
+            OfficeRepository officeRepository,
+            LaaAppsConfig.LaaApplicationsList laaApplicationsList,
+            TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
+            RoleChangeNotificationService roleChangeNotificationService, FirmService firmService,
+            FirmRepository firmRepository, EventService eventService,
+            NotificationService notificationService) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -124,6 +129,8 @@ public class UserService {
         this.userProfileRepository = userProfileRepository;
         this.roleChangeNotificationService = roleChangeNotificationService;
         this.firmService = firmService;
+        this.firmRepository = firmRepository;
+        this.eventService = eventService;
         this.notificationService = notificationService;
     }
 
@@ -1838,5 +1845,96 @@ public class UserService {
                 .roles(roleDtos)
                 .userType(profile.getUserType() != null ? profile.getUserType().name() : "UNKNOWN")
                 .activeProfile(profile.isActiveProfile()).build();
+    }
+
+    /**
+     * Reassign a user to a different firm
+     * This will update the user's firm association and log the event
+     *
+     * @param userProfileId The UUID string of the user profile to reassign
+     * @param newFirmId The UUID of the new firm
+     * @param reason The reason for the reassignment
+     * @param performedByEntraUserId The Entra user ID of the admin performing the action
+     * @param performedByName The name of the admin performing the action
+     * @throws IllegalArgumentException if user profile or firm not found
+     * @throws IllegalStateException if user is not external or other validation fails
+     */
+    @Transactional
+    public void reassignUserFirm(String userProfileId, UUID newFirmId, String reason,
+            UUID performedByEntraUserId, String performedByName) {
+
+        // Validate inputs
+        if (userProfileId == null || userProfileId.trim().isEmpty()) {
+            throw new IllegalArgumentException("User profile ID is required");
+        }
+
+        if (newFirmId == null) {
+            throw new IllegalArgumentException("New firm ID is required");
+        }
+
+        if (reason == null || reason.trim().isEmpty()) {
+            throw new IllegalArgumentException("Reason for reassignment is required");
+        }
+
+        // Get the user profile
+        Optional<UserProfile> optionalProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
+        if (optionalProfile.isEmpty()) {
+            throw new IllegalArgumentException("User profile not found: " + userProfileId);
+        }
+
+        UserProfile userProfile = optionalProfile.get();
+
+        // Verify this is an external user
+        if (userProfile.getUserType() != UserType.EXTERNAL) {
+            throw new IllegalStateException("Only external users can be reassigned to different firms");
+        }
+
+        // Get the current firm (for audit logging)
+        Firm oldFirm = userProfile.getFirm();
+        if (oldFirm == null) {
+            throw new IllegalStateException("User does not have a current firm assigned");
+        }
+
+        // Verify the new firm is different from current firm
+        if (oldFirm.getId().equals(newFirmId)) {
+            throw new IllegalArgumentException("New firm must be different from current firm");
+        }
+
+        // Get the new firm
+        Optional<Firm> optionalNewFirm = firmRepository.findById(newFirmId);
+        if (optionalNewFirm.isEmpty()) {
+            throw new IllegalArgumentException("New firm not found: " + newFirmId);
+        }
+
+        Firm newFirm = optionalNewFirm.get();
+
+        // Update the user's firm
+        userProfile.setFirm(newFirm);
+
+        // Clear the user's offices when reassigning to a new firm
+        // This is important as offices are firm-specific
+        if (userProfile.getOffices() != null) {
+            userProfile.getOffices().clear();
+        }
+
+        // Save the updated profile
+        userProfileRepository.save(userProfile);
+
+        // Log the reassignment event
+        UserFirmReassignmentEvent reassignmentEvent =
+            new UserFirmReassignmentEvent(
+                performedByEntraUserId,
+                performedByName,
+                userProfile.getId().toString(),
+                userProfile.getEntraUser().getEmail(),
+                oldFirm.getName(),
+                newFirm.getName(),
+                reason.trim()
+            );
+
+        eventService.logEvent(reassignmentEvent);
+
+        logger.info("User profile {} reassigned from firm {} to firm {} by {} (Reason: {})",
+                userProfileId, oldFirm.getName(), newFirm.getName(), performedByName, reason);
     }
 }

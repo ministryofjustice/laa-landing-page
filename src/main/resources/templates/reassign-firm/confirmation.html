@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'reassign-firm-confirmation'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>Firm updated</title>
+</head>
+
+<body>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <ol class="govuk-breadcrumbs__list">
+            <li class="govuk-breadcrumbs__list-item">
+                <a class="govuk-breadcrumbs__link" th:href="@{'/admin/users/manage/' + ${user.id}}">Back</a>
+            </li>
+        </ol>
+    </nav>
+    
+    <main class="govuk-main-wrapper" id="main-content">
+        <div class="govuk-grid-row">
+            <div class="govuk-grid-column-two-thirds">
+                
+                <!-- Success Panel -->
+                <div class="govuk-panel govuk-panel--confirmation">
+                    <h1 class="govuk-panel__title">Firm updated</h1>
+                    <div class="govuk-panel__body" th:text="'for ' + ${user.entraUser?.firstName ?: 'this user'}">
+                        for [User Name]
+                    </div>
+                </div>
+
+                <!-- Next Steps -->
+                <h2 class="govuk-heading-m">Next steps</h2>
+                
+                <ul class="govuk-list govuk-list--bullet">
+                    <li>
+                        <a class="govuk-link" th:href="@{'/admin/users/manage/' + ${user.id}}">add user permissions and offices</a>
+                    </li>
+                    <li>
+                        <a class="govuk-link" href="/admin/users/create">create a new user</a>
+                    </li>
+                </ul>
+                
+                <br>
+                
+                <!-- Go Back Button -->
+                <a class="govuk-button" data-module="govuk-button" th:href="@{'/admin/users'}">
+                    Go back to manage your users
+                </a>
+                
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>

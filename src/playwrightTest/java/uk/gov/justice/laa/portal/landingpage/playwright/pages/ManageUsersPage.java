@@ -170,6 +170,14 @@ public class ManageUsersPage {
         firstLink.click();
     }
 
+    public void clickExternalUserLink() {
+        Locator externalUserLink = page.locator("a.govuk-link[href*='/admin/users/manage/']").getByText("Playwright FirmUserManager");
+        externalUserLink.waitFor(new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.VISIBLE)
+                .setTimeout(10000));
+        externalUserLink.click();
+    }
+
     public void clickServicesTab() {
         page.locator("a.govuk-tabs__tab[href*='#services']").click();
     }
@@ -193,6 +201,24 @@ public class ManageUsersPage {
         assertTrue(page.locator(".govuk-summary-list__row:has-text(\"Email\") .govuk-summary-list__value").isVisible());
         assertTrue(page.locator(".govuk-summary-list__row:has-text(\"First name\") .govuk-summary-list__value").isVisible());
         assertTrue(page.locator(".govuk-summary-list__row:has-text(\"Last name\") .govuk-summary-list__value").isVisible());
+    }
+
+    public void clickOfficesTab() {
+        page.locator(".govuk-tabs__tab[href*='#offices']").click();
+    }
+
+    public void clickOfficeChange() {
+        page.locator("#offices .govuk-link:has-text(\"Change\")").click();
+    }
+
+    public void checkSelectedOffices(List<String> offices) {
+
+        for (String office : offices) {
+            Locator checkbox = page.getByLabel(office);
+            if (!checkbox.isChecked()) {
+                checkbox.check();
+            }
+        }
     }
 
     public void checkSelectedRoles(List<String> roles) {

@@ -39,14 +39,11 @@ jobs:
           if [[ $high_value -gt 0 ]]; then
               echo "High alerts, notification should be sent"
               echo "ZAP_SHOULD_NOTIFY='true'" >> "$GITHUB_ENV"
-          else
+          elif [[ $medium_value -gt 0 || $low_value -gt 0 ]]; then
               # For daily baseline runs, send summary on Monday if there are med/low
               if [ "$(date +%A)" = "Monday" ]; then
-                  echo "Today is Monday"
-                  if [[ $medium_value -gt 0 || $low_value -gt 0 ]]; then
-                      echo "Medium and/or low alerts on Monday, notification should be sent"
-                      echo "ZAP_SHOULD_NOTIFY='true'" >> "$GITHUB_ENV"
-                  fi
+                  echo "Medium and/or low alerts on Monday, notification should be sent"
+                  echo "ZAP_SHOULD_NOTIFY='true'" >> "$GITHUB_ENV"
               fi
           else
               echo "ZAP_SHOULD_NOTIFY='false'" >> "$GITHUB_ENV"
