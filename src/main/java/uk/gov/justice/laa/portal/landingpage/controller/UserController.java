@@ -1692,7 +1692,7 @@ public class UserController {
 
         session.setAttribute("grantAccessSelectedApps", selectedApps);
         List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
-                .filter(role -> !roleAssignmentService.canAssignRole(currentUserProfile.getAppRoles(), List.of(role.toString())))
+                .filter(role -> !roleAssignmentService.canAssignRole(currentUserProfile.getAppRoles(), List.of(role.getId())))
                 .map(AppRoleDto::getId)
                 .toList();
         session.setAttribute("nonEditableRoles", nonEditableRoles);
