@@ -176,7 +176,7 @@ class FirmSelectionControllerTest {
                 .name("Firm1")
                 .build();
 
-        Optional<EntraUser> entraUser = getEntraUser(false, firm);
+        Optional<EntraUser> entraUser = getEntraUser(true, firm);
 
         when(userService.findEntraUserByEmail(multiFirmUserForm.getEmail())).thenReturn(entraUser);
 
