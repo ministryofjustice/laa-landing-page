@@ -59,7 +59,6 @@
                             <tr class="govuk-table__row">
                                 <th scope="col" class="govuk-table__header">Service name</th>
                                 <th scope="col" class="govuk-table__header">Description</th>
-                                <th scope="col" class="govuk-table__header">Code</th>
                                 <th scope="col" class="govuk-table__header">Order</th>
                                 <th scope="col" class="govuk-table__header"></th>
                             </tr>
@@ -68,7 +67,6 @@
                             <tr class="govuk-table__row" th:each="app : ${adminApps}">
                                 <td class="govuk-table__cell" th:text="${app.name}">Manage your users</td>
                                 <td class="govuk-table__cell" th:text="${app.description}">Manage user access and permissions</td>
-                                <td class="govuk-table__cell" th:text="${app.id}">12345678-1234-1234-1234-123456789012</td>
                                 <td class="govuk-table__cell" th:text="${app.ordinal}">0</td>
                                 <td class="govuk-table__cell">
                                     <a href="#" class="govuk-link">Change</a>

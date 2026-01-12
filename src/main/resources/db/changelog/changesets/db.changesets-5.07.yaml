@@ -1,0 +1,102 @@
+databaseChangeLog:
+  - changeSet:
+      id: create-admin_app-table
+      author: paul.snowdon
+      changes:
+        - createTable:
+            tableName: admin_app
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: description
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: ordinal
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: enabled
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+        - createIndex:
+            indexName: AdminAppNameIdx
+            tableName: admin_app
+            columns:
+              - column:
+                  name: name
+
+  - changeSet:
+      id: populate-admin_app-initial-data
+      author: paul.snowdon
+      changes:
+        - insert:
+            tableName: admin_app
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: name
+                  value: "Manage your users"
+              - column:
+                  name: description
+                  value: "Manage user access and permissions"
+              - column:
+                  name: ordinal
+                  valueNumeric: 0
+              - column:
+                  name: enabled
+                  valueBoolean: true
+        - insert:
+            tableName: admin_app
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: name
+                  value: "SiLAS Administration"
+              - column:
+                  name: description
+                  value: "Manage admin services including user roles and permissions"
+              - column:
+                  name: ordinal
+                  valueNumeric: 1
+              - column:
+                  name: enabled
+                  valueBoolean: true
+        - insert:
+            tableName: admin_app
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: name
+                  value: "User Access Audit Table"
+              - column:
+                  name: description
+                  value: "View all registered users including account status and role assignments"
+              - column:
+                  name: ordinal
+                  valueNumeric: 2
+              - column:
+                  name: enabled
+                  valueBoolean: true

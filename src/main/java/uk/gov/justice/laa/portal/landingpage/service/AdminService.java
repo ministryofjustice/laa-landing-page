@@ -8,13 +8,16 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import uk.gov.justice.laa.portal.landingpage.dto.AdminAppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.RoleAssignmentAdminDto;
+import uk.gov.justice.laa.portal.landingpage.entity.AdminApp;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.RoleAssignment;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.repository.AdminAppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.RoleAssignmentRepository;
@@ -30,6 +33,18 @@ public class AdminService {
     private final AppRepository appRepository;
     private final AppRoleRepository appRoleRepository;
     private final RoleAssignmentRepository roleAssignmentRepository;
+    private final AdminAppRepository adminAppRepository;
+
+    /**
+     * Get all admin apps for administration display
+     */
+    public List<AdminAppDto> getAllAdminApps() {
+        return adminAppRepository.findAll().stream()
+                .filter(AdminApp::isEnabled)
+                .map(this::mapToAdminAppDto)
+                .sorted((a, b) -> Integer.compare(a.getOrdinal(), b.getOrdinal()))
+                .collect(Collectors.toList());
+    }
 
     /**
      * Get all apps for administration display
@@ -137,6 +152,19 @@ public class AdminService {
                 .assigningRoleName(roleAssignment.getAssigningRole().getName())
                 .assignableRoleId(roleAssignment.getAssignableRole().getId().toString())
                 .assignableRoleName(roleAssignment.getAssignableRole().getName())
+                .build();
+    }
+
+    /**
+     * Map AdminApp entity to AdminAppDto
+     */
+    private AdminAppDto mapToAdminAppDto(AdminApp adminApp) {
+        return AdminAppDto.builder()
+                .id(adminApp.getId().toString())
+                .name(adminApp.getName())
+                .description(adminApp.getDescription())
+                .ordinal(adminApp.getOrdinal())
+                .enabled(adminApp.isEnabled())
                 .build();
     }
 }

@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
+import uk.gov.justice.laa.portal.landingpage.dto.AdminAppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.RoleAssignmentAdminDto;
@@ -42,16 +43,17 @@ public class AdminController {
         model.addAttribute(ModelAttributes.PAGE_TITLE, "SiLAS Administration");
         model.addAttribute("activeTab", tab);
 
-        // Load all apps data for both tabs
-        List<AppAdminDto> adminApps = adminService.getAdminApps();
+        // Load all admin apps data for admin-apps tab
+        List<AdminAppDto> adminApps = adminService.getAllAdminApps();
         model.addAttribute("adminApps", adminApps);
 
+        // Load all apps data for apps tab
         List<AppAdminDto> apps = adminService.getAllApps();
         model.addAttribute("apps", apps);
 
         // Load data based on active tab
         switch (tab) {
-            case "roles":
+            case "roles" -> {
                 List<AppRoleAdminDto> roles;
                 if (appFilter != null && !appFilter.isEmpty()) {
                     roles = adminService.getAppRolesByApp(appFilter);
@@ -68,15 +70,15 @@ public class AdminController {
                         .sorted()
                         .toList();
                 model.addAttribute("appNames", appNames);
-                break;
+            }
 
-            case "assignments":
+            case "assignments" -> {
                 List<RoleAssignmentAdminDto> assignments = adminService.getAllRoleAssignments();
                 model.addAttribute("assignments", assignments);
-                break;
+            }
 
-            default:
-                break;
+            default -> {
+            }
         }
 
         return "silas-administration/administration";
