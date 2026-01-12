@@ -73,8 +73,7 @@ public class FirmSelectionController {
         model.addAttribute("email", multiFirmUserForm.getEmail());
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile");
 
-        String backUrl = "/admin/users";
-        model.addAttribute("backUrl", backUrl);
+        model.addAttribute("backUrl", "/admin/users");
         return "admin-tools/select-user";
     }
 
