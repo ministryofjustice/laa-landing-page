@@ -207,13 +207,13 @@ Firm existingFirm = up.getFirm();
     @PostMapping("/selectFirm")
     public String selectFirmPost(@Valid FirmSearchForm firmSearchForm, BindingResult result,
                                HttpSession session, Model model) {
+        Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
+        boolean showSkipFirmSelection = Boolean.TRUE.equals(isMultiFirmUser);
+        model.addAttribute("showSkipFirmSelection", showSkipFirmSelection);
 
         MultiFirmUserForm multiFirmUserForm = (MultiFirmUserForm) session.getAttribute("multiFirmUserForm");
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while searching for firm: {}", result.getAllErrors());
-            Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
-            boolean showSkipFirmSelection = Boolean.TRUE.equals(isMultiFirmUser);
-            model.addAttribute("showSkipFirmSelection", showSkipFirmSelection);
             // Store the form in session to preserve input on redirect
             session.setAttribute("firmSearchForm", firmSearchForm);
             return "admin-tools/add-user-firm";

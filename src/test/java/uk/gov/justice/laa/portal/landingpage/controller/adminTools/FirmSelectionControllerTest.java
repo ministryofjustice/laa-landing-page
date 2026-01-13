@@ -44,6 +44,8 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -389,15 +391,84 @@ class FirmSelectionControllerTest {
         assertThat(view).isEqualTo(ADMIN_TOOLS_ADD_USER_FIRM);
 
         assertThat(model.getAttribute("firmSearchForm")).isEqualTo(expectedForm);
-        assertThat(session.getAttribute("firmSearchForm")).isEqualTo(expectedForm);
-
+        assertThat(session.getAttribute("firmSearchForm")).isEqualTo(null);
+        assertThat(session.getAttribute("firm")).isEqualTo(firm);
         assertThat(model.getAttribute("firmSearchResultCount")).isEqualTo(10);
         assertTrue((Boolean) model.getAttribute("showSkipFirmSelection"));
 
     }
 
     @Test
-    void selectFirmPost() {
+    void selectFirmPostWithErrors() {
+        //Arrange
+        when(bindingResult.hasErrors()).thenReturn(true);
+        //act
+        String view = firmSelectionController.selectFirmPost(firmSearchForm, bindingResult, session, model);
+        //Assert
+        assertThat(view).isEqualTo(ADMIN_TOOLS_ADD_USER_FIRM);
+        assertThat(session.getAttribute("firmSearchForm")).isEqualTo(firmSearchForm);
+        assertFalse((Boolean) model.getAttribute("showSkipFirmSelection"));
+    }
+
+    @Test
+    void selectFirmPostNoFirmFound() {
+        UUID firmId = UUID.randomUUID();
+        //Arrange
+        firmSearchForm.setFirmSearch("firm");
+        when(firmService.getAllFirmsFromCache()).thenReturn(List.of());
+        //act
+        String view = firmSelectionController.selectFirmPost(firmSearchForm, bindingResult, session, model);
+        //Assert
+        assertThat(view).isEqualTo(ADMIN_TOOLS_ADD_USER_FIRM);
+        assertThat(session.getAttribute("firmSearchForm")).isNull();
+        assertThat(session.getAttribute("firm")).isNull();
+        assertFalse((Boolean) model.getAttribute("showSkipFirmSelection"));
+        verify(bindingResult).rejectValue("firmSearch",
+                "error.firm",
+                "No firm found with that name. Please select from the dropdown.");
+    }
+
+    @Test
+    void selectFirmPostWithoutError() {
+        //Arrange
+        UUID firmId = UUID.randomUUID();
+
+        List<FirmDto> firmDtos = List.of(FirmDto.builder()
+                .name("firm")
+                .id(firmId)
+                .build());
+        firmSearchForm.setFirmSearch("firm");
+        session.setAttribute("multiFirmUserForm", multiFirmUserForm);
+        when(firmService.getAllFirmsFromCache()).thenReturn(firmDtos);
+        when(userService.hasUserFirmAlreadyAssigned(multiFirmUserForm.getEmail(), firmId)).thenReturn(false);
+        //act
+        String view = firmSelectionController.selectFirmPost(firmSearchForm, bindingResult, session, model);
+        //Assert
+        assertThat(view).isEqualTo("redirect:/adminFirmSelection/check-answers");
+        assertThat(session.getAttribute("firmSearchForm")).isEqualTo(firmSearchForm);
+        assertThat(session.getAttribute("delegateTargetFirmId")).isEqualTo(firmSearchForm.getSelectedFirmId().toString());
+    }
+
+    @Test
+    void selectFirmPostWithErrorUserProfileAlreadyExists () {
+        //Arrange
+        UUID firmId = UUID.randomUUID();
+
+        List<FirmDto> firmDtos = List.of(FirmDto.builder()
+                .name("firm")
+                .id(firmId)
+                .build());
+        firmSearchForm.setFirmSearch("firm");
+        session.setAttribute("multiFirmUserForm", multiFirmUserForm);
+        when(firmService.getAllFirmsFromCache()).thenReturn(firmDtos);
+        when(userService.hasUserFirmAlreadyAssigned(multiFirmUserForm.getEmail(), firmId)).thenReturn(true);
+        //act
+        String view = firmSelectionController.selectFirmPost(firmSearchForm, bindingResult, session, model);
+        //Assert
+        assertThat(view).isEqualTo(ADMIN_TOOLS_ADD_USER_FIRM);
+        verify(bindingResult).rejectValue("firmSearch",
+                "error.firm",
+                "User profile already exists for this firm.");
     }
 
     @Test
