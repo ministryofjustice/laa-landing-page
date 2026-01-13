@@ -1,43 +1,36 @@
 package uk.gov.justice.laa.portal.landingpage.controller.adminTools;
 
 import jakarta.servlet.http.HttpSession;
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
-import uk.gov.justice.laa.portal.landingpage.controller.FirmController;
-import uk.gov.justice.laa.portal.landingpage.controller.MultiFirmUserController;
-import uk.gov.justice.laa.portal.landingpage.controller.UserController;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmUserForm;
-import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
@@ -47,12 +40,9 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 
 @ExtendWith(MockitoExtension.class)
 class FirmSelectionControllerTest {
@@ -133,11 +123,19 @@ class FirmSelectionControllerTest {
     @Test
     void selectUserPostWithoutError() {
         //Arrange
-        Optional<EntraUser> entraUser = getEntraUser(true, null);
+        Firm firm = Firm.builder()
+                .name("firm")
+                .build();
+        Firm firmSelected = Firm.builder()
+                .name("firmSelected")
+                .build();
+        Optional<EntraUser> entraUser = getEntraUser(true, firm);
         EntraUserDto entraUserDtoResult = mapper.map(entraUser, EntraUserDto.class);
 
         when(userService.findEntraUserByEmail(multiFirmUserForm.getEmail())).thenReturn(entraUser);
-
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder()
+                .firm(firmSelected)
+                .build());
         //act
         String view = firmSelectionController.selectUserPost(multiFirmUserForm, bindingResult, model, session, authentication);
 
@@ -417,7 +415,6 @@ class FirmSelectionControllerTest {
 
     @Test
     void selectFirmPostNoFirmFound() {
-        UUID firmId = UUID.randomUUID();
         //Arrange
         firmSearchForm.setFirmSearch("firm");
         when(firmService.getAllFirmsFromCache()).thenReturn(List.of());
@@ -577,6 +574,15 @@ class FirmSelectionControllerTest {
 
     @Test
     void handleAuthorizationException() {
+        // Arrange
+        AuthorizationDeniedException authException = new AuthorizationDeniedException("Access denied");
+        MockHttpServletRequest request = new MockHttpServletRequest();
+
+        // Act
+        RedirectView result = firmSelectionController.handleAuthorizationException(authException, session, request);
+
+        // Assert
+        assertThat(result.getUrl()).isEqualTo("/not-authorised");
     }
 
     @Test
@@ -585,7 +591,7 @@ class FirmSelectionControllerTest {
         RedirectView RedirectView = firmSelectionController.handleException(new Exception("error"));
 
         //assert
-        assertThat(RedirectView.getUrl()).isEqualTo("redirect:/admin/users");
+        assertThat(RedirectView.getUrl()).isEqualTo("/error");
 
     }
 
