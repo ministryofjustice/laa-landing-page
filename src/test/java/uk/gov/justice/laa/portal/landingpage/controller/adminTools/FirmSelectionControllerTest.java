@@ -175,23 +175,43 @@ class FirmSelectionControllerTest {
         Firm firm = Firm.builder()
                 .name("Firm1")
                 .build();
-
         Optional<EntraUser> entraUser = getEntraUser(true, firm);
-
         when(userService.findEntraUserByEmail(multiFirmUserForm.getEmail())).thenReturn(entraUser);
-
         when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder()
                         .firm(firm)
                 .build());
 
         //act
         String view = firmSelectionController.selectUserPost(multiFirmUserForm, bindingResult, model, session, authentication);
-
         // Assert
         assertThat(view).isEqualTo(ADMIN_TOOLS_SELECT_USER);
-        assertThat(session.getAttribute("multiFirmUserForm")).isEqualTo(multiFirmUserForm);
-        assertThat(model.getAttribute("multiFirmUserForm")).isEqualTo(multiFirmUserForm);
+        assertThat(model.getAttribute("backUrl")).isEqualTo(ADMIN_USERS);
+        verify(bindingResult).rejectValue("email",
+                "error.email",
+                "This user already has a profile for this firm. You can amend their access from the Manage your users table.");
+    }
 
+    @Test
+    void selectUserPostWithErrorWhenTheUserAlreadyHasAccessForTheFirmWithSession() {
+        //Arrange
+        UUID firmId = UUID.randomUUID();
+        Firm firm = Firm.builder()
+                .name("Firm1")
+                .id(firmId)
+                .build();
+        Optional<EntraUser> entraUser = getEntraUser(true, firm);
+        when(userService.findEntraUserByEmail(multiFirmUserForm.getEmail())).thenReturn(entraUser);
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder()
+                .firm(firm)
+                .build());
+        when(firmService.getById(firmId)).thenReturn(firm);
+
+        session.setAttribute("delegateTargetFirmId", firmId.toString());
+
+        //act
+        String view = firmSelectionController.selectUserPost(multiFirmUserForm, bindingResult, model, session, authentication);
+        // Assert
+        assertThat(view).isEqualTo(ADMIN_TOOLS_SELECT_USER);
         assertThat(model.getAttribute("backUrl")).isEqualTo(ADMIN_USERS);
         verify(bindingResult).rejectValue("email",
                 "error.email",
