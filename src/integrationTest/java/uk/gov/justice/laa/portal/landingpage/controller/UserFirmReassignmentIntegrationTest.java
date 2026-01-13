@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
@@ -59,8 +60,11 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
 
     private EntraUser externalUser;
     private UserProfile externalUserProfile;
+    private UserProfile externalUserProfile2;
     private Firm firm1;
     private Firm firm2;
+    private Firm firm3;
+    private Firm firm4;
     private EntraUser adminUser;
 
     @BeforeAll
@@ -90,6 +94,14 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
             firm2 = firmRepository.save(buildFirm("XYZ Legal Services", "XYZ001"));
             var office2 = officeRepository.save(buildOffice(firm2, "Main Office", "456 Legal Ave", "555-0002", "XYZ-MAIN"));
             firm2.getOffices().add(office2);
+
+            firm3 = firmRepository.save(buildFirm("New Legal Services", "NEW001"));
+            var office3 = officeRepository.save(buildOffice(firm3, "Main Office", "789 Legal Ave", "555-0002", "NEW-MAIN"));
+            firm3.getOffices().add(office3);
+
+            firm4 = firmRepository.save(buildFirm("FOUR Legal Services", "FOUR001"));
+            var office4 = officeRepository.save(buildOffice(firm4, "Main Office", "789 Legal Ave", "555-0002", "FOUR-MAIN"));
+            firm4.getOffices().add(office4);
             
             firmRepository.flush();
             officeRepository.flush();
@@ -102,19 +114,25 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
             UserProfile profile = buildLaaUserProfile(externalUser, UserType.EXTERNAL, true);
             profile.setFirm(firm1);
             profile.setAppRoles(new HashSet<>());
-            externalUser.setUserProfiles(Set.of(profile));
             profile.setEntraUser(externalUser);
-            externalUser = entraUserRepository.saveAndFlush(externalUser);
             externalUserProfile = profile;
 
-            // Create admin user with EDIT_USER_FIRM permission (External User Admin role has this permission)
-            adminUser = buildEntraUser(generateEntraId(), "admin@test.com", "Admin", "User");
-            UserProfile adminProfile = buildLaaUserProfile(adminUser, UserType.INTERNAL, true);
+            externalUserProfile2 = buildLaaUserProfile(externalUser, UserType.EXTERNAL, false);
+            externalUserProfile2.setFirm(firm4);
             AppRole externalUserAdminRole = appRoleRepository.findAllWithPermissions().stream()
                     .filter(AppRole::isAuthzRole)
                     .filter(role -> role.getName().equals("External User Admin"))
                     .findFirst()
                     .orElseThrow(() -> new RuntimeException("Could not find External User Admin role"));
+            externalUserProfile2.setAppRoles(Set.of(externalUserAdminRole));
+            externalUserProfile2.setEntraUser(externalUser);
+
+            externalUser.setUserProfiles(Set.of(externalUserProfile, externalUserProfile2));
+            externalUser = entraUserRepository.saveAndFlush(externalUser);
+
+            // Create admin user with EDIT_USER_FIRM permission (External User Admin role has this permission)
+            adminUser = buildEntraUser(generateEntraId(), "admin@test.com", "Admin", "User");
+            UserProfile adminProfile = buildLaaUserProfile(adminUser, UserType.INTERNAL, true);
             adminProfile.setAppRoles(Set.of(externalUserAdminRole));
             adminUser.setUserProfiles(Set.of(adminProfile));
             adminProfile.setEntraUser(adminUser);
@@ -174,7 +192,7 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
             mockMvc.perform(get("/admin/users/reassign-firm/" + nonExistentId)
                     .with(userOauth2Login(adminUser)))
                     .andExpect(status().isOk())
-                    .andExpect(view().name("error"))
+                    .andExpect(view().name("errors/error-generic"))
                     .andExpect(model().attributeExists("errorMessage"));
         }
 
@@ -191,8 +209,17 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
             mockMvc.perform(get("/admin/users/reassign-firm/" + internalProfile.getId())
                     .with(userOauth2Login(adminUser)))
                     .andExpect(status().isOk())
-                    .andExpect(view().name("error"))
+                    .andExpect(view().name("errors/error-generic"))
                     .andExpect(model().attributeExists("errorMessage"));
+        }
+
+        @Test
+        void shouldReturnError_whenUserWithAppAssignments() throws Exception {
+            mockMvc.perform(get("/admin/users/reassign-firm/" + externalUserProfile2.getId())
+                            .with(userOauth2Login(adminUser)))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrlPattern("/admin/users/manage/*"))
+                    .andExpect(flash().attributeExists("errorMessage"));
         }
 
         @Test
@@ -326,7 +353,7 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
                     .param("selectedFirmName", firm2.getName())
                     .with(userOauth2Login(adminUser)))
                     .andExpect(status().isOk())
-                    .andExpect(view().name("error"));
+                    .andExpect(view().name("errors/error-generic"));
         }
     }
 
@@ -400,7 +427,7 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
                     .param("reason", "Test reason")
                     .with(userOauth2Login(adminUser)))
                     .andExpect(status().isOk())
-                    .andExpect(view().name("error"));
+                    .andExpect(view().name("errors/error-generic"));
         }
     }
 
@@ -480,6 +507,21 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
                     .param("reason", "Test reason")
                     .with(csrf())
                     .with(userOauth2Login(adminUser)))
+                    .andExpect(status().isOk())
+                    .andExpect(view().name("reassign-firm/check-answers"))
+                    .andExpect(model().attributeExists("errorMessage"));
+        }
+
+        @Test
+        void shouldReturnError_whenAppsStillAssigned() throws Exception {
+            UUID nonExistentFirmId = UUID.randomUUID();
+
+            mockMvc.perform(post("/admin/users/reassign-firm/" + externalUserProfile2.getId() + "/confirmation")
+                            .param("selectedFirmId", firm3.getId().toString())
+                            .param("selectedFirmName", firm3.getName())
+                            .param("reason", "Test reason")
+                            .with(csrf())
+                            .with(userOauth2Login(adminUser)))
                     .andExpect(status().isOk())
                     .andExpect(view().name("reassign-firm/check-answers"))
                     .andExpect(model().attributeExists("errorMessage"));
