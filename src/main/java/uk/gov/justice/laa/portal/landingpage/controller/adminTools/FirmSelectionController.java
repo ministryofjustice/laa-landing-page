@@ -138,9 +138,12 @@ public class FirmSelectionController {
                 }
                 for (UserProfile up : entraUser.getUserProfiles()) {
                     Firm existingFirm = up.getFirm();
+/* will never be null
+
+Firm existingFirm = up.getFirm();
                     if (existingFirm == null) {
                         continue;
-                    }
+                    }*/
                     if (isAncestor(existingFirm, targetFirm)) {
                         result.rejectValue("email", "error.email", "This user already belongs to a parent firm in this hierarchy and cannot be assigned to a child firm.");
                         String backUrl2 = "/admin/users";
@@ -167,6 +170,7 @@ public class FirmSelectionController {
             log.debug("User not found for the given user email: {}", multiFirmUserForm.getEmail());
             result.rejectValue("email", "error.email",
                     "We could not find this user. Try again or ask the Legal Aid Agency to create a new account for them.");
+            model.addAttribute("backUrl", "/admin/users");
             return "admin-tools/select-user";
         }
     }

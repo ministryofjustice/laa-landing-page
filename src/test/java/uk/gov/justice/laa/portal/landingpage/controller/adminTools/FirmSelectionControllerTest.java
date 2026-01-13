@@ -13,6 +13,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
@@ -20,6 +21,7 @@ import uk.gov.justice.laa.portal.landingpage.controller.FirmController;
 import uk.gov.justice.laa.portal.landingpage.controller.MultiFirmUserController;
 import uk.gov.justice.laa.portal.landingpage.controller.UserController;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -32,6 +34,9 @@ import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -49,6 +54,7 @@ class FirmSelectionControllerTest {
     public static final String ADMIN_TOOLS_SELECT_USER = "admin-tools/select-user";
     public static final String REDIRECT_ADMIN_FIRM_SELECTION_SELECT_FIRM = "redirect:/adminFirmSelection/selectFirm";
     public static final String ADMIN_USERS = "/admin/users";
+    public static final String ADMIN_TOOLS_ADD_USER_FIRM = "admin-tools/add-user-firm";
     private FirmSelectionController firmSelectionController;
 
     @Mock
@@ -74,6 +80,7 @@ class FirmSelectionControllerTest {
     private HttpSession session;
 
     private MultiFirmUserForm multiFirmUserForm;
+    private FirmSearchForm firmSearchForm;
 
     private ModelMapper mapper;
 
@@ -85,6 +92,8 @@ class FirmSelectionControllerTest {
         session = new MockHttpSession();
         multiFirmUserForm = MultiFirmUserForm.builder()
                 .email("test@test.com")
+                .build();
+        firmSearchForm = FirmSearchForm.builder()
                 .build();
     }
 
@@ -218,9 +227,173 @@ class FirmSelectionControllerTest {
                 "This user already has a profile for this firm. You can amend their access from the Manage your users table.");
     }
 
+    @Test
+    void selectUserPostWithErrorWhenTheUserParentFirm() {
+        //Arrange
+        UUID firmId = UUID.randomUUID();
+        UUID differentFirmId = UUID.randomUUID();
+        Firm firm = Firm.builder()
+                .name("Parent firm")
+                .id(firmId)
+                .build();
+
+        Firm differentFirm = Firm.builder()
+                .name("Child firm")
+                .id(firmId)
+                .build();
+
+        Firm otherFirm = Firm.builder()
+                .name("otherFirm")
+                .id(differentFirmId)
+                .parentFirm(firm)
+                .build();
+
+        Optional<EntraUser> entraUser = getEntraUserProfileWithParents(firm, differentFirm);
+        when(userService.findEntraUserByEmail(multiFirmUserForm.getEmail())).thenReturn(entraUser);
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder()
+                .firm(firm)
+                .build());
+        when(firmService.getById(differentFirmId)).thenReturn(otherFirm);
+
+        session.setAttribute("delegateTargetFirmId", differentFirmId.toString());
+
+        //act
+        String view = firmSelectionController.selectUserPost(multiFirmUserForm, bindingResult, model, session, authentication);
+        // Assert
+        assertThat(view).isEqualTo(ADMIN_TOOLS_SELECT_USER);
+        assertThat(model.getAttribute("backUrl")).isEqualTo(ADMIN_USERS);
+        verify(bindingResult).rejectValue("email",
+                "error.email",
+                "This user already belongs to a parent firm in this hierarchy and cannot be assigned to a child firm.");
+    }
 
     @Test
-    void selectFirmGet() {
+    void selectUserPostWithErrorWhenTheUserChildrenFirm() {
+        //Arrange
+        UUID firmId = UUID.randomUUID();
+        Firm children = Firm.builder()
+                .name("Child firm")
+                .id(firmId)
+                .build();
+
+        Firm firmParent = Firm.builder()
+                .name("Parent firm")
+                .id(firmId)
+                .childFirms(Set.of(children))
+                .parentFirm(Firm.builder()
+                        .name("Parent firm")
+                        .id(firmId)
+                        .build())
+                .build();
+
+        Optional<EntraUser> entraUser = getEntraUser(true, firmParent);
+        when(userService.findEntraUserByEmail(multiFirmUserForm.getEmail())).thenReturn(entraUser);
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder()
+                .firm(firmParent)
+                .build());
+        when(firmService.getById(children.getId())).thenReturn(children);
+        session.setAttribute("delegateTargetFirmId", children.getId().toString());
+
+        //act
+        String view = firmSelectionController.selectUserPost(multiFirmUserForm, bindingResult, model, session, authentication);
+        // Assert
+        assertThat(view).isEqualTo(ADMIN_TOOLS_SELECT_USER);
+        assertThat(model.getAttribute("backUrl")).isEqualTo(ADMIN_USERS);
+        verify(bindingResult).rejectValue("email",
+                "error.email",
+                "This user already belongs to a child firm in this hierarchy and cannot be assigned to a parent firm.");
+    }
+
+    @Test
+    void selectUserPostWithErrorWhenNotFoundUser() {
+        //Arrange
+        when(userService.findEntraUserByEmail(multiFirmUserForm.getEmail())).thenReturn(Optional.empty());
+        //act
+        String view = firmSelectionController.selectUserPost(multiFirmUserForm, bindingResult, model, session, authentication);
+        // Assert
+        assertThat(view).isEqualTo(ADMIN_TOOLS_SELECT_USER);
+        assertThat(model.getAttribute("backUrl")).isEqualTo(ADMIN_USERS);
+        verify(bindingResult).rejectValue("email",
+                "error.email",
+                "We could not find this user. Try again or ask the Legal Aid Agency to create a new account for them.");
+    }
+
+
+    @Test
+    void selectFirmGetWithoutSessionInformationIsNotMultiFirm() {
+        //Arrange
+        session.setAttribute("isMultiFirmUser", false);
+        //act
+        String view = firmSelectionController.selectFirmGet(firmSearchForm, session, model, 10);
+        //Assert
+        assertThat(view).isEqualTo(ADMIN_TOOLS_ADD_USER_FIRM);
+
+        assertThat(model.getAttribute("firmSearchForm")).isEqualTo(firmSearchForm);
+        assertThat(model.getAttribute("firmSearchResultCount")).isEqualTo(10);
+        assertFalse((Boolean) model.getAttribute("showSkipFirmSelection"));
+
+    }
+
+    @Test
+    void selectFirmGetWithoutSessionInformationIsMultiFirm() {
+        //Arrange
+        session.setAttribute("isMultiFirmUser", true);
+
+        //act
+        String view = firmSelectionController.selectFirmGet(firmSearchForm, session, model, 10);
+        //Assert
+        assertThat(view).isEqualTo(ADMIN_TOOLS_ADD_USER_FIRM);
+
+        assertThat(model.getAttribute("firmSearchForm")).isEqualTo(firmSearchForm);
+        assertThat(model.getAttribute("firmSearchResultCount")).isEqualTo(10);
+        assertTrue((Boolean) model.getAttribute("showSkipFirmSelection"));
+
+    }
+
+    @Test
+    void selectFirmGetWithoutSessionInformationFirmSearchFormFromSession() {
+        //Arrange
+        session.setAttribute("isMultiFirmUser", true);
+        session.setAttribute("firmSearchForm", firmSearchForm);
+
+        //act
+        String view = firmSelectionController.selectFirmGet(firmSearchForm, session, model, 10);
+        //Assert
+        assertThat(view).isEqualTo(ADMIN_TOOLS_ADD_USER_FIRM);
+
+        assertThat(model.getAttribute("firmSearchForm")).isEqualTo(firmSearchForm);
+        assertThat(session.getAttribute("firmSearchForm")).isEqualTo(firmSearchForm);
+        assertThat(model.getAttribute("firmSearchResultCount")).isEqualTo(10);
+        assertTrue((Boolean) model.getAttribute("showSkipFirmSelection"));
+
+    }
+
+    @Test
+    void selectFirmGetWithoutSessionInformationFirmFromSession() {
+        //Arrange
+        UUID firmId = UUID.randomUUID();
+        FirmDto firm = FirmDto.builder()
+                .name("Firm")
+                .id(firmId)
+                .build();
+
+        session.setAttribute("isMultiFirmUser", true);
+        session.setAttribute("firm",firm);
+        FirmSearchForm expectedForm = FirmSearchForm.builder()
+                .selectedFirmId(firm.getId())
+                .firmSearch(firm.getName())
+                .build();
+        //act
+        String view = firmSelectionController.selectFirmGet(firmSearchForm, session, model, 10);
+        //Assert
+        assertThat(view).isEqualTo(ADMIN_TOOLS_ADD_USER_FIRM);
+
+        assertThat(model.getAttribute("firmSearchForm")).isEqualTo(expectedForm);
+        assertThat(session.getAttribute("firmSearchForm")).isEqualTo(expectedForm);
+
+        assertThat(model.getAttribute("firmSearchResultCount")).isEqualTo(10);
+        assertTrue((Boolean) model.getAttribute("showSkipFirmSelection"));
+
     }
 
     @Test
@@ -260,6 +433,21 @@ class FirmSelectionControllerTest {
                         .userProfiles(Set.of(UserProfile.builder()
                                         .firm(firm)
                                 .build()))
+                .build());
+    }
+
+    private static Optional<EntraUser> getEntraUserProfileWithParents(Firm parent, Firm child) {
+
+        Set<UserProfile> profiles = new LinkedHashSet<>();
+        profiles.add(UserProfile.builder().firm(parent).build());
+        profiles.add(UserProfile.builder().firm(child).build());
+
+        return Optional.ofNullable(EntraUser.builder()
+                .multiFirmUser(true)
+                .email("test@test.com")
+                .firstName("test")
+                .lastName("test")
+                .userProfiles(Collections.unmodifiableSet(profiles))
                 .build());
     }
 }
