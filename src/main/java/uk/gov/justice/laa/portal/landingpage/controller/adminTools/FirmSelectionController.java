@@ -247,8 +247,6 @@ Firm existingFirm = up.getFirm();
                     "User profile already exists for this firm.");
             return "admin-tools/add-user-firm";
         }
-
-
         session.setAttribute("firmSearchForm", firmSearchForm);
         session.setAttribute("delegateTargetFirmId", firmSearchForm.getSelectedFirmId().toString());
         return "redirect:/adminFirmSelection/check-answers";

@@ -15,11 +15,13 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
+import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.controller.FirmController;
 import uk.gov.justice.laa.portal.landingpage.controller.MultiFirmUserController;
 import uk.gov.justice.laa.portal.landingpage.controller.UserController;
+import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
@@ -46,9 +48,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 
 @ExtendWith(MockitoExtension.class)
 class FirmSelectionControllerTest {
@@ -57,6 +61,7 @@ class FirmSelectionControllerTest {
     public static final String REDIRECT_ADMIN_FIRM_SELECTION_SELECT_FIRM = "redirect:/adminFirmSelection/selectFirm";
     public static final String ADMIN_USERS = "/admin/users";
     public static final String ADMIN_TOOLS_ADD_USER_FIRM = "admin-tools/add-user-firm";
+    public static final String ADMIN_TOOLS_ADD_PROFILE_CHECK_ANSWERS = "admin-tools/add-profile-check-answers";
     private FirmSelectionController firmSelectionController;
 
     @Mock
@@ -473,18 +478,101 @@ class FirmSelectionControllerTest {
 
     @Test
     void checkAnswerGet() {
+        //Arrange
+        UUID firmId = UUID.randomUUID();
+        FirmDto firmDto= FirmDto.builder()
+                .name("firm")
+                .id(firmId)
+                .build();
+        firmSearchForm.setSelectedFirmId(firmId);
+        Optional<EntraUser> entraUser = getEntraUser(true, null);
+        EntraUserDto entraUserDtoResult = mapper.map(entraUser, EntraUserDto.class);
+
+        session.setAttribute("delegateTargetFirmId", firmSearchForm.getSelectedFirmId().toString());
+        session.setAttribute("entraUser", entraUserDtoResult);
+        when(firmService.getFirm(firmId)).thenReturn(firmDto);
+        //act
+        String view = firmSelectionController.checkAnswerGet(model,authentication,session);
+
+        //Assert
+        assertThat(view).isEqualTo(ADMIN_TOOLS_ADD_PROFILE_CHECK_ANSWERS);
+        assertThat(model.getAttribute("user")).isEqualTo(entraUserDtoResult);
+        assertTrue((Boolean) model.getAttribute("externalUser"));
+        assertTrue((Boolean) model.getAttribute("isMultiFirmUser"));
+        assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo(String.format("Add profile - Check your answers - %s", entraUserDtoResult.getFullName()));
+
     }
 
     @Test
     void checkAnswerPost() {
+        //Arrange
+        UUID firmId = UUID.randomUUID();
+        Firm firm = Firm.builder()
+                .id(firmId)
+                .name("Firm1")
+                .build();
+        FirmDto firmDto = mapper.map(firm, FirmDto.class);
+        Optional<EntraUser> entraUser = getEntraUser(true, firm);
+        EntraUserDto entraUserDtoResult = mapper.map(entraUser, EntraUserDto.class);
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setName(entraUserDtoResult.getFullName());
+        session.setAttribute("entraUser", entraUserDtoResult);
+        when(userService.findEntraUserByEmail(entraUserDtoResult.getEmail())).thenReturn(entraUser);
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        session.setAttribute("delegateTargetFirmId", firmId.toString());
+        when(firmService.getFirm(firmId)).thenReturn(firmDto);
+
+        when(userService.addMultiFirmUserProfile(entraUserDtoResult, firmDto, List.of(),
+                List.of(), currentUserDto.getName())).thenReturn(UserProfile.builder()
+                .id(firmId)
+                .build());
+
+        //act
+        String view = firmSelectionController.checkAnswerPost(authentication, session, model);
+
+        //Assert
+        assertThat(view).isEqualTo("redirect:/adminFirmSelection/confirmation");
+        verify(eventService, times(1)).logEvent(any());
     }
 
     @Test
-    void confirmation() {
+    void confirmationInformationFromSession() {
+        //Arrange
+        Optional<EntraUser> entraUser = getEntraUser(true, null);
+        EntraUserDto entraUserDtoResult = mapper.map(entraUser, EntraUserDto.class);
+
+        session.setAttribute("entraUser", entraUserDtoResult);
+        model.addAttribute("user", entraUserDtoResult);
+
+        //act
+        String view = firmSelectionController.confirmation(model,session);
+        //Assert
+        assertThat(view).isEqualTo("multi-firm-user/add-profile-confirmation");
+        assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo(String.format("User profile created - %s" , entraUserDtoResult.getFullName()));
+        assertThat(model.getAttribute("user")).isEqualTo(entraUserDtoResult);
+
+        assertThat(session.getAttribute("entraUser")).isNull();
+        assertThat(session.getAttribute("multiFirmUserForm")).isNull();
+        assertThat(session.getAttribute("firmSearchForm")).isNull();
+        assertThat(session.getAttribute("firm")).isNull();
+        assertThat(session.getAttribute("delegateTargetFirmId")).isNull();
+
     }
 
     @Test
     void cancel() {
+        //act
+        String view = firmSelectionController.cancel(session);
+
+        //assert
+        assertThat(view).isEqualTo("redirect:/admin/users");
+
+        assertThat(session.getAttribute("entraUser")).isNull();
+        assertThat(session.getAttribute("multiFirmUserForm")).isNull();
+        assertThat(session.getAttribute("firmSearchForm")).isNull();
+        assertThat(session.getAttribute("firm")).isNull();
+        assertThat(session.getAttribute("delegateTargetFirmId")).isNull();
+
     }
 
     @Test
@@ -493,6 +581,12 @@ class FirmSelectionControllerTest {
 
     @Test
     void handleException() {
+        //act
+        RedirectView RedirectView = firmSelectionController.handleException(new Exception("error"));
+
+        //assert
+        assertThat(RedirectView.getUrl()).isEqualTo("redirect:/admin/users");
+
     }
 
     private static Optional<EntraUser> getEntraUser(boolean isMultiFirm, Firm firm) {
