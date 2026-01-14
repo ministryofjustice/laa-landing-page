@@ -24,7 +24,7 @@ import uk.gov.justice.laa.portal.landingpage.service.AdminService;
 @Slf4j
 @Controller
 @RequiredArgsConstructor
-@RequestMapping("/admin/silas-administration")
+@RequestMapping("/admin")
 @PreAuthorize("@accessControlService.userHasAuthzRole(authentication, T(uk.gov.justice.laa.portal.landingpage.entity.AuthzRole).GLOBAL_ADMIN.roleName)")
 public class AdminController {
 
@@ -33,7 +33,7 @@ public class AdminController {
     /**
      * Display SiLAS Administration landing page with Admin Services tab by default
      */
-    @GetMapping("")
+    @GetMapping("/silas-administration")
     public String showAdministration(
             @RequestParam(defaultValue = "admin-apps") String tab,
             @RequestParam(required = false) String appFilter,
