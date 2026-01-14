@@ -168,11 +168,12 @@ public class ManageUsersTest extends BaseFrontEndTest {
 
         Arrays.stream(TestUser.values()).toList().forEach(user -> {
             ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(user);
-            if(usersWithCreateUserPrivilege.contains(user)) {
+
+            if(usersWithCreateUserPrivilege.contains(user))
                 assertTrue(manageUsersPage.isCreateUserVisible(), user + " create user is not visible");
-            } else {
+            else
                 assertFalse(manageUsersPage.isCreateUserVisible(), user + " create user is visible");
-            }
+
             manageUsersPage.clickAndConfirmSignOut();
         });
     }
