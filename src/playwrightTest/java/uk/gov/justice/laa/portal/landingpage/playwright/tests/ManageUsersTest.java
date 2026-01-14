@@ -8,8 +8,10 @@ import uk.gov.justice.laa.portal.landingpage.playwright.common.TestUser;
 import uk.gov.justice.laa.portal.landingpage.playwright.pages.AuditPage;
 import uk.gov.justice.laa.portal.landingpage.playwright.pages.ManageUsersPage;
 
+import java.util.Arrays;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ManageUsersTest extends BaseFrontEndTest {
@@ -157,6 +159,22 @@ public class ManageUsersTest extends BaseFrontEndTest {
         //Verify user deleted
         manageUsersPage.clickGoBackToManageUsers();
         manageUsersPage.searchAndVerifyUserNotExists(email);
+    }
+
+    @Test
+    @DisplayName("Only admin users should able to create new user")
+    void testUserPrivilegesToCreateUser() {
+        var usersWithCreateUserPrivilege = List.of(TestUser.GLOBAL_ADMIN, TestUser.EXTERNAL_USER_ADMIN);
+
+        Arrays.stream(TestUser.values()).toList().forEach(user -> {
+            ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(user);
+            if(usersWithCreateUserPrivilege.contains(user)) {
+                assertTrue(manageUsersPage.isCreateUserVisible(), user + " create user is not visible");
+            } else {
+                assertFalse(manageUsersPage.isCreateUserVisible(), user + " create user is visible");
+            }
+            manageUsersPage.clickAndConfirmSignOut();
+        });
     }
 
 
