@@ -16,7 +16,7 @@ public class HomePage {
 
     private final Page page;
     private final Locator header;
-    private final Locator signOutButton;
+    private final Locator signOutLink;
     private final Locator manageUsersLink;
     private final Locator manageUsersDescription;
     private final Locator applyForLegalAidLink;
@@ -30,7 +30,7 @@ public class HomePage {
     public HomePage(Page page) {
         this.page = page;
         this.header = page.locator("h1.govuk-heading-xl");
-        this.signOutButton = page.locator("button[type='submit']:has-text('Sign out')");
+        this.signOutLink = page.locator("a.govuk-header__link:has-text('Sign out')");
         //this.manageUsersDescription = page.locator("div.moj-ticket-panel__content--blue p.govuk-body");
         this.manageUsersDescription  = page.locator("//p[@class='govuk-body' and text()='Manage user access and permissions']");
 
@@ -80,7 +80,11 @@ public class HomePage {
     }
 
     public void clickSignOut() {
-        signOutButton.click();
+        signOutLink.click();
+    }
+
+    public void clickConfirmSignOut() {
+        page.locator("button[type='submit']:has-text('Sign out')").click();
     }
 
     public Page getPage() {

@@ -60,6 +60,7 @@ public class HomePageTest extends BaseFrontEndTest {
     void verifySignOut() {
         HomePage home  = loginAndGetHome(TestUser.GLOBAL_ADMIN);
         home.clickSignOut();
+        home.clickConfirmSignOut();
         assertTrue(page.url().contains("logout-success"));
         assertTrue(page.locator(".govuk-panel__title").textContent().contains("You're now signed out of your account"));
         page.goBack();
