@@ -17,7 +17,6 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
-import uk.gov.justice.laa.portal.landingpage.controller.admintools.FirmSelectionController;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
@@ -39,7 +38,8 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -384,7 +384,7 @@ class FirmSelectionControllerTest {
                 .build();
 
         session.setAttribute("isMultiFirmUser", true);
-        session.setAttribute("firm",firm);
+        session.setAttribute("firm", firm);
         FirmSearchForm expectedForm = FirmSearchForm.builder()
                 .selectedFirmId(firm.getId())
                 .firmSearch(firm.getName())
@@ -453,7 +453,7 @@ class FirmSelectionControllerTest {
     }
 
     @Test
-    void selectFirmPostWithErrorUserProfileAlreadyExists () {
+    void selectFirmPostWithErrorUserProfileAlreadyExists() {
         //Arrange
         UUID firmId = UUID.randomUUID();
 
@@ -478,19 +478,20 @@ class FirmSelectionControllerTest {
     void checkAnswerGet() {
         //Arrange
         UUID firmId = UUID.randomUUID();
-        FirmDto firmDto= FirmDto.builder()
-                .name("firm")
-                .id(firmId)
-                .build();
+
         firmSearchForm.setSelectedFirmId(firmId);
         Optional<EntraUser> entraUser = getEntraUser(true, null);
         EntraUserDto entraUserDtoResult = mapper.map(entraUser, EntraUserDto.class);
 
         session.setAttribute("delegateTargetFirmId", firmSearchForm.getSelectedFirmId().toString());
         session.setAttribute("entraUser", entraUserDtoResult);
+        FirmDto firmDto = FirmDto.builder()
+                .name("firm")
+                .id(firmId)
+                .build();
         when(firmService.getFirm(firmId)).thenReturn(firmDto);
         //act
-        String view = firmSelectionController.checkAnswerGet(model,authentication,session);
+        String view = firmSelectionController.checkAnswerGet(model, authentication, session);
 
         //Assert
         assertThat(view).isEqualTo(ADMIN_TOOLS_ADD_PROFILE_CHECK_ANSWERS);
@@ -509,7 +510,7 @@ class FirmSelectionControllerTest {
                 .id(firmId)
                 .name("Firm1")
                 .build();
-        FirmDto firmDto = mapper.map(firm, FirmDto.class);
+
         Optional<EntraUser> entraUser = getEntraUser(true, firm);
         EntraUserDto entraUserDtoResult = mapper.map(entraUser, EntraUserDto.class);
         CurrentUserDto currentUserDto = new CurrentUserDto();
@@ -518,6 +519,7 @@ class FirmSelectionControllerTest {
         when(userService.findEntraUserByEmail(entraUserDtoResult.getEmail())).thenReturn(entraUser);
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         session.setAttribute("delegateTargetFirmId", firmId.toString());
+        FirmDto firmDto = mapper.map(firm, FirmDto.class);
         when(firmService.getFirm(firmId)).thenReturn(firmDto);
 
         when(userService.addMultiFirmUserProfile(entraUserDtoResult, firmDto, List.of(),
@@ -543,10 +545,10 @@ class FirmSelectionControllerTest {
         model.addAttribute("user", entraUserDtoResult);
 
         //act
-        String view = firmSelectionController.confirmation(model,session);
+        String view = firmSelectionController.confirmation(model, session);
         //Assert
         assertThat(view).isEqualTo("multi-firm-user/add-profile-confirmation");
-        assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo(String.format("User profile created - %s" , entraUserDtoResult.getFullName()));
+        assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo(String.format("User profile created - %s", entraUserDtoResult.getFullName()));
         assertThat(model.getAttribute("user")).isEqualTo(entraUserDtoResult);
 
         assertThat(session.getAttribute("entraUser")).isNull();
@@ -589,10 +591,10 @@ class FirmSelectionControllerTest {
     @Test
     void handleException() {
         //act
-        RedirectView RedirectView = firmSelectionController.handleException(new Exception("error"));
+        RedirectView redirectView = firmSelectionController.handleException(new Exception("error"));
 
         //assert
-        assertThat(RedirectView.getUrl()).isEqualTo("/error");
+        assertThat(redirectView.getUrl()).isEqualTo("/error");
 
     }
 
