@@ -76,7 +76,9 @@ public class AdminService {
                 .sorted((a, b) -> {
                     // Sort by parent app name, then by ordinal
                     int appCompare = a.getParentApp().compareTo(b.getParentApp());
-                    if (appCompare != 0) return appCompare;
+                    if (appCompare != 0) {
+                        return appCompare;
+                    }
                     return Integer.compare(a.getOrdinal(), b.getOrdinal());
                 })
                 .collect(Collectors.toList());
