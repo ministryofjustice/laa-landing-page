@@ -84,15 +84,19 @@ public class LoginController {
                 model.addAttribute("laaApplications", userSessionData.getLaaApplications());
                 boolean isAdmin = false;
                 boolean canViewAuditTable = false;
+                boolean canViewFirmDirectory = false;
                 if (userSessionData.getUser() != null) {
                     Set<Permission> permissions = userService
                             .getUserPermissionsByUserId(userSessionData.getUser().getId());
                     isAdmin = permissions.contains(Permission.VIEW_EXTERNAL_USER)
                             || permissions.contains(Permission.VIEW_INTERNAL_USER);
                     canViewAuditTable = permissions.contains(Permission.VIEW_AUDIT_TABLE);
+                    canViewFirmDirectory = true; //TODO add the permissions;
+
                 }
                 model.addAttribute("isAdminUser", isAdmin);
                 model.addAttribute("canViewAuditTable", canViewAuditTable);
+                model.addAttribute("canViewFirmDirectory", canViewFirmDirectory);
 
                 // Check if user has no roles assigned and determine user type for custom
                 // message

@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'users'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+
+
+<head>
+    <title>Firm Directory</title>
+</head>
+
+<body>
+<nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+    <a class="govuk-back-link" th:href="@{/home}">
+        Back </a>
+</nav>
+<main class="govuk-main-wrapper" id="main-content" th:if="${#authentication.isAuthenticated()}">
+    <div th:if="${successMessage}" class="govuk-notification-banner govuk-notification-banner--success" role="alert"
+         aria-labelledby="govuk-notification-banner-title" data-module="govuk-notification-banner">
+        <div class="govuk-notification-banner__header">
+            <h2 class="govuk-notification-banner__title" id="govuk-notification-banner-title">
+                Success
+            </h2>
+        </div>
+        <div class="govuk-notification-banner__content"
+             style="display: flex; justify-content: space-between; align-items: center;">
+            <p class="govuk-notification-banner__heading" style="margin: 0;">
+                <span th:text="${successMessage}"></span>
+            </p>
+            <a href="/admin/users" class="govuk-link"
+               style="text-decoration: underline; color: #1d70b8; font-size: 19px; line-height: 1.31579; margin-left: 20px; white-space: nowrap;"
+               aria-label="Dismiss success message">
+                Dismiss
+            </a>
+        </div>
+    </div>
+    <div class="govuk-grid-row">
+        <div class="govuk-grid-column-full">
+            <div class="moj-page-header-actions">
+                <div class="moj-page-header-actions__title">
+                    <h1 class="govuk-heading-l">Manage your users</h1>
+                </div>
+                <form class="form" method="post" action="">
+                    <div class="moj-page-header-actions__actions">
+                        <div class="moj-button-group moj-button-group--inline moj-button-group--with-divider">
+                            <button th:if="${allowDelegateUserAccess}" type="button"
+                                    class="govuk-button" data-module="govuk-button" data-govuk-button-init=""
+                                    onclick="location.href='/admin/multi-firm/user/add/profile'">
+                                Delegate access
+                            </button>
+
+                            <button th:if="${allowCreateUser}" type="button" class="govuk-button"
+                                    data-module="govuk-button" data-govuk-button-init=""
+                                    onclick="location.href='/admin/user/create/details';">
+                                Create a new user
+                            </button>
+
+
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="govuk-grid-row">
+                <div class="govuk-grid-column-full">
+                    <!-- Search Card -->
+                    <div class="search-card">
+                        <div class="govuk-form-group">
+                            <fieldset class="govuk-fieldset">
+                                <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
+                                    <h2 class="govuk-fieldset__heading">
+                                        Search by
+                                    </h2>
+                                </legend>
+                                <div class="govuk-hint">
+                                    You can search using one or both boxes
+                                </div>
+
+                                <form method="get" th:action="@{/admin/users}" role="search" id="search-form">
+                                    <div class="search-inputs-container">
+
+                                        <!-- Search by firm name or firm code -->
+                                        <div class="search-input-group">
+                                            <div class="govuk-form-group">
+                                                <label class="govuk-label govuk-label--s" for="firmSearch">
+                                                    Firm name or firm code
+                                                </label>
+                                                <div class="autocomplete__wrapper">
+                                                    <div class="autocomplete__status" aria-live="polite"
+                                                         role="status">
+                                                            <span id="firmSearch__status--A"
+                                                                  class="govuk-visually-hidden"></span>
+                                                        <span id="firmSearch__status--B"
+                                                              class="govuk-visually-hidden"></span>
+                                                    </div>
+                                                    <div
+                                                            style="position: relative; display: inline-block; width: 100%;">
+                                                        <svg class="autocomplete__search-icon" width="16"
+                                                             height="16" viewBox="0 0 16 16"
+                                                             xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
+                                                             focusable="false">
+                                                            <path
+                                                                    d="M6.5 1a5.5 5.5 0 1 0 3.278 9.907l3.657 3.658a.75.75 0 1 0 1.061-1.061L10.84 9.846A5.5 5.5 0 0 0 6.5 1ZM2.5 6.5a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z"
+                                                                    fill="currentColor"></path>
+                                                        </svg>
+                                                        <input class="autocomplete__input govuk-input"
+                                                               id="firmSearch" name="firmSearch" type="text"
+                                                               autocomplete="off" aria-autocomplete="list"
+                                                               aria-expanded="false"
+                                                               aria-controls="firmSearch__listbox"
+                                                               aria-describedby="firm-hint"
+                                                               aria-owns="firmSearch__listbox" role="combobox"
+                                                               th:value="${firmSearch.firmSearch}">
+                                                        <input type="hidden" id="selectedFirmId"
+                                                               name="selectedFirmId"
+                                                               th:value="${firmSearch.selectedFirmId}" />
+                                                        <div id="firmSearch__assistiveHint"
+                                                             class="govuk-hint govuk-visually-hidden" role="status">
+                                                            When autocomplete results are available, use up and down
+                                                            arrows
+                                                            to
+                                                            review and enter to select.
+                                                            Touch device users, explore by touch or with swipe
+                                                            gestures.
+                                                        </div>
+                                                        <ul id="firmSearch__listbox"
+                                                            class="autocomplete__menu autocomplete__menu--hidden"
+                                                            role="listbox" aria-label="Firm search results">
+                                                            <!-- Search results will be populated here via JavaScript -->
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Search users by name or email -->
+                                        <div class="search-input-group">
+                                            <div class="govuk-form-group">
+                                                <label class="govuk-label govuk-label--s" for="search">
+                                                    Name or Email
+                                                </label>
+                                                <input class="govuk-input" id="search" name="search" type="search"
+                                                       th:value="${search}" autocomplete="off">
+                                            </div>
+                                        </div>
+
+                                        <!-- Search button -->
+                                        <div class="search-button-group">
+                                            <div class="govuk-form-group">
+                                                <button type="submit" class="govuk-button govuk-button--secondary"
+                                                        data-module="govuk-button">
+                                                    Search
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Hidden inputs to preserve current search state -->
+                                    <input th:if="${requestedPageSize != null and requestedPageSize != 10}"
+                                           type="hidden" name="size" th:value="${requestedPageSize}">
+                                    <input th:if="${showFirmAdmins}" type="hidden" name="showFirmAdmins"
+                                           th:value="${showFirmAdmins}">
+                                    <input th:if="${showMultiFirmUsers}" type="hidden" name="showMultiFirmUsers"
+                                           th:value="${showMultiFirmUsers}">
+                                </form>
+                            </fieldset>
+                        </div>
+                    </div>
+
+                    <!-- Show firm admins checkbox -->
+                    <div class="govuk-!-padding-top-2 govuk-!-padding-left-2">
+                        <form method="get" th:action="@{/admin/users}" role="search" id="firm-admins-form">
+                            <!-- Hidden inputs to preserve current search state -->
+                            <input th:if="${sort != null and sort != ''}" type="hidden" name="sort"
+                                   th:value="${sort}">
+                            <input th:if="${direction != null and direction != ''}" type="hidden" name="direction"
+                                   th:value="${direction}">
+                            <input th:if="${page != null and page != 1}" type="hidden" name="page"
+                                   th:value="${page}">
+                            <input th:if="${requestedPageSize != null and requestedPageSize != 10}" type="hidden"
+                                   name="size" th:value="${requestedPageSize}">
+                            <input th:if="${search != null and search != ''}" type="hidden" name="search"
+                                   th:value="${search}">
+                            <input th:if="${firmSearch.firmSearch != null and firmSearch.firmSearch != ''}"
+                                   type="hidden" name="firmSearch" th:value="${firmSearch.firmSearch}">
+                            <input th:if="${firmSearch.selectedFirmId != null and firmSearch.selectedFirmId != ''}"
+                                   type="hidden" name="selectedFirmId" th:value="${firmSearch.selectedFirmId}">
+
+                            <div class="govuk-form-group">
+                                <fieldset class="govuk-fieldset">
+                                    <legend class="govuk-fieldset__legend govuk-fieldset__legend--s">Show user by type</legend>
+                                    <div class="govuk-grid-row">
+                                        <div class="govuk-grid-column-one-quarter">
+                                            <div class="govuk-checkboxes govuk-checkboxes--small"
+                                                 data-module="govuk-checkboxes">
+                                                <div class="govuk-checkboxes__item">
+                                                    <input class="govuk-checkboxes__input" id="showFirmAdmins"
+                                                           name="showFirmAdmins" type="checkbox" value="true"
+                                                           th:checked="${showFirmAdmins}">
+                                                    <label class="govuk-label govuk-checkboxes__label"
+                                                           for="showFirmAdmins">
+                                                        Provider admin
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="govuk-grid-column-one-quarter">
+                                            <div class="govuk-checkboxes govuk-checkboxes--small"
+                                                 data-module="govuk-checkboxes">
+                                                <div class="govuk-checkboxes__item">
+                                                    <input class="govuk-checkboxes__input" id="showMultiFirmUsers"
+                                                           name="showMultiFirmUsers" type="checkbox" value="true"
+                                                           th:checked="${showMultiFirmUsers}">
+                                                    <label class="govuk-label govuk-checkboxes__label"
+                                                           for="showMultiFirmUsers">
+                                                        3rd Party
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <style>
+                /* Style the autocomplete to look like a GOV.UK select dropdown */
+                .autocomplete__wrapper {
+                    position: relative;
+                }
+
+                .autocomplete__menu {
+                    background-color: #ffffff;
+                    border: 2px solid #0b0c0c;
+                    border-top: none;
+                    box-sizing: border-box;
+                    color: #0b0c0c;
+                    font-family: "GDS Transport", arial, sans-serif;
+                    font-size: 19px;
+                    font-weight: 400;
+                    line-height: 1.31579;
+                    margin: 0;
+                    max-height: 200px;
+                    overflow-y: auto;
+                    padding: 0;
+                    position: absolute;
+                    top: 100%;
+                    left: 0;
+                    width: 100%;
+                    z-index: 100;
+                    list-style: none;
+                    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+                }
+
+                .autocomplete__menu--hidden {
+                    display: none !important;
+                }
+
+                .autocomplete__menu--inline {
+                    display: block;
+                }
+
+                .autocomplete__option {
+                    background-color: #ffffff;
+                    border-bottom: 1px solid #b1b4b6;
+                    color: #0b0c0c;
+                    cursor: pointer;
+                    display: block;
+                    font-size: 19px;
+                    line-height: 1.31579;
+                    padding: 8px 12px;
+                    text-decoration: none;
+                    position: relative;
+                }
+
+                .autocomplete__option:last-child {
+                    border-bottom: none;
+                }
+
+                .autocomplete__option:hover,
+                .autocomplete__option[aria-selected="true"] {
+                    background-color: #1d70b8;
+                    color: #ffffff;
+                }
+
+                .autocomplete__option:hover strong,
+                .autocomplete__option[aria-selected="true"] strong {
+                    color: #ffffff;
+                }
+
+                .autocomplete__option:hover small,
+                .autocomplete__option[aria-selected="true"] small {
+                    color: #ffffff !important;
+                }
+
+                .autocomplete__option strong {
+                    font-weight: 600;
+                    display: block;
+                    margin-bottom: 2px;
+                }
+
+                .autocomplete__option small {
+                    font-size: 16px;
+                    color: #505a5f;
+                    display: block;
+                }
+
+                /* Make the input look consistent with GOV.UK select styling */
+                .autocomplete__input {
+                    -webkit-appearance: none;
+                    -moz-appearance: none;
+                    appearance: none;
+                    background-color: #ffffff;
+                    border: 2px solid #0b0c0c;
+                    border-radius: 0;
+                    box-sizing: border-box;
+                    color: #0b0c0c;
+                    font-family: "GDS Transport", arial, sans-serif;
+                    font-size: 19px;
+                    font-weight: 400;
+                    line-height: 1.31579;
+                    margin: 0;
+                    padding: 5px 4px 4px 30px;
+                    width: 100%;
+                }
+
+                .autocomplete__search-icon {
+                    position: absolute;
+                    top: 50%;
+                    left: 12px;
+                    transform: translateY(-50%);
+                    color: #0b0c0c;
+                    pointer-events: none;
+                    width: 16px;
+                    height: 16px;
+                    z-index: 1;
+                }
+
+                .autocomplete__input:focus {
+                    border-color: #fd0;
+                    box-shadow: inset 0 0 0 2px;
+                    outline: 3px solid #fd0;
+                    outline-offset: 0;
+                }
+
+                /* Remove the odd styling to make it more uniform like a select */
+                .autocomplete__option--odd {
+                    background-color: #ffffff;
+                }
+
+                .autocomplete__option--odd:hover,
+                .autocomplete__option--odd[aria-selected="true"] {
+                    background-color: #1d70b8;
+                    color: #ffffff;
+                }
+
+                /* Search card styling */
+                .search-card {
+                    padding-right: 0px;
+                    border-radius: 0;
+                    border-bottom: 1px solid #0b0c0c;
+                }
+
+                .search-card .govuk-fieldset__legend {
+                    margin-bottom: 15px;
+                }
+
+                .search-card .govuk-hint {
+                    margin-bottom: 20px;
+                }
+
+                /* Flexbox layout for search inputs */
+                .search-inputs-container {
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 40px;
+                    flex-wrap: wrap;
+                }
+
+                .search-input-group {
+                    flex: 1;
+                    min-width: 250px;
+                }
+
+                .search-button-group {
+                    flex: 0 0 auto;
+                    margin-top: 30px;
+                    /* Position between input and card edge */
+                    margin-left: 0px;
+                    margin-right: 50px;
+                    margin-bottom: -30px;
+                }
+
+                /* Responsive adjustments */
+                @media (max-width: 768px) {
+                    .search-inputs-container {
+                        flex-direction: column;
+                        gap: 20px;
+                    }
+
+                    .search-input-group {
+                        min-width: 100%;
+                    }
+
+                    .search-button-group .govuk-form-group {
+                        padding-top: 0 !important;
+                    }
+                }
+            </style>
+
+            <script th:src="@{/js/utils/url-utils.js}"></script>
+            <script>
+
+                document.addEventListener('DOMContentLoaded', function () {
+                    const firmSearchInput = document.getElementById('firmSearch');
+                    const firmSearchIdInput = document.getElementById('selectedFirmId');
+                    const firmSearchListbox = document.getElementById('firmSearch__listbox');
+                    const statusA = document.getElementById('firmSearch__status--A');
+                    const statusB = document.getElementById('firmSearch__status--B');
+                    const assistiveHint = document.getElementById('firmSearch__assistiveHint');
+
+
+                    if (!firmSearchInput) {
+                        // If the input is not found, return early
+                        return;
+                    }
+
+                    let searchTimeout;
+                    let selectedIndex = -1;
+                    let currentStatusElement = statusA;
+
+                    // Show assistive hint when input is focused
+                    firmSearchInput.addEventListener('focus', function () {
+                        assistiveHint.style.display = 'block';
+                    });
+
+                    // Clear firm search input if no valid firm was selected
+                    firmSearchInput.addEventListener('blur', function () {
+                        // If there's text in the search box but no firm ID selected, clear the input
+                        if (firmSearchInput.value && !firmSearchIdInput.value) {
+                            firmSearchInput.value = '';
+                        }
+                    });
+
+                    // Handle input changes
+                    firmSearchInput.addEventListener('input', function () {
+                        clearTimeout(searchTimeout);
+                        const query = this.value.trim();
+
+                        // If the input is empty, hide results
+                        if (query.length < 3) {
+                            firmSearchIdInput.value = '';
+                            hideResults();
+                            return;
+                        }
+
+                        // Debounce search requests
+                        searchTimeout = setTimeout(() => {
+                            searchFirms(query);
+                        }, 300);
+                    });
+
+                    // Handle keyboard navigation
+                    firmSearchInput.addEventListener('keydown', function (e) {
+                        const items = firmSearchListbox.querySelectorAll('.autocomplete__option');
+
+                        if (e.key === 'ArrowDown') {
+                            e.preventDefault();
+                            selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                            updateSelection(items);
+                            updateStatus(`${selectedIndex + 1} of ${items.length}`);
+                        } else if (e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            selectedIndex = Math.max(selectedIndex - 1, -1);
+                            updateSelection(items);
+                            if (selectedIndex >= 0) {
+                                updateStatus(`${selectedIndex + 1} of ${items.length}`);
+                            }
+                        } else if (e.key === 'Enter') {
+                            // If an item is selected, use it
+                            if (selectedIndex >= 0 && items[selectedIndex]) {
+                                e.preventDefault();
+                                items[selectedIndex].click();
+                                // Submit the form after selection
+                                setTimeout(() => {
+                                    document.getElementById('search-form').submit();
+                                }, 100);
+                            }
+                            // If no item is selected but dropdown has results, select the first one
+                            else if (items.length > 0 && !firmSearchListbox.classList.contains('autocomplete__menu--hidden')) {
+                                // Check if the first item is not a "No firms found" message
+                                const firstItem = items[0];
+                                if (firstItem && firstItem.textContent !== 'No firms found') {
+                                    e.preventDefault();
+                                    firstItem.click();
+                                    // Submit the form after selection
+                                    setTimeout(() => {
+                                        document.getElementById('search-form').submit();
+                                    }, 100);
+                                }
+                            }
+                        } else if (e.key === 'Escape') {
+                            hideResults();
+                        }
+                    });
+
+                    // Hide results when clicking outside
+                    document.addEventListener('click', function (e) {
+                        if (!firmSearchInput.contains(e.target) && !firmSearchListbox.contains(e.target)) {
+                            hideResults();
+                        }
+                    });
+
+                    function searchFirms(query) {
+                        updateStatus('Searching...');
+                        fetch(`/admin/user/firms/search?q=${encodeURIComponent(query)}`, {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            },
+                        })
+                            .then(response => {
+                                if (!response.ok) {
+                                    throw new Error(`HTTP error! status: ${response.status}`);
+                                }
+                                return response.json();
+                            })
+                            .then(data => {
+                                displayResults(data);
+                            })
+                            .catch(error => {
+                                hideResults();
+                                updateStatus('Search failed: ' + error.message);
+                            });
+                    }
+
+                    function displayResults(firms) {
+                        firmSearchListbox.innerHTML = '';
+                        selectedIndex = -1;
+
+                        // Check if we have a search query
+                        const currentQuery = firmSearchInput.value.trim();
+
+                        if (firms.length === 0 && currentQuery.length > 0) {
+                            // Only show "No firms found" if there's a search query but no results
+                            const noResultsItem = document.createElement('li');
+                            noResultsItem.className = 'autocomplete__option';
+                            noResultsItem.textContent = 'No firms found';
+                            noResultsItem.setAttribute('role', 'option');
+                            noResultsItem.setAttribute('aria-selected', 'false');
+                            noResultsItem.style.color = '#6f777b';
+                            firmSearchListbox.appendChild(noResultsItem);
+
+                            showResults();
+                            updateStatus('No results found');
+                            return;
+                        } else if (firms.length === 0) {
+                            // If no search query, just hide results
+                            hideResults();
+                            return;
+                        }
+
+                        firms.forEach((firm, index) => {
+                            const item = document.createElement('li');
+                            item.className = 'autocomplete__option';
+                            item.setAttribute('aria-selected', 'false');
+                            item.setAttribute('role', 'option');
+                            item.setAttribute('tabindex', '-1');
+                            item.setAttribute('id', `firmSearch__option--${index}`);
+                            item.setAttribute('aria-posinset', index + 1);
+                            item.setAttribute('aria-setsize', firms.length);
+
+                            // Create a more select-like display format - using safe DOM manipulation
+                            const firmName = firm.name || '';
+                            const firmCode = firm.code && firm.code.trim() ? firm.code : 'No code available';
+
+                            // Create elements safely to prevent XSS
+                            const strongElement = document.createElement('strong');
+                            strongElement.textContent = firmName;
+
+                            const smallElement = document.createElement('small');
+                            smallElement.textContent = `Firm code: ${firmCode}`;
+
+                            item.appendChild(strongElement);
+                            item.appendChild(smallElement);
+
+                            item.addEventListener('click', function () {
+                                selectFirm(firm);
+                            });
+
+                            item.addEventListener('mouseenter', function () {
+                                selectedIndex = index;
+                                updateSelection(firmSearchListbox.querySelectorAll('.autocomplete__option'));
+                            });
+
+                            firmSearchListbox.appendChild(item);
+                        });
+
+                        showResults();
+                        updateStatus(`${firms.length} result${firms.length === 1 ? '' : 's'} available`);
+                    }
+
+                    function selectFirm(firm) {
+                        firmSearchInput.value = firm.name;
+                        firmSearchIdInput.value = firm.id;
+                        hideResults();
+                        updateStatus(`${firm.name} selected`);
+                    }
+
+                    function updateSelection(items) {
+                        items.forEach((item, index) => {
+                            // Add null check to prevent errors
+                            if (!item) return;
+
+                            if (index === selectedIndex) {
+                                item.setAttribute('aria-selected', 'true');
+                                item.style.backgroundColor = '#1d70b8';
+                                item.style.color = 'white';
+
+                                // Scroll into view if needed
+                                item.scrollIntoView({ block: 'nearest' });
+                            } else {
+                                item.setAttribute('aria-selected', 'false');
+                                item.style.backgroundColor = '';
+                                item.style.color = '';
+                            }
+                        });
+                    }
+
+                    function showResults() {
+                        firmSearchListbox.classList.remove('autocomplete__menu--hidden');
+                        firmSearchListbox.classList.add('autocomplete__menu--inline');
+                        firmSearchInput.setAttribute('aria-expanded', 'true');
+                    }
+
+                    function hideResults() {
+                        firmSearchListbox.classList.add('autocomplete__menu--hidden');
+                        firmSearchListbox.classList.remove('autocomplete__menu--inline');
+                        firmSearchInput.setAttribute('aria-expanded', 'false');
+                        selectedIndex = -1;
+                        if (assistiveHint) {
+                            assistiveHint.style.display = 'none';
+                        }
+                    }
+
+                    function updateStatus(message) {
+                        // Alternate between status elements for better screen reader support
+                        currentStatusElement = currentStatusElement === statusA ? statusB : statusA;
+                        currentStatusElement.textContent = message;
+                    }
+                });
+
+                // Handle sort button clicks
+                document.addEventListener('DOMContentLoaded', function () {
+                    const sortButtons = document.querySelectorAll('.sort-button');
+                    sortButtons.forEach(button => {
+                        button.addEventListener('click', function () {
+                            const params = {
+                                size: this.dataset.size,
+                                page: this.dataset.page,
+                                search: this.dataset.search,
+                                sort: this.dataset.sort,
+                                direction: this.dataset.direction,
+                                usertype: this.dataset.usertype,
+                                showFirmAdmins: this.dataset.showFirmAdmins,
+                                showMultiFirmUsers: this.dataset.showMultiFirmUsers,
+                                firmSearch: this.dataset.firmSearch,
+                                selectedFirmId: this.dataset.selectedFirmId
+                            };
+                            window.location.href = buildCleanUrl('/admin/users', params);
+                        });
+                    });
+
+                    // Clean up form submissions to remove empty parameters
+                    const forms = document.querySelectorAll('form[method="get"]');
+                    forms.forEach(form => {
+                        form.addEventListener('submit', function (e) {
+                            e.preventDefault(); // Prevent default form submission
+
+                            // Collect form data
+                            const formData = new FormData(form);
+                            const params = {};
+
+                            for (const [key, value] of formData.entries()) {
+                                // Only add non-empty values
+                                if (value && value.trim() !== '') {
+                                    // Skip default values
+                                    if (key === 'size' && value == '10') continue;
+                                    if (key === 'page' && value == '1') continue;
+                                    if (key === 'showFirmAdmins' && value === 'false') continue;
+                                    if (key === 'showMultiFirmUsers' && value === 'false') continue;
+                                    params[key] = value;
+                                }
+                            }
+
+                            // Navigate to clean URL
+                            const actionUrl = form.getAttribute('action') || '/admin/users';
+                            window.location.href = buildCleanUrl(actionUrl, params);
+                        });
+                    });
+
+                    // Handle showFirmAdmins checkbox change
+                    const showFirmAdminsCheckbox = document.getElementById('showFirmAdmins');
+                    if (showFirmAdminsCheckbox) {
+                        showFirmAdminsCheckbox.addEventListener('change', function () {
+                            const form = document.getElementById('firm-admins-form');
+                            if (form) {
+                                form.submit();
+                            }
+                        });
+                    }
+                    // Handle showMultiFirmUsers checkbox change
+                    const showMultiFirmUsersCheckbox = document.getElementById('showMultiFirmUsers');
+                    if (showMultiFirmUsersCheckbox) {
+                        showMultiFirmUsersCheckbox.addEventListener('change', function () {
+                            const form = document.getElementById('firm-admins-form');
+                            if (form) {
+                                form.submit();
+                            }
+                        });
+                    }
+                });
+            </script>
+        </div>
+    </div>
+
+
+    <form class="govuk-form-group">
+        <div class="table-container" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+            <table class="govuk-table" data-id-prefix="users-"
+                   style="table-layout: fixed; min-width: 768px; width: 100%;">
+                <thead class="govuk-table__head">
+                <tr class="govuk-table__row">
+                    <th scope="col" class="govuk-table__header"
+                        th:aria-sort="${sort == 'firstName' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}"
+                        style="width: 20%; min-width: 120px;">
+                        <button type="button" class="sort-button" data-sort="firstName"
+                                th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'firstName' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-show-multi-firm-users=${showMultiFirmUsers}">
+                            Name
+                            <img th:if="${sort == 'firstName' and direction == 'asc'}"
+                                 th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
+                            <img th:if="${sort == 'firstName' and direction == 'desc'}"
+                                 th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
+                            <img th:if="${sort != 'firstName'}" th:src="@{/assets/images/sort-none.svg}"
+                                 width="22" height="22" alt="">
+                        </button>
+                    </th>
+                    <th scope="col" class="govuk-table__header"
+                        th:aria-sort="${sort == 'firmName' ? direction : 'none'}"
+                        style="width: 20%; min-width: 120px;">
+                        <button type="button" class="sort-button" data-sort="firmName"
+                                th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'firmName' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-show-multi-firm-users=${showMultiFirmUsers}">
+                            Firm
+                            <img th:if="${sort == 'firmName' and direction == 'asc'}"
+                                 th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
+                            <img th:if="${sort == 'firmName' and direction == 'desc'}"
+                                 th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
+                            <img th:if="${sort != 'firmName'}" th:src="@{/assets/images/sort-none.svg}"
+                                 width="22" height="22" alt="">
+                        </button>
+                    </th>
+                    <th scope="col" class="govuk-table__header"
+                        th:aria-sort="${sort == 'email' ? direction : 'none'}"
+                        style="width: 30%; min-width: 200px;">
+                        <button type="button" class="sort-button" data-sort="email"
+                                th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'email' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-show-multi-firm-users=${showMultiFirmUsers}">
+                            Email
+                            <img th:if="${sort == 'email' and direction == 'asc'}"
+                                 th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
+                            <img th:if="${sort == 'email' and direction == 'desc'}"
+                                 th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
+                            <img th:if="${sort != 'email'}" th:src="@{/assets/images/sort-none.svg}" width="22"
+                                 height="22" alt="">
+                        </button>
+                    </th>
+                    <th scope="col" class="govuk-table__header"
+                        th:aria-sort="${sort == 'userType' ? direction : 'none'}"
+                        style="width: 15%; min-width: 110px;">
+                        <button type="button" class="sort-button" data-sort="userType"
+                                th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'userType' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-show-multi-firm-users=${showMultiFirmUsers}">
+                            User Type
+                            <img th:if="${sort == 'userType' and direction == 'asc'}"
+                                 th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
+                            <img th:if="${sort == 'userType' and direction == 'desc'}"
+                                 th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
+                            <img th:if="${sort != 'userType'}" th:src="@{/assets/images/sort-none.svg}"
+                                 width="22" height="22" alt="">
+                        </button>
+                    </th>
+                    <th scope="col" class="govuk-table__header"
+                        th:aria-sort="${sort == 'userStatus' ? direction : 'none'}"
+                        style="width: 15%; min-width: 90px;">
+                        <button type="button" class="sort-button" data-sort="userStatus"
+                                th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'userStatus' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-show-multi-firm-users=${showMultiFirmUsers}">
+                            Status
+                            <img th:if="${sort == 'userStatus' and direction == 'asc'}"
+                                 th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
+                            <img th:if="${sort == 'userStatus' and direction == 'desc'}"
+                                 th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
+                            <img th:if="${sort != 'userStatus'}" th:src="@{/assets/images/sort-none.svg}"
+                                 width="22" height="22" alt="">
+                        </button>
+                    </th>
+                </tr>
+                </thead>
+
+                <tbody class="govuk-table__body">
+                <tr class="govuk-table__row" th:each="user : ${users}">
+                    <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;">
+                        <a class="govuk-link"
+                           th:href="@{/admin/users/manage/{id}(id=${user.id}, hasFilters=${hasFilters})}"
+                           th:text="${user.fullName}"></a>
+                    </td>
+                    <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;"
+                        th:text="${user.firmName() != null ? user.firmName() : ''}"></td>
+                    <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;"
+                        th:text="${user.email}"></td>
+                    <td class="govuk-table__cell" style="word-wrap: break-word; overflow-wrap: break-word;">
+                                <span th:switch="${#strings.trim(user.userType)}">
+                                    <span th:case="'INTERNAL'">Internal</span>
+                                    <span th:case="'EXTERNAL'">
+                                        <span th:if="${user.multiFirmUser}">External - 3rd Party</span>
+                                        <span th:unless="${user.multiFirmUser}">External</span>
+                                    </span>
+                                    <span th:case="*" th:text="${user.userType}"></span>
+                                </span>
+                    </td>
+                    <td class="govuk-table__cell">
+                                <span th:if="${user.userProfileStatus?.getValue() == 'PENDING'}"
+                                      class="moj-badge moj-badge--blue">INCOMPLETE</span>
+                        <span th:if="${user.userProfileStatus?.getValue() == 'COMPLETE'}"
+                              class="moj-badge moj-badge--green">COMPLETE</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </form>
+    <nav class="govuk-pagination" aria-label="Pagination">
+        <div class="govuk-pagination__prev" th:if="${page > 1}">
+            <a class="govuk-link govuk-pagination__link"
+               th:href="@{/admin/users(size=${requestedPageSize}, page=${page - 1}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers})}"
+               rel="prev">
+                <svg class="govuk-pagination__icon govuk-pagination__icon--prev" xmlns="http://www.w3.org/2000/svg"
+                     height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
+                    <path
+                            d="m6.5938-0.0078125-6.7266 6.7266 6.7441 6.4062 1.377-1.449-4.1856-3.9768h12.896v-2h-12.984l4.2931-4.293-1.414-1.414z">
+                    </path>
+                </svg>
+                <span class="govuk-pagination__link-title">
+                        Previous<span class="govuk-visually-hidden"> page</span>
+                    </span>
+            </a>
+        </div>
+
+        <ul class="govuk-pagination__list">
+            <!-- First page -->
+            <li class="govuk-pagination__item" th:if="${totalPages > 0}"
+                th:classappend="${page == 1 ? 'govuk-pagination__item--current' : ''}">
+                <a class="govuk-link govuk-pagination__link" th:if="${page != 1}"
+                   th:href="@{/admin/users(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers})}"
+                   th:aria-label="'Page 1'">1</a>
+                <a class="govuk-link govuk-pagination__link" th:if="${page == 1}"
+                   th:href="@{/admin/users(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers})}"
+                   th:aria-label="'Page 1'" aria-current="page">1</a>
+            </li>
+
+            <!-- Left ellipses if needed -->
+            <li class="govuk-pagination__item govuk-pagination__item--ellipses" th:if="${page > 4}">
+                &ctdot;
+            </li>
+
+            <!-- Pages around current page -->
+            <th:block
+                    th:each="i : ${#numbers.sequence(T(java.lang.Math).max(2, page - 2), T(java.lang.Math).min(totalPages - 1, page + 2))}">
+                <li class="govuk-pagination__item" th:if="${i > 1 and i < totalPages}"
+                    th:classappend="${i == page ? 'govuk-pagination__item--current' : ''}">
+                    <a class="govuk-link govuk-pagination__link" th:if="${i != page}"
+                       th:href="@{/admin/users(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers})}"
+                       th:aria-label="'Page ' + ${i}" th:text="${i}"></a>
+                    <a class="govuk-link govuk-pagination__link" th:if="${i == page}"
+                       th:href="@{/admin/users(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers})}"
+                       th:aria-label="'Page ' + ${i}" aria-current="page" th:text="${i}"></a>
+                </li>
+            </th:block>
+
+            <!-- Right ellipses if needed -->
+            <li class="govuk-pagination__item govuk-pagination__item--ellipses" th:if="${page < totalPages - 3}">
+                &ctdot;
+            </li>
+
+            <!-- Last page -->
+            <li class="govuk-pagination__item" th:if="${totalPages > 1}"
+                th:classappend="${page == totalPages ? 'govuk-pagination__item--current' : ''}">
+                <a class="govuk-link govuk-pagination__link" th:if="${page != totalPages}"
+                   th:href="@{/admin/users(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers})}"
+                   th:aria-label="'Page ' + ${totalPages}" th:text="${totalPages}"></a>
+                <a class="govuk-link govuk-pagination__link" th:if="${page == totalPages}"
+                   th:href="@{/admin/users(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers})}"
+                   th:aria-label="'Page ' + ${totalPages}" aria-current="page" th:text="${totalPages}"></a>
+            </li>
+        </ul>
+
+        <div class="govuk-pagination__next" th:if="${page < totalPages}">
+            <a class="govuk-link govuk-pagination__link"
+               th:href="@{/admin/users(size=${requestedPageSize}, page=${page + 1}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, sort=${sort}, direction=${direction}, usertype=${usertype}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers})}"
+               rel="next">
+                    <span class="govuk-pagination__link-title">
+                        Next<span class="govuk-visually-hidden"> page</span>
+                    </span>
+                <svg class="govuk-pagination__icon govuk-pagination__icon--next" xmlns="http://www.w3.org/2000/svg"
+                     height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
+                    <path
+                            d="m8.107-0.0078125-1.4136 1.414 4.2926 4.293h-12.986v2h12.896l-4.1855 3.9766 1.377 1.4492 6.7441-6.4062-6.7246-6.7266z">
+                    </path>
+                </svg>
+            </a>
+        </div>
+    </nav>
+    <style>
+        /* Prevent visited link styling on pagination */
+        .govuk-pagination__link:visited {
+            color: #1d70b8;
+            /* Same as unvisited govuk-link color */
+        }
+
+        .govuk-pagination__link:visited:hover {
+            color: #003078;
+            /* Same as unvisited govuk-link hover color */
+        }
+
+        .govuk-pagination__link:visited:focus {
+            color: #0b0c0c;
+            /* Same as unvisited govuk-link focus color */
+        }
+    </style>
+    <p class="moj-pagination__results">Showing <b
+            th:text="${((requestedPageSize ?: 10) * ((page ?: 1) - 1)) + 1}"></b>
+        to <b th:text="${((requestedPageSize ?: 10) * ((page ?: 1) - 1)) + (actualPageSize ?: 10)}"></b>
+        of <b th:text="${totalUsers}"></b> results</p>
+    <div aria-live="polite" role="status" aria-atomic="true" class="govuk-visually-hidden"></div>
+    </div>
+    </div>
+</main>
+</body>
+
+</html>
