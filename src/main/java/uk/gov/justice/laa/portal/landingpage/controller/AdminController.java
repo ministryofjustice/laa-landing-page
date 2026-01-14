@@ -19,7 +19,7 @@ import uk.gov.justice.laa.portal.landingpage.service.AdminService;
 
 /**
  * Controller for SiLAS Administration section
- * Requires "SiLAS Administration" role to access
+ * Requires "Global Admin" role to access
  */
 @Slf4j
 @Controller

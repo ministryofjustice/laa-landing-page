@@ -11,16 +11,13 @@ import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.AdminAppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
-import uk.gov.justice.laa.portal.landingpage.dto.RoleAssignmentAdminDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AdminApp;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
-import uk.gov.justice.laa.portal.landingpage.entity.RoleAssignment;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.AdminAppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.RoleAssignmentRepository;
 
 /**
  * Service for SiLAS Administration functionality
@@ -32,7 +29,6 @@ public class AdminService {
 
     private final AppRepository appRepository;
     private final AppRoleRepository appRoleRepository;
-    private final RoleAssignmentRepository roleAssignmentRepository;
     private final AdminAppRepository adminAppRepository;
 
     /**
@@ -51,17 +47,6 @@ public class AdminService {
      */
     public List<AppAdminDto> getAllApps() {
         return appRepository.findAll().stream()
-                .map(this::mapToAppAdminDto)
-                .sorted((a, b) -> Integer.compare(a.getOrdinal(), b.getOrdinal()))
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Get admin service apps only
-     */
-    public List<AppAdminDto> getAdminApps() {
-        return appRepository.findAll().stream()
-                .filter(app -> app.getAppType() != null && "AUTHZ".equals(app.getAppType().name()))
                 .map(this::mapToAppAdminDto)
                 .sorted((a, b) -> Integer.compare(a.getOrdinal(), b.getOrdinal()))
                 .collect(Collectors.toList());
@@ -92,16 +77,6 @@ public class AdminService {
                 .filter(role -> role.getApp() != null && role.getApp().getName().equals(appName))
                 .map(this::mapToAppRoleAdminDto)
                 .sorted((a, b) -> Integer.compare(a.getOrdinal(), b.getOrdinal()))
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Get all role assignments for administration display
-     */
-    public List<RoleAssignmentAdminDto> getAllRoleAssignments() {
-        return roleAssignmentRepository.findAll().stream()
-                .map(this::mapToRoleAssignmentAdminDto)
-                .sorted((a, b) -> a.getAssigningRoleName().compareTo(b.getAssigningRoleName()))
                 .collect(Collectors.toList());
     }
 
@@ -142,18 +117,6 @@ public class AdminService {
                 .ordinal(appRole.getOrdinal())
                 .authzRole(appRole.isAuthzRole())
                 .ccmsCode(appRole.getCcmsCode() != null ? appRole.getCcmsCode() : "")
-                .build();
-    }
-
-    /**
-     * Map RoleAssignment entity to RoleAssignmentAdminDto
-     */
-    private RoleAssignmentAdminDto mapToRoleAssignmentAdminDto(RoleAssignment roleAssignment) {
-        return RoleAssignmentAdminDto.builder()
-                .assigningRoleId(roleAssignment.getAssigningRole().getId().toString())
-                .assigningRoleName(roleAssignment.getAssigningRole().getName())
-                .assignableRoleId(roleAssignment.getAssignableRole().getId().toString())
-                .assignableRoleName(roleAssignment.getAssignableRole().getName())
                 .build();
     }
 

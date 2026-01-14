@@ -16,17 +16,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.laa.portal.landingpage.dto.AdminAppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
-import uk.gov.justice.laa.portal.landingpage.dto.RoleAssignmentAdminDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AdminApp;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
-import uk.gov.justice.laa.portal.landingpage.entity.AppType;
-import uk.gov.justice.laa.portal.landingpage.entity.RoleAssignment;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.AdminAppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.RoleAssignmentRepository;
 
 @ExtendWith(MockitoExtension.class)
 class AdminServiceTest {
@@ -38,9 +34,6 @@ class AdminServiceTest {
     private AppRoleRepository appRoleRepository;
 
     @Mock
-    private RoleAssignmentRepository roleAssignmentRepository;
-
-    @Mock
     private AdminAppRepository adminAppRepository;
 
     private AdminService adminService;
@@ -50,7 +43,6 @@ class AdminServiceTest {
         adminService = new AdminService(
             appRepository,
             appRoleRepository,
-            roleAssignmentRepository,
             adminAppRepository
         );
     }
@@ -121,26 +113,6 @@ class AdminServiceTest {
     }
 
     @Test
-    void testGetAdminApps_FiltersAuthzAppsOnly() {
-        // Arrange
-        List<App> apps = Arrays.asList(
-            createAppWithType("Admin App", 1, AppType.AUTHZ),
-            createAppWithType("Regular App", 2, AppType.LAA),
-            createAppWithType("Another Admin", 3, AppType.AUTHZ)
-        );
-
-        when(appRepository.findAll()).thenReturn(apps);
-
-        // Act
-        List<AppAdminDto> result = adminService.getAdminApps();
-
-        // Assert
-        assertThat(result).hasSize(2);
-        assertThat(result.get(0).getName()).isEqualTo("Admin App");
-        assertThat(result.get(1).getName()).isEqualTo("Another Admin");
-    }
-
-    @Test
     void testGetAllAppRoles_ReturnsSortedByAppAndOrdinal() {
         // Arrange
         App appA = createApp("App A", 1);
@@ -189,31 +161,6 @@ class AdminServiceTest {
         assertThat(result.get(0).getName()).isEqualTo("Role 1");
         assertThat(result.get(1).getName()).isEqualTo("Role 2");
         assertThat(result.get(2).getName()).isEqualTo("Role 3");
-    }
-
-    @Test
-    void testGetAllRoleAssignments_ReturnsSortedByAssigningRole() {
-        // Arrange
-        AppRole roleA = createSimpleAppRole("Role A");
-        AppRole roleB = createSimpleAppRole("Role B");
-        AppRole roleC = createSimpleAppRole("Role C");
-
-        List<RoleAssignment> assignments = Arrays.asList(
-            createRoleAssignment(roleC, roleA),
-            createRoleAssignment(roleA, roleB),
-            createRoleAssignment(roleB, roleC)
-        );
-
-        when(roleAssignmentRepository.findAll()).thenReturn(assignments);
-
-        // Act
-        List<RoleAssignmentAdminDto> result = adminService.getAllRoleAssignments();
-
-        // Assert
-        assertThat(result).hasSize(3);
-        assertThat(result.get(0).getAssigningRoleName()).isEqualTo("Role A");
-        assertThat(result.get(1).getAssigningRoleName()).isEqualTo("Role B");
-        assertThat(result.get(2).getAssigningRoleName()).isEqualTo("Role C");
     }
 
     @Test
@@ -297,17 +244,6 @@ class AdminServiceTest {
             .build();
     }
 
-    private App createAppWithType(String name, int ordinal, AppType appType) {
-        return App.builder()
-            .id(UUID.randomUUID())
-            .name(name)
-            .description("Description for " + name)
-            .ordinal(ordinal)
-            .url("https://example.com/" + name.toLowerCase())
-            .enabled(true)
-            .appType(appType)
-            .build();
-    }
 
     private AppRole createAppRole(String name, App app, int ordinal) {
         return AppRole.builder()
@@ -317,23 +253,6 @@ class AdminServiceTest {
             .app(app)
             .ordinal(ordinal)
             .authzRole(false)
-            .build();
-    }
-
-    private AppRole createSimpleAppRole(String name) {
-        return AppRole.builder()
-            .id(UUID.randomUUID())
-            .name(name)
-            .description("Description for " + name)
-            .ordinal(1)
-            .authzRole(false)
-            .build();
-    }
-
-    private RoleAssignment createRoleAssignment(AppRole assigningRole, AppRole assignableRole) {
-        return RoleAssignment.builder()
-            .assigningRole(assigningRole)
-            .assignableRole(assignableRole)
             .build();
     }
 }
