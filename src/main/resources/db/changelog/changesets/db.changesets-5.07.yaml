@@ -45,6 +45,8 @@ databaseChangeLog:
   - changeSet:
       id: populate-admin_app-initial-data
       author: paul.snowdon
+      validCheckSums:
+        - 9:0500d781034fb4ff3a1a883a74060f7e
       changes:
         - insert:
             tableName: admin_app

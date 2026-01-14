@@ -15,7 +15,6 @@ import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AdminAppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
-import uk.gov.justice.laa.portal.landingpage.dto.RoleAssignmentAdminDto;
 import uk.gov.justice.laa.portal.landingpage.service.AdminService;
 
 /**
@@ -51,35 +50,22 @@ public class AdminController {
         List<AppAdminDto> apps = adminService.getAllApps();
         model.addAttribute("apps", apps);
 
-        // Load data based on active tab
-        switch (tab) {
-            case "roles" -> {
-                List<AppRoleAdminDto> roles;
-                if (appFilter != null && !appFilter.isEmpty()) {
-                    roles = adminService.getAppRolesByApp(appFilter);
-                } else {
-                    roles = adminService.getAllAppRoles();
-                }
-                model.addAttribute("roles", roles);
-                model.addAttribute("appFilter", appFilter);
-
-                // Get distinct app names for filter dropdown
-                List<String> appNames = adminService.getAllApps().stream()
-                        .map(AppAdminDto::getName)
-                        .distinct()
-                        .sorted()
-                        .toList();
-                model.addAttribute("appNames", appNames);
-            }
-
-            case "assignments" -> {
-                List<RoleAssignmentAdminDto> assignments = adminService.getAllRoleAssignments();
-                model.addAttribute("assignments", assignments);
-            }
-
-            default -> {
-            }
+        List<AppRoleAdminDto> roles;
+        if (appFilter != null && !appFilter.isEmpty()) {
+            roles = adminService.getAppRolesByApp(appFilter);
+        } else {
+            roles = adminService.getAllAppRoles();
         }
+        model.addAttribute("roles", roles);
+        model.addAttribute("appFilter", appFilter);
+
+        // Get distinct app names for filter dropdown
+        List<String> appNames = adminService.getAllApps().stream()
+                .map(AppAdminDto::getName)
+                .distinct()
+                .sorted()
+                .toList();
+        model.addAttribute("appNames", appNames);
 
         return "silas-administration/administration";
     }
