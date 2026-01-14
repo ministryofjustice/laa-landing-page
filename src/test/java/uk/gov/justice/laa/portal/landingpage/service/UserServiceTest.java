@@ -21,11 +21,15 @@ import java.util.stream.IntStream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.Assertions;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
@@ -1533,7 +1537,7 @@ class UserServiceTest {
         Assertions.assertTrue(chambersRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
         Assertions
                 .assertTrue(chambersRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
-        Assertions.assertFalse(chambersRoles.stream().anyMatch(role -> role.getName().equals("Advocate Only Role")));
+        assertFalse(chambersRoles.stream().anyMatch(role -> role.getName().equals("Advocate Only Role")));
     }
 
     @Test
@@ -1576,7 +1580,7 @@ class UserServiceTest {
         Assertions.assertTrue(advocateRoles.stream().anyMatch(role -> role.getName().equals("Advocate Only Role")));
         Assertions
                 .assertTrue(advocateRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
-        Assertions.assertFalse(advocateRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
+        assertFalse(advocateRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
     }
 
     @Test
@@ -1618,10 +1622,8 @@ class UserServiceTest {
         Assertions.assertEquals(1, unrestrictedRoles.size());
         Assertions.assertTrue(
                 unrestrictedRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
-        Assertions
-                .assertFalse(unrestrictedRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
-        Assertions
-                .assertFalse(unrestrictedRoles.stream().anyMatch(role -> role.getName().equals("Advocate Only Role")));
+        assertFalse(unrestrictedRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
+        assertFalse(unrestrictedRoles.stream().anyMatch(role -> role.getName().equals("Advocate Only Role")));
     }
 
     @Test
@@ -1662,8 +1664,8 @@ class UserServiceTest {
 
         Assertions.assertEquals(1, lspRoles.size());
         Assertions.assertTrue(lspRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
-        Assertions.assertFalse(lspRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
-        Assertions.assertFalse(lspRoles.stream().anyMatch(role -> role.getName().equals("Advocate Only Role")));
+        assertFalse(lspRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
+        assertFalse(lspRoles.stream().anyMatch(role -> role.getName().equals("Advocate Only Role")));
     }
 
     @Test
@@ -1705,9 +1707,9 @@ class UserServiceTest {
         Assertions.assertEquals(1, externalChambersRoles.size());
         Assertions.assertTrue(
                 externalChambersRoles.stream().anyMatch(role -> role.getName().equals("External Chambers Role")));
-        Assertions.assertFalse(
+        assertFalse(
                 externalChambersRoles.stream().anyMatch(role -> role.getName().equals("Internal Chambers Role")));
-        Assertions.assertFalse(
+        assertFalse(
                 externalChambersRoles.stream().anyMatch(role -> role.getName().equals("External Advocate Role")));
     }
 
@@ -7580,6 +7582,73 @@ class UserServiceTest {
 
             // Then
             assertThat(result).isEmpty();
+        }
+
+        @Test
+        void hasUserFirmAlreadyAssigned() {
+            // Given
+            UUID firmId = UUID.randomUUID();
+            String mail = "test@test.com";
+            Optional<EntraUser> entraUserOptional = Optional.ofNullable(EntraUser.builder()
+                    .email(mail)
+                    .userProfiles(Set.of(UserProfile.builder()
+                            .firm(Firm.builder()
+                                    .id(firmId)
+                                    .build())
+                            .build()))
+                    .build());
+
+            when(mockEntraUserRepository.findByEmailIgnoreCase(any()))
+                    .thenReturn(entraUserOptional);
+
+            // When
+            boolean result = userService.hasUserFirmAlreadyAssigned(mail, firmId);
+
+            // Then
+            assertTrue(result);
+
+        }
+
+        @Test
+        void hasNotUserFirmAlreadyAssignedWithoutMatch() {
+            // Given
+            UUID firmId = UUID.randomUUID();
+            String mail = "test@test.com";
+            Optional<EntraUser> entraUserOptional = Optional.ofNullable(EntraUser.builder()
+                    .email(mail)
+                    .userProfiles(Set.of(UserProfile.builder()
+                            .firm(Firm.builder()
+                                    .id(UUID.randomUUID())
+                                    .build())
+                            .build()))
+                    .build());
+
+            when(mockEntraUserRepository.findByEmailIgnoreCase(any()))
+                    .thenReturn(entraUserOptional);
+
+            // When
+            boolean result = userService.hasUserFirmAlreadyAssigned(mail, firmId);
+
+            // Then
+            assertFalse(result);
+
+        }
+
+
+        @Test
+        void hasNotUserFirmAlreadyAssigned() {
+            // Given
+            UUID firmId = UUID.randomUUID();
+            String mail = "test@test.com";
+            when(mockEntraUserRepository.findByEmailIgnoreCase(any()))
+                    .thenReturn(Optional.empty());
+
+            // When
+            boolean result = userService.hasUserFirmAlreadyAssigned(mail, firmId);
+
+            // Then
+            assertFalse(result);
+
         }
     }
 }
