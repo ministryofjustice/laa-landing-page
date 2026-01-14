@@ -86,6 +86,10 @@ public class HomePage {
         assertThat(accessRestrictionMessage).isVisible();
     }
 
+    public void clickSignOut() {
+        signOutButton.click();
+    }
+
     public Page getPage() {
         return page;
     }

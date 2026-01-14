@@ -3,6 +3,8 @@ package uk.gov.justice.laa.portal.landingpage.playwright.tests;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -62,5 +64,16 @@ public class HomePageTest extends BaseFrontEndTest {
     void verifyAccessRestrictedMessageAppearsForUserWithNoRoles() {
         HomePage home = loginAndGetHome(TestUser.NO_ROLES);
         home.assertAccessRestrictionMessageVisible();
+    }
+
+    @Test
+    @DisplayName("Verify sign-out works as intended")
+    void verifySignOut() {
+        HomePage home  = loginAndGetHome(TestUser.GLOBAL_ADMIN);
+        home.clickSignOut();
+        assertTrue(page.url().contains("logout-success"));
+        assertTrue(page.locator(".govuk-panel__title").textContent().contains("You're now signed out of your account"));
+        page.goBack();
+        assertTrue(page.url().contains("login.microsoftonline.com/"));
     }
 }
