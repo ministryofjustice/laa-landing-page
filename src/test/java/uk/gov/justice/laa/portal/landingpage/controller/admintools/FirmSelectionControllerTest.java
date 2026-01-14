@@ -17,7 +17,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.servlet.view.RedirectView;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
-import uk.gov.justice.laa.portal.landingpage.controller.adminTools.FirmSelectionController;
+import uk.gov.justice.laa.portal.landingpage.controller.admintools.FirmSelectionController;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;

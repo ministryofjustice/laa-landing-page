@@ -207,8 +207,8 @@ public class UserController {
         boolean allowDelegateUserAccess;
         boolean isNonProdEnv = false;
 
-        if(accessGuard.canDelegateInNonProd(authentication)){
-            allowDelegateUserAccess =  true;
+        if (accessGuard.canDelegateInNonProd(authentication)) {
+            allowDelegateUserAccess = true;
             isNonProdEnv = true;
         } else {
             allowDelegateUserAccess = accessControlService

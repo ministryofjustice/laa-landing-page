@@ -1,4 +1,4 @@
-package uk.gov.justice.laa.portal.landingpage.controller.adminTools;
+package uk.gov.justice.laa.portal.landingpage.controller.admintools;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -49,8 +49,8 @@ import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFro
 @Slf4j
 @Controller
 @RequiredArgsConstructor
-@PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).ADMIN_PERMISSIONS)" +
-        "or @accessGuard.canDelegate(authentication)")
+@PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).ADMIN_PERMISSIONS)"
+        + "or @accessGuard.canDelegate(authentication)")
 @RequestMapping("/adminFirmSelection")
 public class FirmSelectionController {
 
@@ -137,12 +137,6 @@ public class FirmSelectionController {
                 }
                 for (UserProfile up : entraUser.getUserProfiles()) {
                     Firm existingFirm = up.getFirm();
-/* will never be null
-
-Firm existingFirm = up.getFirm();
-                    if (existingFirm == null) {
-                        continue;
-                    }*/
                     if (isAncestor(existingFirm, targetFirm)) {
                         result.rejectValue("email", "error.email", "This user already belongs to a parent firm in this hierarchy and cannot be assigned to a child firm.");
                         String backUrl2 = "/admin/users";
@@ -210,7 +204,6 @@ Firm existingFirm = up.getFirm();
         boolean showSkipFirmSelection = Boolean.TRUE.equals(isMultiFirmUser);
         model.addAttribute("showSkipFirmSelection", showSkipFirmSelection);
 
-        MultiFirmUserForm multiFirmUserForm = (MultiFirmUserForm) session.getAttribute("multiFirmUserForm");
         if (result.hasErrors()) {
             log.debug("Validation errors occurred while searching for firm: {}", result.getAllErrors());
             // Store the form in session to preserve input on redirect
@@ -219,6 +212,7 @@ Firm existingFirm = up.getFirm();
         }
 
         session.removeAttribute("firm");
+        MultiFirmUserForm multiFirmUserForm = (MultiFirmUserForm) session.getAttribute("multiFirmUserForm");
 
         if (firmSearchForm.getFirmSearch() != null && !firmSearchForm.getFirmSearch().isBlank()) {
             // Fallback: search by name if no specific firm was selected
@@ -250,6 +244,7 @@ Firm existingFirm = up.getFirm();
         session.setAttribute("delegateTargetFirmId", firmSearchForm.getSelectedFirmId().toString());
         return "redirect:/adminFirmSelection/check-answers";
     }
+
     @GetMapping("/check-answers")
     public String checkAnswerGet(Model model, Authentication authentication, HttpSession session) {
         String targetFirmId = (String) session.getAttribute("delegateTargetFirmId");
