@@ -1,11 +1,11 @@
 package uk.gov.justice.laa.portal.landingpage.playwright.pages;
 
-import com.microsoft.playwright.Locator;
-import com.microsoft.playwright.Page;
-import com.microsoft.playwright.assertions.PlaywrightAssertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.microsoft.playwright.Locator;
+import com.microsoft.playwright.Page;
+import com.microsoft.playwright.assertions.PlaywrightAssertions;
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
 /**
@@ -18,7 +18,7 @@ public class HomePage {
     private final Locator header;
     private final Locator signOutButton;
     private final Locator manageUsersLink;
-    private final Locator manageUsersDescription;
+    private final Locator silasAdministrationLink;
     private final Locator applyForLegalAidLink;
     private final Locator applyForCriminalLegalAidLink;
     private final Locator ccmsLink;
@@ -31,10 +31,9 @@ public class HomePage {
         this.page = page;
         this.header = page.locator("h1.govuk-heading-xl");
         this.signOutButton = page.locator("button[type='submit']:has-text('Sign out')");
-        //this.manageUsersDescription = page.locator("div.moj-ticket-panel__content--blue p.govuk-body");
-        this.manageUsersDescription  = page.locator("//p[@class='govuk-body' and text()='Manage user access and permissions']");
 
         this.manageUsersLink = page.locator("a.govuk-link:has-text('Manage your users')");
+        this.silasAdministrationLink = page.locator("a.govuk-link:has-text('SiLAS Administration')");
         this.applyForLegalAidLink = page.locator("a.govuk-link:has-text('Apply for civil legal aid')");
         this.applyForCriminalLegalAidLink = page.locator("a.govuk-link:has-text('Apply for criminal legal aid')");
         this.ccmsLink = page.locator("a.govuk-link:has-text('Client and Cost Management System')");
@@ -58,20 +57,28 @@ public class HomePage {
 
     public void assertManageUsersPanelVisible() {
         PlaywrightAssertions.assertThat(manageUsersLink).isVisible();
-        PlaywrightAssertions.assertThat(manageUsersDescription).isVisible();
     }
 
     public String getManageUsersLinkText() {
         return manageUsersLink.textContent().trim();
     }
 
-    public String getManageUsersDescriptionText() {
-        return manageUsersDescription.textContent().trim();
-    }
-
     public void clickManageUsers() {
         log.debug("Clicking 'Manage your users' link");
         manageUsersLink.click();
+    }
+
+    public void assertSilasAdministrationPanelVisible() {
+        PlaywrightAssertions.assertThat(silasAdministrationLink).isVisible();
+    }
+
+    public String getSilasAdministrationLinkText() {
+        return silasAdministrationLink.textContent().trim();
+    }
+
+    public void clickSilasAdministration() {
+        log.debug("Clicking 'SiLAS Administration' link");
+        silasAdministrationLink.click();
     }
 
     public void assertAccessRestrictionMessageVisible() {
@@ -87,4 +94,3 @@ public class HomePage {
         return page;
     }
 }
-

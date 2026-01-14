@@ -1,15 +1,15 @@
 package uk.gov.justice.laa.portal.landingpage.playwright.tests;
 
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import uk.gov.justice.laa.portal.landingpage.playwright.common.BaseFrontEndTest;
-import uk.gov.justice.laa.portal.landingpage.playwright.common.TestUser;
-import uk.gov.justice.laa.portal.landingpage.playwright.pages.HomePage;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import uk.gov.justice.laa.portal.landingpage.playwright.common.BaseFrontEndTest;
+import uk.gov.justice.laa.portal.landingpage.playwright.common.TestUser;
+import uk.gov.justice.laa.portal.landingpage.playwright.pages.HomePage;
 
 public class HomePageTest extends BaseFrontEndTest {
 
@@ -39,13 +39,23 @@ public class HomePageTest extends BaseFrontEndTest {
     void manageUsersPanelVisible() {
         HomePage home = loginAndGetHome(TestUser.GLOBAL_ADMIN);
 
-        // Assert panel elements are visible
+        // Assert panel is visible
         home.assertManageUsersPanelVisible();
 
         String linkText = home.getManageUsersLinkText().replaceAll("\\s+", " ").trim();
         assertEquals("Manage your users", linkText, "Link text should match");
+    }
 
-        String descriptionText = home.getManageUsersDescriptionText();
+    @Test
+    @DisplayName("SiLAS Administration panel is visible for global admin")
+    void silasAdministrationPanelVisible() {
+        HomePage home = loginAndGetHome(TestUser.GLOBAL_ADMIN);
+
+        // Assert panel is visible
+        home.assertSilasAdministrationPanelVisible();
+
+        String linkText = home.getSilasAdministrationLinkText().replaceAll("\\s+", " ").trim();
+        assertEquals("SiLAS Administration", linkText, "Link text should match");
     }
 
     @Test
