@@ -168,7 +168,11 @@
                                         <dd class="govuk-summary-list__value">
                                             <span th:text="${user.firm.name}"></span> - <span th:text="${user.firm.code}"></span>
                                         </dd>
-                                        <dd class="govuk-summary-list__actions"></dd>
+                                        <dd th:if="${enableReassignFirm && canReassignFirm}" class="govuk-summary-list__actions">
+                                            <a class="govuk-link"
+                                                th:href="@{/admin/users/reassign-firm/{id}(id=${user.id})}">Change</a>
+                                        </dd>
+                                        <dd th:unless="${enableReassignFirm && canReassignFirm}" class="govuk-summary-list__actions"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row"
                                         th:if="${externalUser}">
