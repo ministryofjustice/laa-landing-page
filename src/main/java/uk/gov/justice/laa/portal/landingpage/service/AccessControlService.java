@@ -290,6 +290,11 @@ public class AccessControlService {
                         && appRole.getName().equalsIgnoreCase(authzRoleName));
     }
 
+    public boolean userHasAuthzRole(Authentication authentication, String authzRoleName) {
+        EntraUser user = loginService.getCurrentEntraUser(authentication);
+        return userHasAuthzRole(user, authzRoleName);
+    }
+
     public static boolean userHasAnyGivenPermissions(EntraUser entraUser,
             Permission... permissions) {
         Set<Permission> userPermissions = entraUser.getUserProfiles().stream()

@@ -46,7 +46,10 @@
                             (<span th:text="${appRole.getAppName()}"></span>)
                         </dd>
                         <dd class="govuk-summary-list__actions">
-                            <a th:href="${appRole.getUrl()}" class="govuk-link">Change</a>
+                            <a th:href="${appRole.getUrl()}" class="govuk-link">
+                                Change
+                                <span class="govuk-visually-hidden"> app roles</span>
+                            </a>
                         </dd>
                     </div>
                 </dl>
@@ -56,7 +59,10 @@
                             <span>No role assigned</span>
                         </dd>
                         <dd class="govuk-summary-list__actions">
-                            <a th:href="@{/admin/users/edit/{id}/apps(id=${user.id})}" class="govuk-link">Change</a>
+                            <a th:href="@{/admin/users/edit/{id}/apps(id=${user.id})}" class="govuk-link">
+                                Change
+                                <span class="govuk-visually-hidden"> role</span>
+                            </a>
                         </dd>
                     </div>
                 </div>
