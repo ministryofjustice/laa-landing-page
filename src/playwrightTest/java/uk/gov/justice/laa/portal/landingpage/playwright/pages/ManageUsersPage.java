@@ -31,7 +31,8 @@ public class ManageUsersPage {
     private final Locator header;
     private final Locator createNewUserButton;
     private final Locator confirmNewUserButton;
-    private final Locator signOutButton;
+    private final Locator signOutLink;
+    private final Locator signOutConfirmButton;
     private final Locator notAuthorisedHeading;
 
     private final Locator searchInputByName;
@@ -83,7 +84,8 @@ public class ManageUsersPage {
         this.header = page.locator("h1.govuk-heading-xl");
         this.createNewUserButton = page.locator("button.govuk-button[onclick*='/admin/user/create/details']");
         this.notAuthorisedHeading = page.locator("h1.govuk-heading-l");
-        this.signOutButton = page.locator("button:has-text('Sign out')");
+        this.signOutLink = page.locator("a:has-text('Sign out')");
+        this.signOutConfirmButton = page.locator("button[type='submit']:has-text('Sign out')");
 
         this.searchInputByName = page.locator("input[name='search']");
         this.searchButton = page.locator("button:has-text('Search')");
@@ -144,7 +146,8 @@ public class ManageUsersPage {
     }
 
     public void clickAndConfirmSignOut() {
-        signOutButton.click();
+        signOutLink.click();
+        signOutConfirmButton.click();
         var signedOutPage = page.getByText("You're now signed out of your account");
         assertNotNull(signedOutPage, "Failed to find signed out page");
     }
