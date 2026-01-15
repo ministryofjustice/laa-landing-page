@@ -190,6 +190,10 @@ public class ManageUsersPage {
         externalUserLink.click();
     }
 
+    public void clickContinueLink() {
+        continueButton.click();
+    }
+
     public void clickServicesTab() {
         page.locator("a.govuk-tabs__tab[href*='#services']").click();
     }
@@ -229,6 +233,16 @@ public class ManageUsersPage {
             Locator checkbox = page.getByLabel(office);
             if (!checkbox.isChecked()) {
                 checkbox.check();
+            }
+        }
+    }
+
+    public void uncheckSelectedOffices(List<String> offices) {
+
+        for (String office : offices) {
+            Locator checkbox = page.getByLabel(office);
+            if (checkbox.isChecked()) {
+                checkbox.uncheck();
             }
         }
     }
