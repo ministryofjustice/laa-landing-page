@@ -106,11 +106,44 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.checkSelectedRoles(roles);
         manageUsersPage.clickContinueUserDetails();
         manageUsersPage.clickConfirmButton();
+        assertTrue(page.locator(".govuk-panel__title:has-text('User detail updated')").isVisible());
         manageUsersPage.clickGoBackToManageUsers();
         manageUsersPage.searchForUser("playwright-informationassurance@playwrighttest.com");
         manageUsersPage.clickFirstUserLink();
         manageUsersPage.clickServicesTab();
+        assertTrue(page.locator("#services .govuk-summary-card__title:has-text('Services')").isVisible());
         manageUsersPage.verifySelectedUserServices(roles);
+    }
+
+    @Test
+    @DisplayName("Remove services from a user and verify they are removed")
+    void removeServicesAndVerify() {
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+        manageUsersPage.searchForUser("playwright-informationassurance@playwrighttest.com");
+        manageUsersPage.clickFirstUserLink();
+        assertTrue(page.url().contains("/admin/users/manage/"));
+
+        manageUsersPage.clickServicesTab();
+        manageUsersPage.clickChangeLink();
+        manageUsersPage.clickContinueFirmSelectPage();
+
+        List<String> rolesToRemove = List.of(
+                TestRole.INTERNAL_USER_MANAGER.roleName,
+                TestRole.EXTERNAL_USER_VIEWER.roleName
+        );
+        manageUsersPage.uncheckSelectedRoles(rolesToRemove);
+
+        manageUsersPage.clickContinueUserDetails();
+        manageUsersPage.clickConfirmButton();
+        assertTrue(page.locator(".govuk-panel__title:has-text('User detail updated')").isVisible());
+
+        manageUsersPage.clickGoBackToManageUsers();
+        manageUsersPage.searchForUser("playwright-informationassurance@playwrighttest.com");
+        manageUsersPage.clickFirstUserLink();
+        manageUsersPage.clickServicesTab();
+
+        manageUsersPage.verifyServicesNotPresent(rolesToRemove);
+
     }
 
     @Test
