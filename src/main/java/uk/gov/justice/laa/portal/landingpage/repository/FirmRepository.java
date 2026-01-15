@@ -13,6 +13,8 @@ import java.util.UUID;
 public interface FirmRepository extends JpaRepository<Firm, UUID> {
     Firm findFirmByName(String name);
     
+    Firm findByCode(String code);
+    
     @Query("SELECT f FROM Firm f WHERE LOWER(f.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR LOWER(f.code) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
     List<Firm> findByNameOrCodeContaining(@Param("searchTerm") String searchTerm);
 }

@@ -12,4 +12,6 @@ public interface OfficeRepository extends JpaRepository<Office, UUID> {
     List<Office> findOfficeByFirm_IdIn(List<UUID> firmIds);
 
     List<Office> findOfficeByIdIn(List<UUID> ids);
+    
+    Office findByCode(String code);
 }

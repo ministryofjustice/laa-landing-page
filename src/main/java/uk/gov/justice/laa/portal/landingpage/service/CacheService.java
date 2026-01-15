@@ -25,7 +25,7 @@ public class CacheService {
         }
     }
 
-    @Scheduled(cron = "${app.firms.clear.cache.schedule}")
+    @Scheduled(cron = "0 0 0 * * *")
     public void clearCache() {
         log.debug("Clearing Firms Cache");
         Cache cache = cacheManager.getCache(CachingConfig.LIST_OF_FIRMS_CACHE);
