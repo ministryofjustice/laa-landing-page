@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyCollection;
@@ -92,6 +93,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.environment.AccessGuard;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
@@ -126,6 +128,8 @@ class UserControllerTest {
     @Mock
     private LoginService loginService;
     @Mock
+    private AccessGuard accessGuard;
+    @Mock
     private UserService userService;
     @Mock
     private OfficeService officeService;
@@ -154,7 +158,7 @@ class UserControllerTest {
     void setUp() {
         userController = new UserController(loginService, userService, officeService, eventService, firmService,
                 new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService,
-                appRoleService);
+                appRoleService, accessGuard);
         model = new ExtendedModelMap();
         firmSearchForm = FirmSearchForm.builder().build();
     }
@@ -2404,6 +2408,44 @@ class UserControllerTest {
         assertThat(model.getAttribute("showFirmAdmins")).isEqualTo(true);
         assertThat(model.getAttribute("allowCreateUser")).isEqualTo(false);
         assertThat(model.getAttribute("showMultiFirmUsers")).isEqualTo(true);
+        verify(firmService).getUserFirm(externalUser);
+    }
+
+    @Test
+    void displayAllUsers_shouldHandleDelegateButtonOnNonProdEnv() {
+        // Given
+        PaginatedUsers paginatedUsers = new PaginatedUsers();
+        paginatedUsers.setUsers(new ArrayList<>());
+        paginatedUsers.setTotalUsers(5);
+        paginatedUsers.setTotalPages(1);
+
+        EntraUser externalUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        FirmDto userFirm = FirmDto.builder().id(UUID.randomUUID()).name("Firm 1").build();
+
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(externalUser);
+        when(userService.isInternal(any(UUID.class))).thenReturn(false);
+        when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(false);
+        when(firmService.getUserFirm(externalUser)).thenReturn(Optional.of(userFirm));
+        when(session.getAttribute("userListFilters")).thenReturn(null);
+        when(session.getAttribute("firmSearchForm")).thenReturn(null);
+        when(userService.getPageOfUsersBySearch(any(), eq(1), eq(10), anyString(),
+                anyString()))
+                .thenReturn(paginatedUsers);
+
+        when(session.getAttribute("successMessage")).thenReturn("User added successfully");
+        when(accessGuard.canDelegateInNonProd(authentication)).thenReturn(true);
+        String view = userController.displayAllUsers(10, 1, null, null, null, "",
+                true, true, true, firmSearchForm, model, session, authentication);
+
+        // Then
+        assertThat(view).isEqualTo("users");
+        assertThat(model.getAttribute("internal")).isEqualTo(false);
+        assertThat(model.getAttribute("showFirmAdmins")).isEqualTo(true);
+        assertThat(model.getAttribute("allowCreateUser")).isEqualTo(false);
+        assertThat(model.getAttribute("showMultiFirmUsers")).isEqualTo(true);
+        assertThat(model.getAttribute("allowDelegateUserAccess")).isEqualTo(true);
+        assertThat(model.getAttribute("isNonProdEnv")).isEqualTo(true);
+
         verify(firmService).getUserFirm(externalUser);
     }
 
