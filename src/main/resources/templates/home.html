@@ -54,6 +54,19 @@
                     </div>
                 </div>
 
+                <div th:if="${hasSilasAdminRole}" class="govuk-!-margin-bottom-6">
+                    <div class="govuk-grid-row">
+                        <div class="govuk-grid-column-full">
+                            <div class="moj-ticket-panel__content moj-ticket-panel__content--blue">
+                                <h3 class="govuk-heading-m">
+                                    <a href="/admin/silas-administration" class="govuk-link govuk-link--no-visited-state">SiLAS Administration</a>
+                                </h3>
+                                <p class="govuk-body">Manage user access and permissions</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div th:if="${canViewAuditTable && enableUserAuditTable}" class="govuk-grid-row govuk-!-margin-top-4">
                     <div class="govuk-grid-column-full">
                         <div class="moj-ticket-panel__content moj-ticket-panel__content--blue">
