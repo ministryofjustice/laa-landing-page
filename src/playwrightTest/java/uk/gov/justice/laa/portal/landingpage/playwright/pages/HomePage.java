@@ -31,9 +31,6 @@ public class HomePage {
         this.page = page;
         this.header = page.locator("h1.govuk-heading-xl");
         this.signOutLink = page.locator("a.govuk-header__link:has-text('Sign out')");
-//        this.manageUsersDescription = page.locator("div.moj-ticket-panel__content--blue p.govuk-body");
-//        this.manageUsersDescription  = page.locator("//p[@class='govuk-body' and text()='Manage user access and permissions']");
-
         this.manageUsersLink = page.locator("a.govuk-link:has-text('Manage your users')");
         this.silasAdministrationLink = page.locator("a.govuk-link:has-text('SiLAS Administration')");
         this.applyForLegalAidLink = page.locator("a.govuk-link:has-text('Apply for civil legal aid')");
