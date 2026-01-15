@@ -45,7 +45,10 @@
                                     <span th:text="*{firstName}"></span>
                                 </dd>
                                 <dd class="govuk-summary-list__actions">
-                                    <a th:href="@{/admin/users/edit/{id}/details(id=${user.id})}" class="govuk-link">Change</a>
+                                    <a th:href="@{/admin/users/edit/{id}/details(id=${user.id})}" class="govuk-link">
+                                        Change
+                                        <span class="govuk-visually-hidden"> first name</span>
+                                    </a>
                                 </dd>
                             </div>
                             <div class="govuk-summary-list__row">
@@ -54,7 +57,10 @@
                                     <span th:text="*{lastName}"></span>
                                 </dd>
                                 <dd class="govuk-summary-list__actions">
-                                    <a th:href="@{/admin/users/edit/{id}/details(id=${user.id})}" class="govuk-link">Change</a>
+                                    <a th:href="@{/admin/users/edit/{id}/details(id=${user.id})}" class="govuk-link">
+                                        Change
+                                        <span class="govuk-visually-hidden"> last name</span>
+                                    </a>
                                 </dd>
                             </div>
                         </dl>
