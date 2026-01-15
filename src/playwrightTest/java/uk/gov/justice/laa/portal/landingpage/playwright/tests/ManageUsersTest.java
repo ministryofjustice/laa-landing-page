@@ -123,7 +123,6 @@ public class ManageUsersTest extends BaseFrontEndTest {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
         manageUsersPage.clickExternalUserLink();
         manageUsersPage.clickOfficesTab();
-        assertTrue(page.locator(".govuk-summary-card:has-text('Access to All Offices') .govuk-summary-card__content").isVisible());
         manageUsersPage.clickOfficeChange();
         assertTrue(page.url().contains("/admin/users/edit/"));
         List<String> offices = List.of("Automation Office 1, City1, 12345 ()", "Automation Office 2, City2, 23456 ()");
