@@ -4,8 +4,9 @@ import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.microsoft.playwright.options.WaitForSelectorState;
 import org.slf4j.Logger;
@@ -30,6 +31,8 @@ public class ManageUsersPage {
     private final Locator header;
     private final Locator createNewUserButton;
     private final Locator confirmNewUserButton;
+    private final Locator signOutLink;
+    private final Locator signOutConfirmButton;
     private final Locator notAuthorisedHeading;
 
     private final Locator searchInputByName;
@@ -81,6 +84,8 @@ public class ManageUsersPage {
         this.header = page.locator("h1.govuk-heading-xl");
         this.createNewUserButton = page.locator("button.govuk-button[onclick*='/admin/user/create/details']");
         this.notAuthorisedHeading = page.locator("h1.govuk-heading-l");
+        this.signOutLink = page.locator("a:has-text('Sign out')");
+        this.signOutConfirmButton = page.locator("button[type='submit']:has-text('Sign out')");
 
         this.searchInputByName = page.locator("input[name='search']");
         this.searchButton = page.locator("button:has-text('Search')");
@@ -140,6 +145,13 @@ public class ManageUsersPage {
 
     }
 
+    public void clickAndConfirmSignOut() {
+        signOutLink.click();
+        signOutConfirmButton.click();
+        var signedOutPage = page.getByText("You're now signed out of your account");
+        assertNotNull(signedOutPage, "Failed to find signed out page");
+    }
+
     public void clickManageUser() {
         userFullNameLink.click();
     }
@@ -176,6 +188,10 @@ public class ManageUsersPage {
                 .setState(WaitForSelectorState.VISIBLE)
                 .setTimeout(10000));
         externalUserLink.click();
+    }
+
+    public void clickContinueLink() {
+        continueButton.click();
     }
 
     public void clickServicesTab() {
@@ -217,6 +233,16 @@ public class ManageUsersPage {
             Locator checkbox = page.getByLabel(office);
             if (!checkbox.isChecked()) {
                 checkbox.check();
+            }
+        }
+    }
+
+    public void uncheckSelectedOffices(List<String> offices) {
+
+        for (String office : offices) {
+            Locator checkbox = page.getByLabel(office);
+            if (checkbox.isChecked()) {
+                checkbox.uncheck();
             }
         }
     }
