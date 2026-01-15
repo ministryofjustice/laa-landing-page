@@ -209,6 +209,13 @@ public class ManageUsersPage {
         }
     }
 
+    public void verifyServicesNotPresent(List<String> roles) {
+        for (String role : roles) {
+            Locator row = page.locator("dd:has-text('" + role + "')");
+            assertThat(row).not().isVisible();
+        }
+    }
+
     public void verifyIsUserDetailsPage() {
         assertTrue(page.url().contains("/admin/users/manage/"));
     }
@@ -253,6 +260,16 @@ public class ManageUsersPage {
             Locator checkbox = page.getByLabel(role);
             if (!checkbox.isChecked()) {
                 checkbox.check();
+            }
+        }
+    }
+
+    public void uncheckSelectedRoles(List<String> roles) {
+        page.locator("input[type='checkbox']").first().waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000));
+        for (String role : roles) {
+            Locator checkbox = page.getByLabel(role);
+            if (checkbox.isChecked()) {
+                checkbox.uncheck();
             }
         }
     }
