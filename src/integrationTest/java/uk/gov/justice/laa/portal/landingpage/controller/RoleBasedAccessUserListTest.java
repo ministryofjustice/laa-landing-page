@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -10,17 +11,16 @@ import org.springframework.test.web.servlet.MvcResult;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
-import org.springframework.web.servlet.ModelAndView;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.servlet.ModelAndView;
 
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-
-import java.util.stream.Collectors;
 
 public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest {
 
@@ -53,7 +53,9 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .flatMap(user -> user.getUserProfiles().stream())
                 .filter(UserProfile::isActiveProfile)
                 .filter(profile -> profile.getAppRoles().stream()
-                        .anyMatch(appRole -> appRole.isAuthzRole() && (appRole.getName().equals("External User Manager") || appRole.getName().equals("Firm User Manager"))))
+                        .anyMatch(appRole -> appRole.isAuthzRole()
+                                && (appRole.getName().equals(AuthzRole.EXTERNAL_USER_MANAGER.getRoleName())
+                                || appRole.getName().equals(AuthzRole.FIRM_USER_MANAGER.getRoleName()))))
                 .map(profile -> profile.getEntraUser().getFirstName() + " " + profile.getEntraUser().getLastName())
                 .toList();
 
@@ -185,7 +187,9 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .flatMap(user -> user.getUserProfiles().stream())
                 .filter(UserProfile::isActiveProfile)
                 .filter(profile -> profile.getAppRoles().stream()
-                        .anyMatch(appRole -> appRole.isAuthzRole() && (appRole.getName().equals("External User Manager") || appRole.getName().equals("Firm User Manager"))))
+                        .anyMatch(appRole -> appRole.isAuthzRole()
+                                && (appRole.getName().equals(AuthzRole.EXTERNAL_USER_MANAGER.getRoleName())
+                                || appRole.getName().equals(AuthzRole.FIRM_USER_MANAGER.getRoleName()))))
                 .map(profile -> profile.getEntraUser().getFirstName() + " " + profile.getEntraUser().getLastName())
                 .toList();
 
@@ -240,7 +244,9 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .filter(profile -> profile.isActiveProfile() && profile.getUserType() == UserType.EXTERNAL && profile.getFirm() != null
                         && profile.getFirm().getId().equals(loggedInUserFirm.getId()))
                 .filter(profile -> profile.getAppRoles().stream()
-                        .anyMatch(appRole -> appRole.isAuthzRole() && (appRole.getName().equals("External User Manager") || appRole.getName().equals("Firm User Manager"))))
+                        .anyMatch(appRole -> appRole.isAuthzRole()
+                                && (appRole.getName().equals(AuthzRole.EXTERNAL_USER_MANAGER.getRoleName())
+                                || appRole.getName().equals(AuthzRole.FIRM_USER_MANAGER.getRoleName()))))
                 .map(userProfile -> userProfile.getEntraUser().getFirstName() + " " + userProfile.getEntraUser().getLastName())
                 .toList();
 
@@ -289,7 +295,9 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .filter(UserProfile::isActiveProfile)
                 .filter(profile -> UserType.EXTERNAL == profile.getUserType())
                 .filter(profile -> profile.getAppRoles().stream()
-                        .anyMatch(appRole -> appRole.isAuthzRole() && (appRole.getName().equals("External User Manager") || appRole.getName().equals("Firm User Manager"))))
+                        .anyMatch(appRole -> appRole.isAuthzRole()
+                                && (appRole.getName().equals(AuthzRole.EXTERNAL_USER_MANAGER.getRoleName())
+                                || appRole.getName().equals(AuthzRole.FIRM_USER_MANAGER.getRoleName()))))
                 .map(userProfile -> userProfile.getEntraUser().getFirstName() + " " + userProfile.getEntraUser().getLastName())
                 .toList();
         Assertions.assertThat(users).hasSize(expectedUserNames.size());
@@ -314,7 +322,7 @@ public class RoleBasedAccessUserListTest extends RoleBasedAccessIntegrationTest 
                 .flatMap(user -> user.getUserProfiles().stream())
                 .filter(UserProfile::isActiveProfile)
                 .filter(profile -> profile.getAppRoles().stream()
-                        .anyMatch(appRole -> appRole.isAuthzRole() && (appRole.getName().equals("External User Manager"))))
+                        .anyMatch(appRole -> appRole.isAuthzRole() && (appRole.getName().equals(AuthzRole.EXTERNAL_USER_MANAGER.getRoleName()))))
                 .map(profile -> profile.getEntraUser().getFirstName() + " " + profile.getEntraUser().getLastName())
                 .toList();
 
