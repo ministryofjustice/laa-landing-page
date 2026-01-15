@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.dto;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,6 +19,9 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 @AllArgsConstructor
 public class UserProfileDto implements Serializable {
 
+    @Serial
+    private static final long serialVersionUID = 1L;
+
     private UUID id;
     private boolean activeProfile;
     private UserType userType;
@@ -35,6 +39,7 @@ public class UserProfileDto implements Serializable {
     private String createdBy;
     private LocalDateTime lastModified;
     private String lastModifiedBy;
+    private boolean unrestrictedOfficeAccess;
 
     // Helper method for compatibility with tests
     public String getFullName() {

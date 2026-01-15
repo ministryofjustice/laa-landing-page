@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.dto;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.List;
 
@@ -16,6 +17,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PaginatedAuditUsers implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     /**
      * List of audit users for the current page

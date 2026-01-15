@@ -21,7 +21,6 @@ import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Objects;
@@ -117,7 +116,11 @@ public class ClaimEnrichmentService {
                 }
 
                 //External user and offices are not found - fetch all offices for the user's firm
-                if (officeIds.isEmpty()) {
+                boolean isUnrestrictedOfficeAccess = entraUser.getUserProfiles().stream()
+                        .filter(UserProfile::isActiveProfile)
+                        .anyMatch(UserProfile::isUnrestrictedOfficeAccess);
+
+                if (officeIds.isEmpty() && isUnrestrictedOfficeAccess) {
                     officeIds = firms.stream()
                             .flatMap(firm -> officeRepository.findOfficeByFirm_IdIn(List.of(firm.getId())).stream())
                             .map(Office::getCode)

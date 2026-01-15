@@ -166,6 +166,64 @@ class LoginServiceTest {
     }
 
     @Test
+    void processUserSession_fetchingUserTypesThrowsException_defaultsAppsAndUserTypesToEmpty() {
+
+        // Arrange
+        OAuth2User realPrincipal = new DefaultOAuth2User(
+                List.of(new SimpleGrantedAuthority("ROLE_USER")),
+                Map.of("name", "Alice", "preferred_username", "alice@laa.gov.uk"),
+                "name");
+        OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
+        OAuth2AccessToken realAccessToken = new OAuth2AccessToken(
+                OAuth2AccessToken.TokenType.BEARER,
+                TEST_TOKEN_VALUE,
+                Instant.now(),
+                Instant.now().plusSeconds(3600));
+        OAuth2AuthorizedClient realAuthClient = mock(OAuth2AuthorizedClient.class);
+        when(realAuthClient.getAccessToken()).thenReturn(realAccessToken);
+        EntraUserDto mockUser = mock(EntraUserDto.class, Mockito.RETURNS_DEEP_STUBS);
+        when(userService.findUserByUserEntraId(null)).thenReturn(mockUser);
+        when(userService.findUserTypeByUserEntraId(any())).thenThrow(new RuntimeException());
+
+        // Act
+        UserSessionData userSessionData = loginService.processUserSession(realAuthToken, realAuthClient, session);
+
+        // Assert
+        assertThat(userSessionData).isNotNull();
+        assertThat(userSessionData.getUserTypes()).isEmpty();
+        assertThat(userSessionData.getLaaApplications()).isEmpty();
+    }
+
+    @Test
+    void processUserSession_fetchingAppsThrowsException_defaultsAppsAndUserTypesToEmpty() {
+
+        // Arrange
+        OAuth2User realPrincipal = new DefaultOAuth2User(
+                List.of(new SimpleGrantedAuthority("ROLE_USER")),
+                Map.of("name", "Alice", "preferred_username", "alice@laa.gov.uk"),
+                "name");
+        OAuth2AuthenticationToken realAuthToken = new OAuth2AuthenticationToken(realPrincipal, realPrincipal.getAuthorities(), "azure");
+        OAuth2AccessToken realAccessToken = new OAuth2AccessToken(
+                OAuth2AccessToken.TokenType.BEARER,
+                TEST_TOKEN_VALUE,
+                Instant.now(),
+                Instant.now().plusSeconds(3600));
+        OAuth2AuthorizedClient realAuthClient = mock(OAuth2AuthorizedClient.class);
+        when(realAuthClient.getAccessToken()).thenReturn(realAccessToken);
+        EntraUserDto mockUser = mock(EntraUserDto.class, Mockito.RETURNS_DEEP_STUBS);
+        when(userService.findUserByUserEntraId(null)).thenReturn(mockUser);
+        when(userService.getUserAssignedAppsforLandingPage(any())).thenThrow(new RuntimeException());
+
+        // Act
+        UserSessionData userSessionData = loginService.processUserSession(realAuthToken, realAuthClient, session);
+
+        // Assert
+        assertThat(userSessionData).isNotNull();
+        assertThat(userSessionData.getUserTypes()).isEmpty();
+        assertThat(userSessionData.getLaaApplications()).isEmpty();
+    }
+
+    @Test
     void getCurrentUser_withRealPrincipal_populatesNameAndIdFromPrincipal() {
 
         // Arrange

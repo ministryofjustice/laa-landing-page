@@ -13,7 +13,9 @@ import uk.gov.justice.laa.portal.landingpage.config.NotificationsProperties;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
 import java.util.List;
+import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring.addListAppenderToLogger;
@@ -73,11 +75,156 @@ public class NotificationServiceTest {
         assertEquals(1, infoLogs.size());
     }
 
+    @Test
+    public void notifyDeleteFirmAccessShouldSendMailWhenEmailPresent() {
+        // Arrange
+        UUID userProfileId = UUID.randomUUID();
+        String firstName = "Alice";
+        String email = "alice@example.com";
+        String firmName = "Contoso LLP";
+        // Add list appender to logger to capture and verify logs
+        ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(NotificationService.class);
+
+        // Act
+        notificationService.notifyDeleteFirmAccess(userProfileId, firstName, email, firmName);
+
+        // Assert – capture and verify emailService.sendMail() params
+        Mockito.verify(emailService, Mockito.times(1)).sendMail(any(), any(), any(), any());
+        List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
+        assertEquals(2, infoLogs.size());
+    }
+
+    @Test
+    public void notifyDeleteFirmAccessShouldNotSendMailWhenEmailIsNull() {
+        // Arrange
+        UUID userProfileId = UUID.randomUUID();
+        String firstName = "Bob";
+        String email = null; // <- important
+        String firmName = "Fabrikam Inc";
+        // Add list appender to logger to capture and verify logs
+        ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(NotificationService.class);
+
+        // Act
+        notificationService.notifyDeleteFirmAccess(userProfileId, firstName, email, firmName);
+
+        // Assert – emailService must not be called
+        Mockito.verify(emailService, Mockito.times(0)).sendMail(any(), any(), any(), any());
+        List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
+        assertEquals(1, infoLogs.size());
+    }
+
+    @Test
+    public void notifyDelegateFirmAccessShouldNotSendMailWhenTemplateIsNone() {
+        // Arrange
+        NotificationsProperties notificationsProperties = new NotificationsProperties();
+        notificationsProperties.setDelegateFirmAccessEmailTemplate("none");
+        notificationService = new NotificationService(emailService, notificationsProperties);
+
+        UUID userProfileId = UUID.randomUUID();
+        String firstName = "Bob";
+        String email = "test@email.com"; // <- important
+        String firmName = "Fabrikam Inc";
+        // Add list appender to logger to capture and verify logs
+        ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(NotificationService.class);
+
+        // Act
+        notificationService.notifyDeleteFirmAccess(userProfileId, firstName, email, firmName);
+
+        // Assert – emailService must not be called
+        Mockito.verify(emailService, Mockito.times(0)).sendMail(any(), any(), any(), any());
+        List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
+        assertEquals(1, infoLogs.size());
+
+        assertThat(infoLogs)
+                .extracting(ILoggingEvent::getFormattedMessage)
+                .containsExactly(
+                        String.format("Email template for delegate firm access is not ready, skipping notification email for User: %s", userProfileId));
+    }
+
+    @Test
+    public void notifyRevokeFirmAccessShouldSendMailWhenEmailPresent() {
+        // Arrange
+        UUID userProfileId = UUID.randomUUID();
+        String firstName = "Alice";
+        String email = "alice@example.com";
+        String firmName = "Contoso LLP";
+        // Add list appender to logger to capture and verify logs
+        ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(NotificationService.class);
+
+        // Act
+        notificationService.notifyRevokeFirmAccess(userProfileId, firstName, email, firmName);
+
+        // Assert – capture and verify emailService.sendMail() params
+        Mockito.verify(emailService, Mockito.times(1)).sendMail(any(), any(), any(), any());
+        List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
+        assertEquals(2, infoLogs.size());
+
+        assertThat(infoLogs)
+                .extracting(ILoggingEvent::getFormattedMessage)
+                .containsExactly(
+                        String.format("Sending revoke firm access notification for User: %s", userProfileId),
+                        String.format("Revoke firm access notification sent to: alice@example.com for User ID: %s", userProfileId));
+    }
+
+    @Test
+    public void notifyRevokeFirmAccessShouldNotSendMailWhenEmailIsNull() {
+        // Arrange
+        UUID userProfileId = UUID.randomUUID();
+        String firstName = "Bob";
+        String email = null; // <- important
+        String firmName = "Fabrikam Inc";
+        // Add list appender to logger to capture and verify logs
+        ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(NotificationService.class);
+
+        // Act
+        notificationService.notifyRevokeFirmAccess(userProfileId, firstName, email, firmName);
+
+        // Assert – emailService must not be called
+        Mockito.verify(emailService, Mockito.times(0)).sendMail(any(), any(), any(), any());
+        List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
+        assertEquals(1, infoLogs.size());
+
+        assertThat(infoLogs)
+                .extracting(ILoggingEvent::getFormattedMessage)
+                .containsExactly(
+                        String.format("Sending revoke firm access notification for User: %s", userProfileId));
+    }
+
+    @Test
+    public void notifyRevokeFirmAccessShouldNotSendMailWhenTemplateIsNone() {
+        // Arrange
+        NotificationsProperties notificationsProperties = new NotificationsProperties();
+        notificationsProperties.setRevokeFirmAccessEmailTemplate("none");
+        notificationService = new NotificationService(emailService, notificationsProperties);
+
+        UUID userProfileId = UUID.randomUUID();
+        String firstName = "Bob";
+        String email = "test@email.com"; // <- important
+        String firmName = "Fabrikam Inc";
+        // Add list appender to logger to capture and verify logs
+        ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(NotificationService.class);
+
+        // Act
+        notificationService.notifyRevokeFirmAccess(userProfileId, firstName, email, firmName);
+
+        // Assert – emailService must not be called
+        Mockito.verify(emailService, Mockito.times(0)).sendMail(any(), any(), any(), any());
+        List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
+        assertEquals(1, infoLogs.size());
+
+        assertThat(infoLogs)
+                .extracting(ILoggingEvent::getFormattedMessage)
+                .containsExactly(
+                        String.format("Email template for revoke firm access is not ready, skipping notification email for User: %s", userProfileId));
+    }
+
     private static NotificationsProperties buildTestNotificationsProperties() {
         NotificationsProperties notificationsProperties = new NotificationsProperties();
         notificationsProperties.setPortalUrl("testPortalUrl");
         notificationsProperties.setGovNotifyApiKey("testGovNotifyApiKey");
         notificationsProperties.setAddNewUserEmailTemplate("testAddNewUserEmailTemplate");
+        notificationsProperties.setRevokeFirmAccessEmailTemplate("testRevokeFirmAccessEmailTemplate");
+        notificationsProperties.setDelegateFirmAccessEmailTemplate("testDelegateFirmAccessEmailTemplate");
         return notificationsProperties;
     }
 

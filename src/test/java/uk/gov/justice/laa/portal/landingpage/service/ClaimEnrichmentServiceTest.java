@@ -19,7 +19,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.ClaimEnrichmentException;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
@@ -41,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -134,6 +134,7 @@ class ClaimEnrichmentServiceTest {
                 .firm(firm)
                 .legacyUserId(LEGACY_USER_ID)
                 .appRoles(Set.of(appRole))
+                .unrestrictedOfficeAccess(true)
                 .build();
 
         entraUser = EntraUser.builder()
@@ -145,11 +146,18 @@ class ClaimEnrichmentServiceTest {
     }
 
     @Test
-    void enrichClaim_Success() {
+    void enrichClaim_Success_When_UnrestrictedOfficeAccess_is_false() {
         // Arrange
+        UserProfile profile1 = UserProfile.builder().activeProfile(true)
+                .appRoles(Set.of(AppRole.builder().name(EXTERNAL_ROLE).app(app).build()))
+                .legacyUserId(LEGACY_USER_ID)
+                .firm(firm)
+                .unrestrictedOfficeAccess(false)
+                .build();
+        entraUser.setUserProfiles(Set.of(profile1));
+
         when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
         when(appRepository.findByEntraAppId(anyString())).thenReturn(Optional.of(app));
-        when(officeRepository.findOfficeByFirm_IdIn(List.of(FIRM_ID))).thenReturn(List.of(office1, office2));
 
         // Act
         ClaimEnrichmentResponse response = claimEnrichmentService.enrichClaim(request);
@@ -173,8 +181,42 @@ class ClaimEnrichmentServiceTest {
         assertEquals(LEGACY_USER_ID.toString().toUpperCase(), claims.get("USER_NAME"));
         assertEquals(USER_EMAIL, claims.get("USER_EMAIL"));
         assertEquals(List.of(EXTERNAL_ROLE), claims.get("LAA_APP_ROLES"));
-        assertEquals(List.of(office1.getCode(), office2.getCode()), claims.get("LAA_ACCOUNTS"));
+        assertEquals(List.of(), claims.get("LAA_ACCOUNTS"));
         
+        verify(officeRepository, times(0)).findOfficeByFirm_IdIn(List.of(FIRM_ID));
+    }
+
+    @Test
+    void enrichClaim_Success() {
+        // Arrange
+        when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(appRepository.findByEntraAppId(anyString())).thenReturn(Optional.of(app));
+        when(officeRepository.findOfficeByFirm_IdIn(List.of(FIRM_ID))).thenReturn(List.of(office1, office2));
+
+        // Act
+        ClaimEnrichmentResponse response = claimEnrichmentService.enrichClaim(request);
+
+        // Assert
+        assertNotNull(response);
+        assertNotNull(response.getData());
+        assertEquals("microsoft.graph.onTokenIssuanceStartResponseData", response.getData().getOdataType());
+
+        // Verify actions
+        assertNotNull(response.getData().getActions());
+        assertEquals(1, response.getData().getActions().size());
+        assertTrue(response.isSuccess());
+
+        ClaimEnrichmentResponse.ResponseAction action = response.getData().getActions().get(0);
+        assertEquals("microsoft.graph.tokenIssuanceStart.provideClaimsForToken", action.getOdataType());
+
+        // Verify claims
+        Map<String, Object> claims = action.getClaims();
+        assertNotNull(claims);
+        assertEquals(LEGACY_USER_ID.toString().toUpperCase(), claims.get("USER_NAME"));
+        assertEquals(USER_EMAIL, claims.get("USER_EMAIL"));
+        assertEquals(List.of(EXTERNAL_ROLE), claims.get("LAA_APP_ROLES"));
+        assertEquals(List.of(office1.getCode(), office2.getCode()), claims.get("LAA_ACCOUNTS"));
+
         verify(officeRepository).findOfficeByFirm_IdIn(List.of(FIRM_ID));
     }
 
@@ -202,11 +244,13 @@ class ClaimEnrichmentServiceTest {
                 .appRoles(Set.of(AppRole.builder().name(EXTERNAL_ROLE).app(app).build()))
                 .legacyUserId(LEGACY_USER_ID)
                 .firm(firm)
+                .unrestrictedOfficeAccess(true)
                 .build();
         UserProfile profile2 = UserProfile.builder()
                 .appRoles(Set.of(AppRole.builder().name(EXTERNAL_ROLE).app(app).build()))
                 .legacyUserId(LEGACY_USER_ID)
                 .firm(firm2)
+                .unrestrictedOfficeAccess(true)
                 .build();
         entraUser.setUserProfiles(Set.of(profile1, profile2));
 

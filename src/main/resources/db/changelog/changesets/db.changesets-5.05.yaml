@@ -1,0 +1,16 @@
+databaseChangeLog:
+  - changeSet:
+      id: drop-check-constraint_app_role_firm_type_restriction_check
+      author: suresh.kavali
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE app_role DROP CONSTRAINT IF EXISTS app_role_firm_type_restriction_check;
+      rollback:
+        - sql:
+            sql: |
+              ALTER TABLE app_role
+              ADD CONSTRAINT app_role_firm_type_restriction_check
+              CHECK ((firm_type_restriction)::text = ANY ((ARRAY['LEGAL_SERVICES_PROVIDER'::character varying, 'CHAMBERS'::character varying, 'ADVOCATE'::character varying])::text[]));
+
+

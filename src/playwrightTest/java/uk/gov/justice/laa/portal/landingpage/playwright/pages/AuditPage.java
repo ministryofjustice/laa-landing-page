@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
+
 
 public class AuditPage {
 
@@ -45,6 +47,7 @@ public class AuditPage {
     private final Locator paginationNextPage;
 
     private final Locator resultsSummary;
+    private final Locator tableHeaders;
 
     public AuditPage(Page page, int port) {
         this.page = page;
@@ -83,6 +86,8 @@ public class AuditPage {
 
         // Table Rows
         this.tableRows = page.locator("tbody.govuk-table__body tr.govuk-table__row");
+        this.tableHeaders = page.locator("thead.govuk-table__head th.govuk-table__header");
+
 
         // Pagination
         this.paginationNumbers = page.locator(".govuk-pagination__list .govuk-pagination__item a");
@@ -112,6 +117,89 @@ public class AuditPage {
                 "Expected user with email '" + email + "' to appear in the results, but no match was found."
         );
     }
+
+    public void searchAndSelectFirm(String firmName) {
+        log.info("Searching and selecting firm: {}", firmName);
+
+        firmSearchInput.fill("");
+        firmSearchInput.fill(firmName);
+
+        firmSearchListbox.waitFor();
+        firmOptionRows.first().waitFor();
+
+        firmOptionRows.first().click();
+
+        Assertions.assertFalse(
+                firmSearchHiddenId.inputValue().isBlank(),
+                "Expected selectedFirmId to be populated after selecting firm"
+        );
+
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+    }
+
+    public void filterBySilasRole(String role) {
+        log.info("Filtering by SiLAS role: {}", role);
+        silasRoleFilter.selectOption(role);
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+    }
+
+    public void filterByAppAccess(String appId) {
+        log.info("Filtering by app access ID: {}", appId);
+        appAccessFilter.selectOption(appId);
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+    }
+
+    public void filterByUserType(String userType) {
+        log.info("Filtering by user type: {}", userType);
+        userTypeFilter.selectOption(userType);
+        page.waitForLoadState(LoadState.NETWORKIDLE);
+    }
+
+    public List<String> getTableHeaderTexts() {
+        return tableHeaders.allInnerTexts()
+                .stream()
+                .map(String::trim)
+                .toList();
+    }
+
+    public void assertEachRowHasColumnCount(int expectedColumns) {
+        int rowCount = tableRows.count();
+
+        for (int i = 0; i < rowCount; i++) {
+            Locator cells = tableRows.nth(i).locator("td.govuk-table__cell");
+
+            Assertions.assertEquals(
+                    expectedColumns,
+                    cells.count(),
+                    "Row " + (i + 1) + " does not have " + expectedColumns + " columns"
+            );
+        }
+    }
+
+    public void assertOnAuditPage() {
+        Assertions.assertEquals(
+                "User Access Audit Table",
+                pageHeader.innerText().trim(),
+                "Expected to be on the Audit Users page"
+        );
+    }
+
+    public void assertAccessForbidden() {
+        Locator forbiddenHeader = page.locator(
+                "h1.govuk-heading-l:has-text('Access forbidden')"
+        );
+
+        Assertions.assertTrue(
+                forbiddenHeader.isVisible(),
+                "Expected 'Access forbidden' page to be displayed"
+        );
+
+        Assertions.assertTrue(
+                page.locator("text=You don't have permission to access this page.").isVisible(),
+                "Expected access denied message to be displayed"
+        );
+    }
+
 
 }
 

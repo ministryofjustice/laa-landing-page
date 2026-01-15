@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.UUID;
 
@@ -13,7 +14,8 @@ import java.util.UUID;
 @NoArgsConstructor
 @Builder(toBuilder = true)
 public class DeletedUser implements Serializable {
-
+    @Serial
+    private static final long serialVersionUID = 1L;
     private int detachedOfficesCount;
     private int removedRolesCount;
     private UUID deletedUserId;

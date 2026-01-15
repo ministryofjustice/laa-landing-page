@@ -1,48 +1,48 @@
 package uk.gov.justice.laa.portal.landingpage.playwright.common;
 
 import com.microsoft.playwright.Browser;
+import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
-import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.api.extension.TestWatcher;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import uk.gov.justice.laa.portal.landingpage.playwright.pages.ManageUsersPage;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-@Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class BaseFrontEndTest {
     private static final Logger LOGGER = Logger.getLogger(BaseFrontEndTest.class.getName());
-    private static final String CONFIG_FILE = "src/playwrightTest/resources/playwright.properties";
 
     protected static Playwright playwright;
     protected static Browser browser;
-    protected static Page page;
-    protected static Properties config;
+    protected BrowserContext context;
+    protected Page page;
 
     @LocalServerPort
     protected int port;
 
-    @Container
-    @ServiceConnection
-    public static final PostgreSQLContainer<?> postgresContainer = new PostgreSQLContainer<>("postgres:16-alpine")
-            .withDatabaseName("test_db")
-            .withUsername("postgres")
-            .withPassword("password");
+    @Value("${app.playwright.headless}")
+    private boolean headless;
+
+    private static boolean setupComplete = false;
+
+    protected static final PostgreSQLContainer<?> postgresContainer =
+            SharedPostgresContainer.getInstance();
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
@@ -52,47 +52,33 @@ public abstract class BaseFrontEndTest {
     }
 
     @RegisterExtension
-    TestWatcher screenshotOnFailure = new ScreenshotWatcher();
+    ScreenshotWatcher screenshotOnFailure =
+            new ScreenshotWatcher(() -> page);
+
+
+
+    @BeforeAll
+    void beforeAll() {
+        if (!setupComplete) {
+            playwright = Playwright.create();
+
+            browser = playwright.chromium()
+                    .launch(new BrowserType.LaunchOptions().setHeadless(headless));
+
+            setupComplete = true;
+        }
+    }
 
     @BeforeEach
-    void setup() throws IOException {
-        loadConfig();
-        initializeBrowser();
-        // Removed performLogin() to let each test decide which user to log in as
+    void beforeEach() {
+        context = browser.newContext();
+        page = context.newPage();
     }
 
-    @AfterAll
-    static void tearDown() {
-        if (page != null) {
-            page.close();
-        }
-        if (browser != null) {
-            browser.close();
-        }
-        if (playwright != null) {
-            playwright.close();
-        }
-    }
-
-    private static void loadConfig() throws IOException {
-        if (config == null) {
-            config = new Properties();
-            try (FileInputStream input = new FileInputStream(CONFIG_FILE)) {
-                config.load(input);
-            }
-        }
-    }
-
-    private static void initializeBrowser() {
-        if (playwright == null) {
-            playwright = Playwright.create();
-        }
-        boolean headless = Boolean.parseBoolean(config.getProperty("app.playwright.headless", "false"));
-        if (browser == null) {
-            browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(headless));
-        }
-        if (page == null) {
-            page = browser.newPage();
+    @AfterEach
+    void afterEach() {
+        if (context != null) {
+            context.close(); // closes page too
         }
     }
 
@@ -111,5 +97,11 @@ public abstract class BaseFrontEndTest {
             LOGGER.log(Level.SEVERE, "Login failed for " + userEmail, e);
             throw e;
         }
+    }
+
+    protected ManageUsersPage loginAndGetManageUsersPage(TestUser user) {
+        loginAs(user.email);
+        page.navigate(String.format("http://localhost:%d/admin/users", port));
+        return new ManageUsersPage(page, port);
     }
 }

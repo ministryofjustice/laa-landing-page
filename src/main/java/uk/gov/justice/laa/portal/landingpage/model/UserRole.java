@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 @Data
@@ -12,6 +13,8 @@ import java.io.Serializable;
 @AllArgsConstructor
 @NoArgsConstructor
 public class UserRole implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     private String appId;
     private String appName;
     private String appRoleId;

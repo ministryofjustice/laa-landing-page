@@ -29,6 +29,9 @@ public class GlobalControllerAdvice {
     @Value("${feature.flag.enable.user.audit.table}")
     private boolean enableUserAuditTable;
 
+    @Value("${feature.flag.enable.reassign.firm}")
+    private boolean enableReassignFirm;
+
     public GlobalControllerAdvice(LoginService loginService) {
         this.loginService = loginService;
     }
@@ -90,6 +93,11 @@ public class GlobalControllerAdvice {
     @ModelAttribute("enableUserAuditTable")
     public boolean getUserAuditTableEnabledFlag() {
         return enableUserAuditTable;
+    }
+
+    @ModelAttribute("enableReassignFirm")
+    public boolean getReassignFirmEnabledFlag() {
+        return enableReassignFirm;
     }
 
     @ModelAttribute("currentUser")

@@ -3,12 +3,15 @@ package uk.gov.justice.laa.portal.landingpage.dto;
 import lombok.Getter;
 import uk.gov.justice.laa.portal.landingpage.entity.EventType;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 public abstract class AuditEvent implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     @Getter
     protected UUID userId; //modifier id
     @Getter

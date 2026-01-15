@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 import lombok.AccessLevel;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 @Builder
@@ -16,6 +17,8 @@ import java.io.Serializable;
 @AllArgsConstructor(access = AccessLevel.PUBLIC)
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class EntraClaimData implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     @JsonProperty("@odata.type")
     private String odataType;
     private String tenantId;

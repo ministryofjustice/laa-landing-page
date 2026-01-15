@@ -69,3 +69,17 @@ laa-apps:
       url: ${app.civil.claim.for.payment.url}
       laaApplicationDetails: ${app.civil.claim.for.payment.details}
       ordinal: 8
+    - name: ${app.means.and.match.ui1.name}
+      title: LAA Means And Match Spike UI 1
+      description: >-
+        LAA Means And Match Spike UI 1
+      url: ${app.means.and.match.ui1.url}
+      laaApplicationDetails: ${app.means.and.match.ui1.details}
+      ordinal: 9
+    - name: ${app.means.and.match.ui2.name}
+      title: LAA Means And Match Spike UI 2
+      description: >-
+        LAA Means And Match Spike UI 2
+      url: ${app.means.and.match.ui2.url}
+      laaApplicationDetails: ${app.means.and.match.ui2.details}
+      ordinal: 10
