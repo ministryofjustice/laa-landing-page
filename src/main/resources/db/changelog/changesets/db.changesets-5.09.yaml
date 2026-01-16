@@ -1,0 +1,12 @@
+databaseChangeLog:
+  - changeSet:
+      id: update-authz-app-types
+      author: suresh.kavali
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "UPDATE app set app_type = 'AUTHZ' where name in ('Manage Your Users', 'User Access Audit Table');"
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: "UPDATE app set app_type = 'LAA' where name in ('Manage Your Users', 'User Access Audit Table');"
