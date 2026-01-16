@@ -1,11 +1,13 @@
 package uk.gov.justice.laa.portal.landingpage.model;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
-import org.jetbrains.annotations.NotNull;
+import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
+import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 
 import java.io.Serializable;
 
@@ -15,26 +17,39 @@ import java.io.Serializable;
 @AllArgsConstructor
 public class LaaApplicationForView implements Comparable<LaaApplicationForView>, Serializable {
 
+    private String id;
     private String name;
     private String title;
     private String description;
     private String url;
     private int ordinal;
     private boolean specialHandling;
+    private AppType appGroup;
+    private String otherAssignedAppIdForAltDesc;
 
-    public LaaApplicationForView(LaaApplication laaApplication) {
-        this.name = laaApplication.getName();
-        this.title = laaApplication.getTitle();
-        this.description = laaApplication.getDescription();
-        this.url = laaApplication.getUrl();
-        this.ordinal = laaApplication.getOrdinal();
-        this.specialHandling = laaApplication.getDescriptionIfAppAssigned() != null
-                && StringUtils.isNotEmpty(laaApplication.getDescriptionIfAppAssigned().getAppAssigned())
-                && StringUtils.isNotEmpty(laaApplication.getDescriptionIfAppAssigned().getDescription());
+    public LaaApplicationForView(AppDto appDto) {
+        this.id = appDto.getId();
+        this.name = appDto.getName();
+        this.title = appDto.getTitle();
+        this.description = appDto.getDescription();
+        this.url = appDto.getUrl();
+        this.ordinal = appDto.getOrdinal();
+        this.specialHandling = appDto.getAlternativeAppDescription() != null
+                && appDto.getAlternativeAppDescription().getAssignedAppId() != null
+                && StringUtils.isNotEmpty(appDto.getAlternativeAppDescription().getAlternativeDescription());
+        this.otherAssignedAppIdForAltDesc =
+                specialHandling ? appDto.getAlternativeAppDescription().getAssignedAppId() : null;
+        this.appGroup = appDto.getAppType();
     }
 
     @Override
     public int compareTo(@NotNull LaaApplicationForView o) {
-        return ordinal - o.ordinal;
+        int cmp = ordinal - o.ordinal;
+
+        if (cmp == 0) {
+            return o.name.compareToIgnoreCase(name);
+        }
+
+        return cmp;
     }
 }

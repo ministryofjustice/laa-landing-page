@@ -1,6 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.model;
 
 import org.junit.jupiter.api.Test;
+import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
+
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -10,13 +13,13 @@ class LaaApplicationForViewTest {
 
     @Test
     void testConstructorFromLaaApplication_withSpecialHandling() {
-        LaaApplication.DescriptionIfAppAssigned descriptionIfAppAssigned = LaaApplication.DescriptionIfAppAssigned
-                .builder().appAssigned("Assigned").description("Some description").build();
+        AppDto.AlternativeAppDescriptionDto descriptionIfAppAssigned = AppDto.AlternativeAppDescriptionDto
+                .builder().assignedAppId(UUID.randomUUID().toString()).alternativeDescription("Some description").build();
 
-        LaaApplication laaApplication = LaaApplication.builder()
+        AppDto laaApplication = AppDto.builder()
                 .name("AppName").title("AppTitle").description("AppDescription")
                 .url("http://example.com").ordinal(1)
-                .descriptionIfAppAssigned(descriptionIfAppAssigned).build();
+                .alternativeAppDescription(descriptionIfAppAssigned).build();
 
         LaaApplicationForView view = new LaaApplicationForView(laaApplication);
 
@@ -30,7 +33,7 @@ class LaaApplicationForViewTest {
 
     @Test
     void testConstructorFromLaaApplication_withoutSpecialHandling() {
-        LaaApplication laaApplication = LaaApplication.builder()
+        AppDto laaApplication = AppDto.builder()
                 .name("AppName").title("AppTitle").description("AppDescription")
                 .url("http://example.com").ordinal(2).build();
 
@@ -41,8 +44,8 @@ class LaaApplicationForViewTest {
 
     @Test
     void testCompareTo() {
-        LaaApplicationForView app1 = LaaApplicationForView.builder().ordinal(1).build();
-        LaaApplicationForView app2 = LaaApplicationForView.builder().ordinal(2).build();
+        LaaApplicationForView app1 = LaaApplicationForView.builder().name("App 1").ordinal(1).build();
+        LaaApplicationForView app2 = LaaApplicationForView.builder().name("App 2").ordinal(2).build();
 
         assertTrue(app1.compareTo(app2) < 0);
         assertTrue(app2.compareTo(app1) > 0);
