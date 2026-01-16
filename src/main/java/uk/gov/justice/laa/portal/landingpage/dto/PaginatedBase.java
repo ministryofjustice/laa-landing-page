@@ -1,14 +1,12 @@
 package uk.gov.justice.laa.portal.landingpage.dto;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 import java.io.Serial;
 import java.io.Serializable;
-import java.util.List;
 
 /**
  * DTO for paginated audit user results
@@ -27,7 +25,7 @@ public class PaginatedBase implements Serializable {
     /**
      * Total number of rows
      */
-    private long totalRows;
+    private long totalElements;
 
     /**
      * Total number of pages

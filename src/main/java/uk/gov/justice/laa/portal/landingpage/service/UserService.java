@@ -51,9 +51,11 @@ import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto.AuditProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDirectoryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
+import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
 import uk.gov.justice.laa.portal.landingpage.dto.UserFirmReassignmentEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
@@ -107,17 +109,18 @@ public class UserService {
     private final FirmRepository firmRepository;
     private final EventService eventService;
     private final NotificationService notificationService;
+    private final OfficeService officeService;
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
-            EntraUserRepository entraUserRepository, AppRepository appRepository,
-            AppRoleRepository appRoleRepository, ModelMapper mapper,
-            OfficeRepository officeRepository,
-            LaaAppsConfig.LaaApplicationsList laaApplicationsList,
-            TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
-            RoleChangeNotificationService roleChangeNotificationService, FirmService firmService,
-            FirmRepository firmRepository, EventService eventService,
-            NotificationService notificationService) {
+                       EntraUserRepository entraUserRepository, AppRepository appRepository,
+                       AppRoleRepository appRoleRepository, ModelMapper mapper,
+                       OfficeRepository officeRepository,
+                       LaaAppsConfig.LaaApplicationsList laaApplicationsList,
+                       TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
+                       RoleChangeNotificationService roleChangeNotificationService, FirmService firmService,
+                       FirmRepository firmRepository, EventService eventService,
+                       NotificationService notificationService, OfficeService officeService) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -132,6 +135,7 @@ public class UserService {
         this.firmRepository = firmRepository;
         this.eventService = eventService;
         this.notificationService = notificationService;
+        this.officeService = officeService;
     }
 
     static <T> List<List<T>> partitionBasedOnSize(List<T> inputList, int size) {
@@ -1513,6 +1517,66 @@ public class UserService {
                 .totalUsers(userPage.getTotalElements()).totalPages(userPage.getTotalPages())
                 .currentPage(page).pageSize(pageSize).build();
     }
+
+
+
+    public PaginatedFirmDirectory getFirmDirectories(
+            String searchTerm, UUID firmId, String firmType,
+            int page, int pageSize, String sort, String direction) {
+        // Check if sorting by profile count, firm, or account status (special cases -
+        // require different queries)
+        boolean sortByProfileCount = sort != null && sort.equalsIgnoreCase("profilecount");
+        boolean sortByFirm = sort != null
+                && (sort.equalsIgnoreCase("firm") || sort.equalsIgnoreCase("firmassociation"));
+        //boolean sortByAccountStatus = sort != null && sort.equalsIgnoreCase("accountstatus");
+
+
+        Page<Firm> officePage = null;
+        if (sortByProfileCount || sortByFirm /*|| sortByAccountStatus*/) {
+            // Use special queries for profile count, firm, or account status sorting
+            boolean ascending = direction == null || direction.equalsIgnoreCase("asc");
+            String sortField;
+            if (sortByProfileCount) {
+                sortField = "profileCount";
+            } else if (sortByFirm) {
+                sortField = "firmName";
+            } else {
+                sortField = "accountStatus";
+            }
+
+            Sort sortObj = ascending ? Sort.by(sortField).ascending() : Sort.by(sortField).descending();
+            PageRequest pageRequest = PageRequest.of(page - 1, pageSize, sortObj);
+            // UserType must be treated as a string because we are using native queries
+            // here.
+
+
+            if (sortByFirm) {
+                officePage = firmService.getFirms(pageRequest);
+            }
+
+        }
+
+        // Map to DTOs
+        PageRequest pageRequest = PageRequest.of(page - 1, pageSize);
+        officePage = firmService.getFirms(pageRequest);
+        List<FirmDirectoryDto> firmDirectoryDtos = officePage.getContent().stream().map(map -> {
+                   return FirmDirectoryDto.builder()
+                            .firmName(map.getName())
+                            .firmId(map.getId())
+                            .firmCode(map.getCode())
+                            .firmType(map.getType().getValue())
+                            .build();
+                }
+        ).collect(Collectors.toList());
+
+        return PaginatedFirmDirectory.builder()
+                .firmDirectories(firmDirectoryDtos)
+                .totalPages(officePage.getTotalPages())
+                .totalElements(officePage.getTotalElements())
+                .currentPage(page).pageSize(pageSize).build();
+    }
+
+
 
     /**
      * Map EntraUser to AuditUserDto

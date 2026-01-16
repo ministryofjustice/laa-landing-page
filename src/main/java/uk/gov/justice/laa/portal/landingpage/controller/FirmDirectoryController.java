@@ -4,32 +4,18 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
-import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
-import uk.gov.justice.laa.portal.landingpage.dto.AuditTableSearchCriteria;
-import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDirectoryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDirectorySearchCriteria;
-import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
-import uk.gov.justice.laa.portal.landingpage.dto.FirmSearchCriteria;
-import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
-import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
-import uk.gov.justice.laa.portal.landingpage.entity.Permission;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
-import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
 import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
@@ -44,7 +30,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -84,8 +69,15 @@ public class FirmDirectoryController {
                                 .firmName("firmName")
                                 .build()))
                 .totalPages(2)
-                .totalRows(20)
+                .totalElements(20)
                 .build();
+        paginatedFirmDirectory = userService.getFirmDirectories(criteria.getSearch(),
+                criteria.getSelectedFirmId(),
+                criteria.getSelectedFirmType(),
+                criteria.getPage(),
+                criteria.getSize(),
+                criteria.getSort(),
+                criteria.getDirection());
 
                 /*userService.getAuditUsers(
 
@@ -96,6 +88,7 @@ public class FirmDirectoryController {
         // Build firm search form
         FirmSearchForm firmSearchForm = new FirmSearchForm(criteria.getFirmSearch(), criteria.getSelectedFirmId());
         // Add attributes to model
+
         buildDisplayAuditTableModel(criteria, model, paginatedFirmDirectory, firmSearchForm);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Firm Directory");
 
@@ -109,7 +102,7 @@ public class FirmDirectoryController {
         model.addAttribute("requestedPageSize", criteria.getSize());
         model.addAttribute("actualPageSize", paginatedFirmDirectory.getFirmDirectories().size());
         model.addAttribute("page", criteria.getPage());
-        model.addAttribute("totalRows", paginatedFirmDirectory.getTotalRows());
+        model.addAttribute("totalRows", paginatedFirmDirectory.getTotalElements());
         model.addAttribute("totalPages", paginatedFirmDirectory.getTotalPages());
         model.addAttribute("search", criteria.getSearch());
         model.addAttribute("firmSearch", firmSearchForm);

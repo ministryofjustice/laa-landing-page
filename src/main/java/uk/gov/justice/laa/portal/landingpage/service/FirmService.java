@@ -12,6 +12,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
@@ -49,6 +51,10 @@ public class FirmService {
                 .stream()
                 .map(firm -> mapper.map(firm, FirmDto.class))
                 .collect(Collectors.toList());
+    }
+
+    public Page<Firm> getFirms(Pageable pageable) {
+        return firmRepository.findAll(pageable);
     }
 
     public FirmDto getFirm(String id) {
