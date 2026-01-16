@@ -23,6 +23,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
@@ -37,6 +38,8 @@ import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -103,9 +106,14 @@ public class FirmDirectoryController {
         model.addAttribute("totalPages", paginatedUsers.getTotalPages());
         model.addAttribute("search", criteria.getSearch());
         model.addAttribute("firmSearch", firmSearchForm);
-        // Get all SiLAS roles for dropdown filter
-        List<AppRoleDto> silasRoles = userService.getAllSilasRoles();
-        model.addAttribute("silasRoles", silasRoles);
+        // Get all firm type
+        List<FirmType> firmTypes = Collections.unmodifiableList(Arrays.asList(
+                FirmType.LEGAL_SERVICES_PROVIDER,
+                FirmType.CHAMBERS,
+                FirmType.ADVOCATE
+        ));
+        model.addAttribute("firmTypes", firmTypes);
+
         List<AppDto> apps = userService.getApps();
         model.addAttribute("apps", apps);
 /*        //model.addAttribute("selectedSilasRole", criteria.getSilasRole() != null ? criteria.getSilasRole() : "");
