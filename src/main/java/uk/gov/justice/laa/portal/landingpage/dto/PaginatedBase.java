@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -12,8 +13,9 @@ import java.util.List;
 /**
  * DTO for paginated audit user results
  */
+
 @Data
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
 public class PaginatedBase implements Serializable {
@@ -21,15 +23,11 @@ public class PaginatedBase implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    /**
-     * List of audit users for the current page
-     */
-    private List<AuditUserDto> users;
 
     /**
-     * Total number of users across all pages
+     * Total number of rows
      */
-    private long totalUsers;
+    private long totalRows;
 
     /**
      * Total number of pages

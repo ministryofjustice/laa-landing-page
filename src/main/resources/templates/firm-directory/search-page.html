@@ -529,7 +529,7 @@
 
             function searchFirms(query) {
                 updateStatus('Searching...');
-                fetch(`/firmDirectory/search?q=${encodeURIComponent(query)}`, {
+                fetch(`/admin/user/firms/search?q=${encodeURIComponent(query)}`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -698,7 +698,7 @@
             sortButtons.forEach(button => {
                 button.addEventListener('click', function () {
                     // Save current scroll position
-                    sessionStorage.setItem('auditTableScrollPosition', window.scrollY);
+                    sessionStorage.setItem('firmDirectoryTableScrollPosition', window.scrollY);
 
                     const params = {
                         size: this.dataset.size,
@@ -709,18 +709,16 @@
                         firmSearch: this.dataset.firmSearch,
                         selectedFirmId: this.dataset.selectedFirmId,
                         firmType: this.dataset.firmType,
-                        // selectedAppId: this.dataset.selectedAppId,
-                        // selectedUserType: this.dataset.selectedUserType
                     };
                     window.location.href = buildCleanUrl('/firmDirectory', params);
                 });
             });
 
             // Restore scroll position if it was saved
-            const savedScrollPosition = sessionStorage.getItem('auditTableScrollPosition');
+            const savedScrollPosition = sessionStorage.getItem('firmDirectoryTableScrollPosition');
             if (savedScrollPosition !== null) {
                 window.scrollTo(0, parseInt(savedScrollPosition, 10));
-                sessionStorage.removeItem('auditTableScrollPosition');
+                sessionStorage.removeItem('firmDirectoryTableScrollPosition');
             }
 
             // Add scroll position saving to pagination links
@@ -729,7 +727,7 @@
                 link.addEventListener('click', function (e) {
                     e.preventDefault();
                     // Save current scroll position
-                    sessionStorage.setItem('auditTableScrollPosition', window.scrollY);
+                    sessionStorage.setItem('firmDirectoryTableScrollPosition', window.scrollY);
                     const href = this.getAttribute('href');
                     window.location.href = href;
                 });
@@ -793,19 +791,15 @@
                     </tr>
                     </thead>
                     <tbody class="govuk-table__body">
-                    <tr class="govuk-table__row" th:each="user : ${users}">
+                    <tr class="govuk-table__row" th:each="firmDirectory : ${firmDirectories}">
                         <td class="govuk-table__cell">
-                            <a class="govuk-link" th:if="${user.userId != null}"
-                               th:href="@{firmDirectory/{id}(id=${user.userId})}"
-                               th:text="${user.name}"></a>
-                            <a class="govuk-link" th:if="${user.userId == null && user.entraUserId != null}"
-                               th:href="@{firmDirectory/{id}(id=${user.entraUserId}, isEntraId=true)}"
-                               th:text="${user.name}"></a>
-                            <span th:if="${user.userId == null && user.entraUserId == null}" th:text="${user.name}"></span>
+                            <a class="govuk-link" th:if="${firmDirectory.firmId != null}"
+                               th:href="@{firmDirectory/{id}(id=${firmDirectory.firmId})}"
+                               th:text="${firmDirectory.firmName}"></a>
                         </td>
-                        <td class="govuk-table__cell" th:text="${user.email}"></td>
+                        <td class="govuk-table__cell" th:text="${firmDirectory.firmCode}"></td>
                         <td class="govuk-table__cell"
-                            th:text="${user.userType}"></td>
+                            th:text="${firmDirectory.firmType}"></td>
                     </tr>
                     </tbody>
                 </table>
@@ -895,7 +889,7 @@
     <p class="moj-pagination__results">Showing <b
             th:text="${((requestedPageSize ?: 10) * ((page ?: 1) - 1)) + 1}"></b>
         to <b th:text="${((requestedPageSize ?: 10) * ((page ?: 1) - 1)) + (actualPageSize ?: 10)}"></b>
-        of <b th:text="${totalUsers}"></b> results</p>
+        of <b th:text="${totalRows}"></b> results</p>
 </main>
 </body>
 

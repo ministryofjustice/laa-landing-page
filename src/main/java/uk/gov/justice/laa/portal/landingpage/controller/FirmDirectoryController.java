@@ -17,10 +17,12 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditTableSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDirectoryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDirectorySearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
+import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
@@ -73,11 +75,16 @@ public class FirmDirectoryController {
     public String displayAllFirmDirectory(@ModelAttribute FirmDirectorySearchCriteria criteria,
                                           Model model) {
         log.debug("FirmDirectoryController.displayAllFirmDirectory - {}", criteria);
-        // Get audit users
-        PaginatedAuditUsers paginatedUsers = PaginatedAuditUsers.builder()
-                .users(List.of(AuditUserDto.builder()
-                                .email("leo")
-                        .build()))
+        // Get Firm Directory info
+        PaginatedFirmDirectory paginatedFirmDirectory = PaginatedFirmDirectory.builder()
+                .firmDirectories(List.of(FirmDirectoryDto.builder()
+                                .firmCode("firm Code")
+                                .firmId(UUID.randomUUID())
+                                .firmType(FirmType.ADVOCATE.getValue())
+                                .firmName("firmName")
+                                .build()))
+                .totalPages(2)
+                .totalRows(20)
                 .build();
 
                 /*userService.getAuditUsers(
@@ -89,7 +96,7 @@ public class FirmDirectoryController {
         // Build firm search form
         FirmSearchForm firmSearchForm = new FirmSearchForm(criteria.getFirmSearch(), criteria.getSelectedFirmId());
         // Add attributes to model
-        buildDisplayAuditTableModel(criteria, model, paginatedUsers, firmSearchForm);
+        buildDisplayAuditTableModel(criteria, model, paginatedFirmDirectory, firmSearchForm);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Firm Directory");
 
         return SEARCH_PAGE;
@@ -97,13 +104,13 @@ public class FirmDirectoryController {
 
 
     private void buildDisplayAuditTableModel(FirmDirectorySearchCriteria criteria, Model model,
-                                             PaginatedAuditUsers paginatedUsers, FirmSearchForm firmSearchForm) {
-        model.addAttribute("users", paginatedUsers.getUsers());
+                                             PaginatedFirmDirectory paginatedFirmDirectory, FirmSearchForm firmSearchForm) {
+        model.addAttribute("firmDirectories", paginatedFirmDirectory.getFirmDirectories());
         model.addAttribute("requestedPageSize", criteria.getSize());
-        model.addAttribute("actualPageSize", paginatedUsers.getUsers().size());
+        model.addAttribute("actualPageSize", paginatedFirmDirectory.getFirmDirectories().size());
         model.addAttribute("page", criteria.getPage());
-        model.addAttribute("totalUsers", paginatedUsers.getTotalUsers());
-        model.addAttribute("totalPages", paginatedUsers.getTotalPages());
+        model.addAttribute("totalRows", paginatedFirmDirectory.getTotalRows());
+        model.addAttribute("totalPages", paginatedFirmDirectory.getTotalPages());
         model.addAttribute("search", criteria.getSearch());
         model.addAttribute("firmSearch", firmSearchForm);
         // Get all firm type
