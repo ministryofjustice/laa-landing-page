@@ -71,7 +71,7 @@ public class FirmDirectoryController {
                 .totalPages(2)
                 .totalElements(20)
                 .build();
-        paginatedFirmDirectory = userService.getFirmDirectories(criteria.getSearch(),
+        paginatedFirmDirectory = userService.getFirmDirectories(criteria.getFirmSearch(),
                 criteria.getSelectedFirmId(),
                 criteria.getSelectedFirmType(),
                 criteria.getPage(),

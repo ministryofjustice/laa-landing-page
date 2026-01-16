@@ -1532,41 +1532,25 @@ public class UserService {
 
 
         Page<Firm> officePage = null;
-        if (sortByProfileCount || sortByFirm /*|| sortByAccountStatus*/) {
-            // Use special queries for profile count, firm, or account status sorting
-            boolean ascending = direction == null || direction.equalsIgnoreCase("asc");
-            String sortField;
-            if (sortByProfileCount) {
-                sortField = "profileCount";
-            } else if (sortByFirm) {
-                sortField = "firmName";
-            } else {
-                sortField = "accountStatus";
-            }
-
-            Sort sortObj = ascending ? Sort.by(sortField).ascending() : Sort.by(sortField).descending();
-            PageRequest pageRequest = PageRequest.of(page - 1, pageSize, sortObj);
-            // UserType must be treated as a string because we are using native queries
-            // here.
-
-
-            if (sortByFirm) {
-                officePage = firmService.getFirms(pageRequest);
-            }
-
+        PageRequest pageRequest = PageRequest.of(
+                page - 1,
+                pageSize,
+                Sort.by(Sort.Direction.fromString(direction), sort));
+        if (firmId != null)  {
+            officePage = firmService.getFirmsById(firmId, pageRequest);
+        } else if (searchTerm != null){
+            officePage = firmService.getFirmsByName(searchTerm, pageRequest);
+        } else {
+            officePage = firmService.getFirms(pageRequest);
         }
-
         // Map to DTOs
-        PageRequest pageRequest = PageRequest.of(page - 1, pageSize);
-        officePage = firmService.getFirms(pageRequest);
-        List<FirmDirectoryDto> firmDirectoryDtos = officePage.getContent().stream().map(map -> {
-                   return FirmDirectoryDto.builder()
-                            .firmName(map.getName())
-                            .firmId(map.getId())
-                            .firmCode(map.getCode())
-                            .firmType(map.getType().getValue())
-                            .build();
-                }
+
+        List<FirmDirectoryDto> firmDirectoryDtos = officePage.getContent().stream().map(map -> FirmDirectoryDto.builder()
+                .firmName(map.getName())
+                .firmId(map.getId())
+                .firmCode(map.getCode())
+                .firmType(map.getType().getValue())
+                .build()
         ).collect(Collectors.toList());
 
         return PaginatedFirmDirectory.builder()

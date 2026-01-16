@@ -57,6 +57,14 @@ public class FirmService {
         return firmRepository.findAll(pageable);
     }
 
+    public Page<Firm> getFirmsByName(String name, Pageable pageable) {
+        return firmRepository.findAllByName(name, pageable);
+    }
+
+    public Page<Firm> getFirmsById(UUID id, Pageable pageable) {
+        return firmRepository.findAllById(id, pageable);
+    }
+
     public FirmDto getFirm(String id) {
         return getFirm(UUID.fromString(id));
     }

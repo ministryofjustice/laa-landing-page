@@ -735,7 +735,7 @@
         });
     </script>
 
-    <!-- Audit Table -->
+    <!-- Table -->
     <div class="govuk-grid-row govuk-!-margin-top-6" id="audit-table">
         <div class="govuk-grid-column-full">
             <div class="table-container">
@@ -743,47 +743,47 @@
                     <thead class="govuk-table__head">
                     <tr class="govuk-table__row">
                         <th scope="col" class="govuk-table__header"
-                            th:aria-sort="${sort == 'firmName' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
-                            <button type="button" class="sort-button" data-sort="firmName"
+                            th:aria-sort="${sort == 'name' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
+                            <button type="button" class="sort-button" data-sort="name"
                                     th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'firmName' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}">
                                 Firm Name
-                                <img th:if="${sort == 'firmName' and direction == 'asc'}"
+                                <img th:if="${sort == 'name' and direction == 'asc'}"
                                      th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
                                      alt="Sorted ascending">
-                                <img th:if="${sort == 'firmName' and direction == 'desc'}"
+                                <img th:if="${sort == 'name' and direction == 'desc'}"
                                      th:src="@{/assets/images/sort-desc.svg}" width="22" height="22"
                                      alt="Sorted descending">
-                                <img th:if="${sort != 'firmName'}" th:src="@{/assets/images/sort-none.svg}"
+                                <img th:if="${sort != 'name'}" th:src="@{/assets/images/sort-none.svg}"
                                      width="22" height="22" alt="">
                             </button>
                         </th>
                         <th scope="col" class="govuk-table__header"
-                            th:aria-sort="${sort == 'firmCode' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
-                            <button type="button" class="sort-button" data-sort="firmCode"
+                            th:aria-sort="${sort == 'code' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
+                            <button type="button" class="sort-button" data-sort="code"
                                     th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'email' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}">
                                 Firm Code
-                                <img th:if="${sort == 'firmCode' and direction == 'asc'}"
+                                <img th:if="${sort == 'code' and direction == 'asc'}"
                                      th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
                                      alt="Sorted ascending">
-                                <img th:if="${sort == 'firmCode' and direction == 'desc'}"
+                                <img th:if="${sort == 'code' and direction == 'desc'}"
                                      th:src="@{/assets/images/sort-desc.svg}" width="22" height="22"
                                      alt="Sorted descending">
-                                <img th:if="${sort != 'firmCode'}" th:src="@{/assets/images/sort-none.svg}"
+                                <img th:if="${sort != 'code'}" th:src="@{/assets/images/sort-none.svg}"
                                      width="22" height="22" alt="">
                             </button>
                         </th>
                         <th scope="col" class="govuk-table__header"
-                            th:aria-sort="${sort == 'firmType' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
-                            <button type="button" class="sort-button" data-sort="firmType"
+                            th:aria-sort="${sort == 'type' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
+                            <button type="button" class="sort-button" data-sort="type"
                                     th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'userType' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}">
                                 Type
-                                <img th:if="${sort == 'firmType' and direction == 'asc'}"
+                                <img th:if="${sort == 'type' and direction == 'asc'}"
                                      th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
                                      alt="Sorted ascending">
-                                <img th:if="${sort == 'firmType' and direction == 'desc'}"
+                                <img th:if="${sort == 'type' and direction == 'desc'}"
                                      th:src="@{/assets/images/sort-desc.svg}" width="22" height="22"
                                      alt="Sorted descending">
-                                <img th:if="${sort != 'firmType'}" th:src="@{/assets/images/sort-none.svg}"
+                                <img th:if="${sort != 'type'}" th:src="@{/assets/images/sort-none.svg}"
                                      width="22" height="22" alt="">
                             </button>
                         </th>
