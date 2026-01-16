@@ -1,26 +1,25 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import jakarta.transaction.Transactional;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.web.servlet.MvcResult;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.RoleAssignment;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.RoleAssignmentRepository;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 public class RoleBasedAccessAppVisibilityTest extends RoleBasedAccessIntegrationTest {
 
@@ -43,7 +42,7 @@ public class RoleBasedAccessAppVisibilityTest extends RoleBasedAccessIntegration
         testExternalAppRole = testExternalApp.getAppRoles().stream().findFirst().orElseThrow();
 
         // Add restriction that test role can only be set by external user manager.
-        AppRole externalUserManager = appRoleRepository.findByName("External User Manager").orElseThrow();
+        AppRole externalUserManager = appRoleRepository.findByName(AuthzRole.EXTERNAL_USER_MANAGER.getRoleName()).orElseThrow();
         RoleAssignment assignment = new RoleAssignment(externalUserManager, testExternalAppRole);
         roleAssignmentRepository.saveAndFlush(assignment);
 
@@ -84,7 +83,7 @@ public class RoleBasedAccessAppVisibilityTest extends RoleBasedAccessIntegration
         testExternalAppRole = testExternalApp.getAppRoles().stream().findFirst().orElseThrow();
 
         // Add restriction that test role can only be set by external user manager.
-        AppRole externalUserManager = appRoleRepository.findByName("External User Manager").orElseThrow();
+        AppRole externalUserManager = appRoleRepository.findByName(AuthzRole.EXTERNAL_USER_MANAGER.getRoleName()).orElseThrow();
         RoleAssignment assignment = new RoleAssignment(externalUserManager, testExternalAppRole);
         roleAssignmentRepository.saveAndFlush(assignment);
 

@@ -2,7 +2,7 @@ name: ZAP DEV DAST Daily Baseline Scan
 
 on:
   schedule:
-    - cron: '0 8 * * 1-5'
+    - cron: '0 8 * * 1-5' # At 08:00 on Monday through Friday
 
 jobs:
   zap_scan:
@@ -38,15 +38,15 @@ jobs:
 
           if [[ $high_value -gt 0 ]]; then
               echo "High alerts, notification should be sent"
-              echo "ZAP_SHOULD_NOTIFY='true'" >> "$GITHUB_ENV"
+              echo "ZAP_SHOULD_NOTIFY=true" >> "$GITHUB_ENV"
           elif [[ $medium_value -gt 0 || $low_value -gt 0 ]]; then
-              # For daily baseline runs, send summary on Monday if there are med/low
-              if [ "$(date +%A)" = "Monday" ]; then
-                  echo "Medium and/or low alerts on Monday, notification should be sent"
-                  echo "ZAP_SHOULD_NOTIFY='true'" >> "$GITHUB_ENV"
+              # For daily baseline runs, send summary on Wednesday if there are med/low
+              if [ "$(date +%A)" = "Wednesday" ]; then
+                  echo "Medium and/or low alerts on Wednesday, notification should be sent"
+                  echo "ZAP_SHOULD_NOTIFY=true" >> "$GITHUB_ENV"
               fi
           else
-              echo "ZAP_SHOULD_NOTIFY='false'" >> "$GITHUB_ENV"
+              echo "ZAP_SHOULD_NOTIFY=false" >> "$GITHUB_ENV"
           fi
         env:
           ZAP_SUMMARY: ${{ steps.extract-summary.outputs.markdown }}

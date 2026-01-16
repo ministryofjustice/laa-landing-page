@@ -168,11 +168,11 @@
                                         <dd class="govuk-summary-list__value">
                                             <span th:text="${user.firm.name}"></span> - <span th:text="${user.firm.code}"></span>
                                         </dd>
-                                        <dd th:if="${canReassignFirm}" class="govuk-summary-list__actions">
+                                        <dd th:if="${enableReassignFirm && canReassignFirm}" class="govuk-summary-list__actions">
                                             <a class="govuk-link"
                                                 th:href="@{/admin/users/reassign-firm/{id}(id=${user.id})}">Change</a>
                                         </dd>
-                                        <dd th:unless="${canReassignFirm}" class="govuk-summary-list__actions"></dd>
+                                        <dd th:unless="${enableReassignFirm && canReassignFirm}" class="govuk-summary-list__actions"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row"
                                         th:if="${externalUser}">
@@ -206,7 +206,10 @@
                                 <ul th:if="${isAccessGranted and canEditUser}" class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
                                         <a class="govuk-link"
-                                            th:href="@{/admin/users/edit/{id}/apps(id=${user.id})}">Change</a>
+                                            th:href="@{/admin/users/edit/{id}/apps(id=${user.id})}">
+                                            Change
+                                            <span class="govuk-visually-hidden"> services</span>
+                                        </a>
                                     </li>
                                 </ul>
                             </div>
@@ -232,7 +235,10 @@
                                 <ul th:if="${isAccessGranted and canManageOffices}" class="govuk-summary-card__actions">
                                     <li class="govuk-summary-card__action">
                                         <a class="govuk-link"
-                                            th:href="@{/admin/users/edit/{id}/offices(id=${user.id})}">Change</a>
+                                            th:href="@{/admin/users/edit/{id}/offices(id=${user.id})}">
+                                            Change
+                                            <span class="govuk-visually-hidden"> offices</span>
+                                        </a>
                                     </li>
                                 </ul>
                             </div>
