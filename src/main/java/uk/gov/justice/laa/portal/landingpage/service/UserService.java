@@ -1523,13 +1523,6 @@ public class UserService {
     public PaginatedFirmDirectory getFirmDirectories(
             String searchTerm, UUID firmId, String firmType,
             int page, int pageSize, String sort, String direction) {
-        // Check if sorting by profile count, firm, or account status (special cases -
-        // require different queries)
-        boolean sortByProfileCount = sort != null && sort.equalsIgnoreCase("profilecount");
-        boolean sortByFirm = sort != null
-                && (sort.equalsIgnoreCase("firm") || sort.equalsIgnoreCase("firmassociation"));
-        //boolean sortByAccountStatus = sort != null && sort.equalsIgnoreCase("accountstatus");
-
 
         Page<Firm> officePage = null;
         PageRequest pageRequest = PageRequest.of(
@@ -1540,7 +1533,9 @@ public class UserService {
             officePage = firmService.getFirmsById(firmId, pageRequest);
         } else if (searchTerm != null){
             officePage = firmService.getFirmsByName(searchTerm, pageRequest);
-        } else {
+        } if(firmType != null) {
+            officePage = firmService.getFirmsByType(FirmType.valueOf(firmType), pageRequest);
+        }else {
             officePage = firmService.getFirms(pageRequest);
         }
         // Map to DTOs

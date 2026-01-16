@@ -22,6 +22,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
@@ -59,6 +60,10 @@ public class FirmService {
 
     public Page<Firm> getFirmsByName(String name, Pageable pageable) {
         return firmRepository.findAllByName(name, pageable);
+    }
+
+    public Page<Firm> getFirmsByType(FirmType firmType, Pageable pageable) {
+        return firmRepository.findAllByType(firmType, pageable);
     }
 
     public Page<Firm> getFirmsById(UUID id, Pageable pageable) {

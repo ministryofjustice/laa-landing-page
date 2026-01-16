@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 
 import java.util.List;
 import java.util.UUID;
@@ -22,4 +23,5 @@ public interface FirmRepository extends JpaRepository<Firm, UUID> {
 
     Page<Firm> findAllById(UUID id, Pageable pageable);
 
+    Page<Firm> findAllByType(FirmType type, Pageable attr2);
 }

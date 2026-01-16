@@ -61,17 +61,7 @@ public class FirmDirectoryController {
                                           Model model) {
         log.debug("FirmDirectoryController.displayAllFirmDirectory - {}", criteria);
         // Get Firm Directory info
-        PaginatedFirmDirectory paginatedFirmDirectory = PaginatedFirmDirectory.builder()
-                .firmDirectories(List.of(FirmDirectoryDto.builder()
-                                .firmCode("firm Code")
-                                .firmId(UUID.randomUUID())
-                                .firmType(FirmType.ADVOCATE.getValue())
-                                .firmName("firmName")
-                                .build()))
-                .totalPages(2)
-                .totalElements(20)
-                .build();
-        paginatedFirmDirectory = userService.getFirmDirectories(criteria.getFirmSearch(),
+        PaginatedFirmDirectory paginatedFirmDirectory = userService.getFirmDirectories(criteria.getFirmSearch(),
                 criteria.getSelectedFirmId(),
                 criteria.getSelectedFirmType(),
                 criteria.getPage(),
