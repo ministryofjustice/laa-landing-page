@@ -41,7 +41,7 @@ import java.util.UUID;
 @RequestMapping("/firmDirectory")
 public class FirmDirectoryController {
 
-    private final UserService userService;
+    private final FirmService firmService;
     public static final String SEARCH_PAGE = "/firm-directory/search-page";
 
     @GetMapping()
@@ -51,7 +51,7 @@ public class FirmDirectoryController {
                                           Model model) {
         log.debug("FirmDirectoryController.displayAllFirmDirectory - {}", criteria);
         // Get Firm Directory info
-        PaginatedFirmDirectory paginatedFirmDirectory = userService.getFirmDirectories(criteria.getFirmSearch(),
+        PaginatedFirmDirectory paginatedFirmDirectory = firmService.getAllFirms(criteria.getFirmSearch(),
                 criteria.getSelectedFirmId(),
                 criteria.getSelectedFirmType(),
                 criteria.getPage(),

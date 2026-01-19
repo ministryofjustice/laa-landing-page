@@ -1518,47 +1518,6 @@ public class UserService {
                 .currentPage(page).pageSize(pageSize).build();
     }
 
-
-
-    public PaginatedFirmDirectory getFirmDirectories(
-            String searchTerm, UUID firmId, String firmType,
-            int page, int pageSize, String sort, String direction) {
-
-        Page<Firm> officePage = null;
-        PageRequest pageRequest = PageRequest.of(
-                page - 1,
-                pageSize,
-                Sort.by(Sort.Direction.fromString(direction), sort));
-       /* if (firmId != null)  {
-            officePage = firmService.getFirmsById(firmId, pageRequest);
-        } else if(firmType != null) {
-            officePage = firmService.getFirmsByType(FirmType.valueOf(firmType), pageRequest);
-        } else if (searchTerm != null) {
-            officePage = firmService.getFirmsByName(searchTerm, pageRequest);
-        } else {
-            officePage = firmService.getFirms(pageRequest);
-        }*/
-        FirmType type = firmType == null? null : FirmType.valueOf(firmType);
-        officePage = firmService.getAllFirms(searchTerm, firmId, type, pageRequest);
-        // Map to DTOs
-
-        List<FirmDirectoryDto> firmDirectoryDtos = officePage.getContent().stream().map(map -> FirmDirectoryDto.builder()
-                .firmName(map.getName())
-                .firmId(map.getId())
-                .firmCode(map.getCode())
-                .firmType(map.getType().getValue())
-                .build()
-        ).collect(Collectors.toList());
-
-        return PaginatedFirmDirectory.builder()
-                .firmDirectories(firmDirectoryDtos)
-                .totalPages(officePage.getTotalPages())
-                .totalElements(officePage.getTotalElements())
-                .currentPage(page).pageSize(pageSize).build();
-    }
-
-
-
     /**
      * Map EntraUser to AuditUserDto
      */

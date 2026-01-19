@@ -13,12 +13,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDirectoryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -54,8 +58,31 @@ public class FirmService {
                 .collect(Collectors.toList());
     }
 
-    public Page<Firm> getAllFirms(String searchString, UUID id, FirmType firmType, Pageable pageable) {
-        return firmRepository.findAllFirms(searchString, id, firmType, pageable);
+
+    public PaginatedFirmDirectory getAllFirms(String searchTerm, UUID firmId, String firmType,
+                                              int page, int pageSize, String sort, String direction) {
+        Page<Firm> officePage = null;
+        PageRequest pageRequest = PageRequest.of(
+                page - 1,
+                pageSize,
+                Sort.by(Sort.Direction.fromString(direction), sort));
+
+        FirmType type = firmType == null? null : FirmType.valueOf(firmType);
+        officePage = firmRepository.findAllFirms(searchTerm, firmId, type, pageRequest);
+        // Map to DTOs
+        List<FirmDirectoryDto> firmDirectoryDtos = officePage.getContent().stream().map(map -> FirmDirectoryDto.builder()
+                .firmName(map.getName())
+                .firmId(map.getId())
+                .firmCode(map.getCode())
+                .firmType(map.getType().getValue())
+                .build()
+        ).collect(Collectors.toList());
+
+        return PaginatedFirmDirectory.builder()
+                .firmDirectories(firmDirectoryDtos)
+                .totalPages(officePage.getTotalPages())
+                .totalElements(officePage.getTotalElements())
+                .currentPage(page).pageSize(pageSize).build();
     }
 
     public FirmDto getFirm(String id) {
