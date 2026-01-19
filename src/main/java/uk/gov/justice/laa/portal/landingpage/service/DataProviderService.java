@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Async;
@@ -108,6 +109,17 @@ public class DataProviderService {
         List<Firm> allFirms = firmRepository.findAll();
         List<Office> allOffices = officeRepository.findAll();
 
+        // Build lookup maps for O(1) performance instead of O(n) streams
+        Map<String, Firm> firmsByCode = allFirms.stream()
+            .filter(f -> f.getCode() != null)
+            .collect(Collectors.toMap(Firm::getCode, f -> f, (f1, f2) -> f1));
+
+        Map<String, Office> officesByCode = allOffices.stream()
+            .filter(o -> o.getCode() != null)
+            .collect(Collectors.toMap(Office::getCode, o -> o, (o1, o2) -> o1));
+
+        log.info("Built lookup maps: {} firms, {} offices", firmsByCode.size(), officesByCode.size());
+
         // Create new columns for match indicators
         StringColumn firmMatchColumn = StringColumn.create("db_firm_match");
         StringColumn officeMatchColumn = StringColumn.create("db_office_match");
@@ -120,24 +132,16 @@ public class DataProviderService {
             String pdaOfficeAccountNo = String.valueOf(pdaTable.column("officeAccountNo").get(i));
 
             // Try to match firm by code (firmNumber in PDA maps to code in DB)
-            Firm matchedFirm = allFirms.stream()
-                .filter(f -> f.getCode() != null && f.getCode().equals(pdaFirmNumber))
-                .findFirst()
-                .orElse(null);
+            Firm matchedFirm = firmsByCode.get(pdaFirmNumber);
 
             if (matchedFirm != null) {
                 firmMatchColumn.append("MATCHED");
                 firmIdColumn.append(matchedFirm.getId().toString());
 
                 // Try to match office by code (officeAccountNo in PDA maps to code in DB)
-                Office matchedOffice = allOffices.stream()
-                    .filter(o -> o.getFirm().getId().equals(matchedFirm.getId())
-                              && o.getCode() != null
-                              && o.getCode().equals(pdaOfficeAccountNo))
-                    .findFirst()
-                    .orElse(null);
+                Office matchedOffice = officesByCode.get(pdaOfficeAccountNo);
 
-                if (matchedOffice != null) {
+                if (matchedOffice != null && matchedOffice.getFirm().getId().equals(matchedFirm.getId())) {
                     officeMatchColumn.append("MATCHED");
                     officeIdColumn.append(matchedOffice.getId().toString());
                 } else {
