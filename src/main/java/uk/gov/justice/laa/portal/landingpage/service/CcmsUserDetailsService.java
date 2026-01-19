@@ -24,7 +24,7 @@ public class CcmsUserDetailsService {
     private String udaApiKey;
 
     public CcmsUserDetailsResponse getUserDetailsByLegacyUserId(String legacyUserId) {
-        if (udaApiKey.equals("NONE") || udaBaseUrl.equals("NONE")) {
+        if (("NONE").equalsIgnoreCase(udaApiKey) || ("NONE").equalsIgnoreCase(udaBaseUrl)) {
             return null;
         }
 
