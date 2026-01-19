@@ -13,23 +13,13 @@ import java.util.Arrays;
 public class AccessGuard {
 
     private final Environment env;
-    private final LoginService loginService;
-    private final UserService userService;
 
     public AccessGuard(Environment env, LoginService loginService, UserService userService) {
         this.env = env;
-        this.loginService = loginService;
-        this.userService = userService;
     }
 
     public boolean isProdEnv() {
         return Arrays.asList(env.getActiveProfiles()).contains("prod");
-    }
-
-    public boolean canDelegateInNonProd(Authentication authentication) {
-        EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
-        boolean internal = userService.isInternal(entraUser.getId());
-        return !isProdEnv() && internal;
     }
 
 }

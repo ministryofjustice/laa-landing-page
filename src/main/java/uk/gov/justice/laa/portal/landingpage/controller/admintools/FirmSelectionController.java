@@ -51,7 +51,7 @@ import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFro
 @RequiredArgsConstructor
 @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).ADMIN_PERMISSIONS)"
         + "or @accessGuard.canDelegate(authentication)")
-@RequestMapping("/adminFirmSelection")
+@RequestMapping("/admin/firmSelection")
 public class FirmSelectionController {
 
     private final UserService userService;

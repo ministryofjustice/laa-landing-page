@@ -206,12 +206,12 @@ public class UserController {
             session.removeAttribute("successMessage");
         }
 
-        boolean allowDelegateUserAccess;
-        boolean isNonProdEnv = false;
-
-        if (accessGuard.canDelegateInNonProd(authentication)) {
-            allowDelegateUserAccess = true;
-            isNonProdEnv = true;
+        boolean allowDelegateUserAccess = false;
+        boolean showMultiFirmUserForTestingButton = false;
+        
+        // check to show button Link Multi-Firm User for Testing
+        if (internal && !accessGuard.isProdEnv()) {
+            showMultiFirmUserForTestingButton = true;
         } else {
             allowDelegateUserAccess = accessControlService
                     .authenticatedUserHasAnyGivenPermissions(Permission.DELEGATE_EXTERNAL_USER_ACCESS);
@@ -231,7 +231,7 @@ public class UserController {
         model.addAttribute("internal", internal);
         model.addAttribute("showFirmAdmins", showFirmAdmins);
         model.addAttribute("allowDelegateUserAccess", allowDelegateUserAccess);
-        model.addAttribute("isNonProdEnv", isNonProdEnv);
+        model.addAttribute("showMultiFirmUserForTestingButton", showMultiFirmUserForTestingButton);
         model.addAttribute("showMultiFirmUsers", showMultiFirmUsers);
         boolean allowCreateUser = accessControlService.authenticatedUserHasPermission(Permission.CREATE_EXTERNAL_USER);
         model.addAttribute("allowCreateUser", allowCreateUser);

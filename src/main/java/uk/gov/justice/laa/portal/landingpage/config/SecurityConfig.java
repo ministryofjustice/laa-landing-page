@@ -129,7 +129,7 @@ public class SecurityConfig {
         http.authorizeHttpRequests((authorize) -> authorize
                 .requestMatchers("/admin/users/**", "/pda/**")
                 .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
-                .requestMatchers("/admin/user/**", "/adminFirmSelection/**")
+                .requestMatchers("/admin/user/**", "/admin/firmSelection/**")
                 .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
                 .requestMatchers("/admin/multi-firm/user/**")
                 .hasAnyAuthority(Permission.DELEGATE_EXTERNAL_USER_ACCESS.name())
