@@ -54,22 +54,6 @@ public class FirmService {
                 .collect(Collectors.toList());
     }
 
-    public Page<Firm> getFirms(Pageable pageable) {
-        return firmRepository.findAll(pageable);
-    }
-
-    public Page<Firm> getFirmsByName(String name, Pageable pageable) {
-        return firmRepository.findAllByName(name, pageable);
-    }
-
-    public Page<Firm> getFirmsByType(FirmType firmType, Pageable pageable) {
-        return firmRepository.findAllByType(firmType, pageable);
-    }
-
-    public Page<Firm> getFirmsById(UUID id, Pageable pageable) {
-        return firmRepository.findAllById(id, pageable);
-    }
-
     public Page<Firm> getAllFirms(String searchString, UUID id, FirmType firmType, Pageable pageable) {
         return firmRepository.findAllFirms(searchString, id, firmType, pageable);
     }

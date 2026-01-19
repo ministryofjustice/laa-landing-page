@@ -21,15 +21,9 @@ public interface FirmRepository extends JpaRepository<Firm, UUID> {
     @Query("SELECT f FROM Firm f WHERE LOWER(f.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR LOWER(f.code) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
     List<Firm> findByNameOrCodeContaining(@Param("searchTerm") String searchTerm);
 
-    Page<Firm> findAllByName(String name, Pageable pageable);
-
-    Page<Firm> findAllById(UUID id, Pageable pageable);
-
-    Page<Firm> findAllByType(FirmType type, Pageable attr2);
-
     /**
      * Query for Firm directory - fetches all firms
-     * Supports filtering by search Term and Firm Type
+     * Supports filtering by search Term, FirmID and Firm Type
      */
 
     @Query(
