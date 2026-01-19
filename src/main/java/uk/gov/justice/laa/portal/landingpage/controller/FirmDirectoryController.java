@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -45,8 +46,7 @@ public class FirmDirectoryController {
     public static final String SEARCH_PAGE = "/firm-directory/search-page";
 
     @GetMapping()
-/*    @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
-            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_INTERNAL_USER)")*/
+    @PreAuthorize("@accessControlService.authenticatedUserCanAccessFirmDirectory()")
     public String displayAllFirmDirectory(@ModelAttribute FirmDirectorySearchCriteria criteria,
                                           Model model) {
         log.debug("FirmDirectoryController.displayAllFirmDirectory - {}", criteria);

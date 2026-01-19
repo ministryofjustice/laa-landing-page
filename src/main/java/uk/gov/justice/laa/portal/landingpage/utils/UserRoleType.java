@@ -6,7 +6,9 @@ import lombok.Getter;
 public enum UserRoleType {
     EXTERNAL_USER_ADMIN("External User Admin"),
     FIRM_USER_MANAGER("Firm User Manager"),
-    GLOBAL_ADMIN("Global Admin");
+    GLOBAL_ADMIN("Global Admin"),
+    EXTERNAL_USER_VIEW("External User Viewer"),
+    EXTERNAL_USER_MANAGER("External User Manager");
 
     private final String description;
 

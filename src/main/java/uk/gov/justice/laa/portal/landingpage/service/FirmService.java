@@ -67,7 +67,7 @@ public class FirmService {
                 pageSize,
                 Sort.by(Sort.Direction.fromString(direction), sort));
 
-        FirmType type = firmType == null? null : FirmType.valueOf(firmType);
+        FirmType type = firmType == null ? null : FirmType.valueOf(firmType);
         officePage = firmRepository.findAllFirms(searchTerm, firmId, type, pageRequest);
         // Map to DTOs
         List<FirmDirectoryDto> firmDirectoryDtos = officePage.getContent().stream().map(map -> FirmDirectoryDto.builder()

@@ -28,10 +28,9 @@ public class FirmSearchCriteria implements Serializable {
 
     @Override
     public String toString() {
-        return "FirmSearchCriteria{" +
-                "searchTerm='" + searchTerm + '\'' +
-                ", firmSearch=" + firmSearch +
-                ", firmType=" + firmType +
-                '}';
+        return "FirmSearchCriteria{"
+                + "searchTerm='" + searchTerm + '\''
+                + ", firmSearch=" + firmSearch
+                + ", firmType=" + firmType + '}';
     }
 }
