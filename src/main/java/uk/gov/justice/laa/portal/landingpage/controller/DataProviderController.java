@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import tech.tablesaw.api.Table;
 import uk.gov.justice.laa.portal.landingpage.dto.PdaSyncResultDto;
+import uk.gov.justice.laa.portal.landingpage.dto.SyncResponse;
 import uk.gov.justice.laa.portal.landingpage.service.DataProviderService;
 
 /**
@@ -28,34 +29,6 @@ import uk.gov.justice.laa.portal.landingpage.service.DataProviderService;
 public class DataProviderController {
 
     private final DataProviderService dataProviderService;
-
-    /**
-     * API endpoint to fetch provider offices snapshot from PDA.
-     * Returns the data as a TableSaw dataframe converted to JSON.
-     *
-     * @return ResponseEntity containing JSON representation of the dataframe or error message
-     */
-    @GetMapping("/provider-offices/snapshot")
-    public ResponseEntity<String> getProviderOfficesSnapshot() {
-        log.info("Received request for provider offices snapshot");
-        try {
-            Table table = dataProviderService.getProviderOfficesSnapshot();
-
-            // Convert TableSaw Table to JSON
-            String json = table.write().toString("json");
-
-            log.info("Returning dataframe with {} rows and {} columns",
-                table.rowCount(), table.columnCount());
-
-            return ResponseEntity.ok()
-                    .header("Content-Type", "application/json")
-                    .body(json);
-        } catch (Exception e) {
-            log.error("Error retrieving provider offices snapshot", e);
-            return ResponseEntity.internalServerError()
-                    .body("{\"error\": \"Failed to retrieve provider offices snapshot\"}");
-        }
-    }
 
     /**
      * API endpoint to compare PDA data with local database.
@@ -147,9 +120,4 @@ public class DataProviderController {
                 ));
         }
     }
-
-    /**
-     * Response DTO for sync operation status.
-     */
-    private record SyncResponse(String status, String message, boolean started) {}
 }

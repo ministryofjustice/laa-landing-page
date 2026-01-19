@@ -22,13 +22,19 @@ import tech.tablesaw.api.StringColumn;
 import tech.tablesaw.api.Table;
 import tech.tablesaw.io.json.JsonReadOptions;
 import uk.gov.justice.laa.portal.landingpage.dto.PdaSyncResultDto;
+import uk.gov.justice.laa.portal.landingpage.dto.PdaFirmData;
+import uk.gov.justice.laa.portal.landingpage.dto.PdaOfficeData;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
-import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+import uk.gov.justice.laa.portal.landingpage.service.pda.command.CreateFirmCommand;
+import uk.gov.justice.laa.portal.landingpage.service.pda.command.CreateOfficeCommand;
+import uk.gov.justice.laa.portal.landingpage.service.pda.command.DeactivateFirmCommand;
+import uk.gov.justice.laa.portal.landingpage.service.pda.command.DeactivateOfficeCommand;
+import uk.gov.justice.laa.portal.landingpage.service.pda.command.UpdateFirmCommand;
+import uk.gov.justice.laa.portal.landingpage.service.pda.command.UpdateOfficeCommand;
 
 /**
  * Service for calling PDA (Provider Data API) endpoints and matching with local database.
@@ -110,8 +116,8 @@ public class DataProviderService {
 
         // For each row in PDA data, try to find matches in database
         for (int i = 0; i < pdaTable.rowCount(); i++) {
-            String pdaFirmNumber = pdaTable.stringColumn("firmNumber").get(i);
-            String pdaOfficeAccountNo = pdaTable.stringColumn("officeAccountNo").get(i);
+            String pdaFirmNumber = String.valueOf(pdaTable.column("firmNumber").get(i));
+            String pdaOfficeAccountNo = String.valueOf(pdaTable.column("officeAccountNo").get(i));
 
             // Try to match firm by code (firmNumber in PDA maps to code in DB)
             Firm matchedFirm = allFirms.stream()
@@ -199,8 +205,14 @@ public class DataProviderService {
 
             // Build maps of PDA data
             log.info("Building PDA data maps...");
-            final Map<String, PdaFirmData> pdaFirms = buildPdaFirmsMap(pdaTable);
-            log.info("Found {} unique firms in PDA data", pdaFirms.size());
+            Map<String, PdaFirmData> pdaFirms = buildPdaFirmsMap(pdaTable);
+            Map<String, PdaOfficeData> pdaOffices = buildPdaOfficesMap(pdaTable);
+            log.info("Found {} unique firms and {} offices in PDA data", pdaFirms.size(), pdaOffices.size());
+
+            // Perform data integrity checks (matching Python script logic)
+            log.info("=== Data Integrity Checks ===");
+            checkDataIntegrity(pdaFirms, pdaOffices, result);
+            log.info("After integrity checks: {} firms, {} offices", pdaFirms.size(), pdaOffices.size());
             logMemoryUsage("After building PDA maps");
 
             // Get current database state
@@ -255,11 +267,7 @@ public class DataProviderService {
                 }
             });
 
-            // Build PDA offices map and get DB offices
-            log.info("Building PDA offices map...");
-            final Map<String, PdaOfficeData> pdaOffices = buildPdaOfficesMap(pdaTable);
-            log.info("Found {} offices in PDA data", pdaOffices.size());
-
+            // Get DB offices
             log.info("Loading offices from database...");
             Map<String, Office> dbOffices = new HashMap<>();
             officeRepository.findAll().forEach(o -> {
@@ -279,10 +287,10 @@ public class DataProviderService {
                 processedOfficeCodes.add(officeCode);
 
                 Office dbOffice = dbOffices.get(officeCode);
-                Firm parentFirm = dbFirms.get(pdaOffice.firmNumber);
+                Firm parentFirm = dbFirms.get(pdaOffice.getFirmNumber());
 
                 if (parentFirm == null) {
-                    result.addError("Cannot process office " + officeCode + ": firm " + pdaOffice.firmNumber + " not found");
+                    result.addError("Cannot process office " + officeCode + ": firm " + pdaOffice.getFirmNumber() + " not found");
                     continue;
                 }
 
@@ -324,11 +332,12 @@ public class DataProviderService {
         for (int i = 0; i < pdaTable.rowCount(); i++) {
             String firmNumber = getStringValue(pdaTable, "firmNumber", i);
             if (!firms.containsKey(firmNumber)) {
-                PdaFirmData firmData = new PdaFirmData();
-                firmData.firmNumber = firmNumber;
-                firmData.firmName = getStringValue(pdaTable, "firmName", i);
-                firmData.firmType = getStringValue(pdaTable, "firmType", i);
-                firmData.parentFirmNumber = getStringValue(pdaTable, "parentFirmNumber", i);
+                PdaFirmData firmData = PdaFirmData.builder()
+                    .firmNumber(firmNumber)
+                    .firmName(getStringValue(pdaTable, "firmName", i))
+                    .firmType(getStringValue(pdaTable, "firmType", i))
+                    .parentFirmNumber(getStringValue(pdaTable, "parentFirmNumber", i))
+                    .build();
                 firms.put(firmNumber, firmData);
             }
         }
@@ -347,239 +356,121 @@ public class DataProviderService {
     private Map<String, PdaOfficeData> buildPdaOfficesMap(Table pdaTable) {
         Map<String, PdaOfficeData> offices = new HashMap<>();
         for (int i = 0; i < pdaTable.rowCount(); i++) {
-            PdaOfficeData officeData = new PdaOfficeData();
-            officeData.officeAccountNo = getStringValue(pdaTable, "officeAccountNo", i);
-            officeData.firmNumber = getStringValue(pdaTable, "firmNumber", i);
-            officeData.addressLine1 = getStringValue(pdaTable, "officeAddressLine1", i);
-            officeData.addressLine2 = getStringValue(pdaTable, "officeAddressLine2", i);
-            officeData.addressLine3 = getStringValue(pdaTable, "officeAddressLine3", i);
-            officeData.city = getStringValue(pdaTable, "officeAddressCity", i);
-            officeData.postcode = getStringValue(pdaTable, "officeAddressPostcode", i);
-            offices.put(officeData.officeAccountNo, officeData);
+            PdaOfficeData officeData = PdaOfficeData.builder()
+                .officeAccountNo(getStringValue(pdaTable, "officeAccountNo", i))
+                .firmNumber(getStringValue(pdaTable, "firmNumber", i))
+                .addressLine1(getStringValue(pdaTable, "officeAddressLine1", i))
+                .addressLine2(getStringValue(pdaTable, "officeAddressLine2", i))
+                .addressLine3(getStringValue(pdaTable, "officeAddressLine3", i))
+                .city(getStringValue(pdaTable, "officeAddressCity", i))
+                .postcode(getStringValue(pdaTable, "officeAddressPostcode", i))
+                .build();
+            offices.put(officeData.getOfficeAccountNo(), officeData);
         }
         return offices;
     }
 
     private void createFirm(PdaFirmData pdaFirm, PdaSyncResultDto result) {
-        try {
-            Firm firm = Firm.builder()
-                .code(pdaFirm.firmNumber)
-                .name(pdaFirm.firmName)
-                .type(FirmType.valueOf(pdaFirm.firmType.toUpperCase().replace(" ", "_")))
-                .build();
-
-            // Handle parent firm if exists
-            if (pdaFirm.parentFirmNumber != null && !pdaFirm.parentFirmNumber.isEmpty()) {
-                Firm parentFirm = firmRepository.findByCode(pdaFirm.parentFirmNumber);
-                if (parentFirm != null) {
-                    firm.setParentFirm(parentFirm);
-                }
-            }
-
-            // firmRepository.save(firm);  // COMMENTED OUT FOR TESTING
-            result.setFirmsCreated(result.getFirmsCreated() + 1);
-            log.info("Would create firm: {} (name: {}, type: {})", pdaFirm.firmNumber, pdaFirm.firmName, pdaFirm.firmType);
-        } catch (Exception e) {
-            log.error("Failed to create firm {}: {}", pdaFirm.firmNumber, e.getMessage());
-            result.addError("Failed to create firm " + pdaFirm.firmNumber + ": " + e.getMessage());
-        }
-    }
-
-    private void reactivateFirm(Firm firm, PdaFirmData pdaFirm, PdaSyncResultDto result) {
-        try {
-            firm.setName(pdaFirm.firmName);
-            firm.setType(FirmType.valueOf(pdaFirm.firmType.toUpperCase().replace(" ", "_")));
-
-            if (pdaFirm.parentFirmNumber != null && !pdaFirm.parentFirmNumber.isEmpty()) {
-                Firm parentFirm = firmRepository.findByCode(pdaFirm.parentFirmNumber);
-                firm.setParentFirm(parentFirm);
-            } else {
-                firm.setParentFirm(null);
-            }
-
-            // firmRepository.save(firm);  // COMMENTED OUT FOR TESTING
-            result.setFirmsReactivated(result.getFirmsReactivated() + 1);
-            log.info("Would reactivate firm: {} (name: {}, type: {})", pdaFirm.firmNumber, pdaFirm.firmName, pdaFirm.firmType);
-        } catch (Exception e) {
-            log.error("Failed to reactivate firm {}: {}", pdaFirm.firmNumber, e.getMessage());
-            result.addError("Failed to reactivate firm " + pdaFirm.firmNumber + ": " + e.getMessage());
-        }
+        new CreateFirmCommand(firmRepository, pdaFirm).execute(result);
     }
 
     private void updateFirm(Firm firm, PdaFirmData pdaFirm, PdaSyncResultDto result) {
-        try {
-            boolean updated = false;
-
-            // Check firmType - reject if changed
-            FirmType newType = FirmType.valueOf(pdaFirm.firmType.toUpperCase().replace(" ", "_"));
-            if (!firm.getType().equals(newType)) {
-                result.addWarning("Firm " + pdaFirm.firmNumber + " type change rejected: " + firm.getType() + " -> " + newType);
-                return;
-            }
-
-            // Update name if changed
-            if (!firm.getName().equals(pdaFirm.firmName)) {
-                firm.setName(pdaFirm.firmName);
-                updated = true;
-            }
-
-            // Update parent if changed
-            String currentParentCode = firm.getParentFirm() != null ? firm.getParentFirm().getCode() : null;
-            if ((pdaFirm.parentFirmNumber == null && currentParentCode != null)
-                || (pdaFirm.parentFirmNumber != null && !pdaFirm.parentFirmNumber.equals(currentParentCode))) {
-
-                if (pdaFirm.parentFirmNumber != null && !pdaFirm.parentFirmNumber.isEmpty()) {
-                    Firm parentFirm = firmRepository.findByCode(pdaFirm.parentFirmNumber);
-                    firm.setParentFirm(parentFirm);
-                } else {
-                    firm.setParentFirm(null);
-                }
-                updated = true;
-            }
-
-            if (updated) {
-                // firmRepository.save(firm);  // COMMENTED OUT FOR TESTING
-                result.setFirmsUpdated(result.getFirmsUpdated() + 1);
-                log.info("Would update firm: {} (name: {})", pdaFirm.firmNumber, pdaFirm.firmName);
-            }
-        } catch (Exception e) {
-            log.error("Failed to update firm {}: {}", pdaFirm.firmNumber, e.getMessage());
-            result.addError("Failed to update firm " + pdaFirm.firmNumber + ": " + e.getMessage());
-        }
+        new UpdateFirmCommand(firmRepository, firm, pdaFirm).execute(result);
     }
 
     private void deactivateFirm(Firm firm, PdaSyncResultDto result) {
-        try {
-            // firmRepository.delete(firm);  // COMMENTED OUT FOR TESTING - could delete instead
-            result.setFirmsDeactivated(result.getFirmsDeactivated() + 1);
-            log.info("Would deactivate/delete firm: {} (name: {})", firm.getCode(), firm.getName());
-        } catch (Exception e) {
-            log.error("Failed to deactivate firm {}: {}", firm.getCode(), e.getMessage());
-            result.addError("Failed to deactivate firm " + firm.getCode() + ": " + e.getMessage());
-        }
+        new DeactivateFirmCommand(firmRepository, firm).execute(result);
     }
 
     private void createOffice(PdaOfficeData pdaOffice, Firm firm, PdaSyncResultDto result) {
-        try {
-            Office office = Office.builder()
-                .code(pdaOffice.officeAccountNo)
-                .firm(firm)
-                .address(Office.Address.builder()
-                    .addressLine1(pdaOffice.addressLine1)
-                    .addressLine2(pdaOffice.addressLine2)
-                    .addressLine3(pdaOffice.addressLine3)
-                    .city(pdaOffice.city)
-                    .postcode(pdaOffice.postcode)
-                    .build())
-                .build();
-
-            // officeRepository.save(office);  // COMMENTED OUT FOR TESTING
-            result.setOfficesCreated(result.getOfficesCreated() + 1);
-            log.info("Would create office: {} for firm {} (address: {}, {})",
-                pdaOffice.officeAccountNo, firm.getCode(), pdaOffice.addressLine1, pdaOffice.city);
-        } catch (Exception e) {
-            log.error("Failed to create office {}: {}", pdaOffice.officeAccountNo, e.getMessage());
-            result.addError("Failed to create office " + pdaOffice.officeAccountNo + ": " + e.getMessage());
-        }
-    }
-
-    private void reactivateOffice(Office office, PdaOfficeData pdaOffice, Firm firm, PdaSyncResultDto result) {
-        try {
-            office.setFirm(firm);
-            office.setAddress(Office.Address.builder()
-                .addressLine1(pdaOffice.addressLine1)
-                .addressLine2(pdaOffice.addressLine2)
-                .addressLine3(pdaOffice.addressLine3)
-                .city(pdaOffice.city)
-                .postcode(pdaOffice.postcode)
-                .build());
-
-            // officeRepository.save(office);  // COMMENTED OUT FOR TESTING
-            result.setOfficesReactivated(result.getOfficesReactivated() + 1);
-            log.info("Would reactivate office: {} for firm {} (address: {}, {})",
-                pdaOffice.officeAccountNo, firm.getCode(), pdaOffice.addressLine1, pdaOffice.city);
-        } catch (Exception e) {
-            log.error("Failed to reactivate office {}: {}", pdaOffice.officeAccountNo, e.getMessage());
-            result.addError("Failed to reactivate office " + pdaOffice.officeAccountNo + ": " + e.getMessage());
-        }
+        new CreateOfficeCommand(officeRepository, pdaOffice, firm).execute(result);
     }
 
     private void updateOffice(Office office, PdaOfficeData pdaOffice, Firm firm, PdaSyncResultDto result) {
-        try {
-            boolean updated = false;
-
-            // Check if firm changed - if so, remove user_profile_office associations
-            if (!office.getFirm().getId().equals(firm.getId())) {
-                // removeUserProfileOfficeAssociations(office);  // COMMENTED OUT FOR TESTING
-                log.info("Firm changed for office {}: {} -> {}", office.getCode(), office.getFirm().getCode(), firm.getCode());
-                log.info("Would remove user profile associations for office: {}", office.getCode());
-                office.setFirm(firm);
-                updated = true;
-            }
-
-            // Update address if changed
-            Office.Address currentAddress = office.getAddress();
-            if (currentAddress == null
-                || !equals(currentAddress.getAddressLine1(), pdaOffice.addressLine1)
-                || !equals(currentAddress.getAddressLine2(), pdaOffice.addressLine2)
-                || !equals(currentAddress.getAddressLine3(), pdaOffice.addressLine3)
-                || !equals(currentAddress.getCity(), pdaOffice.city)
-                || !equals(currentAddress.getPostcode(), pdaOffice.postcode)) {
-
-                office.setAddress(Office.Address.builder()
-                    .addressLine1(pdaOffice.addressLine1)
-                    .addressLine2(pdaOffice.addressLine2)
-                    .addressLine3(pdaOffice.addressLine3)
-                    .city(pdaOffice.city)
-                    .postcode(pdaOffice.postcode)
-                    .build());
-                updated = true;
-            }
-
-            if (updated) {
-                // officeRepository.save(office);  // COMMENTED OUT FOR TESTING
-                result.setOfficesUpdated(result.getOfficesUpdated() + 1);
-                log.info("Would update office: {} (firm: {}, address: {})",
-                    pdaOffice.officeAccountNo, firm.getCode(), pdaOffice.addressLine1);
-            }
-        } catch (Exception e) {
-            log.error("Failed to update office {}: {}", pdaOffice.officeAccountNo, e.getMessage());
-            result.addError("Failed to update office " + pdaOffice.officeAccountNo + ": " + e.getMessage());
-        }
+        new UpdateOfficeCommand(officeRepository, userProfileRepository, office, pdaOffice, firm).execute(result);
     }
 
     private void deactivateOffice(Office office, PdaSyncResultDto result) {
-        try {
-            // removeUserProfileOfficeAssociations(office);  // COMMENTED OUT FOR TESTING
-            log.info("Would remove user profile associations for office: {}", office.getCode());
-            // officeRepository.delete(office);  // COMMENTED OUT FOR TESTING - could delete instead
-            result.setOfficesDeactivated(result.getOfficesDeactivated() + 1);
-            log.info("Would deactivate/delete office: {} (firm: {})", office.getCode(), office.getFirm().getCode());
-        } catch (Exception e) {
-            log.error("Failed to deactivate office {}: {}", office.getCode(), e.getMessage());
-            result.addError("Failed to deactivate office " + office.getCode() + ": " + e.getMessage());
-        }
+        new DeactivateOfficeCommand(officeRepository, userProfileRepository, office).execute(result);
     }
 
-    private void removeUserProfileOfficeAssociations(Office office) {
-        List<UserProfile> profiles = userProfileRepository.findAll();
-        for (UserProfile profile : profiles) {
-            if (profile.getOffices() != null && profile.getOffices().contains(office)) {
-                // profile.getOffices().remove(office);  // COMMENTED OUT FOR TESTING
-                // userProfileRepository.save(profile);  // COMMENTED OUT FOR TESTING
-                log.info("Would remove office {} from user profile {}", office.getCode(), profile.getId());
+    /**
+     * Validates data integrity of PDA data before processing.
+     * Implements Python script rules:
+     * 1. Check for duplicate firms/offices
+     * 2. Remove orphan offices (offices with no relatable firm)
+     * 3. Remove firms without offices
+     * This ensures clean data before synchronization.
+     */
+    private void checkDataIntegrity(Map<String, PdaFirmData> pdaFirms,
+                                     Map<String, PdaOfficeData> pdaOffices,
+                                     PdaSyncResultDto result) {
+        log.info("Initial PDA data integrity check ---------------");
+
+        // Check for duplicate firm codes (should not happen if map is built correctly)
+        Set<String> firmCodes = new HashSet<>();
+        int duplicateFirms = 0;
+        for (String code : pdaFirms.keySet()) {
+            if (!firmCodes.add(code)) {
+                duplicateFirms++;
             }
         }
-    }
+        log.info("DUPLICATE FIRMS: {}", duplicateFirms);
+        if (duplicateFirms > 0) {
+            result.addWarning("Found " + duplicateFirms + " duplicate firm codes in PDA data");
+        }
 
-    private boolean equals(String s1, String s2) {
-        if (s1 == null && s2 == null) {
-            return true;
+        // Check for duplicate office codes
+        Set<String> officeCodes = new HashSet<>();
+        int duplicateOffices = 0;
+        for (String code : pdaOffices.keySet()) {
+            if (!officeCodes.add(code)) {
+                duplicateOffices++;
+            }
         }
-        if (s1 == null || s2 == null) {
-            return false;
+        log.info("DUPLICATE OFFICES: {}", duplicateOffices);
+        if (duplicateOffices > 0) {
+            result.addWarning("Found " + duplicateOffices + " duplicate office codes in PDA data");
         }
-        return s1.equals(s2);
+
+        // RULE 1: Find and remove orphan offices (offices with no relatable firm)
+        Set<String> orphanOfficeCodes = new HashSet<>();
+        for (Map.Entry<String, PdaOfficeData> entry : pdaOffices.entrySet()) {
+            String officeCode = entry.getKey();
+            PdaOfficeData office = entry.getValue();
+            if (!pdaFirms.containsKey(office.getFirmNumber())) {
+                orphanOfficeCodes.add(officeCode);
+            }
+        }
+
+        if (!orphanOfficeCodes.isEmpty()) {
+            log.warn("Found {} office(s) with no relatable firm. These will be removed", orphanOfficeCodes.size());
+            result.addWarning("Removed " + orphanOfficeCodes.size() + " orphan offices (no relatable firm)");
+            orphanOfficeCodes.forEach(pdaOffices::remove);
+        } else {
+            log.info("All offices have a valid, relatable firm.");
+        }
+
+        // RULE 2: Find and remove firms without offices
+        Set<String> firmCodesWithOffices = new HashSet<>();
+        for (PdaOfficeData office : pdaOffices.values()) {
+            firmCodesWithOffices.add(office.getFirmNumber());
+        }
+
+        Set<String> firmsWithoutOffices = new HashSet<>();
+        for (String firmCode : pdaFirms.keySet()) {
+            if (!firmCodesWithOffices.contains(firmCode)) {
+                firmsWithoutOffices.add(firmCode);
+            }
+        }
+
+        if (!firmsWithoutOffices.isEmpty()) {
+            log.warn("Found {} firm(s) with no offices. These will be removed.", firmsWithoutOffices.size());
+            result.addWarning("Removed " + firmsWithoutOffices.size() + " firms with no offices");
+            firmsWithoutOffices.forEach(pdaFirms::remove);
+        } else {
+            log.info("All firms have at least one office.");
+        }
     }
 
     private void logMemoryUsage(String stage) {
@@ -595,23 +486,5 @@ public class DataProviderService {
             freeMemory / (1024 * 1024),
             totalMemory / (1024 * 1024),
             maxMemory / (1024 * 1024));
-    }
-
-    // Inner classes for PDA data
-    private static class PdaFirmData {
-        String firmNumber;
-        String firmName;
-        String firmType;
-        String parentFirmNumber;
-    }
-
-    private static class PdaOfficeData {
-        String officeAccountNo;
-        String firmNumber;
-        String addressLine1;
-        String addressLine2;
-        String addressLine3;
-        String city;
-        String postcode;
     }
 }
