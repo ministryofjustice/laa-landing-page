@@ -45,14 +45,14 @@ public class FirmDirectorySearchCriteria {
         }
     }
 
-    public void selectedFirmType(String selectedFirmType) {
+    public void setSelectedFirmType(String selectedFirmType) {
         if (selectedFirmType == null || selectedFirmType.isEmpty()) {
             return;
         }
         try {
             this.selectedFirmType = selectedFirmType;
         } catch (IllegalArgumentException ex) {
-            log.warn("Invalid user type provided: {}", selectedFirmType);
+            log.warn("Invalid Firm type provided: {}", selectedFirmType);
         }
     }
 }

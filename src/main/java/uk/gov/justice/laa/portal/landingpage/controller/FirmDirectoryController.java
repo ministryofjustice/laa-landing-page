@@ -41,17 +41,7 @@ import java.util.UUID;
 @RequestMapping("/firmDirectory")
 public class FirmDirectoryController {
 
-    private final LoginService loginService;
     private final UserService userService;
-    private final OfficeService officeService;
-    private final EventService eventService;
-    private final FirmService firmService;
-    private final ModelMapper mapper;
-    private final AccessControlService accessControlService;
-    private final RoleAssignmentService roleAssignmentService;
-    private final EmailValidationService emailValidationService;
-    private final AppRoleService appRoleService;
-
     public static final String SEARCH_PAGE = "/firm-directory/search-page";
 
     @GetMapping()
@@ -69,12 +59,6 @@ public class FirmDirectoryController {
                 criteria.getSort(),
                 criteria.getDirection());
 
-                /*userService.getAuditUsers(
-
-
-                criteria.getSearch(), criteria.getSelectedFirmId(), criteria.getSilasRole(),
-                criteria.getSelectedAppId(), criteria.getSelectedUserType(),
-                criteria.getPage(), criteria.getSize(), criteria.getSort(), criteria.getDirection());*/
         // Build firm search form
         FirmSearchForm firmSearchForm = new FirmSearchForm(criteria.getFirmSearch(), criteria.getSelectedFirmId());
         // Add attributes to model
@@ -96,80 +80,16 @@ public class FirmDirectoryController {
         model.addAttribute("totalPages", paginatedFirmDirectory.getTotalPages());
         model.addAttribute("search", criteria.getSearch());
         model.addAttribute("firmSearch", firmSearchForm);
-        // Get all firm type
-        List<FirmType> firmTypes = Collections.unmodifiableList(Arrays.asList(
-                FirmType.LEGAL_SERVICES_PROVIDER,
-                FirmType.CHAMBERS,
-                FirmType.ADVOCATE
-        ));
-        model.addAttribute("firmTypes", firmTypes);
-
-        List<AppDto> apps = userService.getApps();
-        model.addAttribute("apps", apps);
-/*        //model.addAttribute("selectedSilasRole", criteria.getSilasRole() != null ? criteria.getSilasRole() : "");
-        //model.addAttribute("selectedAppId",
-                criteria.getSelectedAppId() != null ? criteria.getSelectedAppId().toString() : "");
-        model.addAttribute("selectedUserType",
-                criteria.getSelectedUserType() != null ? criteria.getSelectedUserType().toString() : "");*/
         model.addAttribute("sort", criteria.getSort());
         model.addAttribute("direction", criteria.getDirection());
+        model.addAttribute("selectedFirmType",
+                criteria.getSelectedFirmType() != null ? criteria.getSelectedFirmType() : "");
+        // Get all firm type
+        List<FirmType> firmTypes = List.of(
+                FirmType.LEGAL_SERVICES_PROVIDER,
+                FirmType.CHAMBERS,
+                FirmType.ADVOCATE);
+        model.addAttribute("firmTypes", firmTypes);
     }
 
-    private Map<String, Object> processRequestFilters(int size, int page, String sort, String direction,
-                                                      String firmType,
-                                                      String search, boolean backButton,
-                                                      HttpSession session, FirmSearchForm firmSearchForm) {
-
-        if (backButton) {
-            // Use session filters when back button is used
-            @SuppressWarnings("unchecked")
-            Map<String, Object> sessionFilters = (Map<String, Object>) session.getAttribute("userListFilters");
-
-            if (sessionFilters != null) {
-                size = sessionFilters.containsKey("size") ? (Integer) sessionFilters.get("size") : size;
-                page = sessionFilters.containsKey("page") ? (Integer) sessionFilters.get("page") : page;
-                sort = sessionFilters.containsKey("sort") ? (String) sessionFilters.get("sort") : sort;
-                direction = sessionFilters.containsKey("direction") ? (String) sessionFilters.get("direction")
-                        : direction;
-                //firmStatus = sessionFilters.containsKey("firmStatus") ? (String) sessionFilters.get("firmStatus") : firmStatus;
-                firmType = sessionFilters.containsKey("firmType") ? (String) sessionFilters.get("firmType") : firmType;
-                search = sessionFilters.containsKey("search") ? (String) sessionFilters.get("search") : search;
-                firmSearchForm = sessionFilters.containsKey("firmSearchForm")
-                        ? (FirmSearchForm) sessionFilters.get("firmSearchForm")
-                        : firmSearchForm;
-
-                // Handle empty strings for optional parameters
-                if (sort != null && sort.isEmpty()) {
-                    sort = null;
-                }
-                if (direction != null && direction.isEmpty()) {
-                    direction = null;
-                }
-               /* if (firmStatus != null && firmStatus.isEmpty()) {
-                    firmStatus = null;
-                }*/
-                if (firmType != null && firmType.isEmpty()) {
-                    firmType = null;
-                }
-            }
-        } else {
-            // Clear session filters when not using back button (new filter request)
-            session.removeAttribute("userListFilters");
-        }
-
-        Map<String, Object> result = Map.of(
-                "size", size,
-                "page", page,
-                "sort", sort != null ? sort : "",
-                "direction", direction != null ? direction : "",
-                "search", search != null ? search : "",
-                //"firmStatus", firmStatus != null ? firmStatus : "",
-                "firmType", firmType != null ? firmType : "",
-                "firmSearchForm", firmSearchForm != null ? firmSearchForm : FirmSearchForm.builder().build());
-
-        // Store current filter state in session for future back navigation
-        session.setAttribute("userListFilters", result);
-
-        return result;
-    }
 }

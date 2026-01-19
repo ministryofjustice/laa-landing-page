@@ -1531,11 +1531,11 @@ public class UserService {
                 Sort.by(Sort.Direction.fromString(direction), sort));
         if (firmId != null)  {
             officePage = firmService.getFirmsById(firmId, pageRequest);
-        } else if (searchTerm != null){
-            officePage = firmService.getFirmsByName(searchTerm, pageRequest);
-        } if(firmType != null) {
+        } else if(firmType != null) {
             officePage = firmService.getFirmsByType(FirmType.valueOf(firmType), pageRequest);
-        }else {
+        } else if (searchTerm != null) {
+            officePage = firmService.getFirmsByName(searchTerm, pageRequest);
+        } else {
             officePage = firmService.getFirms(pageRequest);
         }
         // Map to DTOs
