@@ -42,7 +42,8 @@ public class RoleBasedAccessAppVisibilityTest extends RoleBasedAccessIntegration
         testExternalAppRole = testExternalApp.getAppRoles().stream().findFirst().orElseThrow();
 
         // Add restriction that test role can only be set by external user manager.
-        AppRole externalUserManager = appRoleRepository.findByName(AuthzRole.EXTERNAL_USER_MANAGER.getRoleName()).orElseThrow();
+        AppRole externalUserManager = appRoleRepository.findByName(
+            EXTERNAL_USER_MANAGER.getRoleName()).orElseThrow();
         RoleAssignment assignment = new RoleAssignment(externalUserManager, testExternalAppRole);
         roleAssignmentRepository.saveAndFlush(assignment);
 

@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import tech.tablesaw.api.StringColumn;
 import tech.tablesaw.api.Table;
 import tech.tablesaw.io.json.JsonReadOptions;
+import uk.gov.justice.laa.portal.landingpage.dto.ComparisonResultDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PdaSyncResultDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PdaFirmData;
 import uk.gov.justice.laa.portal.landingpage.dto.PdaOfficeData;
@@ -95,12 +96,11 @@ public class DataProviderService {
     }
 
     /**
-     * Compares PDA data with local database firms and offices.
-     * Adds comparison columns to indicate matches.
+     * Returns structured comparison showing created, updated, deleted, and matched items.
      *
-     * @return TableSaw Table with additional columns showing database match status
+     * @return ComparisonResultDto with categorized items
      */
-    public Table compareWithDatabase() {
+    public ComparisonResultDto compareWithDatabase() {
         log.info("Comparing PDA data with local database");
 
         Table pdaTable = getProviderOfficesSnapshot();
@@ -109,7 +109,7 @@ public class DataProviderService {
         List<Firm> allFirms = firmRepository.findAll();
         List<Office> allOffices = officeRepository.findAll();
 
-        // Build lookup maps for O(1) performance instead of O(n) streams
+        // Build lookup maps for O(1) performance
         Map<String, Firm> firmsByCode = allFirms.stream()
             .filter(f -> f.getCode() != null)
             .collect(Collectors.toMap(Firm::getCode, f -> f, (f1, f2) -> f1));
@@ -120,51 +120,148 @@ public class DataProviderService {
 
         log.info("Built lookup maps: {} firms, {} offices", firmsByCode.size(), officesByCode.size());
 
-        // Create new columns for match indicators
-        StringColumn firmMatchColumn = StringColumn.create("db_firm_match");
-        StringColumn officeMatchColumn = StringColumn.create("db_office_match");
-        StringColumn firmIdColumn = StringColumn.create("db_firm_id");
-        StringColumn officeIdColumn = StringColumn.create("db_office_id");
+        // Build PDA data maps
+        Map<String, PdaFirmData> pdaFirms = buildPdaFirmsMap(pdaTable);
+        Map<String, PdaOfficeData> pdaOffices = buildPdaOfficesMap(pdaTable);
 
-        // For each row in PDA data, try to find matches in database
-        for (int i = 0; i < pdaTable.rowCount(); i++) {
-            String pdaFirmNumber = String.valueOf(pdaTable.column("firmNumber").get(i));
-            String pdaOfficeAccountNo = String.valueOf(pdaTable.column("officeAccountNo").get(i));
+        ComparisonResultDto result = ComparisonResultDto.builder().build();
 
-            // Try to match firm by code (firmNumber in PDA maps to code in DB)
-            Firm matchedFirm = firmsByCode.get(pdaFirmNumber);
+        // Compare firms
+        Set<String> processedFirmCodes = new HashSet<>();
+        for (Map.Entry<String, PdaFirmData> entry : pdaFirms.entrySet()) {
+            String firmCode = entry.getKey();
+            PdaFirmData pdaFirm = entry.getValue();
+            processedFirmCodes.add(firmCode);
 
-            if (matchedFirm != null) {
-                firmMatchColumn.append("MATCHED");
-                firmIdColumn.append(matchedFirm.getId().toString());
+            Firm dbFirm = firmsByCode.get(firmCode);
 
-                // Try to match office by code (officeAccountNo in PDA maps to code in DB)
-                Office matchedOffice = officesByCode.get(pdaOfficeAccountNo);
-
-                if (matchedOffice != null && matchedOffice.getFirm().getId().equals(matchedFirm.getId())) {
-                    officeMatchColumn.append("MATCHED");
-                    officeIdColumn.append(matchedOffice.getId().toString());
-                } else {
-                    officeMatchColumn.append("NOT_FOUND");
-                    officeIdColumn.append("");
-                }
+            if (dbFirm == null) {
+                // New firm to be created
+                result.getCreated().add(ComparisonResultDto.ItemInfo.builder()
+                    .type("firm")
+                    .code(firmCode)
+                    .name(pdaFirm.getFirmName())
+                    .build());
             } else {
-                firmMatchColumn.append("NOT_FOUND");
-                officeMatchColumn.append("N/A");
-                firmIdColumn.append("");
-                officeIdColumn.append("");
+                // Check if firm needs updating
+                boolean needsUpdate = !pdaFirm.getFirmName().equals(dbFirm.getName());
+
+                if (needsUpdate) {
+                    result.getUpdated().add(ComparisonResultDto.ItemInfo.builder()
+                        .type("firm")
+                        .code(firmCode)
+                        .name(pdaFirm.getFirmName())
+                        .dbId(dbFirm.getId())
+                        .build());
+                } else {
+                    result.getMatched().add(ComparisonResultDto.ItemInfo.builder()
+                        .type("firm")
+                        .code(firmCode)
+                        .name(pdaFirm.getFirmName())
+                        .dbId(dbFirm.getId())
+                        .build());
+                }
             }
         }
 
-        // Add the comparison columns to the table
-        pdaTable.addColumns(firmMatchColumn, officeMatchColumn, firmIdColumn, officeIdColumn);
+        // Find deleted firms
+        for (Map.Entry<String, Firm> entry : firmsByCode.entrySet()) {
+            String firmCode = entry.getKey();
+            if (!processedFirmCodes.contains(firmCode)) {
+                Firm firm = entry.getValue();
+                result.getDeleted().add(ComparisonResultDto.ItemInfo.builder()
+                    .type("firm")
+                    .code(firmCode)
+                    .name(firm.getName())
+                    .dbId(firm.getId())
+                    .build());
+            }
+        }
 
-        log.info("Comparison complete. {} total rows, {} firms matched, {} offices matched",
-            pdaTable.rowCount(),
-            firmMatchColumn.countOccurrences("MATCHED"),
-            officeMatchColumn.countOccurrences("MATCHED"));
+        // Compare offices
+        Set<String> processedOfficeCodes = new HashSet<>();
+        for (Map.Entry<String, PdaOfficeData> entry : pdaOffices.entrySet()) {
+            String officeCode = entry.getKey();
+            PdaOfficeData pdaOffice = entry.getValue();
+            processedOfficeCodes.add(officeCode);
 
-        return pdaTable;
+            Office dbOffice = officesByCode.get(officeCode);
+            Firm parentFirm = firmsByCode.get(pdaOffice.getFirmNumber());
+
+            if (parentFirm == null) {
+                continue; // Skip orphan offices
+            }
+
+            String officeName = pdaOffice.getAddressLine1() != null ? pdaOffice.getAddressLine1() : officeCode;
+
+            if (dbOffice == null) {
+                // New office to be created
+                result.getCreated().add(ComparisonResultDto.ItemInfo.builder()
+                    .type("office")
+                    .code(officeCode)
+                    .name(officeName)
+                    .build());
+            } else {
+                // Check if office needs updating
+                boolean needsUpdate = !dbOffice.getFirm().getId().equals(parentFirm.getId()) ||
+                    !isSameAddress(dbOffice, pdaOffice);
+
+                if (needsUpdate) {
+                    result.getUpdated().add(ComparisonResultDto.ItemInfo.builder()
+                        .type("office")
+                        .code(officeCode)
+                        .name(officeName)
+                        .dbId(dbOffice.getId())
+                        .build());
+                } else {
+                    result.getMatched().add(ComparisonResultDto.ItemInfo.builder()
+                        .type("office")
+                        .code(officeCode)
+                        .name(officeName)
+                        .dbId(dbOffice.getId())
+                        .build());
+                }
+            }
+        }
+
+        // Find deleted offices
+        for (Map.Entry<String, Office> entry : officesByCode.entrySet()) {
+            String officeCode = entry.getKey();
+            if (!processedOfficeCodes.contains(officeCode)) {
+                Office office = entry.getValue();
+                String officeName = office.getAddress() != null && office.getAddress().getAddressLine1() != null
+                    ? office.getAddress().getAddressLine1() : officeCode;
+                result.getDeleted().add(ComparisonResultDto.ItemInfo.builder()
+                    .type("office")
+                    .code(officeCode)
+                    .name(officeName)
+                    .dbId(office.getId())
+                    .build());
+            }
+        }
+
+        log.info("Comparison complete: {} created, {} updated, {} deleted, {} matched",
+            result.getCreated().size(),
+            result.getUpdated().size(),
+            result.getDeleted().size(),
+            result.getMatched().size());
+
+        return result;
+    }
+
+    private boolean isSameAddress(Office office, PdaOfficeData pdaOffice) {
+        if (office.getAddress() == null) return false;
+
+        return equals(office.getAddress().getAddressLine1(), pdaOffice.getAddressLine1()) &&
+               equals(office.getAddress().getAddressLine2(), pdaOffice.getAddressLine2()) &&
+               equals(office.getAddress().getAddressLine3(), pdaOffice.getAddressLine3()) &&
+               equals(office.getAddress().getCity(), pdaOffice.getCity()) &&
+               equals(office.getAddress().getPostcode(), pdaOffice.getPostcode());
+    }
+
+    private boolean equals(String s1, String s2) {
+        if (s1 == null) return s2 == null;
+        return s1.equals(s2);
     }
 
     /**

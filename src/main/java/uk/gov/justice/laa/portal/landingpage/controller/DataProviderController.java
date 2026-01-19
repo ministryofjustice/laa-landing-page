@@ -10,9 +10,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import tech.tablesaw.api.Table;
+import uk.gov.justice.laa.portal.landingpage.dto.ComparisonResultDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PdaSyncResultDto;
 import uk.gov.justice.laa.portal.landingpage.dto.SyncResponse;
 import uk.gov.justice.laa.portal.landingpage.service.DataProviderService;
@@ -27,26 +29,30 @@ import uk.gov.justice.laa.portal.landingpage.service.DataProviderService;
 @RequestMapping("/api/data-provider")
 // @PreAuthorize("@accessControlService.userHasAuthzRole(authentication, T(uk.gov.justice.laa.portal.landingpage.entity.AuthzRole).GLOBAL_ADMIN.roleName)")  // COMMENTED OUT FOR TESTING
 public class DataProviderController {
-
     private final DataProviderService dataProviderService;
+    private final ObjectMapper objectMapper;
 
     /**
      * API endpoint to compare PDA data with local database.
-     * Returns PDA data augmented with database match information.
+     * Returns structured comparison showing created, updated, deleted, and matched items.
      *
-     * @return ResponseEntity containing JSON with match status columns
+     * @return ResponseEntity containing JSON with categorized comparison results
      */
     @GetMapping("/provider-offices/compare")
     public ResponseEntity<String> compareProviderOffices() {
         log.info("Received request to compare PDA data with database");
         try {
-            Table comparisonTable = dataProviderService.compareWithDatabase();
+            ComparisonResultDto result = dataProviderService.compareWithDatabase();
 
-            // Convert TableSaw Table to JSON
-            String json = comparisonTable.write().toString("json");
+            // Pretty print JSON
+            String json = objectMapper.writerWithDefaultPrettyPrinter()
+                    .writeValueAsString(result);
 
-            log.info("Returning comparison dataframe with {} rows and {} columns",
-                comparisonTable.rowCount(), comparisonTable.columnCount());
+            log.info("Returning comparison: {} created, {} updated, {} deleted, {} matched",
+                result.getCreated().size(),
+                result.getUpdated().size(),
+                result.getDeleted().size(),
+                result.getMatched().size());
 
             return ResponseEntity.ok()
                     .header("Content-Type", "application/json")
