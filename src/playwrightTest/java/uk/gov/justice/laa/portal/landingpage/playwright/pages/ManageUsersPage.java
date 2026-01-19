@@ -219,12 +219,6 @@ public class ManageUsersPage {
         assertTrue(page.locator(".govuk-summary-list__row:has-text(\"Last name\") .govuk-summary-list__value").isVisible());
     }
 
-    private void assertRow(String key, String value) {
-        final var row = page.locator(".govuk-summary-list__row:has(.govuk-summary-list__key:has-text('" + key + "'))");
-        assertTrue(row.isVisible());
-        assertTrue(row.allInnerTexts().getFirst().contains(value));
-    }
-
     public void verifyUserDetailsPopulated(String email, String firstName, String lastName, String firmName, String multiFirmAccess) {
         assertRow("Email", email);
         assertRow("First name", firstName);
@@ -423,5 +417,11 @@ public class ManageUsersPage {
         page.navigate(auditUrl);
 
         return new AuditPage(page, port);
+    }
+
+    private void assertRow(String key, String value) {
+        final var row = page.locator(".govuk-summary-list__row:has(.govuk-summary-list__key:has-text('" + key + "'))");
+        assertTrue(row.isVisible());
+        assertTrue(row.allInnerTexts().getFirst().contains(value));
     }
 }
