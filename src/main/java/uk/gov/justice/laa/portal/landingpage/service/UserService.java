@@ -1529,7 +1529,7 @@ public class UserService {
                 page - 1,
                 pageSize,
                 Sort.by(Sort.Direction.fromString(direction), sort));
-        if (firmId != null)  {
+       /* if (firmId != null)  {
             officePage = firmService.getFirmsById(firmId, pageRequest);
         } else if(firmType != null) {
             officePage = firmService.getFirmsByType(FirmType.valueOf(firmType), pageRequest);
@@ -1537,7 +1537,9 @@ public class UserService {
             officePage = firmService.getFirmsByName(searchTerm, pageRequest);
         } else {
             officePage = firmService.getFirms(pageRequest);
-        }
+        }*/
+        FirmType type = firmType == null? null : FirmType.valueOf(firmType);
+        officePage = firmService.getAllFirms(searchTerm, firmId, type, pageRequest);
         // Map to DTOs
 
         List<FirmDirectoryDto> firmDirectoryDtos = officePage.getContent().stream().map(map -> FirmDirectoryDto.builder()

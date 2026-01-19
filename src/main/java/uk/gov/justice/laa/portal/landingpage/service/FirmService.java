@@ -70,6 +70,10 @@ public class FirmService {
         return firmRepository.findAllById(id, pageable);
     }
 
+    public Page<Firm> getAllFirms(String searchString, UUID id, FirmType firmType, Pageable pageable) {
+        return firmRepository.findAllFirms(searchString, id, firmType, pageable);
+    }
+
     public FirmDto getFirm(String id) {
         return getFirm(UUID.fromString(id));
     }
