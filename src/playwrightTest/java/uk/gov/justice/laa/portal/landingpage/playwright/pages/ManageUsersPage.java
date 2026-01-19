@@ -14,6 +14,8 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.TestUser;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.TestUtils;
 
+import java.util.List;
+
 
 public class ManageUsersPage {
 
@@ -27,6 +29,7 @@ public class ManageUsersPage {
     // Locators
     private final Locator header;
     private final Locator createNewUserButton;
+    private final Locator confirmNewUserButton;
     private final Locator notAuthorisedHeading;
 
     private final Locator searchInputByName;
@@ -35,6 +38,7 @@ public class ManageUsersPage {
     private final Locator emailInput;
     private final Locator firstNameInput;
     private final Locator lastNameInput;
+    private final Locator userFullNameLink;
 
     private final Locator providerUserRadio;
     private final Locator providerAdminRadio;
@@ -47,7 +51,12 @@ public class ManageUsersPage {
     private final Locator continueButtonMultiFirm;
 
     private final Locator confirmButton;
-    private final Locator goBackToManageUsersButton;
+    private final Locator goBackToManageYourUsersButton;
+
+    private final Locator deleteUserLink;
+    private final Locator confirmAndDeleteUserButton;
+    private final Locator deleteUserReason;
+    private final Locator deleteUserMessageHeading;
 
     private final Locator firmSearchInput;
     private final Locator firmSearchListbox;
@@ -79,6 +88,7 @@ public class ManageUsersPage {
         this.emailInput = page.locator("input#email");
         this.firstNameInput = page.locator("input#firstName");
         this.lastNameInput = page.locator("input#lastName");
+        this.userFullNameLink = page.locator("a.govuk-link[href*='/admin/users/manage/']");
 
         this.providerUserRadio = page.locator("input#providerUser");
         this.providerAdminRadio = page.locator("input#providerAdmin");
@@ -90,8 +100,14 @@ public class ManageUsersPage {
         this.multiFirmNoRadio = page.locator("input#multiFirmNo");
         this.continueButtonMultiFirm = page.locator("button.govuk-button[type='submit']");
 
-        this.confirmButton = page.locator("button:has-text(\"Create new user\")");
-        this.goBackToManageUsersButton = page.locator("button.govuk-button.govuk-button--primary:has-text('Go back to manage users')");
+        this.confirmNewUserButton = page.locator("button:has-text(\"Create new user\")");
+        this.confirmButton = page.locator("button:has-text(\"Confirm\")");
+        this.goBackToManageYourUsersButton = page.locator("a.govuk-button, button.govuk-button").filter(new Locator.FilterOptions().setHasText("Go back to manage your users"));
+
+        this.deleteUserLink = page.locator("a.govuk-link[href*='/admin/users/manage/'][href$='delete']");
+        this.confirmAndDeleteUserButton = page.locator("button:has-text(\"Confirm and delete user\")");
+        this.deleteUserReason = page.locator("textarea[name='reason']");
+        this.deleteUserMessageHeading = page.locator("h1.govuk-panel__title");
 
         this.firmSearchInput = page.locator("input#firmSearch");
         this.firmSearchListbox = page.locator("ul#firmSearch__listbox");
@@ -118,6 +134,103 @@ public class ManageUsersPage {
         createNewUserButton.click();
     }
 
+    // Create user
+    public boolean isCreateUserVisible() {
+        return createNewUserButton.isVisible();
+
+    }
+
+    public void clickManageUser() {
+        userFullNameLink.click();
+    }
+
+    public void confirmAndDeleteUser() {
+        deleteUserLink.click();
+        deleteUserReason.fill("reason for deleting user");
+        confirmAndDeleteUserButton.click();
+
+        assertEquals(
+                "User deleted",
+                deleteUserMessageHeading.textContent().trim()
+        );
+    }
+
+
+    // Edit user - backwards compatible
+    public void clickEditUser() {
+        clickFirstUserLink();
+    }
+
+    // Clicks the first user link in the table (waits for visibility)
+    public void clickFirstUserLink() {
+        Locator firstLink = page.locator("a.govuk-link[href*='/admin/users/manage/']").first();
+        firstLink.waitFor(new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.VISIBLE)
+                .setTimeout(10000));
+        firstLink.click();
+    }
+
+    public void clickExternalUserLink() {
+        Locator externalUserLink = page.locator("a.govuk-link[href*='/admin/users/manage/']").getByText("Playwright FirmUserManager");
+        externalUserLink.waitFor(new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.VISIBLE)
+                .setTimeout(10000));
+        externalUserLink.click();
+    }
+
+    public void clickServicesTab() {
+        page.locator("a.govuk-tabs__tab[href*='#services']").click();
+    }
+
+    public void clickChangeLink() {
+        page.locator("#services a.govuk-link:has-text(\"Change\")").click();
+    }
+
+    public void verifySelectedUserServices(List<String> roles) {
+        for (String role : roles) {
+            Locator row = page.locator("dd:has-text('" + role + "')");
+            assertThat(row).isVisible();
+        }
+    }
+
+    public void verifyIsUserDetailsPage() {
+        assertTrue(page.url().contains("/admin/users/manage/"));
+    }
+
+    public void verifyUserDetailsPopulated() {
+        assertTrue(page.locator(".govuk-summary-list__row:has-text(\"Email\") .govuk-summary-list__value").isVisible());
+        assertTrue(page.locator(".govuk-summary-list__row:has-text(\"First name\") .govuk-summary-list__value").isVisible());
+        assertTrue(page.locator(".govuk-summary-list__row:has-text(\"Last name\") .govuk-summary-list__value").isVisible());
+    }
+
+    public void clickOfficesTab() {
+        page.locator(".govuk-tabs__tab[href*='#offices']").click();
+    }
+
+    public void clickOfficeChange() {
+        page.locator("#offices .govuk-link:has-text(\"Change\")").click();
+    }
+
+    public void checkSelectedOffices(List<String> offices) {
+
+        for (String office : offices) {
+            Locator checkbox = page.getByLabel(office);
+            if (!checkbox.isChecked()) {
+                checkbox.check();
+            }
+        }
+    }
+
+    public void checkSelectedRoles(List<String> roles) {
+        page.locator("input[type='checkbox']").first().waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000));
+        for (String role : roles) {
+            Locator checkbox = page.getByLabel(role);
+            if (!checkbox.isChecked()) {
+                checkbox.check();
+            }
+        }
+    }
+
     // Unauthorised
     public void verifyNotAuthorisedPage() {
         assertEquals(
@@ -132,14 +245,16 @@ public class ManageUsersPage {
         searchButton.click();
     }
 
-    public void searchAndVerifyUser(String email) {
+
+
+    public boolean searchAndVerifyUser(String email) {
         searchForUser(email);
 
         Locator row = page.locator("tbody tr").filter(
                 new Locator.FilterOptions().setHasText(email)
         );
 
-        assertThat(row).isVisible();
+        return row.isVisible();
     }
 
     public void searchForCurrentUser(TestUser currentUser) {
@@ -148,6 +263,16 @@ public class ManageUsersPage {
                 new Locator.FilterOptions().setHasText(currentUser.email)
         );
         assertThat(row).isVisible();
+    }
+
+    public void searchAndVerifyUserNotExists(String email) {
+        searchForUser(email);
+
+        Locator row = page.locator("tbody tr").filter(
+                new Locator.FilterOptions().setHasText(email)
+        );
+
+        assertThat(row).not().isVisible();
     }
 
     // Add user details
@@ -194,13 +319,17 @@ public class ManageUsersPage {
         continueButtonMultiFirm.click();
     }
 
+    public void clickConfirmNewUserButton() {
+        confirmNewUserButton.click();
+    }
+
     public void clickConfirmButton() {
         confirmButton.click();
     }
 
     public void clickGoBackToManageUsers() {
-        assertThat(goBackToManageUsersButton).isVisible();
-        goBackToManageUsersButton.click();
+        assertThat(goBackToManageYourUsersButton).isVisible();
+        goBackToManageYourUsersButton.click();
     }
 
     // Firm selection

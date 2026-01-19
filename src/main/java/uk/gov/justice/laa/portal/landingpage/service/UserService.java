@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -53,6 +54,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
+import uk.gov.justice.laa.portal.landingpage.dto.UserFirmReassignmentEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
@@ -68,6 +70,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
+import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
@@ -75,6 +78,7 @@ import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditProjection;
@@ -100,6 +104,9 @@ public class UserService {
     private final UserProfileRepository userProfileRepository;
     private final RoleChangeNotificationService roleChangeNotificationService;
     private final FirmService firmService;
+    private final FirmRepository firmRepository;
+    private final EventService eventService;
+    private final NotificationService notificationService;
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
@@ -108,7 +115,9 @@ public class UserService {
             OfficeRepository officeRepository,
             LaaAppsConfig.LaaApplicationsList laaApplicationsList,
             TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
-            RoleChangeNotificationService roleChangeNotificationService, FirmService firmService) {
+            RoleChangeNotificationService roleChangeNotificationService, FirmService firmService,
+            FirmRepository firmRepository, EventService eventService,
+            NotificationService notificationService) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -120,6 +129,9 @@ public class UserService {
         this.userProfileRepository = userProfileRepository;
         this.roleChangeNotificationService = roleChangeNotificationService;
         this.firmService = firmService;
+        this.firmRepository = firmRepository;
+        this.eventService = eventService;
+        this.notificationService = notificationService;
     }
 
     static <T> List<List<T>> partitionBasedOnSize(List<T> inputList, int size) {
@@ -474,6 +486,10 @@ public class UserService {
             }
         }
 
+        // Notify revoke firm access
+        notificationService.notifyRevokeFirmAccess(UUID.fromString(userProfileId), entraUser.getFirstName(),
+                entraUser.getEmail(), firmName);
+
         return true;
     }
 
@@ -818,6 +834,9 @@ public class UserService {
 
         techServicesClient.updateRoleAssignment(entraUser.getId());
 
+        notificationService.notifyDeleteFirmAccess(userProfile.getId(), entraUserDto.getFirstName(),
+                entraUserDto.getEmail(), firmDto.getName());
+
         logger.info("User profile added successfully for user: {} ({})", entraUserDto.getFullName(),
                 entraUserDto.getId());
 
@@ -943,7 +962,8 @@ public class UserService {
                     .filter(appRole -> Arrays.stream(appRole.getUserTypeRestriction())
                             .anyMatch(roleUserType -> roleUserType == userType))
                     .filter(appRole -> appRole.getFirmTypeRestriction() == null
-                            || appRole.getFirmTypeRestriction().equals(userFirmType))
+                            || Arrays.stream(appRole.getFirmTypeRestriction())
+                            .anyMatch(roleFirmType -> roleFirmType == userFirmType))
                     .map(appRole -> mapper.map(appRole, AppRoleDto.class)).sorted().toList();
         }
         return appRoles;
@@ -1110,14 +1130,20 @@ public class UserService {
         if (optionalUserProfile.isPresent()) {
             UserProfile userProfile = optionalUserProfile.get();
             if (selectedOffices.contains("ALL")) {
-                diff = diffOffices(userProfile.getOffices(), null);
+                diff = diffOffices(userProfile.getOffices(), null, true);
                 userProfile.setOffices(null);
+                userProfile.setUnrestrictedOfficeAccess(true);
+            } else if (selectedOffices.contains("NO_OFFICES")) {
+                diff = diffOffices(userProfile.getOffices(), null, false);
+                userProfile.setOffices(null);
+                userProfile.setUnrestrictedOfficeAccess(false);
             } else {
                 List<UUID> officeIds = selectedOffices.stream().map(UUID::fromString).collect(Collectors.toList());
                 Set<Office> offices = validateOfficesByUserFirm(userProfile, officeIds);
-                diff = diffOffices(userProfile.getOffices(), offices);
+                diff = diffOffices(userProfile.getOffices(), offices, null);
                 // Update user profile offices
                 userProfile.setOffices(offices);
+                userProfile.setUnrestrictedOfficeAccess(false);
             }
             userProfileRepository.saveAndFlush(userProfile);
             logger.info("Successfully updated user offices for user ID: {}", userId);
@@ -1128,18 +1154,18 @@ public class UserService {
         return diff;
     }
 
-    protected String diffOffices(Set<Office> oldOffices, Set<Office> newOffices) {
+    protected String diffOffices(Set<Office> oldOffices, Set<Office> newOffices, Boolean isUnrestrictedAccess) {
         String removed = "";
         String added = "";
         if (Objects.isNull(oldOffices) || oldOffices.isEmpty()) {
-            removed = "Removed : All";
+            removed = String.format("Removed : Unrestricted access %s", isUnrestrictedAccess);
             if (!Objects.isNull(newOffices)) {
                 added = "Added : " + newOffices.stream().map(Office::getCode)
                         .collect(Collectors.joining(", "));
             }
         }
         if (Objects.isNull(newOffices) || newOffices.isEmpty()) {
-            added = "Added : All";
+            added = String.format("Added : Unrestricted access %s", isUnrestrictedAccess);
             if (!Objects.isNull(oldOffices)) {
                 removed = "Removed : " + oldOffices.stream().map(Office::getCode)
                         .collect(Collectors.joining(", "));
@@ -1390,8 +1416,11 @@ public class UserService {
      * @return Paginated audit users
      */
     public PaginatedAuditUsers getAuditUsers(
-            String searchTerm, UUID firmId, String silasRole, UUID appId, UserType userType, Boolean multiFirm,
+            String searchTerm, UUID firmId, String silasRole, UUID appId, UserTypeForm userTypeForm,
             int page, int pageSize, String sort, String direction) {
+        Boolean multiFirm = userTypeForm == null ? null : userTypeForm.getMultiFirm();
+        UserType userType = userTypeForm == null ? null : userTypeForm.getUserType();
+        String userTypeStr = userType == null ? null : userType.name();
 
         // Check if sorting by profile count, firm, or account status (special cases -
         // require different queries)
@@ -1418,17 +1447,17 @@ public class UserService {
             PageRequest pageRequest = PageRequest.of(page - 1, pageSize, sortObj);
             // UserType must be treated as a string because we are using native queries
             // here.
-            String userTypeString = userType != null ? userType.toString() : null;
+
             Page<? extends UserAuditProjection> resultPage;
             if (sortByProfileCount) {
                 resultPage = entraUserRepository.findAllUsersForAuditWithProfileCount(
-                        searchTerm, firmId, silasRole, appId, userTypeString, multiFirm, pageRequest);
+                        searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm, pageRequest);
             } else if (sortByFirm) {
                 resultPage = entraUserRepository.findAllUsersForAuditWithFirm(
-                        searchTerm, firmId, silasRole, appId, userTypeString, multiFirm, pageRequest);
+                        searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm, pageRequest);
             } else {
                 resultPage = entraUserRepository.findAllUsersForAuditWithAccountStatus(
-                        searchTerm, firmId, silasRole, appId, userTypeString, multiFirm, pageRequest);
+                        searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm, pageRequest);
             }
 
             // Extract user IDs in order
@@ -1438,7 +1467,7 @@ public class UserService {
             List<EntraUser> users = Collections.emptyList();
             if (!userIds.isEmpty()) {
                 List<EntraUser> fetchedUsers = entraUserRepository
-                        .findUsersWithProfilesAndRoles(new java.util.LinkedHashSet<>(userIds));
+                        .findUsersWithProfilesAndRoles(new LinkedHashSet<>(userIds));
 
                 // Sort users to match the order from the query result
                 Map<UUID, Integer> orderMap = new HashMap<>();
@@ -1804,5 +1833,96 @@ public class UserService {
                 .roles(roleDtos)
                 .userType(profile.getUserType() != null ? profile.getUserType().name() : "UNKNOWN")
                 .activeProfile(profile.isActiveProfile()).build();
+    }
+
+    /**
+     * Reassign a user to a different firm
+     * This will update the user's firm association and log the event
+     *
+     * @param userProfileId The UUID string of the user profile to reassign
+     * @param newFirmId The UUID of the new firm
+     * @param reason The reason for the reassignment
+     * @param performedByEntraUserId The Entra user ID of the admin performing the action
+     * @param performedByName The name of the admin performing the action
+     * @throws IllegalArgumentException if user profile or firm not found
+     * @throws IllegalStateException if user is not external or other validation fails
+     */
+    @Transactional
+    public void reassignUserFirm(String userProfileId, UUID newFirmId, String reason,
+            UUID performedByEntraUserId, String performedByName) {
+
+        // Validate inputs
+        if (userProfileId == null || userProfileId.trim().isEmpty()) {
+            throw new IllegalArgumentException("User profile ID is required");
+        }
+
+        if (newFirmId == null) {
+            throw new IllegalArgumentException("New firm ID is required");
+        }
+
+        if (reason == null || reason.trim().isEmpty()) {
+            throw new IllegalArgumentException("Reason for reassignment is required");
+        }
+
+        // Get the user profile
+        Optional<UserProfile> optionalProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
+        if (optionalProfile.isEmpty()) {
+            throw new IllegalArgumentException("User profile not found: " + userProfileId);
+        }
+
+        UserProfile userProfile = optionalProfile.get();
+
+        // Verify this is an external user
+        if (userProfile.getUserType() != UserType.EXTERNAL) {
+            throw new IllegalStateException("Only external users can be reassigned to different firms");
+        }
+
+        // Get the current firm (for audit logging)
+        Firm oldFirm = userProfile.getFirm();
+        if (oldFirm == null) {
+            throw new IllegalStateException("User does not have a current firm assigned");
+        }
+
+        // Verify the new firm is different from current firm
+        if (oldFirm.getId().equals(newFirmId)) {
+            throw new IllegalArgumentException("New firm must be different from current firm");
+        }
+
+        // Get the new firm
+        Optional<Firm> optionalNewFirm = firmRepository.findById(newFirmId);
+        if (optionalNewFirm.isEmpty()) {
+            throw new IllegalArgumentException("New firm not found: " + newFirmId);
+        }
+
+        Firm newFirm = optionalNewFirm.get();
+
+        // Update the user's firm
+        userProfile.setFirm(newFirm);
+
+        // Clear the user's offices when reassigning to a new firm
+        // This is important as offices are firm-specific
+        if (userProfile.getOffices() != null) {
+            userProfile.getOffices().clear();
+        }
+
+        // Save the updated profile
+        userProfileRepository.save(userProfile);
+
+        // Log the reassignment event
+        UserFirmReassignmentEvent reassignmentEvent =
+            new UserFirmReassignmentEvent(
+                performedByEntraUserId,
+                performedByName,
+                userProfile.getId().toString(),
+                userProfile.getEntraUser().getEmail(),
+                oldFirm.getName(),
+                newFirm.getName(),
+                reason.trim()
+            );
+
+        eventService.logEvent(reassignmentEvent);
+
+        logger.info("User profile {} reassigned from firm {} to firm {} by {} (Reason: {})",
+                userProfileId, oldFirm.getName(), newFirm.getName(), performedByName, reason);
     }
 }
