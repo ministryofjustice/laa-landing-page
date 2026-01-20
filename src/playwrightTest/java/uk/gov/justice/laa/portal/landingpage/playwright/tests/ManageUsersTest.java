@@ -1,5 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.playwright.tests;
 
+
+import com.microsoft.playwright.Locator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.BaseFrontEndTest;
@@ -120,7 +122,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
     void editUserOfficesAndVerify() {
 
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
-        manageUsersPage.clickExternalUserLink();
+        manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
         manageUsersPage.clickOfficesTab();
         manageUsersPage.clickOfficeChange();
         assertTrue(page.url().contains("/admin/users/edit/"));
@@ -130,7 +132,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickConfirmButton();
         assertTrue(page.locator(".govuk-panel__title:has-text('User detail updated')").isVisible());
         manageUsersPage.clickGoBackToManageUsers();
-        manageUsersPage.clickExternalUserLink();
+        manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
         manageUsersPage.clickOfficesTab();
         assertTrue(page.locator(".govuk-table__header:has-text('Office Address')").isVisible());
         assertTrue(page.locator(".govuk-table__header:has-text('Account number')").isVisible());
@@ -245,7 +247,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         List<TestUser> users = List.of(TestUser.EXTERNAL_USER_ADMIN, TestUser.EXTERNAL_USER_MANAGER);
         for (TestUser user : users) {
             ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(user);
-            manageUsersPage.clickExternalUserLink();
+            manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
             manageUsersPage.clickServicesTab();
             manageUsersPage.clickChangeLink();
             manageUsersPage.clickContinueLink();
@@ -263,7 +265,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         List<TestUser> users = List.of(TestUser.EXTERNAL_USER_ADMIN, TestUser.EXTERNAL_USER_MANAGER);
         for (TestUser user : users) {
             ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(user);
-            manageUsersPage.clickExternalUserLink();
+            manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
             manageUsersPage.clickOfficesTab();
             manageUsersPage.clickOfficeChange();
             List<String> offices = List.of("Automation Office 1, City1, 12345 ()", "Automation Office 2, City2, 23456 ()");
@@ -271,12 +273,12 @@ public class ManageUsersTest extends BaseFrontEndTest {
             manageUsersPage.clickContinueLink();
             manageUsersPage.clickConfirmButton();
             manageUsersPage.clickGoBackToManageUsers();
-            manageUsersPage.clickExternalUserLink();
+            manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
             manageUsersPage.clickOfficesTab();
             assertTrue(page.locator(".govuk-summary-card:has-text('Automation Office 1, City1, 12345')").isVisible());
             assertTrue(page.locator(".govuk-summary-card:has-text('Automation Office 2, City2, 23456')").isVisible());
             manageUsersPage.clickGoBackToManageUsers();
-            manageUsersPage.clickExternalUserLink();
+            manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
             manageUsersPage.clickOfficesTab();
             manageUsersPage.clickOfficeChange();
             List<String> updatedOffices = List.of("Automation Office 1, City1, 12345 ()");
@@ -284,15 +286,33 @@ public class ManageUsersTest extends BaseFrontEndTest {
             manageUsersPage.clickContinueLink();
             manageUsersPage.clickConfirmButton();
             manageUsersPage.clickGoBackToManageUsers();
-            manageUsersPage.clickExternalUserLink();
+            manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
             manageUsersPage.clickOfficesTab();
             assertTrue(page.locator(".govuk-summary-card:has-text('Automation Office 1, City1, 12345')").isHidden());
             assertTrue(page.locator(".govuk-summary-card:has-text('Automation Office 2, City2, 23456')").isVisible());
         }
     }
 
-
-
-
-
+    @Test
+    @DisplayName("Verify External User Manager can Manage Access for incomplete users.")
+    public void verifyExternalUserManagerIncompleteUsers() {
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+        Locator row = manageUsersPage.externalUserRowLocator();
+        System.out.println("Row count: " + row.count());
+        assertTrue(row.locator(".moj-badge.moj-badge--blue").isVisible());
+        manageUsersPage.clickExternalUserLink("Playwright ExternalUserIncomplete");
+        assertTrue(page.locator(".govuk-button:has-text('Manage Access')").isVisible());
+        manageUsersPage.clickManageAccess();
+        List<String> services = List.of("Manage Your Users");
+        manageUsersPage.checkSelectedRoles(services);
+        manageUsersPage.clickContinueLink();
+        List<String> roles = List.of("Firm User Manager");
+        manageUsersPage.checkSelectedRoles(roles);
+        manageUsersPage.clickContinueLink();
+        manageUsersPage.clickContinueLink();
+        manageUsersPage.clickConfirmButton();
+        assertTrue(page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible());
+        manageUsersPage.clickGoBackToManageUsers();
+        assertTrue(row.locator(".moj-badge.moj-badge--blue").isHidden());
+    }
 }
