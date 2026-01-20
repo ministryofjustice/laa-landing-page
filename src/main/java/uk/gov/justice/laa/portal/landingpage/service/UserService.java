@@ -24,7 +24,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.StringUtils;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +43,6 @@ import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.kiota.RequestInformation;
 
 import jakarta.transaction.Transactional;
-import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
@@ -60,6 +58,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
@@ -72,7 +71,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
-import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
@@ -99,7 +97,7 @@ public class UserService {
     private final AppRepository appRepository;
     private final AppRoleRepository appRoleRepository;
     private final ModelMapper mapper;
-    private final LaaAppsConfig.LaaApplicationsList laaApplicationsList;
+    private final AppService appService;
     private final TechServicesClient techServicesClient;
     private final UserProfileRepository userProfileRepository;
     private final RoleChangeNotificationService roleChangeNotificationService;
@@ -113,7 +111,7 @@ public class UserService {
             EntraUserRepository entraUserRepository, AppRepository appRepository,
             AppRoleRepository appRoleRepository, ModelMapper mapper,
             OfficeRepository officeRepository,
-            LaaAppsConfig.LaaApplicationsList laaApplicationsList,
+            AppService appService,
             TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
             RoleChangeNotificationService roleChangeNotificationService, FirmService firmService,
             FirmRepository firmRepository, EventService eventService,
@@ -124,7 +122,7 @@ public class UserService {
         this.appRoleRepository = appRoleRepository;
         this.mapper = mapper;
         this.officeRepository = officeRepository;
-        this.laaApplicationsList = laaApplicationsList;
+        this.appService = appService;
         this.techServicesClient = techServicesClient;
         this.userProfileRepository = userProfileRepository;
         this.roleChangeNotificationService = roleChangeNotificationService;
@@ -990,7 +988,7 @@ public class UserService {
 
         Set<AppDto> userApps = getUserAppsByUserId(String.valueOf(userProfile.get().getId()));
 
-        return getUserAssignedApps(userApps);
+        return getUserAssignedLaaApps(userApps);
     }
 
     /**
@@ -1063,42 +1061,36 @@ public class UserService {
         }
     }
 
-    private Set<LaaApplicationForView> getUserAssignedApps(Set<AppDto> userApps) {
-        List<LaaApplication> applications = laaApplicationsList.getApplications();
-        Set<LaaApplicationForView> userAssignedApps = applications.stream()
-                .filter(app -> userApps.stream().map(AppDto::getName)
-                        .anyMatch(appName -> appName.equals(app.getName())))
+    private Set<LaaApplicationForView> getUserAssignedLaaApps(Set<AppDto> userApps) {
+        Set<LaaApplicationForView> userAssignedLaaApps = userApps.stream()
+                .filter(app -> AppType.LAA.equals(app.getAppType()))
                 .map(LaaApplicationForView::new)
-                .sorted(Comparator.comparingInt(LaaApplicationForView::getOrdinal))
+                .sorted()
                 .collect(Collectors.toCollection(TreeSet::new));
 
         // Make any necessary adjustments to the app display properties
-        makeAppDisplayAdjustments(userAssignedApps);
+        makeAppDisplayAdjustments(userAssignedLaaApps);
 
-        return userAssignedApps;
+        return userAssignedLaaApps;
     }
 
     private void makeAppDisplayAdjustments(Set<LaaApplicationForView> userApps) {
-        List<LaaApplication> applications = laaApplicationsList.getApplications();
+        List<AppDto> applications = appService.getAllAppsFromCache();
 
-        Set<String> userAppNames = userApps.stream().map(LaaApplicationForView::getName).collect(Collectors.toSet());
+        Set<String> userAppIds = userApps.stream()
+                .map(LaaApplicationForView::getId)
+                .collect(Collectors.toSet());
 
-        userApps.forEach(app -> {
-            Optional<LaaApplication> matchingApp = applications.stream()
-                    .filter(configApp -> configApp.getName().equals(app.getName())).findFirst();
-
-            matchingApp.ifPresent(configApp -> {
-                if (configApp.getDescriptionIfAppAssigned() != null
-                        && StringUtils.isNotEmpty(
-                                configApp.getDescriptionIfAppAssigned().getAppAssigned())
-                        && StringUtils.isNotEmpty(
-                                configApp.getDescriptionIfAppAssigned().getDescription())
-                        && userAppNames.contains(
-                                configApp.getDescriptionIfAppAssigned().getAppAssigned())) {
-                    app.setDescription(configApp.getDescriptionIfAppAssigned().getDescription());
-                }
-            });
-        });
+        for (LaaApplicationForView userApp : userApps) {
+            if (userApp.isSpecialHandling() && userAppIds.contains(userApp.getOtherAssignedAppIdForAltDesc())) {
+                String alternateDescription = applications.stream()
+                        .filter(app -> app.getId().equals(userApp.getId()))
+                        .map(app -> app.getAlternativeAppDescription().getAlternativeDescription())
+                        .findFirst()
+                        .orElse("Unknown");
+                userApp.setDescription(alternateDescription);
+            }
+        }
     }
 
     /**
