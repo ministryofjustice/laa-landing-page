@@ -55,6 +55,7 @@ public class ManageUsersPage {
 
     private final Locator confirmButton;
     private final Locator goBackToManageYourUsersButton;
+    private final Locator manageAccessButton;
 
     private final Locator deleteUserLink;
     private final Locator confirmAndDeleteUserButton;
@@ -99,6 +100,7 @@ public class ManageUsersPage {
         this.providerAdminRadio = page.locator("input#providerAdmin");
 
         this.continueButton = page.locator("button.govuk-button:has-text('Continue')");
+        this.manageAccessButton = page.locator("button.govuk-button:has-text('Manage access')");
         this.cancelLink = page.locator("a.govuk-link:has-text('Cancel')");
 
         this.multiFirmYesRadio = page.locator("input#multiFirmYes");
@@ -182,8 +184,8 @@ public class ManageUsersPage {
         firstLink.click();
     }
 
-    public void clickExternalUserLink() {
-        Locator externalUserLink = page.locator("a.govuk-link[href*='/admin/users/manage/']").getByText("Playwright FirmUserManager");
+    public void clickExternalUserLink(String user) {
+        Locator externalUserLink = page.locator("a.govuk-link[href*='/admin/users/manage/']").getByText(user);
         externalUserLink.waitFor(new Locator.WaitForOptions()
                 .setState(WaitForSelectorState.VISIBLE)
                 .setTimeout(10000));
@@ -192,6 +194,10 @@ public class ManageUsersPage {
 
     public void clickContinueLink() {
         continueButton.click();
+    }
+
+    public void clickManageAccess() {
+        manageAccessButton.click();
     }
 
     public void clickServicesTab() {
@@ -263,6 +269,23 @@ public class ManageUsersPage {
                 checkbox.check();
             }
         }
+    }
+
+    public void checkSelectedServices(List<String> services) {
+        page.locator("input[type='checkbox']").first().waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000));
+        for (String service : services) {
+            Locator checkbox = page.getByLabel(service);
+            if (!checkbox.isChecked()) {
+                checkbox.check();
+            }
+        }
+    }
+
+    public Locator externalUserRowLocator() {
+        return page.locator(
+                "tr.govuk-table__row:has(td.govuk-table__cell:has-text(\"externaluser-incomplete@playwrighttest.com\"))"
+        );
+
     }
 
     // Unauthorised

@@ -1491,6 +1491,20 @@ public class UserController {
         return "edit-user-confirmation";
     }
 
+    @GetMapping("/users/edit/{id}/cancel/confirmation")
+    public String confirmCancelEditUserApps(@PathVariable String id, Model model) {
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        model.addAttribute("user", user);
+        return "cancel-edit-user-confirmation";
+    }
+
+    @GetMapping("/users/edit/{id}/cancel/offices/confirmation")
+    public String confirmCancelEditUserOffices(@PathVariable String id, Model model) {
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        model.addAttribute("user", user);
+        return "cancel-edit-user-firm-confirmation";
+    }
+
     @GetMapping("/users/edit/{id}/cancel")
     public String cancelUserEdit(@PathVariable String id, HttpSession session) {
         // Clear all edit-related session attributes
@@ -2205,6 +2219,13 @@ public class UserController {
         model.addAttribute("user", user);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Access granted - " + user.getFullName());
         return "grant-access-confirmation";
+    }
+
+    @GetMapping("/users/grant-access/{id}/cancel/confirmation")
+    public String confirmCancelGrantingAccess(@PathVariable String id, Model model) {
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        model.addAttribute("user", user);
+        return "cancel-grant-access-user-confirmation";
     }
 
     /**
