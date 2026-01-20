@@ -13,6 +13,8 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraAuthenticationContext;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraClaimData;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraServicePrincipalDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserPayloadDto;
+import uk.gov.justice.laa.portal.landingpage.dto.CcmsUserDetails;
+import uk.gov.justice.laa.portal.landingpage.dto.CcmsUserDetailsResponse;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -66,6 +68,8 @@ class ClaimEnrichmentServiceTest {
     private AppRepository appRepository;
     @Mock
     private OfficeRepository officeRepository;
+    @Mock
+    private CcmsUserDetailsService ccmsUserDetailsService;
     @InjectMocks
     private ClaimEnrichmentService claimEnrichmentService;
 
@@ -287,7 +291,7 @@ class ClaimEnrichmentServiceTest {
     }
 
     @Test
-    void enrichClaim_InternalUser() {
+    void enrichClaim_InternalUser_noLegacySyncRolesAssigned() {
         // Arrange
         AppRole internalRole = AppRole.builder()
                 .name(INTERNAL_ROLE)
@@ -329,6 +333,45 @@ class ClaimEnrichmentServiceTest {
         assertEquals(Collections.emptyList(), claims.get("LAA_ACCOUNTS"));
         
         verify(officeRepository, never()).findOfficeByFirm_IdIn(any());
+        verify(ccmsUserDetailsService, never()).getUserDetailsByLegacyUserId(anyString());
+    }
+
+    @Test
+    void enrichClaim_InternalUserWithLegacySyncRole_UsesCcmsUsernameFromUda() {
+        AppRole internalLegacyRole = AppRole.builder()
+                .name(INTERNAL_ROLE)
+                .app(app)
+                .legacySync(true)
+                .build();
+
+        UserProfile userProfile = UserProfile.builder()
+                .activeProfile(true)
+                .appRoles(Set.of(internalLegacyRole))
+                .legacyUserId(LEGACY_USER_ID)
+                .firm(null)
+                .userType(UserType.INTERNAL)
+                .build();
+        entraUser.setUserProfiles(Set.of(userProfile));
+
+        when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(appRepository.findByEntraAppId(anyString())).thenReturn(Optional.of(app));
+
+        CcmsUserDetails ccmsUserDetails = new CcmsUserDetails();
+        ccmsUserDetails.setUserName("UDA_CCMS_USER");
+        CcmsUserDetailsResponse ccmsResponse = new CcmsUserDetailsResponse();
+        ccmsResponse.setCcmsUserDetails(ccmsUserDetails);
+
+        when(ccmsUserDetailsService.getUserDetailsByLegacyUserId(LEGACY_USER_ID.toString()))
+                .thenReturn(ccmsResponse);
+
+        ClaimEnrichmentResponse response = claimEnrichmentService.enrichClaim(request);
+
+        assertNotNull(response);
+        ClaimEnrichmentResponse.ResponseAction action = response.getData().getActions().get(0);
+        Map<String, Object> claims = action.getClaims();
+
+        assertEquals("UDA_CCMS_USER", claims.get("CCMS_USERNAME"));
+        assertEquals(LEGACY_USER_ID.toString().toUpperCase(), claims.get("USER_NAME"));
     }
 
     @Test

@@ -55,6 +55,7 @@ public class ManageUsersPage {
 
     private final Locator confirmButton;
     private final Locator goBackToManageYourUsersButton;
+    private final Locator manageAccessButton;
 
     private final Locator deleteUserLink;
     private final Locator confirmAndDeleteUserButton;
@@ -99,6 +100,7 @@ public class ManageUsersPage {
         this.providerAdminRadio = page.locator("input#providerAdmin");
 
         this.continueButton = page.locator("button.govuk-button:has-text('Continue')");
+        this.manageAccessButton = page.locator("button.govuk-button:has-text('Manage access')");
         this.cancelLink = page.locator("a.govuk-link:has-text('Cancel')");
 
         this.multiFirmYesRadio = page.locator("input#multiFirmYes");
@@ -182,8 +184,8 @@ public class ManageUsersPage {
         firstLink.click();
     }
 
-    public void clickExternalUserLink() {
-        Locator externalUserLink = page.locator("a.govuk-link[href*='/admin/users/manage/']").getByText("Playwright FirmUserManager");
+    public void clickExternalUserLink(String user) {
+        Locator externalUserLink = page.locator("a.govuk-link[href*='/admin/users/manage/']").getByText(user);
         externalUserLink.waitFor(new Locator.WaitForOptions()
                 .setState(WaitForSelectorState.VISIBLE)
                 .setTimeout(10000));
@@ -192,6 +194,10 @@ public class ManageUsersPage {
 
     public void clickContinueLink() {
         continueButton.click();
+    }
+
+    public void clickManageAccess() {
+        manageAccessButton.click();
     }
 
     public void clickServicesTab() {
@@ -217,6 +223,14 @@ public class ManageUsersPage {
         assertTrue(page.locator(".govuk-summary-list__row:has-text(\"Email\") .govuk-summary-list__value").isVisible());
         assertTrue(page.locator(".govuk-summary-list__row:has-text(\"First name\") .govuk-summary-list__value").isVisible());
         assertTrue(page.locator(".govuk-summary-list__row:has-text(\"Last name\") .govuk-summary-list__value").isVisible());
+    }
+
+    public void verifyUserDetailsPopulated(String email, String firstName, String lastName, String firmName, String multiFirmAccess) {
+        assertRow("Email", email);
+        assertRow("First name", firstName);
+        assertRow("Last name", lastName);
+        assertRow("Firm name", firmName);
+        assertRow("Multi-firm access", multiFirmAccess);
     }
 
     public void clickOfficesTab() {
@@ -257,6 +271,23 @@ public class ManageUsersPage {
         }
     }
 
+    public void checkSelectedServices(List<String> services) {
+        page.locator("input[type='checkbox']").first().waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000));
+        for (String service : services) {
+            Locator checkbox = page.getByLabel(service);
+            if (!checkbox.isChecked()) {
+                checkbox.check();
+            }
+        }
+    }
+
+    public Locator externalUserRowLocator() {
+        return page.locator(
+                "tr.govuk-table__row:has(td.govuk-table__cell:has-text(\"externaluser-incomplete@playwrighttest.com\"))"
+        );
+
+    }
+
     // Unauthorised
     public void verifyNotAuthorisedPage() {
         assertEquals(
@@ -270,7 +301,6 @@ public class ManageUsersPage {
         searchInputByName.fill(userEmail);
         searchButton.click();
     }
-
 
 
     public boolean searchAndVerifyUser(String email) {
@@ -410,5 +440,11 @@ public class ManageUsersPage {
         page.navigate(auditUrl);
 
         return new AuditPage(page, port);
+    }
+
+    private void assertRow(String key, String value) {
+        final var row = page.locator(".govuk-summary-list__row:has(.govuk-summary-list__key:has-text('" + key + "'))");
+        assertTrue(row.isVisible());
+        assertTrue(row.allInnerTexts().getFirst().contains(value));
     }
 }

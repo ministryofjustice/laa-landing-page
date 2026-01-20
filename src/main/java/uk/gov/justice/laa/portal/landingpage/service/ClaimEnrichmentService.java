@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentResponse;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentRequest;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserPayloadDto;
+import uk.gov.justice.laa.portal.landingpage.dto.CcmsUserDetailsResponse;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -36,6 +37,7 @@ public class ClaimEnrichmentService {
     private final AppRepository appRepository;
     private final OfficeRepository officeRepository;
     private final FirmRepository firmRepository;
+    private final CcmsUserDetailsService ccmsUserDetailsService;
 
     public ClaimEnrichmentResponse enrichClaim(ClaimEnrichmentRequest request) {
         EntraUserPayloadDto userDetails =
@@ -131,7 +133,32 @@ public class ClaimEnrichmentService {
                 }
             }
 
-            ClaimEnrichmentResponse.ResponseData responseData = getResponseData(entraUser, userRoles, officeIds, externalFirms);
+            String legacyUserId = entraUser.getUserProfiles().stream()
+                    .filter(UserProfile::isActiveProfile)
+                    .map(UserProfile::getLegacyUserId)
+                    .filter(Objects::nonNull)
+                    .findFirst()
+                    .map(UUID::toString)
+                    .orElse(null);
+
+            String ccmsUsername = null;
+            if (isInternalUser) {
+                boolean hasLegacySyncRole = entraUser.getUserProfiles().stream()
+                        .filter(UserProfile::isActiveProfile)
+                        .flatMap(profile -> profile.getAppRoles().stream())
+                        .anyMatch(AppRole::isLegacySync);
+
+                if (hasLegacySyncRole && legacyUserId != null) {
+                    CcmsUserDetailsResponse udaResponse = ccmsUserDetailsService.getUserDetailsByLegacyUserId(legacyUserId);
+                    if (udaResponse != null
+                            && udaResponse.getCcmsUserDetails() != null
+                            && udaResponse.getCcmsUserDetails().getUserName() != null) {
+                        ccmsUsername = udaResponse.getCcmsUserDetails().getUserName();
+                    }
+                }
+            }
+
+            ClaimEnrichmentResponse.ResponseData responseData = getResponseData(entraUser, userRoles, officeIds, externalFirms, legacyUserId, ccmsUsername);
 
             return ClaimEnrichmentResponse.builder()
                     .success(true)
@@ -150,21 +177,18 @@ public class ClaimEnrichmentService {
     private static ClaimEnrichmentResponse.ResponseData getResponseData(EntraUser entraUser,
                                                                         List<String> userRoles,
                                                                         List<String> officeIds,
-                                                                        List<Firm> externalFirms) {
-
-        String legacyUserId = entraUser.getUserProfiles().stream()
-                .filter(UserProfile::isActiveProfile)
-                .map(UserProfile::getLegacyUserId)
-                .filter(Objects::nonNull)
-                .findFirst()
-                .map(UUID::toString)
-                .orElse(null);
+                                                                        List<Firm> externalFirms,
+                                                                        String legacyUserId,
+                                                                        String ccmsUsername) {
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("USER_NAME", legacyUserId.toUpperCase());
         claims.put("USER_EMAIL", entraUser.getEmail());
         claims.put("LAA_APP_ROLES", userRoles);
         claims.put("LAA_ACCOUNTS", officeIds);
+        if (ccmsUsername != null && !ccmsUsername.isEmpty()) {
+            claims.put("CCMS_USERNAME", ccmsUsername);
+        }
 
         if (!externalFirms.isEmpty()) {
             List<String> code = externalFirms.stream().map(Firm::getCode).collect(Collectors.toList());
