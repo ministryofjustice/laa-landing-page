@@ -26,15 +26,15 @@ public class ComparisonResultDto {
     private List<ItemInfo> exists = new ArrayList<>();
 
     // Separate counts for firms and offices
-    private int firmsCreated;
-    private int firmsUpdated;
-    private int firmsDeleted;
-    private int firmsExists;
+    private int firmCreates;
+    private int firmUpdates;
+    private int firmDeletes;
+    private int firmExists;
 
-    private int officesCreated;
-    private int officesUpdated;
-    private int officesDeleted;
-    private int officesExists;
+    private int officeCreates;
+    private int officeUpdates;
+    private int officeDeletes;
+    private int officeExists;
 
     /**
      * Minimal info for each item (firm or office).

@@ -34,7 +34,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.service.pda.command.CreateFirmCommand;
 import uk.gov.justice.laa.portal.landingpage.service.pda.command.CreateOfficeCommand;
 import uk.gov.justice.laa.portal.landingpage.service.pda.command.DeactivateFirmCommand;
-import uk.gov.justice.laa.portal.landingpage.service.pda.command.DeactivateOfficeCommand;
+import uk.gov.justice.laa.portal.landingpage.service.pda.command.DeleteOfficeCommand;
 import uk.gov.justice.laa.portal.landingpage.service.pda.command.UpdateFirmCommand;
 import uk.gov.justice.laa.portal.landingpage.service.pda.command.UpdateOfficeCommand;
 
@@ -125,8 +125,8 @@ public class DataProviderService {
         Map<String, PdaOfficeData> pdaOffices = buildPdaOfficesMap(pdaTable);
 
         // Track separate counts
-        int firmsCreated = 0, firmsUpdated = 0, firmsDeleted = 0, firmsExists = 0;
-        int officesCreated = 0, officesUpdated = 0, officesDeleted = 0, officesExists = 0;
+        int firmCreates = 0, firmUpdates = 0, firmDeletes = 0, firmExists = 0;
+        int officeCreates = 0, officeUpdates = 0, officeDeletes = 0, officeExists = 0;
 
         ComparisonResultDto result = ComparisonResultDto.builder().build();
 
@@ -146,7 +146,7 @@ public class DataProviderService {
                     .code(firmCode)
                     .name(pdaFirm.getFirmName())
                     .build());
-                firmsCreated++;
+                firmCreates++;
             } else {
                 // Check if firm needs updating
                 boolean needsUpdate = !pdaFirm.getFirmName().equals(dbFirm.getName());
@@ -158,7 +158,7 @@ public class DataProviderService {
                         .name(pdaFirm.getFirmName())
                         .dbId(dbFirm.getId())
                         .build());
-                    firmsUpdated++;
+                    firmUpdates++;
                 } else {
                     result.getExists().add(ComparisonResultDto.ItemInfo.builder()
                         .type("firm")
@@ -166,7 +166,7 @@ public class DataProviderService {
                         .name(pdaFirm.getFirmName())
                         .dbId(dbFirm.getId())
                         .build());
-                    firmsExists++;
+                    firmExists++;
                 }
             }
         }
@@ -182,7 +182,7 @@ public class DataProviderService {
                     .name(firm.getName())
                     .dbId(firm.getId())
                     .build());
-                firmsDeleted++;
+                firmDeletes++;
             }
         }
 
@@ -209,7 +209,7 @@ public class DataProviderService {
                     .code(officeCode)
                     .name(officeName)
                     .build());
-                officesCreated++;
+                officeCreates++;
             } else {
                 // Check if office needs updating
                 boolean needsUpdate = !dbOffice.getFirm().getId().equals(parentFirm.getId()) ||
@@ -222,7 +222,7 @@ public class DataProviderService {
                         .name(officeName)
                         .dbId(dbOffice.getId())
                         .build());
-                    officesUpdated++;
+                    officeUpdates++;
                 } else {
                     result.getExists().add(ComparisonResultDto.ItemInfo.builder()
                         .type("office")
@@ -230,7 +230,7 @@ public class DataProviderService {
                         .name(officeName)
                         .dbId(dbOffice.getId())
                         .build());
-                    officesExists++;
+                    officeExists++;
                 }
             }
         }
@@ -248,19 +248,19 @@ public class DataProviderService {
                     .name(officeName)
                     .dbId(office.getId())
                     .build());
-                officesDeleted++;
+                officeDeletes++;
             }
         }
 
         // Set the separate counts in the result
-        result.setFirmsCreated(firmsCreated);
-        result.setFirmsUpdated(firmsUpdated);
-        result.setFirmsDeleted(firmsDeleted);
-        result.setFirmsExists(firmsExists);
-        result.setOfficesCreated(officesCreated);
-        result.setOfficesUpdated(officesUpdated);
-        result.setOfficesDeleted(officesDeleted);
-        result.setOfficesExists(officesExists);
+        result.setFirmCreates(firmCreates);
+        result.setFirmUpdates(firmUpdates);
+        result.setFirmDeletes(firmDeletes);
+        result.setFirmExists(firmExists);
+        result.setOfficeCreates(officeCreates);
+        result.setOfficeUpdates(officeUpdates);
+        result.setOfficeDeletes(officeDeletes);
+        result.setOfficeExists(officeExists);
 
         return result;
     }
@@ -380,11 +380,23 @@ public class DataProviderService {
                         if (!pdaFirm.getParentFirmNumber().equals(currentParentCode)) {
                             Firm parentFirm = dbFirms.get(pdaFirm.getParentFirmNumber());
                             if (parentFirm != null) {
-                                firm.setParentFirm(parentFirm);
-                                firmRepository.save(firm);
-                                log.info("Set parent for firm {}: {} -> {}", firmCode, currentParentCode, pdaFirm.getParentFirmNumber());
+                                try {
+                                    firm.setParentFirm(parentFirm);
+                                    firmRepository.save(firm);
+                                    log.info("Set parent for firm {}: {} -> {}", firmCode, currentParentCode, pdaFirm.getParentFirmNumber());
+                                } catch (Exception e) {
+                                    log.error("Failed to set parent {} for firm {}: {} - clearing parent reference",
+                                        pdaFirm.getParentFirmNumber(), firmCode, e.getMessage());
+                                    firm.setParentFirm(null);
+                                    firmRepository.save(firm);
+                                    result.addWarning("Invalid parent firm " + pdaFirm.getParentFirmNumber() +
+                                        " for firm " + firmCode + ": " + e.getMessage());
+                                }
                             } else {
-                                log.warn("Parent firm {} not found for firm {}", pdaFirm.getParentFirmNumber(), firmCode);
+                                log.warn("Parent firm {} not found for firm {} - clearing parent reference",
+                                    pdaFirm.getParentFirmNumber(), firmCode);
+                                firm.setParentFirm(null);
+                                firmRepository.save(firm);
                                 result.addWarning("Parent firm " + pdaFirm.getParentFirmNumber() + " not found for firm " + firmCode);
                             }
                         }
@@ -503,11 +515,11 @@ public class DataProviderService {
     }
 
     private void updateOffice(Office office, PdaOfficeData pdaOffice, Firm firm, PdaSyncResultDto result) {
-        new UpdateOfficeCommand(officeRepository, userProfileRepository, office, pdaOffice, firm).execute(result);
+        new UpdateOfficeCommand(officeRepository, office, pdaOffice, firm).execute(result);
     }
 
     private void deactivateOffice(Office office, PdaSyncResultDto result) {
-        new DeactivateOfficeCommand(officeRepository, userProfileRepository, office).execute(result);
+        new DeleteOfficeCommand(officeRepository, userProfileRepository, office).execute(result);
     }
 
     /**

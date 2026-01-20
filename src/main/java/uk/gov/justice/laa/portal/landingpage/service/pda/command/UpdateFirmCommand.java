@@ -62,7 +62,19 @@ public class UpdateFirmCommand implements PdaSyncCommand {
 
                 if (newParentCode != null) {
                     Firm parentFirm = firmRepository.findByCode(newParentCode);
-                    firm.setParentFirm(parentFirm);
+                    if (parentFirm == null) {
+                        log.warn("Parent firm {} not found for firm {} - setting to null", newParentCode, pdaFirm.getFirmNumber());
+                        result.addWarning("Parent firm " + newParentCode + " not found for firm " + pdaFirm.getFirmNumber());
+                        firm.setParentFirm(null);
+                    } else if (parentFirm.getType() == FirmType.ADVOCATE) {
+                        log.warn("Parent firm {} is ADVOCATE type for firm {} - setting to null (ADVOCATE firms cannot be parents)",
+                            newParentCode, pdaFirm.getFirmNumber());
+                        result.addWarning("Parent firm " + newParentCode + " is ADVOCATE type and cannot be a parent for firm " +
+                            pdaFirm.getFirmNumber());
+                        firm.setParentFirm(null);
+                    } else {
+                        firm.setParentFirm(parentFirm);
+                    }
                 } else {
                     firm.setParentFirm(null);
                 }

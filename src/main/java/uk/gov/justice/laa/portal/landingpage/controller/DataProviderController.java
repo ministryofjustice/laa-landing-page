@@ -49,9 +49,9 @@ public class DataProviderController {
                     .writeValueAsString(result);
 
             log.info("Returning comparison - Firms: {} creates, {} updates, {} deletes, {} exists",
-                result.getFirmsCreated(), result.getFirmsUpdated(), result.getFirmsDeleted(), result.getFirmsExists());
+                result.getFirmCreates(), result.getFirmUpdates(), result.getFirmDeletes(), result.getFirmExists());
             log.info("Returning comparison - Offices: {} creates, {} updates, {} deletes, {} exists",
-                result.getOfficesCreated(), result.getOfficesUpdated(), result.getOfficesDeleted(), result.getOfficesExists());
+                result.getOfficeCreates(), result.getOfficeUpdates(), result.getOfficeDeletes(), result.getOfficeExists());
             log.info("Returning comparison - Total: {} creates, {} updates, {} deletes, {} exists",
                 result.getCreated().size(),
                 result.getUpdated().size(),

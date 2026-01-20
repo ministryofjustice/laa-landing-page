@@ -4,17 +4,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.PdaOfficeData;
 import uk.gov.justice.laa.portal.landingpage.dto.PdaSyncResultDto;
-import uk.gov.justice.laa.portal.landingpage.entity.Address;
+import uk.gov.justice.laa.portal.landingpage.entity.Office.Address;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
 @Slf4j
 @RequiredArgsConstructor
 public class UpdateOfficeCommand {
     private final OfficeRepository officeRepository;
-    private final UserProfileRepository userProfileRepository;
     private final Office office;
     private final PdaOfficeData pdaOffice;
     private final Firm firm;
@@ -35,32 +33,25 @@ public class UpdateOfficeCommand {
             }
 
             Address address = office.getAddress();
-            if (!equals(address.getAddressLine1(), pdaOffice.getAddressLine1())) {
-                address.setAddressLine1(pdaOffice.getAddressLine1());
+            if (!equals(address.getAddressLine1(), emptyToNull(pdaOffice.getAddressLine1()))) {
+                address.setAddressLine1(emptyToNull(pdaOffice.getAddressLine1()));
                 hasChanges = true;
             }
-            if (!equals(address.getAddressLine2(), pdaOffice.getAddressLine2())) {
-                address.setAddressLine2(pdaOffice.getAddressLine2());
+            if (!equals(address.getAddressLine2(), emptyToNull(pdaOffice.getAddressLine2()))) {
+                address.setAddressLine2(emptyToNull(pdaOffice.getAddressLine2()));
                 hasChanges = true;
             }
-            if (!equals(address.getAddressLine3(), pdaOffice.getAddressLine3())) {
-                address.setAddressLine3(pdaOffice.getAddressLine3());
+            if (!equals(address.getAddressLine3(), emptyToNull(pdaOffice.getAddressLine3()))) {
+                address.setAddressLine3(emptyToNull(pdaOffice.getAddressLine3()));
                 hasChanges = true;
             }
-            if (!equals(address.getCity(), pdaOffice.getCity())) {
-                address.setCity(pdaOffice.getCity());
+            if (!equals(address.getCity(), emptyToNull(pdaOffice.getCity()))) {
+                address.setCity(emptyToNull(pdaOffice.getCity()));
                 hasChanges = true;
             }
-            if (!equals(address.getPostcode(), pdaOffice.getPostcode())) {
-                address.setPostcode(pdaOffice.getPostcode());
+            if (!equals(address.getPostcode(), emptyToNull(pdaOffice.getPostcode()))) {
+                address.setPostcode(emptyToNull(pdaOffice.getPostcode()));
                 hasChanges = true;
-            }
-
-            // Reactivate if inactive
-            if (!office.isActive()) {
-                office.setActive(true);
-                hasChanges = true;
-                log.info("Reactivating office: {}", office.getCode());
             }
 
             if (hasChanges) {
@@ -78,5 +69,9 @@ public class UpdateOfficeCommand {
     private boolean equals(String s1, String s2) {
         if (s1 == null) return s2 == null;
         return s1.equals(s2);
+    }
+
+    private String emptyToNull(String value) {
+        return (value == null || value.trim().isEmpty()) ? null : value;
     }
 }

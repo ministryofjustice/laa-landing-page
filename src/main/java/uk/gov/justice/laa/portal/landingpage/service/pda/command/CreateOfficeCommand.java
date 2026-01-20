@@ -26,11 +26,11 @@ public class CreateOfficeCommand implements PdaSyncCommand {
                 .code(pdaOffice.getOfficeAccountNo())
                 .firm(firm)
                 .address(Office.Address.builder()
-                    .addressLine1(pdaOffice.getAddressLine1())
-                    .addressLine2(pdaOffice.getAddressLine2())
-                    .addressLine3(pdaOffice.getAddressLine3())
-                    .city(pdaOffice.getCity())
-                    .postcode(pdaOffice.getPostcode())
+                    .addressLine1(emptyToNull(pdaOffice.getAddressLine1()))
+                    .addressLine2(emptyToNull(pdaOffice.getAddressLine2()))
+                    .addressLine3(emptyToNull(pdaOffice.getAddressLine3()))
+                    .city(emptyToNull(pdaOffice.getCity()))
+                    .postcode(emptyToNull(pdaOffice.getPostcode()))
                     .build())
                 .build();
 
@@ -42,5 +42,9 @@ public class CreateOfficeCommand implements PdaSyncCommand {
             log.error("Failed to create office {}: {}", pdaOffice.getOfficeAccountNo(), e.getMessage());
             result.addError("Failed to create office " + pdaOffice.getOfficeAccountNo() + ": " + e.getMessage());
         }
+    }
+
+    private String emptyToNull(String value) {
+        return (value == null || value.trim().isEmpty()) ? null : value;
     }
 }

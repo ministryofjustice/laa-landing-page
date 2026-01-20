@@ -58,6 +58,7 @@ public class Office extends BaseEntity {
     @NoArgsConstructor
     @SuperBuilder
     @Getter
+    @Setter
     public static class Address {
 
         @Column(name = "address_line_1", nullable = true, length = 255)
