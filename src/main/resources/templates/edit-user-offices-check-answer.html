@@ -33,7 +33,10 @@
                                 (<span th:text="${office.code}"></span>)
                             </dd>
                             <dd class="govuk-summary-list__actions">
-                                <a th:href="@{/admin/users/edit/{id}/offices(id=${user.id})}" class="govuk-link">Change</a>
+                                <a th:href="@{/admin/users/edit/{id}/offices(id=${user.id})}" class="govuk-link">
+                                    Change
+                                    <span class="govuk-visually-hidden"> office</span>
+                                </a>
                             </dd>
                         </div>
                     </dl>
@@ -43,7 +46,10 @@
                                 <span>Access to All Offices</span>
                             </dd>
                             <dd class="govuk-summary-list__actions">
-                                <a th:href="@{/admin/users/edit/{id}/offices(id=${user.id})}" class="govuk-link">Change</a>
+                                <a th:href="@{/admin/users/edit/{id}/offices(id=${user.id})}" class="govuk-link">
+                                    Change
+                                    <span class="govuk-visually-hidden"> access to all offices</span>
+                                </a>
                             </dd>
                         </div>
                         <div class="govuk-summary-list__row" th:if="${hasNoOffices}" >

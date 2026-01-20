@@ -29,6 +29,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
@@ -1014,7 +1015,7 @@ public class AccessControlServiceTest {
     public void testUserHasAuthzRole_WithMatchingRole() {
         UUID userId = UUID.randomUUID();
         AppRole globalAdminRole = AppRole.builder()
-                .name("Global Admin")
+                .name(AuthzRole.GLOBAL_ADMIN.getRoleName())
                 .authzRole(true)
                 .build();
         EntraUser user = EntraUser.builder()
@@ -1030,7 +1031,7 @@ public class AccessControlServiceTest {
                 .build();
         user.getUserProfiles().add(userProfile);
 
-        boolean result = AccessControlService.userHasAuthzRole(user, "Global Admin");
+        boolean result = AccessControlService.userHasAuthzRole(user, AuthzRole.GLOBAL_ADMIN.getRoleName());
         Assertions.assertThat(result).isTrue();
     }
 
@@ -1054,7 +1055,7 @@ public class AccessControlServiceTest {
                 .build();
         user.getUserProfiles().add(userProfile);
 
-        boolean result = AccessControlService.userHasAuthzRole(user, "Global Admin");
+        boolean result = AccessControlService.userHasAuthzRole(user, AuthzRole.GLOBAL_ADMIN.getRoleName());
         Assertions.assertThat(result).isFalse();
     }
 
@@ -1062,7 +1063,7 @@ public class AccessControlServiceTest {
     public void testUserHasAuthzRole_CaseInsensitive() {
         UUID userId = UUID.randomUUID();
         AppRole globalAdminRole = AppRole.builder()
-                .name("Global Admin")
+                .name(AuthzRole.GLOBAL_ADMIN.getRoleName())
                 .authzRole(true)
                 .build();
         EntraUser user = EntraUser.builder()
@@ -1086,7 +1087,7 @@ public class AccessControlServiceTest {
     public void testUserHasAuthzRole_InactiveProfile() {
         UUID userId = UUID.randomUUID();
         AppRole globalAdminRole = AppRole.builder()
-                .name("Global Admin")
+                .name(AuthzRole.GLOBAL_ADMIN.getRoleName())
                 .authzRole(true)
                 .build();
         EntraUser user = EntraUser.builder()
@@ -1102,7 +1103,7 @@ public class AccessControlServiceTest {
                 .build();
         user.getUserProfiles().add(inactiveProfile);
 
-        boolean result = AccessControlService.userHasAuthzRole(user, "Global Admin");
+        boolean result = AccessControlService.userHasAuthzRole(user, AuthzRole.GLOBAL_ADMIN.getRoleName());
         Assertions.assertThat(result).isFalse();
     }
 

@@ -798,6 +798,11 @@ public class UserController {
         return "add-user-created";
     }
 
+    @GetMapping("/user/create/cancel/confirmation")
+    public String confirmCancelCreateUser() {
+        return "cancel-add-user-confirmation";
+    }
+
     @GetMapping("/user/create/cancel")
     public String cancelUserCreation(HttpSession session) {
         session.removeAttribute("user");
