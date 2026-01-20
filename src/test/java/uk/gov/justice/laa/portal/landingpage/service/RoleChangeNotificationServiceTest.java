@@ -114,7 +114,6 @@ class RoleChangeNotificationServiceTest {
         userProfile = UserProfile.builder()
                 .id(UUID.randomUUID())
                 .legacyUserId(UUID.randomUUID())
-                .userType(UserType.EXTERNAL)
                 .entraUser(entraUser)
                 .firm(firm)
                 .appRoles(Set.of(puiRole1, puiRole2, nonPuiRole))
@@ -135,16 +134,6 @@ class RoleChangeNotificationServiceTest {
         Set<String> unchangedRoles = Set.of(puiRole1.getCcmsCode());
 
         boolean result = roleChangeNotificationService.sendMessage(userProfile, unchangedRoles, unchangedRoles);
-
-        assertThat(result).isTrue();
-        verify(sqsClient, never()).sendMessage(any(SendMessageRequest.class));
-    }
-
-    @Test
-    void shouldNotSendMessage_whenUserIsInternal() {
-        userProfile.setUserType(UserType.INTERNAL);
-
-        boolean result = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
 
         assertThat(result).isTrue();
         verify(sqsClient, never()).sendMessage(any(SendMessageRequest.class));
