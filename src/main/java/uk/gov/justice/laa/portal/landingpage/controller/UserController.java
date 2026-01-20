@@ -40,7 +40,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.beans.factory.annotation.Value;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -2371,14 +2370,14 @@ public class UserController {
             @RequestParam(value = "selectedFirmId", required = false) String selectedFirmId,
             @RequestParam(value = "selectedFirmName", required = false) String selectedFirmName,
             @RequestParam(value = "reason", required = false) String reason,
-            Model model) {
+            Model model, RedirectAttributes redirectAttributes) {
         try {
             Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
 
             if (optionalUser.isEmpty()) {
                 log.warn("User not found for reassignment: {}", id);
                 model.addAttribute("errorMessage", "User not found");
-                return "error";
+                return "errors/error-generic";
             }
 
             UserProfileDto user = optionalUser.get();
@@ -2386,7 +2385,16 @@ public class UserController {
             if (user.getUserType() != UserType.EXTERNAL) {
                 log.warn("Attempted to reassign internal user: {}", id);
                 model.addAttribute("errorMessage", "Only external users can be reassigned to different firms");
-                return "error";
+                return "errors/error-generic";
+            }
+
+            if (!user.getAppRoles().isEmpty()) {
+                log.warn("App roles not removed prior to firm switch for user: {}", id);
+                redirectAttributes.addFlashAttribute("errorMessage",
+                        "All app assignments must be removed before assigning a different firm to the account");
+                model.addAttribute("errorMessage",
+                        "All app assignments must be removed before assigning a different firm to the account");
+                return "redirect:/admin/users/manage/" + id;
             }
 
             FirmReassignmentForm form = new FirmReassignmentForm();
@@ -2407,7 +2415,7 @@ public class UserController {
         } catch (Exception e) {
             log.error("Error loading firm reassignment page for user {}: {}", id, e.getMessage(), e);
             model.addAttribute("errorMessage", "An error occurred while loading the page");
-            return "error";
+            return "errors/error-generic";
         }
     }
 
@@ -2487,7 +2495,7 @@ public class UserController {
             if (optionalUser.isEmpty()) {
                 log.warn("User not found for reassignment: {}", id);
                 model.addAttribute("errorMessage", "User not found");
-                return "error";
+                return "errors/error-generic";
             }
 
             UserProfileDto user = optionalUser.get();
@@ -2495,7 +2503,14 @@ public class UserController {
             if (user.getUserType() != UserType.EXTERNAL) {
                 log.warn("Attempted to reassign internal user: {}", id);
                 model.addAttribute("errorMessage", "Only external users can be reassigned to different firms");
-                return "error";
+                return "errors/error-generic";
+            }
+
+            if (!user.getAppRoles().isEmpty()) {
+                log.warn("App roles not removed prior to firm switch for user: {}", id);
+                model.addAttribute("errorMessage",
+                        "All app assignments must be removed before assigning a different firm to the account");
+                return "errors/error-generic";
             }
 
             ReassignmentReasonForm reasonForm = new ReassignmentReasonForm();
@@ -2513,7 +2528,7 @@ public class UserController {
         } catch (Exception e) {
             log.error("Error loading reason page for user {}: {}", id, e.getMessage(), e);
             model.addAttribute("errorMessage", "An error occurred while loading the page");
-            return "error";
+            return "errors/error-generic";
         }
     }
 
@@ -2546,7 +2561,7 @@ public class UserController {
             if (user.getUserType() != UserType.EXTERNAL) {
                 log.warn("Attempted to reassign internal user: {}", id);
                 model.addAttribute("errorMessage", "Only external users can be reassigned to different firms");
-                return "error";
+                return "errors/error-generic";
             }
 
             if (bindingResult.hasFieldErrors("reason")) {
@@ -2589,7 +2604,7 @@ public class UserController {
             if (optionalUser.isEmpty()) {
                 log.warn("User not found for reassignment: {}", id);
                 model.addAttribute("errorMessage", "User not found");
-                return "error";
+                return "errors/error-generic";
             }
 
             UserProfileDto user = optionalUser.get();
@@ -2597,7 +2612,13 @@ public class UserController {
             if (user.getUserType() != UserType.EXTERNAL) {
                 log.warn("Attempted to reassign internal user: {}", id);
                 model.addAttribute("errorMessage", "Only external users can be reassigned to different firms");
-                return "error";
+                return "errors/error-generic";
+            }
+
+            if (!user.getAppRoles().isEmpty()) {
+                log.warn("App roles not removed prior to firm switch for user: {}", id);
+                model.addAttribute("errorMessage", "All app assignments must be removed before assigning a different firm to the account");
+                return "errors/error-generic";
             }
 
             model.addAttribute("user", user);
@@ -2610,7 +2631,7 @@ public class UserController {
         } catch (Exception e) {
             log.error("Error loading check answers page for user {}: {}", id, e.getMessage(), e);
             model.addAttribute("errorMessage", "An error occurred while loading the page");
-            return "error";
+            return "errors/error-generic";
         }
     }
 
@@ -2709,7 +2730,7 @@ public class UserController {
             if (optionalUser.isEmpty()) {
                 log.warn("User not found for confirmation page: {}", id);
                 model.addAttribute("errorMessage", "User not found");
-                return "error";
+                return "errors/error-generic";
             }
 
             UserProfileDto user = optionalUser.get();
@@ -2720,7 +2741,7 @@ public class UserController {
         } catch (Exception e) {
             log.error("Error loading confirmation page for user {}: {}", id, e.getMessage(), e);
             model.addAttribute("errorMessage", "An error occurred while loading the page");
-            return "error";
+            return "errors/error-generic";
         }
     }
 
