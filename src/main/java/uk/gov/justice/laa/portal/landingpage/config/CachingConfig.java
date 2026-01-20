@@ -15,13 +15,15 @@ public class CachingConfig {
 
     public static final String TECH_SERVICES_DETAILS_CACHE = "tech_services_details_cache";
     public static final String LIST_OF_FIRMS_CACHE = "all_firms_cache";
+    public static final String LIST_OF_APPS_CACHE = "all_apps_cache";
 
     @Bean
     public CacheManager cacheManager() {
         SimpleCacheManager cacheManager = new SimpleCacheManager();
         cacheManager.setCaches(List.of(
                 new ConcurrentMapCache(TECH_SERVICES_DETAILS_CACHE),
-                new ConcurrentMapCache(LIST_OF_FIRMS_CACHE)
+                new ConcurrentMapCache(LIST_OF_FIRMS_CACHE),
+                new ConcurrentMapCache(LIST_OF_APPS_CACHE)
                 )
         );
         return cacheManager;
