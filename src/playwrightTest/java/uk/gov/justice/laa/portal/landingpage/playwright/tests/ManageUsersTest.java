@@ -48,7 +48,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
 
     @Test
     @DisplayName("Create a new provider admin user with multi-firm access")
-    void createMultiFirmUserAndVerifyItAppears() throws InterruptedException {
+    void createMultiFirmUserAndVerifyItAppears() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
 
         manageUsersPage.clickCreateUser();
@@ -142,7 +142,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickOfficesTab();
         manageUsersPage.clickOfficeChange();
         assertTrue(page.url().contains("/admin/users/edit/"));
-        List<String> offices = List.of("Automation Office 1, City1, 12345 ()", "Automation Office 2, City2, 23456 ()");
+        List<String> offices = List.of("Automation Office 1, City1, 12345 (THREE)", "Automation Office 2, City2, 23456 (FOUR)");
         manageUsersPage.checkSelectedOffices(offices);
         manageUsersPage.clickContinueUserDetails();
         manageUsersPage.clickConfirmButton();
