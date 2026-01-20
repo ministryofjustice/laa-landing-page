@@ -40,7 +40,7 @@ public class ClaimEnrichmentResponse implements Serializable {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class ResponseAction {
+    public static class ResponseAction implements Serializable{
         @JsonProperty("@odata.type")
         private String odataType;
         
