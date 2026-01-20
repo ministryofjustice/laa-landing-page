@@ -76,6 +76,22 @@ public class ManageUsersTest extends BaseFrontEndTest {
     }
 
     @Test
+    @DisplayName("Create a new provider admin user with non multi-firm access")
+    void verifyUserDetails() {
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+        manageUsersPage.clickCreateUser();
+        final String email = manageUsersPage.fillInUserDetails(true);
+        manageUsersPage.selectMultiFirmAccess(false);
+        manageUsersPage.searchAndSelectFirmByCode("90001");
+        manageUsersPage.clickContinueFirmSelectPage();
+        manageUsersPage.clickConfirmNewUserButton();
+        manageUsersPage.clickGoBackToManageUsers();
+        assertTrue(manageUsersPage.searchAndVerifyUser(email));
+        manageUsersPage.clickManageUser();
+        manageUsersPage.verifyUserDetailsPopulated(email, "Test", "User", "90001", "No");
+    }
+
+    @Test
     @DisplayName("Navigate from users list into manage-user page")
     void verifyNavigateToUserDetailsPage() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
