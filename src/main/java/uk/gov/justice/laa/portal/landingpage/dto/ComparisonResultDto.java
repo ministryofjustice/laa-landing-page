@@ -23,7 +23,18 @@ public class ComparisonResultDto {
     private List<ItemInfo> deleted = new ArrayList<>();
 
     @Builder.Default
-    private List<ItemInfo> matched = new ArrayList<>();
+    private List<ItemInfo> exists = new ArrayList<>();
+
+    // Separate counts for firms and offices
+    private int firmsCreated;
+    private int firmsUpdated;
+    private int firmsDeleted;
+    private int firmsExists;
+
+    private int officesCreated;
+    private int officesUpdated;
+    private int officesDeleted;
+    private int officesExists;
 
     /**
      * Minimal info for each item (firm or office).

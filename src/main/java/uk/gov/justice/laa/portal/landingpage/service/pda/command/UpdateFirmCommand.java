@@ -37,17 +37,31 @@ public class UpdateFirmCommand implements PdaSyncCommand {
 
             // Update name if changed
             if (!firm.getName().equals(pdaFirm.getFirmName())) {
+                log.info("Updating firm {}: name '{}' -> '{}'",
+                    pdaFirm.getFirmNumber(), firm.getName(), pdaFirm.getFirmName());
                 firm.setName(pdaFirm.getFirmName());
                 updated = true;
             }
 
             // Update parent if changed
             String currentParentCode = firm.getParentFirm() != null ? firm.getParentFirm().getCode() : null;
-            if ((pdaFirm.getParentFirmNumber() == null && currentParentCode != null)
-                || (pdaFirm.getParentFirmNumber() != null && !pdaFirm.getParentFirmNumber().equals(currentParentCode))) {
+            String newParentCode = (pdaFirm.getParentFirmNumber() != null && !pdaFirm.getParentFirmNumber().trim().isEmpty())
+                ? pdaFirm.getParentFirmNumber().trim() : null;
 
-                if (pdaFirm.getParentFirmNumber() != null && !pdaFirm.getParentFirmNumber().isEmpty()) {
-                    Firm parentFirm = firmRepository.findByCode(pdaFirm.getParentFirmNumber());
+            // Debug: Check if equals is working properly
+            boolean areEqual = equals(currentParentCode, newParentCode);
+            if (currentParentCode == null && newParentCode == null && !areEqual) {
+                log.error("DEBUG: equals() returning false for two null values! This is a bug.");
+            }
+
+            if (!areEqual) {
+                log.info("Updating firm {}: parentFirm '{}' -> '{}'",
+                    pdaFirm.getFirmNumber(),
+                    currentParentCode != null ? currentParentCode : "null",
+                    newParentCode != null ? newParentCode : "null");
+
+                if (newParentCode != null) {
+                    Firm parentFirm = firmRepository.findByCode(newParentCode);
                     firm.setParentFirm(parentFirm);
                 } else {
                     firm.setParentFirm(null);
@@ -56,13 +70,23 @@ public class UpdateFirmCommand implements PdaSyncCommand {
             }
 
             if (updated) {
-                // firmRepository.save(firm);  // COMMENTED OUT FOR TESTING
+                firmRepository.save(firm);
                 result.setFirmsUpdated(result.getFirmsUpdated() + 1);
-                log.info("Would update firm: {} (name: {})", pdaFirm.getFirmNumber(), pdaFirm.getFirmName());
+                log.info("Firm {} update complete", pdaFirm.getFirmNumber());
             }
         } catch (Exception e) {
             log.error("Failed to update firm {}: {}", pdaFirm.getFirmNumber(), e.getMessage());
             result.addError("Failed to update firm " + pdaFirm.getFirmNumber() + ": " + e.getMessage());
         }
+    }
+
+    private boolean equals(String s1, String s2) {
+        if (s1 == null && s2 == null) {
+            return true;
+        }
+        if (s1 == null || s2 == null) {
+            return false;
+        }
+        return s1.equals(s2);
     }
 }

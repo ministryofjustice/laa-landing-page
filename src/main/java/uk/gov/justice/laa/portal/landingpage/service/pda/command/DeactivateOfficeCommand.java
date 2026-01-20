@@ -25,18 +25,32 @@ public class DeactivateOfficeCommand implements PdaSyncCommand {
     public void execute(PdaSyncResultDto result) {
         try {
             // CRITICAL RULE: MUST remove user associations before deleting office
-            // removeUserProfileOfficeAssociations(office);  // COMMENTED OUT FOR TESTING
+            removeUserProfileOfficeAssociations(office);
             int associationsCount = countUserProfileOfficeAssociations(office);
             log.info("Would remove {} user profile associations for office: {}", associationsCount, office.getCode());
             result.addWarning("Office " + office.getCode() + " being deleted: "
                 + associationsCount + " user associations will be removed");
 
-            // officeRepository.delete(office);  // COMMENTED OUT FOR TESTING - could delete instead
+            officeRepository.delete(office);
             result.setOfficesDeactivated(result.getOfficesDeactivated() + 1);
             log.info("Would deactivate/delete office: {} (firm: {})", office.getCode(), office.getFirm().getCode());
         } catch (Exception e) {
             log.error("Failed to deactivate office {}: {}", office.getCode(), e.getMessage());
             result.addError("Failed to deactivate office " + office.getCode() + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * Removes all user profile associations for an office before deletion.
+     */
+    private void removeUserProfileOfficeAssociations(Office office) {
+        List<UserProfile> profiles = userProfileRepository.findAll();
+        for (UserProfile profile : profiles) {
+            if (profile.getOffices() != null && profile.getOffices().contains(office)) {
+                profile.getOffices().remove(office);
+                userProfileRepository.save(profile);
+                log.info("Removed office {} from user profile {}", office.getCode(), profile.getId());
+            }
         }
     }
 

@@ -34,7 +34,7 @@ public class CreateOfficeCommand implements PdaSyncCommand {
                     .build())
                 .build();
 
-            // officeRepository.save(office);  // COMMENTED OUT FOR TESTING
+            officeRepository.save(office);
             result.setOfficesCreated(result.getOfficesCreated() + 1);
             log.info("Would create office: {} for firm {} (address: {}, {})",
                 pdaOffice.getOfficeAccountNo(), firm.getCode(), pdaOffice.getAddressLine1(), pdaOffice.getCity());

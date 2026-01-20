@@ -48,15 +48,17 @@ public class DataProviderController {
             String json = objectMapper.writerWithDefaultPrettyPrinter()
                     .writeValueAsString(result);
 
-            log.info("Returning comparison: {} created, {} updated, {} deleted, {} matched",
+            log.info("Returning comparison - Firms: {} creates, {} updates, {} deletes, {} exists",
+                result.getFirmsCreated(), result.getFirmsUpdated(), result.getFirmsDeleted(), result.getFirmsExists());
+            log.info("Returning comparison - Offices: {} creates, {} updates, {} deletes, {} exists",
+                result.getOfficesCreated(), result.getOfficesUpdated(), result.getOfficesDeleted(), result.getOfficesExists());
+            log.info("Returning comparison - Total: {} creates, {} updates, {} deletes, {} exists",
                 result.getCreated().size(),
                 result.getUpdated().size(),
                 result.getDeleted().size(),
-                result.getMatched().size());
+                result.getExists().size());
 
-            return ResponseEntity.ok()
-                    .header("Content-Type", "application/json")
-                    .body(json);
+            return ResponseEntity.ok(json);
         } catch (Exception e) {
             log.error("Error comparing provider offices", e);
             return ResponseEntity.internalServerError()

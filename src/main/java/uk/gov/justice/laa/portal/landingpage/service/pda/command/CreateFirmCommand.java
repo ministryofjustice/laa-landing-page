@@ -27,17 +27,12 @@ public class CreateFirmCommand implements PdaSyncCommand {
                 .type(FirmType.valueOf(pdaFirm.getFirmType().toUpperCase().replace(" ", "_")))
                 .build();
 
-            // Handle parent firm if exists
-            if (pdaFirm.getParentFirmNumber() != null && !pdaFirm.getParentFirmNumber().isEmpty()) {
-                Firm parentFirm = firmRepository.findByCode(pdaFirm.getParentFirmNumber());
-                if (parentFirm != null) {
-                    firm.setParentFirm(parentFirm);
-                }
-            }
+            // Note: Parent firm is NOT set here to avoid circular dependencies
+            // Parent relationships are set in a second pass after all firms are created
 
-            // firmRepository.save(firm);  // COMMENTED OUT FOR TESTING
+            firmRepository.save(firm);
             result.setFirmsCreated(result.getFirmsCreated() + 1);
-            log.info("Would create firm: {} (name: {}, type: {})",
+            log.info("Created firm: {} (name: {}, type: {})",
                 pdaFirm.getFirmNumber(), pdaFirm.getFirmName(), pdaFirm.getFirmType());
         } catch (Exception e) {
             log.error("Failed to create firm {}: {}", pdaFirm.getFirmNumber(), e.getMessage());
