@@ -76,6 +76,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserFirmReassignmentEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
@@ -7599,4 +7600,207 @@ class UserServiceTest {
             assertThat(result).isEmpty();
         }
     }
+
+    @Test
+    void shouldReassignUserFirmSuccessfully() {
+        final ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
+
+        final UUID userProfileId = UUID.randomUUID();
+        final UUID entraUserId = UUID.randomUUID();
+        final UUID newFirmId = UUID.randomUUID();
+        final UUID oldFirmId = UUID.randomUUID();
+        final UUID performedById = UUID.randomUUID();
+        final UUID oldLegacyUserId = UUID.randomUUID();
+
+
+        Firm oldFirm = Firm.builder().id(oldFirmId).name("OldFirm").code("OLD_FIRM").build();
+        Firm newFirm = Firm.builder().id(newFirmId).name("NewFirm").code("NEW_FIRM").build();
+        EntraUser entraUser = EntraUser.builder()
+                .id(entraUserId)
+                .email("user@example.com")
+                .build();
+        UserProfile userProfile = UserProfile.builder().id(userProfileId)
+                .userType(UserType.EXTERNAL).firm(oldFirm)
+                .legacyUserId(oldLegacyUserId)
+                .appRoles(Collections.emptySet())
+                .offices(Collections.emptySet())
+                .entraUser(entraUser)
+                .build();
+
+        when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+        when(mockFirmRepository.findById(newFirmId)).thenReturn(Optional.of(newFirm));
+
+        userService.reassignUserFirm(userProfileId.toString(), newFirmId, "Valid reason", performedById, "AdminUser");
+
+        assertThat(userProfile.getFirm()).isEqualTo(newFirm);
+        assertThat(userProfile.getOffices()).isEmpty();
+        assertThat(userProfile.getLegacyUserId()).isNotNull();
+        assertThat(userProfile.getLegacyUserId()).isNotEqualTo(oldLegacyUserId);
+        verify(mockUserProfileRepository).save(userProfile);
+        verify(mockEventService).logEvent(any(UserFirmReassignmentEvent.class));
+
+        List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
+        assertThat(infoLogs.size()).isEqualTo(1);
+        assertThat(infoLogs.getFirst().getFormattedMessage())
+                .contains(String.format("User profile %s reassigned from firm %s to firm %s",
+                        userProfileId, oldFirm.getName(), newFirm.getName()));
+
+    }
+
+    @Test
+    void shouldThrowWhenUserProfileIdIsNull() {
+        assertThatThrownBy(() ->
+                userService.reassignUserFirm(null, UUID.randomUUID(), "reason", UUID.randomUUID(), "AdminUser")
+        ).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("User profile ID is required");
+    }
+
+    @Test
+    void shouldThrowWhenNewFirmIdIsNull() {
+        assertThatThrownBy(() ->
+                userService.reassignUserFirm(UUID.randomUUID().toString(), null, "reason", UUID.randomUUID(), "AdminUser")
+        ).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("New firm ID is required");
+    }
+
+    @Test
+    void shouldThrowWhenReasonIsEmpty() {
+        assertThatThrownBy(() ->
+                userService.reassignUserFirm(UUID.randomUUID().toString(), UUID.randomUUID(), "   ", UUID.randomUUID(), "AdminUser")
+        ).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Reason for reassignment is required");
+    }
+
+    @Test
+    void shouldThrowWhenUserProfileNotFound() {
+        when(mockUserProfileRepository.findById(any(UUID.class))).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() ->
+                userService.reassignUserFirm(UUID.randomUUID().toString(), UUID.randomUUID(), "reason", UUID.randomUUID(), "AdminUser")
+        ).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("User profile not found");
+    }
+
+    @Test
+    void shouldThrowWhenUserTypeIsNotExternal() {
+        final UUID userProfileId = UUID.randomUUID();
+        final UUID entraUserId = UUID.randomUUID();
+        final UUID newFirmId = UUID.randomUUID();
+        final UUID performedById = UUID.randomUUID();
+
+        EntraUser entraUser = EntraUser.builder()
+                .id(entraUserId)
+                .email("user@example.com")
+                .build();
+        UserProfile userProfile = UserProfile.builder().id(userProfileId)
+                .userType(UserType.INTERNAL)
+                .appRoles(Collections.emptySet())
+                .offices(Collections.emptySet())
+                .entraUser(entraUser)
+                .build();
+        userProfile.setUserType(UserType.INTERNAL);
+        when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+
+        assertThatThrownBy(() ->
+                userService.reassignUserFirm(userProfileId.toString(), newFirmId, "reason", performedById, "AdminUser")
+        ).isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Only external users");
+    }
+
+    @Test
+    void shouldThrowWhenNewFirmIsSameAsCurrent() {
+        final UUID userProfileId = UUID.randomUUID();
+        final UUID entraUserId = UUID.randomUUID();
+        final UUID oldFirmId = UUID.randomUUID();
+        final UUID performedById = UUID.randomUUID();
+        final UUID legacyUserId = UUID.randomUUID();
+
+
+        Firm oldFirm = Firm.builder().id(oldFirmId).name("OldFirm").code("OLD_FIRM").build();
+        EntraUser entraUser = EntraUser.builder()
+                .id(entraUserId)
+                .email("user@example.com")
+                .build();
+        UserProfile userProfile = UserProfile.builder().id(userProfileId)
+                .userType(UserType.EXTERNAL).firm(oldFirm)
+                .legacyUserId(legacyUserId)
+                .appRoles(Collections.emptySet())
+                .offices(Collections.emptySet())
+                .entraUser(entraUser)
+                .build();
+
+
+        when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+
+        assertThatThrownBy(() ->
+                userService.reassignUserFirm(userProfileId.toString(), oldFirmId, "reason", performedById, "AdminUser")
+        ).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("New firm must be different");
+    }
+
+    @Test
+    void shouldThrowWhenNewFirmNotFound() {
+        final UUID userProfileId = UUID.randomUUID();
+        final UUID entraUserId = UUID.randomUUID();
+        final UUID newFirmId = UUID.randomUUID();
+        final UUID oldFirmId = UUID.randomUUID();
+        final UUID performedById = UUID.randomUUID();
+        final UUID legacyUserId = UUID.randomUUID();
+
+
+        Firm oldFirm = Firm.builder().id(oldFirmId).name("OldFirm").code("OLD_FIRM").build();
+        EntraUser entraUser = EntraUser.builder()
+                .id(entraUserId)
+                .email("user@example.com")
+                .build();
+        UserProfile userProfile = UserProfile.builder().id(userProfileId)
+                .userType(UserType.EXTERNAL).firm(oldFirm)
+                .legacyUserId(legacyUserId)
+                .appRoles(Collections.emptySet())
+                .offices(Collections.emptySet())
+                .entraUser(entraUser)
+                .build();
+
+        when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+
+        assertThatThrownBy(() ->
+                userService.reassignUserFirm(userProfileId.toString(), newFirmId, "reason", performedById, "AdminUser")
+        ).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("New firm not found");
+    }
+
+    @Test
+    void shouldThrowWhenAppRolesNotEmpty() {
+
+        final UUID userProfileId = UUID.randomUUID();
+        final UUID entraUserId = UUID.randomUUID();
+        final UUID newFirmId = UUID.randomUUID();
+        final UUID oldFirmId = UUID.randomUUID();
+        final UUID performedById = UUID.randomUUID();
+        final UUID legacyUserId = UUID.randomUUID();
+
+
+        Firm oldFirm = Firm.builder().id(oldFirmId).name("OldFirm").code("OLD_FIRM").build();
+        Firm newFirm = Firm.builder().id(newFirmId).name("NewFirm").code("NEW_FIRM").build();
+        EntraUser entraUser = EntraUser.builder()
+                .id(entraUserId)
+                .email("user@example.com")
+                .build();
+        UserProfile userProfile = UserProfile.builder().id(userProfileId)
+                .userType(UserType.EXTERNAL).firm(oldFirm)
+                .legacyUserId(legacyUserId)
+                .appRoles(Set.of(AppRole.builder().name("ROLE_USER").build()))
+                .offices(Collections.emptySet())
+                .entraUser(entraUser)
+                .build();
+
+        when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+        when(mockFirmRepository.findById(newFirmId)).thenReturn(Optional.of(newFirm));
+
+        assertThatThrownBy(() ->
+                userService.reassignUserFirm(userProfileId.toString(), newFirmId, "reason", performedById, "AdminUser")
+        ).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("All app assignment must be removed");
+    }
+
 }

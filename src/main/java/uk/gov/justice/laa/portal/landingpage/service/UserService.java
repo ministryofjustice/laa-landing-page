@@ -1886,6 +1886,11 @@ public class UserService {
             throw new IllegalArgumentException("New firm not found: " + newFirmId);
         }
 
+        // Ensure all app roles were removed prior to reassign firm
+        if (!userProfile.getAppRoles().isEmpty()) {
+            throw new IllegalArgumentException("All app assignment must be removed prior to reassign firm");
+        }
+
         Firm newFirm = optionalNewFirm.get();
 
         // Update the user's firm
@@ -1896,6 +1901,10 @@ public class UserService {
         if (userProfile.getOffices() != null) {
             userProfile.getOffices().clear();
         }
+
+        // Set new legacy user id
+        final UUID oldLegacyId = userProfile.getLegacyUserId();
+        userProfile.setLegacyUserId(UUID.randomUUID());
 
         // Save the updated profile
         userProfileRepository.save(userProfile);
@@ -1914,7 +1923,7 @@ public class UserService {
 
         eventService.logEvent(reassignmentEvent);
 
-        logger.info("User profile {} reassigned from firm {} to firm {} by {} (Reason: {})",
-                userProfileId, oldFirm.getName(), newFirm.getName(), performedByName, reason);
+        logger.info("User profile {} reassigned from firm {} to firm {} and legacyId from {} to {} by {} (Reason: {})",
+                userProfileId, oldFirm.getName(), newFirm.getName(), oldLegacyId, userProfile.getLegacyUserId(), performedByName, reason);
     }
 }
