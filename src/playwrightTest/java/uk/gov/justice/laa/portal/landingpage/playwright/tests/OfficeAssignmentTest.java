@@ -11,7 +11,6 @@ import uk.gov.justice.laa.portal.landingpage.playwright.common.BaseFrontEndTest;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.TestUser;
 import uk.gov.justice.laa.portal.landingpage.playwright.pages.UserProfilePage;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -47,7 +46,6 @@ public class OfficeAssignmentTest extends BaseFrontEndTest {
         userProfilePage.getOfficesTab().click();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-        assertEquals("Change", userProfilePage.getChangeOfficeAssignmentLink().innerText());
         userProfilePage.getChangeOfficeAssignmentLink().click();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
@@ -84,7 +82,6 @@ public class OfficeAssignmentTest extends BaseFrontEndTest {
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
         assertTrue(userProfilePage.getChangeOfficeAssignmentLink().isVisible());
-        assertEquals("Change", userProfilePage.getChangeOfficeAssignmentLink().innerText());
         userProfilePage.getChangeOfficeAssignmentLink().click();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 

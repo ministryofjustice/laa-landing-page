@@ -1075,7 +1075,7 @@ public class UserService {
     }
 
     private void makeAppDisplayAdjustments(Set<LaaApplicationForView> userApps) {
-        List<AppDto> applications = appService.getAllAppsFromCache();
+        List<AppDto> applications = appService.getAllActiveLaaApps();
 
         Set<String> userAppIds = userApps.stream()
                 .map(LaaApplicationForView::getId)

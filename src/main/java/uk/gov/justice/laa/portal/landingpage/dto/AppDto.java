@@ -53,7 +53,7 @@ public class AppDto implements Comparable<AppDto>, Serializable {
     @Builder
     @AllArgsConstructor
     @NoArgsConstructor
-    public static class AlternativeAppDescriptionDto {
+    public static class AlternativeAppDescriptionDto implements Serializable {
         private String assignedAppId;
         private String alternativeDescription;
     }
