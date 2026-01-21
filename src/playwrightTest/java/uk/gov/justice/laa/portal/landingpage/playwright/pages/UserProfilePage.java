@@ -18,7 +18,7 @@ public class UserProfilePage {
         this.page = page;
         this.port = port;
         this.officesTab = page.locator("#tab_offices");
-        this.changeOfficeAssignmentLink = page.locator("#offices ul.govuk-summary-card__actions a.govuk-link");
+        this.changeOfficeAssignmentLink = page.locator("#offices ul.govuk-summary-card__actions a.govuk-link:has-text(\"Change\")");
         this.allOfficesCheckBox = page.locator("#offices-all");
         this.noOfficesCheckBox = page.locator("#no-offices");
         this.continueButton = page.locator("button[type='submit']:has-text('Continue')");
