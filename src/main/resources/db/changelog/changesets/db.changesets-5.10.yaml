@@ -1,0 +1,27 @@
+  databaseChangeLog:
+    - changeSet:
+        id: enable-delegate-internal-user-dev
+        author: leonardopalmeiro
+        context: dev
+        changes:
+          # Internal user manager permissions.
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Internal User Manager'), 'DELEGATE_EXTERNAL_USER_ACCESS')"
+          # Global Admin permissions
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'DELEGATE_EXTERNAL_USER_ACCESS')"
+    - changeSet:
+        id: enable-delegate-internal-user-nle
+        author: leonardopalmeiro
+        context: nle
+        changes:
+          # Internal user manager permissions.
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Internal User Manager'), 'DELEGATE_EXTERNAL_USER_ACCESS')"
+          # Global Admin permissions
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'DELEGATE_EXTERNAL_USER_ACCESS')"
