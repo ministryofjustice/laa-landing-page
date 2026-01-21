@@ -598,35 +598,6 @@ public class DataProviderService {
                 result.setOfficesDeactivated(result.getOfficesDeactivated() + 1);
             }
 
-            // FINAL VALIDATION: Check that all firms have at least one office before commit
-            // This prevents the "Firm must have at least one office" constraint violation
-            log.info("Validating all firms have at least one office...");
-            Map<String, List<Office>> firmOfficesMap = new HashMap<>();
-            officeRepository.findAll().forEach(office -> {
-                String fCode = office.getFirm() != null ? office.getFirm().getCode() : null;
-                if (fCode != null) {
-                    firmOfficesMap.computeIfAbsent(fCode, k -> new java.util.ArrayList<>()).add(office);
-                }
-            });
-
-            List<Firm> firmsWithoutOffices = new java.util.ArrayList<>();
-            firmRepository.findAll().forEach(firm -> {
-                List<Office> offices = firmOfficesMap.get(firm.getCode());
-                if (offices == null || offices.isEmpty()) {
-                    firmsWithoutOffices.add(firm);
-                }
-            });
-
-            if (!firmsWithoutOffices.isEmpty()) {
-                log.warn("Found {} firms without offices - deactivating them to prevent constraint violation",
-                    firmsWithoutOffices.size());
-                for (Firm firm : firmsWithoutOffices) {
-                    log.info("Deactivating firm {} - has no offices after sync", firm.getCode());
-                    deactivateFirm(firm, result);
-                    result.setFirmsDeactivated(result.getFirmsDeactivated() + 1);
-                }
-            }
-
             log.info("PDA sync complete - Firms: {} created, {} updated, {} deactivated | Offices: {} created, {} updated, {} deactivated",
                 result.getFirmsCreated(), result.getFirmsUpdated(), result.getFirmsDeactivated(),
                 result.getOfficesCreated(), result.getOfficesUpdated(), result.getOfficesDeactivated());
