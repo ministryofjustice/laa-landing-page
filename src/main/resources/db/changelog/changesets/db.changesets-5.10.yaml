@@ -1,0 +1,9 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1769009090061-1
+      author: majid.elmi
+      changes:
+        # Add global admin as an assigning role for SiLAS Administration role.
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'SiLAS Administration'), (SELECT id FROM app_role WHERE name = 'Global Admin'))"
