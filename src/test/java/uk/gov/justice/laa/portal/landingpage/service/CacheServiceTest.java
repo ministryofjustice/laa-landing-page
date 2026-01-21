@@ -25,11 +25,14 @@ class CacheServiceTest {
     @Mock
     private Cache firmsCache;
 
+    @Mock
+    private Cache appsCache;
+
     @InjectMocks
     private CacheService cacheService;
 
     @Test
-    void clearTechServicesCache_WhenCacheExists_ShouldClearCache() {
+    void clearTechServicesCache_WhenCacheExists_ShouldClearFirmsCache() {
         // Given
         when(cacheManager.getCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE))
                 .thenReturn(techServicesCache);
@@ -57,13 +60,13 @@ class CacheServiceTest {
     }
 
     @Test
-    void clearFirmsCache_WhenCacheExists_ShouldClearCache() {
+    void clearFirmsCache_WhenCacheExists_ShouldClearFirmsCache() {
         // Given
         when(cacheManager.getCache(CachingConfig.LIST_OF_FIRMS_CACHE))
                 .thenReturn(firmsCache);
 
         // When
-        cacheService.clearCache();
+        cacheService.clearFirmsCache();
 
         // Then
         verify(firmsCache).clear();
@@ -77,9 +80,39 @@ class CacheServiceTest {
                 .thenReturn(null);
 
         // When
-        cacheService.clearCache();
+        cacheService.clearFirmsCache();
 
         // Then - No exception should be thrown
+        verifyNoInteractions(firmsCache);
+        verifyNoInteractions(techServicesCache);
+    }
+
+    @Test
+    void clearAppsCache_WhenCacheExists_ShouldClearFirmsCache() {
+        // Given
+        when(cacheManager.getCache(CachingConfig.LIST_OF_APPS_CACHE))
+                .thenReturn(appsCache);
+
+        // When
+        cacheService.clearAppsCache();
+
+        // Then
+        verify(appsCache).clear();
+        verifyNoInteractions(firmsCache);
+        verifyNoInteractions(techServicesCache);
+    }
+
+    @Test
+    void clearAppsCache_WhenCacheIsNull_ShouldNotThrowException() {
+        // Given
+        when(cacheManager.getCache(CachingConfig.LIST_OF_APPS_CACHE))
+                .thenReturn(null);
+
+        // When
+        cacheService.clearAppsCache();
+
+        // Then - No exception should be thrown
+        verifyNoInteractions(appsCache);
         verifyNoInteractions(firmsCache);
         verifyNoInteractions(techServicesCache);
     }

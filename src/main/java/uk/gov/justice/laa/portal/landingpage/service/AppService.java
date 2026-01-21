@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -39,15 +38,6 @@ public class AppService {
                 .toList();
     }
 
-    @Scheduled(cron = "${app.apps.cache.clear.schedule}")
-    public void clearCache() {
-        log.debug("Clearing Apps Cache");
-        Cache cache = cacheManager.getCache(ALL_APPS);
-        if (cache != null) {
-            cache.clear();
-        }
-    }
-
     public List<AppDto> getAllAppsFromCache() {
         Cache cache = cacheManager.getCache(CachingConfig.LIST_OF_APPS_CACHE);
         if (cache != null) {
@@ -56,7 +46,9 @@ public class AppService {
                 if (valueWrapper != null) {
                     @SuppressWarnings("unchecked")
                     List<AppDto> cachedApps = (List<AppDto>) valueWrapper.get();
-                    return cachedApps;
+                    if (cachedApps != null && !cachedApps.isEmpty()) {
+                        return cachedApps;
+                    }
                 }
             } catch (Exception ex) {
                 log.info("Error while getting apps from cache", ex);

@@ -102,16 +102,6 @@ class AppServiceTest {
     }
 
     @Test
-    void testClearCache_ShouldClearAllAppsCache() {
-        when(cacheManager.getCache("all_apps")).thenReturn(cache);
-
-        appService.clearCache();
-
-        verify(cacheManager).getCache("all_apps");
-        verify(cache).clear();
-    }
-
-    @Test
     void testGetAllAppsFromCache_WhenCacheHit_ShouldReturnCachedApps() {
         when(cacheManager.getCache(CachingConfig.LIST_OF_APPS_CACHE)).thenReturn(cache);
         when(cache.get("all_apps")).thenReturn(() -> Collections.singletonList(appDto));

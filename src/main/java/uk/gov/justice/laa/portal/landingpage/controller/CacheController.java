@@ -2,35 +2,39 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
-import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
+import uk.gov.justice.laa.portal.landingpage.service.CacheService;
 
 @RestController
-public class FirmsCacheController {
+public class CacheController {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
-    private final CacheManager cacheManager;
+    private final CacheService cacheService;
 
-    public FirmsCacheController(CacheManager cacheManager) {
-        this.cacheManager = cacheManager;
+    public CacheController(CacheService cacheService) {
+        this.cacheService = cacheService;
     }
 
     @GetMapping("/admin/firms/clear-cache")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_INTERNAL_USER,"
             + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_INTERNAL_USER)")
     public ResponseEntity<String> clearFirmsCache() {
-        Cache cache = cacheManager.getCache(CachingConfig.LIST_OF_FIRMS_CACHE);
-        if (cache != null) {
-            cache.clear();
-            logger.info("Firms cache cleared");
-        }
+        logger.info("Clearing Firms Cache");
+        cacheService.clearFirmsCache();
         return new ResponseEntity<>("Firms cache cleared!!", HttpStatus.OK);
+    }
+
+    @GetMapping("/admin/apps/clear-cache")
+    @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_INTERNAL_USER,"
+            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_INTERNAL_USER)")
+    public ResponseEntity<String> clearAppsCache() {
+        logger.info("Clearing Apps Cache");
+        cacheService.clearAppsCache();
+        return new ResponseEntity<>("Apps cache cleared!!", HttpStatus.OK);
     }
 
 }
