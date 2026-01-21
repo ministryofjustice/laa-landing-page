@@ -754,19 +754,4 @@ public class DataProviderService {
             log.info("Data integrity: removed {} firms, {} offices", removedFirms, removedOffices);
         }
     }
-
-    private void logMemoryUsage(String stage) {
-        Runtime runtime = Runtime.getRuntime();
-        long totalMemory = runtime.totalMemory();
-        long freeMemory = runtime.freeMemory();
-        long usedMemory = totalMemory - freeMemory;
-        long maxMemory = runtime.maxMemory();
-
-        log.info("Memory [{}]: Used={} MB, Free={} MB, Total={} MB, Max={} MB",
-            stage,
-            usedMemory / (1024 * 1024),
-            freeMemory / (1024 * 1024),
-            totalMemory / (1024 * 1024),
-            maxMemory / (1024 * 1024));
-    }
 }
