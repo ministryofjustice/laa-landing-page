@@ -40,7 +40,7 @@ public class RoleAssignmentRepositoryTest extends BaseRepositoryTest {
         // Arrange
         App app = App.builder().name("app").securityGroupOid("sec_grp_oid").securityGroupName("sec_grp_name")
                 .title("Lassie App Title").description("Lassie App Description").oidGroupName("Lassie OID Group")
-                .appType(AppType.LAA).url("http://localhost:8080/lassie").build();
+                .appType(AppType.LAA).url("http://localhost:8080/lassie").enabled(true).build();
         appRepository.save(app);
 
         AppRole appRole1 = AppRole.builder().name("appRole1").description("appRole1").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).build();
@@ -69,7 +69,7 @@ public class RoleAssignmentRepositoryTest extends BaseRepositoryTest {
         // Arrange
         App app = App.builder().name("app").securityGroupOid("sec_grp_oid").securityGroupName("sec_grp_name")
                 .title("Lassie App Title").description("Lassie App Description").oidGroupName("Lassie OID Group")
-                .appType(AppType.LAA).url("http://localhost:8080/lassie").build();
+                .appType(AppType.LAA).url("http://localhost:8080/lassie").enabled(true).build();
         appRepository.save(app);
 
         AppRole appRole1 = AppRole.builder().name("appRole1").description("appRole1").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).build();
