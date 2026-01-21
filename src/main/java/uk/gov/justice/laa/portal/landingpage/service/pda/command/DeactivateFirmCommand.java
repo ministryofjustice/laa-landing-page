@@ -8,6 +8,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.PdaSyncResultDto;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
@@ -28,16 +29,26 @@ public class DeactivateFirmCommand implements PdaSyncCommand {
     @Override
     public void execute(PdaSyncResultDto result) {
         try {
-            // First, remove user profile firm associations to avoid foreign key constraint violations
+            // First, handle user profile firm associations
+            // EXTERNAL users cannot exist without a firm (database constraint), so we delete their profiles
+            // INTERNAL users can have null firm, so we just clear the association
             List<UserProfile> profilesWithFirm = userProfileRepository.findByFirmId(firm.getId());
             if (!profilesWithFirm.isEmpty()) {
-                log.info("Removing firm association from {} user profiles for firm {} before deleting",
+                log.info("Handling {} user profiles associated with firm {} before deleting",
                     profilesWithFirm.size(), firm.getCode());
                 for (UserProfile profile : profilesWithFirm) {
-                    profile.setFirm(null);
-                    userProfileRepository.save(profile);
-                    log.debug("Removed firm {} from user profile {} during firm deactivation",
-                        firm.getCode(), profile.getId());
+                    if (profile.getUserType() == UserType.EXTERNAL) {
+                        // EXTERNAL users must have a firm - delete the profile entirely
+                        log.info("Deleting EXTERNAL user profile {} (firm {} being deactivated)",
+                            profile.getId(), firm.getCode());
+                        userProfileRepository.delete(profile);
+                    } else {
+                        // INTERNAL users can have null firm - just clear the association
+                        profile.setFirm(null);
+                        userProfileRepository.save(profile);
+                        log.debug("Removed firm {} from INTERNAL user profile {} during firm deactivation",
+                            firm.getCode(), profile.getId());
+                    }
                 }
             }
 

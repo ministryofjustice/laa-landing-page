@@ -29,6 +29,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.PdaFirmData;
 import uk.gov.justice.laa.portal.landingpage.dto.PdaOfficeData;
 import uk.gov.justice.laa.portal.landingpage.dto.PdaSyncResultDto;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
@@ -474,17 +475,35 @@ public class DataProviderService {
                         if (!pdaFirm.getParentFirmNumber().equals(currentParentCode)) {
                             Firm parentFirm = dbFirms.get(pdaFirm.getParentFirmNumber());
                             if (parentFirm != null) {
-                                try {
-                                    firm.setParentFirm(parentFirm);
-                                    firmRepository.save(firm);
-                                    log.info("Set parent for firm {}: {} -> {}", firmCode, currentParentCode, pdaFirm.getParentFirmNumber());
-                                } catch (Exception e) {
-                                    log.error("Failed to set parent {} for firm {}: {} - clearing parent reference",
-                                        pdaFirm.getParentFirmNumber(), firmCode, e.getMessage());
+                                // Validate parent firm before setting
+                                if (parentFirm.getType() == FirmType.ADVOCATE) {
+                                    log.warn("Parent firm {} is ADVOCATE type for firm {} - setting to null (ADVOCATE firms cannot be parents)",
+                                        pdaFirm.getParentFirmNumber(), firmCode);
                                     firm.setParentFirm(null);
                                     firmRepository.save(firm);
-                                    result.addWarning("Invalid parent firm " + pdaFirm.getParentFirmNumber() +
-                                        " for firm " + firmCode + ": " + e.getMessage());
+                                    result.addWarning("Parent firm " + pdaFirm.getParentFirmNumber() +
+                                        " is ADVOCATE type and cannot be a parent for firm " + firmCode);
+                                } else if (parentFirm.getParentFirm() != null) {
+                                    log.warn("Parent firm {} already has parent {} for firm {} - setting to null (multi-level hierarchy not allowed)",
+                                        pdaFirm.getParentFirmNumber(), parentFirm.getParentFirm().getCode(), firmCode);
+                                    firm.setParentFirm(null);
+                                    firmRepository.save(firm);
+                                    result.addWarning("Parent firm " + pdaFirm.getParentFirmNumber() +
+                                        " already has parent " + parentFirm.getParentFirm().getCode() +
+                                        " - multi-level hierarchy not allowed for firm " + firmCode);
+                                } else {
+                                    try {
+                                        firm.setParentFirm(parentFirm);
+                                        firmRepository.save(firm);
+                                        log.info("Set parent for firm {}: {} -> {}", firmCode, currentParentCode, pdaFirm.getParentFirmNumber());
+                                    } catch (Exception e) {
+                                        log.error("Failed to set parent {} for firm {}: {} - clearing parent reference",
+                                            pdaFirm.getParentFirmNumber(), firmCode, e.getMessage());
+                                        firm.setParentFirm(null);
+                                        firmRepository.save(firm);
+                                        result.addWarning("Invalid parent firm " + pdaFirm.getParentFirmNumber() +
+                                            " for firm " + firmCode + ": " + e.getMessage());
+                                    }
                                 }
                             } else {
                                 log.warn("Parent firm {} not found for firm {} - clearing parent reference",
@@ -577,6 +596,35 @@ public class DataProviderService {
             for (String officeCode : officesToDeactivate) {
                 deactivateOffice(dbOffices.get(officeCode), result);
                 result.setOfficesDeactivated(result.getOfficesDeactivated() + 1);
+            }
+
+            // FINAL VALIDATION: Check that all firms have at least one office before commit
+            // This prevents the "Firm must have at least one office" constraint violation
+            log.info("Validating all firms have at least one office...");
+            Map<String, List<Office>> firmOfficesMap = new HashMap<>();
+            officeRepository.findAll().forEach(office -> {
+                String fCode = office.getFirm() != null ? office.getFirm().getCode() : null;
+                if (fCode != null) {
+                    firmOfficesMap.computeIfAbsent(fCode, k -> new java.util.ArrayList<>()).add(office);
+                }
+            });
+
+            List<Firm> firmsWithoutOffices = new java.util.ArrayList<>();
+            firmRepository.findAll().forEach(firm -> {
+                List<Office> offices = firmOfficesMap.get(firm.getCode());
+                if (offices == null || offices.isEmpty()) {
+                    firmsWithoutOffices.add(firm);
+                }
+            });
+
+            if (!firmsWithoutOffices.isEmpty()) {
+                log.warn("Found {} firms without offices - deactivating them to prevent constraint violation",
+                    firmsWithoutOffices.size());
+                for (Firm firm : firmsWithoutOffices) {
+                    log.info("Deactivating firm {} - has no offices after sync", firm.getCode());
+                    deactivateFirm(firm, result);
+                    result.setFirmsDeactivated(result.getFirmsDeactivated() + 1);
+                }
             }
 
             log.info("PDA sync complete - Firms: {} created, {} updated, {} deactivated | Offices: {} created, {} updated, {} deactivated",
