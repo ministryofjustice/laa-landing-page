@@ -1,0 +1,23 @@
+databaseChangeLog:
+  # Populate firm directory permission
+  - changeSet:
+      id: add-firm-directory-permission
+      author: leonardopalmeiro
+      changes:
+      # add permissions
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Viewer'), 'VIEW_FIRM_DIRECTORY');"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Admin'), 'VIEW_FIRM_DIRECTORY');"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Manager'), 'VIEW_FIRM_DIRECTORY')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'VIEW_FIRM_DIRECTORY')"
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'VIEW_FIRM_DIRECTORY' AND app_role_id = (SELECT id FROM app_role WHERE name in('External User Viewer', 'External User Admin', 'External User Manager', 'Global Admin')"

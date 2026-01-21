@@ -1,9 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.modelmapper.ModelMapper;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -11,27 +9,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
-import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
-import uk.gov.justice.laa.portal.landingpage.dto.FirmDirectoryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDirectorySearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
-import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
-import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
-import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
-import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
-import uk.gov.justice.laa.portal.landingpage.service.LoginService;
-import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
-import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
-import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
 /**
  * Controller for handling firm-directory requests
@@ -40,6 +24,8 @@ import java.util.UUID;
 @Controller
 @RequiredArgsConstructor
 @RequestMapping("/firmDirectory")
+@PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions("
+        + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_AUDIT_TABLE)")
 public class FirmDirectoryController {
 
     private final FirmService firmService;

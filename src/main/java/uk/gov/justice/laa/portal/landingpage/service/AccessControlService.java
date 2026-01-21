@@ -284,16 +284,6 @@ public class AccessControlService {
         return userHasAnyGivenPermissions(authenticatedUser, permission);
     }
 
-    public boolean authenticatedUserCanAccessFirmDirectory() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
-        return userHasAuthzRoles(authenticatedUser,
-                EXTERNAL_USER_VIEW.getDescription(),
-                EXTERNAL_USER_ADMIN.getDescription(),
-                EXTERNAL_USER_MANAGER.getDescription(),
-                GLOBAL_ADMIN.getDescription());
-    }
-
     public static boolean userHasPermission(EntraUser entraUser, Permission permission) {
         return userHasAnyGivenPermissions(entraUser, permission);
     }
