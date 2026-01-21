@@ -15,8 +15,8 @@
             <li class="govuk-breadcrumbs__list-item">
                 <a class="govuk-breadcrumbs__link"
                    th:href="@{/admin/user/create/multi-firm}">
-
-                    < Back</a>
+                    < Back
+                </a>
             </li>
         </ol>
     </nav>
@@ -30,7 +30,7 @@
                     </h2>
                     <div class="govuk-error-summary__body" id="error-summary-description">
                         <ul class="govuk-list govuk-error-summary__list">
-                            <li th:each="error : ${#fields.errors()}"><a href="#" th:text="${error}"></a></li>
+                            <li th:each="error : ${#fields.errors()}"><a href="#firmSearch" th:text="${error}"></a></li>
                         </ul>
                     </div>
                 </div>
@@ -93,7 +93,7 @@
 
             <div class="govuk-button-group">
                 <button type="submit" class="govuk-button">Continue</button>
-                <a href="/admin/user/create/cancel" class="govuk-link">Cancel</a>
+                <a th:href="@{/admin/user/create/cancel/confirmation}" class="govuk-link">Cancel</a>
             </div>
         </form>
 

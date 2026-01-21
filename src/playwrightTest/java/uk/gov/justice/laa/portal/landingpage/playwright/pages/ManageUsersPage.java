@@ -4,8 +4,9 @@ import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.microsoft.playwright.options.WaitForSelectorState;
 import org.slf4j.Logger;
@@ -30,6 +31,8 @@ public class ManageUsersPage {
     private final Locator header;
     private final Locator createNewUserButton;
     private final Locator confirmNewUserButton;
+    private final Locator signOutLink;
+    private final Locator signOutConfirmButton;
     private final Locator notAuthorisedHeading;
 
     private final Locator searchInputByName;
@@ -52,6 +55,7 @@ public class ManageUsersPage {
 
     private final Locator confirmButton;
     private final Locator goBackToManageYourUsersButton;
+    private final Locator manageAccessButton;
 
     private final Locator deleteUserLink;
     private final Locator confirmAndDeleteUserButton;
@@ -81,6 +85,8 @@ public class ManageUsersPage {
         this.header = page.locator("h1.govuk-heading-xl");
         this.createNewUserButton = page.locator("button.govuk-button[onclick*='/admin/user/create/details']");
         this.notAuthorisedHeading = page.locator("h1.govuk-heading-l");
+        this.signOutLink = page.locator("a:has-text('Sign out')");
+        this.signOutConfirmButton = page.locator("button[type='submit']:has-text('Sign out')");
 
         this.searchInputByName = page.locator("input[name='search']");
         this.searchButton = page.locator("button:has-text('Search')");
@@ -94,6 +100,7 @@ public class ManageUsersPage {
         this.providerAdminRadio = page.locator("input#providerAdmin");
 
         this.continueButton = page.locator("button.govuk-button:has-text('Continue')");
+        this.manageAccessButton = page.locator("button.govuk-button:has-text('Manage access')");
         this.cancelLink = page.locator("a.govuk-link:has-text('Cancel')");
 
         this.multiFirmYesRadio = page.locator("input#multiFirmYes");
@@ -140,6 +147,13 @@ public class ManageUsersPage {
 
     }
 
+    public void clickAndConfirmSignOut() {
+        signOutLink.click();
+        signOutConfirmButton.click();
+        var signedOutPage = page.getByText("You're now signed out of your account");
+        assertNotNull(signedOutPage, "Failed to find signed out page");
+    }
+
     public void clickManageUser() {
         userFullNameLink.click();
     }
@@ -170,12 +184,20 @@ public class ManageUsersPage {
         firstLink.click();
     }
 
-    public void clickExternalUserLink() {
-        Locator externalUserLink = page.locator("a.govuk-link[href*='/admin/users/manage/']").getByText("Playwright FirmUserManager");
+    public void clickExternalUserLink(String user) {
+        Locator externalUserLink = page.locator("a.govuk-link[href*='/admin/users/manage/']").getByText(user);
         externalUserLink.waitFor(new Locator.WaitForOptions()
                 .setState(WaitForSelectorState.VISIBLE)
                 .setTimeout(10000));
         externalUserLink.click();
+    }
+
+    public void clickContinueLink() {
+        continueButton.click();
+    }
+
+    public void clickManageAccess() {
+        manageAccessButton.click();
     }
 
     public void clickServicesTab() {
@@ -203,6 +225,14 @@ public class ManageUsersPage {
         assertTrue(page.locator(".govuk-summary-list__row:has-text(\"Last name\") .govuk-summary-list__value").isVisible());
     }
 
+    public void verifyUserDetailsPopulated(String email, String firstName, String lastName, String firmName, String multiFirmAccess) {
+        assertRow("Email", email);
+        assertRow("First name", firstName);
+        assertRow("Last name", lastName);
+        assertRow("Firm name", firmName);
+        assertRow("Multi-firm access", multiFirmAccess);
+    }
+
     public void clickOfficesTab() {
         page.locator(".govuk-tabs__tab[href*='#offices']").click();
     }
@@ -221,6 +251,16 @@ public class ManageUsersPage {
         }
     }
 
+    public void uncheckSelectedOffices(List<String> offices) {
+
+        for (String office : offices) {
+            Locator checkbox = page.getByLabel(office);
+            if (checkbox.isChecked()) {
+                checkbox.uncheck();
+            }
+        }
+    }
+
     public void checkSelectedRoles(List<String> roles) {
         page.locator("input[type='checkbox']").first().waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000));
         for (String role : roles) {
@@ -229,6 +269,23 @@ public class ManageUsersPage {
                 checkbox.check();
             }
         }
+    }
+
+    public void checkSelectedServices(List<String> services) {
+        page.locator("input[type='checkbox']").first().waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000));
+        for (String service : services) {
+            Locator checkbox = page.getByLabel(service);
+            if (!checkbox.isChecked()) {
+                checkbox.check();
+            }
+        }
+    }
+
+    public Locator externalUserRowLocator() {
+        return page.locator(
+                "tr.govuk-table__row:has(td.govuk-table__cell:has-text(\"externaluser-incomplete@playwrighttest.com\"))"
+        );
+
     }
 
     // Unauthorised
@@ -244,7 +301,6 @@ public class ManageUsersPage {
         searchInputByName.fill(userEmail);
         searchButton.click();
     }
-
 
 
     public boolean searchAndVerifyUser(String email) {
@@ -384,5 +440,11 @@ public class ManageUsersPage {
         page.navigate(auditUrl);
 
         return new AuditPage(page, port);
+    }
+
+    private void assertRow(String key, String value) {
+        final var row = page.locator(".govuk-summary-list__row:has(.govuk-summary-list__key:has-text('" + key + "'))");
+        assertTrue(row.isVisible());
+        assertTrue(row.allInnerTexts().getFirst().contains(value));
     }
 }

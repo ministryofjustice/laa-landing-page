@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'manage-access'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Cancel grant access to user</title>
+</head>
+<body>
+<main class="govuk-main-wrapper" id="main-content">
+    <div th:if="${globalErrorMessage}">
+        <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
+             aria-describedby="error-summary-description" data-module="govuk-error-summary">
+            <h2 class="govuk-error-summary__title" id="error-summary-title">
+                There is a problem
+            </h2>
+            <div class="govuk-error-summary__body" id="error-summary-description">
+                <ul class="govuk-list govuk-error-summary__list">
+                    <li th:text="${globalErrorMessage}"></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <a class="govuk-back-link" th:href="@{/home}">Back</a>
+
+    <h1 class="govuk-heading-l">
+        Are you sure you want to cancel granting access to user?
+    </h1>
+    <p class="govuk-body">
+        If you cancel, any information you’ve entered will be lost.
+    </p>
+    <form th:action="@{/admin/users/manage/{id}/grant-access(id=${user.id})}" method="post" style="display: inline;">
+        <div class="moj-button-group">
+            <button type="submit" class="govuk-button" data-module="govuk-button">
+                Continue editing
+            </button>
+            <a th:href="@{/admin/users/grant-access/{id}/cancel(id=${user.id})}" class="govuk-link">Cancel and leave</a>
+        </div>
+    </form>
+    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+</main>
+</body>
+</html>

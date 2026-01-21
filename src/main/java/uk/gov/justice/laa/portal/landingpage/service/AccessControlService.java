@@ -295,6 +295,11 @@ public class AccessControlService {
                         && appRole.getName().equalsIgnoreCase(authzRoleName));
     }
 
+    public boolean userHasAuthzRole(Authentication authentication, String authzRoleName) {
+        EntraUser user = loginService.getCurrentEntraUser(authentication);
+        return userHasAuthzRole(user, authzRoleName);
+    }
+
     public static boolean userHasAuthzRoles(EntraUser user, String... authzRoleName) {
         Set<String> userRolesAuth = user.getUserProfiles().stream()
                 .filter(UserProfile::isActiveProfile)

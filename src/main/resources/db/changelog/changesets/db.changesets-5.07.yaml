@@ -1,23 +1,104 @@
 databaseChangeLog:
-  # Populate firm directory permission
   - changeSet:
-      id: add-firm-directory-permission
-      author: leonardopalmeiro
+      id: create-admin_app-table
+      author: paul.snowdon
       changes:
-      # add permissions
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Viewer'), 'VIEW_FIRM_DIRECTORY');"
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Admin'), 'VIEW_FIRM_DIRECTORY');"
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Manager'), 'VIEW_FIRM_DIRECTORY')"
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'VIEW_FIRM_DIRECTORY')"
-      rollback:
-        - sql:
-            dbms: postgresql
-            sql: "DELETE FROM role_permission WHERE permission = 'VIEW_FIRM_DIRECTORY' AND app_role_id = (SELECT id FROM app_role WHERE name in('External User Viewer', 'External User Admin', 'External User Manager', 'Global Admin')"
+        - createTable:
+            tableName: admin_app
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: description
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: ordinal
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: enabled
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+        - createIndex:
+            indexName: AdminAppNameIdx
+            tableName: admin_app
+            columns:
+              - column:
+                  name: name
+
+  - changeSet:
+      id: populate-admin_app-initial-data
+      author: paul.snowdon
+      validCheckSums:
+        - 9:0500d781034fb4ff3a1a883a74060f7e
+      changes:
+        - insert:
+            tableName: admin_app
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: name
+                  value: "Manage your users"
+              - column:
+                  name: description
+                  value: "Manage user access and permissions"
+              - column:
+                  name: ordinal
+                  valueNumeric: 0
+              - column:
+                  name: enabled
+                  valueBoolean: true
+        - insert:
+            tableName: admin_app
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: name
+                  value: "SiLAS Administration"
+              - column:
+                  name: description
+                  value: "Manage admin services including user roles and permissions"
+              - column:
+                  name: ordinal
+                  valueNumeric: 1
+              - column:
+                  name: enabled
+                  valueBoolean: true
+        - insert:
+            tableName: admin_app
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: name
+                  value: "User Access Audit Table"
+              - column:
+                  name: description
+                  value: "View all registered users including account status and role assignments"
+              - column:
+                  name: ordinal
+                  valueNumeric: 2
+              - column:
+                  name: enabled
+                  valueBoolean: true
