@@ -107,7 +107,6 @@ public class UserService {
     private final FirmRepository firmRepository;
     private final EventService eventService;
     private final NotificationService notificationService;
-    private final OfficeService officeService;
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
@@ -133,7 +132,6 @@ public class UserService {
         this.firmRepository = firmRepository;
         this.eventService = eventService;
         this.notificationService = notificationService;
-        this.officeService = officeService;
     }
 
     static <T> List<List<T>> partitionBasedOnSize(List<T> inputList, int size) {
