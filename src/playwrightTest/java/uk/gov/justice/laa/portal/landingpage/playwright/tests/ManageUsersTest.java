@@ -284,7 +284,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
             manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
             manageUsersPage.clickOfficesTab();
             manageUsersPage.clickOfficeChange();
-            List<String> offices = List.of("Automation Office 1, City1, 12345 ()", "Automation Office 2, City2, 23456 ()");
+            List<String> offices = List.of("Automation Office 1, City1, 12345 (THREE)", "Automation Office 2, City2, 23456 (FOUR)");
             manageUsersPage.checkSelectedOffices(offices);
             manageUsersPage.clickContinueLink();
             manageUsersPage.clickConfirmButton();
@@ -297,7 +297,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
             manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
             manageUsersPage.clickOfficesTab();
             manageUsersPage.clickOfficeChange();
-            List<String> updatedOffices = List.of("Automation Office 1, City1, 12345 ()");
+            List<String> updatedOffices = List.of("Automation Office 1, City1, 12345 (THREE)");
             manageUsersPage.uncheckSelectedOffices(updatedOffices);
             manageUsersPage.clickContinueLink();
             manageUsersPage.clickConfirmButton();
