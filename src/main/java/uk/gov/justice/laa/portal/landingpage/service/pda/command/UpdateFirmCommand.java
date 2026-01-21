@@ -1,10 +1,11 @@
 package uk.gov.justice.laa.portal.landingpage.service.pda.command;
 
+import org.springframework.dao.DataIntegrityViolationException;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
-import uk.gov.justice.laa.portal.landingpage.dto.PdaSyncResultDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PdaFirmData;
+import uk.gov.justice.laa.portal.landingpage.dto.PdaSyncResultDto;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
@@ -46,7 +47,7 @@ public class UpdateFirmCommand implements PdaSyncCommand {
 
             // Update parent if changed
             String currentParentCode = firm.getParentFirm() != null ? firm.getParentFirm().getCode() : null;
-            String newParentCode = (pdaFirm.getParentFirmNumber() != null 
+            String newParentCode = (pdaFirm.getParentFirmNumber() != null
                 && !pdaFirm.getParentFirmNumber().trim().isEmpty()
                 && !pdaFirm.getParentFirmNumber().trim().equalsIgnoreCase("null"))
                 ? pdaFirm.getParentFirmNumber().trim() : null;
@@ -88,13 +89,13 @@ public class UpdateFirmCommand implements PdaSyncCommand {
                     if (e.getMessage() != null && e.getMessage().contains("firm_name_key")) {
                         log.warn("Duplicate firm name '{}' for firm {} - skipping name update but keeping other changes",
                             pdaFirm.getFirmName(), pdaFirm.getFirmNumber());
-                        result.addWarning("Duplicate firm name '" + pdaFirm.getFirmName() + 
+                        result.addWarning("Duplicate firm name '" + pdaFirm.getFirmName() +
                             "' for firm " + pdaFirm.getFirmNumber() + " - name update skipped");
-                        
+
                         // Revert the name change but keep other updates (like parent firm)
                         String originalName = firm.getName();
                         firm.setName(originalName);  // This will reset to DB value on next load
-                        
+
                         // Don't re-throw - allow sync to continue
                         return;
                     }
