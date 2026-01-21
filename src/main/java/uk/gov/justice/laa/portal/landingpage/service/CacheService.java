@@ -35,13 +35,4 @@ public class CacheService {
         }
     }
 
-    @Scheduled(cron = "${app.apps.cache.clear.schedule}")
-    public void clearAppsCache() {
-        log.info("Clearing Apps Cache");
-        Cache cache = cacheManager.getCache(CachingConfig.LIST_OF_APPS_CACHE);
-        if (cache != null) {
-            cache.clear();
-            log.info("Cleared Apps Cache");
-        }
-    }
 }

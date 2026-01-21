@@ -63,31 +63,4 @@ class CacheControllerTest {
         verify(cache, never()).clear();
     }
 
-    @Test
-    void givenCacheExists_whenClearAppsCache_thenCacheIsCleared() {
-        // Arrange
-        when(cacheManager.getCache(CachingConfig.LIST_OF_APPS_CACHE)).thenReturn(cache);
-
-        // Act
-        ResponseEntity<String> response = cacheController.clearAppsCache();
-
-        // Assert
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("Apps cache cleared!!", response.getBody());
-        verify(cache).clear();
-    }
-
-    @Test
-    void givenCacheDoesNotExist_whenClearAppsCache_thenReturnOk() {
-        // Arrange
-        when(cacheManager.getCache(CachingConfig.LIST_OF_APPS_CACHE)).thenReturn(null);
-
-        // Act
-        ResponseEntity<String> response = cacheController.clearAppsCache();
-
-        // Assert
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("Apps cache cleared!!", response.getBody());
-        verify(cache, never()).clear();
-    }
 }

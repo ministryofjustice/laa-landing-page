@@ -28,13 +28,4 @@ public class CacheController {
         return new ResponseEntity<>("Firms cache cleared!!", HttpStatus.OK);
     }
 
-    @GetMapping("/admin/apps/clear-cache")
-    @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_INTERNAL_USER,"
-            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_INTERNAL_USER)")
-    public ResponseEntity<String> clearAppsCache() {
-        logger.info("Clearing Apps Cache");
-        cacheService.clearAppsCache();
-        return new ResponseEntity<>("Apps cache cleared!!", HttpStatus.OK);
-    }
-
 }

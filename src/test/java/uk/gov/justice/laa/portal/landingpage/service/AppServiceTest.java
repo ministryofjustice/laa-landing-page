@@ -6,9 +6,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
-import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
-import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
@@ -19,7 +17,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -29,12 +26,6 @@ class AppServiceTest {
     @Mock
     private AppRepository appRepository;
 
-    @Mock
-    private CacheManager cacheManager;
-
-    @Mock
-    private Cache cache;
-
     private AppService appService;
 
     private App app;
@@ -43,7 +34,7 @@ class AppServiceTest {
 
     @BeforeEach
     void setUp() {
-        appService = new AppService(appRepository, new ModelMapper(), cacheManager);
+        appService = new AppService(appRepository, new ModelMapper());
         UUID id = UUID.randomUUID();
         app = App.builder()
                 .id(id)
@@ -99,39 +90,6 @@ class AppServiceTest {
                 .containsExactly(appDto);
 
         verify(appRepository).findAll();
-    }
-
-    @Test
-    void testGetAllAppsFromCache_WhenCacheHit_ShouldReturnCachedApps() {
-        when(cacheManager.getCache(CachingConfig.LIST_OF_APPS_CACHE)).thenReturn(cache);
-        when(cache.get("all_apps")).thenReturn(() -> Collections.singletonList(appDto));
-
-        List<AppDto> result = appService.getAllAppsFromCache();
-
-        assertThat(result)
-                .isNotNull()
-                .hasSize(1)
-                .containsExactly(appDto);
-
-        verify(cache).get("all_apps");
-        verify(appRepository, never()).findAll();
-    }
-
-    @Test
-    void testGetAllAppsFromCache_WhenCacheMiss_ShouldFetchFromRepositoryAndPutInCache() {
-        when(cacheManager.getCache(CachingConfig.LIST_OF_APPS_CACHE)).thenReturn(cache);
-        when(cache.get("all_apps")).thenReturn(null);
-        when(appRepository.findAll()).thenReturn(Collections.singletonList(app));
-
-        List<AppDto> result = appService.getAllAppsFromCache();
-
-        assertThat(result)
-                .isNotNull()
-                .hasSize(1)
-                .containsExactly(appDto);
-
-        verify(appRepository).findAll();
-        verify(cache).put("all_apps", result);
     }
 
 }

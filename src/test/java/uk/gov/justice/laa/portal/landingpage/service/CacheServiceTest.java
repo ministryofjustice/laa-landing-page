@@ -25,9 +25,6 @@ class CacheServiceTest {
     @Mock
     private Cache firmsCache;
 
-    @Mock
-    private Cache appsCache;
-
     @InjectMocks
     private CacheService cacheService;
 
@@ -87,33 +84,4 @@ class CacheServiceTest {
         verifyNoInteractions(techServicesCache);
     }
 
-    @Test
-    void clearAppsCache_WhenCacheExists_ShouldClearFirmsCache() {
-        // Given
-        when(cacheManager.getCache(CachingConfig.LIST_OF_APPS_CACHE))
-                .thenReturn(appsCache);
-
-        // When
-        cacheService.clearAppsCache();
-
-        // Then
-        verify(appsCache).clear();
-        verifyNoInteractions(firmsCache);
-        verifyNoInteractions(techServicesCache);
-    }
-
-    @Test
-    void clearAppsCache_WhenCacheIsNull_ShouldNotThrowException() {
-        // Given
-        when(cacheManager.getCache(CachingConfig.LIST_OF_APPS_CACHE))
-                .thenReturn(null);
-
-        // When
-        cacheService.clearAppsCache();
-
-        // Then - No exception should be thrown
-        verifyNoInteractions(appsCache);
-        verifyNoInteractions(firmsCache);
-        verifyNoInteractions(techServicesCache);
-    }
 }
