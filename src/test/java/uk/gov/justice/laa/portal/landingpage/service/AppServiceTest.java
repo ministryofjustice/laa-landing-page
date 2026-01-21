@@ -6,9 +6,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
-import org.springframework.cache.CacheManager;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
+import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 
 import java.util.Collections;
@@ -77,7 +77,6 @@ class AppServiceTest {
         assertThat(result).isEmpty();
     }
 
-
     @Test
     void testFindAll_ShouldReturnMappedDtos() {
         when(appRepository.findAll()).thenReturn(Collections.singletonList(app));
@@ -90,6 +89,20 @@ class AppServiceTest {
                 .containsExactly(appDto);
 
         verify(appRepository).findAll();
+    }
+
+    @Test
+    void testGetAllEnabledApps() {
+        when(appRepository.findAppsByAppTypeAndEnabled(AppType.LAA, true)).thenReturn(Collections.singletonList(app));
+
+        List<AppDto> result = appService.getAllActiveLaaApps();
+
+        assertThat(result)
+                .isNotNull()
+                .hasSize(1)
+                .containsExactly(appDto);
+
+        verify(appRepository).findAppsByAppTypeAndEnabled(AppType.LAA, true);
     }
 
 }
