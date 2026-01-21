@@ -100,7 +100,8 @@ public class LoginController {
                     EntraUser currentUser = loginService.getCurrentEntraUser(authentication);
                     hasSilasAdminRole = currentUser != null
                             && AccessControlService.userHasAuthzRole(currentUser, AuthzRole.GLOBAL_ADMIN.getRoleName());
-                    canViewFirmDirectory = true; //TODO add the permissions;
+                    canViewFirmDirectory = currentUser != null
+                            && AccessControlService.userHasAnyGivenPermissions(currentUser, Permission.VIEW_FIRM_DIRECTORY);
 
                 }
                 model.addAttribute("isAdminUser", isAdmin);
