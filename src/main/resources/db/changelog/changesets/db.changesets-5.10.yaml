@@ -4,24 +4,24 @@
         author: leonardopalmeiro
         context: dev
         changes:
-          # Internal user manager permissions.
-          - sql:
-              dbms: postgresql
-              sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Internal User Manager'), 'DELEGATE_EXTERNAL_USER_ACCESS')"
           # Global Admin permissions
           - sql:
               dbms: postgresql
               sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'DELEGATE_EXTERNAL_USER_ACCESS')"
+        rollback:
+          - sql:
+              dbms: postgresql
+              sql: "DELETE FROM role_permission WHERE permission = 'DELEGATE_EXTERNAL_USER_ACCESS' AND app_role_id = (SELECT id FROM app_role WHERE name = 'Global Admin')"
     - changeSet:
         id: enable-delegate-internal-user-nle
         author: leonardopalmeiro
         context: nle
         changes:
-          # Internal user manager permissions.
-          - sql:
-              dbms: postgresql
-              sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Internal User Manager'), 'DELEGATE_EXTERNAL_USER_ACCESS')"
           # Global Admin permissions
           - sql:
               dbms: postgresql
               sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'DELEGATE_EXTERNAL_USER_ACCESS')"
+        rollback:
+          - sql:
+              dbms: postgresql
+              sql: "DELETE FROM role_permission WHERE permission = 'DELEGATE_EXTERNAL_USER_ACCESS' AND app_role_id = (SELECT id FROM app_role WHERE name = 'Global Admin')"
