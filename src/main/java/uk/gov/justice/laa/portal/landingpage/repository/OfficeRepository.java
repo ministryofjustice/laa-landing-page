@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 
 import java.util.List;
@@ -12,6 +13,8 @@ public interface OfficeRepository extends JpaRepository<Office, UUID> {
     List<Office> findOfficeByFirm_IdIn(List<UUID> firmIds);
 
     List<Office> findOfficeByIdIn(List<UUID> ids);
-    
+
     Office findByCode(String code);
+
+    List<Office> findByFirm(Firm firm);
 }

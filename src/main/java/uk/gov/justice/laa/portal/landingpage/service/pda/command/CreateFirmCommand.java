@@ -35,7 +35,7 @@ public class CreateFirmCommand implements PdaSyncCommand {
             log.info("Created firm: {} (name: {}, type: {})",
                 pdaFirm.getFirmNumber(), pdaFirm.getFirmName(), pdaFirm.getFirmType());
         } catch (Exception e) {
-            log.error("Failed to create firm {}: {}", pdaFirm.getFirmNumber(), e.getMessage());
+            log.error("Failed to create firm {}: {}", pdaFirm.getFirmNumber(), e.getMessage(), e);
             result.addError("Failed to create firm " + pdaFirm.getFirmNumber() + ": " + e.getMessage());
         }
     }

@@ -44,13 +44,11 @@ public class DeleteOfficeCommand implements PdaSyncCommand {
      * Removes all user profile associations for an office before deletion.
      */
     private void removeUserProfileOfficeAssociations(Office office) {
-        List<UserProfile> profiles = userProfileRepository.findAll();
+        List<UserProfile> profiles = userProfileRepository.findByOfficeId(office.getId());
         for (UserProfile profile : profiles) {
-            if (profile.getOffices() != null && profile.getOffices().contains(office)) {
-                profile.getOffices().remove(office);
-                userProfileRepository.save(profile);
-                log.info("Removed office {} from user profile {}", office.getCode(), profile.getId());
-            }
+            profile.getOffices().remove(office);
+            userProfileRepository.save(profile);
+            log.info("Removed office {} from user profile {}", office.getCode(), profile.getId());
         }
     }
 
@@ -58,13 +56,6 @@ public class DeleteOfficeCommand implements PdaSyncCommand {
      * Counts user profile associations for an office.
      */
     private int countUserProfileOfficeAssociations(Office office) {
-        List<UserProfile> profiles = userProfileRepository.findAll();
-        int count = 0;
-        for (UserProfile profile : profiles) {
-            if (profile.getOffices() != null && profile.getOffices().contains(office)) {
-                count++;
-            }
-        }
-        return count;
+        return userProfileRepository.findByOfficeId(office.getId()).size();
     }
 }

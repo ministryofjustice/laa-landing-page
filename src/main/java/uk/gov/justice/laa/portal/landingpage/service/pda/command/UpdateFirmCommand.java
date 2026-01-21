@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.service.pda.command;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import uk.gov.justice.laa.portal.landingpage.dto.PdaSyncResultDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PdaFirmData;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -45,16 +46,12 @@ public class UpdateFirmCommand implements PdaSyncCommand {
 
             // Update parent if changed
             String currentParentCode = firm.getParentFirm() != null ? firm.getParentFirm().getCode() : null;
-            String newParentCode = (pdaFirm.getParentFirmNumber() != null && !pdaFirm.getParentFirmNumber().trim().isEmpty())
+            String newParentCode = (pdaFirm.getParentFirmNumber() != null 
+                && !pdaFirm.getParentFirmNumber().trim().isEmpty()
+                && !pdaFirm.getParentFirmNumber().trim().equalsIgnoreCase("null"))
                 ? pdaFirm.getParentFirmNumber().trim() : null;
 
-            // Debug: Check if equals is working properly
-            boolean areEqual = equals(currentParentCode, newParentCode);
-            if (currentParentCode == null && newParentCode == null && !areEqual) {
-                log.error("DEBUG: equals() returning false for two null values! This is a bug.");
-            }
-
-            if (!areEqual) {
+            if (!equals(currentParentCode, newParentCode)) {
                 log.info("Updating firm {}: parentFirm '{}' -> '{}'",
                     pdaFirm.getFirmNumber(),
                     currentParentCode != null ? currentParentCode : "null",
@@ -82,10 +79,33 @@ public class UpdateFirmCommand implements PdaSyncCommand {
             }
 
             if (updated) {
-                firmRepository.save(firm);
-                result.setFirmsUpdated(result.getFirmsUpdated() + 1);
-                log.info("Firm {} update complete", pdaFirm.getFirmNumber());
+                try {
+                    firmRepository.save(firm);
+                    result.setFirmsUpdated(result.getFirmsUpdated() + 1);
+                    log.info("Firm {} update complete", pdaFirm.getFirmNumber());
+                } catch (DataIntegrityViolationException e) {
+                    // Check if this is a duplicate name constraint violation
+                    if (e.getMessage() != null && e.getMessage().contains("firm_name_key")) {
+                        log.warn("Duplicate firm name '{}' for firm {} - skipping name update but keeping other changes",
+                            pdaFirm.getFirmName(), pdaFirm.getFirmNumber());
+                        result.addWarning("Duplicate firm name '" + pdaFirm.getFirmName() + 
+                            "' for firm " + pdaFirm.getFirmNumber() + " - name update skipped");
+                        
+                        // Revert the name change but keep other updates (like parent firm)
+                        String originalName = firm.getName();
+                        firm.setName(originalName);  // This will reset to DB value on next load
+                        
+                        // Don't re-throw - allow sync to continue
+                        return;
+                    }
+                    // For other data integrity violations, propagate the error
+                    throw e;
+                }
             }
+        } catch (DataIntegrityViolationException e) {
+            // Catch constraint violations that aren't handled above
+            log.error("Data integrity violation updating firm {}: {}", pdaFirm.getFirmNumber(), e.getMessage());
+            result.addError("Data integrity violation for firm " + pdaFirm.getFirmNumber() + ": " + e.getMessage());
         } catch (Exception e) {
             log.error("Failed to update firm {}: {}", pdaFirm.getFirmNumber(), e.getMessage());
             result.addError("Failed to update firm " + pdaFirm.getFirmNumber() + ": " + e.getMessage());

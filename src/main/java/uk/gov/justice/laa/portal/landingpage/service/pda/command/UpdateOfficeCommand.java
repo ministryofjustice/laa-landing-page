@@ -4,9 +4,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.PdaOfficeData;
 import uk.gov.justice.laa.portal.landingpage.dto.PdaSyncResultDto;
-import uk.gov.justice.laa.portal.landingpage.entity.Office.Address;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.Office.Address;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 
 @Slf4j
@@ -60,6 +60,14 @@ public class UpdateOfficeCommand {
                 log.debug("Updated office: {}", office.getCode());
             }
 
+        } catch (org.springframework.dao.InvalidDataAccessApiUsageException e) {
+            // Office was deleted in this transaction, skip the update
+            if (e.getMessage() != null && e.getMessage().contains("deleted instance passed to merge")) {
+                log.info("Office {} was deleted in this transaction, skipping update", office.getCode());
+                return;
+            }
+            log.error("Failed to update office {}: {}", office.getCode(), e.getMessage(), e);
+            result.addError("Failed to update office " + office.getCode() + ": " + e.getMessage());
         } catch (Exception e) {
             log.error("Failed to update office {}: {}", office.getCode(), e.getMessage(), e);
             result.addError("Failed to update office " + office.getCode() + ": " + e.getMessage());

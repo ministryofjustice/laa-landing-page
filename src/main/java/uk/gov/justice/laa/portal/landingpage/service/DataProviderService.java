@@ -12,20 +12,22 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestClient;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import tech.tablesaw.api.StringColumn;
 import tech.tablesaw.api.Table;
 import tech.tablesaw.io.json.JsonReadOptions;
 import uk.gov.justice.laa.portal.landingpage.dto.ComparisonResultDto;
-import uk.gov.justice.laa.portal.landingpage.dto.PdaSyncResultDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PdaFirmData;
 import uk.gov.justice.laa.portal.landingpage.dto.PdaOfficeData;
+import uk.gov.justice.laa.portal.landingpage.dto.PdaSyncResultDto;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
@@ -53,6 +55,10 @@ public class DataProviderService {
     private final FirmRepository firmRepository;
     private final OfficeRepository officeRepository;
     private final UserProfileRepository userProfileRepository;
+    private final TransactionTemplate transactionTemplate;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     /**
      * Fetches provider offices snapshot from PDA and returns as TableSaw dataframe.
@@ -292,8 +298,31 @@ public class DataProviderService {
         log.info("Starting async PDA synchronization in thread: {}", Thread.currentThread().getName());
 
         try {
-            PdaSyncResultDto result = synchronizeWithPda();
-            log.info("Async PDA synchronization completed successfully");
+            // Use TransactionTemplate to ensure proper transaction boundary
+            // @Transactional doesn't work when called from same class due to proxy bypass
+            PdaSyncResultDto result = transactionTemplate.execute(status -> {
+                try {
+                    return synchronizeWithPda();
+                } catch (Exception e) {
+                    // Catch any exception that would mark transaction as rollback-only
+                    // Log it and return an error result, allowing partial commit
+                    log.error("Exception during PDA sync (allowing partial commit): {}", e.getMessage(), e);
+                    PdaSyncResultDto errorResult = PdaSyncResultDto.builder().build();
+                    errorResult.addError("Sync exception: " + e.getMessage());
+                    // Don't set rollback - let partial changes commit
+                    return errorResult;
+                }
+            });
+
+            if (result != null) {
+                if (!result.getErrors().isEmpty()) {
+                    log.warn("PDA sync completed with {} errors (changes were committed)", result.getErrors().size());
+                }
+                log.info("Async PDA synchronization completed - Firms: {} created, {} updated, {} deactivated | Offices: {} created, {} updated, {} deactivated",
+                    result.getFirmsCreated(), result.getFirmsUpdated(), result.getFirmsDeactivated(),
+                    result.getOfficesCreated(), result.getOfficesUpdated(), result.getOfficesDeactivated());
+            }
+
             return CompletableFuture.completedFuture(result);
         } catch (Exception e) {
             log.error("Async PDA synchronization failed with exception", e);
@@ -307,37 +336,69 @@ public class DataProviderService {
      * Synchronizes PDA data with local database according to the state machine logic.
      * Handles creation, updates, reactivation, and deactivation of firms and offices.
      *
+     * NOTE: This method should be called within a transaction. The caller (synchronizeWithPdaAsync)
+     * uses TransactionTemplate to ensure proper transaction boundary.
+     *
      * @return PdaSyncResultDto containing statistics and any errors/warnings
      */
-    @org.springframework.transaction.annotation.Transactional
-    public PdaSyncResultDto synchronizeWithPda() {
-        log.info("Starting PDA synchronization");
+    private PdaSyncResultDto synchronizeWithPda() {
+        log.info("Starting PDA synchronization - CODE VERSION 2026-01-21-10:22");
         PdaSyncResultDto result = PdaSyncResultDto.builder().build();
 
         try {
+            // Defer constraint checking to allow firms to be created before their offices
+            // The check_firms_have_office constraint will be checked at transaction commit
+            // Use EntityManager to ensure it's on the same connection as the transaction
+            entityManager.createNativeQuery("SET CONSTRAINTS ALL DEFERRED").executeUpdate();
+            log.debug("Deferred constraint checking for PDA sync transaction");
+
             // Fetch and build PDA data maps
+            log.info("DEBUG: Fetching PDA data...");
             Table pdaTable = getProviderOfficesSnapshot();
+            log.info("DEBUG: Building PDA maps - firms and offices...");
             Map<String, PdaFirmData> pdaFirms = buildPdaFirmsMap(pdaTable);
             Map<String, PdaOfficeData> pdaOffices = buildPdaOfficesMap(pdaTable);
+            log.info("DEBUG: Found {} firms and {} offices in PDA data", pdaFirms.size(), pdaOffices.size());
 
             // Perform data integrity checks
+            log.info("DEBUG: Checking data integrity...");
             checkDataIntegrity(pdaFirms, pdaOffices, result);
 
             // Get current database state
+            log.info("DEBUG: Loading database firms...");
             Map<String, Firm> dbFirms = new HashMap<>();
             firmRepository.findAll().forEach(f -> {
                 if (f.getCode() != null) {
                     dbFirms.put(f.getCode(), f);
                 }
             });
+            log.info("DEBUG: Loaded {} firms from database", dbFirms.size());
 
             // Track processed codes
             Set<String> processedFirmCodes = new HashSet<>();
 
+            // Determine which firms have offices (database constraint requires this)
+            log.info("DEBUG: Building firmsWithOffices set...");
+            Set<String> firmsWithOffices = new HashSet<>();
+            for (PdaOfficeData office : pdaOffices.values()) {
+                if (office.getFirmNumber() != null) {
+                    firmsWithOffices.add(office.getFirmNumber());
+                }
+            }
+            log.info("Found {} unique firms with offices in PDA data", firmsWithOffices.size());
+
             // PASS 1: Process firms - create or update (without parent references for new firms)
+            // ONLY process firms that have at least one office (database constraint requirement)
             for (Map.Entry<String, PdaFirmData> entry : pdaFirms.entrySet()) {
                 String firmCode = entry.getKey();
                 PdaFirmData pdaFirm = entry.getValue();
+
+                if (!firmsWithOffices.contains(firmCode)) {
+                    log.warn("Skipping firm {} - no offices found in PDA data (database requires firms to have at least one office)", firmCode);
+                    result.addWarning("Skipped firm " + firmCode + " - no offices in PDA data");
+                    continue;
+                }
+
                 processedFirmCodes.add(firmCode);
 
                 Firm dbFirm = dbFirms.get(firmCode);
@@ -347,15 +408,48 @@ public class DataProviderService {
                 } else {
                     updateFirm(dbFirm, pdaFirm, result);
                 }
+
+                // Check if we have critical errors that abort the transaction
+                // If so, stop processing to avoid "transaction is aborted" cascading errors
+                if (!result.getErrors().isEmpty()) {
+                    log.warn("Stopping firm processing due to {} errors to prevent transaction abort cascade",
+                        result.getErrors().size());
+                    break;
+                }
+            }
+
+            // If errors occurred during firm processing, stop immediately to avoid cascading failures
+            if (!result.getErrors().isEmpty()) {
+                log.error("Stopping synchronization due to {} errors during firm processing", result.getErrors().size());
+                return result;
             }
 
             // Check for firms to deactivate
+            // Deactivate firms that are either:
+            // 1. Not in PDA data anymore
+            // 2. In PDA but don't have any offices (violates database constraint)
             for (String firmCode : dbFirms.keySet()) {
                 if (!processedFirmCodes.contains(firmCode)) {
+                    log.info("Deactivating firm {} - not in PDA data", firmCode);
+                    deactivateFirm(dbFirms.get(firmCode), result);
+                    result.setFirmsDeactivated(result.getFirmsDeactivated() + 1);
+                } else if (!firmsWithOffices.contains(firmCode)) {
+                    log.info("Deactivating firm {} - no offices in PDA data (database constraint)", firmCode);
                     deactivateFirm(dbFirms.get(firmCode), result);
                     result.setFirmsDeactivated(result.getFirmsDeactivated() + 1);
                 }
             }
+
+            // If errors occurred during deactivation, stop immediately
+            if (!result.getErrors().isEmpty()) {
+                log.error("Stopping synchronization due to {} errors during firm deactivation", result.getErrors().size());
+                return result;
+            }
+
+            // Flush Pass 1 changes (firm creation/updates/deactivations) before setting parent references
+            log.info("Flushing Pass 1 firm changes to database...");
+            entityManager.flush();
+            log.info("Pass 1 firm changes flushed successfully");
 
             // Reload firms after changes
             dbFirms.clear();
@@ -402,7 +496,19 @@ public class DataProviderService {
                         }
                     }
                 }
+
+                // Check for errors after each parent update attempt
+                if (!result.getErrors().isEmpty()) {
+                    log.error("Stopping synchronization due to {} errors during parent reference update", result.getErrors().size());
+                    return result;
+                }
             }
+
+            // CRITICAL: Flush all firm changes before processing offices
+            // This ensures offices can reference newly created/updated firms
+            log.info("Flushing firm changes to database...");
+            entityManager.flush();
+            log.info("Firm changes flushed successfully");
 
             // Get DB offices
             Map<String, Office> dbOffices = new HashMap<>();
@@ -414,7 +520,16 @@ public class DataProviderService {
 
             final Set<String> processedOfficeCodes = new HashSet<>();
 
-            // Process offices
+            // First, identify offices that will be deactivated (not in PDA data)
+            final Set<String> officesToDeactivate = new HashSet<>();
+            for (String officeCode : dbOffices.keySet()) {
+                if (!pdaOffices.containsKey(officeCode)) {
+                    officesToDeactivate.add(officeCode);
+                }
+            }
+
+            // PASS 3: Process offices - create new ones and update existing ones (but not those being deactivated)
+            log.info("Processing offices...");
             for (Map.Entry<String, PdaOfficeData> entry : pdaOffices.entrySet()) {
                 String officeCode = entry.getKey();
                 PdaOfficeData pdaOffice = entry.getValue();
@@ -428,19 +543,40 @@ public class DataProviderService {
                     continue;
                 }
 
+                // Skip if this office is being deactivated (should not happen but defensive check)
+                if (officesToDeactivate.contains(officeCode)) {
+                    log.warn("Office {} is in PDA data but was marked for deactivation - skipping", officeCode);
+                    continue;
+                }
+
                 if (dbOffice == null) {
                     createOffice(pdaOffice, parentFirm, result);
                 } else {
+                    // Check if the office entity is still managed (not deleted in this transaction)
+                    if (!entityManager.contains(dbOffice)) {
+                        log.warn("Office {} entity is detached/deleted, skipping update", officeCode);
+                        continue;
+                    }
                     updateOffice(dbOffice, pdaOffice, parentFirm, result);
+                }
+
+                // Check for errors after each office operation
+                if (!result.getErrors().isEmpty()) {
+                    log.error("Stopping synchronization due to {} errors during office processing", result.getErrors().size());
+                    return result;
                 }
             }
 
-            // Check for offices to deactivate
-            for (String officeCode : dbOffices.keySet()) {
-                if (!processedOfficeCodes.contains(officeCode)) {
-                    deactivateOffice(dbOffices.get(officeCode), result);
-                    result.setOfficesDeactivated(result.getOfficesDeactivated() + 1);
-                }
+            // Check for errors before deactivating offices
+            if (!result.getErrors().isEmpty()) {
+                log.error("Stopping synchronization due to {} errors, skipping office deactivation", result.getErrors().size());
+                return result;
+            }
+
+            // Now deactivate offices that are not in PDA data
+            for (String officeCode : officesToDeactivate) {
+                deactivateOffice(dbOffices.get(officeCode), result);
+                result.setOfficesDeactivated(result.getOfficesDeactivated() + 1);
             }
 
             log.info("PDA sync complete - Firms: {} created, {} updated, {} deactivated | Offices: {} created, {} updated, {} deactivated",
@@ -507,7 +643,7 @@ public class DataProviderService {
     }
 
     private void deactivateFirm(Firm firm, PdaSyncResultDto result) {
-        new DeactivateFirmCommand(firmRepository, firm).execute(result);
+        new DeactivateFirmCommand(firmRepository, officeRepository, userProfileRepository, firm).execute(result);
     }
 
     private void createOffice(PdaOfficeData pdaOffice, Firm firm, PdaSyncResultDto result) {
