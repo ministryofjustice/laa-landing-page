@@ -865,7 +865,7 @@ class UserServiceTest {
                 AppDto.builder().name("Test App 1").appType(AppType.LAA).ordinal(0).enabled(true).build(),
                 AppDto.builder().name("Test App 2").appType(AppType.LAA).ordinal(1).enabled(true).build(),
                 AppDto.builder().name("Test App 3").appType(AppType.LAA).ordinal(2).enabled(true).build());
-        when(appService.getAllAppsFromCache()).thenReturn(applications);
+        when(appService.getAllActiveLaaApps()).thenReturn(applications);
         // When
         Set<LaaApplicationForView> returnedApps = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
 
@@ -2470,11 +2470,11 @@ class UserServiceTest {
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
             List<AppDto> configuredApps = List.of(
-                    AppDto.builder().name("Test App 1").appType(AppType.LAA).ordinal(1).build(),
-                    AppDto.builder().name("Test App 2").appType(AppType.LAA).ordinal(2).build(),
-                    AppDto.builder().name("Test App 3").appType(AppType.LAA).ordinal(3).build(),
-                    AppDto.builder().name("Non-matching App").appType(AppType.LAA).ordinal(4).build());
-            when(appService.getAllAppsFromCache()).thenReturn(configuredApps);
+                    AppDto.builder().name("Test App 1").appType(AppType.LAA).ordinal(1).enabled(true).build(),
+                    AppDto.builder().name("Test App 2").appType(AppType.LAA).ordinal(2).enabled(true).build(),
+                    AppDto.builder().name("Test App 3").appType(AppType.LAA).ordinal(3).enabled(true).build(),
+                    AppDto.builder().name("Non-matching App").appType(AppType.LAA).ordinal(4).enabled(true).build());
+            when(appService.getAllActiveLaaApps()).thenReturn(configuredApps);
 
             // Act
             Set<LaaApplicationForView> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
@@ -2508,8 +2508,8 @@ class UserServiceTest {
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
             List<AppDto> configuredApps = List.of(
-                    AppDto.builder().name("Different App").appType(AppType.LAA).ordinal(1).build());
-            when(appService.getAllAppsFromCache()).thenReturn(configuredApps);
+                    AppDto.builder().name("Different App").appType(AppType.LAA).ordinal(1).enabled(true).build());
+            when(appService.getAllActiveLaaApps()).thenReturn(configuredApps);
 
             // Act
             Set<LaaApplicationForView> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
@@ -2549,7 +2549,7 @@ class UserServiceTest {
                     AppDto.builder().name("App C").ordinal(3).build(),
                     AppDto.builder().name("App A").ordinal(1).build(),
                     AppDto.builder().name("App B").ordinal(2).build());
-            when(appService.getAllAppsFromCache()).thenReturn(configuredApps);
+            when(appService.getAllActiveLaaApps()).thenReturn(configuredApps);
 
             // Act
             Set<LaaApplicationForView> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
@@ -2602,7 +2602,7 @@ class UserServiceTest {
                                     .alternativeDescription("Alternative description for App A").build())
                             .build(),
                     AppDto.builder().id(appBsId.toString()).name("App B").ordinal(2).description("Default description for App B").build());
-            when(appService.getAllAppsFromCache()).thenReturn(configuredApps);
+            when(appService.getAllActiveLaaApps()).thenReturn(configuredApps);
 
             // Act
             Set<LaaApplicationForView> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
@@ -2657,7 +2657,7 @@ class UserServiceTest {
                                     .alternativeDescription("Alternative description for App A").build())
                             .build(),
                     AppDto.builder().id(appBsId.toString()).name("App B").ordinal(2).build());
-            when(appService.getAllAppsFromCache()).thenReturn(configuredApps);
+            when(appService.getAllActiveLaaApps()).thenReturn(configuredApps);
 
             // Act
             Set<LaaApplicationForView> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
