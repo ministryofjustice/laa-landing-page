@@ -1,5 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.service.pda.command;
 
+import java.util.List;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.PdaSyncResultDto;
@@ -9,8 +11,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
-
-import java.util.List;
 
 /**
  * Command to deactivate/delete a firm that no longer exists in PDA.
@@ -28,7 +28,20 @@ public class DeactivateFirmCommand implements PdaSyncCommand {
     @Override
     public void execute(PdaSyncResultDto result) {
         try {
-            // First, delete all offices belonging to this firm to avoid foreign key constraint violations
+            // First, remove user profile firm associations to avoid foreign key constraint violations
+            List<UserProfile> profilesWithFirm = userProfileRepository.findByFirmId(firm.getId());
+            if (!profilesWithFirm.isEmpty()) {
+                log.info("Removing firm association from {} user profiles for firm {} before deleting",
+                    profilesWithFirm.size(), firm.getCode());
+                for (UserProfile profile : profilesWithFirm) {
+                    profile.setFirm(null);
+                    userProfileRepository.save(profile);
+                    log.debug("Removed firm {} from user profile {} during firm deactivation",
+                        firm.getCode(), profile.getId());
+                }
+            }
+
+            // Second, delete all offices belonging to this firm to avoid foreign key constraint violations
             List<Office> offices = officeRepository.findByFirm(firm);
             if (!offices.isEmpty()) {
                 log.info("Deleting {} offices for firm {} before deleting firm", offices.size(), firm.getCode());
