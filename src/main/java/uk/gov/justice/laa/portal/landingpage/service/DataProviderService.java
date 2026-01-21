@@ -598,6 +598,25 @@ public class DataProviderService {
                 result.setOfficesDeactivated(result.getOfficesDeactivated() + 1);
             }
 
+            // Flush all changes and verify constraint compliance before commit
+            log.info("Flushing all changes before final validation...");
+            entityManager.flush();
+            entityManager.clear(); // Clear cache to get fresh data
+
+            // FINAL SAFETY CHECK: Verify no firms exist without offices
+            // This catches edge cases where office operations failed silently
+            log.info("Final validation: checking all firms have at least one office...");
+            List<Firm> firmsWithoutOffices = firmRepository.findFirmsWithoutOffices();
+
+            if (!firmsWithoutOffices.isEmpty()) {
+                log.error("Found {} firms without offices - this violates database constraint", firmsWithoutOffices.size());
+                for (Firm firm : firmsWithoutOffices) {
+                    log.error("Firm {} has no offices - deactivating to prevent constraint violation", firm.getCode());
+                    deactivateFirm(firm, result);
+                    result.setFirmsDeactivated(result.getFirmsDeactivated() + 1);
+                }
+            }
+
             log.info("PDA sync complete - Firms: {} created, {} updated, {} deactivated | Offices: {} created, {} updated, {} deactivated",
                 result.getFirmsCreated(), result.getFirmsUpdated(), result.getFirmsDeactivated(),
                 result.getOfficesCreated(), result.getOfficesUpdated(), result.getOfficesDeactivated());
