@@ -1,0 +1,22 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1763544960003-1
+      author: sankavi.mohanraj
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              ALTER TABLE entra_user ADD COLUMN IF NOT EXISTS last_synced_on timestamp;
+        - sql:
+            dbms: postgresql
+            sql: |
+              CREATE TABLE IF NOT EXISTS entra_last_sync_metadata (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                updated_at timestamp NULL,
+                last_successful_to timestamp NULL
+              );
+      rollback:
+        - sql:
+            sql: |
+              ALTER TABLE entra_user DROP COLUMN IF EXISTS last_synced_on;
+              DROP TABLE IF EXISTS entra_last_sync_metadata;
