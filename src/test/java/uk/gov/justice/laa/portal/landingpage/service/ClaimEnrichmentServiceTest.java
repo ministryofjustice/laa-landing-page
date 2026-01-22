@@ -292,57 +292,10 @@ class ClaimEnrichmentServiceTest {
     }
 
     @Test
-    void enrichClaim_InternalUser_noLegacySyncRolesAssigned() {
-        // Arrange
-        AppRole internalRole = AppRole.builder()
-                .name(INTERNAL_ROLE)
-                .app(app)
-                .build();
-        // Internal users don't have firms
-        UserProfile userProfile = UserProfile.builder().activeProfile(true)
-                .appRoles(Set.of(internalRole))
-                .legacyUserId(LEGACY_USER_ID)
-                .firm(null)
-                .userType(UserType.INTERNAL)
-                .build();
-        entraUser.setUserProfiles(Set.of(userProfile));
-
-        when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
-        when(appRepository.findByEntraAppId(anyString())).thenReturn(Optional.of(app));
-
-        // Act
-        ClaimEnrichmentResponse response = claimEnrichmentService.enrichClaim(request);
-
-        // Assert
-        assertNotNull(response);
-        assertNotNull(response.getData());
-        assertEquals("microsoft.graph.onTokenIssuanceStartResponseData", response.getData().getOdataType());
-        
-        // Verify actions
-        assertNotNull(response.getData().getActions());
-        assertEquals(1, response.getData().getActions().size());
-        
-        ClaimEnrichmentResponse.ResponseAction action = response.getData().getActions().get(0);
-        assertEquals("microsoft.graph.tokenIssuanceStart.provideClaimsForToken", action.getOdataType());
-        
-        // Verify claims
-        Map<String, Object> claims = action.getClaims();
-        assertNotNull(claims);
-        assertEquals(LEGACY_USER_ID.toString().toUpperCase(), claims.get("USER_NAME"));
-        assertEquals(USER_EMAIL, claims.get("USER_EMAIL"));
-        assertEquals(List.of(INTERNAL_ROLE), claims.get("LAA_APP_ROLES"));
-        assertEquals(Collections.emptyList(), claims.get("LAA_ACCOUNTS"));
-        
-        verify(officeRepository, never()).findOfficeByFirm_IdIn(any());
-        verify(ccmsUserDetailsService, never()).getUserDetailsByLegacyUserId(anyString());
-    }
-
-    @Test
-    void enrichClaim_InternalUserWithLegacySyncRole_UsesCcmsUsernameFromUda() {
+    void enrichClaim_InternalUser_UsesCcmsUsernameFromUda() {
         AppRole internalLegacyRole = AppRole.builder()
                 .name(INTERNAL_ROLE)
                 .app(app)
-                .legacySync(true)
                 .build();
 
         UserProfile userProfile = UserProfile.builder()
