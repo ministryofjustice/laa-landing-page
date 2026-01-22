@@ -25,8 +25,7 @@ public class EntraLastSyncMetadata {
 
     @Id
     @Column(name = "id")
-    @Builder.Default
-    private String id = "ENTRA_USER_SYNC";
+    private String id;
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
