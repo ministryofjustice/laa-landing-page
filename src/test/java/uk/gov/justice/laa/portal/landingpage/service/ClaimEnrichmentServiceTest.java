@@ -110,6 +110,7 @@ class ClaimEnrichmentServiceTest {
                 .id(UUID.fromString(APP_ID))
                 .entraAppId(ENTRA_APP_ID)
                 .name(APP_NAME)
+                .enabled(true)
                 .build();
 
         firm = Firm.builder()
@@ -480,6 +481,31 @@ class ClaimEnrichmentServiceTest {
             () -> claimEnrichmentService.enrichClaim(request)
         );
         assertEquals("User has no firm assigned", exception.getMessage());
+        verify(officeRepository, never()).findOfficeByFirm_IdIn(any());
+    }
+
+    @Test
+    void enrichClaim_Success_When_App_Disabled() {
+        // Arrange
+        app.setEnabled(false);
+        UserProfile profile1 = UserProfile.builder().activeProfile(true)
+                .appRoles(Set.of(AppRole.builder().name(EXTERNAL_ROLE).app(app).build()))
+                .legacyUserId(LEGACY_USER_ID)
+                .firm(firm)
+                .unrestrictedOfficeAccess(false)
+                .build();
+        entraUser.setUserProfiles(Set.of(profile1));
+
+        when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(appRepository.findByEntraAppId(anyString())).thenReturn(Optional.of(app));
+
+        // Act
+        ClaimEnrichmentResponse response = claimEnrichmentService.enrichClaim(request);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(false, response.isSuccess());
+        assertEquals(null, response.getData());
         verify(officeRepository, never()).findOfficeByFirm_IdIn(any());
     }
 }
