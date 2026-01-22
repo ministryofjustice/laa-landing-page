@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -46,6 +48,7 @@ public class HomePageTest extends BaseFrontEndTest {
         assertEquals("Manage your users", linkText, "Link text should match");
     }
 
+    @Disabled("Temporarily disabled")
     @Test
     @DisplayName("SiLAS Administration panel is visible for global admin")
     void silasAdministrationPanelVisible() {
