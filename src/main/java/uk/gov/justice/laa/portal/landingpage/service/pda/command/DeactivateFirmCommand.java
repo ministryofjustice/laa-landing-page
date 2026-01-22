@@ -61,14 +61,14 @@ public class DeactivateFirmCommand implements PdaSyncCommand {
                     removeUserProfileOfficeAssociations(office);
 
                     officeRepository.delete(office);
-                    result.setOfficesDeactivated(result.getOfficesDeactivated() + 1);
+                result.setOfficesDeleted(result.getOfficesDeleted() + 1);
                     log.debug("Deleted office {} belonging to firm {}", office.getCode(), firm.getCode());
                 }
             }
 
             // Now delete the firm
             firmRepository.delete(firm);
-            result.setFirmsDeactivated(result.getFirmsDeactivated() + 1);
+            result.setFirmsDeleted(result.getFirmsDeleted() + 1);
             log.info("Deactivate/delete firm: {} (name: {})", firm.getCode(), firm.getName());
         } catch (Exception e) {
             log.error("Failed to deactivate firm {}: {}", firm.getCode(), e.getMessage());

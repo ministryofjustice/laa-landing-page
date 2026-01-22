@@ -23,7 +23,7 @@ public class PdaSyncResultDto {
     private int firmsUpdated = 0;
 
     @Builder.Default
-    private int firmsDeactivated = 0;
+    private int firmsDeleted = 0;
 
     @Builder.Default
     private int officesCreated = 0;
@@ -35,7 +35,7 @@ public class PdaSyncResultDto {
     private int officesUpdated = 0;
 
     @Builder.Default
-    private int officesDeactivated = 0;
+    private int officesDeleted = 0;
 
     @Builder.Default
     private List<String> errors = new ArrayList<>();

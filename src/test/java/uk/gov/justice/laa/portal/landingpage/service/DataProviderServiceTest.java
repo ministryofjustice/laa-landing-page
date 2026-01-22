@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.service;
 
 import java.util.Collections;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
+import uk.gov.justice.laa.portal.landingpage.dto.PdaSyncResultDto;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
@@ -106,6 +108,26 @@ class DataProviderServiceTest {
 
             // Then - verify repository method is available
             assertThat(firmRepository.findFirmsWithoutOffices()).hasSize(1);
+        }
+    }
+
+    @Nested
+    class ShutdownHandlingTests {
+
+        @Test
+        void shouldAbortSyncWhenShutdownFlagIsSet() throws Exception {
+            // Given - trigger shutdown before sync starts
+            dataProviderService.onShutdown();
+
+            // When
+            CompletableFuture<PdaSyncResultDto> future = dataProviderService.synchronizeWithPdaAsync();
+            PdaSyncResultDto result = future.get();
+
+            // Then - sync should abort immediately with warning
+            assertThat(result.getWarnings())
+                .contains("Sync aborted - application is shutting down");
+            assertThat(result.getFirmsCreated()).isZero();
+            assertThat(result.getFirmsUpdated()).isZero();
         }
     }
 }

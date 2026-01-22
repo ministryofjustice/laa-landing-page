@@ -199,7 +199,7 @@ class DeactivateFirmCommandTest {
             inOrder.verify(officeRepository).delete(office2);
             inOrder.verify(firmRepository).delete(firm);
 
-            assertThat(result.getOfficesDeactivated()).isEqualTo(2);
+        assertThat(result.getOfficesDeleted()).isEqualTo(2);
         }
 
         @Test

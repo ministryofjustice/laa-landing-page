@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -18,6 +19,7 @@ import org.springframework.web.client.RestClient;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import jakarta.annotation.PreDestroy;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
@@ -60,6 +62,15 @@ public class DataProviderService {
 
     @PersistenceContext
     private EntityManager entityManager;
+
+    // Flag to detect application shutdown and prevent database access
+    private final AtomicBoolean shuttingDown = new AtomicBoolean(false);
+
+    @PreDestroy
+    public void onShutdown() {
+        log.info("DataProviderService shutdown initiated - flagging sync operations to abort");
+        shuttingDown.set(true);
+    }
 
     /**
      * Fetches provider offices snapshot from PDA and returns as TableSaw dataframe.
@@ -104,11 +115,15 @@ public class DataProviderService {
 
     /**
      * Returns structured comparison showing created, updated, deleted, and matched items.
+     * IMPORTANT: This comparison mirrors the actual sync logic including business rules:
+     * - Firms without offices are skipped (database constraint)
+     * - Firm name updates are skipped if duplicate name exists
+     * - Parent firm validation rules apply
      *
-     * @return ComparisonResultDto with categorized items
+     * @return ComparisonResultDto with categorized items matching actual sync behavior
      */
     public ComparisonResultDto compareWithDatabase() {
-        log.info("Comparing PDA data with local database");
+        log.info("Comparing PDA data with local database (mirroring sync business rules)");
 
         Table pdaTable = getProviderOfficesSnapshot();
 
@@ -121,6 +136,10 @@ public class DataProviderService {
             .filter(f -> f.getCode() != null)
             .collect(Collectors.toMap(Firm::getCode, f -> f, (f1, f2) -> f1));
 
+        Map<String, Firm> firmsByName = allFirms.stream()
+            .filter(f -> f.getName() != null)
+            .collect(Collectors.toMap(Firm::getName, f -> f, (f1, f2) -> f1));
+
         Map<String, Office> officesByCode = allOffices.stream()
             .filter(o -> o.getCode() != null)
             .collect(Collectors.toMap(Office::getCode, o -> o, (o1, o2) -> o1));
@@ -131,17 +150,33 @@ public class DataProviderService {
         Map<String, PdaFirmData> pdaFirms = buildPdaFirmsMap(pdaTable);
         Map<String, PdaOfficeData> pdaOffices = buildPdaOfficesMap(pdaTable);
 
+        // Determine which firms have offices (sync skips firms without offices)
+        Set<String> firmsWithOffices = new HashSet<>();
+        for (PdaOfficeData office : pdaOffices.values()) {
+            if (office.getFirmNumber() != null) {
+                firmsWithOffices.add(office.getFirmNumber());
+            }
+        }
+        log.info("Found {} firms with offices in PDA data (firms without offices will be skipped)", firmsWithOffices.size());
+
         // Track separate counts
         int firmCreates = 0, firmUpdates = 0, firmDeletes = 0, firmExists = 0;
         int officeCreates = 0, officeUpdates = 0, officeDeletes = 0, officeExists = 0;
 
         ComparisonResultDto result = ComparisonResultDto.builder().build();
 
-        // Compare firms
+        // Compare firms - MIRRORING SYNC LOGIC
         Set<String> processedFirmCodes = new HashSet<>();
         for (Map.Entry<String, PdaFirmData> entry : pdaFirms.entrySet()) {
             String firmCode = entry.getKey();
             PdaFirmData pdaFirm = entry.getValue();
+
+            // SYNC RULE: Skip firms without offices (database constraint)
+            if (!firmsWithOffices.contains(firmCode)) {
+                log.debug("Skipping firm {} in comparison - no offices (sync would skip this)", firmCode);
+                continue;
+            }
+
             processedFirmCodes.add(firmCode);
 
             Firm dbFirm = firmsByCode.get(firmCode);
@@ -156,7 +191,23 @@ public class DataProviderService {
                 firmCreates++;
             } else {
                 // Check if firm needs updating
-                boolean needsUpdate = !pdaFirm.getFirmName().equals(dbFirm.getName());
+                // IMPORTANT: UpdateFirmCommand is only called for NAME changes in sync Pass 1
+                // Parent firm updates happen separately in sync Pass 2 via direct repository save
+                // So we should ONLY check name changes here to match actual UpdateFirmCommand usage
+                boolean nameChanged = !pdaFirm.getFirmName().equals(dbFirm.getName());
+                boolean needsUpdate = false;
+
+                if (nameChanged) {
+                    // SYNC RULE: Skip name update if duplicate name exists (UpdateFirmCommand behavior)
+                    Firm existingFirmWithName = firmsByName.get(pdaFirm.getFirmName());
+                    if (existingFirmWithName != null && !existingFirmWithName.getId().equals(dbFirm.getId())) {
+                        log.debug("Firm {} name change would be skipped - duplicate name exists", firmCode);
+                        // Sync would skip this update due to duplicate name, so don't count it
+                    } else {
+                        log.info("COMPARE: Firm {} needs name update: '{}' -> '{}'", firmCode, dbFirm.getName(), pdaFirm.getFirmName());
+                        needsUpdate = true;
+                    }
+                }
 
                 if (needsUpdate) {
                     result.getUpdated().add(ComparisonResultDto.ItemInfo.builder()
@@ -178,10 +229,13 @@ public class DataProviderService {
             }
         }
 
-        // Find deleted firms
+        // Find deleted firms - MIRRORING SYNC LOGIC
+        // Sync deactivates firms that are:
+        // 1. Not in PDA data anymore, OR
+        // 2. In PDA but don't have any offices (violates database constraint)
         for (Map.Entry<String, Firm> entry : firmsByCode.entrySet()) {
             String firmCode = entry.getKey();
-            if (!processedFirmCodes.contains(firmCode)) {
+            if (!processedFirmCodes.contains(firmCode) || !firmsWithOffices.contains(firmCode)) {
                 Firm firm = entry.getValue();
                 result.getDeleted().add(ComparisonResultDto.ItemInfo.builder()
                     .type("firm")
@@ -198,14 +252,15 @@ public class DataProviderService {
         for (Map.Entry<String, PdaOfficeData> entry : pdaOffices.entrySet()) {
             String officeCode = entry.getKey();
             PdaOfficeData pdaOffice = entry.getValue();
-            processedOfficeCodes.add(officeCode);
 
             Office dbOffice = officesByCode.get(officeCode);
             Firm parentFirm = firmsByCode.get(pdaOffice.getFirmNumber());
 
             if (parentFirm == null) {
-                continue; // Skip orphan offices
+                continue; // Skip orphan offices - don't mark as processed since sync won't process them
             }
+
+            processedOfficeCodes.add(officeCode);
 
             String officeName = pdaOffice.getAddressLine1() != null ? pdaOffice.getAddressLine1() : officeCode;
 
@@ -249,6 +304,8 @@ public class DataProviderService {
                 Office office = entry.getValue();
                 String officeName = office.getAddress() != null && office.getAddress().getAddressLine1() != null
                     ? office.getAddress().getAddressLine1() : officeCode;
+                log.info("COMPARE: Office {} needs deletion (firm: {}, not in PDA data)", officeCode,
+                    office.getFirm() != null ? office.getFirm().getCode() : "null");
                 result.getDeleted().add(ComparisonResultDto.ItemInfo.builder()
                     .type("office")
                     .code(officeCode)
@@ -275,16 +332,21 @@ public class DataProviderService {
     private boolean isSameAddress(Office office, PdaOfficeData pdaOffice) {
         if (office.getAddress() == null) return false;
 
-        return equals(office.getAddress().getAddressLine1(), pdaOffice.getAddressLine1()) &&
-               equals(office.getAddress().getAddressLine2(), pdaOffice.getAddressLine2()) &&
-               equals(office.getAddress().getAddressLine3(), pdaOffice.getAddressLine3()) &&
-               equals(office.getAddress().getCity(), pdaOffice.getCity()) &&
-               equals(office.getAddress().getPostcode(), pdaOffice.getPostcode());
+        // Use emptyToNull normalization to match UpdateOfficeCommand behavior
+        return equals(office.getAddress().getAddressLine1(), emptyToNull(pdaOffice.getAddressLine1())) &&
+               equals(office.getAddress().getAddressLine2(), emptyToNull(pdaOffice.getAddressLine2())) &&
+               equals(office.getAddress().getAddressLine3(), emptyToNull(pdaOffice.getAddressLine3())) &&
+               equals(office.getAddress().getCity(), emptyToNull(pdaOffice.getCity())) &&
+               equals(office.getAddress().getPostcode(), emptyToNull(pdaOffice.getPostcode()));
     }
 
     private boolean equals(String s1, String s2) {
         if (s1 == null) return s2 == null;
         return s1.equals(s2);
+    }
+
+    private String emptyToNull(String value) {
+        return (value == null || value.trim().isEmpty()) ? null : value;
     }
 
     /**
@@ -298,13 +360,40 @@ public class DataProviderService {
     public CompletableFuture<PdaSyncResultDto> synchronizeWithPdaAsync() {
         log.info("Starting async PDA synchronization in thread: {}", Thread.currentThread().getName());
 
+        // Check if application is shutting down before starting any work
+        if (shuttingDown.get()) {
+            log.warn("PDA sync aborted - application is shutting down");
+            PdaSyncResultDto shutdownResult = PdaSyncResultDto.builder().build();
+            shutdownResult.addWarning("Sync aborted - application is shutting down");
+            return CompletableFuture.completedFuture(shutdownResult);
+        }
+
         try {
             // Use TransactionTemplate to ensure proper transaction boundary
             // @Transactional doesn't work when called from same class due to proxy bypass
             PdaSyncResultDto result = transactionTemplate.execute(status -> {
+                // Re-check shutdown flag inside transaction
+                if (shuttingDown.get()) {
+                    log.warn("PDA sync aborted during transaction - application is shutting down");
+                    status.setRollbackOnly();
+                    PdaSyncResultDto shutdownResult = PdaSyncResultDto.builder().build();
+                    shutdownResult.addWarning("Sync aborted during transaction - application is shutting down");
+                    return shutdownResult;
+                }
+
                 try {
                     return synchronizeWithPda();
                 } catch (Exception e) {
+                    // Check if error is due to shutdown (connection closed, etc.)
+                    String errorMsg = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
+                    if (shuttingDown.get() || errorMsg.contains("connection") && errorMsg.contains("closed")) {
+                        log.warn("PDA sync interrupted by shutdown: {}", e.getMessage());
+                        status.setRollbackOnly();
+                        PdaSyncResultDto shutdownResult = PdaSyncResultDto.builder().build();
+                        shutdownResult.addWarning("Sync interrupted by application shutdown");
+                        return shutdownResult;
+                    }
+
                     // Catch any exception that would mark transaction as rollback-only
                     // Log it and return an error result, allowing partial commit
                     log.error("Exception during PDA sync (allowing partial commit): {}", e.getMessage(), e);
@@ -319,9 +408,9 @@ public class DataProviderService {
                 if (!result.getErrors().isEmpty()) {
                     log.warn("PDA sync completed with {} errors (changes were committed)", result.getErrors().size());
                 }
-                log.info("Async PDA synchronization completed - Firms: {} created, {} updated, {} deactivated | Offices: {} created, {} updated, {} deactivated",
-                    result.getFirmsCreated(), result.getFirmsUpdated(), result.getFirmsDeactivated(),
-                    result.getOfficesCreated(), result.getOfficesUpdated(), result.getOfficesDeactivated());
+                log.info("Async PDA synchronization completed - Firms: {} created, {} updated, {} deleted | Offices: {} created, {} updated, {} deleted",
+                    result.getFirmsCreated(), result.getFirmsUpdated(), result.getFirmsDeleted(),
+                    result.getOfficesCreated(), result.getOfficesUpdated(), result.getOfficesDeleted());
             }
 
             return CompletableFuture.completedFuture(result);
@@ -391,6 +480,13 @@ public class DataProviderService {
             // PASS 1: Process firms - create or update (without parent references for new firms)
             // ONLY process firms that have at least one office (database constraint requirement)
             for (Map.Entry<String, PdaFirmData> entry : pdaFirms.entrySet()) {
+                // Check for shutdown before processing each firm
+                if (shuttingDown.get()) {
+                    log.warn("Firm processing aborted - application is shutting down");
+                    result.addWarning("Firm processing aborted - application shutdown detected");
+                    return result;
+                }
+
                 String firmCode = entry.getKey();
                 PdaFirmData pdaFirm = entry.getValue();
 
@@ -433,11 +529,11 @@ public class DataProviderService {
                 if (!processedFirmCodes.contains(firmCode)) {
                     log.info("Deactivating firm {} - not in PDA data", firmCode);
                     deactivateFirm(dbFirms.get(firmCode), result);
-                    result.setFirmsDeactivated(result.getFirmsDeactivated() + 1);
+                    result.setFirmsDeleted(result.getFirmsDeleted() + 1);
                 } else if (!firmsWithOffices.contains(firmCode)) {
                     log.info("Deactivating firm {} - no offices in PDA data (database constraint)", firmCode);
                     deactivateFirm(dbFirms.get(firmCode), result);
-                    result.setFirmsDeactivated(result.getFirmsDeactivated() + 1);
+                    result.setFirmsDeleted(result.getFirmsDeleted() + 1);
                 }
             }
 
@@ -547,9 +643,40 @@ public class DataProviderService {
                 }
             }
 
+            // Also identify orphaned offices in PDA data (parent firm doesn't exist in DB)
+            // These should be deactivated if they exist in DB, or skipped if they don't
+            final Set<String> orphanedOfficeCodes = new HashSet<>();
+            for (Map.Entry<String, PdaOfficeData> entry : pdaOffices.entrySet()) {
+                String officeCode = entry.getKey();
+                PdaOfficeData pdaOffice = entry.getValue();
+                Firm parentFirm = dbFirms.get(pdaOffice.getFirmNumber());
+
+                if (parentFirm == null) {
+                    orphanedOfficeCodes.add(officeCode);
+                    // If this office exists in DB, mark it for deactivation
+                    if (dbOffices.containsKey(officeCode)) {
+                        officesToDeactivate.add(officeCode);
+                        log.warn("Office {} is orphaned (parent firm {} not found) - will be deactivated",
+                            officeCode, pdaOffice.getFirmNumber());
+                        result.addWarning("Office " + officeCode + " orphaned (parent firm " +
+                            pdaOffice.getFirmNumber() + " not found) - will be deactivated");
+                    } else {
+                        log.info("Office {} is orphaned (parent firm {} not found) and doesn't exist in DB - skipping",
+                            officeCode, pdaOffice.getFirmNumber());
+                    }
+                }
+            }
+
             // PASS 3: Process offices - create new ones and update existing ones (but not those being deactivated)
             log.info("Processing offices...");
             for (Map.Entry<String, PdaOfficeData> entry : pdaOffices.entrySet()) {
+                // Check for shutdown before processing each office
+                if (shuttingDown.get()) {
+                    log.warn("Office processing aborted - application is shutting down");
+                    result.addWarning("Office processing aborted - application shutdown detected");
+                    return result;
+                }
+
                 String officeCode = entry.getKey();
                 PdaOfficeData pdaOffice = entry.getValue();
                 processedOfficeCodes.add(officeCode);
@@ -557,8 +684,15 @@ public class DataProviderService {
                 Office dbOffice = dbOffices.get(officeCode);
                 Firm parentFirm = dbFirms.get(pdaOffice.getFirmNumber());
 
+                // Skip orphaned offices - they're already marked for deactivation
+                if (orphanedOfficeCodes.contains(officeCode)) {
+                    continue;
+                }
+
+                // This should not happen now, but defensive check
                 if (parentFirm == null) {
-                    result.addError("Cannot process office " + officeCode + ": firm " + pdaOffice.getFirmNumber() + " not found");
+                    log.error("Office {} parent firm {} not found - this should have been caught earlier",
+                        officeCode, pdaOffice.getFirmNumber());
                     continue;
                 }
 
@@ -595,7 +729,7 @@ public class DataProviderService {
             // Now deactivate offices that are not in PDA data
             for (String officeCode : officesToDeactivate) {
                 deactivateOffice(dbOffices.get(officeCode), result);
-                result.setOfficesDeactivated(result.getOfficesDeactivated() + 1);
+                result.setOfficesDeleted(result.getOfficesDeleted() + 1);
             }
 
             // Flush all changes and verify constraint compliance before commit
@@ -613,13 +747,13 @@ public class DataProviderService {
                 for (Firm firm : firmsWithoutOffices) {
                     log.error("Firm {} has no offices - deactivating to prevent constraint violation", firm.getCode());
                     deactivateFirm(firm, result);
-                    result.setFirmsDeactivated(result.getFirmsDeactivated() + 1);
+                    result.setFirmsDeleted(result.getFirmsDeleted() + 1);
                 }
             }
 
-            log.info("PDA sync complete - Firms: {} created, {} updated, {} deactivated | Offices: {} created, {} updated, {} deactivated",
-                result.getFirmsCreated(), result.getFirmsUpdated(), result.getFirmsDeactivated(),
-                result.getOfficesCreated(), result.getOfficesUpdated(), result.getOfficesDeactivated());
+            log.info("PDA sync complete - Firms: {} created, {} updated, {} deleted | Offices: {} created, {} updated, {} deleted",
+                result.getFirmsCreated(), result.getFirmsUpdated(), result.getFirmsDeleted(),
+                result.getOfficesCreated(), result.getOfficesUpdated(), result.getOfficesDeleted());
 
         } catch (Exception e) {
             log.error("Error during PDA synchronization: {}", e.getMessage(), e);
