@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
@@ -213,6 +214,31 @@ public class MultiFirmUserControllerTest {
         String result = controller.addUserProfilePost(form, bindingResult, model, session, authentication);
 
         assertThat(result).isEqualTo("redirect:/admin/multi-firm/user/add/profile/select/apps");
+        assertThat(model.getAttribute("entraUser")).isNotNull();
+        assertThat(session.getAttribute("entraUser")).isNotNull();
+    }
+
+    @Test
+    public void addUserProfilePost_validMultiFirmUserWhenIsInternal() {
+        MultiFirmUserForm form = createForm();
+        BindingResult bindingResult = mockBindingResult(false);
+
+        Firm userFirm = Firm.builder().name("test").build();
+        UserProfile userProfile = UserProfile.builder().firm(userFirm).build();
+        EntraUser entraUser = EntraUser.builder().email(form.getEmail())
+                .multiFirmUser(true).userProfiles(Set.of(userProfile)).build();
+        when(userService.findEntraUserByEmail(form.getEmail())).thenReturn(Optional.of(entraUser));
+
+        Firm adminFirm = Firm.builder().name("admin firm").build();
+        UserProfile adminUserProfile = UserProfile.builder()
+                .firm(adminFirm)
+                .userType(UserType.INTERNAL)
+                .build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(adminUserProfile);
+
+        String result = controller.addUserProfilePost(form, bindingResult, model, session, authentication);
+
+        assertThat(result).isEqualTo("redirect:/admin/multi-firm/user/add/profile/select/internalUserFirm");
         assertThat(model.getAttribute("entraUser")).isNotNull();
         assertThat(session.getAttribute("entraUser")).isNotNull();
     }
@@ -1232,6 +1258,44 @@ public class MultiFirmUserControllerTest {
         assertThat(selectedRoles.get(0).getRoleName()).isEqualTo("Role Two"); // sorted by ordinal
         assertThat(selectedRoles.get(1).getRoleName()).isEqualTo("Role One");
         assertThat(model.getAttribute("isMultiFirmUser")).isEqualTo(true);
+        assertThat(model.getAttribute("isInternalUser")).isEqualTo(false);
+    }
+
+    @Test
+    void shouldMapAppRolesCorrectlyAndSortByOrdinalInternalUser() {
+        session.setAttribute("userOffices", List.of("office1"));
+        session.setAttribute("entraUser", EntraUserDto.builder().fullName("Test User").build());
+
+        Map<Integer, List<String>> appRolesMap = new HashMap<>();
+        appRolesMap.put(0, List.of("role1", "role2"));
+        session.setAttribute("addUserProfileAllSelectedRoles", appRolesMap);
+
+        AppRoleDto role1 = AppRoleDto.builder().id("role1").name("Role One").ordinal(2).build();
+        AppRoleDto role2 = AppRoleDto.builder().id("role2").name("Role Two").ordinal(1).build();
+
+        Firm firm = Firm.builder().build();
+        UserProfile profile = UserProfile.builder()
+                .firm(firm)
+                .userType(UserType.INTERNAL)
+                .build();
+
+        FirmDto firmDto = FirmDto.builder().build();
+        UserProfileDto profileDto = UserProfileDto.builder().firm(firmDto).build();
+
+        when(loginService.getCurrentProfile(authentication)).thenReturn(profile);
+        when(officeService.getOfficesByIds(List.of("office1"))).thenReturn(List.of(new OfficeDto()));
+        when(appRoleService.getByIds(List.of("role1", "role2"))).thenReturn(List.of(role1, role2));
+
+        String view = controller.checkAnswerAndAddProfile(model, authentication, session);
+
+        assertThat(view).isEqualTo("multi-firm-user/add-profile-check-answers");
+
+        List<UserRole> selectedRoles = (List<UserRole>) model.getAttribute("selectedAppRole");
+        assertThat(selectedRoles).hasSize(2);
+        assertThat(selectedRoles.get(0).getRoleName()).isEqualTo("Role Two"); // sorted by ordinal
+        assertThat(selectedRoles.get(1).getRoleName()).isEqualTo("Role One");
+        assertThat(model.getAttribute("isMultiFirmUser")).isEqualTo(true);
+        assertThat(model.getAttribute("isInternalUser")).isEqualTo(true);
     }
 
     @Test
@@ -1278,7 +1342,7 @@ public class MultiFirmUserControllerTest {
     }
 
     @Test
-    void shouldSkipOfficeValidationIfAllSelected() {
+    void shouldSkipOfficeValidationIfAllSelectedWithInternalUser() {
         session.setAttribute("entraUser", EntraUserDto.builder().fullName("Test User").build());
         session.setAttribute("addUserProfileAllSelectedRoles", Map.of());
         session.setAttribute("userOffices", List.of("ALL"));
@@ -1289,7 +1353,10 @@ public class MultiFirmUserControllerTest {
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("admin");
 
-        UserProfile profile = UserProfile.builder().firm(Firm.builder().build()).appRoles(Set.of()).build();
+        UserProfile profile = UserProfile.builder()
+                .firm(Firm.builder().build())
+                .userType(UserType.INTERNAL)
+                .appRoles(Set.of()).build();
 
         when(appRoleService.getByIds(any())).thenReturn(List.of());
         when(loginService.getCurrentProfile(authentication)).thenReturn(profile);
@@ -1299,6 +1366,7 @@ public class MultiFirmUserControllerTest {
                 .thenReturn(UserProfile.builder().id(UUID.randomUUID()).build());
 
         String view = controller.checkAnswerAndAddProfilePost(authentication, session, model);
+        assertThat(model.getAttribute("isInternalUser")).isEqualTo(true);
 
         assertThat(view).isEqualTo("redirect:/admin/multi-firm/user/add/profile/confirmation");
     }

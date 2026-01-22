@@ -226,9 +226,9 @@ public class MultiFirmUserController {
     @GetMapping("/user/add/profile")
     public String addUserProfile(Model model, HttpSession session, Authentication authentication) {
         String targetFirmId = (String) session.getAttribute("delegateTargetFirmId");
-        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
-        if(targetFirmId == null) {
+        if (targetFirmId == null) {
             // If current user's firm has children, select a target firm first
+            UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
             Firm firm = currentUserProfile.getFirm();
             if (firm != null && firm.getChildFirms() != null && !firm.getChildFirms().isEmpty()) {
                 return "redirect:/admin/multi-firm/user/add/profile/select/firm";
@@ -240,6 +240,7 @@ public class MultiFirmUserController {
         model.addAttribute("email", multiFirmUserForm.getEmail());
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile");
         // Back link: if user's firm has children, return to firm selection, otherwise users list
+        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
         Firm firm = currentUserProfile.getFirm();
         String backUrl = (firm != null && firm.getChildFirms() != null && !firm.getChildFirms().isEmpty())
                 ? "/admin/multi-firm/user/add/profile/select/firm" : "/admin/users";
@@ -754,6 +755,7 @@ public class MultiFirmUserController {
         List<String> userOfficeIds = getListFromHttpSession(session, "userOffices", String.class).orElse(List.of());
 
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
+        System.out.println(currentUserProfile.toString());
         UserProfileDto currentUserProfileDto = mapper.map(currentUserProfile, UserProfileDto.class);
         List<OfficeDto> userOfficeDtos = userOfficeIds.contains("ALL") ? List.of()
                 : officeService.getOfficesByIds(userOfficeIds);
