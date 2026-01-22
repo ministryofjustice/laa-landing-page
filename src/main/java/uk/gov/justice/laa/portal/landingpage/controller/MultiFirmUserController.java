@@ -51,6 +51,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
+import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmUserForm;
 import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
@@ -65,6 +66,7 @@ import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
 
+import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
@@ -94,6 +96,85 @@ public class MultiFirmUserController {
     private final ModelMapper mapper;
 
     private final FirmService firmService;
+
+
+    @GetMapping("/user/add/profile/select/internalUserFirm")
+    public String selectAdminUserFirmGet(FirmSearchForm firmSearchForm, HttpSession session, Model model,
+                                @RequestParam(value = "firmSearchResultCount", defaultValue = "10") Integer count) {
+
+        Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
+
+        // If firmSearchForm is already populated from session (e.g., validation
+        // errors), keep it
+        FirmSearchForm existingForm = (FirmSearchForm) session.getAttribute("firmSearchForm");
+        if (existingForm != null) {
+            firmSearchForm = existingForm;
+        } else if (session.getAttribute("firm") != null) {
+            // Grab firm search details from session firm if coming here from the
+            // confirmation screen.
+            FirmDto firm = (FirmDto) session.getAttribute("firm");
+            firmSearchForm = FirmSearchForm.builder()
+                    .selectedFirmId(firm.getId())
+                    .firmSearch(firm.getName())
+                    .build();
+        }
+        int validatedCount = Math.max(10, Math.min(count, 100));
+        boolean showSkipFirmSelection = Boolean.TRUE.equals(isMultiFirmUser);
+        model.addAttribute("firmSearchForm", firmSearchForm);
+        model.addAttribute("firmSearchResultCount", validatedCount);
+        model.addAttribute("showSkipFirmSelection", showSkipFirmSelection);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Select firm");
+        return "multi-firm-user/select-admin-firm";
+    }
+
+    @PostMapping("/user/add/profile/select/internalUserFirm")
+    public String selectAdminUserFirmPost(@Valid FirmSearchForm firmSearchForm, BindingResult result,
+                                 HttpSession session, Model model) {
+        Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
+        boolean showSkipFirmSelection = Boolean.TRUE.equals(isMultiFirmUser);
+        model.addAttribute("showSkipFirmSelection", showSkipFirmSelection);
+
+        if (result.hasErrors()) {
+            log.debug("Validation errors occurred while searching for firm: {}", result.getAllErrors());
+            // Store the form in session to preserve input on redirect
+            session.setAttribute("firmSearchForm", firmSearchForm);
+            return "multi-firm-user/select-admin-firm";
+        }
+
+        session.removeAttribute("firm");
+        MultiFirmUserForm multiFirmUserForm = (MultiFirmUserForm) session.getAttribute("multiFirmUserForm");
+
+        if (firmSearchForm.getFirmSearch() != null && !firmSearchForm.getFirmSearch().isBlank()) {
+            // Fallback: search by name if no specific firm was selected
+            List<FirmDto> firms = firmService.getAllFirmsFromCache();
+            FirmDto selectedFirm = firms.stream()
+                    .filter(firm -> firm.getName().toLowerCase().contains(firmSearchForm.getFirmSearch().toLowerCase()))
+                    .sorted((s1, s2) -> Integer.compare(relevance(s2, firmSearchForm.getFirmSearch()),
+                            relevance(s1, firmSearchForm.getFirmSearch())))
+                    .findFirst()
+                    .orElse(null);
+
+            if (selectedFirm == null) {
+                result.rejectValue("firmSearch", "error.firm",
+                        "No firm found with that name. Please select from the dropdown.");
+                return "multi-firm-user/select-admin-firm";
+            }
+            firmSearchForm.setFirmSearch(selectedFirm.getName());
+            firmSearchForm.setSelectedFirmId(selectedFirm.getId());
+            session.setAttribute("firm", selectedFirm);
+        }
+
+        //check if the user has the Firm Already Assigned
+        if (userService.hasUserFirmAlreadyAssigned(multiFirmUserForm.getEmail(), firmSearchForm.getSelectedFirmId())) {
+            result.rejectValue("firmSearch", "error.firm",
+                    "User profile already exists for this firm.");
+            return "multi-firm-user/select-admin-firm";
+        }
+        session.setAttribute("firmSearchForm", firmSearchForm);
+        session.setAttribute("delegateTargetFirmId", firmSearchForm.getSelectedFirmId().toString());
+        return "redirect:/admin/multi-firm/user/add/profile/select/apps";
+
+    }
 
     @GetMapping("/user/add/profile/select/firm")
     public String selectDelegateFirm(@RequestParam(value = "q", required = false) String query,
@@ -149,9 +230,9 @@ public class MultiFirmUserController {
     @GetMapping("/user/add/profile")
     public String addUserProfile(Model model, HttpSession session, Authentication authentication) {
         String targetFirmId = (String) session.getAttribute("delegateTargetFirmId");
-        if (targetFirmId == null) {
+        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
+        if(targetFirmId == null) {
             // If current user's firm has children, select a target firm first
-            UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
             Firm firm = currentUserProfile.getFirm();
             if (firm != null && firm.getChildFirms() != null && !firm.getChildFirms().isEmpty()) {
                 return "redirect:/admin/multi-firm/user/add/profile/select/firm";
@@ -163,7 +244,6 @@ public class MultiFirmUserController {
         model.addAttribute("email", multiFirmUserForm.getEmail());
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile");
         // Back link: if user's firm has children, return to firm selection, otherwise users list
-        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
         Firm firm = currentUserProfile.getFirm();
         String backUrl = (firm != null && firm.getChildFirms() != null && !firm.getChildFirms().isEmpty())
                 ? "/admin/multi-firm/user/add/profile/select/firm" : "/admin/users";
@@ -263,7 +343,12 @@ public class MultiFirmUserController {
 
             model.addAttribute("entraUser", entraUserDto);
             session.setAttribute("entraUser", entraUserDto);
+            UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
+            boolean isInternal = currentUserProfile.getUserType().equals(UserType.INTERNAL);
 
+            if(isInternal){
+                return "redirect:/admin/multi-firm/user/add/profile/select/internalUserFirm";
+            }
             model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile - " + entraUserDto.getFullName());
             return "redirect:/admin/multi-firm/user/add/profile/select/apps";
 
