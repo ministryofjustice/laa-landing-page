@@ -4041,6 +4041,7 @@ class UserControllerTest {
         AppDto app1 = new AppDto();
         app1.setId("app1");
         app1.setName("App 1");
+        app1.setEnabled(true);
         List<AppDto> apps = List.of(app1);
 
         Model sessionModel = new ExtendedModelMap();
@@ -4083,6 +4084,52 @@ class UserControllerTest {
 
         // Then
         assertThat(result).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/apps");
+    }
+
+    @Test
+    void grantAccessSetSelectedApps_shouldHandleNonEditableApps() {
+        // Given
+        ApplicationsForm applicationsForm = new ApplicationsForm();
+        applicationsForm.setApps(null); // This will trigger validation error
+
+        // Mock session model with apps data
+        UserProfileDto user = new UserProfileDto();
+        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+
+        AppDto app1 = AppDto.builder().id("app1").name("App 1").enabled(true).ordinal(1).build();
+        AppRoleDto role1 = AppRoleDto.builder().app(app1).id("role1").name("Role 1").ordinal(1).build();
+        AppDto app2 = AppDto.builder().id("app2").name("App 2").enabled(false).ordinal(2).build();
+        AppRoleDto role2 = AppRoleDto.builder().app(app2).id("role2").name("Role 2").ordinal(2).build();
+        AppDto app3 = AppDto.builder().id("app3").name("App 3").enabled(true).ordinal(3).build();
+        AppRoleDto role3 = AppRoleDto.builder().app(app3).id("role3").name("Role 3").ordinal(3).build();
+        List<AppDto> apps = List.of(app1, app2, app3);
+        final List<AppRoleDto> roles = List.of(role1, role2, role3);
+
+        Model sessionModel = new ExtendedModelMap();
+        sessionModel.addAttribute("user", user);
+        sessionModel.addAttribute("apps", apps);
+
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("grantAccessUserAppsModel", sessionModel);
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+
+        // When
+        when(userService.getUserAppRolesByUserId(anyString())).thenReturn(roles);
+        Set<AppRole> editorRoles = Set.of(AppRole.builder().build());
+        when(loginService.getCurrentProfile(authentication))
+                .thenReturn(UserProfile.builder().appRoles(editorRoles).build());
+        when(roleAssignmentService.canAssignRole(any(), any())).thenReturn(false).thenReturn(true).thenReturn(true);
+        String userId = "550e8400-e29b-41d4-a716-446655440000";
+        String result = userController.grantAccessSetSelectedApps(userId, applicationsForm, bindingResult,
+                authentication, model, testSession);
+
+        // Then
+        assertThat(result).startsWith("redirect:/admin/users/grant-access/");
+        List<String> nonEditableAppRoles = (List<String>) testSession.getAttribute("nonEditableRoles");
+        assertThat(nonEditableAppRoles).isNotEmpty();
+        assertThat(nonEditableAppRoles).containsExactly("role1", "role2");
     }
 
     @Test
@@ -4219,6 +4266,60 @@ class UserControllerTest {
         assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/offices");
         assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNull();
         assertThat(testSession.getAttribute("grantAccessAllSelectedRoles")).isNull();
+    }
+
+    @Test
+    void grantAccessUpdateUserRoles_shouldHandleNonEditableAppRoles() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440004";
+        RolesForm rolesForm = new RolesForm();
+        rolesForm.setRoles(List.of("role2"));
+
+        final AppDto app1 = AppDto.builder().id("app1").name("App 1").enabled(true).ordinal(1).build();
+        final AppRoleDto role1 = AppRoleDto.builder().app(app1).id("role1").name("Role 1").ordinal(1).build();
+        final AppDto app2 = AppDto.builder().id("app2").name("App 2").enabled(false).ordinal(2).build();
+        final AppRoleDto role2 = AppRoleDto.builder().app(app2).id("role2").name("Role 2").ordinal(2).build();
+
+        UserProfileDto user = new UserProfileDto();
+        EntraUserDto entraUser = new EntraUserDto();
+        user.setEntraUser(entraUser);
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("test user");
+
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("grantAccessSelectedApps", List.of("app1", "app2"));
+
+        // Existing roles for previous app
+        Map<Integer, List<String>> existingRoles = new HashMap<>();
+        existingRoles.put(0, List.of("role1"));
+        testSession.setAttribute("grantAccessAllSelectedRoles", existingRoles);
+
+        Model sessionModel = new ExtendedModelMap();
+        testSession.setAttribute("grantAccessUserRolesModel", sessionModel);
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+        when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of(role1, role2));
+        when(roleAssignmentService.canUserAssignRolesForApp(any(), any())).thenReturn(false).thenReturn(false);
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+
+        // When - updating roles for last app (index 1)
+        String view = userController.grantAccessUpdateUserRoles(
+                userId,
+                rolesForm,
+                bindingResult,
+                1,
+                authentication,
+                model, testSession);
+
+        // Then
+        assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/offices");
+        assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNull();
+        assertThat(testSession.getAttribute("grantAccessAllSelectedRoles")).isNull();
+        List<String> nonEditableAppRoles = (List<String>) testSession.getAttribute("nonEditableRoles");
+        assertThat(nonEditableAppRoles).isNotEmpty();
+        assertThat(nonEditableAppRoles).containsExactly("role1", "role2");
     }
 
     @Test
@@ -4751,6 +4852,27 @@ class UserControllerTest {
         assertThat(view).isEqualTo("grant-access-user-offices");
         assertThat(model.getAttribute("user")).isNotNull();
         assertThat(model.getAttribute("officeData")).isNotNull();
+        verify(userService, Mockito.never()).updateUserOffices(anyString(), anyList());
+    }
+
+    @Test
+    void grantAccessUpdateUserOffices_shouldReturnToOfficeSelectionIfSessionIsEmptyOnValidationErrors() throws IOException {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440010";
+        OfficesForm officesForm = new OfficesForm();
+        officesForm.setOffices(null); // Validation error
+
+        MockHttpSession testSession = new MockHttpSession();
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(true);
+
+        // When
+        String view = userController.grantAccessUpdateUserOffices(userId, officesForm, bindingResult, authentication,
+                model, testSession);
+
+        // Then
+        assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/offices");
         verify(userService, Mockito.never()).updateUserOffices(anyString(), anyList());
     }
 
