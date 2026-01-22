@@ -10,15 +10,8 @@
 </head>
 
 <body>
-<nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-    <ol class="govuk-breadcrumbs__list">
-        <li class="govuk-breadcrumbs__list-item">
-            <a class="govuk-breadcrumbs__link"
-               href="/adminFirmSelection/selectUser">
-
-                < Back</a>
-        </li>
-    </ol>
+<nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs" style="margin-bottom: -24px;">
+    <a class="govuk-back-link govuk-!-margin-bottom-0" href="/admin/multi-firm/user/add/profile">Back</a>
 </nav>
 <main class="govuk-main-wrapper" id="main-content">
     <form th:action="@{/admin/multi-firm/user/add/profile/select/internalUserFirm}" th:method="post" th:object="${firmSearchForm}">
@@ -64,27 +57,6 @@
                         <!-- Search results will be populated here via JavaScript -->
                     </ul>
                 </div>
-                <div th:if="${showSkipFirmSelection}" class="skip-firm-container">
-                    <div class="govuk-checkboxes__divider">or</div>
-                    <div class="govuk-form-group govuk-!-margin-bottom-0">
-                        <fieldset class="govuk-fieldset">
-                            <div class="govuk-checkboxes govuk-checkboxes--small"
-                                 data-module="govuk-checkboxes">
-                                <div class="govuk-checkboxes__item">
-                                    <input class="govuk-checkboxes__input" id="skipFirmSelection"
-                                           name="skipFirmSelection" type="checkbox" value="true"
-                                           th:checked="*{skipFirmSelection}">
-                                    <label class="govuk-label govuk-checkboxes__label" for="skipFirmSelection">
-                                        Skip firm selection
-                                    </label>
-                                </div>
-                            </div>
-                        </fieldset>
-                    </div>
-                </div>
-                <div th:unless="${showSkipFirmSelection}">
-                    <input th:type="hidden" th:name="skipFirmSelection" id="skipFirmSelection" th:value="false">
-                </div>
 
                 <input type="hidden" name="selectedFirmId" id="selectedFirmId" th:value="*{selectedFirmId}" />
                 <input type="hidden" name="firmSearchResultCount" id="firmSearchResultCount" th:value="${firmSearchResultCount}" />
@@ -93,7 +65,7 @@
 
         <div class="govuk-button-group">
             <button type="submit" class="govuk-button">Continue</button>
-            <a href="/adminFirmSelection/cancel" class="govuk-link">Cancel</a>
+            <a href="/admin/multi-firm/user/cancel" class="govuk-link">Cancel</a>
         </div>
     </form>
 
@@ -244,7 +216,6 @@
             const statusA = document.getElementById('firmSearch__status--A');
             const statusB = document.getElementById('firmSearch__status--B');
             const assistiveHint = document.getElementById('firmSearch__assistiveHint');
-            const skipFirmSelectionInput = document.getElementById('skipFirmSelection');
 
 
             if (!firmSearchInput) {
@@ -261,11 +232,6 @@
                 assistiveHint.style.display = 'block';
             });
 
-            skipFirmSelectionInput.addEventListener('input', function () {
-                firmSearchInput.value = '';
-                selectedFirmIdInput.value = '';
-            });
-
             // Handle input changes
             firmSearchInput.addEventListener('input', function () {
                 clearTimeout(searchTimeout);
@@ -277,8 +243,6 @@
                     selectedFirmIdInput.value = '';
                     return;
                 }
-
-                skipFirmSelectionInput.checked = false;
 
                 // Debounce search requests
                 searchTimeout = setTimeout(() => {

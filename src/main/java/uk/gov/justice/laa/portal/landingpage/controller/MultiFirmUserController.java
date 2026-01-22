@@ -102,8 +102,6 @@ public class MultiFirmUserController {
     public String selectAdminUserFirmGet(FirmSearchForm firmSearchForm, HttpSession session, Model model,
                                 @RequestParam(value = "firmSearchResultCount", defaultValue = "10") Integer count) {
 
-        Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
-
         // If firmSearchForm is already populated from session (e.g., validation
         // errors), keep it
         FirmSearchForm existingForm = (FirmSearchForm) session.getAttribute("firmSearchForm");
@@ -119,10 +117,8 @@ public class MultiFirmUserController {
                     .build();
         }
         int validatedCount = Math.max(10, Math.min(count, 100));
-        boolean showSkipFirmSelection = Boolean.TRUE.equals(isMultiFirmUser);
         model.addAttribute("firmSearchForm", firmSearchForm);
         model.addAttribute("firmSearchResultCount", validatedCount);
-        model.addAttribute("showSkipFirmSelection", showSkipFirmSelection);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Select firm");
         return "multi-firm-user/select-admin-firm";
     }
@@ -344,8 +340,7 @@ public class MultiFirmUserController {
             model.addAttribute("entraUser", entraUserDto);
             session.setAttribute("entraUser", entraUserDto);
             UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
-            boolean isInternal = currentUserProfile.getUserType().equals(UserType.INTERNAL);
-
+            boolean isInternal = currentUserProfile.getUserType() == UserType.INTERNAL;
             if(isInternal){
                 return "redirect:/admin/multi-firm/user/add/profile/select/internalUserFirm";
             }
@@ -782,6 +777,7 @@ public class MultiFirmUserController {
         model.addAttribute("selectedAppRole", selectedAppRole);
         model.addAttribute("externalUser", true);
         model.addAttribute("isMultiFirmUser", true);
+        model.addAttribute("isInternalUser", currentUserProfile.getUserType() == UserType.INTERNAL);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile - Check your answers - " + user.getFullName());
 
         return "multi-firm-user/add-profile-check-answers";
@@ -887,6 +883,8 @@ public class MultiFirmUserController {
         session.removeAttribute("userProfile");
         session.removeAttribute("officesForm");
         session.removeAttribute("delegateTargetFirmId");
+        session.removeAttribute("firmSearchForm");
+        session.removeAttribute("firm");
     }
 
     /**
