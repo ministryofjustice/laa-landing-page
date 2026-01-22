@@ -6,4 +6,7 @@ databaseChangeLog:
         # Add global admin as an assigning role for SiLAS Administration role.
         - sql:
             dbms: postgresql
+            sql: "INSERT INTO public.app_role (authz_role, app_id, id, description, name, user_type_restriction, ccms_code, legacy_sync, ordinal, firm_type_restriction) VALUES (true, (SELECT id FROM app WHERE name = 'Manage Your Users'), gen_random_uuid(), 'SiLAS App Administrator', 'SiLAS Administration', '{INTERNAL}', NULL, false, 0, NULL);"
+        - sql:
+            dbms: postgresql
             sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'SiLAS Administration'), (SELECT id FROM app_role WHERE name = 'Global Admin'))"
