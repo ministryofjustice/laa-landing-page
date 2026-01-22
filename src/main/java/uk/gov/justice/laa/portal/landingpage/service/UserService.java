@@ -143,6 +143,7 @@ public class UserService {
 
         return false;
     }
+
     static <T> List<List<T>> partitionBasedOnSize(List<T> inputList, int size) {
         List<List<T>> partitions = new ArrayList<>();
         for (int i = 0; i < inputList.size(); i += size) {

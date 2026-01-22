@@ -342,7 +342,7 @@ public class MultiFirmUserController {
             session.setAttribute("entraUser", entraUserDto);
             UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
             boolean isInternal = currentUserProfile.getUserType() == UserType.INTERNAL;
-            if(isInternal){
+            if (isInternal) {
                 return "redirect:/admin/multi-firm/user/add/profile/select/internalUserFirm";
             }
             model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile - " + entraUserDto.getFullName());
