@@ -15,10 +15,10 @@ import org.springframework.web.client.RestClient;
 @Configuration
 public class DataProviderConfig {
 
-    @Value("${app.data.provider.base-url:https://laa-data-provider-data-pr-1027.apps.cloud-platform.service.justice.gov.uk}")
+    @Value("${app.data.provider.base-url}")
     private String dataProviderBaseUrl;
 
-    @Value("${app.data.provider.api-key:dpd_udny15mQGcLFhU76yRn4}")
+    @Value("${app.data.provider.api-key}")
     private String dataProviderApiKey;
 
     @Value("${app.data.provider.req.read.timeout:30}")
