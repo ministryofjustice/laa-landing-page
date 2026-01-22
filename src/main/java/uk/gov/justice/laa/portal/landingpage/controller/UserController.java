@@ -314,6 +314,7 @@ public class UserController {
 
         List<AppRoleDto> userAppRoles = user.getAppRoles() != null
                 ? user.getAppRoles().stream()
+                        .filter(appRoleDto -> appRoleDto.getApp().isEnabled())
                         .map(appRoleDto -> mapper.map(appRoleDto, AppRoleDto.class))
                         .sorted()
                         .collect(Collectors.toList())
@@ -933,6 +934,7 @@ public class UserController {
         List<AppDto> availableApps = userService.getAppsByUserType(userType);
 
         List<AppDto> editableApps = availableApps.stream()
+                .filter(AppDto::isEnabled)
                 .filter(app -> roleAssignmentService.canUserAssignRolesForApp(currentUserProfile, app))
                 .toList();
 
@@ -1185,6 +1187,7 @@ public class UserController {
         List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
                 .orElseGet(ArrayList::new);
         Map<String, AppDto> editableApps = userService.getAppsByUserType(userType).stream()
+                .filter(AppDto::isEnabled)
                 .filter(app -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, app))
                 .filter(app -> selectedApps.contains(app.getId()))
                 .collect(Collectors.toMap(AppDto::getId, Function.identity()));
@@ -1262,7 +1265,8 @@ public class UserController {
                 .flatMap(List::stream)
                 .toList();
         List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
-                .filter(role -> !roleAssignmentService.canAssignRole(editorUserProfile.getAppRoles(), List.of(role.getId())))
+                .filter(role -> !role.getApp().isEnabled()
+                        || !roleAssignmentService.canAssignRole(editorUserProfile.getAppRoles(), List.of(role.getId())))
                 .map(AppRoleDto::getId)
                 .toList();
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
@@ -1657,6 +1661,7 @@ public class UserController {
         List<AppDto> availableApps = userService.getAppsByUserType(userType);
 
         List<AppDto> editableApps = availableApps.stream()
+                .filter(AppDto::isEnabled)
                 .filter(app -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, app))
                 .toList();
 
@@ -1710,7 +1715,8 @@ public class UserController {
 
         session.setAttribute("grantAccessSelectedApps", selectedApps);
         List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
-                .filter(role -> !roleAssignmentService.canAssignRole(currentUserProfile.getAppRoles(), List.of(role.getId())))
+                .filter(role -> !role.getApp().isEnabled()
+                        || !roleAssignmentService.canAssignRole(currentUserProfile.getAppRoles(), List.of(role.getId())))
                 .map(AppRoleDto::getId)
                 .toList();
         session.setAttribute("nonEditableRoles", nonEditableRoles);
@@ -1867,7 +1873,8 @@ public class UserController {
                     .flatMap(List::stream)
                     .collect(Collectors.toSet());
             List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
-                    .filter(role -> !roleAssignmentService.canUserAssignRolesForApp(currentUserProfile, role.getApp()))
+                    .filter(role -> !role.getApp().isEnabled()
+                            || !roleAssignmentService.canUserAssignRolesForApp(currentUserProfile, role.getApp()))
                     .map(AppRoleDto::getId)
                     .toList();
             session.setAttribute("allSelectedRoles", allSelectedRoles);
