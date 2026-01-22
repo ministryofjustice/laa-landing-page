@@ -25,14 +25,13 @@ import java.util.List;
 @RequiredArgsConstructor
 @RequestMapping("/firmDirectory")
 @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions("
-        + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_AUDIT_TABLE)")
+        + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_FIRM_DIRECTORY)")
 public class FirmDirectoryController {
 
     private final FirmService firmService;
     public static final String SEARCH_PAGE = "/firm-directory/search-page";
 
     @GetMapping()
-    @PreAuthorize("@accessControlService.authenticatedUserCanAccessFirmDirectory()")
     public String displayAllFirmDirectory(@ModelAttribute FirmDirectorySearchCriteria criteria,
                                           Model model) {
         log.debug("FirmDirectoryController.displayAllFirmDirectory - {}", criteria);
