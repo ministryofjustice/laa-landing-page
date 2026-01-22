@@ -82,7 +82,8 @@ public class BaseRepositoryTest {
                               String title, String description, String url, String oidGroupName) {
         return App.builder().name(name).appRoles(HashSet.newHashSet(1)).url(url)
                 .title(title).description(description).appType(AppType.LAA).oidGroupName(oidGroupName)
-                .entraAppId(entraAppId).securityGroupOid(securityGroupOid).securityGroupName(securityGroupName).build();
+                .entraAppId(entraAppId).securityGroupOid(securityGroupOid).securityGroupName(securityGroupName)
+                .enabled(true).build();
     }
 
     protected AppRole buildLaaAppRole(App app, String name) {

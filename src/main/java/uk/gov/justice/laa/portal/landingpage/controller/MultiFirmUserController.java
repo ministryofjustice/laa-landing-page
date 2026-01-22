@@ -466,6 +466,7 @@ public class MultiFirmUserController {
 
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
         List<AppDto> assignableApps = availableApps.stream()
+                .filter(AppDto::isEnabled)
                 .filter(app -> roleAssignmentService.canUserAssignRolesForApp(currentUserProfile, app))
                 .toList();
         List<String> selectedApps = applicationsForm.getApps() == null ? List.of() : applicationsForm.getApps();

@@ -23,6 +23,7 @@ public class AppDto implements Comparable<AppDto>, Serializable {
     private int ordinal;
     private boolean selected;
     private AppType appType;
+    private boolean enabled;
     private AlternativeAppDescriptionDto alternativeAppDescription;
 
     @Override

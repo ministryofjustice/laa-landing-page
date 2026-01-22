@@ -5,7 +5,6 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -437,8 +436,10 @@ public class MultiFirmUserControllerTest {
 
         AppDto app1 = new AppDto();
         app1.setId("app1");
+        app1.setEnabled(true);
         AppDto app2 = new AppDto();
         app2.setId("app2");
+        app2.setEnabled(true);
 
         session.setAttribute("applicationsForm", form);
         session.setAttribute("entraUser", entraUser);
@@ -458,6 +459,44 @@ public class MultiFirmUserControllerTest {
         String pageTitle = (String) model.getAttribute(ModelAttributes.PAGE_TITLE);
         assertThat(pageTitle).contains("John Doe");
         assertThat(session.getAttribute("addProfileUserAppsModel")).isEqualTo(model);
+        List modelApps = (List) model.getAttribute("apps");
+        assertThat(modelApps).containsExactly(app1);
+    }
+
+    @Test
+    void testSelectUserApps_validData_shouldReturnEnabledAppsOnly() {
+        ApplicationsForm form = new ApplicationsForm();
+        form.setApps(List.of("app1"));
+
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setFullName("John Doe");
+
+        AppDto app1 = new AppDto();
+        app1.setId("app1");
+        app1.setEnabled(false);
+        AppDto app2 = new AppDto();
+        app2.setId("app2");
+        app2.setEnabled(true);
+
+        session.setAttribute("applicationsForm", form);
+        session.setAttribute("entraUser", entraUser);
+
+        UserProfile profile = UserProfile.builder().build();
+
+        when(userService.getAppsByUserType(UserType.EXTERNAL)).thenReturn(List.of(app1, app2));
+        when(loginService.getCurrentProfile(authentication)).thenReturn(profile);
+        when(roleAssignmentService.canUserAssignRolesForApp(profile, app2)).thenReturn(true);
+
+        String view = controller.selectUserApps(model, session, authentication);
+
+        assertThat(view).isEqualTo("multi-firm-user/select-user-apps");
+        assertThat(model.getAttribute("applicationsForm")).isEqualTo(form);
+        assertThat(model.getAttribute("entraUser")).isEqualTo(entraUser);
+        String pageTitle = (String) model.getAttribute(ModelAttributes.PAGE_TITLE);
+        assertThat(pageTitle).contains("John Doe");
+        assertThat(session.getAttribute("addProfileUserAppsModel")).isEqualTo(model);
+        List modelApps = (List) model.getAttribute("apps");
+        assertThat(modelApps).containsExactly(app2);
     }
 
     @Test
@@ -511,8 +550,10 @@ public class MultiFirmUserControllerTest {
 
         AppDto app1 = new AppDto();
         app1.setId("app1");
+        app1.setEnabled(true);
         AppDto app2 = new AppDto();
         app2.setId("app2");
+        app2.setEnabled(true);
 
         session.setAttribute("applicationsForm", form);
         session.setAttribute("entraUser", entraUser);
@@ -1046,14 +1087,16 @@ public class MultiFirmUserControllerTest {
         List<String> selectedAppIds = List.of(appId);
         session.setAttribute("addProfileSelectedApps", selectedAppIds);
 
-        AppDto appDto = AppDto.builder().id(appId).name("CCMS Application").build();
+        AppDto appDto = AppDto.builder().id(appId).name("CCMS Application").enabled(true).build();
 
         AppRoleDto roleDto = new AppRoleDto();
         roleDto.setId(UUID.randomUUID().toString());
+        roleDto.setCcmsCode("XXCCMS_1");
         roleDto.setApp(appDto);
 
         AppRoleDto roleDto2 = new AppRoleDto();
         roleDto2.setId(UUID.randomUUID().toString());
+        roleDto2.setCcmsCode("XXCCMS_2");
         roleDto2.setApp(appDto);
 
         when(userService.getAppByAppId(appId)).thenReturn(Optional.of(appDto));
