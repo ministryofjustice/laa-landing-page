@@ -78,6 +78,12 @@ public class EntraUser extends AuditableEntity {
     @Column(name = "last_synced_on")
     private LocalDateTime lastSyncedOn;
 
+    @Column(name = "mail_only")
+    private boolean mailOnly;
+
+    @Column(name = "last_login_date")
+    private LocalDateTime lastLoginDate;
+
     @OneToMany(mappedBy = "entraUser", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @ToString.Exclude
     @JsonIgnore

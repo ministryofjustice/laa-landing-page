@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,7 +21,12 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class EntraLastSyncMetadata extends BaseEntity {
+public class EntraLastSyncMetadata {
+
+    @Id
+    @Column(name = "id")
+    @Builder.Default
+    private String id = "ENTRA_USER_SYNC";
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
