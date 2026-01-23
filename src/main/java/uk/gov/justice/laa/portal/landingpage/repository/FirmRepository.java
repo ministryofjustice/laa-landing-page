@@ -21,4 +21,12 @@ public interface FirmRepository extends JpaRepository<Firm, UUID> {
 
     @Query("SELECT f FROM Firm f LEFT JOIN Office o ON o.firm.id = f.id GROUP BY f HAVING COUNT(o.id) = 0")
     List<Firm> findFirmsWithoutOffices();
+
+    // Performance Optimizations for PDA Sync
+    /**
+     * Fetch all firms with parent firm eagerly loaded (avoids N+1 queries).
+     * Use this instead of findAll() when parent firm relationships are needed.
+     */
+    @Query("SELECT DISTINCT f FROM Firm f LEFT JOIN FETCH f.parentFirm")
+    List<Firm> findAllWithParentFirm();
 }

@@ -145,9 +145,9 @@ public class DataProviderService {
 
         Table pdaTable = getProviderOfficesSnapshot();
 
-        // Get all firms and offices from database
-        List<Firm> allFirms = firmRepository.findAll();
-        List<Office> allOffices = officeRepository.findAll();
+        // Get all firms and offices from database (optimized with fetch joins)
+        List<Firm> allFirms = firmRepository.findAllWithParentFirm();
+        List<Office> allOffices = officeRepository.findAllWithFirm();
 
         // Build lookup maps for O(1) performance
         Map<String, Firm> firmsByCode = allFirms.stream()
@@ -583,10 +583,10 @@ public class DataProviderService {
             log.info("\nAll offices have a valid, relatable firm.");
             checkDataIntegrity(pdaFirms, pdaOffices, result);
 
-            // Get current database state
+            // Get current database state (optimized with fetch join)
             log.info("DEBUG: Loading database firms...");
             Map<String, Firm> dbFirms = new HashMap<>();
-            firmRepository.findAll().forEach(f -> {
+            firmRepository.findAllWithParentFirm().forEach(f -> {
                 if (f.getCode() != null) {
                     dbFirms.put(f.getCode(), f);
                 }
@@ -660,16 +660,20 @@ public class DataProviderService {
             // Deactivate firms that are either:
             // 1. Not in PDA data anymore
             // 2. In PDA but don't have any offices (violates database constraint)
+            Set<String> firmsToDeactivate = new HashSet<>();
             for (String firmCode : dbFirms.keySet()) {
                 if (!processedFirmCodes.contains(firmCode)) {
-                    log.info("Deactivating firm {} - not in PDA data", firmCode);
-                    deactivateFirm(dbFirms.get(firmCode), result);
-                    result.setFirmsDeleted(result.getFirmsDeleted() + 1);
+                    log.info("Marking firm {} for deactivation - not in PDA data", firmCode);
+                    firmsToDeactivate.add(firmCode);
                 } else if (!firmsWithOffices.contains(firmCode)) {
-                    log.info("Deactivating firm {} - no offices in PDA data (database constraint)", firmCode);
-                    deactivateFirm(dbFirms.get(firmCode), result);
-                    result.setFirmsDeleted(result.getFirmsDeleted() + 1);
+                    log.info("Marking firm {} for deactivation - no offices in PDA data (database constraint)", firmCode);
+                    firmsToDeactivate.add(firmCode);
                 }
+            }
+
+            // Deactivate/delete firms (must use individual deletes for cascade handling)
+            for (String firmCode : firmsToDeactivate) {
+                deactivateFirm(dbFirms.get(firmCode), result);
             }
 
             // If errors occurred during deactivation, stop immediately
@@ -681,11 +685,12 @@ public class DataProviderService {
             // Flush Pass 1 changes (firm creation/updates/deactivations) before setting parent references
             log.info("Flushing Pass 1 firm changes to database...");
             entityManager.flush();
-            log.info("Pass 1 firm changes flushed successfully");
+            entityManager.clear(); // Clear persistence context to free memory
+            log.info("Pass 1 firm changes flushed and persistence context cleared");
 
-            // Reload firms after changes
+            // Reload firms after changes (optimized with fetch join)
             dbFirms.clear();
-            firmRepository.findAll().forEach(f -> {
+            firmRepository.findAllWithParentFirm().forEach(f -> {
                 if (f.getCode() != null) {
                     dbFirms.put(f.getCode(), f);
                 }
@@ -758,15 +763,17 @@ public class DataProviderService {
             // This ensures offices can reference newly created/updated firms
             log.info("Flushing firm changes to database...");
             entityManager.flush();
-            log.info("Firm changes flushed successfully");
+            entityManager.clear(); // Clear persistence context to free memory
+            log.info("Firm changes flushed and persistence context cleared");
 
-            // Get DB offices
+            // Get DB offices (optimized with fetch join)
             Map<String, Office> dbOffices = new HashMap<>();
-            officeRepository.findAll().forEach(o -> {
+            officeRepository.findAllWithFirm().forEach(o -> {
                 if (o.getCode() != null) {
                     dbOffices.put(o.getCode(), o);
                 }
             });
+            log.info("Loaded {} offices from database", dbOffices.size());
 
             final Set<String> processedOfficeCodes = new HashSet<>();
 
@@ -864,7 +871,6 @@ public class DataProviderService {
             // Now deactivate offices that are not in PDA data
             for (String officeCode : officesToDeactivate) {
                 deactivateOffice(dbOffices.get(officeCode), result);
-                result.setOfficesDeleted(result.getOfficesDeleted() + 1);
             }
 
             // Flush all changes and verify constraint compliance before commit

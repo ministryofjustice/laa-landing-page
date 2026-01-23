@@ -69,6 +69,29 @@ public class UpdateFirmCommand implements PdaSyncCommand {
                 && !pdaFirm.getParentFirmNumber().trim().equalsIgnoreCase("null"))
                 ? pdaFirm.getParentFirmNumber().trim() : null;
 
+            // Normalize parent code to null if parent doesn't exist in database (prevents infinite update loops)
+            if (newParentCode != null) {
+                Firm parentFirm = firmRepository.findByCode(newParentCode);
+                if (parentFirm == null || parentFirm.getType() == FirmType.ADVOCATE || parentFirm.getParentFirm() != null) {
+                    // Parent doesn't exist, is invalid type, or has its own parent - treat as null
+                    if (parentFirm == null) {
+                        log.warn("Parent firm {} not found for firm {} - treating as null parent", newParentCode, pdaFirm.getFirmNumber());
+                        result.addWarning("Parent firm " + newParentCode + " not found for firm " + pdaFirm.getFirmNumber());
+                    } else if (parentFirm.getType() == FirmType.ADVOCATE) {
+                        log.warn("Parent firm {} is ADVOCATE type for firm {} - treating as null parent (ADVOCATE firms cannot be parents)",
+                            newParentCode, pdaFirm.getFirmNumber());
+                        result.addWarning("Parent firm " + newParentCode + " is ADVOCATE type and cannot be a parent for firm " +
+                            pdaFirm.getFirmNumber());
+                    } else if (parentFirm.getParentFirm() != null) {
+                        log.warn("Parent firm {} already has parent {} for firm {} - treating as null parent (multi-level hierarchy not allowed)",
+                            newParentCode, parentFirm.getParentFirm().getCode(), pdaFirm.getFirmNumber());
+                        result.addWarning("Parent firm " + newParentCode + " already has parent - multi-level hierarchy not allowed for firm " +
+                            pdaFirm.getFirmNumber());
+                    }
+                    newParentCode = null;  // Normalize to null to prevent re-detection on next sync
+                }
+            }
+
             if (!equals(currentParentCode, newParentCode)) {
                 log.info("Updating firm {}: parentFirm '{}' -> '{}'",
                     pdaFirm.getFirmNumber(),
@@ -77,40 +100,9 @@ public class UpdateFirmCommand implements PdaSyncCommand {
 
                 if (newParentCode != null) {
                     Firm parentFirm = firmRepository.findByCode(newParentCode);
-                    if (parentFirm == null) {
-                        log.warn("Parent firm {} not found for firm {} - keeping parent as null", newParentCode, pdaFirm.getFirmNumber());
-                        result.addWarning("Parent firm " + newParentCode + " not found for firm " + pdaFirm.getFirmNumber());
-                        // Don't set to null if already null - no change needed
-                        if (currentParentCode != null) {
-                            firm.setParentFirm(null);
-                            updated = true;
-                        }
-                    } else if (parentFirm.getType() == FirmType.ADVOCATE) {
-                        log.warn("Parent firm {} is ADVOCATE type for firm {} - keeping parent as null (ADVOCATE firms cannot be parents)",
-                            newParentCode, pdaFirm.getFirmNumber());
-                        result.addWarning("Parent firm " + newParentCode + " is ADVOCATE type and cannot be a parent for firm " +
-                            pdaFirm.getFirmNumber());
-                        // Don't set to null if already null - no change needed
-                        if (currentParentCode != null) {
-                            firm.setParentFirm(null);
-                            updated = true;
-                        }
-                    } else if (parentFirm.getParentFirm() != null) {
-                        // Check if proposed parent already has a parent (database constraint: only one level allowed)
-                        log.warn("Parent firm {} already has parent {} for firm {} - keeping parent as null (multi-level hierarchy not allowed)",
-                            newParentCode, parentFirm.getParentFirm().getCode(), pdaFirm.getFirmNumber());
-                        result.addWarning("Parent firm " + newParentCode + " already has parent " +
-                            parentFirm.getParentFirm().getCode() + " - multi-level hierarchy not allowed for firm " +
-                            pdaFirm.getFirmNumber());
-                        // Don't set to null if already null - no change needed
-                        if (currentParentCode != null) {
-                            firm.setParentFirm(null);
-                            updated = true;
-                        }
-                    } else {
-                        firm.setParentFirm(parentFirm);
-                        updated = true;
-                    }
+                    // Parent existence and validity already validated above, this lookup should always succeed
+                    firm.setParentFirm(parentFirm);
+                    updated = true;
                 } else {
                     // Setting parent to null - only mark as updated if it wasn't already null
                     if (currentParentCode != null) {
