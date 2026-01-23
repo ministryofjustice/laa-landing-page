@@ -54,6 +54,9 @@ class DataProviderServiceTest {
     private TransactionTemplate transactionTemplate;
 
     @Mock
+    private uk.gov.justice.laa.portal.landingpage.config.DataProviderConfig dataProviderConfig;
+
+    @Mock
     private EntityManager entityManager;
 
     @Mock
@@ -69,7 +72,8 @@ class DataProviderServiceTest {
             firmRepository,
             officeRepository,
             userProfileRepository,
-            transactionTemplate
+            transactionTemplate,
+            dataProviderConfig
         );
     }
 

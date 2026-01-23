@@ -1,5 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.service.pda.command;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -27,10 +29,12 @@ class UpdateFirmCommandTest {
     private FirmRepository firmRepository;
 
     private PdaSyncResultDto result;
+    private Map<String, Firm> firmsByCode;
 
     @BeforeEach
     void setUp() {
         result = PdaSyncResultDto.builder().build();
+        firmsByCode = new HashMap<>();
     }
 
     @Nested
@@ -54,7 +58,7 @@ class UpdateFirmCommandTest {
 
             when(firmRepository.findFirmByName("New Name")).thenReturn(null);
 
-            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm);
+            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm, firmsByCode);
 
             // When
             command.execute(result);
@@ -81,7 +85,7 @@ class UpdateFirmCommandTest {
                 .firmType("Legal Services Provider")
                 .build();
 
-            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm);
+            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm, firmsByCode);
 
             // When
             command.execute(result);
@@ -117,7 +121,7 @@ class UpdateFirmCommandTest {
 
             when(firmRepository.findFirmByName("Duplicate Name")).thenReturn(otherFirmWithSameName);
 
-            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm);
+            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm, firmsByCode);
 
             // When
             command.execute(result);
@@ -150,7 +154,7 @@ class UpdateFirmCommandTest {
                 .firmType("Advocate") // Different type
                 .build();
 
-            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm);
+            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm, firmsByCode);
 
             // When
             command.execute(result);
@@ -193,9 +197,9 @@ class UpdateFirmCommandTest {
                 .parentFirmNumber("PARENT")
                 .build();
 
-            when(firmRepository.findByCode("PARENT")).thenReturn(parentFirm);
+            firmsByCode.put("PARENT", parentFirm);
 
-            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm);
+            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm, firmsByCode);
 
             // When
             command.execute(result);
@@ -231,7 +235,7 @@ class UpdateFirmCommandTest {
                 .parentFirmNumber(null)
                 .build();
 
-            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm);
+            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm, firmsByCode);
 
             // When
             command.execute(result);
@@ -260,7 +264,7 @@ class UpdateFirmCommandTest {
                 .parentFirmNumber("null") // String "null"
                 .build();
 
-            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm);
+            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm, firmsByCode);
 
             // When
             command.execute(result);
@@ -296,16 +300,16 @@ class UpdateFirmCommandTest {
                 .parentFirmNumber("ADVOCATE")
                 .build();
 
-            when(firmRepository.findByCode("ADVOCATE")).thenReturn(advocateParent);
+            firmsByCode.put("ADVOCATE", advocateParent);
 
-            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm);
+            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm, firmsByCode);
 
             // When
             command.execute(result);
 
             // Then
             assertThat(existingFirm.getParentFirm()).isNull();
-            assertThat(result.getFirmsUpdated()).isEqualTo(0); // Already null
+            assertThat(result.getFirmsUpdated()).isEqualTo(0); // No update due to validation
             assertThat(result.getWarnings()).hasSize(1);
             assertThat(result.getWarnings().get(0)).contains("ADVOCATE");
             assertThat(result.getWarnings().get(0)).contains("cannot be a parent");
@@ -345,9 +349,10 @@ class UpdateFirmCommandTest {
                 .parentFirmNumber("PARENT")
                 .build();
 
-            when(firmRepository.findByCode("PARENT")).thenReturn(parentWithParent);
+            firmsByCode.put("PARENT", parentWithParent);
+            firmsByCode.put("GRANDPARENT", grandParent);
 
-            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm);
+            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm, firmsByCode);
 
             // When
             command.execute(result);
@@ -378,9 +383,9 @@ class UpdateFirmCommandTest {
                 .parentFirmNumber("MISSING")
                 .build();
 
-            when(firmRepository.findByCode("MISSING")).thenReturn(null);
+            // Don't add MISSING to firmsByCode map
 
-            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm);
+            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm, firmsByCode);
 
             // When
             command.execute(result);
@@ -390,6 +395,111 @@ class UpdateFirmCommandTest {
             assertThat(result.getFirmsUpdated()).isEqualTo(0);
             assertThat(result.getWarnings()).hasSize(1);
             assertThat(result.getWarnings().get(0)).contains("not found");
+            verify(firmRepository, never()).save(any());
+        }
+
+        @Test
+        void shouldPreventInfiniteUpdateLoopWhenParentNotFound() {
+            // Given - This scenario was causing infinite update loops
+            // Firm has null parent in DB, PDA says parent is "261367", but 261367 doesn't exist
+            Firm existingFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("49058")
+                .name("Test Firm")
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .parentFirm(null) // Current state: null
+                .build();
+
+            PdaFirmData pdaFirm = PdaFirmData.builder()
+                .firmNumber("49058")
+                .firmName("Test Firm")
+                .firmType("Advocate")
+                .parentFirmNumber("261367") // Ghost parent - doesn't exist
+                .build();
+
+            // Don't add 261367 to firmsByCode (it doesn't exist)
+
+            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm, firmsByCode);
+
+            // When - execute twice to simulate subsequent syncs
+            command.execute(result);
+            PdaSyncResultDto result2 = PdaSyncResultDto.builder().build();
+            UpdateFirmCommand command2 = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm, firmsByCode);
+            command2.execute(result2);
+
+            // Then - should normalize parent to null and not detect change on second run
+            assertThat(existingFirm.getParentFirm()).isNull();
+            assertThat(result.getFirmsUpdated()).isEqualTo(0); // No update (parent stays null)
+            assertThat(result2.getFirmsUpdated()).isEqualTo(0); // Still no update on second run
+            assertThat(result.getWarnings()).hasSize(1);
+            assertThat(result2.getWarnings()).hasSize(1);
+            verify(firmRepository, never()).save(any()); // Never saved
+        }
+
+        @Test
+        void shouldUseCachedFirmsMapInsteadOfDatabaseQueries() {
+            // Given
+            Firm existingFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("12345")
+                .name("Test Firm")
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .parentFirm(null)
+                .build();
+
+            Firm parentFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("PARENT")
+                .name("Parent Firm")
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .build();
+
+            PdaFirmData pdaFirm = PdaFirmData.builder()
+                .firmNumber("12345")
+                .firmName("Test Firm")
+                .firmType("Legal Services Provider")
+                .parentFirmNumber("PARENT")
+                .build();
+
+            // Add parent to cache
+            firmsByCode.put("PARENT", parentFirm);
+
+            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm, firmsByCode);
+
+            // When
+            command.execute(result);
+
+            // Then - should use cache, NOT call findByCode
+            verify(firmRepository, never()).findByCode(any());
+            assertThat(existingFirm.getParentFirm()).isEqualTo(parentFirm);
+        }
+
+        @Test
+        void shouldNormalizeEmptyStringToNull() {
+            // Given
+            Firm existingFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("12345")
+                .name("Test Firm")
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .parentFirm(null)
+                .build();
+
+            PdaFirmData pdaFirm = PdaFirmData.builder()
+                .firmNumber("12345")
+                .firmName("Test Firm")
+                .firmType("Legal Services Provider")
+                .parentFirmNumber("   ") // Empty/whitespace
+                .build();
+
+            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm, firmsByCode);
+
+            // When
+            command.execute(result);
+
+            // Then
+            assertThat(existingFirm.getParentFirm()).isNull();
+            assertThat(result.getFirmsUpdated()).isEqualTo(0);
             verify(firmRepository, never()).save(any());
         }
     }

@@ -271,7 +271,7 @@ class DeactivateFirmCommandTest {
 
             // Then
             verify(firmRepository).delete(firm);
-            assertThat(result.getFirmsDeactivated()).isEqualTo(1);
+            assertThat(result.getFirmsDeleted()).isEqualTo(1);
         }
 
         @Test
@@ -294,7 +294,7 @@ class DeactivateFirmCommandTest {
             command.execute(result);
 
             // Then
-            assertThat(result.getFirmsDeactivated()).isEqualTo(1);
+            assertThat(result.getFirmsDeleted()).isEqualTo(1);
         }
     }
 
@@ -322,7 +322,7 @@ class DeactivateFirmCommandTest {
             command.execute(result);
 
             // Then
-            assertThat(result.getFirmsDeactivated()).isEqualTo(0);
+            assertThat(result.getFirmsDeleted()).isEqualTo(0);
             assertThat(result.getErrors()).hasSize(1);
             assertThat(result.getErrors().get(0)).contains("Failed to deactivate firm");
             assertThat(result.getErrors().get(0)).contains("12345");
