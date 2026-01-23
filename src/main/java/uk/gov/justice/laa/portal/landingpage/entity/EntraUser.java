@@ -84,6 +84,10 @@ public class EntraUser extends AuditableEntity {
     @Column(name = "last_login_date")
     private LocalDateTime lastLoginDate;
 
+    @Column(name = "disabled", nullable = false)
+    @ColumnDefault("false")
+    private boolean disabled;
+
     @OneToMany(mappedBy = "entraUser", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @ToString.Exclude
     @JsonIgnore

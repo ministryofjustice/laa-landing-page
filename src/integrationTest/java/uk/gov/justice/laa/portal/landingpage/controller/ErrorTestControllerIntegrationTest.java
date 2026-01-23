@@ -21,12 +21,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import uk.gov.justice.laa.portal.landingpage.exception.GlobalExceptionHandler;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 
-@WebMvcTest(controllers = ErrorTestController.class)
-@Import({GlobalExceptionHandler.class, GlobalControllerAdvice.class})  // Import exception handler for proper error handling
 @TestPropertySource(properties = {
     "app.test.error-pages.enabled=true"
 })
-class ErrorTestControllerIntegrationTest {
+class ErrorTestControllerIntegrationTest extends BaseIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;

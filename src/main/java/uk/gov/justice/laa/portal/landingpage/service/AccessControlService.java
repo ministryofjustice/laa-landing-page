@@ -156,6 +156,16 @@ public class AccessControlService {
         return hasDeletePermission && hasRequiredRoles;
     }
 
+    public boolean canDisableUser(String entraUserId) {
+        Optional<EntraUserDto> accessedUserOptional = userService.getEntraUserById(entraUserId);
+        if (accessedUserOptional.isEmpty()) {
+            return false;
+        }
+        EntraUserDto accessedUser = accessedUserOptional.get();
+        return authenticatedUserHasPermission(Permission.DISABLE_EXTERNAL_USER)
+                && (accessedUser.isMultiFirmUser() || !userService.isInternal(entraUserId));
+    }
+
     /**
      * Check if the authenticated user can delete a specific firm profile.
      *

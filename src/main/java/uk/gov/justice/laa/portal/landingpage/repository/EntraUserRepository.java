@@ -265,4 +265,6 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             @Param("userType") String userType,
             @Param("multiFirm") Boolean multiFirm,
             Pageable pageable);
+
+    boolean existsByEntraOidAndDisabledTrue(String id);
 }
