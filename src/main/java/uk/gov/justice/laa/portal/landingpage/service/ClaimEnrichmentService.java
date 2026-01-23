@@ -150,19 +150,12 @@ public class ClaimEnrichmentService {
                     .orElse(null);
 
             String ccmsUsername = null;
-            if (isInternalUser) {
-                boolean hasLegacySyncRole = entraUser.getUserProfiles().stream()
-                        .filter(UserProfile::isActiveProfile)
-                        .flatMap(profile -> profile.getAppRoles().stream())
-                        .anyMatch(AppRole::isLegacySync);
-
-                if (hasLegacySyncRole && legacyUserId != null) {
-                    CcmsUserDetailsResponse udaResponse = ccmsUserDetailsService.getUserDetailsByLegacyUserId(legacyUserId);
-                    if (udaResponse != null
-                            && udaResponse.getCcmsUserDetails() != null
-                            && udaResponse.getCcmsUserDetails().getUserName() != null) {
-                        ccmsUsername = udaResponse.getCcmsUserDetails().getUserName();
-                    }
+            if (isInternalUser && legacyUserId != null) {
+                CcmsUserDetailsResponse udaResponse = ccmsUserDetailsService.getUserDetailsByLegacyUserId(legacyUserId);
+                if (udaResponse != null
+                        && udaResponse.getCcmsUserDetails() != null
+                        && udaResponse.getCcmsUserDetails().getUserName() != null) {
+                    ccmsUsername = udaResponse.getCcmsUserDetails().getUserName();
                 }
             }
 
