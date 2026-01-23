@@ -155,20 +155,6 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
             profile.setEntraUser(user);
             internalUserManagers.add(entraUserRepository.saveAndFlush(user));
         }
-        // Setup 5 internal userManagers with delegate access
-        for (int i = 0; i < 5; i++) {
-            EntraUser user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "Internal", "InternalUserManager");
-            UserProfile profile = buildLaaUserProfile(user, UserType.INTERNAL, true);
-            AppRole appRole = allAppRoles.stream()
-                    .filter(AppRole::isAuthzRole)
-                    .filter(role -> role.getName().equals("Internal User Manager"))
-                    .findFirst()
-                    .orElseThrow(() -> new RuntimeException("Could not find app role"));
-            profile.setAppRoles(Set.of(appRole));
-            user.setUserProfiles(Set.of(profile));
-            profile.setEntraUser(user);
-            internalUserManagers.add(entraUserRepository.saveAndFlush(user));
-        }
 
         // Setup 5 internal Users with external user manager role.
         for (int i = 0; i < 5; i++) {
@@ -317,7 +303,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         profile.setEntraUser(user);
         firmUserManagers.add(entraUserRepository.saveAndFlush(user));
 
-        // Set up Firm User Manager internal
+        // Set up Firm User Manager internal DELEGATE_EXTERNAL_USER_ACCESS
         user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmOneUserManager");
         profile = buildLaaUserProfile(user, UserType.INTERNAL, true);
         AppRole firmUserManagerRoleInternal = allAppRoles.stream()
@@ -327,7 +313,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
                 .orElseThrow(() -> new RuntimeException("Could not find app role"));
         appRole.setPermissions(Set.of(Permission.DELEGATE_EXTERNAL_USER_ACCESS));
         profile.setAppRoles(Set.of(firmUserManagerRoleInternal));
-        //profile.setFirm(testFirm2);
+
         user.setUserProfiles(Set.of(profile));
         profile.setEntraUser(user);
         firmUserManagersInternal.add(entraUserRepository.saveAndFlush(user));
