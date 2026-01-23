@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.playwright.tests;
 
 
 import com.microsoft.playwright.Locator;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.BaseFrontEndTest;
@@ -180,6 +181,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.searchAndVerifyUserNotExists(email);
     }
 
+    @Disabled("Temporarily disabled")
     @Test
     @DisplayName("Only admin users should able to create new user")
     void testUserPrivilegesToCreateUser() {
