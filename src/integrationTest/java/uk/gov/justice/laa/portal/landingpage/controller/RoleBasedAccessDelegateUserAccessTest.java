@@ -15,6 +15,7 @@ import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmUserForm;
 
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -52,7 +53,21 @@ public class RoleBasedAccessDelegateUserAccessTest extends RoleBasedAccessIntegr
     @Transactional
     public void testFirmUserManagerCanDelegateFirmAccessToInternalUser() throws Exception {
 
-        EntraUser editorUser = firmUserManagersInternal.getFirst();
+        // Set up Firm User Manager internal DELEGATE_EXTERNAL_USER_ACCESS
+        List<AppRole> allAppRoles = appRoleRepository.findAllWithPermissions();
+        EntraUser user = buildEntraUser(UUID.randomUUID().toString(), "delegateemail@delegateemail.com", "Internal with delegate", "FirmOneUserManager");
+        UserProfile profileNew = buildLaaUserProfile(user, UserType.INTERNAL, true);
+        AppRole firmUserManagerRoleInternal = allAppRoles.stream()
+                .filter(AppRole::isAuthzRole)
+                .filter(role -> role.getName().equals("Firm User Manager"))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Could not find app role"));
+        firmUserManagerRoleInternal.setPermissions(Set.of(Permission.DELEGATE_EXTERNAL_USER_ACCESS));
+        profileNew.setAppRoles(Set.of(firmUserManagerRoleInternal));
+
+        user.setUserProfiles(Set.of(profileNew));
+        profileNew.setEntraUser(user);
+        EntraUser editorUser = entraUserRepository.saveAndFlush(user);
         EntraUser editedUser = multiFirmUsers.getFirst();
         MvcResult result = delegateFirmAccessInternalUser(editorUser, editedUser);
         assertThat(result.getResponse()).isNotNull();
@@ -71,6 +86,7 @@ public class RoleBasedAccessDelegateUserAccessTest extends RoleBasedAccessIntegr
                 .findFirst()
                 .orElseThrow();
         userProfileRepository.delete(newlyCreatedUserProfile);
+        entraUserRepository.delete(editorUser);
     }
 
     @Test

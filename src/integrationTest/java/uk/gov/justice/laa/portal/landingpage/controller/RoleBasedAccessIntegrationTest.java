@@ -9,7 +9,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.method.P;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
@@ -19,7 +18,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
-import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
@@ -67,7 +65,6 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
     protected Firm testFirm2;
     protected List<EntraUser> internalUsersNoRoles = new ArrayList<>();
     protected List<EntraUser> internalUserManagers = new ArrayList<>();
-    protected List<EntraUser> internalUserManagersWithDelegate = new ArrayList<>();
     protected List<EntraUser> internalAndExternalUserManagers = new ArrayList<>();
     protected List<EntraUser> internalWithExternalOnlyUserManagers = new ArrayList<>();
     protected List<EntraUser> externalOnlyUserManagers = new ArrayList<>();
@@ -78,7 +75,6 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
     protected List<EntraUser> multiFirmUsers = new ArrayList<>();
     protected List<EntraUser> globalAdmins = new ArrayList<>();
     protected List<EntraUser> firmUserManagers = new ArrayList<>();
-    protected List<EntraUser> firmUserManagersInternal = new ArrayList<>();
     protected List<EntraUser> informationAndAssuranceUsers = new ArrayList<>();
     protected List<EntraUser> allUsers = new ArrayList<>();
 
@@ -115,7 +111,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
             officeRepository.save(firm2Office1);
             officeRepository.save(firm2Office2);
             testFirm2.setOffices(new java.util.HashSet<>(Set.of(firm2Office1, firm2Office2)));
-            testFirm2 = firmRepository.saveAndFlush(testFirm2);
+            testFirm2 = firmRepository.save(testFirm2);
             
             firmRepository.flush();
             entityManager.createNativeQuery("SET session_replication_role = DEFAULT").executeUpdate();
@@ -303,20 +299,6 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         profile.setEntraUser(user);
         firmUserManagers.add(entraUserRepository.saveAndFlush(user));
 
-        // Set up Firm User Manager internal DELEGATE_EXTERNAL_USER_ACCESS
-        user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmOneUserManager");
-        profile = buildLaaUserProfile(user, UserType.INTERNAL, true);
-        AppRole firmUserManagerRoleInternal = allAppRoles.stream()
-                .filter(AppRole::isAuthzRole)
-                .filter(role -> role.getName().equals("Firm User Manager"))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Could not find app role"));
-        appRole.setPermissions(Set.of(Permission.DELEGATE_EXTERNAL_USER_ACCESS));
-        profile.setAppRoles(Set.of(firmUserManagerRoleInternal));
-
-        user.setUserProfiles(Set.of(profile));
-        profile.setEntraUser(user);
-        firmUserManagersInternal.add(entraUserRepository.saveAndFlush(user));
 
         // Set up Multi-firm User
         user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmOne");
