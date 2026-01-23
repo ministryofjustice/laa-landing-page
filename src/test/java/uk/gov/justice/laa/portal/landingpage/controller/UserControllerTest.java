@@ -247,8 +247,8 @@ class UserControllerTest {
                 .entraUser(new EntraUserDto())
                 .build();
         when(userService.getUserProfileById(id)).thenReturn(Optional.of(user));
-        AppDto app1 = AppDto.builder().id(selectedApps.get(0)).name("A1").build();
-        AppDto app2 = AppDto.builder().id(selectedApps.get(1)).name("A2").build();
+        AppDto app1 = AppDto.builder().id(selectedApps.get(0)).name("A1").enabled(true).build();
+        AppDto app2 = AppDto.builder().id(selectedApps.get(1)).name("A2").enabled(true).build();
         when(userService.getAppsByUserType(UserType.EXTERNAL)).thenReturn(List.of(app1, app2));
         when(roleAssignmentService.canUserAssignRolesForApp(any(UserProfile.class), any(AppDto.class)))
                 .thenReturn(true);
@@ -532,10 +532,11 @@ class UserControllerTest {
         entraUser.setId(userId);
         entraUser.setFullName("Managed User");
 
+        AppRoleDto appRoleDto = AppRoleDto.builder().app(AppDto.builder().enabled(true).build()).build();
         UserProfileDto mockUser = UserProfileDto.builder()
                 .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
                 .entraUser(entraUser)
-                .appRoles(List.of(new AppRoleDto()))
+                .appRoles(List.of(appRoleDto))
                 .offices(List.of(OfficeDto.builder()
                         .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440001"))
                         .code("Test Office")
@@ -578,10 +579,11 @@ class UserControllerTest {
         nonDefaultUserListFilters.put("firmSearchForm",
                 FirmSearchForm.builder().firmSearch("test").selectedFirmId(UUID.randomUUID()).build());
 
+        AppRoleDto appRoleDto = AppRoleDto.builder().app(AppDto.builder().enabled(true).build()).build();
         UserProfileDto mockUser = UserProfileDto.builder()
                 .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
                 .entraUser(entraUser)
-                .appRoles(List.of(new AppRoleDto()))
+                .appRoles(List.of(appRoleDto))
                 .offices(List.of(OfficeDto.builder()
                         .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440001"))
                         .code("Test Office")
@@ -629,10 +631,11 @@ class UserControllerTest {
         entraUser.setId(userId);
         entraUser.setFullName("Managed User");
 
+        AppRoleDto appRoleDto = AppRoleDto.builder().app(AppDto.builder().enabled(true).build()).build();
         UserProfileDto mockUser = UserProfileDto.builder()
                 .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
                 .entraUser(entraUser)
-                .appRoles(List.of(new AppRoleDto()))
+                .appRoles(List.of(appRoleDto))
                 .offices(List.of(OfficeDto.builder()
                         .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440001"))
                         .code("Test Office")
@@ -741,7 +744,7 @@ class UserControllerTest {
         entraUser.setId(userId);
         entraUser.setFullName("Managed User");
 
-        AppDto appDto = AppDto.builder().build();
+        AppDto appDto = AppDto.builder().enabled(true).build();
         AppRoleDto appRoleDto1 = AppRoleDto.builder().name("Role One").ordinal(3).app(appDto).build();
         AppRoleDto appRoleDto2 = AppRoleDto.builder().name("Role Two").ordinal(2).app(appDto).build();
         AppRoleDto appRoleDto3 = AppRoleDto.builder().name("Role Three").ordinal(1).app(appDto).build();
@@ -771,6 +774,55 @@ class UserControllerTest {
         List<AppRoleDto> appRoles = (List<AppRoleDto>) model.getAttribute("userAppRoles");
         assertThat(appRoles.stream().map(AppRoleDto::getName))
                 .containsExactly("Role Three", "Role Two", "Role One");
+        verify(userService).getUserProfileById(userId);
+    }
+
+    @Test
+    void manageUser_shouldReturnNoApprolesFromDisabledApp() {
+        // Given - Editor is an Internal user
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.INTERNAL)
+                .build();
+        // Arrange
+        String userId = "user52";
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setId(userId);
+        entraUser.setFullName("Managed User");
+
+        AppDto appDto = AppDto.builder().enabled(false).build();
+        AppRoleDto appRoleDto1 = AppRoleDto.builder().name("Role One").ordinal(3).app(appDto).build();
+        AppRoleDto appRoleDto2 = AppRoleDto.builder().name("Role Two").ordinal(2).app(appDto).build();
+        AppRoleDto appRoleDto3 = AppRoleDto.builder().name("Role Three").ordinal(1).app(appDto).build();
+
+        UserProfileDto mockUser = UserProfileDto.builder()
+                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .entraUser(entraUser)
+                .appRoles(List.of(appRoleDto1, appRoleDto2, appRoleDto3))
+                .offices(List.of(OfficeDto.builder()
+                        .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440001"))
+                        .code("Test Office")
+                        .address(OfficeDto.AddressDto.builder().addressLine1("Test Address").build())
+                        .build()))
+                .userType(UserType.EXTERNAL)
+                .build();
+
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
+
+        // Act
+        String view = userController.manageUser(userId, false, model, session, authentication);
+
+        // Assert
+        assertThat(view).isEqualTo("manage-user");
+        assertThat(model.getAttribute("user")).isEqualTo(mockUser);
+        assertThat(model.getAttribute("userAppRoles")).isNotNull();
+        List<AppRoleDto> appRoles = (List<AppRoleDto>) model.getAttribute("userAppRoles");
+        assertThat(appRoles).isEmpty();
         verify(userService).getUserProfileById(userId);
     }
 
@@ -1189,10 +1241,10 @@ class UserControllerTest {
         entraUser.setFullName("Test User");
 
         UUID appId = UUID.randomUUID();
-        AppDto testApp = AppDto.builder().id(appId.toString()).name("Test App").build();
+        AppDto testApp = AppDto.builder().id(appId.toString()).name("Test App").enabled(true).build();
 
         UUID appId2 = UUID.randomUUID();
-        AppDto testApp2 = AppDto.builder().id(appId2.toString()).name("Test App 2").build();
+        AppDto testApp2 = AppDto.builder().id(appId2.toString()).name("Test App 2").enabled(true).build();
 
         UserProfileDto userProfile = UserProfileDto.builder()
                 .id(userId)
@@ -1232,6 +1284,56 @@ class UserControllerTest {
     }
 
     @Test
+    public void testEditUserAppsReturnsEnabledAppsOnly() throws ServletException {
+        // Given
+        final UUID userId = UUID.randomUUID();
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setId(userId.toString());
+        entraUser.setFullName("Test User");
+
+        UUID appId = UUID.randomUUID();
+        AppDto testApp = AppDto.builder().id(appId.toString()).name("Test App").enabled(true).build();
+
+        UUID appId2 = UUID.randomUUID();
+        AppDto testApp2 = AppDto.builder().id(appId2.toString()).name("Test App 2").enabled(false).build();
+
+        UserProfileDto userProfile = UserProfileDto.builder()
+                .id(userId)
+                .entraUser(entraUser)
+                .userType(UserType.EXTERNAL)
+                .build();
+
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .userType(UserType.EXTERNAL)
+                .appRoles(new HashSet<>())
+                .build();
+
+        when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.of(userProfile));
+        when(userService.getUserAppsByUserId(userId.toString())).thenReturn(Set.of(testApp, testApp2));
+        when(userService.getAppsByUserType(any())).thenReturn(List.of(testApp, testApp2));
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
+        when(roleAssignmentService.canUserAssignRolesForApp(any(), any())).thenReturn(true);
+
+        // When
+        String view = userController.editUserApps(userId.toString(), null, model, session, authentication);
+
+        // Then
+        assertThat(view).isEqualTo("edit-user-apps");
+        assertThat(model.getAttribute("user")).isNotNull();
+        UserProfileDto returnedUser = (UserProfileDto) model.getAttribute("user");
+        Assertions.assertEquals(userProfile.getId(), returnedUser.getId());
+        Assertions.assertEquals(userProfile.getFullName(), returnedUser.getFullName());
+
+        // Check the correct model attribute name "apps"
+        assertThat(model.getAttribute("apps")).isNotNull();
+        @SuppressWarnings("unchecked")
+        List<AppDto> apps = (List<AppDto>) model.getAttribute("apps");
+        assertThat(apps).hasSize(1);
+        assertThat(apps.getFirst().isSelected()).isTrue();
+    }
+
+    @Test
     public void testEditUserAppsReturnsCorrectViewAndAttributes_hide_non_editable_app() throws ServletException {
         // Given
         final UUID userId = UUID.randomUUID();
@@ -1251,9 +1353,9 @@ class UserControllerTest {
                 .build();
 
         UUID appId = UUID.randomUUID();
-        AppDto testApp = AppDto.builder().id(appId.toString()).name("Test App").build();
+        AppDto testApp = AppDto.builder().id(appId.toString()).name("Test App").enabled(true).build();
         UUID appId2 = UUID.randomUUID();
-        AppDto testApp2 = AppDto.builder().id(appId2.toString()).name("Test App 2").build();
+        AppDto testApp2 = AppDto.builder().id(appId2.toString()).name("Test App 2").enabled(true).build();
 
         when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.of(userProfile));
         when(userService.getUserAppsByUserId(userId.toString())).thenReturn(Set.of(testApp, testApp2));
@@ -1361,9 +1463,9 @@ class UserControllerTest {
         existingRoles.put(1, List.of());
         UUID role3 = UUID.randomUUID();
         UUID appId3 = UUID.randomUUID();
-        AppDto app1 = AppDto.builder().id(appId1.toString()).name("app1").build();
-        AppDto app2 = AppDto.builder().id(appId2.toString()).name("app2").build();
-        AppDto app3 = AppDto.builder().id(appId3.toString()).name("app3").build();
+        AppDto app1 = AppDto.builder().id(appId1.toString()).name("app1").enabled(true).build();
+        AppDto app2 = AppDto.builder().id(appId2.toString()).name("app2").enabled(true).build();
+        AppDto app3 = AppDto.builder().id(appId3.toString()).name("app3").enabled(true).build();
         AppRoleDto app1Role1Dto = AppRoleDto.builder().id(role1.toString())
                 .app(app1).name("role1").build();
         AppRoleDto app1Role2Dto = AppRoleDto.builder().id(role2.toString())
@@ -1392,6 +1494,59 @@ class UserControllerTest {
     }
 
     @Test
+    void editUserRolesCheckAnswerWithDisabledApps() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID
+        UserProfileDto userProfile = UserProfileDto.builder()
+                .id(UUID.fromString(userId))
+                .userType(UserType.EXTERNAL)
+                .build();
+        when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.ofNullable(userProfile));
+
+        MockHttpSession testSession = new MockHttpSession();
+
+        // Simulate roles for previous apps already selected
+        Map<Integer, List<String>> existingRoles = new HashMap<>();
+        final UUID role1 = UUID.randomUUID();
+        final UUID role2 = UUID.randomUUID();
+        final UUID role3 = UUID.randomUUID();
+        final UUID appId1 = UUID.randomUUID();
+        final UUID appId2 = UUID.randomUUID();
+        testSession.setAttribute("selectedApps", List.of(appId1.toString(), appId2.toString()));
+        existingRoles.put(0, List.of(role1.toString(), role3.toString()));
+        existingRoles.put(1, List.of());
+        UUID appId3 = UUID.randomUUID();
+        AppDto app1 = AppDto.builder().id(appId1.toString()).name("app1").enabled(true).build();
+        AppDto app2 = AppDto.builder().id(appId2.toString()).name("app2").enabled(true).build();
+        AppDto app3 = AppDto.builder().id(appId3.toString()).name("app3").enabled(false).build();
+        AppRoleDto app1Role1Dto = AppRoleDto.builder().id(role1.toString())
+                .app(app1).name("role1").build();
+        AppRoleDto app1Role2Dto = AppRoleDto.builder().id(role2.toString())
+                .app(app1).name("role2").build();
+        AppRoleDto app1Role3Dto = AppRoleDto.builder().id(role2.toString())
+                .app(app3).name("role3").build();
+        Map<String, AppRoleDto> app1Roles = Map.of(role1.toString(), app1Role1Dto, role2.toString(), app1Role2Dto,
+                role3.toString(), app1Role3Dto);
+        testSession.setAttribute("editUserAllSelectedRoles", existingRoles);
+        when(userService.getRolesByIdIn(any())).thenReturn(app1Roles);
+        when(userService.getAppsByUserType(any())).thenReturn(List.of(app1, app2, app3));
+        when(loginService.getCurrentProfile(authentication))
+                .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.canUserAssignRolesForApp(any(), any())).thenReturn(true, true, false);
+        // When
+        model = new ExtendedModelMap();
+        String view = userController.editUserRolesCheckAnswer(userId, null, model, testSession, authentication);
+
+        // Then - should complete editing and redirect to manage user
+        assertThat(view).isEqualTo("edit-user-roles-check-answer");
+        List<UserRole> selectedAppRole = (List<UserRole>) model.getAttribute("selectedAppRole");
+        assertThat(selectedAppRole).hasSize(3);
+        assertThat(selectedAppRole.get(0).getAppName()).isEqualTo("app1");
+        assertThat(selectedAppRole.get(1).getAppName()).isEqualTo("app3");
+        assertThat(selectedAppRole.get(2).getRoleName()).isEqualTo("No Role selected");
+    }
+
+    @Test
     void editUserRolesCheckAnswer_index_error() {
         // Given
         final String userId = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID
@@ -1413,10 +1568,10 @@ class UserControllerTest {
         existingRoles.put(1, List.of());
         UUID role3 = UUID.randomUUID();
         UUID appId3 = UUID.randomUUID();
-        AppDto app1 = AppDto.builder().id(appId1.toString()).name("app1").build();
+        AppDto app1 = AppDto.builder().id(appId1.toString()).name("app1").enabled(true).build();
         UUID appId2 = UUID.randomUUID();
-        AppDto app2 = AppDto.builder().id(appId2.toString()).name("app2").build();
-        AppDto app3 = AppDto.builder().id(appId3.toString()).name("app3").build();
+        AppDto app2 = AppDto.builder().id(appId2.toString()).name("app2").enabled(true).build();
+        AppDto app3 = AppDto.builder().id(appId3.toString()).name("app3").enabled(true).build();
         AppRoleDto app1Role1Dto = AppRoleDto.builder().id(role1.toString())
                 .app(app1).name("role1").build();
         AppRoleDto app1Role2Dto = AppRoleDto.builder().id(role2.toString())
@@ -1773,10 +1928,12 @@ class UserControllerTest {
         AppDto app1 = new AppDto();
         app1.setId("app1");
         app1.setName("App 1");
+        app1.setEnabled(true);
 
         AppDto app2 = new AppDto();
         app2.setId("app2");
         app2.setName("App 2");
+        app2.setEnabled(true);
 
         Set<AppDto> userApps = Set.of(app1);
         List<AppDto> allApps = List.of(app1, app2);
@@ -2740,10 +2897,11 @@ class UserControllerTest {
 
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setId("id1");
+        AppRoleDto appRoleDto = AppRoleDto.builder().app(AppDto.builder().enabled(true).build()).build();
         UserProfileDto userProfile = UserProfileDto.builder()
                 .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
                 .entraUser(entraUser)
-                .appRoles(List.of(new AppRoleDto()))
+                .appRoles(List.of(appRoleDto))
                 .offices(List.of(OfficeDto.builder()
                         .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440001"))
                         .code("Test Office")
@@ -2935,10 +3093,11 @@ class UserControllerTest {
         entraUser.setFullName("Managed User");
         entraUser.setMultiFirmUser(true);
 
+        AppRoleDto appRoleDto = AppRoleDto.builder().app(AppDto.builder().enabled(true).build()).build();
         UserProfileDto mockUser = UserProfileDto.builder()
                 .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
                 .entraUser(entraUser)
-                .appRoles(List.of(new AppRoleDto()))
+                .appRoles(List.of(appRoleDto))
                 .offices(List.of())
                 .userType(UserType.EXTERNAL)
                 .build();
@@ -2982,10 +3141,11 @@ class UserControllerTest {
         entraUser.setFullName("Managed User");
         entraUser.setMultiFirmUser(true);
 
+        AppRoleDto appRoleDto = AppRoleDto.builder().app(AppDto.builder().enabled(true).build()).build();
         UserProfileDto mockUser = UserProfileDto.builder()
                 .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
                 .entraUser(entraUser)
-                .appRoles(List.of(new AppRoleDto()))
+                .appRoles(List.of(appRoleDto))
                 .offices(List.of())
                 .userType(UserType.EXTERNAL)
                 .build();
@@ -3032,10 +3192,11 @@ class UserControllerTest {
         entraUser.setFullName("Current User");
         entraUser.setMultiFirmUser(true);
 
+        AppRoleDto appRoleDto = AppRoleDto.builder().app(AppDto.builder().enabled(true).build()).build();
         UserProfileDto mockUser = UserProfileDto.builder()
                 .id(profileId)
                 .entraUser(entraUser)
-                .appRoles(List.of(new AppRoleDto()))
+                .appRoles(List.of(appRoleDto))
                 .offices(List.of())
                 .userType(UserType.EXTERNAL)
                 .build();
@@ -3083,10 +3244,11 @@ class UserControllerTest {
         entraUser.setFullName("Other User");
         entraUser.setMultiFirmUser(true);
 
+        AppRoleDto appRoleDto = AppRoleDto.builder().app(AppDto.builder().enabled(true).build()).build();
         UserProfileDto mockUser = UserProfileDto.builder()
                 .id(viewedProfileId)
                 .entraUser(entraUser)
-                .appRoles(List.of(new AppRoleDto()))
+                .appRoles(List.of(appRoleDto))
                 .offices(List.of())
                 .userType(UserType.EXTERNAL)
                 .build();
@@ -3789,9 +3951,11 @@ class UserControllerTest {
         AppDto app1 = new AppDto();
         app1.setId("app1");
         app1.setName("App 1");
+        app1.setEnabled(true);
         AppDto app2 = new AppDto();
         app2.setId("app2");
         app2.setName("App 2");
+        app2.setEnabled(true);
 
         Set<AppDto> userApps = Set.of(app1);
         List<AppDto> availableApps = List.of(app1, app2);
@@ -3877,6 +4041,7 @@ class UserControllerTest {
         AppDto app1 = new AppDto();
         app1.setId("app1");
         app1.setName("App 1");
+        app1.setEnabled(true);
         List<AppDto> apps = List.of(app1);
 
         Model sessionModel = new ExtendedModelMap();
@@ -3919,6 +4084,52 @@ class UserControllerTest {
 
         // Then
         assertThat(result).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/apps");
+    }
+
+    @Test
+    void grantAccessSetSelectedApps_shouldHandleNonEditableApps() {
+        // Given
+        ApplicationsForm applicationsForm = new ApplicationsForm();
+        applicationsForm.setApps(null); // This will trigger validation error
+
+        // Mock session model with apps data
+        UserProfileDto user = new UserProfileDto();
+        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+
+        AppDto app1 = AppDto.builder().id("app1").name("App 1").enabled(true).ordinal(1).build();
+        AppRoleDto role1 = AppRoleDto.builder().app(app1).id("role1").name("Role 1").ordinal(1).build();
+        AppDto app2 = AppDto.builder().id("app2").name("App 2").enabled(false).ordinal(2).build();
+        AppRoleDto role2 = AppRoleDto.builder().app(app2).id("role2").name("Role 2").ordinal(2).build();
+        AppDto app3 = AppDto.builder().id("app3").name("App 3").enabled(true).ordinal(3).build();
+        AppRoleDto role3 = AppRoleDto.builder().app(app3).id("role3").name("Role 3").ordinal(3).build();
+        List<AppDto> apps = List.of(app1, app2, app3);
+        final List<AppRoleDto> roles = List.of(role1, role2, role3);
+
+        Model sessionModel = new ExtendedModelMap();
+        sessionModel.addAttribute("user", user);
+        sessionModel.addAttribute("apps", apps);
+
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("grantAccessUserAppsModel", sessionModel);
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+
+        // When
+        when(userService.getUserAppRolesByUserId(anyString())).thenReturn(roles);
+        Set<AppRole> editorRoles = Set.of(AppRole.builder().build());
+        when(loginService.getCurrentProfile(authentication))
+                .thenReturn(UserProfile.builder().appRoles(editorRoles).build());
+        when(roleAssignmentService.canAssignRole(any(), any())).thenReturn(false).thenReturn(true).thenReturn(true);
+        String userId = "550e8400-e29b-41d4-a716-446655440000";
+        String result = userController.grantAccessSetSelectedApps(userId, applicationsForm, bindingResult,
+                authentication, model, testSession);
+
+        // Then
+        assertThat(result).startsWith("redirect:/admin/users/grant-access/");
+        List<String> nonEditableAppRoles = (List<String>) testSession.getAttribute("nonEditableRoles");
+        assertThat(nonEditableAppRoles).isNotEmpty();
+        assertThat(nonEditableAppRoles).containsExactly("role1", "role2");
     }
 
     @Test
@@ -4055,6 +4266,60 @@ class UserControllerTest {
         assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/offices");
         assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNull();
         assertThat(testSession.getAttribute("grantAccessAllSelectedRoles")).isNull();
+    }
+
+    @Test
+    void grantAccessUpdateUserRoles_shouldHandleNonEditableAppRoles() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440004";
+        RolesForm rolesForm = new RolesForm();
+        rolesForm.setRoles(List.of("role2"));
+
+        final AppDto app1 = AppDto.builder().id("app1").name("App 1").enabled(true).ordinal(1).build();
+        final AppRoleDto role1 = AppRoleDto.builder().app(app1).id("role1").name("Role 1").ordinal(1).build();
+        final AppDto app2 = AppDto.builder().id("app2").name("App 2").enabled(false).ordinal(2).build();
+        final AppRoleDto role2 = AppRoleDto.builder().app(app2).id("role2").name("Role 2").ordinal(2).build();
+
+        UserProfileDto user = new UserProfileDto();
+        EntraUserDto entraUser = new EntraUserDto();
+        user.setEntraUser(entraUser);
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("test user");
+
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("grantAccessSelectedApps", List.of("app1", "app2"));
+
+        // Existing roles for previous app
+        Map<Integer, List<String>> existingRoles = new HashMap<>();
+        existingRoles.put(0, List.of("role1"));
+        testSession.setAttribute("grantAccessAllSelectedRoles", existingRoles);
+
+        Model sessionModel = new ExtendedModelMap();
+        testSession.setAttribute("grantAccessUserRolesModel", sessionModel);
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+        when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of(role1, role2));
+        when(roleAssignmentService.canUserAssignRolesForApp(any(), any())).thenReturn(false).thenReturn(false);
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+
+        // When - updating roles for last app (index 1)
+        String view = userController.grantAccessUpdateUserRoles(
+                userId,
+                rolesForm,
+                bindingResult,
+                1,
+                authentication,
+                model, testSession);
+
+        // Then
+        assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/offices");
+        assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNull();
+        assertThat(testSession.getAttribute("grantAccessAllSelectedRoles")).isNull();
+        List<String> nonEditableAppRoles = (List<String>) testSession.getAttribute("nonEditableRoles");
+        assertThat(nonEditableAppRoles).isNotEmpty();
+        assertThat(nonEditableAppRoles).containsExactly("role1", "role2");
     }
 
     @Test
@@ -4587,6 +4852,27 @@ class UserControllerTest {
         assertThat(view).isEqualTo("grant-access-user-offices");
         assertThat(model.getAttribute("user")).isNotNull();
         assertThat(model.getAttribute("officeData")).isNotNull();
+        verify(userService, Mockito.never()).updateUserOffices(anyString(), anyList());
+    }
+
+    @Test
+    void grantAccessUpdateUserOffices_shouldReturnToOfficeSelectionIfSessionIsEmptyOnValidationErrors() throws IOException {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440010";
+        OfficesForm officesForm = new OfficesForm();
+        officesForm.setOffices(null); // Validation error
+
+        MockHttpSession testSession = new MockHttpSession();
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(true);
+
+        // When
+        String view = userController.grantAccessUpdateUserOffices(userId, officesForm, bindingResult, authentication,
+                model, testSession);
+
+        // Then
+        assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/offices");
         verify(userService, Mockito.never()).updateUserOffices(anyString(), anyList());
     }
 

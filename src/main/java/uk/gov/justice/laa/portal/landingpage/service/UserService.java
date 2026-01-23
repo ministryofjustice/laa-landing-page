@@ -1065,6 +1065,7 @@ public class UserService {
 
     private Set<LaaApplicationForView> getUserAssignedLaaApps(Set<AppDto> userApps) {
         Set<LaaApplicationForView> userAssignedLaaApps = userApps.stream()
+                .filter(AppDto::isEnabled)
                 .filter(app -> AppType.LAA.equals(app.getAppType()))
                 .map(LaaApplicationForView::new)
                 .sorted()
@@ -1077,7 +1078,7 @@ public class UserService {
     }
 
     private void makeAppDisplayAdjustments(Set<LaaApplicationForView> userApps) {
-        List<AppDto> applications = appService.getAllAppsFromCache();
+        List<AppDto> applications = appService.getAllActiveLaaApps();
 
         Set<String> userAppIds = userApps.stream()
                 .map(LaaApplicationForView::getId)

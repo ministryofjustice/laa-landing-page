@@ -172,7 +172,9 @@ public class FirmService {
                 if (valueWrapper != null) {
                     @SuppressWarnings("unchecked")
                     List<FirmDto> cachedFirms = (List<FirmDto>) valueWrapper.get();
-                    return cachedFirms;
+                    if (cachedFirms != null && !cachedFirms.isEmpty()) {
+                        return cachedFirms;
+                    }
                 }
             } catch (Exception ex) {
                 logger.info("Error while getting access token from cache", ex);
