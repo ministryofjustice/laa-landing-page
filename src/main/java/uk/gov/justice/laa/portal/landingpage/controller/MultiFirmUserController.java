@@ -817,14 +817,16 @@ public class MultiFirmUserController {
         if (!userOfficeDtos.isEmpty()) {
             String targetFirmId = (String) session.getAttribute("delegateTargetFirmId");
             Firm validationFirm = targetFirmId != null ? firmService.getById(UUID.fromString(targetFirmId)) : userProfile.getFirm();
-            if (validationFirm == null || validationFirm.getOffices() == null
-                    || !validationFirm.getOffices().stream().map(Office::getCode).allMatch(code -> userProfile.getFirm()
-                            .getOffices().stream().map(Office::getCode).anyMatch(code::equals))) {
-                log.error(
-                        "User does not have sufficient permissions to assign the selected offices: userId={}, attemptedOfficeIds={}",
-                        userProfile.getId(),
-                        userOfficeDtos.stream().map(OfficeDto::getId).toList());
-                throw new RuntimeException("Office assignment is not permitted");
+            if(userProfile.getUserType() != UserType.INTERNAL) {
+                if (validationFirm == null || validationFirm.getOffices() == null
+                        || !validationFirm.getOffices().stream().map(Office::getCode).allMatch(code -> userProfile.getFirm()
+                        .getOffices().stream().map(Office::getCode).anyMatch(code::equals))) {
+                    log.error(
+                            "User does not have sufficient permissions to assign the selected offices: userId={}, attemptedOfficeIds={}",
+                            userProfile.getId(),
+                            userOfficeDtos.stream().map(OfficeDto::getId).toList());
+                    throw new RuntimeException("Office assignment is not permitted");
+                }
             }
         }
 
