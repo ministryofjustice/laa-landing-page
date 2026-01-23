@@ -20,6 +20,7 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.jetbrains.annotations.NotNull;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,6 +29,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -71,6 +73,7 @@ import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncomple
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm;
+import uk.gov.justice.laa.portal.landingpage.forms.DisableUserReasonForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmReassignmentForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
@@ -86,6 +89,7 @@ import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
+import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
@@ -99,6 +103,7 @@ import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
 import uk.gov.justice.laa.portal.landingpage.utils.RolesUtils;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
+import uk.gov.justice.laa.portal.landingpage.viewmodel.DisableUserReasonViewModel;
 
 /**
  * User Controller
@@ -121,6 +126,7 @@ public class UserController {
     private final RoleAssignmentService roleAssignmentService;
     private final EmailValidationService emailValidationService;
     private final AppRoleService appRoleService;
+    private final UserAccountStatusService disableUserService;
 
     @GetMapping("/users")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
@@ -287,16 +293,6 @@ public class UserController {
     }
 
     /**
-     * Disable group of users via graph SDK
-     */
-    @PreAuthorize("hasAuthority('SCOPE_User.EnableDisableAccount.All')")
-    @PostMapping("/users/disable")
-    public String disableUsers(@RequestParam("disable-user") List<String> id) throws IOException {
-        userService.disableUsers(id);
-        return "redirect:/users";
-    }
-
-    /**
      * Manage user via graph SDK
      */
     @GetMapping("/users/manage/{id}")
@@ -458,6 +454,68 @@ public class UserController {
         model.addAttribute("user", optionalUser.get());
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Remove access - " + optionalUser.get().getFullName());
         return "delete-user-reason";
+    }
+
+    @GetMapping("/users/manage/{id}/disable")
+    @PreAuthorize("@accessControlService.canDisableUser(#id)")
+    public String disableUserReasonsGet(@PathVariable String id,
+                                     DisableUserReasonForm disableUserReasonForm,
+                                     Model model,
+                                     HttpSession session) {
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        List<DisableUserReasonViewModel> reasons = disableUserService.getDisableUserReasons().stream()
+                .map(reason -> mapper.map(reason, DisableUserReasonViewModel.class))
+                .toList();
+        model.addAttribute("user", user);
+        model.addAttribute("reasons", reasons);
+        model.addAttribute("disableUserReasonsForm", disableUserReasonForm);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Disable User - " + user.getFullName());
+        session.setAttribute("disableUserReasonModel", model);
+        return "disable-user-reason";
+    }
+
+    @PostMapping("/users/manage/{id}/disable")
+    @PreAuthorize("@accessControlService.canDisableUser(#id)")
+    public String disableUserReasonsPost(@PathVariable String id,
+                                     @Valid DisableUserReasonForm disableUserReasonForm,
+                                     BindingResult result,
+                                     Authentication authentication,
+                                     Model model,
+                                     HttpSession session) {
+        if (result.hasErrors()) {
+            String errorMessage = buildErrorString(result);
+            Model modelFromSession = getObjectFromHttpSession(session, "disableUserReasonModel", Model.class).orElseThrow();
+            EntraUserDto user = (EntraUserDto) modelFromSession.getAttribute("user");
+            model.addAttribute("reasons", modelFromSession.getAttribute("reasons"));
+            model.addAttribute("user", user);
+            model.addAttribute("disableUserReasonsForm", disableUserReasonForm);
+            model.addAttribute("errorMessage", errorMessage);
+            return "disable-user-reason";
+        }
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        UUID disabledUserId = UUID.fromString(user.getId());
+        UUID disabledByUserId = loginService.getCurrentEntraUser(authentication).getId();
+        UUID disabledReasonId = UUID.fromString(disableUserReasonForm.getReasonId());
+        disableUserService.disableUser(disabledUserId, disabledReasonId, disabledByUserId);
+
+        model.addAttribute("user", user);
+        model.addAttribute("disableUserReasonsForm", disableUserReasonForm);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Disable User Success - " + user.getFullName());
+        return "disable-user-completed";
+    }
+
+    @NotNull
+    private static String buildErrorString(BindingResult result) {
+        StringBuilder errorMessage = new StringBuilder();
+        List<ObjectError> errors = result.getAllErrors();
+        for (int i = 0; i < errors.size(); i++) {
+            ObjectError error = errors.get(i);
+            errorMessage.append(error.getDefaultMessage());
+            if (i < errors.size() - 1) {
+                errorMessage.append("\n");
+            }
+        }
+        return errorMessage.toString();
     }
 
     @GetMapping("/user/create/details")

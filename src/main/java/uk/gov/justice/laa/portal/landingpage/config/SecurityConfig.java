@@ -25,6 +25,7 @@ import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequest
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
@@ -48,11 +49,14 @@ public class SecurityConfig {
     private final AuthzOidcUserDetailsService authzOidcUserDetailsService;
     private final CustomLogoutHandler logoutHandler;
     private final Environment environment;
+    private final UserDisabledFilter userDisabledFilter;
 
-    public SecurityConfig(AuthzOidcUserDetailsService authzOidcUserDetailsService, CustomLogoutHandler logoutHandler, Environment environment) {
+    public SecurityConfig(AuthzOidcUserDetailsService authzOidcUserDetailsService, CustomLogoutHandler logoutHandler, Environment environment,
+                          UserDisabledFilter userDisabledFilter) {
         this.authzOidcUserDetailsService = authzOidcUserDetailsService;
         this.logoutHandler = logoutHandler;
         this.environment = environment;
+        this.userDisabledFilter = userDisabledFilter;
     }
 
     @Bean
@@ -126,7 +130,8 @@ public class SecurityConfig {
     @Order(2)
     public SecurityFilterChain webSecurityFilterChain(HttpSecurity http, 
             ClientRegistrationRepository clientRegistrationRepository) throws Exception {
-        http.authorizeHttpRequests((authorize) -> authorize
+        http.addFilterAfter(userDisabledFilter, UsernamePasswordAuthenticationFilter.class)
+                .authorizeHttpRequests((authorize) -> authorize
                 .requestMatchers("/admin/users/**", "/pda/**")
                 .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
                 .requestMatchers("/admin/user/**")
@@ -183,7 +188,7 @@ public class SecurityConfig {
                                 + " script-src * 'self' 'unsafe-eval' 'unsafe-inline' blob: data: gap:; object-src * 'self' blob: data: gap:;"
                                 + " img-src * self 'unsafe-inline' blob: data: gap:; connect-src self * 'unsafe-inline' blob: data: gap:;"
                                 + " frame-src * self blob: data: gap:;"))
-        );
+            );
         return http.build();
     }
 

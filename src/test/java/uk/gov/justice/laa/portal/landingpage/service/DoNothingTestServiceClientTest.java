@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
@@ -83,6 +84,22 @@ public class DoNothingTestServiceClientTest {
         Assertions.assertThat(response.getData().getMessage()).isNotNull();
         Assertions.assertThat(response.getData().getMessage()).isEqualTo("Activation code has been generated and sent successfully via email.");
         assertLogMessage("Verification email has been resent from Dummy Tech Services Client for user");
+    }
+
+    @Test
+    public void testDisableUserReturnsSuccessResponse() {
+        EntraUserDto user = EntraUserDto.builder().build();
+        TechServicesApiResponse<ChangeAccountEnabledResponse> response = techServicesClient.disableUser(user, "Test Reason");
+        Assertions.assertThat(response.isSuccess()).isTrue();
+        Assertions.assertThat(response.getData().getMessage()).isEqualTo("Successfully disabled user.");
+    }
+
+    @Test
+    public void testEnableUserReturnsSuccessResponse() {
+        EntraUserDto user = EntraUserDto.builder().build();
+        TechServicesApiResponse<ChangeAccountEnabledResponse> response = techServicesClient.enableUser(user);
+        Assertions.assertThat(response.isSuccess()).isTrue();
+        Assertions.assertThat(response.getData().getMessage()).isEqualTo("Successfully enabled user.");
     }
 
     private void assertLogMessage(String message) {
