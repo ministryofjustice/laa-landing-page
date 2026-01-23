@@ -15,4 +15,13 @@ public interface FirmRepository extends JpaRepository<Firm, UUID> {
     
     @Query("SELECT f FROM Firm f WHERE LOWER(f.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR LOWER(f.code) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
     List<Firm> findByNameOrCodeContaining(@Param("searchTerm") String searchTerm);
+
+    @Query("""
+            SELECT f.name, f.code, COUNT(up.id) FROM Firm f
+            JOIN UserProfile up ON up.firm.id = f.id
+            JOIN EntraUser eu ON eu.id = up.entraUser.id
+            WHERE eu.multiFirmUser = TRUE
+            GROUP BY f.id, f.name, f.code
+            """)
+    List<Object[]>findMultiFirmUserCountsByFirm();
 }

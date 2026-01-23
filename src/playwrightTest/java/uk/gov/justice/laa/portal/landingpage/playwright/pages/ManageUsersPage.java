@@ -184,14 +184,6 @@ public class ManageUsersPage {
         firstLink.click();
     }
 
-    public void clickExternalUserLink(String user) {
-        Locator externalUserLink = page.locator("a.govuk-link[href*='/admin/users/manage/']").getByText(user);
-        externalUserLink.waitFor(new Locator.WaitForOptions()
-                .setState(WaitForSelectorState.VISIBLE)
-                .setTimeout(10000));
-        externalUserLink.click();
-    }
-
     public void clickContinueLink() {
         continueButton.click();
     }

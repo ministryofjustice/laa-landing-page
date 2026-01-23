@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.repository;
 
 import java.util.Arrays;
+import java.util.List;
 
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,9 +11,13 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.jpa.JpaSystemException;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @DataJpaTest
@@ -25,6 +30,14 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
     private OfficeRepository officeRepository;
+
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    private UserProfileRepository userProfileRepository;
+
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    private EntraUserRepository entraUserRepository;
 
     @BeforeEach
     public void beforeEach() {
@@ -81,6 +94,53 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
         JpaSystemException ex = assertThrows(JpaSystemException.class,
                 () -> repository.saveAllAndFlush(Arrays.asList(firm1, firm2, firm3)), "Exception expected");
         Assertions.assertThat(ex.getMessage()).contains("parent firm (" + firm2.getId() + ") already has parent");
+    }
+
+    @Test
+    public void testFindMultiFirmUserCountsByFirm() {
+
+        // Create three multi-firm users
+        EntraUser user1 = buildMultifirmEntraUser(generateEntraId(), "user1@example.com", "User", "One", true);
+        user1 = entraUserRepository.saveAndFlush(user1);
+        EntraUser user2 = buildMultifirmEntraUser(generateEntraId(), "user2@example.com", "User", "Two", true);
+        user2 = entraUserRepository.saveAndFlush(user2);
+        EntraUser user3 = buildMultifirmEntraUser(generateEntraId(), "user3@example.com", "User", "Three", false);
+        user3 = entraUserRepository.saveAndFlush(user3);
+
+        // Create firms
+        Firm firm1 = buildFirm("Firm Epsilon", "EPSILON");
+        Firm firm2 = buildFirm("Firm Zeta", "ZETA");
+        Firm firm3 = buildFirm("Firm Eta", "ETA");
+        repository.saveAllAndFlush(List.of(firm1, firm2, firm3));
+
+
+        UserProfile user1P1 = buildLaaUserProfile(user1, UserType.EXTERNAL);
+        user1P1.setFirm(firm1);
+        UserProfile user1P2 = buildLaaUserProfile(user1, UserType.EXTERNAL);
+        user1P2.setFirm(firm2);
+        UserProfile user1P3 = buildLaaUserProfile(user1, UserType.EXTERNAL);
+        user1P3.setFirm(firm3);
+
+        user1.getUserProfiles().addAll(List.of(user1P1, user1P2, user1P3));
+        userProfileRepository.saveAllAndFlush(List.of(user1P1, user1P2, user1P3));
+        UserProfile user2P1 = buildLaaUserProfile(user2, UserType.EXTERNAL);
+        user2P1.setFirm(firm3);
+        user2.getUserProfiles().add(user2P1);
+        userProfileRepository.saveAndFlush(user2P1);
+        UserProfile user3P1 = buildLaaUserProfile(user3, UserType.EXTERNAL);
+        user3P1.setFirm(firm2);
+        user3.getUserProfiles().add(user3P1);
+        userProfileRepository.saveAndFlush(user3P1);
+
+        List<Object[]> result = repository.findMultiFirmUserCountsByFirm();
+
+        assertThat(result)
+                .hasSize(3)
+                .containsExactlyInAnyOrder(
+                        new Object[]{"Firm Epsilon", "EPSILON", 1L},
+                        new Object[]{"Firm Zeta", "ZETA", 1L},
+                        new Object[]{"Firm Eta", "ETA", 2L}
+                );
     }
 
 }

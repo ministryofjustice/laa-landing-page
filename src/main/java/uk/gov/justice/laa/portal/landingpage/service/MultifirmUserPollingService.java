@@ -1,0 +1,74 @@
+package uk.gov.justice.laa.portal.landingpage.service;
+
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class MultifirmUserPollingService {
+
+    private final FirmRepository firmRepository;
+    private final EntraUserRepository entraUserRepository;
+
+    private String reportDirectory = "\\tmp\\reports";
+
+    private final DateTimeFormatter FILE_TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH:mm");
+
+    public void pollForMultifirmUsers() {
+
+        List<Object[]> reportRows = new ArrayList<>();
+
+        reportRows.addAll(firmRepository.findMultiFirmUserCountsByFirm());
+        reportRows.addAll(entraUserRepository.findUnlinkedMultifirmUsersCount());
+        reportRows.addAll(entraUserRepository.findTotalMultiFirmUsersCount());
+
+        writeToCsv(reportRows);
+    }
+
+    private void writeToCsv(List<Object[]> rows){
+
+        String timestamp = LocalDateTime.now().format(FILE_TIMESTAMP);
+        Path outputPath = Path.of(reportDirectory, "SiLAS-multifirm-user-report-" + timestamp + ".csv");
+
+        try (BufferedWriter writer = Files.newBufferedWriter(outputPath)){
+            writer.write("Firm Name, Firm Code, Count");
+            writer.newLine();
+
+            for (Object[] row : rows) {
+                String firmName = (String) row[0];
+                String firmCode = row[1] == null ? "" : (String) row[1];
+                long count = ((Number) row[2]).longValue();
+
+                writer.write(csvValue(firmName));
+                writer.write(",");
+                writer.write(csvValue(firmCode));
+                writer.write(",");
+                writer.write(Long.toString(count));
+                writer.newLine();
+
+            }
+        } catch (IOException e){
+            throw new IllegalStateException("Failed to write multifirm users to CSV", e);
+        }
+    }
+
+    private String csvValue(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value;
+    }
+}

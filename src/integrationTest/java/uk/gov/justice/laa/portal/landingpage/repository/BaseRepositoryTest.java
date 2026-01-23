@@ -134,4 +134,13 @@ public class BaseRepositoryTest {
         appRepository.deleteAll(nonAuthzApps);
     }
 
+    protected EntraUser buildMultifirmEntraUser(String entraId, String email, String firstName, String lastName,
+                                                Boolean multiFirmUser) {
+        return EntraUser.builder().email(email).entraOid(entraId)
+                .userProfiles(HashSet.newHashSet(11))
+                .firstName(firstName).lastName(lastName)
+                .userStatus(UserStatus.ACTIVE)
+                .createdDate(LocalDateTime.now()).createdBy("Test").multiFirmUser(multiFirmUser).build();
+    }
+
 }

@@ -265,4 +265,21 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             @Param("userType") String userType,
             @Param("multiFirm") Boolean multiFirm,
             Pageable pageable);
+
+    @Query("""
+            SELECT 'Unlinked multi-firm users', NULL, COUNT(eu.id)
+                FROM EntraUser eu
+                LEFT JOIN UserProfile up
+                ON up.entraUser.id = eu.id
+                WHERE eu.multiFirmUser = TRUE
+                AND up.id IS NULL
+            """)
+    List<Object[]> findUnlinkedMultifirmUsersCount();
+
+    @Query("""
+            SELECT 'Total multi-firm users', NULL, COUNT(*)
+                FROM EntraUser
+                WHERE multiFirmUser = TRUE
+            """)
+    List<Object[]> findTotalMultiFirmUsersCount();
 }
