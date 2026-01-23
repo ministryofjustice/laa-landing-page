@@ -23,6 +23,13 @@ public class CreateFirmCommand implements PdaSyncCommand {
     @Override
     public void execute(PdaSyncResultDto result) {
         try {
+            // Validate firmType
+            if (pdaFirm.getFirmType() == null || pdaFirm.getFirmType().trim().isEmpty()) {
+                log.error("Failed to create firm {}: firmType is empty or null", pdaFirm.getFirmNumber());
+                result.addError("Failed to create firm " + pdaFirm.getFirmNumber() + ": firmType is empty or null");
+                return;
+            }
+
             // Check for duplicate name BEFORE attempting to create to avoid aborting transaction
             Firm existingFirmWithName = firmRepository.findFirmByName(pdaFirm.getFirmName());
             String finalName = pdaFirm.getFirmName();

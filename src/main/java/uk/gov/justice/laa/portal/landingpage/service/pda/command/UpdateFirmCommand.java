@@ -27,6 +27,13 @@ public class UpdateFirmCommand implements PdaSyncCommand {
             boolean updated = false;
 
             // Check firmType - CRITICAL: Type should NOT change (Python script requirement)
+            // Handle empty or null firmType gracefully
+            if (pdaFirm.getFirmType() == null || pdaFirm.getFirmType().trim().isEmpty()) {
+                log.error("Failed to update firm {}: firmType is empty or null", pdaFirm.getFirmNumber());
+                result.addError("Failed to update firm " + pdaFirm.getFirmNumber() + ": firmType is empty or null");
+                return;
+            }
+
             FirmType newType = FirmType.valueOf(pdaFirm.getFirmType().toUpperCase().replace(" ", "_"));
             if (!firm.getType().equals(newType)) {
                 // This violates SiLAS data requirements - log as ERROR

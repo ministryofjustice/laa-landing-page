@@ -27,6 +27,12 @@ public class DataProviderConfig {
     @Value("${app.data.provider.req.connect.timeout:30}")
     private int dataProviderReqConnectTimeout;
 
+    @Value("${app.data.provider.use-local-file:false}")
+    private boolean useLocalFile;
+
+    @Value("${app.data.provider.local-file-path:pda_data_21Jan2026.json}")
+    private String localFilePath;
+
     @Bean
     public RestClient dataProviderRestClient() {
         return RestClient.builder()
@@ -43,5 +49,13 @@ public class DataProviderConfig {
         factory.setReadTimeout(Duration.ofSeconds(dataProviderReqReadTimeout));
         factory.setConnectTimeout(Duration.ofSeconds(dataProviderReqConnectTimeout));
         return factory;
+    }
+
+    public boolean isUseLocalFile() {
+        return useLocalFile;
+    }
+
+    public String getLocalFilePath() {
+        return localFilePath;
     }
 }

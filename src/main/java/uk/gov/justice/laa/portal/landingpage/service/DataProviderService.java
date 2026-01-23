@@ -1,6 +1,8 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import java.io.StringReader;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -26,6 +28,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import tech.tablesaw.api.Table;
 import tech.tablesaw.io.json.JsonReadOptions;
+import uk.gov.justice.laa.portal.landingpage.config.DataProviderConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.ComparisonResultDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PdaFirmData;
 import uk.gov.justice.laa.portal.landingpage.dto.PdaOfficeData;
@@ -59,6 +62,7 @@ public class DataProviderService {
     private final OfficeRepository officeRepository;
     private final UserProfileRepository userProfileRepository;
     private final TransactionTemplate transactionTemplate;
+    private final DataProviderConfig dataProviderConfig;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -78,15 +82,28 @@ public class DataProviderService {
      * @return TableSaw Table containing provider offices snapshot data
      */
     public Table getProviderOfficesSnapshot() {
-        log.info("Fetching provider offices snapshot from PDA");
+        log.info("Fetching provider offices snapshot from {}",
+            dataProviderConfig.isUseLocalFile() ? "local file: " + dataProviderConfig.getLocalFilePath() : "PDA API");
 
         try {
-            String response = dataProviderRestClient.get()
-                    .uri("/api/v1/provider-offices/snapshot")
-                    .retrieve()
-                    .body(String.class);
+            String response;
 
-            log.info("Successfully fetched provider offices snapshot from PDA, converting to dataframe");
+            if (dataProviderConfig.isUseLocalFile()) {
+                // Read from local file
+                response = Files.readString(
+                    Paths.get(dataProviderConfig.getLocalFilePath())
+                );
+                log.info("Successfully loaded data from local file");
+            } else {
+                // Fetch from API
+                response = dataProviderRestClient.get()
+                        .uri("/api/v1/provider-offices/snapshot")
+                        .retrieve()
+                        .body(String.class);
+                log.info("Successfully fetched provider offices snapshot from PDA API");
+            }
+
+            log.info("Converting to dataframe");
 
             // Parse JSON to extract the "offices" array
             JsonNode rootNode = objectMapper.readTree(response);
