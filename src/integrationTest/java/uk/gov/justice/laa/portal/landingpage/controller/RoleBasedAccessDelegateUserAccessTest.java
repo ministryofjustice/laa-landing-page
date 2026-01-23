@@ -67,8 +67,10 @@ public class RoleBasedAccessDelegateUserAccessTest extends RoleBasedAccessIntegr
 
         user.setUserProfiles(Set.of(profileNew));
         profileNew.setEntraUser(user);
+
         EntraUser editorUser = entraUserRepository.saveAndFlush(user);
         EntraUser editedUser = multiFirmUsers.getFirst();
+        //act
         MvcResult result = delegateFirmAccessInternalUser(editorUser, editedUser);
         assertThat(result.getResponse()).isNotNull();
         assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/admin/multi-firm/user/add/profile/confirmation");
