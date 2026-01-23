@@ -7,6 +7,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+
 import static org.mockito.ArgumentMatchers.any;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -23,7 +24,10 @@ import org.springframework.web.servlet.view.RedirectView;
 
 import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
@@ -165,6 +169,40 @@ class LoginControllerTest {
         // Assert
         assertThat(viewName).isEqualTo("home");
         assertThat(model.getAttribute("name")).isEqualTo("Test User");
+        verify(loginService).processUserSession(authentication, authClient, session);
+    }
+
+    @Test
+    void givenAuthenticatedUser_whenHomeGet_thenPopulatesModelWithFirmDirectoryAndReturnsHomeView() {
+
+        // Arrange
+        Model model = new ConcurrentModel();
+        UserSessionData mockSessionData = UserSessionData.builder()
+                .name("Test User")
+                .build();
+        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class),
+                any(HttpSession.class)))
+                .thenReturn(mockSessionData);
+
+        EntraUser entraUser = EntraUser.builder()
+                .email("test@test.com")
+                .userProfiles(Set.of(UserProfile.builder()
+                        .activeProfile(true)
+                        .appRoles(Set.of(AppRole.builder()
+                                .permissions(Set.of(Permission.VIEW_FIRM_DIRECTORY))
+                                .authzRole(true)
+                                .build()))
+                        .build()))
+                .build();
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+
+        // Act
+        String viewName = controller.home(model, authentication, session, authClient);
+
+        // Assert
+        assertThat(viewName).isEqualTo("home");
+        assertThat(model.getAttribute("name")).isEqualTo("Test User");
+        assertThat(model.getAttribute("canViewFirmDirectory")).isEqualTo(true);
         verify(loginService).processUserSession(authentication, authClient, session);
     }
 
