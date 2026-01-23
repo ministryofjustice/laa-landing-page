@@ -184,21 +184,30 @@ public class ManageUsersPage {
         firstLink.click();
     }
 
+    public boolean isNextLinkClickable() {
+        return page.locator("a.govuk-link:has-text('Next page')").isVisible();
+    }
+
+    public void clickNextPageLink() {
+        Locator next = page.locator("a.govuk-link:has-text('Next page')");
+        if (next.isVisible()) {
+            next.click();
+        }
+    }
+
     public void clickExternalUserLink(String user) {
         Locator externalUserLink = page
                 .locator("a.govuk-link[href*='/admin/users/manage/']")
                 .getByText(user);
 
-        // Try current page first, otherwise paginate until found (or no Next page).
         for (int attempts = 0; attempts < 50; attempts++) {
             if (externalUserLink.count() > 0 && externalUserLink.first().isVisible()) {
                 externalUserLink.first().click();
                 return;
             }
 
-            Locator next = page.locator("a.govuk-link:has-text('Next page')");
-            if (next.isVisible()) {
-                next.click(); // or nextPage();
+            if (isNextLinkClickable()) {
+                clickNextPageLink();
             } else {
                 break;
             }
