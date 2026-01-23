@@ -185,11 +185,26 @@ public class ManageUsersPage {
     }
 
     public void clickExternalUserLink(String user) {
-        Locator externalUserLink = page.locator("a.govuk-link[href*='/admin/users/manage/']").getByText(user);
-        externalUserLink.waitFor(new Locator.WaitForOptions()
-                .setState(WaitForSelectorState.VISIBLE)
-                .setTimeout(10000));
-        externalUserLink.click();
+        Locator externalUserLink = page
+                .locator("a.govuk-link[href*='/admin/users/manage/']")
+                .getByText(user);
+
+        // Try current page first, otherwise paginate until found (or no Next page).
+        for (int attempts = 0; attempts < 50; attempts++) {
+            if (externalUserLink.count() > 0 && externalUserLink.first().isVisible()) {
+                externalUserLink.first().click();
+                return;
+            }
+
+            Locator next = page.locator("a.govuk-link:has-text('Next page')");
+            if (next.isVisible()) {
+                next.click(); // or nextPage();
+            } else {
+                break;
+            }
+        }
+
+        throw new IllegalStateException("Could not find external user link for user: " + user);
     }
 
     public void clickContinueLink() {
