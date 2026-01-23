@@ -756,7 +756,6 @@ public class MultiFirmUserController {
         List<String> userOfficeIds = getListFromHttpSession(session, "userOffices", String.class).orElse(List.of());
 
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
-        System.out.println(currentUserProfile.toString());
         UserProfileDto currentUserProfileDto = mapper.map(currentUserProfile, UserProfileDto.class);
         List<OfficeDto> userOfficeDtos = userOfficeIds.contains("ALL") ? List.of()
                 : officeService.getOfficesByIds(userOfficeIds);
@@ -817,7 +816,7 @@ public class MultiFirmUserController {
         if (!userOfficeDtos.isEmpty()) {
             String targetFirmId = (String) session.getAttribute("delegateTargetFirmId");
             Firm validationFirm = targetFirmId != null ? firmService.getById(UUID.fromString(targetFirmId)) : userProfile.getFirm();
-            if(userProfile.getUserType() != UserType.INTERNAL) {
+            if (userProfile.getUserType() != UserType.INTERNAL) {
                 if (validationFirm == null || validationFirm.getOffices() == null
                         || !validationFirm.getOffices().stream().map(Office::getCode).allMatch(code -> userProfile.getFirm()
                         .getOffices().stream().map(Office::getCode).anyMatch(code::equals))) {
