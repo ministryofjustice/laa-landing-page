@@ -16,7 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-class FirmsCacheControllerTest extends BaseIntegrationTest {
+class CacheControllerTest extends BaseIntegrationTest {
 
     @MockitoBean
     private CacheManager cacheManager;

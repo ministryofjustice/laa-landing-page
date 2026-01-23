@@ -58,6 +58,14 @@ public class ClaimEnrichmentService {
             App app = appRepository.findByEntraAppId(appEntraId)
                     .orElseThrow(() -> new ClaimEnrichmentException("Application not found"));
 
+            if (!app.isEnabled()) {
+                log.info("App disabled on SiLAS, so user cannot access the application");
+                return ClaimEnrichmentResponse.builder()
+                        .success(false)
+                        .data(null)
+                        .build();
+            }
+
             // 3. Check if user has access to this app
             boolean hasAccess = entraUser.getUserProfiles().stream()
                     .filter(UserProfile::isActiveProfile)
@@ -142,19 +150,12 @@ public class ClaimEnrichmentService {
                     .orElse(null);
 
             String ccmsUsername = null;
-            if (isInternalUser) {
-                boolean hasLegacySyncRole = entraUser.getUserProfiles().stream()
-                        .filter(UserProfile::isActiveProfile)
-                        .flatMap(profile -> profile.getAppRoles().stream())
-                        .anyMatch(AppRole::isLegacySync);
-
-                if (hasLegacySyncRole && legacyUserId != null) {
-                    CcmsUserDetailsResponse udaResponse = ccmsUserDetailsService.getUserDetailsByLegacyUserId(legacyUserId);
-                    if (udaResponse != null
-                            && udaResponse.getCcmsUserDetails() != null
-                            && udaResponse.getCcmsUserDetails().getUserName() != null) {
-                        ccmsUsername = udaResponse.getCcmsUserDetails().getUserName();
-                    }
+            if (isInternalUser && legacyUserId != null) {
+                CcmsUserDetailsResponse udaResponse = ccmsUserDetailsService.getUserDetailsByLegacyUserId(legacyUserId);
+                if (udaResponse != null
+                        && udaResponse.getCcmsUserDetails() != null
+                        && udaResponse.getCcmsUserDetails().getUserName() != null) {
+                    ccmsUsername = udaResponse.getCcmsUserDetails().getUserName();
                 }
             }
 
