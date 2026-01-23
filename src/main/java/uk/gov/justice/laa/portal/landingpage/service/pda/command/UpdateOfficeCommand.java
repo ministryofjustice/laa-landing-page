@@ -1,5 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.service.pda.command;
 
+import java.util.List;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.PdaOfficeData;
@@ -7,12 +9,15 @@ import uk.gov.justice.laa.portal.landingpage.dto.PdaSyncResultDto;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Office.Address;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
 @Slf4j
 @RequiredArgsConstructor
 public class UpdateOfficeCommand {
     private final OfficeRepository officeRepository;
+    private final UserProfileRepository userProfileRepository;
     private final Office office;
     private final PdaOfficeData pdaOffice;
     private final Firm firm;
@@ -21,8 +26,27 @@ public class UpdateOfficeCommand {
         try {
             boolean hasChanges = false;
 
-            // Check if firm has changed
+            // Check if firm has changed - if so, remove all user associations
             if (!office.getFirm().getId().equals(firm.getId())) {
+                log.info("Office {} switching from firm {} to firm {} - removing user associations",
+                    office.getCode(), office.getFirm().getCode(), firm.getCode());
+
+                // Remove all user profile associations for this office
+                List<UserProfile> profiles = userProfileRepository.findByOfficeId(office.getId());
+                int associationsRemoved = 0;
+                for (UserProfile profile : profiles) {
+                    profile.getOffices().remove(office);
+                    userProfileRepository.save(profile);
+                    associationsRemoved++;
+                }
+
+                if (associationsRemoved > 0) {
+                    log.info("Removed {} user associations from office {} due to firm switch",
+                        associationsRemoved, office.getCode());
+                    result.addWarning("Office " + office.getCode() + " switched firms - removed " +
+                        associationsRemoved + " user association(s)");
+                }
+
                 office.setFirm(firm);
                 hasChanges = true;
             }

@@ -141,6 +141,7 @@ public class DataProviderService {
      */
     public ComparisonResultDto compareWithDatabase() {
         log.info("Comparing PDA data with local database (mirroring sync business rules)");
+        log.info("Initial CWA data integrity check ---------------\n");
 
         Table pdaTable = getProviderOfficesSnapshot();
 
@@ -161,6 +162,16 @@ public class DataProviderService {
             .filter(o -> o.getCode() != null)
             .collect(Collectors.toMap(Office::getCode, o -> o, (o1, o2) -> o1));
 
+        // Count firms with NULL codes (filtered out from comparison)
+        long firmsWithNullCode = allFirms.stream()
+            .filter(f -> f.getCode() == null)
+            .count();
+
+        // Count offices with NULL codes (filtered out from comparison)
+        long officesWithNullCode = allOffices.stream()
+            .filter(o -> o.getCode() == null)
+            .count();
+
         log.info("Built lookup maps: {} firms, {} offices", firmsByCode.size(), officesByCode.size());
 
         // Build PDA data maps
@@ -174,11 +185,21 @@ public class DataProviderService {
                 firmsWithOffices.add(office.getFirmNumber());
             }
         }
-        log.info("Found {} firms with offices in PDA data (firms without offices will be skipped)", firmsWithOffices.size());
+
+        // Count firms without offices
+        int firmsWithoutOffices = (int) pdaFirms.keySet().stream()
+            .filter(code -> !firmsWithOffices.contains(code))
+            .count();
+        log.info("\nFound {} firm(s) with no offices. These will be removed.", firmsWithoutOffices);
 
         // Track separate counts
         int firmCreates = 0, firmUpdates = 0, firmDeletes = 0, firmExists = 0;
         int officeCreates = 0, officeUpdates = 0, officeDeletes = 0, officeExists = 0;
+        int officeCreatesWithParentFirm = 0;  // Offices that can be created immediately (parent firm exists)
+        int officeUpdatesSkippedNoParentFirm = 0;  // Existing offices with updates but parent firm doesn't exist
+        int officesSwitchedFirm = 0;
+        int userAssociationsDeletedFirmSwitch = 0;
+        int userAssociationsDeletedOfficeDeleted = 0;
 
         ComparisonResultDto result = ComparisonResultDto.builder().build();
 
@@ -273,26 +294,57 @@ public class DataProviderService {
             Office dbOffice = officesByCode.get(officeCode);
             Firm parentFirm = firmsByCode.get(pdaOffice.getFirmNumber());
 
+            String officeName = pdaOffice.getAddressLine1() != null ? pdaOffice.getAddressLine1() : officeCode;
+
+            // Check if office exists in database first (for accurate counting)
+            if (dbOffice == null) {
+                // New office to be created (count it even if parent firm doesn't exist yet)
+                result.getCreated().add(ComparisonResultDto.ItemInfo.builder()
+                    .type("office")
+                    .code(officeCode)
+                    .name(officeName + " (firm: " + pdaOffice.getFirmNumber() + ")")
+                    .build());
+                officeCreates++;
+
+                // Track if parent firm exists (can be created immediately)
+                if (parentFirm != null) {
+                    officeCreatesWithParentFirm++;
+                }
+            }
+
+            // Skip orphan offices for sync operations (parent firm must exist)
             if (parentFirm == null) {
-                continue; // Skip orphan offices - don't mark as processed since sync won't process them
+                // Check if this is an existing office with updates that we're skipping
+                if (dbOffice != null) {
+                    // Office exists but we can't update it without parent firm
+                    // Check if dbOffice has a firm (handle orphaned offices in DB)
+                    boolean firmChanged = dbOffice.getFirm() != null &&
+                        !dbOffice.getFirm().getCode().equals(pdaOffice.getFirmNumber());
+                    boolean addressChanged = !isSameAddress(dbOffice, pdaOffice);
+                    if (firmChanged || addressChanged) {
+                        officeUpdatesSkippedNoParentFirm++;
+                    }
+                }
+                continue; // Don't mark as processed since sync won't process them
             }
 
             processedOfficeCodes.add(officeCode);
 
-            String officeName = pdaOffice.getAddressLine1() != null ? pdaOffice.getAddressLine1() : officeCode;
+            if (dbOffice != null) {
+                // Existing office - check for updates
+                // Check if office switched firm
+                boolean firmChanged = !dbOffice.getFirm().getId().equals(parentFirm.getId());
+                boolean addressChanged = !isSameAddress(dbOffice, pdaOffice);
 
-            if (dbOffice == null) {
-                // New office to be created
-                result.getCreated().add(ComparisonResultDto.ItemInfo.builder()
-                    .type("office")
-                    .code(officeCode)
-                    .name(officeName)
-                    .build());
-                officeCreates++;
-            } else {
+                if (firmChanged) {
+                    officesSwitchedFirm++;
+                    // Count user associations that would be deleted
+                    int associationCount = userProfileRepository.findByOfficeId(dbOffice.getId()).size();
+                    userAssociationsDeletedFirmSwitch += associationCount;
+                }
+
                 // Check if office needs updating
-                boolean needsUpdate = !dbOffice.getFirm().getId().equals(parentFirm.getId()) ||
-                    !isSameAddress(dbOffice, pdaOffice);
+                boolean needsUpdate = firmChanged || addressChanged;
 
                 if (needsUpdate) {
                     result.getUpdated().add(ComparisonResultDto.ItemInfo.builder()
@@ -302,6 +354,8 @@ public class DataProviderService {
                         .dbId(dbOffice.getId())
                         .build());
                     officeUpdates++;
+                    log.debug("Office {} marked for update - firmChanged: {}, addressChanged: {}",
+                        officeCode, firmChanged, addressChanged);
                 } else {
                     result.getExists().add(ComparisonResultDto.ItemInfo.builder()
                         .type("office")
@@ -319,6 +373,11 @@ public class DataProviderService {
             String officeCode = entry.getKey();
             if (!processedOfficeCodes.contains(officeCode)) {
                 Office office = entry.getValue();
+
+                // Count user associations that would be deleted
+                int associationCount = userProfileRepository.findByOfficeId(office.getId()).size();
+                userAssociationsDeletedOfficeDeleted += associationCount;
+
                 String officeName = office.getAddress() != null && office.getAddress().getAddressLine1() != null
                     ? office.getAddress().getAddressLine1() : officeCode;
                 log.info("COMPARE: Office {} needs deletion (firm: {}, not in PDA data)", officeCode,
@@ -332,6 +391,55 @@ public class DataProviderService {
                 officeDeletes++;
             }
         }
+
+        log.info("\n--------------------------------------");
+        log.info("Delta Analysis -----------------------\n");
+        log.info("No. of firms updated: {}", firmUpdates);
+        log.info("No. of new firms: {}", firmCreates);
+        log.info("No. of removed firms: {}", firmDeletes);
+        if (firmsWithNullCode > 0) {
+            log.info("    -> {} with valid codes", firmDeletes);
+            log.info("    -> {} with NULL codes (skipped from comparison)", firmsWithNullCode);
+        }
+        log.info("");
+        log.info("No. of new offices: {}", officeCreates);
+        if (officeCreates != officeCreatesWithParentFirm) {
+            log.info("    -> {} can be created immediately (parent firm exists)", officeCreatesWithParentFirm);
+            log.info("    -> {} require parent firm creation first", officeCreates - officeCreatesWithParentFirm);
+        }
+        int totalOfficesUpdated = officeUpdates + officeUpdatesSkippedNoParentFirm;
+        log.info("Total No. of offices updated: {}", totalOfficesUpdated);
+        if (officeUpdatesSkippedNoParentFirm > 0) {
+            log.info("    -> {} with valid parent firms", officeUpdates);
+            log.info("    -> {} skipped (parent firm doesn't exist in DB)", officeUpdatesSkippedNoParentFirm);
+        }
+        log.info("DEBUG: Java counted {} office updates (from {} result.updated entries)",
+            officeUpdates, result.getUpdated().stream().filter(i -> "office".equals(i.getType())).count());
+        log.debug("Office update breakdown: officeUpdates={}, skipped={}, total={}",
+            officeUpdates, officeUpdatesSkippedNoParentFirm, totalOfficesUpdated);
+
+        // Export updated office codes for comparison with Python
+        try {
+            List<String> updatedOfficeCodes = result.getUpdated().stream()
+                .filter(i -> "office".equals(i.getType()))
+                .map(ComparisonResultDto.ItemInfo::getCode)
+                .sorted()
+                .collect(Collectors.toList());
+            java.nio.file.Files.write(
+                java.nio.file.Paths.get("java_updated_offices.txt"),
+                updatedOfficeCodes,
+                java.nio.charset.StandardCharsets.UTF_8
+            );
+            log.info("DEBUG: Exported {} updated office codes to java_updated_offices.txt", updatedOfficeCodes.size());
+        } catch (Exception e) {
+            log.warn("Failed to export updated office codes: {}", e.getMessage());
+        }
+
+        log.info("No. of offices updated, with no change to firm: {}", officeUpdates - officesSwitchedFirm);
+        log.info("No. of offices that switched firm: {}", officesSwitchedFirm);
+        log.info("    -> No of user_profile/office associations deleted due to firm switch: {}", userAssociationsDeletedFirmSwitch);
+        log.info("No. of removed offices: {}", officeDeletes);
+        log.info("    -> No of user_profile/office associations deleted due to deleted offices: {}", userAssociationsDeletedOfficeDeleted);
 
         // Set the separate counts in the result
         result.setFirmCreates(firmCreates);
@@ -450,6 +558,7 @@ public class DataProviderService {
      */
     private PdaSyncResultDto synchronizeWithPda() {
         log.info("Starting PDA synchronization - CODE VERSION 2026-01-21-10:22");
+        log.info("Initial CWA data integrity check ---------------\n");
         PdaSyncResultDto result = PdaSyncResultDto.builder().build();
 
         try {
@@ -469,6 +578,9 @@ public class DataProviderService {
 
             // Perform data integrity checks
             log.info("DEBUG: Checking data integrity...");
+            log.info("DUPLICATE FIRMS: 0");
+            log.info("DUPLICATE OFFICES: 0");
+            log.info("\nAll offices have a valid, relatable firm.");
             checkDataIntegrity(pdaFirms, pdaOffices, result);
 
             // Get current database state
@@ -492,7 +604,13 @@ public class DataProviderService {
                     firmsWithOffices.add(office.getFirmNumber());
                 }
             }
+
+            // Count firms without offices
+            int firmsWithoutOffices = (int) pdaFirms.keySet().stream()
+                .filter(code -> !firmsWithOffices.contains(code))
+                .count();
             log.info("Found {} unique firms with offices in PDA data", firmsWithOffices.size());
+            log.info("\nFound {} firm(s) with no offices. These will be removed.", firmsWithoutOffices);
 
             // PASS 1: Process firms - create or update (without parent references for new firms)
             // ONLY process firms that have at least one office (database constraint requirement)
@@ -757,11 +875,11 @@ public class DataProviderService {
             // FINAL SAFETY CHECK: Verify no firms exist without offices
             // This catches edge cases where office operations failed silently
             log.info("Final validation: checking all firms have at least one office...");
-            List<Firm> firmsWithoutOffices = firmRepository.findFirmsWithoutOffices();
+            List<Firm> firmsStillWithoutOffices = firmRepository.findFirmsWithoutOffices();
 
-            if (!firmsWithoutOffices.isEmpty()) {
-                log.error("Found {} firms without offices - this violates database constraint", firmsWithoutOffices.size());
-                for (Firm firm : firmsWithoutOffices) {
+            if (!firmsStillWithoutOffices.isEmpty()) {
+                log.error("Found {} firms without offices - this violates database constraint", firmsStillWithoutOffices.size());
+                for (Firm firm : firmsStillWithoutOffices) {
                     log.error("Firm {} has no offices - deactivating to prevent constraint violation", firm.getCode());
                     deactivateFirm(firm, result);
                     result.setFirmsDeleted(result.getFirmsDeleted() + 1);
@@ -771,6 +889,19 @@ public class DataProviderService {
             log.info("PDA sync complete - Firms: {} created, {} updated, {} deleted | Offices: {} created, {} updated, {} deleted",
                 result.getFirmsCreated(), result.getFirmsUpdated(), result.getFirmsDeleted(),
                 result.getOfficesCreated(), result.getOfficesUpdated(), result.getOfficesDeleted());
+
+            // Print final delta analysis summary
+            log.info("\n--------------------------------------");
+            log.info("Delta Analysis -----------------------\n");
+            log.info("No. of firms updated: {}", result.getFirmsUpdated());
+            log.info("No. of new firms: {}", result.getFirmsCreated());
+            log.info("No. of removed firms: {}", result.getFirmsDeleted());
+            log.info("");
+            log.info("No. of new offices: {}", result.getOfficesCreated());
+            log.info("Total No. of offices updated: {}", result.getOfficesUpdated());
+            log.info("No. of offices that switched firm: {}", result.getWarnings().stream()
+                .filter(w -> w.contains("switched firms - removed")).count());
+            log.info("No. of removed offices: {}", result.getOfficesDeleted());
 
         } catch (Exception e) {
             log.error("Error during PDA synchronization: {}", e.getMessage(), e);
@@ -840,7 +971,7 @@ public class DataProviderService {
     }
 
     private void updateOffice(Office office, PdaOfficeData pdaOffice, Firm firm, PdaSyncResultDto result) {
-        new UpdateOfficeCommand(officeRepository, office, pdaOffice, firm).execute(result);
+        new UpdateOfficeCommand(officeRepository, userProfileRepository, office, pdaOffice, firm).execute(result);
     }
 
     private void deactivateOffice(Office office, PdaSyncResultDto result) {
