@@ -24,11 +24,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 
-import static uk.gov.justice.laa.portal.landingpage.utils.UserRoleType.EXTERNAL_USER_ADMIN;
-import static uk.gov.justice.laa.portal.landingpage.utils.UserRoleType.EXTERNAL_USER_MANAGER;
-import static uk.gov.justice.laa.portal.landingpage.utils.UserRoleType.EXTERNAL_USER_VIEW;
-import static uk.gov.justice.laa.portal.landingpage.utils.UserRoleType.GLOBAL_ADMIN;
-
 @Service
 public class AccessControlService {
 
@@ -298,17 +293,6 @@ public class AccessControlService {
     public boolean userHasAuthzRole(Authentication authentication, String authzRoleName) {
         EntraUser user = loginService.getCurrentEntraUser(authentication);
         return userHasAuthzRole(user, authzRoleName);
-    }
-
-    public static boolean userHasAuthzRoles(EntraUser user, String... authzRoleName) {
-        Set<String> userRolesAuth = user.getUserProfiles().stream()
-                .filter(UserProfile::isActiveProfile)
-                .flatMap(userProfile -> userProfile.getAppRoles().stream())
-                .filter(AppRole::isAuthzRole)
-                .map(AppRole::getName)
-                .collect(Collectors.toSet());
-
-        return Arrays.stream(authzRoleName).anyMatch(userRolesAuth::contains);
     }
 
     public static boolean userHasAnyGivenPermissions(EntraUser entraUser,
