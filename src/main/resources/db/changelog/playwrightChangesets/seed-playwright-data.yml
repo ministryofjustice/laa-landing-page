@@ -164,6 +164,29 @@ databaseChangeLog:
                            WHERE u.email = 'playwright-externaluserviewer@playwrighttest.com'),
                           (SELECT id FROM app_role WHERE name = 'External User Viewer'))"
 
+  # SiLAS Administration
+  - changeSet:
+      id: 1769183038683-1
+      author: majid.elmi
+      context: playwright
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO entra_user (id, email, first_name, last_name, entra_oid, status, multi_firm_user, created_by, last_modified_by, created_date, last_modified_date)
+                  VALUES (gen_random_uuid(), 'playwright-silasadministration@playwrighttest.com', 'Playwright', 'SiLASAdministration', gen_random_uuid(), 'ACTIVE', false, 'System', 'System', NOW(), NOW())"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO user_profile (id, entra_user_id, active_profile, status, user_type, created_date, 
+            last_modified_date, created_by, last_modified_by, last_sync_successful)
+                  VALUES (gen_random_uuid(), (SELECT id FROM entra_user WHERE email = 'playwright-silasadministration@playwrighttest.com'),
+                  true, 'COMPLETE', 'INTERNAL', NOW(), NOW(), 'System', 'System', false)"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO user_profile_app_role (user_profile_id, app_role_id)
+                  VALUES ((SELECT up.id FROM user_profile up JOIN entra_user u ON up.entra_user_id = u.id
+                           WHERE u.email = 'playwright-silasadministration@playwrighttest.com'),
+                          (SELECT id FROM app_role WHERE name = 'SiLAS Administration'))"
+
   # Information & Assurance
   - changeSet:
       id: 1761063088678-11

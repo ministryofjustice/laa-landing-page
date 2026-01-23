@@ -12,7 +12,6 @@ import uk.gov.justice.laa.portal.landingpage.playwright.pages.AdminPage;
 
 import java.util.stream.Stream;
 
-@Disabled("Temporarily disabled")
 public class AdminPageTest extends BaseFrontEndTest {
 
     private AdminPage loginAndGetAdminPage(TestUser user) {
@@ -24,14 +23,14 @@ public class AdminPageTest extends BaseFrontEndTest {
     @Test
     @DisplayName("SiLAS Administration page loads and shows expected heading")
     void adminPage_loadsAndShowsHeading() {
-        AdminPage adminPage = loginAndGetAdminPage(TestUser.GLOBAL_ADMIN);
+        AdminPage adminPage = loginAndGetAdminPage(TestUser.SILAS_ADMINISTRATION);
         adminPage.assertOnPage();
     }
 
     @Test
     @DisplayName("Admin Services tab shows expected columns and at least 1 row")
     void adminServicesTab_hasExpectedColumnsAndRows() {
-        AdminPage adminPage = loginAndGetAdminPage(TestUser.GLOBAL_ADMIN);
+        AdminPage adminPage = loginAndGetAdminPage(TestUser.SILAS_ADMINISTRATION);
 
         adminPage.assertAdminServicesTableColumns()
                 .assertReorderAdminServicesButtonVisible();
@@ -45,7 +44,7 @@ public class AdminPageTest extends BaseFrontEndTest {
     @Test
     @DisplayName("Legal Aid Services tab shows expected columns and at least 1 row")
     void legalAidServicesTab_hasExpectedColumnsAndRows() {
-        AdminPage adminPage = loginAndGetAdminPage(TestUser.GLOBAL_ADMIN);
+        AdminPage adminPage = loginAndGetAdminPage(TestUser.SILAS_ADMINISTRATION);
 
         adminPage.assertLegalAidServicesTableColumns()
                 .assertReorderLegalAidServicesButtonVisible();
@@ -59,7 +58,7 @@ public class AdminPageTest extends BaseFrontEndTest {
     @Test
     @DisplayName("Roles and Permissions tab shows expected columns and action buttons")
     void rolesAndPermissionsTab_hasExpectedColumnsAndButtons() {
-        AdminPage adminPage = loginAndGetAdminPage(TestUser.GLOBAL_ADMIN);
+        AdminPage adminPage = loginAndGetAdminPage(TestUser.SILAS_ADMINISTRATION);
 
         adminPage.assertRolesTableColumns()
                 .assertRolesActionButtonsVisible()
@@ -74,7 +73,7 @@ public class AdminPageTest extends BaseFrontEndTest {
     @Test
     @DisplayName("Roles and Permissions filter dropdown is present and can filter by a known application")
     void rolesFilter_canFilterByApplication() {
-        AdminPage adminPage = loginAndGetAdminPage(TestUser.GLOBAL_ADMIN);
+        AdminPage adminPage = loginAndGetAdminPage(TestUser.SILAS_ADMINISTRATION);
 
         int before = adminPage.getRolesRowCount();
 
@@ -103,6 +102,7 @@ public class AdminPageTest extends BaseFrontEndTest {
 
     private static Stream<TestUser> nonPermittedUsers() {
         return Stream.of(
+                TestUser.GLOBAL_ADMIN,
                 TestUser.INTERNAL_USER_VIEWER,
                 TestUser.INTERNAL_USER_MANAGER,
                 TestUser.EXTERNAL_USER_VIEWER,

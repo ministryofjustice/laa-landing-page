@@ -181,7 +181,6 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.searchAndVerifyUserNotExists(email);
     }
 
-    @Disabled("Temporarily disabled")
     @Test
     @DisplayName("Only admin users should able to create new user")
     void testUserPrivilegesToCreateUser() {

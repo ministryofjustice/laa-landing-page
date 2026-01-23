@@ -48,11 +48,10 @@ public class HomePageTest extends BaseFrontEndTest {
         assertEquals("Manage your users", linkText, "Link text should match");
     }
 
-    @Disabled("Temporarily disabled")
     @Test
     @DisplayName("SiLAS Administration panel is visible for global admin")
     void silasAdministrationPanelVisible() {
-        HomePage home = loginAndGetHome(TestUser.GLOBAL_ADMIN);
+        HomePage home = loginAndGetHome(TestUser.SILAS_ADMINISTRATION);
 
         // Assert panel is visible
         home.assertSilasAdministrationPanelVisible();
