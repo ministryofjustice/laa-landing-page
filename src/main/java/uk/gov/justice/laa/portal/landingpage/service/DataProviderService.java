@@ -638,7 +638,7 @@ public class DataProviderService {
                 if (dbFirm == null) {
                     createFirm(pdaFirm, result);
                 } else {
-                    updateFirm(dbFirm, pdaFirm, result);
+                    updateFirm(dbFirm, pdaFirm, dbFirms, result);
                 }
 
                 // Check if we have critical errors that abort the transaction
@@ -964,8 +964,8 @@ public class DataProviderService {
         new CreateFirmCommand(firmRepository, pdaFirm).execute(result);
     }
 
-    private void updateFirm(Firm firm, PdaFirmData pdaFirm, PdaSyncResultDto result) {
-        new UpdateFirmCommand(firmRepository, firm, pdaFirm).execute(result);
+    private void updateFirm(Firm firm, PdaFirmData pdaFirm, Map<String, Firm> firmsByCode, PdaSyncResultDto result) {
+        new UpdateFirmCommand(firmRepository, firm, pdaFirm, firmsByCode).execute(result);
     }
 
     private void deactivateFirm(Firm firm, PdaSyncResultDto result) {

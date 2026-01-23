@@ -1,5 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.service.pda.command;
 
+import java.util.Map;
+
 import org.springframework.dao.DataIntegrityViolationException;
 
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,7 @@ public class UpdateFirmCommand implements PdaSyncCommand {
     private final FirmRepository firmRepository;
     private final Firm firm;
     private final PdaFirmData pdaFirm;
+    private final Map<String, Firm> firmsByCode;
 
     @Override
     public void execute(PdaSyncResultDto result) {
@@ -71,7 +74,7 @@ public class UpdateFirmCommand implements PdaSyncCommand {
 
             // Normalize parent code to null if parent doesn't exist in database (prevents infinite update loops)
             if (newParentCode != null) {
-                Firm parentFirm = firmRepository.findByCode(newParentCode);
+                Firm parentFirm = firmsByCode.get(newParentCode);
                 if (parentFirm == null || parentFirm.getType() == FirmType.ADVOCATE || parentFirm.getParentFirm() != null) {
                     // Parent doesn't exist, is invalid type, or has its own parent - treat as null
                     if (parentFirm == null) {
@@ -99,7 +102,7 @@ public class UpdateFirmCommand implements PdaSyncCommand {
                     newParentCode != null ? newParentCode : "null");
 
                 if (newParentCode != null) {
-                    Firm parentFirm = firmRepository.findByCode(newParentCode);
+                    Firm parentFirm = firmsByCode.get(newParentCode);
                     // Parent existence and validity already validated above, this lookup should always succeed
                     firm.setParentFirm(parentFirm);
                     updated = true;
