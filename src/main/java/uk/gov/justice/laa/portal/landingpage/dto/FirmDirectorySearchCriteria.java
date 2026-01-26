@@ -37,7 +37,7 @@ public class FirmDirectorySearchCriteria {
 
     public void setSelectedFirmId(String selectedFirmId) {
         if (selectedFirmId != null && !selectedFirmId.isBlank()) {
-                this.selectedFirmId = UUID.fromString(selectedFirmId);
+            this.selectedFirmId = UUID.fromString(selectedFirmId);
         }
     }
 

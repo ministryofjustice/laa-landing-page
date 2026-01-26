@@ -1,7 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.dto;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -25,9 +24,5 @@ public class PaginatedFirmDirectory extends PaginatedBase implements Serializabl
 
     private List<FirmDirectoryDto> firmDirectories;
 
-    public PaginatedFirmDirectory(long totalUsers, int totalPages, int currentPage, int pageSize, List<FirmDirectoryDto> firmDirectories) {
-        super(totalUsers, totalPages, currentPage, pageSize);
-        this.firmDirectories = firmDirectories;
-    }
 
 }

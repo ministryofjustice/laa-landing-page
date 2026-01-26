@@ -87,15 +87,14 @@ class FirmDirectoryControllerTest {
     void displayAllFirmDirectoryFindByType() {
         //Arrange
         FirmDirectorySearchCriteria criteria = new FirmDirectorySearchCriteria();
-        criteria.setSelectedFirmType(FirmType.ADVOCATE.getValue());
+        criteria.setSelectedFirmType(String.valueOf(FirmType.ADVOCATE));
         UUID firmId = UUID.randomUUID();
         List<FirmDirectoryDto> firmDirectoryDtos = List.of(FirmDirectoryDto.builder()
                         .firmType(FirmType.ADVOCATE.getValue())
                         .firmName("Firm Code 1")
                         .firmId(firmId)
                         .firmName("Firm Name 1")
-                        .build()
-                ,
+                        .build(),
                 FirmDirectoryDto.builder()
                         .firmType(FirmType.ADVOCATE.getValue())
                         .firmName("Firm Code 2")
