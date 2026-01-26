@@ -1,5 +1,17 @@
 databaseChangeLog:
   - changeSet:
+      id: update-authz-app-types
+      author: suresh.kavali
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "UPDATE app set app_type = 'AUTHZ' where name in ('Manage Your Users', 'User Access Audit Table');"
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: "UPDATE app set app_type = 'LAA' where name in ('Manage Your Users', 'User Access Audit Table');"
+
+  - changeSet:
       id: add-performance-indexes-pda-sync
       author: paul.snowdon
       runInTransaction: false
@@ -37,4 +49,4 @@ databaseChangeLog:
         - sql: DROP INDEX CONCURRENTLY IF EXISTS idx_office_code
         - sql: DROP INDEX CONCURRENTLY IF EXISTS idx_office_firm_id
         - sql: DROP INDEX CONCURRENTLY IF EXISTS idx_office_code
-        - sql: DROP INDEX CONCURRENTLY IF EXISTS idx_office_firm_idoffice_office_id
+        - sql: DROP INDEX CONCURRENTLY IF EXISTS idx_user_profile_office_office_id

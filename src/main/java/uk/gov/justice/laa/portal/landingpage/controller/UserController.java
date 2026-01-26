@@ -40,7 +40,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.beans.factory.annotation.Value;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -315,6 +314,7 @@ public class UserController {
 
         List<AppRoleDto> userAppRoles = user.getAppRoles() != null
                 ? user.getAppRoles().stream()
+                        .filter(appRoleDto -> appRoleDto.getApp().isEnabled())
                         .map(appRoleDto -> mapper.map(appRoleDto, AppRoleDto.class))
                         .sorted()
                         .collect(Collectors.toList())
@@ -934,6 +934,7 @@ public class UserController {
         List<AppDto> availableApps = userService.getAppsByUserType(userType);
 
         List<AppDto> editableApps = availableApps.stream()
+                .filter(AppDto::isEnabled)
                 .filter(app -> roleAssignmentService.canUserAssignRolesForApp(currentUserProfile, app))
                 .toList();
 
@@ -1186,6 +1187,7 @@ public class UserController {
         List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
                 .orElseGet(ArrayList::new);
         Map<String, AppDto> editableApps = userService.getAppsByUserType(userType).stream()
+                .filter(AppDto::isEnabled)
                 .filter(app -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, app))
                 .filter(app -> selectedApps.contains(app.getId()))
                 .collect(Collectors.toMap(AppDto::getId, Function.identity()));
@@ -1263,7 +1265,8 @@ public class UserController {
                 .flatMap(List::stream)
                 .toList();
         List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
-                .filter(role -> !roleAssignmentService.canAssignRole(editorUserProfile.getAppRoles(), List.of(role.getId())))
+                .filter(role -> !role.getApp().isEnabled()
+                        || !roleAssignmentService.canAssignRole(editorUserProfile.getAppRoles(), List.of(role.getId())))
                 .map(AppRoleDto::getId)
                 .toList();
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
@@ -1491,6 +1494,20 @@ public class UserController {
         return "edit-user-confirmation";
     }
 
+    @GetMapping("/users/edit/{id}/cancel/confirmation")
+    public String confirmCancelEditUserApps(@PathVariable String id, Model model) {
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        model.addAttribute("user", user);
+        return "cancel-edit-user-confirmation";
+    }
+
+    @GetMapping("/users/edit/{id}/cancel/offices/confirmation")
+    public String confirmCancelEditUserOffices(@PathVariable String id, Model model) {
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        model.addAttribute("user", user);
+        return "cancel-edit-user-firm-confirmation";
+    }
+
     @GetMapping("/users/edit/{id}/cancel")
     public String cancelUserEdit(@PathVariable String id, HttpSession session) {
         // Clear all edit-related session attributes
@@ -1644,6 +1661,7 @@ public class UserController {
         List<AppDto> availableApps = userService.getAppsByUserType(userType);
 
         List<AppDto> editableApps = availableApps.stream()
+                .filter(AppDto::isEnabled)
                 .filter(app -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, app))
                 .toList();
 
@@ -1697,7 +1715,8 @@ public class UserController {
 
         session.setAttribute("grantAccessSelectedApps", selectedApps);
         List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
-                .filter(role -> !roleAssignmentService.canAssignRole(currentUserProfile.getAppRoles(), List.of(role.getId())))
+                .filter(role -> !role.getApp().isEnabled()
+                        || !roleAssignmentService.canAssignRole(currentUserProfile.getAppRoles(), List.of(role.getId())))
                 .map(AppRoleDto::getId)
                 .toList();
         session.setAttribute("nonEditableRoles", nonEditableRoles);
@@ -1854,7 +1873,8 @@ public class UserController {
                     .flatMap(List::stream)
                     .collect(Collectors.toSet());
             List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
-                    .filter(role -> !roleAssignmentService.canUserAssignRolesForApp(currentUserProfile, role.getApp()))
+                    .filter(role -> !role.getApp().isEnabled()
+                            || !roleAssignmentService.canUserAssignRolesForApp(currentUserProfile, role.getApp()))
                     .map(AppRoleDto::getId)
                     .toList();
             session.setAttribute("allSelectedRoles", allSelectedRoles);
@@ -2207,6 +2227,13 @@ public class UserController {
         return "grant-access-confirmation";
     }
 
+    @GetMapping("/users/grant-access/{id}/cancel/confirmation")
+    public String confirmCancelGrantingAccess(@PathVariable String id, Model model) {
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        model.addAttribute("user", user);
+        return "cancel-grant-access-user-confirmation";
+    }
+
     /**
      * Cancel the grant access flow and clean up session data
      *
@@ -2350,14 +2377,14 @@ public class UserController {
             @RequestParam(value = "selectedFirmId", required = false) String selectedFirmId,
             @RequestParam(value = "selectedFirmName", required = false) String selectedFirmName,
             @RequestParam(value = "reason", required = false) String reason,
-            Model model) {
+            Model model, RedirectAttributes redirectAttributes) {
         try {
             Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
 
             if (optionalUser.isEmpty()) {
                 log.warn("User not found for reassignment: {}", id);
                 model.addAttribute("errorMessage", "User not found");
-                return "error";
+                return "errors/error-generic";
             }
 
             UserProfileDto user = optionalUser.get();
@@ -2365,7 +2392,16 @@ public class UserController {
             if (user.getUserType() != UserType.EXTERNAL) {
                 log.warn("Attempted to reassign internal user: {}", id);
                 model.addAttribute("errorMessage", "Only external users can be reassigned to different firms");
-                return "error";
+                return "errors/error-generic";
+            }
+
+            if (!user.getAppRoles().isEmpty()) {
+                log.warn("App roles not removed prior to firm switch for user: {}", id);
+                redirectAttributes.addFlashAttribute("errorMessage",
+                        "All app assignments must be removed before assigning a different firm to the account");
+                model.addAttribute("errorMessage",
+                        "All app assignments must be removed before assigning a different firm to the account");
+                return "redirect:/admin/users/manage/" + id;
             }
 
             FirmReassignmentForm form = new FirmReassignmentForm();
@@ -2386,7 +2422,7 @@ public class UserController {
         } catch (Exception e) {
             log.error("Error loading firm reassignment page for user {}: {}", id, e.getMessage(), e);
             model.addAttribute("errorMessage", "An error occurred while loading the page");
-            return "error";
+            return "errors/error-generic";
         }
     }
 
@@ -2466,7 +2502,7 @@ public class UserController {
             if (optionalUser.isEmpty()) {
                 log.warn("User not found for reassignment: {}", id);
                 model.addAttribute("errorMessage", "User not found");
-                return "error";
+                return "errors/error-generic";
             }
 
             UserProfileDto user = optionalUser.get();
@@ -2474,7 +2510,14 @@ public class UserController {
             if (user.getUserType() != UserType.EXTERNAL) {
                 log.warn("Attempted to reassign internal user: {}", id);
                 model.addAttribute("errorMessage", "Only external users can be reassigned to different firms");
-                return "error";
+                return "errors/error-generic";
+            }
+
+            if (!user.getAppRoles().isEmpty()) {
+                log.warn("App roles not removed prior to firm switch for user: {}", id);
+                model.addAttribute("errorMessage",
+                        "All app assignments must be removed before assigning a different firm to the account");
+                return "errors/error-generic";
             }
 
             ReassignmentReasonForm reasonForm = new ReassignmentReasonForm();
@@ -2492,7 +2535,7 @@ public class UserController {
         } catch (Exception e) {
             log.error("Error loading reason page for user {}: {}", id, e.getMessage(), e);
             model.addAttribute("errorMessage", "An error occurred while loading the page");
-            return "error";
+            return "errors/error-generic";
         }
     }
 
@@ -2525,7 +2568,7 @@ public class UserController {
             if (user.getUserType() != UserType.EXTERNAL) {
                 log.warn("Attempted to reassign internal user: {}", id);
                 model.addAttribute("errorMessage", "Only external users can be reassigned to different firms");
-                return "error";
+                return "errors/error-generic";
             }
 
             if (bindingResult.hasFieldErrors("reason")) {
@@ -2568,7 +2611,7 @@ public class UserController {
             if (optionalUser.isEmpty()) {
                 log.warn("User not found for reassignment: {}", id);
                 model.addAttribute("errorMessage", "User not found");
-                return "error";
+                return "errors/error-generic";
             }
 
             UserProfileDto user = optionalUser.get();
@@ -2576,7 +2619,13 @@ public class UserController {
             if (user.getUserType() != UserType.EXTERNAL) {
                 log.warn("Attempted to reassign internal user: {}", id);
                 model.addAttribute("errorMessage", "Only external users can be reassigned to different firms");
-                return "error";
+                return "errors/error-generic";
+            }
+
+            if (!user.getAppRoles().isEmpty()) {
+                log.warn("App roles not removed prior to firm switch for user: {}", id);
+                model.addAttribute("errorMessage", "All app assignments must be removed before assigning a different firm to the account");
+                return "errors/error-generic";
             }
 
             model.addAttribute("user", user);
@@ -2589,7 +2638,7 @@ public class UserController {
         } catch (Exception e) {
             log.error("Error loading check answers page for user {}: {}", id, e.getMessage(), e);
             model.addAttribute("errorMessage", "An error occurred while loading the page");
-            return "error";
+            return "errors/error-generic";
         }
     }
 
@@ -2688,7 +2737,7 @@ public class UserController {
             if (optionalUser.isEmpty()) {
                 log.warn("User not found for confirmation page: {}", id);
                 model.addAttribute("errorMessage", "User not found");
-                return "error";
+                return "errors/error-generic";
             }
 
             UserProfileDto user = optionalUser.get();
@@ -2699,7 +2748,7 @@ public class UserController {
         } catch (Exception e) {
             log.error("Error loading confirmation page for user {}: {}", id, e.getMessage(), e);
             model.addAttribute("errorMessage", "An error occurred while loading the page");
-            return "error";
+            return "errors/error-generic";
         }
     }
 

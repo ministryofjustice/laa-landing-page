@@ -208,6 +208,8 @@ spec:
               value: "${POLLING_GROUP_ID}"
             - name: FIRM_CACHE_CLEAR_SCHEDULE
               value: "${FIRM_CACHE_CLEAR_SCHEDULE}"
+            - name: APPS_CACHE_CLEAR_SCHEDULE
+              value: "${APPS_CACHE_CLEAR_SCHEDULE}"
             - name: TECH_SERVICES_CLEAR_CACHE_INTERVAL
               value: "${TECH_SERVICES_CLEAR_CACHE_INTERVAL}"
             - name: TECH_SERVICES_REQ_READ_TIMEOUT
@@ -224,6 +226,10 @@ spec:
               value: "${CCMS_USER_MANAGEMENT_API_KEY}"
             - name: CCMS_USER_API_SQS_ARN
               value: "${CCMS_USER_API_SQS_ARN}"
+            - name: CCMS_UDA_API_BASE_URL
+              value: "${CCMS_UDA_API_BASE_URL}"
+            - name: CCMS_UDA_API_KEY
+              value: "${CCMS_UDA_API_KEY}"
             - name: ENABLE_DISTRIBUTED_DB_LOCKING
               value: "${ENABLE_DISTRIBUTED_DB_LOCKING}"
             - name: DISTRIBUTED_DB_LOCKING_PERIOD

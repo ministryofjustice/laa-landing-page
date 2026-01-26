@@ -1,0 +1,35 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1769086883000-1
+      author: sankavi.mohanraj
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              ALTER TABLE entra_user ADD COLUMN IF NOT EXISTS last_synced_on timestamp;
+        - sql:
+            dbms: postgresql
+            sql: |
+              ALTER TABLE entra_user ADD COLUMN IF NOT EXISTS mail_only boolean DEFAULT false NOT NULL;
+        - sql:
+            dbms: postgresql
+            sql: |
+              ALTER TABLE entra_user ADD COLUMN IF NOT EXISTS last_login_date timestamp;
+        - sql:
+            dbms: postgresql
+            sql: |
+              CREATE TABLE IF NOT EXISTS entra_last_sync_metadata (
+                id VARCHAR(50) PRIMARY KEY DEFAULT 'ENTRA_USER_SYNC',
+                updated_at timestamp NULL,
+                last_successful_to timestamp NULL
+              );
+              INSERT INTO entra_last_sync_metadata (id, updated_at, last_successful_to) 
+              SELECT 'ENTRA_USER_SYNC', NULL, NULL 
+              WHERE NOT EXISTS (SELECT 1 FROM entra_last_sync_metadata);
+      rollback:
+        - sql:
+            sql: |
+              ALTER TABLE entra_user DROP COLUMN IF EXISTS last_synced_on;
+              ALTER TABLE entra_user DROP COLUMN IF EXISTS mail_only;
+              ALTER TABLE entra_user DROP COLUMN IF EXISTS last_login_date;
+              DROP TABLE IF EXISTS entra_last_sync_metadata;
