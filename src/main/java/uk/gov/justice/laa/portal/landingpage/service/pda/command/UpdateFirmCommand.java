@@ -52,13 +52,13 @@ public class UpdateFirmCommand implements PdaSyncCommand {
                 // Check for duplicate name BEFORE attempting update to avoid aborting transaction
                 Firm existingFirmWithName = firmRepository.findFirmByName(pdaFirm.getFirmName());
                 if (existingFirmWithName != null && !existingFirmWithName.getId().equals(firm.getId())) {
-                    log.warn("Duplicate firm name '{}' detected for firm {} - skipping name update",
+                    log.debug("Duplicate firm name '{}' detected for firm {} - skipping name update",
                         pdaFirm.getFirmName(), pdaFirm.getFirmNumber());
                     result.addWarning("Duplicate firm name '" + pdaFirm.getFirmName() +
                         "' for firm " + pdaFirm.getFirmNumber() + " - name update skipped");
                     // Don't update the name, but continue with other updates
                 } else {
-                    log.info("Updating firm {}: name '{}' -> '{}'",
+                    log.debug("Updating firm {}: name '{}' -> '{}'",
                         pdaFirm.getFirmNumber(), firm.getName(), pdaFirm.getFirmName());
                     firm.setName(pdaFirm.getFirmName());
                     updated = true;
@@ -78,15 +78,15 @@ public class UpdateFirmCommand implements PdaSyncCommand {
                 if (parentFirm == null || parentFirm.getType() == FirmType.ADVOCATE || parentFirm.getParentFirm() != null) {
                     // Parent doesn't exist, is invalid type, or has its own parent - treat as null
                     if (parentFirm == null) {
-                        log.warn("Parent firm {} not found for firm {} - treating as null parent", newParentCode, pdaFirm.getFirmNumber());
+                        log.debug("Parent firm {} not found for firm {} - treating as null parent", newParentCode, pdaFirm.getFirmNumber());
                         result.addWarning("Parent firm " + newParentCode + " not found for firm " + pdaFirm.getFirmNumber());
                     } else if (parentFirm.getType() == FirmType.ADVOCATE) {
-                        log.warn("Parent firm {} is ADVOCATE type for firm {} - treating as null parent (ADVOCATE firms cannot be parents)",
+                        log.debug("Parent firm {} is ADVOCATE type for firm {} - treating as null parent (ADVOCATE firms cannot be parents)",
                             newParentCode, pdaFirm.getFirmNumber());
                         result.addWarning("Parent firm " + newParentCode + " is ADVOCATE type and cannot be a parent for firm " +
                             pdaFirm.getFirmNumber());
                     } else if (parentFirm.getParentFirm() != null) {
-                        log.warn("Parent firm {} already has parent {} for firm {} - treating as null parent (multi-level hierarchy not allowed)",
+                        log.debug("Parent firm {} already has parent {} for firm {} - treating as null parent (multi-level hierarchy not allowed)",
                             newParentCode, parentFirm.getParentFirm().getCode(), pdaFirm.getFirmNumber());
                         result.addWarning("Parent firm " + newParentCode + " already has parent - multi-level hierarchy not allowed for firm " +
                             pdaFirm.getFirmNumber());
@@ -96,7 +96,7 @@ public class UpdateFirmCommand implements PdaSyncCommand {
             }
 
             if (!equals(currentParentCode, newParentCode)) {
-                log.info("Updating firm {}: parentFirm '{}' -> '{}'",
+                log.debug("Updating firm {}: parentFirm '{}' -> '{}'",
                     pdaFirm.getFirmNumber(),
                     currentParentCode != null ? currentParentCode : "null",
                     newParentCode != null ? newParentCode : "null");
@@ -118,12 +118,12 @@ public class UpdateFirmCommand implements PdaSyncCommand {
             if (updated) {
                 firmRepository.save(firm);
                 result.setFirmsUpdated(result.getFirmsUpdated() + 1);
-                log.info("Firm {} update complete", pdaFirm.getFirmNumber());
+                log.debug("Firm {} update complete", pdaFirm.getFirmNumber());
             }
         } catch (DataIntegrityViolationException e) {
             // Check if this is a duplicate name constraint violation
             if (e.getMessage() != null && e.getMessage().contains("firm_name_key")) {
-                log.warn("Duplicate firm name '{}' for firm {} - skipping entire update to avoid constraint violation",
+                log.debug("Duplicate firm name '{}' for firm {} - skipping entire update to avoid constraint violation",
                     pdaFirm.getFirmName(), pdaFirm.getFirmNumber());
                 result.addWarning("Duplicate firm name '" + pdaFirm.getFirmName() +
                     "' for firm " + pdaFirm.getFirmNumber() + " - update skipped to avoid constraint violation");
@@ -136,7 +136,7 @@ public class UpdateFirmCommand implements PdaSyncCommand {
         } catch (Exception e) {
             // Check if this is a duplicate name constraint violation (wrapped in different exception type)
             if (e.getMessage() != null && e.getMessage().contains("firm_name_key")) {
-                log.warn("Duplicate firm name '{}' for firm {} - skipping entire update to avoid constraint violation",
+                log.debug("Duplicate firm name '{}' for firm {} - skipping entire update to avoid constraint violation",
                     pdaFirm.getFirmName(), pdaFirm.getFirmNumber());
                 result.addWarning("Duplicate firm name '" + pdaFirm.getFirmName() +
                     "' for firm " + pdaFirm.getFirmNumber() + " - update skipped to avoid constraint violation");
