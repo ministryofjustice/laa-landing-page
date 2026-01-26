@@ -9,21 +9,21 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import uk.gov.justice.laa.portal.landingpage.service.DistributedLockService;
-import uk.gov.justice.laa.portal.landingpage.service.MultifirmUserPollingService;
+import uk.gov.justice.laa.portal.landingpage.service.MultifirmUserReportService;
 
 import java.time.Duration;
 
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "multifirm.user.polling.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "multifirm.user.reporting.enabled", havingValue = "true")
 @Slf4j
-public class MultifirmUserPolling {
-    private static final String POLLING_LOCK_KEY = "MULTIFIRM_USER_POLLING_LOCK";
+public class MultifirmUserReporting {
+    private static final String POLLING_LOCK_KEY = "MULTIFIRM_USER_REPORTING_LOCK";
 
-    private final MultifirmUserPollingService multifirmUserPollingService;
+    private final MultifirmUserReportService multifirmUserReportService;
     private final DistributedLockService lockService;
 
-    @Value("${internal.user.polling.enabled}")
+    @Value("${multifirm.user.reporting.enabled}")
     private boolean pollingEnabled;
 
     @Value("${app.enable.distributed.db.locking}")
@@ -41,7 +41,7 @@ public class MultifirmUserPolling {
                 try {
                     lockService.withLock(POLLING_LOCK_KEY, Duration.ofMinutes(distributedDbLockingPeriod), () -> {
                         log.debug("Acquired lock for multifirm user polling");
-                        multifirmUserPollingService.pollForMultifirmUsers();
+                        multifirmUserReportService.getMultifirmUsers();
                         log.debug("Completed multifirm user polling");
                         return null;
                     });
@@ -51,7 +51,7 @@ public class MultifirmUserPolling {
                     log.error("Error during multifirm user polling", e);
                 }
             } else {
-                multifirmUserPollingService.pollForMultifirmUsers();
+                multifirmUserReportService.getMultifirmUsers();
             }
         } else {
             log.debug("Multifirm user polling is disabled via configuration");

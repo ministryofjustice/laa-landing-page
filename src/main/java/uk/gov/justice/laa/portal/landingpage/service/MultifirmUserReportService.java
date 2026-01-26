@@ -2,10 +2,10 @@ package uk.gov.justice.laa.portal.landingpage.service;
 
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -17,17 +17,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
-public class MultifirmUserPollingService {
+public class MultifirmUserReportService {
 
     private final FirmRepository firmRepository;
     private final EntraUserRepository entraUserRepository;
 
-    private String reportDirectory = "\\tmp\\reports";
-
     private final DateTimeFormatter FILE_TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH:mm");
 
-    public void pollForMultifirmUsers() {
+    public void getMultifirmUsers() {
 
         List<Object[]> reportRows = new ArrayList<>();
 
@@ -36,11 +35,13 @@ public class MultifirmUserPollingService {
         reportRows.addAll(entraUserRepository.findTotalMultiFirmUsersCount());
 
         writeToCsv(reportRows);
+        log.info("Multifirm users written to CSV successfully");
     }
 
     private void writeToCsv(List<Object[]> rows){
 
         String timestamp = LocalDateTime.now().format(FILE_TIMESTAMP);
+        String reportDirectory = "\\tmp\\reports";
         Path outputPath = Path.of(reportDirectory, "SiLAS-multifirm-user-report-" + timestamp + ".csv");
 
         try (BufferedWriter writer = Files.newBufferedWriter(outputPath)){
@@ -58,7 +59,6 @@ public class MultifirmUserPollingService {
                 writer.write(",");
                 writer.write(Long.toString(count));
                 writer.newLine();
-
             }
         } catch (IOException e){
             throw new IllegalStateException("Failed to write multifirm users to CSV", e);
@@ -68,6 +68,9 @@ public class MultifirmUserPollingService {
     private String csvValue(String value) {
         if (value == null) {
             return "";
+        }
+        if (value.contains(",") || value.contains("\"")) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
         }
         return value;
     }

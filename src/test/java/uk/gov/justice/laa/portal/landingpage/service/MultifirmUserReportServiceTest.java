@@ -22,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-public class MultifirmUserPollingServiceTest {
+public class MultifirmUserReportServiceTest {
 
     @Mock
     private FirmRepository firmRepository;
@@ -33,7 +33,7 @@ public class MultifirmUserPollingServiceTest {
     @TempDir
     Path tempDir;
 
-    private MultifirmUserPollingService service;
+    private MultifirmUserReportService service;
 
     private Path getGeneratedCsvFile() throws IOException {
         try (Stream<Path> files = Files.list(tempDir)) {
@@ -46,7 +46,7 @@ public class MultifirmUserPollingServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new MultifirmUserPollingService(firmRepository, entraUserRepository);
+        service = new MultifirmUserReportService(firmRepository, entraUserRepository);
 
         ReflectionTestUtils.setField(service, "reportDirectory", tempDir.toString());
     }
@@ -59,18 +59,16 @@ public class MultifirmUserPollingServiceTest {
                         new Object[]{"firm1", "67", 10L},
                         new Object[]{"firm2", "21", 20L}
                 ));
-
         when(entraUserRepository.findUnlinkedMultifirmUsersCount())
                 .thenReturn(singletonList(
                         new Object[]{"Unlinked multi-firm users", null, 30L}
                 ));
-
         when(entraUserRepository.findTotalMultiFirmUsersCount())
                 .thenReturn(singletonList(
                         new Object[]{"Total multi-firm users", null, 50L}
                 ));
 
-        service.pollForMultifirmUsers();
+        service.getMultifirmUsers();
 
         Path csvPath = getGeneratedCsvFile();
         List<String> lines = Files.readAllLines(csvPath);
@@ -82,5 +80,24 @@ public class MultifirmUserPollingServiceTest {
                 "Unlinked multi-firm users,,30",
                 "Total multi-firm users,,50"
         );
+    }
+
+    @Test
+    void getMultiFirmUsers_escapesCsvValuesCorrectly() throws Exception {
+
+        when(firmRepository.findMultiFirmUserCountsByFirm())
+                .thenReturn(singletonList(new Object[] {"Firm, Inc", "ABC\"123", 1L}));
+        when(entraUserRepository.findUnlinkedMultifirmUsersCount())
+                .thenReturn(singletonList(
+                        new Object[]{"Unlinked multi-firm users", null, 0L}
+                ));
+        when(entraUserRepository.findTotalMultiFirmUsersCount())
+                .thenReturn(singletonList(
+                        new Object[]{"Total multi-firm users", null, 1L}
+                ));
+        service.getMultifirmUsers();
+
+        List<String> lines = Files.readAllLines(getGeneratedCsvFile());
+        assertThat(lines.get(1)).isEqualTo("\"Firm, Inc\",\"ABC\"\"123\",1");
     }
 }
