@@ -132,7 +132,7 @@ class FirmDirectoryControllerTest {
                 .build());
         assertThat(model.getAttribute("sort")).isEqualTo(criteria.getSort());
         assertThat(model.getAttribute("direction")).isEqualTo(criteria.getDirection());
-        assertThat(model.getAttribute("selectedFirmType")).isEqualTo(FirmType.ADVOCATE.getValue());
+        assertThat(model.getAttribute("selectedFirmType")).isEqualTo(String.valueOf(FirmType.ADVOCATE));
     }
 
 }

@@ -46,7 +46,7 @@ class FirmDirectorySearchCriteriaTest {
         assertThat(criteria.getSearch()).isEqualTo("search");
         assertThat(criteria.getFirmSearch()).isEqualTo("FirmSearch");
         assertThat(criteria.getSelectedFirmId()).isEqualTo(firmId);
-        assertThat(criteria.getSelectedFirmType()).isEqualTo(FirmType.CHAMBERS.getValue());
+        assertThat(criteria.getSelectedFirmType()).isEqualTo(String.valueOf(FirmType.CHAMBERS));
         assertThat(criteria.getSize()).isEqualTo(20);
         assertThat(criteria.getPage()).isEqualTo(20);
         assertThat(criteria.getSort()).isEqualTo("code");
