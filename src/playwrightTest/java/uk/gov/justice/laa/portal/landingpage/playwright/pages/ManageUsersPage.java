@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.microsoft.playwright.options.LoadState;
 import com.microsoft.playwright.options.WaitForSelectorState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -360,9 +361,13 @@ public class ManageUsersPage {
 
         clickContinueUserDetails();
 
-        assertTrue(firstNameInvalidCharsError.isVisible());
-        assertTrue(lastNameInvalidCharsError.isVisible());
-        assertTrue(selectUserTypeError.isVisible());
+        // Anchor wait: error summary appears (proves validation ran)
+        Locator errorSummary = page.locator(".govuk-error-summary");
+        assertThat(errorSummary).isVisible();
+
+        assertThat(firstNameInvalidCharsError).isVisible();
+        assertThat(lastNameInvalidCharsError).isVisible();
+        assertThat(selectUserTypeError).isVisible();
     }
 
     // Multi firm
@@ -389,36 +394,43 @@ public class ManageUsersPage {
     }
 
     // Firm selection
+
     public void searchAndSelectFirmByCode(String firmCode) {
 
+        // Ensure the page is settled enough for interactive widgets
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // 1) Input ready
         firmSearchInput.waitFor(new Locator.WaitForOptions()
                 .setState(WaitForSelectorState.VISIBLE)
-                .setTimeout(5000));
+                .setTimeout(7000));
 
         firmSearchInput.click();
         firmSearchInput.fill("");
-        page.waitForTimeout(4000);
 
-        firmSearchInput.pressSequentially(firmCode,
-                new Locator.PressSequentiallyOptions().setDelay(4000));
+        // 2) Real typing to trigger autocomplete logic
+        firmSearchInput.pressSequentially(firmCode);
 
-        // helps components that only open on nav keys
+        // 3) Nudge open for stubborn comboboxes
         firmSearchInput.press("ArrowDown");
 
-        //  wait for open state (polling)
+        // 4) Wait for open state (event/state-based)
         assertThat(firmSearchInput).hasAttribute("aria-expanded", "true",
                 new com.microsoft.playwright.assertions.LocatorAssertions.HasAttributeOptions()
                         .setTimeout(7000));
 
-        //  wait/click the actual option, scoped to this listbox
-        Locator firmOption = page.locator("#firmSearch__listbox [role='option']")
+        // 5) Find the option by firm code (stable) and click the LI
+        Locator firmOption = page
+                .locator("#firmSearch__listbox li[role='option'] small")
                 .filter(new Locator.FilterOptions().setHasText("Firm code: " + firmCode))
-                .first();
+                .first()
+                .locator(".."); // parent <li>
 
         firmOption.waitFor(new Locator.WaitForOptions()
                 .setState(WaitForSelectorState.VISIBLE)
                 .setTimeout(7000));
 
+        // 6) Safe click
         firmOption.click(new Locator.ClickOptions().setTrial(true));
         firmOption.click();
     }
