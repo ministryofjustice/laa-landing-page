@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.entity;
 
+import java.time.LocalDateTime;
 import java.util.Set;
 
 import org.hibernate.annotations.ColumnDefault;
@@ -73,6 +74,15 @@ public class EntraUser extends AuditableEntity {
     @Column(name = "multi_firm_user", nullable = false)
     @ColumnDefault("false")
     private boolean multiFirmUser;
+
+    @Column(name = "last_synced_on")
+    private LocalDateTime lastSyncedOn;
+
+    @Column(name = "mail_only")
+    private boolean mailOnly;
+
+    @Column(name = "last_login_date")
+    private LocalDateTime lastLoginDate;
 
     @OneToMany(mappedBy = "entraUser", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @ToString.Exclude

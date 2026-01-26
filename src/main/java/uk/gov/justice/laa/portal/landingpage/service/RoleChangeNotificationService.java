@@ -72,7 +72,8 @@ public class RoleChangeNotificationService {
 
     private void sendRoleChangeNotificationToSqs(UserProfile userProfile, Set<String> newPuiRoles, Set<String> oldPuiRoles) throws Exception {
         EntraUser entraUser = userProfile.getEntraUser();
-        if (!newPuiRoles.equals(oldPuiRoles)) {
+        if (!newPuiRoles.equals(oldPuiRoles)
+                && userProfile.getUserType() != UserType.INTERNAL) {
             log.info("CCMS roles updated for user: {}, generating message", userProfile.getEntraUser().getEntraOid());
             CcmsMessage message = CcmsMessage.builder()
                     .userName(userProfile.getLegacyUserId().toString())
