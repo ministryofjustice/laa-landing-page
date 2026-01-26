@@ -395,17 +395,32 @@ public class ManageUsersPage {
                 .setState(WaitForSelectorState.VISIBLE)
                 .setTimeout(5000));
 
-        firmSearchInput.fill(firmCode);
+        firmSearchInput.click();
+        firmSearchInput.fill("");
+        page.waitForTimeout(100);
 
-        // Let autocomplete populate
-        firmSearchListbox.waitFor(new Locator.WaitForOptions()
+        firmSearchInput.pressSequentially(firmCode,
+                new Locator.PressSequentiallyOptions().setDelay(40));
+
+        // helps components that only open on nav keys
+        firmSearchInput.press("ArrowDown");
+
+        //  wait for open state (polling)
+        assertThat(firmSearchInput).hasAttribute("aria-expanded", "true",
+                new com.microsoft.playwright.assertions.LocatorAssertions.HasAttributeOptions()
+                        .setTimeout(7000));
+
+        //  wait/click the actual option, scoped to this listbox
+        Locator firmOption = page.locator("#firmSearch__listbox [role='option']")
+                .filter(new Locator.FilterOptions().setHasText("Firm code: " + firmCode))
+                .first();
+
+        firmOption.waitFor(new Locator.WaitForOptions()
                 .setState(WaitForSelectorState.VISIBLE)
-                .setTimeout(5000));
+                .setTimeout(7000));
 
-        Locator firmOption = page.locator("li.autocomplete__option")
-                .filter(new Locator.FilterOptions().setHasText("Firm code: " + firmCode));
-
-        firmOption.first().click();
+        firmOption.click(new Locator.ClickOptions().setTrial(true));
+        firmOption.click();
     }
 
     public void clickContinueFirmSelectPage() {
