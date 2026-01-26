@@ -2,11 +2,11 @@ package uk.gov.justice.laa.portal.landingpage.dto;
 
 import org.junit.jupiter.api.Test;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
-import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class FirmDirectorySearchCriteriaTest {
 
@@ -35,7 +35,7 @@ class FirmDirectorySearchCriteriaTest {
         criteria.setSelectedFirmId(firmId.toString());
         criteria.setSearch("search");
         criteria.setFirmSearch("FirmSearch");
-        criteria.setSelectedFirmType(FirmType.CHAMBERS.getValue());
+        criteria.setSelectedFirmType(String.valueOf(FirmType.CHAMBERS));
         criteria.setPage(20);
         criteria.setSize(20);
         criteria.setDirection("desc");
@@ -51,6 +51,54 @@ class FirmDirectorySearchCriteriaTest {
         assertThat(criteria.getPage()).isEqualTo(20);
         assertThat(criteria.getSort()).isEqualTo("code");
         assertThat(criteria.getDirection()).isEqualTo("desc");
+    }
+
+    @Test
+    void selectTypeIsNullWhenSetSelectFirmTypeAsEmpty() {
+        // When
+        FirmDirectorySearchCriteria criteria = new FirmDirectorySearchCriteria();
+        criteria.setSelectedFirmType("");
+
+        // Then
+        assertThat(criteria).isNotNull();
+        assertThat(criteria.getSelectedFirmType()).isNull();
+    }
+
+    @Test
+    void throwErrorWhenSelectTypeIsInvalid() {
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> {
+                    FirmDirectorySearchCriteria criteria = new FirmDirectorySearchCriteria();
+                    criteria.setSelectedFirmType("invalid");
+                }
+        );
+        assertThat(ex).hasMessageContaining("No enum constant uk.gov.justice.laa.portal.landingpage.entity.FirmType.invalid");
+
+    }
+
+    @Test
+    void firmIdIsNullWhenSetFirmIdAsEmpty() {
+        // Arrange and act
+        FirmDirectorySearchCriteria criteria = new FirmDirectorySearchCriteria();
+        criteria.setSelectedFirmId("");
+
+        // Assert
+        assertThat(criteria).isNotNull();
+        assertThat(criteria.getSelectedFirmId()).isNull();
+    }
+
+    @Test
+    void throwErrorWhenFirmIdInvalid() {
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> {
+                    FirmDirectorySearchCriteria criteria = new FirmDirectorySearchCriteria();
+                    criteria.setSelectedFirmId("invalid");
+                }
+        );
+        assertThat(ex).hasMessageContaining("Invalid UUID string: invalid");
+
     }
 
 }

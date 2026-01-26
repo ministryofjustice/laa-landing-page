@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
-import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
+import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 
 import java.util.UUID;
 
@@ -37,11 +37,7 @@ public class FirmDirectorySearchCriteria {
 
     public void setSelectedFirmId(String selectedFirmId) {
         if (selectedFirmId != null && !selectedFirmId.isBlank()) {
-            try {
                 this.selectedFirmId = UUID.fromString(selectedFirmId);
-            } catch (IllegalArgumentException e) {
-                log.warn("Invalid firm ID format: {}", selectedFirmId);
-            }
         }
     }
 
@@ -49,10 +45,7 @@ public class FirmDirectorySearchCriteria {
         if (selectedFirmType == null || selectedFirmType.isEmpty()) {
             return;
         }
-        try {
-            this.selectedFirmType = selectedFirmType;
-        } catch (IllegalArgumentException ex) {
-            log.warn("Invalid Firm type provided: {}", selectedFirmType);
-        }
+        this.selectedFirmType = FirmType.valueOf(selectedFirmType).getValue();
+
     }
 }
