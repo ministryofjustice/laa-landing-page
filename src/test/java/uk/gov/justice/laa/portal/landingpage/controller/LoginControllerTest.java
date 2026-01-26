@@ -5,6 +5,8 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -14,6 +16,7 @@ import org.mockito.Mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.modelmapper.ModelMapper;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.ui.ConcurrentModel;
@@ -23,6 +26,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import org.springframework.web.servlet.view.RedirectView;
 
 import jakarta.servlet.http.HttpSession;
+import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -58,6 +62,13 @@ class LoginControllerTest {
 
     @InjectMocks
     private LoginController controller;
+
+    private ModelMapper mapper;
+
+    @BeforeEach
+    void setUp() {
+        mapper = new MapperConfig().modelMapper();
+    }
 
     @Test
     void givenEmptyEmail_whenLoginGet_thenReturnsIndexView() {
@@ -174,16 +185,8 @@ class LoginControllerTest {
 
     @Test
     void givenAuthenticatedUser_whenHomeGet_thenPopulatesModelWithFirmDirectoryAndReturnsHomeView() {
-
         // Arrange
         Model model = new ConcurrentModel();
-        UserSessionData mockSessionData = UserSessionData.builder()
-                .name("Test User")
-                .build();
-        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class),
-                any(HttpSession.class)))
-                .thenReturn(mockSessionData);
-
         EntraUser entraUser = EntraUser.builder()
                 .email("test@test.com")
                 .userProfiles(Set.of(UserProfile.builder()
@@ -194,7 +197,15 @@ class LoginControllerTest {
                                 .build()))
                         .build()))
                 .build();
+        EntraUserDto userDto = mapper.map(entraUser, EntraUserDto.class);
+        UserSessionData mockSessionData = UserSessionData.builder()
+                .name("Test User")
+                .user(userDto)
+                .build();
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class),
+                any(HttpSession.class)))
+                .thenReturn(mockSessionData);
 
         // Act
         String viewName = controller.home(model, authentication, session, authClient);
