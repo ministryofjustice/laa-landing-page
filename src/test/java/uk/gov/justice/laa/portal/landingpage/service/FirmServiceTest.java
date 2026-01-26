@@ -110,6 +110,27 @@ class FirmServiceTest {
     }
 
     @Test
+    void getAllFirmFirmTypeNull() {
+        UUID firmId = UUID.randomUUID();
+        Page<Firm> firmPage = new PageImpl<>(
+                List.of(Firm.builder()
+                        .name("firm1")
+                        .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                        .build()),
+                PageRequest.of(0, 2), 2);
+        PaginatedFirmDirectory paginatorExpected = PaginatedFirmDirectory.builder()
+                .firmDirectories(List.of(FirmDirectoryDto.builder()
+                        .firmName("firm1")
+                        .firmType(FirmType.LEGAL_SERVICES_PROVIDER.getValue())
+                        .build()))
+                .build();
+        when(firmRepository.findAllFirms(any(), any(), any(), any())).thenReturn(firmPage);
+        PaginatedFirmDirectory firmPaginator = firmService.getAllFirms("", firmId, null, 1, 10, "sort", Sort.Direction.DESC.name());
+        assertThat(firmPaginator.getFirmDirectories())
+                .isEqualTo(paginatorExpected.getFirmDirectories());
+    }
+
+    @Test
     void getUserFirms() {
         UserProfile up1 = UserProfile.builder().activeProfile(true).userProfileStatus(UserProfileStatus.COMPLETE).firm(Firm.builder().name("F1").build()).build();
         UserProfile up2 = UserProfile.builder().activeProfile(false).userProfileStatus(UserProfileStatus.COMPLETE).firm(Firm.builder().name("F2").build()).build();
