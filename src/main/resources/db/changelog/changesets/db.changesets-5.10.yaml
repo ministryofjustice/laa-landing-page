@@ -23,8 +23,8 @@ databaseChangeLog:
                 updated_at timestamp NULL,
                 last_successful_to timestamp NULL
               );
-              INSERT INTO entra_last_sync_metadata (id, updated_at, last_successful_to) 
-              SELECT 'ENTRA_USER_SYNC', NULL, NULL 
+              INSERT INTO entra_last_sync_metadata (id, updated_at, last_successful_to)
+              SELECT 'ENTRA_USER_SYNC', NULL, NULL
               WHERE NOT EXISTS (SELECT 1 FROM entra_last_sync_metadata);
       rollback:
         - sql:
