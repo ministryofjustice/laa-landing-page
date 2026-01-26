@@ -397,10 +397,10 @@ public class ManageUsersPage {
 
         firmSearchInput.click();
         firmSearchInput.fill("");
-        page.waitForTimeout(100);
+        page.waitForTimeout(4000);
 
         firmSearchInput.pressSequentially(firmCode,
-                new Locator.PressSequentiallyOptions().setDelay(40));
+                new Locator.PressSequentiallyOptions().setDelay(4000));
 
         // helps components that only open on nav keys
         firmSearchInput.press("ArrowDown");
