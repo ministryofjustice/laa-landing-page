@@ -28,7 +28,7 @@ public class UpdateOfficeCommand {
 
             // Check if firm has changed - if so, remove all user associations
             if (!office.getFirm().getId().equals(firm.getId())) {
-                log.info("Office {} switching from firm {} to firm {} - removing user associations",
+                log.debug("Office {} switching from firm {} to firm {} - removing user associations",
                     office.getCode(), office.getFirm().getCode(), firm.getCode());
 
                 // Remove all user profile associations for this office
@@ -41,7 +41,7 @@ public class UpdateOfficeCommand {
                 }
 
                 if (associationsRemoved > 0) {
-                    log.info("Removed {} user associations from office {} due to firm switch",
+                    log.debug("Removed {} user associations from office {} due to firm switch",
                         associationsRemoved, office.getCode());
                     result.addWarning("Office " + office.getCode() + " switched firms - removed " +
                         associationsRemoved + " user association(s)");
@@ -87,7 +87,7 @@ public class UpdateOfficeCommand {
         } catch (org.springframework.dao.InvalidDataAccessApiUsageException e) {
             // Office was deleted in this transaction, skip the update
             if (e.getMessage() != null && e.getMessage().contains("deleted instance passed to merge")) {
-                log.info("Office {} was deleted in this transaction, skipping update", office.getCode());
+                log.debug("Office {} was deleted in this transaction, skipping update", office.getCode());
                 return;
             }
             log.error("Failed to update office {}: {}", office.getCode(), e.getMessage(), e);

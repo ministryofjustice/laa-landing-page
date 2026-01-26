@@ -2,8 +2,8 @@ package uk.gov.justice.laa.portal.landingpage.service.pda.command;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import uk.gov.justice.laa.portal.landingpage.dto.PdaSyncResultDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PdaOfficeData;
+import uk.gov.justice.laa.portal.landingpage.dto.PdaSyncResultDto;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
@@ -36,7 +36,7 @@ public class CreateOfficeCommand implements PdaSyncCommand {
 
             officeRepository.save(office);
             result.setOfficesCreated(result.getOfficesCreated() + 1);
-            log.info("Would create office: {} for firm {} (address: {}, {})",
+            log.debug("Created office: {} for firm {} (address: {}, {})",
                 pdaOffice.getOfficeAccountNo(), firm.getCode(), pdaOffice.getAddressLine1(), pdaOffice.getCity());
         } catch (Exception e) {
             log.error("Failed to create office {}: {}", pdaOffice.getOfficeAccountNo(), e.getMessage());

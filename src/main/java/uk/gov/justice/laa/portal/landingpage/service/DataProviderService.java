@@ -82,7 +82,7 @@ public class DataProviderService {
      * @return TableSaw Table containing provider offices snapshot data
      */
     public Table getProviderOfficesSnapshot() {
-        log.info("Fetching provider offices snapshot from {}",
+        log.debug("Fetching provider offices snapshot from {}",
             dataProviderConfig.isUseLocalFile() ? "local file: " + dataProviderConfig.getLocalFilePath() : "PDA API");
 
         try {
@@ -93,17 +93,17 @@ public class DataProviderService {
                 response = Files.readString(
                     Paths.get(dataProviderConfig.getLocalFilePath())
                 );
-                log.info("Successfully loaded data from local file");
+                log.debug("Successfully loaded data from local file");
             } else {
                 // Fetch from API
                 response = dataProviderRestClient.get()
                         .uri("/api/v1/provider-offices/snapshot")
                         .retrieve()
                         .body(String.class);
-                log.info("Successfully fetched provider offices snapshot from PDA API");
+                log.debug("Successfully fetched provider offices snapshot from PDA API");
             }
 
-            log.info("Converting to dataframe");
+            log.debug("Converting to dataframe");
 
             // Parse JSON to extract the "offices" array
             JsonNode rootNode = objectMapper.readTree(response);
@@ -120,7 +120,7 @@ public class DataProviderService {
                 JsonReadOptions.builder(new StringReader(officesJson)).build()
             );
 
-            log.info("Dataframe created with {} rows and {} columns",
+            log.debug("Dataframe created with {} rows and {} columns",
                 table.rowCount(), table.columnCount());
 
             return table;
@@ -140,8 +140,8 @@ public class DataProviderService {
      * @return ComparisonResultDto with categorized items matching actual sync behavior
      */
     public ComparisonResultDto compareWithDatabase() {
-        log.info("Comparing PDA data with local database (mirroring sync business rules)");
-        log.info("Initial CWA data integrity check ---------------\n");
+        log.debug("Comparing PDA data with local database (mirroring sync business rules)");
+        log.debug("Initial CWA data integrity check ---------------\n");
 
         Table pdaTable = getProviderOfficesSnapshot();
 
@@ -172,7 +172,7 @@ public class DataProviderService {
             .filter(o -> o.getCode() == null)
             .count();
 
-        log.info("Built lookup maps: {} firms, {} offices", firmsByCode.size(), officesByCode.size());
+        log.debug("Built lookup maps: {} firms, {} offices", firmsByCode.size(), officesByCode.size());
 
         // Build PDA data maps
         Map<String, PdaFirmData> pdaFirms = buildPdaFirmsMap(pdaTable);
@@ -190,7 +190,7 @@ public class DataProviderService {
         int firmsWithoutOffices = (int) pdaFirms.keySet().stream()
             .filter(code -> !firmsWithOffices.contains(code))
             .count();
-        log.info("\nFound {} firm(s) with no offices. These will be removed.", firmsWithoutOffices);
+        log.debug("\nFound {} firm(s) with no offices. These will be removed.", firmsWithoutOffices);
 
         // Track separate counts
         int firmCreates = 0, firmUpdates = 0, firmDeletes = 0, firmExists = 0;
@@ -242,7 +242,7 @@ public class DataProviderService {
                         log.debug("Firm {} name change would be skipped - duplicate name exists", firmCode);
                         // Sync would skip this update due to duplicate name, so don't count it
                     } else {
-                        log.info("COMPARE: Firm {} needs name update: '{}' -> '{}'", firmCode, dbFirm.getName(), pdaFirm.getFirmName());
+                        log.debug("COMPARE: Firm {} needs name update: '{}' -> '{}'", firmCode, dbFirm.getName(), pdaFirm.getFirmName());
                         needsUpdate = true;
                     }
                 }
@@ -380,7 +380,7 @@ public class DataProviderService {
 
                 String officeName = office.getAddress() != null && office.getAddress().getAddressLine1() != null
                     ? office.getAddress().getAddressLine1() : officeCode;
-                log.info("COMPARE: Office {} needs deletion (firm: {}, not in PDA data)", officeCode,
+                log.debug("COMPARE: Office {} needs deletion (firm: {}, not in PDA data)", officeCode,
                     office.getFirm() != null ? office.getFirm().getCode() : "null");
                 result.getDeleted().add(ComparisonResultDto.ItemInfo.builder()
                     .type("office")
@@ -413,10 +413,6 @@ public class DataProviderService {
             log.info("    -> {} with valid parent firms", officeUpdates);
             log.info("    -> {} skipped (parent firm doesn't exist in DB)", officeUpdatesSkippedNoParentFirm);
         }
-        log.info("DEBUG: Java counted {} office updates (from {} result.updated entries)",
-            officeUpdates, result.getUpdated().stream().filter(i -> "office".equals(i.getType())).count());
-        log.debug("Office update breakdown: officeUpdates={}, skipped={}, total={}",
-            officeUpdates, officeUpdatesSkippedNoParentFirm, totalOfficesUpdated);
 
         // Export updated office codes for comparison with Python
         try {
@@ -430,7 +426,6 @@ public class DataProviderService {
                 updatedOfficeCodes,
                 java.nio.charset.StandardCharsets.UTF_8
             );
-            log.info("DEBUG: Exported {} updated office codes to java_updated_offices.txt", updatedOfficeCodes.size());
         } catch (Exception e) {
             log.warn("Failed to export updated office codes: {}", e.getMessage());
         }
@@ -557,8 +552,6 @@ public class DataProviderService {
      * @return PdaSyncResultDto containing statistics and any errors/warnings
      */
     private PdaSyncResultDto synchronizeWithPda() {
-        log.info("Starting PDA synchronization - CODE VERSION 2026-01-21-10:22");
-        log.info("Initial CWA data integrity check ---------------\n");
         PdaSyncResultDto result = PdaSyncResultDto.builder().build();
 
         try {
@@ -566,38 +559,27 @@ public class DataProviderService {
             // The check_firms_have_office constraint will be checked at transaction commit
             // Use EntityManager to ensure it's on the same connection as the transaction
             entityManager.createNativeQuery("SET CONSTRAINTS ALL DEFERRED").executeUpdate();
-            log.debug("Deferred constraint checking for PDA sync transaction");
 
             // Fetch and build PDA data maps
-            log.info("DEBUG: Fetching PDA data...");
             Table pdaTable = getProviderOfficesSnapshot();
-            log.info("DEBUG: Building PDA maps - firms and offices...");
             Map<String, PdaFirmData> pdaFirms = buildPdaFirmsMap(pdaTable);
             Map<String, PdaOfficeData> pdaOffices = buildPdaOfficesMap(pdaTable);
-            log.info("DEBUG: Found {} firms and {} offices in PDA data", pdaFirms.size(), pdaOffices.size());
 
             // Perform data integrity checks
-            log.info("DEBUG: Checking data integrity...");
-            log.info("DUPLICATE FIRMS: 0");
-            log.info("DUPLICATE OFFICES: 0");
-            log.info("\nAll offices have a valid, relatable firm.");
             checkDataIntegrity(pdaFirms, pdaOffices, result);
 
             // Get current database state (optimized with fetch join)
-            log.info("DEBUG: Loading database firms...");
             Map<String, Firm> dbFirms = new HashMap<>();
             firmRepository.findAllWithParentFirm().forEach(f -> {
                 if (f.getCode() != null) {
                     dbFirms.put(f.getCode(), f);
                 }
             });
-            log.info("DEBUG: Loaded {} firms from database", dbFirms.size());
 
             // Track processed codes
             Set<String> processedFirmCodes = new HashSet<>();
 
             // Determine which firms have offices (database constraint requires this)
-            log.info("DEBUG: Building firmsWithOffices set...");
             Set<String> firmsWithOffices = new HashSet<>();
             for (PdaOfficeData office : pdaOffices.values()) {
                 if (office.getFirmNumber() != null) {
@@ -609,8 +591,6 @@ public class DataProviderService {
             int firmsWithoutOffices = (int) pdaFirms.keySet().stream()
                 .filter(code -> !firmsWithOffices.contains(code))
                 .count();
-            log.info("Found {} unique firms with offices in PDA data", firmsWithOffices.size());
-            log.info("\nFound {} firm(s) with no offices. These will be removed.", firmsWithoutOffices);
 
             // PASS 1: Process firms - create or update (without parent references for new firms)
             // ONLY process firms that have at least one office (database constraint requirement)
@@ -663,10 +643,10 @@ public class DataProviderService {
             Set<String> firmsToDeactivate = new HashSet<>();
             for (String firmCode : dbFirms.keySet()) {
                 if (!processedFirmCodes.contains(firmCode)) {
-                    log.info("Marking firm {} for deactivation - not in PDA data", firmCode);
+                    log.debug("Marking firm {} for deactivation - not in PDA data", firmCode);
                     firmsToDeactivate.add(firmCode);
                 } else if (!firmsWithOffices.contains(firmCode)) {
-                    log.info("Marking firm {} for deactivation - no offices in PDA data (database constraint)", firmCode);
+                    log.debug("Marking firm {} for deactivation - no offices in PDA data (database constraint)", firmCode);
                     firmsToDeactivate.add(firmCode);
                 }
             }
@@ -683,10 +663,8 @@ public class DataProviderService {
             }
 
             // Flush Pass 1 changes (firm creation/updates/deactivations) before setting parent references
-            log.info("Flushing Pass 1 firm changes to database...");
             entityManager.flush();
             entityManager.clear(); // Clear persistence context to free memory
-            log.info("Pass 1 firm changes flushed and persistence context cleared");
 
             // Reload firms after changes (optimized with fetch join)
             dbFirms.clear();
@@ -697,7 +675,6 @@ public class DataProviderService {
             });
 
             // PASS 2: Update parent firm references for newly created firms
-            log.info("Updating parent firm references...");
             for (Map.Entry<String, PdaFirmData> entry : pdaFirms.entrySet()) {
                 String firmCode = entry.getKey();
                 PdaFirmData pdaFirm = entry.getValue();
@@ -731,7 +708,7 @@ public class DataProviderService {
                                     try {
                                         firm.setParentFirm(parentFirm);
                                         firmRepository.save(firm);
-                                        log.info("Set parent for firm {}: {} -> {}", firmCode, currentParentCode, pdaFirm.getParentFirmNumber());
+                                        log.debug("Set parent for firm {}: {} -> {}", firmCode, currentParentCode, pdaFirm.getParentFirmNumber());
                                     } catch (Exception e) {
                                         log.error("Failed to set parent {} for firm {}: {} - clearing parent reference",
                                             pdaFirm.getParentFirmNumber(), firmCode, e.getMessage());
@@ -742,7 +719,7 @@ public class DataProviderService {
                                     }
                                 }
                             } else {
-                                log.warn("Parent firm {} not found for firm {} - clearing parent reference",
+                                log.info("Parent firm {} not found for firm {} - clearing parent reference",
                                     pdaFirm.getParentFirmNumber(), firmCode);
                                 firm.setParentFirm(null);
                                 firmRepository.save(firm);
@@ -761,10 +738,8 @@ public class DataProviderService {
 
             // CRITICAL: Flush all firm changes before processing offices
             // This ensures offices can reference newly created/updated firms
-            log.info("Flushing firm changes to database...");
             entityManager.flush();
             entityManager.clear(); // Clear persistence context to free memory
-            log.info("Firm changes flushed and persistence context cleared");
 
             // Get DB offices (optimized with fetch join)
             Map<String, Office> dbOffices = new HashMap<>();
@@ -773,7 +748,6 @@ public class DataProviderService {
                     dbOffices.put(o.getCode(), o);
                 }
             });
-            log.info("Loaded {} offices from database", dbOffices.size());
 
             final Set<String> processedOfficeCodes = new HashSet<>();
 
@@ -803,14 +777,13 @@ public class DataProviderService {
                         result.addWarning("Office " + officeCode + " orphaned (parent firm " +
                             pdaOffice.getFirmNumber() + " not found) - will be deactivated");
                     } else {
-                        log.info("Office {} is orphaned (parent firm {} not found) and doesn't exist in DB - skipping",
+                        log.debug("Office {} is orphaned (parent firm {} not found) and doesn't exist in DB - skipping",
                             officeCode, pdaOffice.getFirmNumber());
                     }
                 }
             }
 
             // PASS 3: Process offices - create new ones and update existing ones (but not those being deactivated)
-            log.info("Processing offices...");
             for (Map.Entry<String, PdaOfficeData> entry : pdaOffices.entrySet()) {
                 // Check for shutdown before processing each office
                 if (shuttingDown.get()) {
@@ -874,40 +847,25 @@ public class DataProviderService {
             }
 
             // Flush all changes and verify constraint compliance before commit
-            log.info("Flushing all changes before final validation...");
             entityManager.flush();
             entityManager.clear(); // Clear cache to get fresh data
 
             // FINAL SAFETY CHECK: Verify no firms exist without offices
             // This catches edge cases where office operations failed silently
-            log.info("Final validation: checking all firms have at least one office...");
             List<Firm> firmsStillWithoutOffices = firmRepository.findFirmsWithoutOffices();
 
             if (!firmsStillWithoutOffices.isEmpty()) {
-                log.error("Found {} firms without offices - this violates database constraint", firmsStillWithoutOffices.size());
+                log.debug("Found {} firms without offices - this violates database constraint", firmsStillWithoutOffices.size());
                 for (Firm firm : firmsStillWithoutOffices) {
-                    log.error("Firm {} has no offices - deactivating to prevent constraint violation", firm.getCode());
+                    log.debug("Firm {} has no offices - deactivating to prevent constraint violation", firm.getCode());
                     deactivateFirm(firm, result);
                     result.setFirmsDeleted(result.getFirmsDeleted() + 1);
                 }
             }
 
-            log.info("PDA sync complete - Firms: {} created, {} updated, {} deleted | Offices: {} created, {} updated, {} deleted",
+            log.debug("PDA sync complete - Firms: {} created, {} updated, {} deleted | Offices: {} created, {} updated, {} deleted",
                 result.getFirmsCreated(), result.getFirmsUpdated(), result.getFirmsDeleted(),
                 result.getOfficesCreated(), result.getOfficesUpdated(), result.getOfficesDeleted());
-
-            // Print final delta analysis summary
-            log.info("\n--------------------------------------");
-            log.info("Delta Analysis -----------------------\n");
-            log.info("No. of firms updated: {}", result.getFirmsUpdated());
-            log.info("No. of new firms: {}", result.getFirmsCreated());
-            log.info("No. of removed firms: {}", result.getFirmsDeleted());
-            log.info("");
-            log.info("No. of new offices: {}", result.getOfficesCreated());
-            log.info("Total No. of offices updated: {}", result.getOfficesUpdated());
-            log.info("No. of offices that switched firm: {}", result.getWarnings().stream()
-                .filter(w -> w.contains("switched firms - removed")).count());
-            log.info("No. of removed offices: {}", result.getOfficesDeleted());
 
         } catch (Exception e) {
             log.error("Error during PDA synchronization: {}", e.getMessage(), e);
@@ -1058,7 +1016,7 @@ public class DataProviderService {
         int removedOffices = initialOffices - pdaOffices.size();
 
         if (removedFirms > 0 || removedOffices > 0) {
-            log.info("Data integrity: removed {} firms, {} offices", removedFirms, removedOffices);
+            log.debug("Data integrity: removed {} firms, {} offices", removedFirms, removedOffices);
         }
     }
 }

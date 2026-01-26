@@ -35,7 +35,7 @@ public class CreateFirmCommand implements PdaSyncCommand {
             String finalName = pdaFirm.getFirmName();
 
             if (existingFirmWithName != null) {
-                log.warn("Duplicate firm name '{}' detected when creating firm {} - appending firm code to make unique",
+                log.debug("Duplicate firm name '{}' detected when creating firm {} - appending firm code to make unique",
                     pdaFirm.getFirmName(), pdaFirm.getFirmNumber());
                 finalName = pdaFirm.getFirmName() + " (" + pdaFirm.getFirmNumber() + ")";
                 result.addWarning("Duplicate firm name '" + pdaFirm.getFirmName() +
@@ -53,7 +53,7 @@ public class CreateFirmCommand implements PdaSyncCommand {
 
             firmRepository.save(firm);
             result.setFirmsCreated(result.getFirmsCreated() + 1);
-            log.info("Created firm: {} (name: {}, type: {})",
+            log.debug("Created firm: {} (name: {}, type: {})",
                 pdaFirm.getFirmNumber(), firm.getName(), pdaFirm.getFirmType());
         } catch (DataIntegrityViolationException e) {
             log.error("Data integrity violation creating firm {}: {}", pdaFirm.getFirmNumber(), e.getMessage());

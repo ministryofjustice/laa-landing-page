@@ -27,13 +27,13 @@ public class DeleteOfficeCommand implements PdaSyncCommand {
             // CRITICAL RULE: MUST remove user associations before deleting office
             removeUserProfileOfficeAssociations(office);
             int associationsCount = countUserProfileOfficeAssociations(office);
-            log.info("Would remove {} user profile associations for office: {}", associationsCount, office.getCode());
+            log.debug("Would remove {} user profile associations for office: {}", associationsCount, office.getCode());
             result.addWarning("Office " + office.getCode() + " being deleted: "
                 + associationsCount + " user associations will be removed");
 
             officeRepository.delete(office);
         result.setOfficesDeleted(result.getOfficesDeleted() + 1);
-            log.info("Deleted office: {} (firm: {})", office.getCode(), office.getFirm().getCode());
+            log.debug("Deleted office: {} (firm: {})", office.getCode(), office.getFirm().getCode());
         } catch (Exception e) {
             log.error("Failed to delete office {}: {}", office.getCode(), e.getMessage());
             result.addError("Failed to delete office " + office.getCode() + ": " + e.getMessage());
@@ -48,7 +48,7 @@ public class DeleteOfficeCommand implements PdaSyncCommand {
         for (UserProfile profile : profiles) {
             profile.getOffices().remove(office);
             userProfileRepository.save(profile);
-            log.info("Removed office {} from user profile {}", office.getCode(), profile.getId());
+            log.debug("Removed office {} from user profile {}", office.getCode(), profile.getId());
         }
     }
 

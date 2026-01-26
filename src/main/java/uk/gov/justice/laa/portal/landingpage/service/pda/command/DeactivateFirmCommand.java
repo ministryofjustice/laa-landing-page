@@ -34,12 +34,12 @@ public class DeactivateFirmCommand implements PdaSyncCommand {
             // INTERNAL users can have null firm, so we just clear the association
             List<UserProfile> profilesWithFirm = userProfileRepository.findByFirmId(firm.getId());
             if (!profilesWithFirm.isEmpty()) {
-                log.info("Handling {} user profiles associated with firm {} before deleting",
+                log.debug("Handling {} user profiles associated with firm {} before deleting",
                     profilesWithFirm.size(), firm.getCode());
                 for (UserProfile profile : profilesWithFirm) {
                     if (profile.getUserType() == UserType.EXTERNAL) {
                         // EXTERNAL users must have a firm - delete the profile entirely
-                        log.info("Deleting EXTERNAL user profile {} (firm {} being deactivated)",
+                        log.debug("Deleting EXTERNAL user profile {} (firm {} being deactivated)",
                             profile.getId(), firm.getCode());
                         userProfileRepository.delete(profile);
                     } else {
@@ -55,7 +55,7 @@ public class DeactivateFirmCommand implements PdaSyncCommand {
             // Second, delete all offices belonging to this firm to avoid foreign key constraint violations
             List<Office> offices = officeRepository.findByFirm(firm);
             if (!offices.isEmpty()) {
-                log.info("Deleting {} offices for firm {} before deleting firm", offices.size(), firm.getCode());
+                log.debug("Deleting {} offices for firm {} before deleting firm", offices.size(), firm.getCode());
                 for (Office office : offices) {
                     // Remove user associations before deleting office
                     removeUserProfileOfficeAssociations(office);
@@ -69,7 +69,7 @@ public class DeactivateFirmCommand implements PdaSyncCommand {
             // Now delete the firm
             firmRepository.delete(firm);
             result.setFirmsDeleted(result.getFirmsDeleted() + 1);
-            log.info("Deactivate/delete firm: {} (name: {})", firm.getCode(), firm.getName());
+            log.debug("Deactivate/delete firm: {} (name: {})", firm.getCode(), firm.getName());
         } catch (Exception e) {
             log.error("Failed to deactivate firm {}: {}", firm.getCode(), e.getMessage());
             result.addError("Failed to deactivate firm " + firm.getCode() + ": " + e.getMessage());
