@@ -19,7 +19,8 @@ public enum Permission {
     DELETE_EXTERNAL_USER,
     DELETE_AUDIT_USER,
     VIEW_AUDIT_TABLE,
-    TRIGGER_CCMS_ROLE_SYNC;
+    TRIGGER_CCMS_ROLE_SYNC,
+    DISABLE_EXTERNAL_USER;
 
     public static final String[] ADMIN_PERMISSIONS = {
             VIEW_INTERNAL_USER.name(),

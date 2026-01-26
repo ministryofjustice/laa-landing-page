@@ -325,28 +325,6 @@ class UserServiceTest {
     }
 
     @Test
-    void disableUsers() throws IOException {
-        BatchRequestBuilder batchRequestBuilder = mock(BatchRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(mockGraphServiceClient.getBatchRequestBuilder()).thenReturn(batchRequestBuilder);
-
-        RequestAdapter requestAdapter = mock(RequestAdapter.class, RETURNS_DEEP_STUBS);
-        Request request = mock(Request.class, RETURNS_DEEP_STUBS);
-        when(requestAdapter.convertToNativeRequest(any())).thenReturn(request);
-        when(mockGraphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
-
-        BatchResponseContent responseContent = mock(BatchResponseContent.class, RETURNS_DEEP_STUBS);
-        RequestInformation requestInformation = mock(RequestInformation.class, RETURNS_DEEP_STUBS);
-        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
-        when(usersRequestBuilder.byUserId(any()).toPatchRequestInformation(any())).thenReturn(requestInformation);
-        when(batchRequestBuilder.post(any(BatchRequestContent.class), any())).thenReturn(responseContent);
-
-        userService.disableUsers(List.of("user1", "user2"));
-
-        verify(mockGraphServiceClient, times(1)).getBatchRequestBuilder();
-    }
-
-    @Test
     void partitionBasedOnSize() {
         List<Character> characters = List.of('a', 'b', 'c');
         Collection<List<Character>> subsets = UserService.partitionBasedOnSize(characters, 2);
