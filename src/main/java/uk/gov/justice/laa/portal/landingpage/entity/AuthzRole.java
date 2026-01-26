@@ -12,7 +12,7 @@ public enum AuthzRole {
     EXTERNAL_USER_ADMIN("External User Admin"),
     INTERNAL_USER_VIEWER("Internal User Viewer"),
     EXTERNAL_USER_VIEWER("External User Viewer"),
-    SILAS_ADMINISTRATION("SiLAS Administration");
+    SILAS_ADMINISTRATION("SiLAS System Administration");
 
     private final String roleName;
 
