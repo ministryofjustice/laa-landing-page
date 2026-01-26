@@ -863,9 +863,26 @@ public class DataProviderService {
                 }
             }
 
-            log.debug("PDA sync complete - Firms: {} created, {} updated, {} deleted | Offices: {} created, {} updated, {} deleted",
-                result.getFirmsCreated(), result.getFirmsUpdated(), result.getFirmsDeleted(),
-                result.getOfficesCreated(), result.getOfficesUpdated(), result.getOfficesDeleted());
+            // Print final delta analysis summary
+            log.info("\n========================================\n" +
+                "PDA Sync Delta Analysis\n" +
+                "========================================\n\n" +
+                "Firms:\n" +
+                "  Updated:  {}\n" +
+                "  Created:  {}\n" +
+                "  Deleted:  {}\n\n" +
+                "Offices:\n" +
+                "  Created:         {}\n" +
+                "  Updated:         {}\n" +
+                "  Switched firm:   {}\n" +
+                "  Deleted:         {}",
+                result.getFirmsUpdated(),
+                result.getFirmsCreated(),
+                result.getFirmsDeleted(),
+                result.getOfficesCreated(),
+                result.getOfficesUpdated(),
+                result.getWarnings().stream().filter(w -> w.contains("switched firms - removed")).count(),
+                result.getOfficesDeleted());
 
         } catch (Exception e) {
             log.error("Error during PDA synchronization: {}", e.getMessage(), e);
