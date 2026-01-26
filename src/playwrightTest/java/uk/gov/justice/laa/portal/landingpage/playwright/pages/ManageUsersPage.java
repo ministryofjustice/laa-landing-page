@@ -397,43 +397,32 @@ public class ManageUsersPage {
 
     public void searchAndSelectFirmByCode(String firmCode) {
 
-        // Ensure the page is settled enough for interactive widgets
-        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-
-        // 1) Input ready
         firmSearchInput.waitFor(new Locator.WaitForOptions()
                 .setState(WaitForSelectorState.VISIBLE)
-                .setTimeout(7000));
+                .setTimeout(5000));
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
         firmSearchInput.click();
         firmSearchInput.fill("");
 
-        // 2) Real typing to trigger autocomplete logic
+        // Trigger autocomplete using real key events
         firmSearchInput.pressSequentially(firmCode);
-
-        // 3) Nudge open for stubborn comboboxes
         firmSearchInput.press("ArrowDown");
 
-        // 4) Wait for open state (event/state-based)
-        assertThat(firmSearchInput).hasAttribute("aria-expanded", "true",
-                new com.microsoft.playwright.assertions.LocatorAssertions.HasAttributeOptions()
-                        .setTimeout(7000));
+        // Wait until the combobox is actually open
+        assertThat(firmSearchInput).hasAttribute("aria-expanded", "true");
 
-        // 5) Find the option by firm code (stable) and click the LI
-        Locator firmOption = page
-                .locator("#firmSearch__listbox li[role='option'] small")
+        // Click option by firm code
+        Locator firmOption = page.locator("#firmSearch__listbox li[role='option'] small")
                 .filter(new Locator.FilterOptions().setHasText("Firm code: " + firmCode))
                 .first()
-                .locator(".."); // parent <li>
+                .locator("..");
 
-        firmOption.waitFor(new Locator.WaitForOptions()
-                .setState(WaitForSelectorState.VISIBLE)
-                .setTimeout(7000));
-
-        // 6) Safe click
-        firmOption.click(new Locator.ClickOptions().setTrial(true));
+        assertThat(firmOption).isVisible();
         firmOption.click();
     }
+
 
     public void clickContinueFirmSelectPage() {
         continueButtonFirmSelection.click();
