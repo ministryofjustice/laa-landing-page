@@ -864,18 +864,18 @@ public class DataProviderService {
             }
 
             // Print final delta analysis summary
-            log.info("\n========================================\n" +
-                "PDA Sync Delta Analysis\n" +
-                "========================================\n\n" +
-                "Firms:\n" +
-                "  Updated:  {}\n" +
-                "  Created:  {}\n" +
-                "  Deleted:  {}\n\n" +
-                "Offices:\n" +
-                "  Created:         {}\n" +
-                "  Updated:         {}\n" +
-                "  Switched firm:   {}\n" +
-                "  Deleted:         {}",
+            log.info("\n========================================"
+                + "\nPDA Sync Delta Analysis"
+                + "\n========================================"
+                + "\n\nFirms:"
+                + "\n  Updated:  {}"
+                + "\n  Created:  {}"
+                + "\n  Deleted:  {}"
+                + "\n\nOffices:"
+                + "\n  Created:         {}"
+                + "\n  Updated:         {}"
+                + "\n  Switched firm:   {}"
+                + "\n  Deleted:         {}",
                 result.getFirmsUpdated(),
                 result.getFirmsCreated(),
                 result.getFirmsDeleted(),
