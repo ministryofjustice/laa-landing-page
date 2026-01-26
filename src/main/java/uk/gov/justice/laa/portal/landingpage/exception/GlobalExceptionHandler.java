@@ -74,6 +74,11 @@ public class GlobalExceptionHandler {
         throw new RuntimeException(ex);
     }
 
+    @ExceptionHandler({ UserNotFoundException.class})
+    public ResponseEntity<ClaimEnrichmentResponse> handleUserNotFoundExceptionException(Exception ex, HttpServletRequest request) {
+        return createErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
     /**
      * Handle generic exceptions for API requests only
      * Web requests will be handled by the error controller
