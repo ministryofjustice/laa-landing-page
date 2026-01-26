@@ -45,7 +45,7 @@ public class FirmDirectorySearchCriteria {
         if (selectedFirmType == null || selectedFirmType.isEmpty()) {
             return;
         }
-        this.selectedFirmType = FirmType.valueOf(selectedFirmType).getValue();
+        this.selectedFirmType = String.valueOf(FirmType.valueOf(selectedFirmType));
 
     }
 }
