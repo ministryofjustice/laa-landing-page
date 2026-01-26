@@ -35,7 +35,7 @@ public class FirmDirectoryController {
     public String displayAllFirmDirectory(@ModelAttribute FirmDirectorySearchCriteria criteria,
                                           Model model) {
         log.debug("FirmDirectoryController.displayAllFirmDirectory - {}", criteria);
-        // Get Firm Directory info
+
         PaginatedFirmDirectory paginatedFirmDirectory = firmService.getAllFirms(criteria.getFirmSearch(),
                 criteria.getSelectedFirmId(),
                 criteria.getSelectedFirmType(),
