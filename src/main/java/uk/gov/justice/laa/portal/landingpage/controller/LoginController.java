@@ -98,7 +98,7 @@ public class LoginController {
                     // Check if user has SiLAS Administration role
                     EntraUser currentUser = loginService.getCurrentEntraUser(authentication);
                     hasSilasAdminRole = currentUser != null
-                            && AccessControlService.userHasAuthzRole(currentUser, AuthzRole.SILAS_ADMINISTRATION.getRoleName());
+                            && AccessControlService.userHasAuthzRole(currentUser, AuthzRole.GLOBAL_ADMIN.getRoleName());
                 }
                 model.addAttribute("isAdminUser", isAdmin);
                 model.addAttribute("canViewAuditTable", canViewAuditTable);

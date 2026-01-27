@@ -146,4 +146,17 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                 AND ars.legacySync = true
             """)
     List<UserProfile> findUserProfilesForCcmsSync();
+
+    @Query("""
+            SELECT ups FROM UserProfile ups
+                        JOIN ups.offices o
+            WHERE o.id = :officeId
+            """)
+    List<UserProfile> findByOfficeId(@Param("officeId") UUID officeId);
+
+    @Query("""
+            SELECT ups FROM UserProfile ups
+            WHERE ups.firm.id = :firmId
+            """)
+    List<UserProfile> findByFirmId(@Param("firmId") UUID firmId);
 }
