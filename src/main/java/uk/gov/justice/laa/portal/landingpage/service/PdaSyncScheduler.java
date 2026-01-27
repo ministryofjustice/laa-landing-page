@@ -4,7 +4,10 @@ import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +23,8 @@ import uk.gov.justice.laa.portal.landingpage.dto.PdaSyncResultDto;
  *
  * Configuration:
  * - app.pda.sync.scheduler.enabled: Enable/disable automatic sync (default: false)
- * - app.pda.sync.scheduler.cron: Cron expression for sync schedule (default: daily at 2 AM)
+ * - app.pda.sync.scheduler.cron: Cron expression for sync schedule (default: daily at 7 AM)
+ * - app.pda.sync.scheduler.run-on-startup: Run sync immediately on application startup (default: false)
  *
  * The scheduler can be disabled via configuration while keeping the manual /sync endpoint available.
  */
@@ -30,6 +34,9 @@ import uk.gov.justice.laa.portal.landingpage.dto.PdaSyncResultDto;
 public class PdaSyncScheduler {
 
     private final DataProviderService dataProviderService;
+
+    @Value("${app.pda.sync.scheduler.run-on-startup:false}")
+    private boolean runOnStartup;
 
     // Metrics
     private final Timer syncTimer;
@@ -190,6 +197,18 @@ public class PdaSyncScheduler {
             syncFailureCounter.increment();
             syncErrorsCounter.increment();
             log.error("Scheduled PDA sync failed after {} seconds", Duration.ofNanos(duration).toSeconds(), e);
+        }
+    }
+
+    /**
+     * Run PDA sync on application startup if configured to do so.
+     * This allows immediate sync on deployment, then reverts to scheduled cron-based sync.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void onApplicationReady() {
+        if (runOnStartup) {
+            log.info("Running PDA sync on startup as configured");
+            scheduledSync();
         }
     }
 }

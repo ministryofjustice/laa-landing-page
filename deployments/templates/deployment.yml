@@ -220,6 +220,8 @@ spec:
               value: "${PDA_SYNC_SCHEDULER_ENABLED}"
             - name: PDA_SYNC_SCHEDULER_CRON
               value: "${PDA_SYNC_SCHEDULER_CRON}"
+            - name: PDA_SYNC_SCHEDULER_RUN_ON_STARTUP
+              value: "${PDA_SYNC_SCHEDULER_RUN_ON_STARTUP}"
             - name: SENTRY_ENVIRONMENT
               value: "${SENTRY_ENVIRONMENT}"
             - name: SENTRY_ENABLED
