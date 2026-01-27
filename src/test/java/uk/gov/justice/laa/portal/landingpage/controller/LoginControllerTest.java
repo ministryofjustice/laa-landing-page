@@ -10,8 +10,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
@@ -23,9 +28,12 @@ import org.springframework.web.servlet.view.RedirectView;
 
 import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
+import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
@@ -66,6 +74,20 @@ class LoginControllerTest {
 
         // Assert
         assertThat(viewIndex).isEqualTo("redirect:/home");
+        assertThat(model.getAttribute("successMessage")).isNull();
+    }
+
+    @Test
+    void whenLogoutConfirmation_thenReturnsLogoutConfirmationTemplate() {
+
+        // Arrange
+        Model model = new ConcurrentModel();
+
+        // Act
+        String result = controller.logoutConfirmation();
+
+        // Assert
+        assertThat(result).isEqualTo("logout-confirmation");
         assertThat(model.getAttribute("successMessage")).isNull();
     }
 
@@ -369,5 +391,63 @@ class LoginControllerTest {
         assertThat(viewName).isEqualTo("home");
         assertThat(model.getAttribute("userHasNoRoles")).isEqualTo(false);
         assertThat(model.getAttribute("isInternalUser")).isNull();
+    }
+
+    @Test
+    void givenCurrentUserHasSilasAdminRole_whenHomeGet_thenSetsHasSilasAdminRoleTrue() throws IOException {
+        // Arrange
+        Model model = new ConcurrentModel();
+        String userId = UUID.randomUUID().toString();
+        UserSessionData userSessionData = UserSessionData.builder()
+                .user(EntraUserDto.builder().id(userId).build())
+                .name("Test User")
+                .build();
+
+        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
+                .thenReturn(userSessionData);
+
+        EntraUser mockCurrentUser = mock(EntraUser.class);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(mockCurrentUser);
+
+        try (MockedStatic<AccessControlService> mocked = mockStatic(AccessControlService.class)) {
+            mocked.when(() -> AccessControlService.userHasAuthzRole(mockCurrentUser, AuthzRole.SILAS_ADMINISTRATION.getRoleName()))
+                    .thenReturn(true);
+
+            // Act
+            String viewName = controller.home(model, authentication, session, authClient);
+
+            // Assert
+            assertThat(viewName).isEqualTo("home");
+            assertThat(model.getAttribute("hasSilasAdminRole")).isEqualTo(true);
+        }
+    }
+
+    @Test
+    void givenCurrentUserDoesNotHaveSilasAdminRole_whenHomeGet_thenSetsHasSilasAdminRoleFalse() throws IOException {
+        // Arrange
+        Model model = new ConcurrentModel();
+        String userId = UUID.randomUUID().toString();
+        UserSessionData userSessionData = UserSessionData.builder()
+                .user(EntraUserDto.builder().id(userId).build())
+                .name("Test User")
+                .build();
+
+        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
+                .thenReturn(userSessionData);
+
+        EntraUser mockCurrentUser = mock(EntraUser.class);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(mockCurrentUser);
+
+        try (MockedStatic<AccessControlService> mocked = mockStatic(AccessControlService.class)) {
+            mocked.when(() -> AccessControlService.userHasAuthzRole(mockCurrentUser, AuthzRole.SILAS_ADMINISTRATION.getRoleName()))
+                    .thenReturn(false);
+
+            // Act
+            String viewName = controller.home(model, authentication, session, authClient);
+
+            // Assert
+            assertThat(viewName).isEqualTo("home");
+            assertThat(model.getAttribute("hasSilasAdminRole")).isEqualTo(false);
+        }
     }
 }
