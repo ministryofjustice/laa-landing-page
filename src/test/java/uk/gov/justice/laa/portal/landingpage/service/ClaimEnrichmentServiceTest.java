@@ -339,7 +339,7 @@ class ClaimEnrichmentServiceTest {
                 UserNotFoundException.class,
                 () -> claimEnrichmentService.enrichClaim(request)
         );
-        assertEquals("User not found in database", exception.getMessage());
+        assertEquals("User not found for the given entra id: entra-123", exception.getMessage());
         verify(officeRepository, never()).findOfficeByFirm_IdIn(any());
     }
 

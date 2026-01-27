@@ -175,7 +175,7 @@ public class ClaimEnrichmentService {
             log.error("Claim enrichment failed: {}", e.getMessage());
             throw e;
         } catch (UserNotFoundException e) {
-            throw new UserNotFoundException("User not found in database", e);
+            throw new UserNotFoundException(String.format("User not found for the given entra id: %s", userId));
         } catch (Exception e) {
             log.error("Unexpected error during claim enrichment", e);
             throw new ClaimEnrichmentException("Failed to process claim enrichment", e);
