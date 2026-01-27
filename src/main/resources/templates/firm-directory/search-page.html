@@ -59,23 +59,7 @@
                                                 </svg>
                                                 <input class="autocomplete__input govuk-input" id="firmSearch"
                                                        name="firmSearch" type="text" autocomplete="off"
-                                                       aria-autocomplete="list" aria-expanded="false"
-                                                       aria-controls="firmSearch__listbox" aria-describedby="firm-hint"
-                                                       aria-owns="firmSearch__listbox" role="combobox"
                                                        th:value="${firmSearch.firmSearch}">
-                                                <input type="hidden" id="selectedFirmId" name="selectedFirmId"
-                                                       th:value="${firmSearch.selectedFirmId}" />
-                                                <div id="firmSearch__assistiveHint"
-                                                     class="govuk-hint govuk-visually-hidden" role="status">
-                                                    When autocomplete results are available, use up and down arrows
-                                                    to review and enter to select. Touch device users, explore by
-                                                    touch or with swipe gestures.
-                                                </div>
-                                                <ul id="firmSearch__listbox"
-                                                    class="autocomplete__menu autocomplete__menu--hidden"
-                                                    role="listbox" aria-label="Firm search results">
-                                                    <!-- Search results will be populated here via JavaScript -->
-                                                </ul>
                                             </div>
                                         </div>
                                     </div>
@@ -445,7 +429,6 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const firmSearchInput = document.getElementById('firmSearch');
-            const firmSearchIdInput = document.getElementById('selectedFirmId');
             const firmSearchListbox = document.getElementById('firmSearch__listbox');
             const statusA = document.getElementById('firmSearch__status--A');
             const statusB = document.getElementById('firmSearch__status--B');
@@ -459,202 +442,11 @@
             let selectedIndex = -1;
             let currentStatusElement = statusA;
 
-            firmSearchInput.addEventListener('focus', function () {
-                assistiveHint.style.display = 'block';
-            });
-
             firmSearchInput.addEventListener('blur', function () {
-                if (firmSearchInput.value && !firmSearchIdInput.value) {
+                if (firmSearchInput.value) {
                     firmSearchInput.value = '';
                 }
             });
-
-            firmSearchInput.addEventListener('input', function () {
-                clearTimeout(searchTimeout);
-                const query = this.value.trim();
-
-                if (query.length < 3) {
-                    firmSearchIdInput.value = '';
-                    hideResults();
-                    return;
-                }
-
-                searchTimeout = setTimeout(() => {
-                    searchFirms(query);
-                }, 300);
-            });
-
-            firmSearchInput.addEventListener('keydown', function (e) {
-                const items = firmSearchListbox.querySelectorAll('.autocomplete__option');
-
-                if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
-                    updateSelection(items);
-                    updateStatus(`${selectedIndex + 1} of ${items.length}`);
-                } else if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    selectedIndex = Math.max(selectedIndex - 1, -1);
-                    updateSelection(items);
-                    if (selectedIndex >= 0) {
-                        updateStatus(`${selectedIndex + 1} of ${items.length}`);
-                    }
-                } else if (e.key === 'Enter') {
-                    if (selectedIndex >= 0 && items[selectedIndex]) {
-                        e.preventDefault();
-                        items[selectedIndex].click();
-                        setTimeout(() => {
-                            document.getElementById('search-form').submit();
-                        }, 100);
-                    } else if (items.length > 0 && !firmSearchListbox.classList.contains('autocomplete__menu--hidden')) {
-                        const firstItem = items[0];
-                        if (firstItem && firstItem.textContent !== 'No firms found') {
-                            e.preventDefault();
-                            firstItem.click();
-                            setTimeout(() => {
-                                document.getElementById('search-form').submit();
-                            }, 100);
-                        }
-                    }
-                } else if (e.key === 'Escape') {
-                    hideResults();
-                }
-            });
-
-            document.addEventListener('click', function (e) {
-                if (!firmSearchInput.contains(e.target) && !firmSearchListbox.contains(e.target)) {
-                    hideResults();
-                }
-            });
-
-            function searchFirms(query) {
-                updateStatus('Searching...');
-                fetch(`/admin/user/firms/search?q=${encodeURIComponent(query)}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        displayResults(data);
-                    })
-                    .catch(error => {
-                        hideResults();
-                        updateStatus('Search failed: ' + error.message);
-                    });
-            }
-
-            function displayResults(firms) {
-                firmSearchListbox.innerHTML = '';
-                selectedIndex = -1;
-
-                const currentQuery = firmSearchInput.value.trim();
-
-                if (firms.length === 0 && currentQuery.length > 0) {
-                    const noResultsItem = document.createElement('li');
-                    noResultsItem.className = 'autocomplete__option';
-                    noResultsItem.textContent = 'No firms found';
-                    noResultsItem.setAttribute('role', 'option');
-                    noResultsItem.setAttribute('aria-selected', 'false');
-                    noResultsItem.style.color = '#6f777b';
-                    firmSearchListbox.appendChild(noResultsItem);
-                    showResults();
-                    updateStatus('No results found');
-                    return;
-                } else if (firms.length === 0) {
-                    hideResults();
-                    return;
-                }
-
-                firms.forEach((firm, index) => {
-                    const item = document.createElement('li');
-                    item.className = 'autocomplete__option';
-                    item.setAttribute('aria-selected', 'false');
-                    item.setAttribute('role', 'option');
-                    item.setAttribute('tabindex', '-1');
-                    item.setAttribute('id', `firmSearch__option--${index}`);
-                    item.setAttribute('aria-posinset', index + 1);
-                    item.setAttribute('aria-setsize', firms.length);
-
-                    const firmName = firm.name || '';
-                    const firmCode = firm.code && firm.code.trim() ? firm.code : 'No code available';
-
-                    const strongElement = document.createElement('strong');
-                    strongElement.textContent = firmName;
-
-                    const smallElement = document.createElement('small');
-                    smallElement.textContent = `Firm code: ${firmCode}`;
-
-                    item.appendChild(strongElement);
-                    item.appendChild(smallElement);
-
-                    item.addEventListener('click', function () {
-                        selectFirm(firm);
-                    });
-
-                    item.addEventListener('mouseenter', function () {
-                        selectedIndex = index;
-                        updateSelection(firmSearchListbox.querySelectorAll('.autocomplete__option'));
-                    });
-
-                    firmSearchListbox.appendChild(item);
-                });
-
-                showResults();
-                updateStatus(`${firms.length} result${firms.length === 1 ? '' : 's'} available`);
-            }
-
-            function selectFirm(firm) {
-                firmSearchInput.value = firm.name;
-                firmSearchIdInput.value = firm.id;
-                hideResults();
-                updateStatus(`${firm.name} selected`);
-            }
-
-            function updateSelection(items) {
-                items.forEach((item, index) => {
-                    if (!item) return;
-
-                    if (index === selectedIndex) {
-                        item.setAttribute('aria-selected', 'true');
-                        item.style.backgroundColor = '#1d70b8';
-                        item.style.color = 'white';
-                        item.scrollIntoView({ block: 'nearest' });
-                    } else {
-                        item.setAttribute('aria-selected', 'false');
-                        item.style.backgroundColor = '';
-                        item.style.color = '';
-                    }
-                });
-            }
-
-            function showResults() {
-                firmSearchListbox.classList.remove('autocomplete__menu--hidden');
-                firmSearchListbox.classList.add('autocomplete__menu--inline');
-                firmSearchInput.setAttribute('aria-expanded', 'true');
-            }
-
-            function hideResults() {
-                firmSearchListbox.classList.add('autocomplete__menu--hidden');
-                firmSearchListbox.classList.remove('autocomplete__menu--inline');
-                firmSearchInput.setAttribute('aria-expanded', 'false');
-                selectedIndex = -1;
-                if (assistiveHint) {
-                    assistiveHint.style.display = 'none';
-                }
-            }
-
-            function updateStatus(message) {
-                currentStatusElement = currentStatusElement === statusA ? statusB : statusA;
-                currentStatusElement.textContent = message;
-            }
 
             // Firm Type auto-submit
             const firmTypeAccessFilter = document.getElementById('firmTypeAccessFilter');
@@ -707,7 +499,6 @@
                         sort: this.dataset.sort,
                         direction: this.dataset.direction,
                         firmSearch: this.dataset.firmSearch,
-                        selectedFirmId: this.dataset.selectedFirmId,
                         selectedFirmType: this.dataset.selectedFirmType,
                     };
                     window.location.href = buildCleanUrl('/firmDirectory', params);
@@ -745,7 +536,7 @@
                         <th scope="col" class="govuk-table__header"
                             th:aria-sort="${sort == 'name' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                             <button type="button" class="sort-button" data-sort="name"
-                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'name' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-selected-firm-type=${selectedFirmType}">
+                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'name' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-type=${selectedFirmType}">
                                 Firm Name
                                 <img th:if="${sort == 'name' and direction == 'asc'}"
                                      th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
@@ -760,7 +551,7 @@
                         <th scope="col" class="govuk-table__header"
                             th:aria-sort="${sort == 'code' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                             <button type="button" class="sort-button" data-sort="code"
-                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'code' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-selected-firm-type=${selectedFirmType}">
+                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'code' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-type=${selectedFirmType}">
                                 Firm Code
                                 <img th:if="${sort == 'code' and direction == 'asc'}"
                                      th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
@@ -775,7 +566,7 @@
                         <th scope="col" class="govuk-table__header"
                             th:aria-sort="${sort == 'type' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                             <button type="button" class="sort-button" data-sort="type"
-                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'type' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-selected-firm-type=${selectedFirmType}">
+                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'type' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-type=${selectedFirmType}">
                                 Type
                                 <img th:if="${sort == 'type' and direction == 'asc'}"
                                      th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
@@ -811,7 +602,7 @@
     <nav class="govuk-pagination" aria-label="Pagination" th:if="${totalPages > 1}">
         <div class="govuk-pagination__prev" th:if="${page > 1}">
             <a class="govuk-link govuk-pagination__link"
-               th:href="@{firmDirectory(size=${requestedPageSize}, page=${page - 1}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
+               th:href="@{firmDirectory(size=${requestedPageSize}, page=${page - 1}, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
                rel="prev">
                 <svg class="govuk-pagination__icon govuk-pagination__icon--prev" xmlns="http://www.w3.org/2000/svg"
                      height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
@@ -830,10 +621,10 @@
             <li class="govuk-pagination__item"
                 th:classappend="${page == 1 ? 'govuk-pagination__item--current' : ''}">
                 <a class="govuk-link govuk-pagination__link" th:if="${page != 1}"
-                   th:href="@{firmDirectory(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
+                   th:href="@{firmDirectory(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
                    th:aria-label="'Page 1'">1</a>
                 <a class="govuk-link govuk-pagination__link" th:if="${page == 1}"
-                   th:href="@{firmDirectory(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
+                   th:href="@{firmDirectory(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
                    th:aria-label="'Page 1'" aria-current="page">1</a>
             </li>
 
@@ -846,10 +637,10 @@
                 <li class="govuk-pagination__item" th:if="${i > 1 and i < totalPages}"
                     th:classappend="${i == page ? 'govuk-pagination__item--current' : ''}">
                     <a class="govuk-link govuk-pagination__link" th:if="${i != page}"
-                       th:href="@{firmDirectory(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
+                       th:href="@{firmDirectory(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
                        th:aria-label="'Page ' + ${i}" th:text="${i}"></a>
                     <a class="govuk-link govuk-pagination__link" th:if="${i == page}"
-                       th:href="@{firmDirectory(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
+                       th:href="@{firmDirectory(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
                        th:aria-label="'Page ' + ${i}" aria-current="page" th:text="${i}"></a>
                 </li>
             </th:block>
@@ -861,17 +652,17 @@
             <li class="govuk-pagination__item" th:if="${totalPages > 1}"
                 th:classappend="${page == totalPages ? 'govuk-pagination__item--current' : ''}">
                 <a class="govuk-link govuk-pagination__link" th:if="${page != totalPages}"
-                   th:href="@{firmDirectory(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
+                   th:href="@{firmDirectory(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
                    th:aria-label="'Page ' + ${totalPages}" th:text="${totalPages}"></a>
                 <a class="govuk-link govuk-pagination__link" th:if="${page == totalPages}"
-                   th:href="@{firmDirectory(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
+                   th:href="@{firmDirectory(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
                    th:aria-label="'Page ' + ${totalPages}" aria-current="page" th:text="${totalPages}"></a>
             </li>
         </ul>
 
         <div class="govuk-pagination__next" th:if="${page < totalPages}">
             <a class="govuk-link govuk-pagination__link"
-               th:href="@{firmDirectory(size=${requestedPageSize}, page=${page + 1}, search=${search}, firmSearch=${firmSearch.firmSearch}, selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
+               th:href="@{firmDirectory(size=${requestedPageSize}, page=${page + 1}, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
                rel="next">
                     <span class="govuk-pagination__link-title">
                         Next<span class="govuk-visually-hidden"> page</span>

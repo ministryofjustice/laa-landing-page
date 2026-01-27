@@ -35,7 +35,6 @@ public class FirmDirectoryController {
         log.debug("FirmDirectoryController.displayAllFirmDirectory - {}", criteria);
 
         PaginatedFirmDirectory paginatedFirmDirectory = firmService.getFirmsPage(criteria.getFirmSearch(),
-                criteria.getSelectedFirmId(),
                 criteria.getSelectedFirmType(),
                 criteria.getPage(),
                 criteria.getSize(),
@@ -43,7 +42,7 @@ public class FirmDirectoryController {
                 criteria.getDirection());
 
         // Build firm search form
-        FirmSearchForm firmSearchForm = new FirmSearchForm(criteria.getFirmSearch(), criteria.getSelectedFirmId());
+        FirmSearchForm firmSearchForm = new FirmSearchForm(criteria.getFirmSearch(), null);
         // Add attributes to model
         buildDisplayAuditTableModel(criteria, model, paginatedFirmDirectory, firmSearchForm);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Firm Directory");

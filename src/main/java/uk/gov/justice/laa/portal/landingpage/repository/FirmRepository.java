@@ -31,7 +31,6 @@ public interface FirmRepository extends JpaRepository<Firm, UUID> {
                     WHERE (:searchTerm IS NULL OR :searchTerm = '' OR
                            LOWER(f.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR
                            LOWER(f.code) LIKE LOWER(CONCAT('%', :searchTerm, '%')))
-                      AND (:firmId IS NULL OR f.id = :firmId)
                       AND (COALESCE(:firmType, f.type) = f.type)
                     """,
             countQuery = """
@@ -40,13 +39,11 @@ public interface FirmRepository extends JpaRepository<Firm, UUID> {
                     WHERE (:searchTerm IS NULL OR :searchTerm = '' OR
                            LOWER(f.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR
                            LOWER(f.code) LIKE LOWER(CONCAT('%', :searchTerm, '%')))
-                      AND (:firmId IS NULL OR f.id = :firmId)
                       AND (COALESCE(:firmType, f.type) = f.type)
                     """
     )
     Page<Firm> getFirmsPage(
             @Param("searchTerm") String searchTerm,
-            @Param("firmId") UUID firmId,
             @Param("firmType") FirmType firmType,
             Pageable pageable);
 }
