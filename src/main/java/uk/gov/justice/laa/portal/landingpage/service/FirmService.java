@@ -60,16 +60,16 @@ public class FirmService {
 
     public PaginatedFirmDirectory getFirmsPage(String searchTerm, String firmType,
                                                int page, int pageSize, String sort, String direction) {
-        Page<Firm> officePage = null;
+        Page<Firm> firmsPage = null;
         PageRequest pageRequest = PageRequest.of(
                 page - 1,
                 pageSize,
                 Sort.by(Sort.Direction.fromString(direction), sort));
 
         FirmType type = firmType == null ? null : FirmType.valueOf(firmType);
-        officePage = firmRepository.getFirmsPage(searchTerm, type, pageRequest);
+        firmsPage = firmRepository.getFirmsPage(searchTerm, type, pageRequest);
         // Map to DTOs
-        List<FirmDirectoryDto> firmDirectoryDtos = officePage.getContent().stream().map(map -> FirmDirectoryDto.builder()
+        List<FirmDirectoryDto> firmDirectoryDtos = firmsPage.getContent().stream().map(map -> FirmDirectoryDto.builder()
                 .firmName(map.getName())
                 .firmId(map.getId())
                 .firmCode(map.getCode())
@@ -79,8 +79,8 @@ public class FirmService {
 
         return PaginatedFirmDirectory.builder()
                 .firmDirectories(firmDirectoryDtos)
-                .totalPages(officePage.getTotalPages())
-                .totalElements(officePage.getTotalElements())
+                .totalPages(firmsPage.getTotalPages())
+                .totalElements(firmsPage.getTotalElements())
                 .currentPage(page).pageSize(pageSize).build();
     }
 
