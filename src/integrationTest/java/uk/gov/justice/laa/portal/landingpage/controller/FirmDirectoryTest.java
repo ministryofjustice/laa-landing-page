@@ -11,12 +11,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 public class FirmDirectoryTest extends BaseIntegrationTest {
 
-    public static final String FIRM_DIRECTORY = "firmDirectory";
+    public static final String FIRM_DIRECTORY_PATH = "/admin/firmDirectory";
 
     @Test
     public void accessFirmDirectorySearchScreen() throws Exception {
-        final String path = "/" + FIRM_DIRECTORY;
-        mockMvc.perform(get(path)
+        mockMvc.perform(get(FIRM_DIRECTORY_PATH)
                 .with(defaultOauth2Login(defaultLoggedInUser)))
                 .andExpect(status().is2xxSuccessful())
                 .andExpect(view().name("/firm-directory/search-page"))
