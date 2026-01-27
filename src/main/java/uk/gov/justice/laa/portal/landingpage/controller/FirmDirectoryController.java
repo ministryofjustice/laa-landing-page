@@ -15,15 +15,13 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 
-import java.util.List;
-
 /**
  * Controller for handling firm-directory requests
  */
 @Slf4j
 @Controller
 @RequiredArgsConstructor
-@RequestMapping("/firmDirectory")
+@RequestMapping("/admin/firmDirectory")
 @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions("
         + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_FIRM_DIRECTORY)")
 public class FirmDirectoryController {
@@ -36,7 +34,7 @@ public class FirmDirectoryController {
                                           Model model) {
         log.debug("FirmDirectoryController.displayAllFirmDirectory - {}", criteria);
 
-        PaginatedFirmDirectory paginatedFirmDirectory = firmService.getAllFirms(criteria.getFirmSearch(),
+        PaginatedFirmDirectory paginatedFirmDirectory = firmService.getFirmsPage(criteria.getFirmSearch(),
                 criteria.getSelectedFirmId(),
                 criteria.getSelectedFirmType(),
                 criteria.getPage(),
@@ -47,7 +45,6 @@ public class FirmDirectoryController {
         // Build firm search form
         FirmSearchForm firmSearchForm = new FirmSearchForm(criteria.getFirmSearch(), criteria.getSelectedFirmId());
         // Add attributes to model
-
         buildDisplayAuditTableModel(criteria, model, paginatedFirmDirectory, firmSearchForm);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Firm Directory");
 
@@ -69,12 +66,7 @@ public class FirmDirectoryController {
         model.addAttribute("direction", criteria.getDirection());
         model.addAttribute("selectedFirmType",
                 criteria.getSelectedFirmType() != null ? criteria.getSelectedFirmType() : "");
-        // Get all firm type
-        List<FirmType> firmTypes = List.of(
-                FirmType.LEGAL_SERVICES_PROVIDER,
-                FirmType.CHAMBERS,
-                FirmType.ADVOCATE);
-        model.addAttribute("firmTypes", firmTypes);
+        model.addAttribute("firmTypes", FirmType.values());
     }
 
 }

@@ -103,8 +103,8 @@ class FirmServiceTest {
                                 .firmType(FirmType.LEGAL_SERVICES_PROVIDER.getValue())
                         .build()))
                 .build();
-        when(firmRepository.findAllFirms(any(), any(), any(), any())).thenReturn(firmPage);
-        PaginatedFirmDirectory firmPaginator = firmService.getAllFirms("", firmId, FirmType.LEGAL_SERVICES_PROVIDER.name(), 1, 10, "sort", Sort.Direction.DESC.name());
+        when(firmRepository.getFirmsPage(any(), any(), any(), any())).thenReturn(firmPage);
+        PaginatedFirmDirectory firmPaginator = firmService.getFirmsPage("", firmId, FirmType.LEGAL_SERVICES_PROVIDER.name(), 1, 10, "sort", Sort.Direction.DESC.name());
         assertThat(firmPaginator.getFirmDirectories())
                 .isEqualTo(paginatorExpected.getFirmDirectories());
     }
@@ -124,8 +124,8 @@ class FirmServiceTest {
                         .firmType(FirmType.LEGAL_SERVICES_PROVIDER.getValue())
                         .build()))
                 .build();
-        when(firmRepository.findAllFirms(any(), any(), any(), any())).thenReturn(firmPage);
-        PaginatedFirmDirectory firmPaginator = firmService.getAllFirms("", firmId, null, 1, 10, "sort", Sort.Direction.DESC.name());
+        when(firmRepository.getFirmsPage(any(), any(), any(), any())).thenReturn(firmPage);
+        PaginatedFirmDirectory firmPaginator = firmService.getFirmsPage("", firmId, null, 1, 10, "sort", Sort.Direction.DESC.name());
         assertThat(firmPaginator.getFirmDirectories())
                 .isEqualTo(paginatorExpected.getFirmDirectories());
     }

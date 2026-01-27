@@ -53,7 +53,7 @@ class FirmDirectoryControllerTest {
         PaginatedFirmDirectory paginatedFirmDirectory = new PaginatedFirmDirectory();
         paginatedFirmDirectory.setFirmDirectories(List.of());
 
-        when(firmService.getAllFirms(criteria.getFirmSearch(),
+        when(firmService.getFirmsPage(criteria.getFirmSearch(),
                 criteria.getSelectedFirmId(),
                 criteria.getSelectedFirmType(),
                 criteria.getPage(),
@@ -105,7 +105,7 @@ class FirmDirectoryControllerTest {
         PaginatedFirmDirectory paginatedFirmDirectory = new PaginatedFirmDirectory();
         paginatedFirmDirectory.setFirmDirectories(firmDirectoryDtos);
 
-        when(firmService.getAllFirms(criteria.getFirmSearch(),
+        when(firmService.getFirmsPage(criteria.getFirmSearch(),
                 criteria.getSelectedFirmId(),
                 criteria.getSelectedFirmType(),
                 criteria.getPage(),

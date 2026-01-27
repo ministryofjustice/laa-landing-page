@@ -6,10 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.util.List;
 import java.util.UUID;
@@ -46,7 +44,7 @@ public interface FirmRepository extends JpaRepository<Firm, UUID> {
                       AND (COALESCE(:firmType, f.type) = f.type)
                     """
     )
-    Page<Firm> findAllFirms(
+    Page<Firm> getFirmsPage(
             @Param("searchTerm") String searchTerm,
             @Param("firmId") UUID firmId,
             @Param("firmType") FirmType firmType,

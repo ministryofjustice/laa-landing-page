@@ -14,7 +14,6 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
@@ -59,8 +58,8 @@ public class FirmService {
     }
 
 
-    public PaginatedFirmDirectory getAllFirms(String searchTerm, UUID firmId, String firmType,
-                                              int page, int pageSize, String sort, String direction) {
+    public PaginatedFirmDirectory getFirmsPage(String searchTerm, UUID firmId, String firmType,
+                                               int page, int pageSize, String sort, String direction) {
         Page<Firm> officePage = null;
         PageRequest pageRequest = PageRequest.of(
                 page - 1,
@@ -68,7 +67,7 @@ public class FirmService {
                 Sort.by(Sort.Direction.fromString(direction), sort));
 
         FirmType type = firmType == null ? null : FirmType.valueOf(firmType);
-        officePage = firmRepository.findAllFirms(searchTerm, firmId, type, pageRequest);
+        officePage = firmRepository.getFirmsPage(searchTerm, firmId, type, pageRequest);
         // Map to DTOs
         List<FirmDirectoryDto> firmDirectoryDtos = officePage.getContent().stream().map(map -> FirmDirectoryDto.builder()
                 .firmName(map.getName())
