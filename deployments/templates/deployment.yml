@@ -216,6 +216,10 @@ spec:
               value: "${TECH_SERVICES_REQ_READ_TIMEOUT}"
             - name: TECH_SERVICES_REQ_CONNECT_TIMEOUT
               value: "${TECH_SERVICES_REQ_CONNECT_TIMEOUT}"
+            - name: PDA_SYNC_SCHEDULER_ENABLED
+              value: "${PDA_SYNC_SCHEDULER_ENABLED}"
+            - name: PDA_SYNC_SCHEDULER_CRON
+              value: "${PDA_SYNC_SCHEDULER_CRON}"
             - name: SENTRY_ENVIRONMENT
               value: "${SENTRY_ENVIRONMENT}"
             - name: SENTRY_ENABLED

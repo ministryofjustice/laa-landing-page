@@ -27,7 +27,7 @@ public class DataProviderConfig {
     @Value("${app.data.provider.req.connect.timeout:30}")
     private int dataProviderReqConnectTimeout;
 
-    @Value("${app.data.provider.use-local-file:false}")
+    @Value("${app.data.provider.use-local-file}")
     private boolean useLocalFile;
 
     @Value("${app.data.provider.local-file-path}")
