@@ -42,25 +42,10 @@
                                         <label class="govuk-label govuk-label--s" for="firmSearch">
                                             Firm name or firm code
                                         </label>
-                                        <div class="autocomplete__wrapper">
-                                            <div class="autocomplete__status" aria-live="polite" role="status">
-                                                    <span id="firmSearch__status--A"
-                                                          class="govuk-visually-hidden"></span>
-                                                <span id="firmSearch__status--B"
-                                                      class="govuk-visually-hidden"></span>
-                                            </div>
-                                            <div style="position: relative; display: inline-block; width: 100%;">
-                                                <svg class="autocomplete__search-icon" width="16" height="16"
-                                                     viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"
-                                                     aria-hidden="true" focusable="false">
-                                                    <path
-                                                            d="M6.5 1a5.5 5.5 0 1 0 3.278 9.907l3.657 3.658a.75.75 0 1 0 1.061-1.061L10.84 9.846A5.5 5.5 0 0 0 6.5 1ZM2.5 6.5a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z"
-                                                            fill="currentColor"></path>
-                                                </svg>
-                                                <input class="autocomplete__input govuk-input" id="firmSearch"
-                                                       name="firmSearch" type="text" autocomplete="off"
-                                                       th:value="${firmSearch.firmSearch}">
-                                            </div>
+                                        <div style="position: relative; display: inline-block; width: 100%;">
+                                            <input class="govuk-input" id="firmSearch"
+                                                   name="firmSearch" type="text" autocomplete="off"
+                                                   th:value="${firmSearch.firmSearch}">
                                         </div>
                                     </div>
                                 </div>
@@ -112,60 +97,6 @@
         /* Reuse autocomplete styles from users.html */
         .autocomplete__wrapper {
             position: relative;
-        }
-
-        .autocomplete__menu {
-            background-color: #ffffff;
-            border: 2px solid #0b0c0c;
-            border-top: none;
-            box-sizing: border-box;
-            color: #0b0c0c;
-            font-family: "GDS Transport", arial, sans-serif;
-            font-size: 19px;
-            font-weight: 400;
-            line-height: 1.31579;
-            margin: 0;
-            max-height: 200px;
-            overflow-y: auto;
-            padding: 0;
-            position: absolute;
-            top: 100%;
-            left: 0;
-            width: 100%;
-            z-index: 100;
-            list-style: none;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-        }
-
-        .autocomplete__menu--hidden {
-            display: none !important;
-        }
-
-        .autocomplete__menu--inline {
-            display: block;
-        }
-
-        .autocomplete__option {
-            background-color: #ffffff;
-            border-bottom: 1px solid #b1b4b6;
-            color: #0b0c0c;
-            cursor: pointer;
-            display: block;
-            font-size: 19px;
-            line-height: 1.31579;
-            padding: 8px 12px;
-            text-decoration: none;
-            position: relative;
-        }
-
-        .autocomplete__option:last-child {
-            border-bottom: none;
-        }
-
-        .autocomplete__option:hover,
-        .autocomplete__option[aria-selected="true"] {
-            background-color: #1d70b8;
-            color: #ffffff;
         }
 
         .autocomplete__option:hover strong,
@@ -225,16 +156,6 @@
             box-shadow: inset 0 0 0 2px;
             outline: 3px solid #fd0;
             outline-offset: 0;
-        }
-
-        .autocomplete__option--odd {
-            background-color: #ffffff;
-        }
-
-        .autocomplete__option--odd:hover,
-        .autocomplete__option--odd[aria-selected="true"] {
-            background-color: #1d70b8;
-            color: #ffffff;
         }
 
         .search-card {
@@ -513,7 +434,7 @@
     </script>
 
     <!-- Table -->
-    <div class="govuk-grid-row govuk-!-margin-top-6" id="audit-table">
+    <div class="govuk-grid-row govuk-!-margin-top-6" id="firmDirectory-table">
         <div class="govuk-grid-column-full">
             <div class="table-container">
                 <table class="govuk-table">
