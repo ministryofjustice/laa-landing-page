@@ -75,12 +75,12 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({ UserNotFoundException.class})
-    public ResponseEntity<ClaimEnrichmentResponse> handleUserNotFoundExceptionException(Exception ex, HttpServletRequest request) {
+    public ResponseEntity<ClaimEnrichmentResponse> handleUserNotFoundExceptionException(Exception ex) {
         return createErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
     @ExceptionHandler({ BadRequestException.class})
-    public ResponseEntity<ClaimEnrichmentResponse> handleBadRequestExceptionException(Exception ex, HttpServletRequest request) {
+    public ResponseEntity<ClaimEnrichmentResponse> handleBadRequestExceptionException(Exception ex) {
         return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
