@@ -23,6 +23,7 @@ public class MultifirmUserReportService {
 
     private final FirmRepository firmRepository;
     private final EntraUserRepository entraUserRepository;
+    private String reportDirectory = "\\tmp\\reports";;
 
     private final DateTimeFormatter FILE_TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH:mm");
 
@@ -41,7 +42,6 @@ public class MultifirmUserReportService {
     private void writeToCsv(List<Object[]> rows){
 
         String timestamp = LocalDateTime.now().format(FILE_TIMESTAMP);
-        String reportDirectory = "\\tmp\\reports";
         Path outputPath = Path.of(reportDirectory, "SiLAS-multifirm-user-report-" + timestamp + ".csv");
 
         try (BufferedWriter writer = Files.newBufferedWriter(outputPath)){
