@@ -30,3 +30,25 @@ databaseChangeLog:
         - sql:
             dbms: postgresql
             sql: "DELETE FROM role_permission WHERE permission = 'VIEW_FIRM_DIRECTORY' AND app_role_id = (SELECT id FROM app_role WHERE name =('Global Admin'))"
+  - changeSet:
+      id: populate-admin_app-for-firm-directory
+      author: leonardopalmeiro
+      changes:
+        - insert:
+            tableName: admin_app
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: name
+                  value: "Firm Directory"
+              - column:
+                  name: description
+                  value: "View all registered Firms"
+              - column:
+                  name: ordinal
+                  valueNumeric: 3
+              - column:
+                  name: enabled
+                  valueBoolean: true
