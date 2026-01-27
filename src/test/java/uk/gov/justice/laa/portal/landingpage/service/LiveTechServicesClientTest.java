@@ -377,7 +377,7 @@ public class LiveTechServicesClientTest {
         Assertions.assertThat(rtEx.getMessage())
                 .contains("Failed to assign security groups for user");
         assertLogMessage(Level.INFO, "Sending update security groups request to tech services:");
-        assertLogMessage(Level.WARN,
+        assertLogMessage(Level.INFO,
                 "Failed to assign security groups for user firstName lastName with error code 400 BAD_REQUEST");
         verify(restClient, times(1)).patch();
     }
