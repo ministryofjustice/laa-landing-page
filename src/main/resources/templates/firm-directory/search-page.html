@@ -429,24 +429,10 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const firmSearchInput = document.getElementById('firmSearch');
-            const firmSearchListbox = document.getElementById('firmSearch__listbox');
-            const statusA = document.getElementById('firmSearch__status--A');
-            const statusB = document.getElementById('firmSearch__status--B');
-            const assistiveHint = document.getElementById('firmSearch__assistiveHint');
 
             if (!firmSearchInput) {
                 return;
             }
-
-            let searchTimeout;
-            let selectedIndex = -1;
-            let currentStatusElement = statusA;
-
-            firmSearchInput.addEventListener('blur', function () {
-                if (firmSearchInput.value) {
-                    firmSearchInput.value = '';
-                }
-            });
 
             // Firm Type auto-submit
             const firmTypeAccessFilter = document.getElementById('firmTypeAccessFilter');

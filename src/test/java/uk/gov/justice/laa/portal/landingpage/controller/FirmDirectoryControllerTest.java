@@ -32,11 +32,6 @@ class FirmDirectoryControllerTest {
 
     private Model model;
 
-    private final List<FirmType> firmTypes = List.of(
-            FirmType.LEGAL_SERVICES_PROVIDER,
-            FirmType.CHAMBERS,
-            FirmType.ADVOCATE);
-
     @InjectMocks
     private FirmDirectoryController firmDirectoryController;
 
@@ -66,7 +61,7 @@ class FirmDirectoryControllerTest {
         //Assert
         assertThat(result).isEqualTo(SEARCH_PAGE);
         assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Firm Directory");
-        assertThat(model.getAttribute("firmTypes")).isEqualTo(firmTypes);
+        assertThat(model.getAttribute("firmTypes")).isEqualTo(FirmType.values());
 
         assertThat(model.getAttribute("firmDirectories")).isEqualTo(paginatedFirmDirectory.getFirmDirectories());
         assertThat(model.getAttribute("requestedPageSize")).isEqualTo(criteria.getSize());
@@ -117,7 +112,7 @@ class FirmDirectoryControllerTest {
         //Assert
         assertThat(result).isEqualTo(SEARCH_PAGE);
         assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Firm Directory");
-        assertThat(model.getAttribute("firmTypes")).isEqualTo(firmTypes);
+        assertThat(model.getAttribute("firmTypes")).isEqualTo(FirmType.values());
 
         assertThat(model.getAttribute("firmDirectories")).isEqualTo(paginatedFirmDirectory.getFirmDirectories());
         assertThat(model.getAttribute("requestedPageSize")).isEqualTo(criteria.getSize());
