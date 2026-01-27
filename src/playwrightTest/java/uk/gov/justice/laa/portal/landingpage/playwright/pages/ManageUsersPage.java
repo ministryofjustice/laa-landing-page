@@ -185,12 +185,36 @@ public class ManageUsersPage {
         firstLink.click();
     }
 
+    public boolean isNextLinkClickable() {
+        return page.locator("a.govuk-link:has-text('Next page')").isVisible();
+    }
+
+    public void clickNextPageLink() {
+        Locator next = page.locator("a.govuk-link:has-text('Next page')");
+        if (next.isVisible()) {
+            next.click();
+        }
+    }
+
     public void clickExternalUserLink(String user) {
-        Locator externalUserLink = page.locator("a.govuk-link[href*='/admin/users/manage/']").getByText(user);
-        externalUserLink.waitFor(new Locator.WaitForOptions()
-                .setState(WaitForSelectorState.VISIBLE)
-                .setTimeout(10000));
-        externalUserLink.click();
+        Locator externalUserLink = page
+                .locator("a.govuk-link[href*='/admin/users/manage/']")
+                .getByText(user);
+
+        for (int attempts = 0; attempts < 50; attempts++) {
+            if (externalUserLink.count() > 0 && externalUserLink.first().isVisible()) {
+                externalUserLink.first().click();
+                return;
+            }
+
+            if (isNextLinkClickable()) {
+                clickNextPageLink();
+            } else {
+                break;
+            }
+        }
+
+        throw new IllegalStateException("Could not find external user link for user: " + user);
     }
 
     public void clickContinueLink() {
