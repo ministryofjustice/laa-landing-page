@@ -29,9 +29,9 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.IpAddressMatcher;
-
 import org.springframework.session.config.SessionRepositoryCustomizer;
 import org.springframework.session.jdbc.JdbcIndexedSessionRepository;
+
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
 import uk.gov.justice.laa.portal.landingpage.service.CustomLogoutHandler;
@@ -69,13 +69,13 @@ public class SecurityConfig {
             ClientRegistrationRepository clientRegistrationRepository) {
         DefaultOAuth2AuthorizationRequestResolver authorizationRequestResolver =
                 new DefaultOAuth2AuthorizationRequestResolver(clientRegistrationRepository, "/oauth2/authorization");
-        
+
         authorizationRequestResolver.setAuthorizationRequestCustomizer(customizer -> {
             Map<String, Object> additionalParameters = new HashMap<>();
             additionalParameters.put("prompt", "select_account");
             customizer.additionalParameters(additionalParameters);
         });
-        
+
         return authorizationRequestResolver;
     }
 
@@ -124,9 +124,12 @@ public class SecurityConfig {
      */
     @Bean
     @Order(2)
-    public SecurityFilterChain webSecurityFilterChain(HttpSecurity http, 
+    public SecurityFilterChain webSecurityFilterChain(HttpSecurity http,
             ClientRegistrationRepository clientRegistrationRepository) throws Exception {
-        http.authorizeHttpRequests((authorize) -> authorize
+        http.csrf(csrf -> csrf
+                .ignoringRequestMatchers("/api/data-provider/**")  // TEMP FOR TESTING - REMOVE LATER
+        ).authorizeHttpRequests((authorize) -> authorize
+                .requestMatchers("/api/data-provider/**").permitAll()  // TEMP FOR TESTING - REMOVE LATER
                 .requestMatchers("/admin/users/**", "/pda/**")
                 .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
                 .requestMatchers("/admin/user/**")
@@ -170,6 +173,7 @@ public class SecurityConfig {
                 .maximumSessions(1)
                 .expiredUrl("/?message=session-expired")
         ).csrf(csrf -> csrf
+                .ignoringRequestMatchers("/api/data-provider/**")  // TEMP FOR TESTING - REMOVE LATER
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
         ).headers(headers -> headers
                 .httpStrictTransportSecurity(hsts -> hsts
