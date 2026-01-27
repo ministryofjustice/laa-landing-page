@@ -117,7 +117,7 @@ public class LiveTechServicesClient implements TechServicesClient {
                 logger.info("Security Groups assigned successfully for {} with security groups {} added and {} with security groups removed",
                         entraUser.getFirstName() + " " + entraUser.getLastName(), responseBody.getGroupsAdded(), responseBody.getGroupsRemoved());
             } else if (response.getStatusCode().is4xxClientError()) {
-                logger.warn("Failed to assign security groups for user {} with error code {}", entraUser.getFirstName() + " " + entraUser.getLastName(), response.getStatusCode());
+                logger.info("Failed to assign security groups for user {} with error code {}", entraUser.getFirstName() + " " + entraUser.getLastName(), response.getStatusCode());
                 throw new BadRequestException("Failed to assign security groups for user " + entraUser.getFirstName() + " " + entraUser.getLastName() + " with error code " + response.getStatusCode());
             } else {
                 logger.error("Failed to assign security groups for user {} with error code {}", entraUser.getFirstName() + " " + entraUser.getLastName(), response.getStatusCode());
