@@ -79,6 +79,11 @@ public class GlobalExceptionHandler {
         return createErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
+    @ExceptionHandler({ BadRequestException.class})
+    public ResponseEntity<ClaimEnrichmentResponse> handleBadRequestExceptionException(Exception ex, HttpServletRequest request) {
+        return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
     /**
      * Handle generic exceptions for API requests only
      * Web requests will be handled by the error controller
