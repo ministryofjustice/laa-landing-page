@@ -142,6 +142,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickGoBackToManageUsers();
         assertTrue(manageUsersPage.searchAndVerifyUser(email));
 
+        // Create new user with same email id
         manageUsersPage.clickCreateUser();
         manageUsersPage.fillInUserDetails(true, email, "dummyFirstName", "dummyLastName");
         manageUsersPage.verifyEmailAlreadyExists();
