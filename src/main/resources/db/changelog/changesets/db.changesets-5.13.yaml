@@ -254,11 +254,11 @@ databaseChangeLog:
             sql: |
               INSERT INTO role_permission (app_role_id, permission)
               SELECT (SELECT id FROM app_role WHERE name = 'Multi-firm Delegation'),
-              'DELEGATE_EXTERNAL_USER_ACCESS'
+              'DELEGATE_EXTERNAL_USER_ACCESS_INTERNAL'
               WHERE NOT EXISTS (
               SELECT 1 FROM role_permission
               WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'Multi-firm Delegation')
-              AND permission = 'DELEGATE_EXTERNAL_USER_ACCESS'
+              AND permission = 'DELEGATE_EXTERNAL_USER_ACCESS_INTERNAL'
               );
 
         - sql:
@@ -415,7 +415,7 @@ databaseChangeLog:
                 ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'DISABLE_EXTERNAL_USER'),
                 ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'ENABLE_EXTERNAL_USER'),
                 ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'EXPORT_AUDIT_DATA'),
-                ((SELECT id FROM app_role WHERE name = 'Multi-firm Delegation'), 'DELEGATE_EXTERNAL_USER_ACCESS'),
+                ((SELECT id FROM app_role WHERE name = 'Multi-firm Delegation'), 'DELEGATE_EXTERNAL_USER_ACCESS_INTERNAL'),
                 ((SELECT id FROM app_role WHERE name = 'Audit Export'), 'VIEW_AUDIT_TABLE'),
                 ((SELECT id FROM app_role WHERE name = 'Audit Export'), 'EXPORT_AUDIT_DATA'),
                 ((SELECT id FROM app_role WHERE name = 'Internal User Viewer'), 'VIEW_AUDIT_TABLE'),
