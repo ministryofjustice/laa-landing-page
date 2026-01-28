@@ -35,6 +35,7 @@ import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
+import uk.gov.justice.laa.portal.landingpage.exception.BadRequestException;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
@@ -368,15 +369,15 @@ public class LiveTechServicesClientTest {
         when(responseSpec.toEntity(UpdateSecurityGroupsResponse.class)).thenReturn(ResponseEntity.badRequest().build());
         when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
-        RuntimeException rtEx = assertThrows(RuntimeException.class,
+        BadRequestException rtEx = assertThrows(BadRequestException.class,
                 () -> liveTechServicesClient.updateRoleAssignment(userId),
                 "RuntimeException expected");
 
-        Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
+        Assertions.assertThat(rtEx).isInstanceOf(BadRequestException.class);
         Assertions.assertThat(rtEx.getMessage())
-                .contains("Error while sending security group changes to Tech Services.");
+                .contains("Failed to assign security groups for user");
         assertLogMessage(Level.INFO, "Sending update security groups request to tech services:");
-        assertLogMessage(Level.ERROR,
+        assertLogMessage(Level.INFO,
                 "Failed to assign security groups for user firstName lastName with error code 400 BAD_REQUEST");
         verify(restClient, times(1)).patch();
     }

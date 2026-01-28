@@ -21,6 +21,7 @@ import org.springframework.web.client.RestClient;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.exception.BadRequestException;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
@@ -115,10 +116,15 @@ public class LiveTechServicesClient implements TechServicesClient {
                 assert responseBody != null;
                 logger.info("Security Groups assigned successfully for {} with security groups {} added and {} with security groups removed",
                         entraUser.getFirstName() + " " + entraUser.getLastName(), responseBody.getGroupsAdded(), responseBody.getGroupsRemoved());
+            } else if (response.getStatusCode().is4xxClientError()) {
+                logger.info("Failed to assign security groups for user {} with error code {}", entraUser.getFirstName() + " " + entraUser.getLastName(), response.getStatusCode());
+                throw new BadRequestException("Failed to assign security groups for user " + entraUser.getFirstName() + " " + entraUser.getLastName() + " with error code " + response.getStatusCode());
             } else {
                 logger.error("Failed to assign security groups for user {} with error code {}", entraUser.getFirstName() + " " + entraUser.getLastName(), response.getStatusCode());
                 throw new RuntimeException("Failed to assign security groups for user " + entraUser.getFirstName() + " " + entraUser.getLastName() + " with error code " + response.getStatusCode());
             }
+        } catch (BadRequestException e) {
+            throw new BadRequestException(e);
         } catch (Exception ex) {
             logger.error("Error while sending security group changes to Tech Services.", ex);
             throw new RuntimeException("Error while sending security group changes to Tech Services.", ex);
