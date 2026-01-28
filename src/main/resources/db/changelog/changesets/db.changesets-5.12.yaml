@@ -1,372 +1,54 @@
 databaseChangeLog:
+  # Populate firm directory permission
   - changeSet:
-      id: streamline-roles-permissions
-      author: suresh.kavali
-      dbms: postgresql
+      id: add-firm-directory-permission
+      author: leonardopalmeiro
       changes:
+        # add permissions
         - sql:
             dbms: postgresql
-            splitStatements: true
-            stripComments: true
-            sql: |
-              INSERT INTO app_role (app_id, id, name, description, user_type_restriction, authz_role)
-              SELECT (SELECT id FROM app WHERE name = 'Manage Your Users'),
-                     gen_random_uuid(),
-                     'Multi-firm Delegation',
-                     'An internal user able to delegate access to multi-firm users on behalf of the firm admin',
-                     ARRAY['INTERNAL'],
-                     true
-              WHERE NOT EXISTS (
-                SELECT 1 FROM app_role WHERE name = 'Multi-firm Delegation'
-              );
-
-              INSERT INTO app_role (app_id, id, name, description, user_type_restriction, authz_role)
-              SELECT (SELECT id FROM app WHERE name = 'Manage Your Users'),
-                     gen_random_uuid(),
-                     'Audit Export',
-                     'An internal user able to export data from the user audit screen as a CSV',
-                     ARRAY['INTERNAL'],
-                     true
-              WHERE NOT EXISTS (
-                SELECT 1 FROM app_role WHERE name = 'Audit Export'
-              );
-
-              INSERT INTO app_role (app_id, id, name, description, user_type_restriction, authz_role)
-              SELECT (SELECT id FROM app WHERE name = 'Manage Your Users'),
-                     gen_random_uuid(),
-                     'Security Response',
-                     'An internal user able to view all users - enable & disable, access audit screens',
-                     ARRAY['INTERNAL'],
-                     true
-              WHERE NOT EXISTS (
-                SELECT 1 FROM app_role WHERE name = 'Security Response'
-              );
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Viewer'), 'VIEW_FIRM_DIRECTORY');"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Admin'), 'VIEW_FIRM_DIRECTORY');"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Manager'), 'VIEW_FIRM_DIRECTORY')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'VIEW_FIRM_DIRECTORY')"
       rollback:
         - sql:
             dbms: postgresql
-            splitStatements: true
-            stripComments: true
-            sql: |
-              DELETE FROM app_role WHERE name IN ('Multi-firm Delegation', 'Audit Export', 'Security Response');
-
+            sql: "DELETE FROM role_permission WHERE permission = 'VIEW_FIRM_DIRECTORY' AND app_role_id = (SELECT id FROM app_role WHERE name =('External User Viewer'))"
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'VIEW_FIRM_DIRECTORY' AND app_role_id = (SELECT id FROM app_role WHERE name =('External User Admin'))"
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'VIEW_FIRM_DIRECTORY' AND app_role_id = (SELECT id FROM app_role WHERE name =('External User Manager'))"
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'VIEW_FIRM_DIRECTORY' AND app_role_id = (SELECT id FROM app_role WHERE name =('Global Admin'))"
   - changeSet:
-      id: 20260126-role-permissions
-      author: suresh.kavali
-      context: prod
-      dbms: postgresql
-      runOnChange: false
-      runAlways: false
+      id: populate-admin_app-for-firm-directory
+      author: leonardopalmeiro
       changes:
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'Internal User Manager'), 'VIEW_AUDIT_TABLE'
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'Internal User Manager')
-                  AND permission = 'VIEW_AUDIT_TABLE'
-              );
-
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'External User Manager'), 'DISABLE_EXTERNAL_USER'
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'External User Manager')
-                  AND permission = 'DISABLE_EXTERNAL_USER'
-              );
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'External User Manager'), 'ENABLE_EXTERNAL_USER'
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'External User Manager')
-                  AND permission = 'ENABLE_EXTERNAL_USER'
-              );
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'External User Manager'), 'VIEW_AUDIT_TABLE'
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'External User Manager')
-                  AND permission = 'VIEW_AUDIT_TABLE'
-              );
-
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'Firm User Manager'), 'DISABLE_EXTERNAL_USER'
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'Firm User Manager')
-                  AND permission = 'DISABLE_EXTERNAL_USER'
-              );
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'Firm User Manager'), 'ENABLE_EXTERNAL_USER'
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'Firm User Manager')
-                  AND permission = 'ENABLE_EXTERNAL_USER'
-              );
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'Firm User Manager'), 'DELETE_EXTERNAL_USER'
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'Firm User Manager')
-                  AND permission = 'DELETE_EXTERNAL_USER'
-              );
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'Firm User Manager'), 'VIEW_AUDIT_TABLE'
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'Firm User Manager')
-                  AND permission = 'VIEW_AUDIT_TABLE'
-              );
-
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'External User Admin'), 'DISABLE_EXTERNAL_USER'
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'External User Admin')
-                  AND permission = 'DISABLE_EXTERNAL_USER'
-              );
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'External User Admin'), 'ENABLE_EXTERNAL_USER'
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'External User Admin')
-                  AND permission = 'ENABLE_EXTERNAL_USER'
-              );
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'External User Admin'), 'VIEW_AUDIT_TABLE'
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'External User Admin')
-                  AND permission = 'VIEW_AUDIT_TABLE'
-              );
-
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'Global Admin'), 'DISABLE_EXTERNAL_USER'
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'Global Admin')
-                  AND permission = 'DISABLE_EXTERNAL_USER'
-              );
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'Global Admin'), 'ENABLE_EXTERNAL_USER'
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'Global Admin')
-                  AND permission = 'ENABLE_EXTERNAL_USER'
-              );
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'Global Admin'), 'EXPORT_AUDIT_DATA'
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'Global Admin')
-                  AND permission = 'EXPORT_AUDIT_DATA'
-              );
-
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'Multi-firm Delegation'), 'DELEGATE_EXTERNAL_USER_ACCESS'
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'Multi-firm Delegation')
-                  AND permission = 'DELEGATE_EXTERNAL_USER_ACCESS'
-              );
-
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'Audit Export'), 'VIEW_AUDIT_TABLE'
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'Audit Export')
-                  AND permission = 'VIEW_AUDIT_TABLE'
-              );
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'Audit Export'), 'EXPORT_AUDIT_DATA'
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'Audit Export')
-                  AND permission = 'EXPORT_AUDIT_DATA'
-              );
-
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'Internal User Viewer'), 'VIEW_AUDIT_TABLE'
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'Internal User Viewer')
-                  AND permission = 'VIEW_AUDIT_TABLE'
-              );
-
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'External User Viewer'), 'VIEW_AUDIT_TABLE'
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'External User Viewer')
-                  AND permission = 'VIEW_AUDIT_TABLE'
-              );
-
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'Security Response'), 'VIEW_INTERNAL_USER'
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'Security Response')
-                  AND permission = 'VIEW_INTERNAL_USER'
-              );
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'Security Response'), 'VIEW_EXTERNAL_USER'
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'Security Response')
-                  AND permission = 'VIEW_EXTERNAL_USER'
-              );
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'Security Response'), 'EDIT_EXTERNAL_USER'
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'Security Response')
-                  AND permission = 'EDIT_EXTERNAL_USER'
-              );
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'Security Response'), 'DISABLE_EXTERNAL_USER'
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'Security Response')
-                  AND permission = 'DISABLE_EXTERNAL_USER'
-              );
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'Security Response'), 'ENABLE_EXTERNAL_USER'
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'Security Response')
-                  AND permission = 'ENABLE_EXTERNAL_USER'
-              );
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'Security Response'), 'DELETE_EXTERNAL_USER'
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'Security Response')
-                  AND permission = 'DELETE_EXTERNAL_USER'
-              );
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'Security Response'), 'VIEW_AUDIT_TABLE'
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'Security Response')
-                  AND permission = 'VIEW_AUDIT_TABLE'
-              );
-
-      rollback:
-        - sql:
-            dbms: postgresql
-            splitStatements: true
-            stripComments: true
-            sql: |
-              DELETE FROM role_permission
-              WHERE (app_role_id, permission) IN (
-                ((SELECT id FROM app_role WHERE name = 'Internal User Manager'), 'VIEW_AUDIT_TABLE'),
-
-                ((SELECT id FROM app_role WHERE name = 'External User Manager'), 'DISABLE_EXTERNAL_USER'),
-                ((SELECT id FROM app_role WHERE name = 'External User Manager'), 'ENABLE_EXTERNAL_USER'),
-                ((SELECT id FROM app_role WHERE name = 'External User Manager'), 'VIEW_AUDIT_TABLE'),
-
-                ((SELECT id FROM app_role WHERE name = 'Firm User Manager'), 'DISABLE_EXTERNAL_USER'),
-                ((SELECT id FROM app_role WHERE name = 'Firm User Manager'), 'ENABLE_EXTERNAL_USER'),
-                ((SELECT id FROM app_role WHERE name = 'Firm User Manager'), 'DELETE_EXTERNAL_USER'),
-                ((SELECT id FROM app_role WHERE name = 'Firm User Manager'), 'VIEW_AUDIT_TABLE'),
-
-                ((SELECT id FROM app_role WHERE name = 'External User Admin'), 'DISABLE_EXTERNAL_USER'),
-                ((SELECT id FROM app_role WHERE name = 'External User Admin'), 'ENABLE_EXTERNAL_USER'),
-                ((SELECT id FROM app_role WHERE name = 'External User Admin'), 'VIEW_AUDIT_TABLE'),
-
-                ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'DISABLE_EXTERNAL_USER'),
-                ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'ENABLE_EXTERNAL_USER'),
-                ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'EXPORT_AUDIT_DATA'),
-
-                ((SELECT id FROM app_role WHERE name = 'Multi-firm Delegation'), 'DELEGATE_EXTERNAL_USER_ACCESS'),
-
-                ((SELECT id FROM app_role WHERE name = 'Audit Export'), 'VIEW_AUDIT_TABLE'),
-                ((SELECT id FROM app_role WHERE name = 'Audit Export'), 'EXPORT_AUDIT_DATA'),
-
-                ((SELECT id FROM app_role WHERE name = 'Internal User Viewer'), 'VIEW_AUDIT_TABLE'),
-                ((SELECT id FROM app_role WHERE name = 'External User Viewer'), 'VIEW_AUDIT_TABLE'),
-
-                ((SELECT id FROM app_role WHERE name = 'Security Response'), 'VIEW_INTERNAL_USER'),
-                ((SELECT id FROM app_role WHERE name = 'Security Response'), 'VIEW_EXTERNAL_USER'),
-                ((SELECT id FROM app_role WHERE name = 'Security Response'), 'EDIT_EXTERNAL_USER'),
-                ((SELECT id FROM app_role WHERE name = 'Security Response'), 'DISABLE_EXTERNAL_USER'),
-                ((SELECT id FROM app_role WHERE name = 'Security Response'), 'ENABLE_EXTERNAL_USER'),
-                ((SELECT id FROM app_role WHERE name = 'Security Response'), 'DELETE_EXTERNAL_USER'),
-                ((SELECT id FROM app_role WHERE name = 'Security Response'), 'VIEW_AUDIT_TABLE')
-              );
+        - insert:
+            tableName: admin_app
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: name
+                  value: "Firm Directory"
+              - column:
+                  name: description
+                  value: "View all registered Firms"
+              - column:
+                  name: ordinal
+                  valueNumeric: 3
+              - column:
+                  name: enabled
+                  valueBoolean: true
