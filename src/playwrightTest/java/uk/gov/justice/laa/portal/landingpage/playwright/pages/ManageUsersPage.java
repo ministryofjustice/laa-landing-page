@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.microsoft.playwright.options.LoadState;
 import com.microsoft.playwright.options.WaitForSelectorState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,6 +56,7 @@ public class ManageUsersPage {
 
     private final Locator confirmButton;
     private final Locator goBackToManageYourUsersButton;
+    private final Locator manageAccessButton;
 
     private final Locator deleteUserLink;
     private final Locator confirmAndDeleteUserButton;
@@ -99,6 +101,7 @@ public class ManageUsersPage {
         this.providerAdminRadio = page.locator("input#providerAdmin");
 
         this.continueButton = page.locator("button.govuk-button:has-text('Continue')");
+        this.manageAccessButton = page.locator("button.govuk-button:has-text('Manage access')");
         this.cancelLink = page.locator("a.govuk-link:has-text('Cancel')");
 
         this.multiFirmYesRadio = page.locator("input#multiFirmYes");
@@ -182,16 +185,44 @@ public class ManageUsersPage {
         firstLink.click();
     }
 
-    public void clickExternalUserLink() {
-        Locator externalUserLink = page.locator("a.govuk-link[href*='/admin/users/manage/']").getByText("Playwright FirmUserManager");
-        externalUserLink.waitFor(new Locator.WaitForOptions()
-                .setState(WaitForSelectorState.VISIBLE)
-                .setTimeout(10000));
-        externalUserLink.click();
+    public boolean isNextLinkClickable() {
+        return page.locator("a.govuk-link:has-text('Next page')").isVisible();
+    }
+
+    public void clickNextPageLink() {
+        Locator next = page.locator("a.govuk-link:has-text('Next page')");
+        if (next.isVisible()) {
+            next.click();
+        }
+    }
+
+    public void clickExternalUserLink(String user) {
+        Locator externalUserLink = page
+                .locator("a.govuk-link[href*='/admin/users/manage/']")
+                .getByText(user);
+
+        for (int attempts = 0; attempts < 50; attempts++) {
+            if (externalUserLink.count() > 0 && externalUserLink.first().isVisible()) {
+                externalUserLink.first().click();
+                return;
+            }
+
+            if (isNextLinkClickable()) {
+                clickNextPageLink();
+            } else {
+                break;
+            }
+        }
+
+        throw new IllegalStateException("Could not find external user link for user: " + user);
     }
 
     public void clickContinueLink() {
         continueButton.click();
+    }
+
+    public void clickManageAccess() {
+        manageAccessButton.click();
     }
 
     public void clickServicesTab() {
@@ -263,6 +294,23 @@ public class ManageUsersPage {
                 checkbox.check();
             }
         }
+    }
+
+    public void checkSelectedServices(List<String> services) {
+        page.locator("input[type='checkbox']").first().waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000));
+        for (String service : services) {
+            Locator checkbox = page.getByLabel(service);
+            if (!checkbox.isChecked()) {
+                checkbox.check();
+            }
+        }
+    }
+
+    public Locator externalUserRowLocator() {
+        return page.locator(
+                "tr.govuk-table__row:has(td.govuk-table__cell:has-text(\"externaluser-incomplete@playwrighttest.com\"))"
+        );
+
     }
 
     // Unauthorised
@@ -342,9 +390,13 @@ public class ManageUsersPage {
 
         clickContinueUserDetails();
 
-        assertTrue(firstNameInvalidCharsError.isVisible());
-        assertTrue(lastNameInvalidCharsError.isVisible());
-        assertTrue(selectUserTypeError.isVisible());
+        // Anchor wait: error summary appears (proves validation ran)
+        Locator errorSummary = page.locator(".govuk-error-summary");
+        assertThat(errorSummary).isVisible();
+
+        assertThat(firstNameInvalidCharsError).isVisible();
+        assertThat(lastNameInvalidCharsError).isVisible();
+        assertThat(selectUserTypeError).isVisible();
     }
 
     // Multi firm
@@ -371,24 +423,35 @@ public class ManageUsersPage {
     }
 
     // Firm selection
+
     public void searchAndSelectFirmByCode(String firmCode) {
 
         firmSearchInput.waitFor(new Locator.WaitForOptions()
                 .setState(WaitForSelectorState.VISIBLE)
                 .setTimeout(5000));
 
-        firmSearchInput.fill(firmCode);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-        // Let autocomplete populate
-        firmSearchListbox.waitFor(new Locator.WaitForOptions()
-                .setState(WaitForSelectorState.VISIBLE)
-                .setTimeout(5000));
+        firmSearchInput.click();
+        firmSearchInput.fill("");
 
-        Locator firmOption = page.locator("li.autocomplete__option")
-                .filter(new Locator.FilterOptions().setHasText("Firm code: " + firmCode));
+        // Trigger autocomplete using real key events
+        firmSearchInput.pressSequentially(firmCode);
+        firmSearchInput.press("ArrowDown");
 
-        firmOption.first().click();
+        // Wait until the combobox is actually open
+        assertThat(firmSearchInput).hasAttribute("aria-expanded", "true");
+
+        // Click option by firm code
+        Locator firmOption = page.locator("#firmSearch__listbox li[role='option'] small")
+                .filter(new Locator.FilterOptions().setHasText("Firm code: " + firmCode))
+                .first()
+                .locator("..");
+
+        assertThat(firmOption).isVisible();
+        firmOption.click();
     }
+
 
     public void clickContinueFirmSelectPage() {
         continueButtonFirmSelection.click();

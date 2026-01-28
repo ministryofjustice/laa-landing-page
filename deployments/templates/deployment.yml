@@ -208,6 +208,8 @@ spec:
               value: "${POLLING_GROUP_ID}"
             - name: FIRM_CACHE_CLEAR_SCHEDULE
               value: "${FIRM_CACHE_CLEAR_SCHEDULE}"
+            - name: APPS_CACHE_CLEAR_SCHEDULE
+              value: "${APPS_CACHE_CLEAR_SCHEDULE}"
             - name: TECH_SERVICES_CLEAR_CACHE_INTERVAL
               value: "${TECH_SERVICES_CLEAR_CACHE_INTERVAL}"
             - name: TECH_SERVICES_REQ_READ_TIMEOUT
@@ -224,14 +226,16 @@ spec:
               value: "${CCMS_USER_MANAGEMENT_API_KEY}"
             - name: CCMS_USER_API_SQS_ARN
               value: "${CCMS_USER_API_SQS_ARN}"
+            - name: CCMS_UDA_API_BASE_URL
+              value: "${CCMS_UDA_API_BASE_URL}"
+            - name: CCMS_UDA_API_KEY
+              value: "${CCMS_UDA_API_KEY}"
             - name: ENABLE_DISTRIBUTED_DB_LOCKING
               value: "${ENABLE_DISTRIBUTED_DB_LOCKING}"
             - name: DISTRIBUTED_DB_LOCKING_PERIOD
               value: "${DISTRIBUTED_DB_LOCKING_PERIOD}"
             - name: FEATURE_FLAG_ENABLE_USER_AUDIT_TABLE
               value: "${FEATURE_FLAG_ENABLE_USER_AUDIT_TABLE}"
-            - name: FEATURE_FLAG_ENABLE_REASSIGN_FIRM
-              value: "${FEATURE_FLAG_ENABLE_REASSIGN_FIRM}"
             - name: SPRING_SESSION_JDBC_ENABLED
               value: "${SPRING_SESSION_JDBC_ENABLED}"
             - name: APP_MEANS_AND_MATCH_UI1_NAME
