@@ -19,6 +19,9 @@ public enum Permission {
     DELETE_EXTERNAL_USER,
     DELETE_AUDIT_USER,
     VIEW_AUDIT_TABLE,
+    DISABLE_EXTERNAL_USER,
+    ENABLE_EXTERNAL_USER,
+    EXPORT_AUDIT_DATA,
     TRIGGER_CCMS_ROLE_SYNC;
 
     public static final String[] ADMIN_PERMISSIONS = {
@@ -35,6 +38,9 @@ public enum Permission {
             DELETE_EXTERNAL_USER.name(),
             DELETE_AUDIT_USER.name(),
             VIEW_ALL_USER_MULTI_FIRM_PROFILES.name(),
+            DISABLE_EXTERNAL_USER.name(),
+            ENABLE_EXTERNAL_USER.name(),
+            EXPORT_AUDIT_DATA.name(),
             VIEW_AUDIT_TABLE.name()
     };
 }
