@@ -273,6 +273,12 @@ public class ManageUsersPage {
         );
     }
 
+    // SignIn Error
+    public void verifySignInError() {
+        assertTrue(page.getByText("Sorry, but we’re having trouble signing you in.").isVisible());
+    }
+
+
     // Search
     public void searchForUser(String userEmail) {
         searchInputByName.fill(userEmail);
