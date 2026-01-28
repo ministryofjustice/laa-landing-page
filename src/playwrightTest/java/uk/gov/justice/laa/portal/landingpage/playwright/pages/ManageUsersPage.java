@@ -326,6 +326,10 @@ public class ManageUsersPage {
         assertTrue(page.getByText("Sorry, but we’re having trouble signing you in.").isVisible());
     }
 
+    public void verifyEmailAlreadyExists() {
+        assertTrue(page.getByText("Email address already exists").first().isVisible());
+    }
+
     // Search
     public void searchForUser(String userEmail) {
         searchInputByName.fill(userEmail);
@@ -377,6 +381,21 @@ public class ManageUsersPage {
 
         continueButton.click();
         return randomEmail;
+    }
+
+    // Add user details
+    public void fillInUserDetails(boolean isAdmin, String email, String firstName, String lastName) {
+        emailInput.fill(email);
+        firstNameInput.fill(firstName);
+        lastNameInput.fill(lastName);
+
+        if (isAdmin) {
+            providerAdminRadio.check();
+        } else {
+            providerUserRadio.check();
+        }
+
+        continueButton.click();
     }
 
     public void clickContinueUserDetails() {
