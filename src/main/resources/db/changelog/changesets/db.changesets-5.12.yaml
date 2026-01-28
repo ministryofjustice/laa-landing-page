@@ -1,0 +1,54 @@
+databaseChangeLog:
+  # Populate firm directory permission
+  - changeSet:
+      id: add-firm-directory-permission
+      author: leonardopalmeiro
+      changes:
+        # add permissions
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Viewer'), 'VIEW_FIRM_DIRECTORY');"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Admin'), 'VIEW_FIRM_DIRECTORY');"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Manager'), 'VIEW_FIRM_DIRECTORY')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'VIEW_FIRM_DIRECTORY')"
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'VIEW_FIRM_DIRECTORY' AND app_role_id = (SELECT id FROM app_role WHERE name =('External User Viewer'))"
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'VIEW_FIRM_DIRECTORY' AND app_role_id = (SELECT id FROM app_role WHERE name =('External User Admin'))"
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'VIEW_FIRM_DIRECTORY' AND app_role_id = (SELECT id FROM app_role WHERE name =('External User Manager'))"
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'VIEW_FIRM_DIRECTORY' AND app_role_id = (SELECT id FROM app_role WHERE name =('Global Admin'))"
+  - changeSet:
+      id: populate-admin_app-for-firm-directory
+      author: leonardopalmeiro
+      changes:
+        - insert:
+            tableName: admin_app
+            columns:
+              - column:
+                  name: id
+                  valueComputed: "gen_random_uuid()"
+              - column:
+                  name: name
+                  value: "Firm Directory"
+              - column:
+                  name: description
+                  value: "View all registered Firms"
+              - column:
+                  name: ordinal
+                  valueNumeric: 3
+              - column:
+                  name: enabled
+                  valueBoolean: true
