@@ -18,7 +18,7 @@ public class FirmDirectoryTest extends BaseIntegrationTest {
         mockMvc.perform(get(FIRM_DIRECTORY_PATH)
                 .with(defaultOauth2Login(defaultLoggedInUser)))
                 .andExpect(status().is2xxSuccessful())
-                .andExpect(view().name("/firm-directory/search-page"))
+                .andExpect(view().name("firm-directory/search-page"))
                 .andExpect(model().attributeExists(ModelAttributes.PAGE_TITLE))
                 .andReturn();
     }
