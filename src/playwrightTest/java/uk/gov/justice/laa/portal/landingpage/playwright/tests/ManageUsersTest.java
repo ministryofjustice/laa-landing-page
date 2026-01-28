@@ -75,7 +75,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
     }
 
     @Test
-    @DisplayName("Create a new provider admin user with non multi-firm access")
+    @DisplayName("Create user and login created user")
     void createAndLoginUser() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
         manageUsersPage.clickCreateUser();

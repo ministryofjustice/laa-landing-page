@@ -278,7 +278,6 @@ public class ManageUsersPage {
         assertTrue(page.getByText("Sorry, but we’re having trouble signing you in.").isVisible());
     }
 
-
     // Search
     public void searchForUser(String userEmail) {
         searchInputByName.fill(userEmail);
