@@ -60,7 +60,6 @@ public abstract class BaseFrontEndTest {
             new ScreenshotWatcher(() -> page);
 
 
-
     @BeforeAll
     void beforeAll() {
         if (!setupComplete) {
@@ -113,6 +112,8 @@ public abstract class BaseFrontEndTest {
         loginAs(userEmail);
         page.navigate(String.format("http://localhost:%d/admin/users", port));
         return new ManageUsersPage(page, port);
+    }
+
     protected UserProfilePage loginAndGetUserProfilePage(TestUser user, String userEmail) {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(user);
         manageUsersPage.searchForUser(userEmail);
