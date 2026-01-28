@@ -60,6 +60,7 @@ public abstract class BaseFrontEndTest {
             new ScreenshotWatcher(() -> page);
 
 
+
     @BeforeAll
     void beforeAll() {
         if (!setupComplete) {
