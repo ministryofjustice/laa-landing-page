@@ -76,6 +76,59 @@ public class ManageUsersTest extends BaseFrontEndTest {
     }
 
     @Test
+    @DisplayName("Create user and login created user")
+    void createAndLoginUser() {
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+        manageUsersPage.clickCreateUser();
+        final String email = manageUsersPage.fillInUserDetails(true);
+        manageUsersPage.selectMultiFirmAccess(false);
+        manageUsersPage.searchAndSelectFirmByCode("90001");
+        manageUsersPage.clickContinueFirmSelectPage();
+        manageUsersPage.clickConfirmNewUserButton();
+        manageUsersPage.clickGoBackToManageUsers();
+        assertTrue(manageUsersPage.searchAndVerifyUser(email));
+        manageUsersPage.clickAndConfirmSignOut();
+
+        //Login with created user
+        ManageUsersPage manageUsersPageCreatedUser = loginAndGetManageUsersPage(email);
+        assertTrue(manageUsersPageCreatedUser.searchAndVerifyUser(email));
+
+    }
+
+    @Test
+    @DisplayName("Delete user and login deleted again")
+    void deleteAndLoginUser() {
+
+        //Create new user
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+        manageUsersPage.clickCreateUser();
+        final String email = manageUsersPage.fillInUserDetails(true);
+        manageUsersPage.selectMultiFirmAccess(false);
+        manageUsersPage.searchAndSelectFirmByCode("90001");
+        manageUsersPage.clickContinueFirmSelectPage();
+        manageUsersPage.clickConfirmNewUserButton();
+        manageUsersPage.clickGoBackToManageUsers();
+        assertTrue(manageUsersPage.searchAndVerifyUser(email));
+        manageUsersPage.clickAndConfirmSignOut();
+
+        //Login with created user
+        ManageUsersPage manageUsersPageCreatedUser = loginAndGetManageUsersPage(email);
+        assertTrue(manageUsersPageCreatedUser.searchAndVerifyUser(email));
+        manageUsersPageCreatedUser.clickAndConfirmSignOut();
+
+        // Delete and confirm newly created user
+        ManageUsersPage manageUsersPageReLogin = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+        assertTrue(manageUsersPageReLogin.searchAndVerifyUser(email));
+        manageUsersPageReLogin.clickManageUser();
+        manageUsersPageReLogin.confirmAndDeleteUser();
+        manageUsersPageReLogin.clickAndConfirmSignOut();
+
+        //Failed Login with deleted user
+        ManageUsersPage manageUsersPageDeletedUser = loginAndGetManageUsersPage(email);
+        manageUsersPageDeletedUser.verifySignInError();
+    }
+
+    @Test
     @DisplayName("Create a new provider admin user with non multi-firm access")
     void verifyUserDetails() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
