@@ -10,6 +10,8 @@ import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiRespons
 
 import java.util.UUID;
 
+import static java.util.Collections.emptyList;
+
 public class DoNothingTechServicesClient implements TechServicesClient {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
@@ -52,7 +54,7 @@ public class DoNothingTechServicesClient implements TechServicesClient {
         // Return empty success response
         return TechServicesApiResponse.success(GetUsersResponse.builder()
                 .message("Users retrieved successfully")
-                .user(java.util.Collections.emptyList())
+                .users(emptyList())
                 .build());
     }
 

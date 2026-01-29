@@ -47,7 +47,7 @@ class ExternalUserPollingServiceTest {
         when(entraLastSyncMetadataRepository.getSyncMetadata()).thenReturn(Optional.empty());
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
-                .user(Collections.emptyList())
+                .users(Collections.emptyList())
                 .build();
         TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
         when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
@@ -70,15 +70,15 @@ class ExternalUserPollingServiceTest {
         
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
-                .user(Collections.emptyList())
+                .users(Collections.emptyList())
                 .build();
         TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
         when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
 
         externalUserPollingService.updateSyncMetadata();
 
-        verify(entraLastSyncMetadataRepository).updateSyncMetadata(any(LocalDateTime.class), any(LocalDateTime.class));
-        verify(entraLastSyncMetadataRepository, never()).save(any(EntraLastSyncMetadata.class));
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+        verify(entraLastSyncMetadataRepository, never()).updateSyncMetadata(any(LocalDateTime.class), any(LocalDateTime.class));
         verify(techServicesClient).getUsers(anyString(), anyString());
     }
 
@@ -94,7 +94,7 @@ class ExternalUserPollingServiceTest {
         
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
-                .user(Collections.emptyList())
+                .users(Collections.emptyList())
                 .build();
         TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
         when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
@@ -102,7 +102,7 @@ class ExternalUserPollingServiceTest {
         externalUserPollingService.updateSyncMetadata();
 
         verify(techServicesClient).getUsers(anyString(), anyString());
-        verify(entraLastSyncMetadataRepository).updateSyncMetadata(any(LocalDateTime.class), any(LocalDateTime.class));
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
 
     @Test
@@ -117,7 +117,7 @@ class ExternalUserPollingServiceTest {
         
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
-                .user(Collections.emptyList())
+                .users(Collections.emptyList())
                 .build();
         TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
         when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
@@ -125,7 +125,7 @@ class ExternalUserPollingServiceTest {
         externalUserPollingService.updateSyncMetadata();
 
         verify(techServicesClient).getUsers(anyString(), anyString());
-        verify(entraLastSyncMetadataRepository).updateSyncMetadata(any(LocalDateTime.class), any(LocalDateTime.class));
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
 
     @Test
@@ -145,7 +145,7 @@ class ExternalUserPollingServiceTest {
         
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
-                .user(List.of(user1, user2))
+                .users(List.of(user1, user2))
                 .build();
         TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
         when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
@@ -201,7 +201,7 @@ class ExternalUserPollingServiceTest {
         
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
-                .user(null)
+                .users(null)
                 .build();
         TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
         when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
@@ -218,7 +218,7 @@ class ExternalUserPollingServiceTest {
         
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
-                .user(Collections.emptyList())
+                .users(Collections.emptyList())
                 .build();
         TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
         when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);

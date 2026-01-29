@@ -16,11 +16,14 @@ import java.util.List;
 @AllArgsConstructor
 public class GetUsersResponse implements Serializable {
     
+    @JsonProperty("success")
+    private boolean success;
+    
     @JsonProperty("message")
     private String message;
     
-    @JsonProperty("user")
-    private List<TechServicesUser> user;
+    @JsonProperty("users")
+    private List<TechServicesUser> users;
     
     @Data
     @NoArgsConstructor

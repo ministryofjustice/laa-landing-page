@@ -98,8 +98,8 @@ public class DoNothingTestServiceClientTest {
         Assertions.assertThat(response.getError()).isNull();
         Assertions.assertThat(response.getData()).isNotNull();
         Assertions.assertThat(response.getData().getMessage()).isEqualTo("Users retrieved successfully");
-        Assertions.assertThat(response.getData().getUser()).isNotNull();
-        Assertions.assertThat(response.getData().getUser()).isEmpty();
+        Assertions.assertThat(response.getData().getUsers()).isNotNull();
+        Assertions.assertThat(response.getData().getUsers()).isEmpty();
         assertLogMessage("Get users request received on Dummy Tech Services Client");
     }
 

@@ -45,50 +45,56 @@ public class ExternalUserPollingService {
             if (existingMetadata.isPresent() && existingMetadata.get().getLastSuccessfulTo() != null) {
                 fromTime = existingMetadata.get().getLastSuccessfulTo().minusMinutes(bufferMinutes);
             } else {
-                fromTime = toTime.minusHours(1);
+                fromTime = toTime.minusMonths(1);
             }
 
-            // Cap the time gap to maximum 1 hour if difference is more than 60 minutes
+            // Cap the time gap to 30 minutes
             long minutesBetween = ChronoUnit.MINUTES.between(fromTime, toTime);
-            if (minutesBetween > 60) {
-                fromTime = toTime.minus(1, ChronoUnit.HOURS);
+            if (minutesBetween > 30) {
+                toTime = fromTime.plusMinutes(25);
             }
 
-            String fromDateTime = fromTime + "Z";
-            String toDateTime = toTime + "Z";
-            
+            String fromDateTime = fromTime.truncatedTo(ChronoUnit.SECONDS) + ".00Z";
+            String toDateTime = toTime.truncatedTo(ChronoUnit.SECONDS) + ".00Z";
+
             log.debug("Calling Tech Services API to get users from {} to {} (gap: {} minutes)", 
                      fromDateTime, toDateTime, ChronoUnit.MINUTES.between(fromTime, toTime));
             TechServicesApiResponse<GetUsersResponse> response = techServicesClient.getUsers(fromDateTime, toDateTime);
             
             if (response.isSuccess()) {
                 GetUsersResponse usersResponse = response.getData();
-                int userCount = usersResponse.getUser() != null ? usersResponse.getUser().size() : 0;
+                int userCount = usersResponse.getUsers() != null ? usersResponse.getUsers().size() : 0;
                 log.info("Successfully retrieved {} users from Tech Services", userCount);
-
-                LocalDateTime syncCompletedTime = LocalDateTime.now();
-
-                if (existingMetadata.isPresent()) {
-                    entraLastSyncMetadataRepository.updateSyncMetadata(syncCompletedTime, toTime);
-                    log.info("Successfully updated EntraLastSyncMetadata: updatedAt={}, lastSuccessfulTo={}", syncCompletedTime, toTime);
-                } else {
-                    // Create new record if it doesn't exist
-                    EntraLastSyncMetadata newMetadata = EntraLastSyncMetadata.builder()
-                            .id(ENTRA_USER_SYNC_ID)
-                            .updatedAt(toTime)
-                            .lastSuccessfulTo(toTime)
-                            .build();
-                    
-                    entraLastSyncMetadataRepository.save(newMetadata);
-                    log.info("Created new EntraLastSyncMetadata record: updatedAt={}, lastSuccessfulTo={}", syncCompletedTime, toTime);
-                }
+                updateSyncMetadataOnSuccess(existingMetadata, toTime, "Successfully saved EntraLastSyncMetadata: updatedAt={}, lastSuccessfulTo={}");
             } else {
-                log.warn("Failed to retrieve users from Tech Services: {}", response.getError().getMessage());
-                throw new RuntimeException("Tech Services API call failed: " + response.getError().getMessage());
+                String errorMessage = response.getError().getMessage();
+                if ("Users not found.".equals(errorMessage)) {
+                    log.info("No users updated in the specified time range");
+                    updateSyncMetadataOnSuccess(existingMetadata, toTime, "Successfully saved EntraLastSyncMetadata after 'Users not found to update' response: updatedAt={}, lastSuccessfulTo={}");
+                } else {
+                    log.warn("Failed to retrieve users from Tech Services: {}", errorMessage);
+                    throw new RuntimeException("Tech Services API call failed: " + errorMessage);
+                }
             }
         } catch (Exception e) {
             log.error("Error during sync process", e);
             throw e;
         }
+    }
+
+    private void updateSyncMetadataOnSuccess(Optional<EntraLastSyncMetadata> existingMetadata, LocalDateTime toTime, String logMessage) {
+        LocalDateTime syncCompletedTime = LocalDateTime.now();
+        
+        EntraLastSyncMetadata metadata = existingMetadata.orElseGet(() -> 
+            EntraLastSyncMetadata.builder()
+                    .id(ENTRA_USER_SYNC_ID)
+                    .build()
+        );
+        
+        metadata.setUpdatedAt(syncCompletedTime);
+        metadata.setLastSuccessfulTo(toTime);
+        
+        entraLastSyncMetadataRepository.save(metadata);
+        log.info(logMessage, syncCompletedTime, toTime);
     }
 }

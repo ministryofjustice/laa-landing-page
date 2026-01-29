@@ -804,44 +804,15 @@ public class LiveTechServicesClientTest {
 
     @Test
     void testGetUsers_Success() {
-        AccessToken token = new AccessToken("token", null);
-        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
         when(restClient.get()).thenReturn(requestHeadersUriSpec);
         when(requestHeadersUriSpec.uri(anyString())).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
         
-        String responseJson = """
-                {
-                    "message": "Users retrieved successfully",
-                    "user": [
-                        {
-                            "id": "user1",
-                            "displayName": "John Doe",
-                            "mail": "john@example.com",
-                            "alias": ["john.doe"],
-                            "email": "john@example.com",
-                            "lastSignIn": "2024-01-15T10:30:00Z",
-                            "isMailOnly": false,
-                            "deleted": false
-                        },
-                        {
-                            "id": "user2",
-                            "displayName": "Jane Smith",
-                            "mail": "jane@example.com",
-                            "alias": ["jane.smith"],
-                            "email": "jane@example.com",
-                            "lastSignIn": "2024-01-14T09:15:00Z",
-                            "isMailOnly": false,
-                            "deleted": false
-                        }
-                    ]
-                }""";
-        
         when(responseSpec.toEntity(GetUsersResponse.class))
                 .thenReturn(ResponseEntity.ok(GetUsersResponse.builder()
                         .message("Users retrieved successfully")
-                        .user(List.of(
+                        .users(List.of(
                                 GetUsersResponse.TechServicesUser.builder()
                                         .id("user1")
                                         .displayName("John Doe")
@@ -854,16 +825,15 @@ public class LiveTechServicesClientTest {
                                         .build()
                         ))
                         .build()));
-        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         TechServicesApiResponse<GetUsersResponse> response = liveTechServicesClient.getUsers("2024-01-01T00:00:00Z", "2024-01-15T23:59:59Z");
 
         assertThat(response).isNotNull();
         assertThat(response.isSuccess()).isTrue();
         assertThat(response.getData()).isNotNull();
-        assertThat(response.getData().getUser()).hasSize(2);
-        assertThat(response.getData().getUser().get(0).getId()).isEqualTo("user1");
-        assertThat(response.getData().getUser().get(1).getId()).isEqualTo("user2");
+        assertThat(response.getData().getUsers()).hasSize(2);
+        assertThat(response.getData().getUsers().get(0).getId()).isEqualTo("user1");
+        assertThat(response.getData().getUsers().get(1).getId()).isEqualTo("user2");
 
         assertLogMessage(Level.INFO, "Successfully retrieved users from Tech Services");
         verify(restClient, times(1)).get();
@@ -871,8 +841,6 @@ public class LiveTechServicesClientTest {
 
     @Test
     void testGetUsers_EmptyResponse() {
-        AccessToken token = new AccessToken("token", null);
-        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
         when(restClient.get()).thenReturn(requestHeadersUriSpec);
         when(requestHeadersUriSpec.uri(anyString())).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
@@ -881,16 +849,15 @@ public class LiveTechServicesClientTest {
         when(responseSpec.toEntity(GetUsersResponse.class))
                 .thenReturn(ResponseEntity.ok(GetUsersResponse.builder()
                         .message("No users found")
-                        .user(Collections.emptyList())
+                        .users(Collections.emptyList())
                         .build()));
-        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         TechServicesApiResponse<GetUsersResponse> response = liveTechServicesClient.getUsers("2024-01-01T00:00:00Z", "2024-01-15T23:59:59Z");
 
         assertThat(response).isNotNull();
         assertThat(response.isSuccess()).isTrue();
         assertThat(response.getData()).isNotNull();
-        assertThat(response.getData().getUser()).isEmpty();
+        assertThat(response.getData().getUsers()).isEmpty();
 
         assertLogMessage(Level.INFO, "Successfully retrieved users from Tech Services");
         verify(restClient, times(1)).get();
@@ -898,8 +865,6 @@ public class LiveTechServicesClientTest {
 
     @Test
     void testGetUsers_4xxError() {
-        AccessToken token = new AccessToken("token", null);
-        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
         when(restClient.get()).thenReturn(requestHeadersUriSpec);
         when(requestHeadersUriSpec.uri(anyString())).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
@@ -914,7 +879,6 @@ public class LiveTechServicesClientTest {
         HttpClientErrorException exception = HttpClientErrorException.create(HttpStatus.BAD_REQUEST,
                 "Bad Request", null, errorBody.getBytes(), null);
         when(responseSpec.toEntity(GetUsersResponse.class)).thenThrow(exception);
-        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         TechServicesApiResponse<GetUsersResponse> response = liveTechServicesClient.getUsers("invalid-date", "invalid-date");
 
@@ -930,8 +894,6 @@ public class LiveTechServicesClientTest {
 
     @Test
     void testGetUsers_5xxError() {
-        AccessToken token = new AccessToken("token", null);
-        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
         when(restClient.get()).thenReturn(requestHeadersUriSpec);
         when(requestHeadersUriSpec.uri(anyString())).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
@@ -946,7 +908,6 @@ public class LiveTechServicesClientTest {
         HttpClientErrorException exception = HttpClientErrorException.create(HttpStatus.INTERNAL_SERVER_ERROR,
                 "Internal Server Error", null, errorBody.getBytes(), null);
         when(responseSpec.toEntity(GetUsersResponse.class)).thenThrow(exception);
-        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         TechServicesApiResponse<GetUsersResponse> response = liveTechServicesClient.getUsers("2024-01-01T00:00:00Z", "2024-01-15T23:59:59Z");
 
@@ -962,16 +923,13 @@ public class LiveTechServicesClientTest {
 
     @Test
     void testGetUsers_UnexpectedError() {
-        AccessToken token = new AccessToken("token", null);
-        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
         when(restClient.get()).thenThrow(new RuntimeException("Network timeout"));
-        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
 
         RuntimeException ex = assertThrows(RuntimeException.class, 
                 () -> liveTechServicesClient.getUsers("2024-01-01T00:00:00Z", "2024-01-15T23:59:59Z"));
 
         assertThat(ex.getMessage()).contains("Unexpected error while getting users from Tech Services");
-        assertLogMessage(Level.WARN, "Unexpected error while getting users");
+        assertLogMessage(Level.ERROR, "Unexpected error while getting users from Tech Services. Response body: Unknown");
     }
 
     private void assertLogMessage(ch.qos.logback.classic.Level logLevel, String message) {
@@ -979,7 +937,7 @@ public class LiveTechServicesClientTest {
                         .anyMatch(logEvent -> logEvent.getLevel() == logLevel
                                 && logEvent.getFormattedMessage().contains(message)),
                 String.format("Log message not found with level %s and message %s. Actual Logs are: %s", logLevel, message,
-                        logAppender.list.stream().map(e -> String.format("[%s] %s", logLevel, e.getFormattedMessage()))
+                        logAppender.list.stream().map(e -> String.format("[%s] %s", e.getLevel(), e.getFormattedMessage()))
                                 .toList()));
     }
 

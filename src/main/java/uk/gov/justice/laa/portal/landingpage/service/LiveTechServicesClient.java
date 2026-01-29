@@ -391,14 +391,14 @@ public class LiveTechServicesClient implements TechServicesClient {
                         errorResponse.getMessage(), errorResponse.getCode(), httpEx);
                 throw httpEx;
             } catch (Exception ex) {
-                String responseBody = response != null ? response.getBody().toString() : "Unknown";
+                String responseBody = response != null && response.getBody() != null ? response.getBody().toString() : "Unknown";
                 logger.warn("Error while getting users from Tech Services. The response body is {}",
                         responseBody, ex);
                 throw new RuntimeException("Error while getting users from Tech Services.", ex);
             }
         } catch (Exception ex) {
-            String responseBody = response != null ? response.getBody().toString() : "Unknown";
-            logger.warn("Unexpected error while getting users from Tech Services. The response is {}",
+            String responseBody = response != null && response.getBody() != null ? response.getBody().toString() : "Unknown";
+            logger.error("Unexpected error while getting users from Tech Services. Response body: {}", 
                     responseBody, ex);
             throw new RuntimeException("Unexpected error while getting users from Tech Services.", ex);
         }
