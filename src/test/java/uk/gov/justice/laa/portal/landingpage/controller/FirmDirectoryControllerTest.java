@@ -25,7 +25,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class FirmDirectoryControllerTest {
 
-    public static final String SEARCH_PAGE = "/firm-directory/search-page";
+    public static final String SEARCH_PAGE = "firm-directory/search-page";
 
     @Mock
     private FirmService firmService;
