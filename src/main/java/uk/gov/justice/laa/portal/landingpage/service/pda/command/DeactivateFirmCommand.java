@@ -66,6 +66,13 @@ public class DeactivateFirmCommand implements PdaSyncCommand {
                 }
             }
 
+            // Clear parent firm reference to avoid TransientObjectException
+            // This can happen when the parent firm hasn't been persisted yet
+            if (firm.getParentFirm() != null) {
+                log.debug("Clearing parent firm reference for firm {} before deletion", firm.getCode());
+                firm.setParentFirm(null);
+            }
+
             // Now delete the firm
             firmRepository.delete(firm);
             result.setFirmsDeleted(result.getFirmsDeleted() + 1);
