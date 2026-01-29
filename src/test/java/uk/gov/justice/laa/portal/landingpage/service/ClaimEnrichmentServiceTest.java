@@ -23,6 +23,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.ClaimEnrichmentException;
+import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
@@ -334,11 +335,11 @@ class ClaimEnrichmentServiceTest {
         when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.empty());
 
         // Act & Assert
-        ClaimEnrichmentException exception = assertThrows(
-            ClaimEnrichmentException.class,
-            () -> claimEnrichmentService.enrichClaim(request)
+        UserNotFoundException exception = assertThrows(
+                UserNotFoundException.class,
+                () -> claimEnrichmentService.enrichClaim(request)
         );
-        assertEquals("User not found in database", exception.getMessage());
+        assertEquals("User not found for the given entra id: entra-123", exception.getMessage());
         verify(officeRepository, never()).findOfficeByFirm_IdIn(any());
     }
 
