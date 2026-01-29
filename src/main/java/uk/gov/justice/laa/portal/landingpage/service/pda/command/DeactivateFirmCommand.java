@@ -71,6 +71,8 @@ public class DeactivateFirmCommand implements PdaSyncCommand {
             if (firm.getParentFirm() != null) {
                 log.debug("Clearing parent firm reference for firm {} before deletion", firm.getCode());
                 firm.setParentFirm(null);
+                // Save the firm with cleared parent reference before deleting
+                firmRepository.save(firm);
             }
 
             // Now delete the firm
