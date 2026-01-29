@@ -38,6 +38,7 @@ class ExternalUserPollingTest {
         externalUserPolling = new ExternalUserPolling(externalUserPollingService, lockService);
         ReflectionTestUtils.setField(externalUserPolling, "enableDistributedDbLocking", true);
         ReflectionTestUtils.setField(externalUserPolling, "distributedDbLockingPeriod", 5);
+        ReflectionTestUtils.setField(externalUserPolling, "pollingEnabled", true);
     }
 
     @Test
@@ -75,6 +76,7 @@ class ExternalUserPollingTest {
         ExternalUserPolling anotherInstance = new ExternalUserPolling(externalUserPollingService, lockService);
         ReflectionTestUtils.setField(anotherInstance, "enableDistributedDbLocking", true);
         ReflectionTestUtils.setField(anotherInstance, "distributedDbLockingPeriod", 5);
+        ReflectionTestUtils.setField(anotherInstance, "pollingEnabled", true);
 
         externalUserPolling.poll();
 
