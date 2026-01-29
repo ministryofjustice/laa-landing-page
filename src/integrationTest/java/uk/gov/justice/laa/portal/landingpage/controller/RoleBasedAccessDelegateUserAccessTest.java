@@ -15,7 +15,6 @@ import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmUserForm;
 
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -47,48 +46,6 @@ public class RoleBasedAccessDelegateUserAccessTest extends RoleBasedAccessIntegr
                 .findFirst()
                 .orElseThrow();
         userProfileRepository.delete(newlyCreatedUserProfile);
-    }
-
-    @Test
-    @Transactional
-    public void testFirmUserManagerCanDelegateFirmAccessToInternalUser() throws Exception {
-
-        // Set up Firm User Manager internal DELEGATE_EXTERNAL_USER_ACCESS
-        List<AppRole> allAppRoles = appRoleRepository.findAllWithPermissions();
-        EntraUser user = buildEntraUser(UUID.randomUUID().toString(), "delegateemail@delegateemail.com", "Internal with delegate", "FirmOneUserManager");
-        UserProfile profileNew = buildLaaUserProfile(user, UserType.INTERNAL, true);
-        AppRole firmUserManagerRoleInternal = allAppRoles.stream()
-                .filter(AppRole::isAuthzRole)
-                .filter(role -> role.getName().equals("Firm User Manager"))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Could not find app role"));
-        firmUserManagerRoleInternal.setPermissions(Set.of(Permission.DELEGATE_EXTERNAL_USER_ACCESS));
-        profileNew.setAppRoles(Set.of(firmUserManagerRoleInternal));
-
-        user.setUserProfiles(Set.of(profileNew));
-        profileNew.setEntraUser(user);
-
-        EntraUser editorUser = entraUserRepository.saveAndFlush(user);
-        EntraUser editedUser = multiFirmUsers.getFirst();
-        //act
-        MvcResult result = delegateFirmAccessInternalUser(editorUser, editedUser);
-        assertThat(result.getResponse()).isNotNull();
-        assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/admin/multi-firm/user/add/profile/confirmation");
-
-        // Teardown
-        List<UserProfile> optionalCreatedUserProfiles = userProfileRepository.findAll().stream()
-                .filter(profile -> profile.getEntraUser().getEmail().equalsIgnoreCase(editedUser.getEmail()))
-                .toList();
-        assertThat(optionalCreatedUserProfiles).isNotEmpty();
-        assertThat(optionalCreatedUserProfiles).hasSize(2);
-
-        // reset
-        UserProfile newlyCreatedUserProfile = entraUserRepository.findById(editedUser.getId()).get().getUserProfiles().stream()
-                .filter(userProfile -> userProfile.getFirm().getId().equals(testFirm2.getId()))
-                .findFirst()
-                .orElseThrow();
-        userProfileRepository.delete(newlyCreatedUserProfile);
-        entraUserRepository.delete(editorUser);
     }
 
     @Test
@@ -287,7 +244,7 @@ public class RoleBasedAccessDelegateUserAccessTest extends RoleBasedAccessIntegr
 
         // Build test role
         AppRole testInternalAppRole = buildLaaAppRole(testExternalApp, "Test Internal App Role");
-        testInternalAppRole.setPermissions(Set.of(Permission.DELEGATE_EXTERNAL_USER_ACCESS));
+        testInternalAppRole.setPermissions(Set.of(Permission.DELEGATE_EXTERNAL_USER_ACCESS_INTERNAL));
         testInternalAppRole.setUserTypeRestriction(new UserType[]{UserType.INTERNAL});
 
         // Persist app and role.

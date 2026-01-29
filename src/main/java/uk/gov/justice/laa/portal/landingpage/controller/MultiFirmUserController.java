@@ -78,7 +78,8 @@ import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 @Controller
 @RequiredArgsConstructor
 @RequestMapping("/admin/multi-firm")
-@PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).DELEGATE_EXTERNAL_USER_ACCESS)")
+@PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).DELEGATE_EXTERNAL_USER_ACCESS,"
+        + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).DELEGATE_EXTERNAL_USER_ACCESS_INTERNAL)")
 public class MultiFirmUserController {
 
     private final UserService userService;
@@ -99,6 +100,7 @@ public class MultiFirmUserController {
 
 
     @GetMapping("/user/add/profile/select/internalUserFirm")
+    @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).DELEGATE_EXTERNAL_USER_ACCESS_INTERNAL)")
     public String selectAdminUserFirmGet(FirmSearchForm firmSearchForm, HttpSession session, Model model,
                                 @RequestParam(value = "firmSearchResultCount", defaultValue = "10") Integer count) {
 
@@ -124,6 +126,7 @@ public class MultiFirmUserController {
     }
 
     @PostMapping("/user/add/profile/select/internalUserFirm")
+    @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).DELEGATE_EXTERNAL_USER_ACCESS_INTERNAL)")
     public String selectAdminUserFirmPost(@Valid FirmSearchForm firmSearchForm, BindingResult result,
                                  HttpSession session, Model model) {
         Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
