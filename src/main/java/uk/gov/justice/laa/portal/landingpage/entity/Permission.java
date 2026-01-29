@@ -16,9 +16,13 @@ public enum Permission {
     VIEW_USER_OFFICE,
     EDIT_USER_DETAILS,
     DELEGATE_EXTERNAL_USER_ACCESS,
+    DELEGATE_EXTERNAL_USER_ACCESS_INTERNAL,
     DELETE_EXTERNAL_USER,
     DELETE_AUDIT_USER,
     VIEW_AUDIT_TABLE,
+    DISABLE_EXTERNAL_USER,
+    ENABLE_EXTERNAL_USER,
+    EXPORT_AUDIT_DATA,
     VIEW_FIRM_DIRECTORY,
     TRIGGER_CCMS_ROLE_SYNC;
 
@@ -36,6 +40,9 @@ public enum Permission {
             DELETE_EXTERNAL_USER.name(),
             DELETE_AUDIT_USER.name(),
             VIEW_ALL_USER_MULTI_FIRM_PROFILES.name(),
+            DISABLE_EXTERNAL_USER.name(),
+            ENABLE_EXTERNAL_USER.name(),
+            EXPORT_AUDIT_DATA.name(),
             VIEW_AUDIT_TABLE.name()
     };
 }
