@@ -343,8 +343,8 @@ public class LiveTechServicesClient implements TechServicesClient {
             logger.info("Calling Tech Services GET users endpoint for business unit: {} with date range: {} to {}",
                        laaBusinessUnit, fromDateTime, toDateTime);
             
-            String uri = String.format(TECH_SERVICES_GET_USERS_ENDPOINT, "", laaBusinessUnit) +
-                        "?fromDateTime=" + fromDateTime + "&toDateTime=" + toDateTime;
+            String uri = String.format(TECH_SERVICES_GET_USERS_ENDPOINT, "", laaBusinessUnit)
+                    + "?fromDateTime=" + fromDateTime + "&toDateTime=" + toDateTime;
             
             response = restClient.get()
                     .uri(uri)
