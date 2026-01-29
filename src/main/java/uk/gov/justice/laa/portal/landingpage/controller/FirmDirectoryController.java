@@ -27,7 +27,7 @@ import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 public class FirmDirectoryController {
 
     private final FirmService firmService;
-    public static final String SEARCH_PAGE = "/firm-directory/search-page";
+    public static final String SEARCH_PAGE = "firm-directory/search-page";
 
     @GetMapping()
     public String displayAllFirmDirectory(@ModelAttribute FirmDirectorySearchCriteria criteria,
