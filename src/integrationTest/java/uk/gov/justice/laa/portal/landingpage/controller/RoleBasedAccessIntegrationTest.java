@@ -310,12 +310,12 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         profile.setEntraUser(user);
         multiFirmUsers.add(entraUserRepository.saveAndFlush(user));
 
-        // Set up Information & Assurance User
+        // Set up Security Response User
         user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "Internal", "InformationAndAssuranceUser");
         profile = buildLaaUserProfile(user, UserType.INTERNAL, true);
         AppRole informationAndAssuranceRole = allAppRoles.stream()
                 .filter(AppRole::isAuthzRole)
-                .filter(role -> role.getName().equals("Information & Assurance"))
+                .filter(role -> role.getName().equals("Security Response"))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Could not find app role"));
         profile.setAppRoles(Set.of(informationAndAssuranceRole));
