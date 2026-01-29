@@ -51,7 +51,7 @@ public class ExternalUserPollingService {
             // Cap the time gap to 30 minutes
             long minutesBetween = ChronoUnit.MINUTES.between(fromTime, toTime);
             if (minutesBetween > 30) {
-                toTime = fromTime.plusMinutes(25);
+                toTime = fromTime.plusMinutes(30);
             }
 
             String fromDateTime = fromTime.truncatedTo(ChronoUnit.SECONDS) + ".00Z";
