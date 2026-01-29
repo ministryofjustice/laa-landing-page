@@ -22,6 +22,7 @@ import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.techservices.GetUsersResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailRequest;
@@ -48,6 +49,7 @@ public class LiveTechServicesClient implements TechServicesClient {
     private static final String TECH_SERVICES_UPDATE_USER_GRP_ENDPOINT = "%s/users/%s";
     private static final String TECH_SERVICES_REGISTER_USER_ENDPOINT = "%s/users";
     private static final String TECH_SERVICES_RESEND_VERIFICATION_EMAIL_ENDPOINT = "%s/users/%s/verify";
+    private static final String TECH_SERVICES_GET_USERS_ENDPOINT = "%s/%s/users";
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final ClientSecretCredential clientSecretCredential;
     private final RestClient restClient;
@@ -332,5 +334,68 @@ public class LiveTechServicesClient implements TechServicesClient {
         return accessToken;
     }
 
+    @Override
+    public TechServicesApiResponse<GetUsersResponse> getUsers(String fromDateTime, String toDateTime) {
+        String accessToken = getAccessToken();
+        ResponseEntity<GetUsersResponse> response = null;
+        
+        try {
+            logger.info("Calling Tech Services GET users endpoint for business unit: {} with date range: {} to {}",
+                       laaBusinessUnit, fromDateTime, toDateTime);
+            
+            String uri = String.format(TECH_SERVICES_GET_USERS_ENDPOINT, "", laaBusinessUnit) +
+                        "?fromDateTime=" + fromDateTime + "&toDateTime=" + toDateTime;
+            
+            response = restClient.get()
+                    .uri(uri)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                    .retrieve()
+                    .toEntity(GetUsersResponse.class);
+
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                logger.info("Successfully retrieved users from Tech Services for business unit: {}", laaBusinessUnit);
+                return TechServicesApiResponse.success(response.getBody());
+            } else {
+                logger.warn("Unexpected response from Tech Services GET users endpoint: status={}, body={}", 
+                           response.getStatusCode(), response.getBody());
+                return TechServicesApiResponse.error(TechServicesErrorResponse.builder()
+                        .success(false)
+                        .code("UNEXPECTED_RESPONSE")
+                        .message("Unexpected response from Tech Services")
+                        .build());
+            }
+
+        } catch (HttpClientErrorException | HttpServerErrorException httpEx) {
+            String errorJson = httpEx.getResponseBodyAsString();
+            logger.info("The get users error response from TS: {}", errorJson);
+            try {
+                TechServicesErrorResponse errorResponse = objectMapper.readValue(errorJson, TechServicesErrorResponse.class);
+                if (httpEx.getStatusCode().is4xxClientError()) {
+                    logger.info("Error while getting users from Tech Services, the root cause is {} ({})",
+                            errorResponse.getMessage(), errorResponse.getCode());
+                    return TechServicesApiResponse.error(errorResponse);
+                }
+                if (httpEx.getStatusCode().is5xxServerError()) {
+                    logger.warn("Error while getting users from Tech Services, the root cause is {} ({})",
+                            errorResponse.getMessage(), errorResponse.getCode());
+                    return TechServicesApiResponse.error(errorResponse);
+                }
+                logger.warn("Error while getting users from Tech Services, the root cause is {} ({})",
+                        errorResponse.getMessage(), errorResponse.getCode(), httpEx);
+                throw httpEx;
+            } catch (Exception ex) {
+                String responseBody = response != null ? response.getBody().toString() : "Unknown";
+                logger.warn("Error while getting users from Tech Services. The response body is {}",
+                        responseBody, ex);
+                throw new RuntimeException("Error while getting users from Tech Services.", ex);
+            }
+        } catch (Exception ex) {
+            String responseBody = response != null ? response.getBody().toString() : "Unknown";
+            logger.warn("Unexpected error while getting users from Tech Services. The response is {}",
+                    responseBody, ex);
+            throw new RuntimeException("Unexpected error while getting users from Tech Services.", ex);
+        }
+    }
 
 }
