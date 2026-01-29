@@ -3,6 +3,8 @@ package uk.gov.justice.laa.portal.landingpage.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.ForeignKey;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -25,21 +27,26 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @SuperBuilder
-@Table(name = "disable_user_audit")
+@Table(name = "user_account_status_audit")
 @ToString(doNotUseGetters = true)
 @NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
-public class DisableUserAudit extends BaseEntity {
+public class UserAccountStatusAudit extends BaseEntity {
 
-    @Column(name = "disabled_date", nullable = false)
+    @Column(name = "status_changed_date", nullable = false)
     @CreatedDate
-    @NotNull(message = "Disabled date must be provided")
+    @NotNull(message = "Status changed date must be provided")
     private LocalDateTime disabledDate;
 
-    @Column(name = "disabled_by", nullable = false, length = 255)
-    @NotBlank(message = "Disabled by must be provided")
+    @Column(name = "status_changed_by", nullable = false, length = 255)
+    @NotBlank(message = "Status changed by must be provided")
     @Size(min = 1, max = 255, message = "Disabled by must be between 1 and 255 characters")
     @CreatedBy
     private String disabledBy;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status_change", nullable = false, length = 255)
+    @NotNull(message = "Status change must be provided")
+    private UserAccountStatus statusChange;
 
     @ManyToOne
     @JoinColumn(name = "entra_user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_disable_user_audit_entra_user_id"))
@@ -48,7 +55,7 @@ public class DisableUserAudit extends BaseEntity {
     private EntraUser entraUser;
 
     @ManyToOne
-    @JoinColumn(name = "disable_user_reason_id", nullable = false, foreignKey = @ForeignKey(name = "fk_disable_user_audit_disable_user_reason_id"))
+    @JoinColumn(name = "disable_user_reason_id", nullable = true, foreignKey = @ForeignKey(name = "fk_disable_user_audit_disable_user_reason_id"))
     @ToString.Exclude
     @JsonIgnore
     private DisableUserReason disableUserReason;

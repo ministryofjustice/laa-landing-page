@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.entity;
 import java.time.LocalDateTime;
 import java.util.Set;
 
+import lombok.Builder;
 import org.hibernate.annotations.ColumnDefault;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -84,9 +85,10 @@ public class EntraUser extends AuditableEntity {
     @Column(name = "last_login_date")
     private LocalDateTime lastLoginDate;
 
-    @Column(name = "disabled", nullable = false)
-    @ColumnDefault("false")
-    private boolean disabled;
+    @Column(name = "enabled", nullable = false)
+    @ColumnDefault("true")
+    @Builder.Default
+    private boolean enabled = true;
 
     @OneToMany(mappedBy = "entraUser", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @ToString.Exclude

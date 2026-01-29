@@ -6,7 +6,12 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultMatcher;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
 import uk.gov.justice.laa.portal.landingpage.repository.DisableUserReasonRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -19,6 +24,9 @@ public class RoleBaseAccessDisableUserTest extends RoleBasedAccessIntegrationTes
     @Autowired
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     private DisableUserReasonRepository disableUserReasonRepository;
+    @Autowired
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    private UserAccountStatusAuditRepository userAccountStatusAuditRepository;
 
     @Test
     public void testGlobalAdminCanAccessDisableUserReasonPage() throws Exception {
@@ -94,109 +102,130 @@ public class RoleBaseAccessDisableUserTest extends RoleBasedAccessIntegrationTes
     public void testGlobalAdminCanDisableUser() throws Exception {
         EntraUser loggedInUser = globalAdmins.getFirst();
         EntraUser accessedUser = externalUsersNoRoles.getFirst();
-        assertThat(accessedUser.isDisabled()).isFalse();
+        assertThat(accessedUser.isEnabled()).isTrue();
         sendDisableUserPost(loggedInUser, accessedUser, status().isOk());
         accessedUser = entraUserRepository.findById(accessedUser.getId()).orElseThrow();
-        assertThat(accessedUser.isDisabled()).isTrue();
+        assertThat(accessedUser.isEnabled()).isFalse();
+        List<UserAccountStatusAudit> statusChanges = userAccountStatusAuditRepository.findAll();
+        assertThat(statusChanges.size()).isEqualTo(1);
+        UserAccountStatusAudit statusChange = statusChanges.getFirst();
+        assertThat(statusChange.getEntraUser().getId()).isEqualTo(accessedUser.getId());
+        assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DISABLED);
+        assertThat(statusChange.getDisabledBy()).isEqualTo(loggedInUser.getFirstName() + " " + loggedInUser.getLastName());
         // Teardown
-        accessedUser.setDisabled(false);
+        accessedUser.setEnabled(true);
         entraUserRepository.saveAndFlush(accessedUser);
+        userAccountStatusAuditRepository.delete(statusChange);
     }
 
     @Test
     public void testExternalUserAdminCanDisableUser() throws Exception {
         EntraUser loggedInUser = externalUserAdmins.getFirst();
         EntraUser accessedUser = externalUsersNoRoles.getFirst();
-        assertThat(accessedUser.isDisabled()).isFalse();
+        assertThat(accessedUser.isEnabled()).isTrue();
         sendDisableUserPost(loggedInUser, accessedUser, status().isOk());
         accessedUser = entraUserRepository.findById(accessedUser.getId()).orElseThrow();
-        assertThat(accessedUser.isDisabled()).isTrue();
+        assertThat(accessedUser.isEnabled()).isFalse();
+        List<UserAccountStatusAudit> statusChanges = userAccountStatusAuditRepository.findAll();
+        assertThat(statusChanges.size()).isEqualTo(1);
+        UserAccountStatusAudit statusChange = statusChanges.getFirst();
+        assertThat(statusChange.getEntraUser().getId()).isEqualTo(accessedUser.getId());
+        assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DISABLED);
+        assertThat(statusChange.getDisabledBy()).isEqualTo(loggedInUser.getFirstName() + " " + loggedInUser.getLastName());
         // Teardown
-        accessedUser.setDisabled(false);
+        accessedUser.setEnabled(true);
         entraUserRepository.saveAndFlush(accessedUser);
+        userAccountStatusAuditRepository.delete(statusChange);
     }
 
     @Test
     public void testInformationAndAssuranceCanDisableUser() throws Exception {
         EntraUser loggedInUser = informationAndAssuranceUsers.getFirst();
         EntraUser accessedUser = externalUsersNoRoles.getFirst();
-        assertThat(accessedUser.isDisabled()).isFalse();
+        assertThat(accessedUser.isEnabled()).isTrue();
         sendDisableUserPost(loggedInUser, accessedUser, status().isOk());
         accessedUser = entraUserRepository.findById(accessedUser.getId()).orElseThrow();
-        assertThat(accessedUser.isDisabled()).isTrue();
+        assertThat(accessedUser.isEnabled()).isFalse();
+        List<UserAccountStatusAudit> statusChanges = userAccountStatusAuditRepository.findAll();
+        assertThat(statusChanges.size()).isEqualTo(1);
+        UserAccountStatusAudit statusChange = statusChanges.getFirst();
+        assertThat(statusChange.getEntraUser().getId()).isEqualTo(accessedUser.getId());
+        assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DISABLED);
+        assertThat(statusChange.getDisabledBy()).isEqualTo(loggedInUser.getFirstName() + " " + loggedInUser.getLastName());
         // Teardown
-        accessedUser.setDisabled(false);
+        accessedUser.setEnabled(true);
         entraUserRepository.saveAndFlush(accessedUser);
+        userAccountStatusAuditRepository.delete(statusChange);
     }
 
     @Test
     public void testInternalUserManagerCannotDisableUser() throws Exception {
         EntraUser loggedInUser = internalUserManagers.getFirst();
         EntraUser accessedUser = externalUsersNoRoles.getFirst();
-        assertThat(accessedUser.isDisabled()).isFalse();
+        assertThat(accessedUser.isEnabled()).isTrue();
         sendDisableUserPost(loggedInUser, accessedUser, status().is3xxRedirection());
         accessedUser = entraUserRepository.findById(accessedUser.getId()).orElseThrow();
-        assertThat(accessedUser.isDisabled()).isFalse();
+        assertThat(accessedUser.isEnabled()).isTrue();
     }
 
     @Test
     public void testExternalUserManagerCannotDisableUser() throws Exception {
         EntraUser loggedInUser = externalOnlyUserManagers.getFirst();
         EntraUser accessedUser = externalUsersNoRoles.getFirst();
-        assertThat(accessedUser.isDisabled()).isFalse();
+        assertThat(accessedUser.isEnabled()).isTrue();
         sendDisableUserPost(loggedInUser, accessedUser, status().is3xxRedirection());
         accessedUser = entraUserRepository.findById(accessedUser.getId()).orElseThrow();
-        assertThat(accessedUser.isDisabled()).isFalse();
+        assertThat(accessedUser.isEnabled()).isTrue();
     }
 
     @Test
     public void testFirmUserManagerCannotDisableUser() throws Exception {
         EntraUser loggedInUser = firmUserManagers.getFirst();
         EntraUser accessedUser = externalUsersNoRoles.getFirst();
-        assertThat(accessedUser.isDisabled()).isFalse();
+        assertThat(accessedUser.isEnabled()).isTrue();
         sendDisableUserPost(loggedInUser, accessedUser, status().is3xxRedirection());
         accessedUser = entraUserRepository.findById(accessedUser.getId()).orElseThrow();
-        assertThat(accessedUser.isDisabled()).isFalse();
+        assertThat(accessedUser.isEnabled()).isTrue();
     }
 
     @Test
     public void testInternalUserViewerCannotDisableUser() throws Exception {
         EntraUser loggedInUser = internalUserViewers.getFirst();
         EntraUser accessedUser = externalUsersNoRoles.getFirst();
-        assertThat(accessedUser.isDisabled()).isFalse();
+        assertThat(accessedUser.isEnabled()).isTrue();
         sendDisableUserPost(loggedInUser, accessedUser, status().is3xxRedirection());
         accessedUser = entraUserRepository.findById(accessedUser.getId()).orElseThrow();
-        assertThat(accessedUser.isDisabled()).isFalse();
+        assertThat(accessedUser.isEnabled()).isTrue();
     }
 
     @Test
     public void testExternalUserViewerCannotDisableUser() throws Exception {
         EntraUser loggedInUser = externalUserViewers.getFirst();
         EntraUser accessedUser = externalUsersNoRoles.getFirst();
-        assertThat(accessedUser.isDisabled()).isFalse();
+        assertThat(accessedUser.isEnabled()).isTrue();
         sendDisableUserPost(loggedInUser, accessedUser, status().is3xxRedirection());
         accessedUser = entraUserRepository.findById(accessedUser.getId()).orElseThrow();
-        assertThat(accessedUser.isDisabled()).isFalse();
+        assertThat(accessedUser.isEnabled()).isTrue();
     }
 
     @Test
     public void testInternalUserNoRolesCannotDisableUser() throws Exception {
         EntraUser loggedInUser = internalUsersNoRoles.getFirst();
         EntraUser accessedUser = externalUsersNoRoles.getFirst();
-        assertThat(accessedUser.isDisabled()).isFalse();
+        assertThat(accessedUser.isEnabled()).isTrue();
         sendDisableUserPost(loggedInUser, accessedUser, status().is4xxClientError());
         accessedUser = entraUserRepository.findById(accessedUser.getId()).orElseThrow();
-        assertThat(accessedUser.isDisabled()).isFalse();
+        assertThat(accessedUser.isEnabled()).isTrue();
     }
 
     @Test
     public void testExternalUserNoRolesCannotDisableUser() throws Exception {
         EntraUser loggedInUser = externalUsersNoRoles.getFirst();
         EntraUser accessedUser = externalUsersNoRoles.getFirst();
-        assertThat(accessedUser.isDisabled()).isFalse();
+        assertThat(accessedUser.isEnabled()).isTrue();
         sendDisableUserPost(loggedInUser, accessedUser, status().is4xxClientError());
         accessedUser = entraUserRepository.findById(accessedUser.getId()).orElseThrow();
-        assertThat(accessedUser.isDisabled()).isFalse();
+        assertThat(accessedUser.isEnabled()).isTrue();
     }
 
     public void requestDisableUserReasonPage(EntraUser loggedInUser, EntraUser accessedUser, ResultMatcher expectedResult) throws Exception {

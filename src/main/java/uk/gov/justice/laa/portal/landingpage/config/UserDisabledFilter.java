@@ -36,7 +36,7 @@ public class UserDisabledFilter extends OncePerRequestFilter {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(auth);
             if (currentUserDto != null) {
                 boolean disabled = userRepository
-                        .existsByEntraOidAndDisabledTrue(currentUserDto.getUserId().toString()); // optimized query
+                        .existsByEntraOidAndEnabledFalse(currentUserDto.getUserId().toString()); // optimized query
 
                 if (disabled) {
                     SecurityContextHolder.clearContext();

@@ -12,7 +12,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.DisableUserReasonDto;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
-import uk.gov.justice.laa.portal.landingpage.repository.DisableUserAuditRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.DisableUserReasonRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
@@ -37,7 +37,7 @@ public class UserAccountStatusServiceTest {
     @Mock
     private DisableUserReasonRepository disableUserReasonRepository;
     @Mock
-    private DisableUserAuditRepository disableUserAuditRepository;
+    private UserAccountStatusAuditRepository userAccountStatusAuditRepository;
     @Mock
     private EntraUserRepository entraUserRepository;
     @Mock
@@ -49,7 +49,7 @@ public class UserAccountStatusServiceTest {
     @BeforeEach
     public void setup() {
         ModelMapper mapper = new MapperConfig().modelMapper();
-        userAccountStatusService = new UserAccountStatusService(disableUserReasonRepository, disableUserAuditRepository, mapper, entraUserRepository, techServicesClient);
+        userAccountStatusService = new UserAccountStatusService(disableUserReasonRepository, userAccountStatusAuditRepository, mapper, entraUserRepository, techServicesClient);
     }
 
     @Test
@@ -101,9 +101,9 @@ public class UserAccountStatusServiceTest {
 
         userAccountStatusService.disableUser(disabledUser.getId(), disableUserReason.getId(), disabledByUser.getId());
 
-        assertThat(disabledUser.isDisabled()).isTrue();
+        assertThat(disabledUser.isEnabled()).isFalse();
         verify(entraUserRepository, times(1)).saveAndFlush(any());
-        verify(disableUserAuditRepository, times(1)).saveAndFlush(any());
+        verify(userAccountStatusAuditRepository, times(1)).saveAndFlush(any());
     }
 
     @Test
@@ -138,9 +138,9 @@ public class UserAccountStatusServiceTest {
         when(techServicesClient.disableUser(any(), any())).thenReturn(techServicesResponse);
 
         assertThrows(TechServicesClientException.class, () -> userAccountStatusService.disableUser(disabledUser.getId(), disableUserReason.getId(), disabledByUser.getId()));
-        assertThat(disabledUser.isDisabled()).isFalse();
+        assertThat(disabledUser.isEnabled()).isTrue();
         verify(entraUserRepository, times(0)).saveAndFlush(any());
-        verify(disableUserAuditRepository, times(0)).saveAndFlush(any());
+        verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
     }
 
     @Test
@@ -148,7 +148,7 @@ public class UserAccountStatusServiceTest {
         assertThrows(RuntimeException.class, () -> userAccountStatusService.disableUser(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()));
         verify(entraUserRepository, times(1)).findById(any());
         verify(entraUserRepository, times(0)).saveAndFlush(any());
-        verify(disableUserAuditRepository, times(0)).saveAndFlush(any());
+        verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
     }
 
     @Test
@@ -162,10 +162,10 @@ public class UserAccountStatusServiceTest {
         when(entraUserRepository.findById(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
 
         assertThrows(RuntimeException.class, () -> userAccountStatusService.disableUser(disabledUser.getId(), UUID.randomUUID(), UUID.randomUUID()));
-        assertThat(disabledUser.isDisabled()).isFalse();
+        assertThat(disabledUser.isEnabled()).isTrue();
         verify(entraUserRepository, times(2)).findById(any());
         verify(entraUserRepository, times(0)).saveAndFlush(any());
-        verify(disableUserAuditRepository, times(0)).saveAndFlush(any());
+        verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
     }
 
     @Test
@@ -185,10 +185,10 @@ public class UserAccountStatusServiceTest {
         when(entraUserRepository.findById(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
 
         assertThrows(RuntimeException.class, () -> userAccountStatusService.disableUser(disabledUser.getId(), UUID.randomUUID(), disabledByUser.getId()));
-        assertThat(disabledUser.isDisabled()).isFalse();
+        assertThat(disabledUser.isEnabled()).isTrue();
         verify(entraUserRepository, times(2)).findById(any());
         verify(disableUserReasonRepository, times(1)).findById(any());
         verify(entraUserRepository, times(0)).saveAndFlush(any());
-        verify(disableUserAuditRepository, times(0)).saveAndFlush(any());
+        verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
     }
 }
