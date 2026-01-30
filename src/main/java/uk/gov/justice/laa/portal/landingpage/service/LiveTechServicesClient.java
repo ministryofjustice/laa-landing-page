@@ -23,6 +23,8 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.exception.BadRequestException;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledRequest;
+import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailRequest;
@@ -310,6 +312,126 @@ public class LiveTechServicesClient implements TechServicesClient {
         } catch (Exception ex) {
             logger.error("Error while sending verification email request to Tech Services.", ex);
             throw new RuntimeException("Error while sending verification email request to Tech Services.", ex);
+        }
+    }
+
+    @Override
+    public TechServicesApiResponse<ChangeAccountEnabledResponse> disableUser(EntraUserDto user, String reason) {
+        try {
+            if (user == null || user.getEntraOid() == null) {
+                throw new RuntimeException("Invalid user details supplied.");
+            }
+
+            String accessToken = getAccessToken();
+
+            ChangeAccountEnabledRequest request = new ChangeAccountEnabledRequest(false, reason);
+
+            logger.info("Sending disable user request to tech services: {}", request);
+
+            String uri = String.format(TECH_SERVICES_UPDATE_USER_GRP_ENDPOINT, laaBusinessUnit, user.getEntraOid());
+
+            ResponseEntity<String> response = restClient
+                    .patch()
+                    .uri(uri)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .toEntity(String.class);
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                logger.info("Disable user request by Tech Services is successful for {} and response is {}",
+                        user.getFirstName() + " " + user.getLastName(), response);
+                ObjectMapper mapper = new ObjectMapper();
+                ChangeAccountEnabledResponse successResponse = mapper.readValue(response.getBody(), ChangeAccountEnabledResponse.class);
+                return TechServicesApiResponse.success(successResponse);
+            } else {
+                ObjectMapper mapper = new ObjectMapper();
+                TechServicesErrorResponse errorResponse = mapper.readValue(response.getBody(), TechServicesErrorResponse.class);
+                logger.error("Failed to disable user {}", user.getFirstName() + " " + user.getLastName());
+                return TechServicesApiResponse.error(errorResponse);
+            }
+
+        } catch (HttpClientErrorException | HttpServerErrorException httpEx) {
+            String errorJson = httpEx.getResponseBodyAsString();
+            ObjectMapper mapper = new ObjectMapper();
+            try {
+                TechServicesErrorResponse errorResponse = mapper.readValue(errorJson, TechServicesErrorResponse.class);
+                if (HttpStatus.TOO_EARLY.equals(httpEx.getStatusCode())) {
+                    logger.info("Failed to disable user {}, the root cause is {} ({}) ",
+                            user.getFirstName() + " " + user.getLastName(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
+                    return TechServicesApiResponse.error(errorResponse);
+                }
+                logger.error("Failed to disable user {}, the root cause is {} ({}) ",
+                        user.getFirstName() + " " + user.getLastName(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
+                return TechServicesApiResponse.error(errorResponse);
+            } catch (Exception ex) {
+                logger.error("Error while sending disable user request to Tech Services.", ex);
+                throw new RuntimeException("Error while sending disable user request to Tech Services.", ex);
+            }
+        } catch (Exception ex) {
+            logger.error("Error while disable user request to Tech Services.", ex);
+            throw new RuntimeException("Error while disable user request to Tech Services.", ex);
+        }
+    }
+
+    @Override
+    public TechServicesApiResponse<ChangeAccountEnabledResponse> enableUser(EntraUserDto user) {
+        try {
+            if (user == null || user.getEntraOid() == null) {
+                throw new RuntimeException("Invalid user details supplied.");
+            }
+
+            String accessToken = getAccessToken();
+
+            ChangeAccountEnabledRequest request = new ChangeAccountEnabledRequest(true);
+
+            logger.info("Sending enable user request to tech services: {}", request);
+
+            String uri = String.format(TECH_SERVICES_UPDATE_USER_GRP_ENDPOINT, laaBusinessUnit, user.getEntraOid());
+
+            ResponseEntity<String> response = restClient
+                    .patch()
+                    .uri(uri)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .toEntity(String.class);
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                logger.info("Enable user request by Tech Services is successful for {} and response is {}",
+                        user.getFirstName() + " " + user.getLastName(), response);
+                ObjectMapper mapper = new ObjectMapper();
+                ChangeAccountEnabledResponse successResponse = mapper.readValue(response.getBody(), ChangeAccountEnabledResponse.class);
+                return TechServicesApiResponse.success(successResponse);
+            } else {
+                ObjectMapper mapper = new ObjectMapper();
+                TechServicesErrorResponse errorResponse = mapper.readValue(response.getBody(), TechServicesErrorResponse.class);
+                logger.error("Failed to enable user {}", user.getFirstName() + " " + user.getLastName());
+                return TechServicesApiResponse.error(errorResponse);
+            }
+
+        } catch (HttpClientErrorException | HttpServerErrorException httpEx) {
+            String errorJson = httpEx.getResponseBodyAsString();
+            ObjectMapper mapper = new ObjectMapper();
+            try {
+                TechServicesErrorResponse errorResponse = mapper.readValue(errorJson, TechServicesErrorResponse.class);
+                if (HttpStatus.TOO_EARLY.equals(httpEx.getStatusCode())) {
+                    logger.info("Failed to enable user {}, the root cause is {} ({}) ",
+                            user.getFirstName() + " " + user.getLastName(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
+                    return TechServicesApiResponse.error(errorResponse);
+                }
+                logger.error("Failed to enable user {}, the root cause is {} ({}) ",
+                        user.getFirstName() + " " + user.getLastName(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
+                return TechServicesApiResponse.error(errorResponse);
+            } catch (Exception ex) {
+                logger.error("Error while sending enable user request to Tech Services.", ex);
+                throw new RuntimeException("Error while sending enable user request to Tech Services.", ex);
+            }
+        } catch (Exception ex) {
+            logger.error("Error while enable user request to Tech Services.", ex);
+            throw new RuntimeException("Error while enable user request to Tech Services.", ex);
         }
     }
 
