@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
@@ -32,7 +33,7 @@ public class UserDisabledFilter extends OncePerRequestFilter {
 
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.isAuthenticated()) {
+        if (auth != null && auth.isAuthenticated() && auth instanceof OAuth2AuthenticationToken) {
             CurrentUserDto currentUserDto = loginService.getCurrentUser(auth);
             if (currentUserDto != null) {
                 boolean disabled = userRepository
