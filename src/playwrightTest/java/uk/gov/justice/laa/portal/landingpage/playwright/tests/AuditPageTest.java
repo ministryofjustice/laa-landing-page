@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.BaseFrontEndTest;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.TestUser;
@@ -93,7 +92,7 @@ public class AuditPageTest extends BaseFrontEndTest {
     }
 
     @Test
-    @DisplayName("Information & Assurance can access the Audit Users page")
+    @DisplayName("Security Response can access the Audit Users page")
     void informationAndAssurance_canAccessAuditPage() {
         AuditPage auditPage = loginAndGetAuditPage(TestUser.INFORMATION_AND_ASSURANCE);
 

@@ -29,8 +29,16 @@ public class RoleBaseAccessDeleteExternalUserTest extends RoleBasedAccessIntegra
 
     @Test
     @Transactional
-    public void testExternalUserManagerCannotDeleteExternalUser() throws Exception {
+    public void testFirmUserManagerCanDeleteExternalUser() throws Exception {
         EntraUser loggedInUser = externalOnlyUserManagers.getFirst();
+        EntraUser deletedUser = externalUsersNoRoles.getFirst();
+        canAccessDeleteUserScreens(loggedInUser, deletedUser, status().isOk());
+    }
+
+    @Test
+    @Transactional
+    public void testExternalUserManagerCannotDeleteExternalUser() throws Exception {
+        EntraUser loggedInUser = internalWithExternalOnlyUserManagers.getFirst();
         EntraUser deletedUser = externalUsersNoRoles.getFirst();
         canAccessDeleteUserScreens(loggedInUser, deletedUser, status().is3xxRedirection());
     }
