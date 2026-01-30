@@ -16,6 +16,7 @@ public enum Permission {
     VIEW_USER_OFFICE,
     EDIT_USER_DETAILS,
     DELEGATE_EXTERNAL_USER_ACCESS,
+    DELEGATE_EXTERNAL_USER_ACCESS_INTERNAL,
     DELETE_EXTERNAL_USER,
     DELETE_AUDIT_USER,
     VIEW_AUDIT_TABLE,
@@ -38,5 +39,10 @@ public enum Permission {
             DELETE_AUDIT_USER.name(),
             VIEW_ALL_USER_MULTI_FIRM_PROFILES.name(),
             VIEW_AUDIT_TABLE.name()
+    };
+
+    public static final String[] DELEGATE_FIRM_ACCESS_PERMISSIONS = {
+            DELEGATE_EXTERNAL_USER_ACCESS.name(),
+            DELEGATE_EXTERNAL_USER_ACCESS_INTERNAL.name()
     };
 }

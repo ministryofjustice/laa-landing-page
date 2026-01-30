@@ -135,6 +135,18 @@ public class UserService {
         this.notificationService = notificationService;
     }
 
+    public boolean hasUserFirmAlreadyAssigned(String email, UUID firmId) {
+        Optional<EntraUser> entraUserOptional = entraUserRepository.findByEmailIgnoreCase(email);
+        if (entraUserOptional.isPresent()) {
+            EntraUser entraUser = entraUserOptional.get();
+            return entraUser.getUserProfiles().stream()
+                    .anyMatch(profile -> profile.getFirm() != null
+                            && profile.getFirm().getId().equals(firmId));
+        }
+
+        return false;
+    }
+
     static <T> List<List<T>> partitionBasedOnSize(List<T> inputList, int size) {
         List<List<T>> partitions = new ArrayList<>();
         for (int i = 0; i < inputList.size(); i += size) {
