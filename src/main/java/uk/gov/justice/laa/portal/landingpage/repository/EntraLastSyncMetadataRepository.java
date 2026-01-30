@@ -11,8 +11,4 @@ import java.time.LocalDateTime;
 
 @Repository
 public interface EntraLastSyncMetadataRepository extends JpaRepository<EntraLastSyncMetadata, String> {
-
-    @Modifying
-    @Query("UPDATE EntraLastSyncMetadata e SET e.updatedAt = :updatedAt, e.lastSuccessfulTo = :lastSuccessfulTo WHERE e.id = 'ENTRA_USER_SYNC'")
-    int updateSyncMetadata(@Param("updatedAt") LocalDateTime updatedAt, @Param("lastSuccessfulTo") LocalDateTime lastSuccessfulTo);
 }
