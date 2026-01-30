@@ -206,6 +206,10 @@ spec:
               value: "${POLLING_INTERVAL}"
             - name: POLLING_GROUP_ID
               value: "${POLLING_GROUP_ID}"
+            - name: EXTERNAL_USER_POLLING_ENABLED
+              value: "${EXTERNAL_USER_POLLING_ENABLED}"
+            - name: EXTERNAL_USER_POLLING_INTERVAL
+              value: "${EXTERNAL_USER_POLLING_INTERVAL}"
             - name: FIRM_CACHE_CLEAR_SCHEDULE
               value: "${FIRM_CACHE_CLEAR_SCHEDULE}"
             - name: APPS_CACHE_CLEAR_SCHEDULE
