@@ -37,6 +37,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -56,6 +57,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.validation.ObjectError;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import org.springframework.web.servlet.view.RedirectView;
@@ -74,6 +76,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.ConvertToMultiFirmAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent;
+import uk.gov.justice.laa.portal.landingpage.dto.DisableUserReasonDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeData;
@@ -95,6 +98,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
+import uk.gov.justice.laa.portal.landingpage.forms.DisableUserReasonForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmForm;
@@ -106,6 +110,7 @@ import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
+import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
@@ -117,6 +122,7 @@ import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEm
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
+import uk.gov.justice.laa.portal.landingpage.viewmodel.DisableUserReasonViewModel;
 
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
@@ -147,6 +153,8 @@ class UserControllerTest {
     private EmailValidationService emailValidationService;
     @Mock
     private AppRoleService appRoleService;
+    @Mock
+    private UserAccountStatusService disableUserService;
     private Model model;
     private FirmSearchForm firmSearchForm;
 
@@ -154,7 +162,7 @@ class UserControllerTest {
     void setUp() {
         userController = new UserController(loginService, userService, officeService, eventService, firmService,
                 new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService,
-                appRoleService);
+                appRoleService, disableUserService);
         model = new ExtendedModelMap();
         firmSearchForm = FirmSearchForm.builder().build();
     }
@@ -506,13 +514,6 @@ class UserControllerTest {
 
         assertThat(viewName).isEqualTo("edit-user");
         verify(userService).getUserProfileById(userId);
-    }
-
-    @Test
-    void disableUsers() throws IOException {
-        List<String> ids = List.of("1", "2", "3");
-        String view = userController.disableUsers(ids);
-        assertThat(view).isEqualTo("redirect:/users");
     }
 
     @Test
@@ -2873,14 +2874,6 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("add-user-check-answers");
         assertThat(model.getAttribute("roles")).isNull();
-    }
-
-    @Test
-    void disableUsers_shouldCallServiceAndRedirect() throws IOException {
-        List<String> ids = List.of("id1", "id2");
-        String view = userController.disableUsers(ids);
-        assertThat(view).isEqualTo("redirect:/users");
-        verify(userService).disableUsers(ids);
     }
 
     @Test
@@ -5941,6 +5934,110 @@ class UserControllerTest {
                 .isEqualTo("Test Firm");
         assertThat(((FirmSearchForm) testSession.getAttribute("firmSearchForm")).getSelectedFirmId()).isEqualTo(firmId);
         verify(firmService).getAllFirmsFromCache();
+    }
+
+    @Test
+    public void testDisableUserGetReturnsReasonAndUser() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        EntraUserDto returnedUser = EntraUserDto.builder()
+                .id(userId.toString())
+                .fullName("Test User")
+                .build();
+        DisableUserReasonDto reason = DisableUserReasonDto.builder()
+                .id(UUID.randomUUID())
+                .name("Test Reason")
+                .description("A test reason.")
+                .build();
+        DisableUserReasonForm form = new DisableUserReasonForm();
+        form.setReasonId(reason.getId().toString());
+
+        when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(returnedUser));
+        when(disableUserService.getDisableUserReasons()).thenReturn(List.of(reason));
+
+
+        String view = userController.disableUserReasonsGet(userId.toString(), form, model, session);
+
+        Assertions.assertEquals("disable-user-reason", view);
+        Assertions.assertEquals(returnedUser, model.getAttribute("user"));
+
+        Object returnedReasonsObject = model.getAttribute("reasons");
+        Assertions.assertNotNull(returnedReasonsObject);
+        Assertions.assertInstanceOf(List.class, returnedReasonsObject);
+        List<?> returnedReasonList = (List<?>) returnedReasonsObject;
+        Object returnedReasonObject = returnedReasonList.getFirst();
+        Assertions.assertInstanceOf(DisableUserReasonViewModel.class, returnedReasonObject);
+
+        DisableUserReasonViewModel returnedReason = (DisableUserReasonViewModel) returnedReasonObject;
+        Assertions.assertEquals(reason.getId(), returnedReason.getId());
+        Assertions.assertEquals("Disable User - " + returnedUser.getFullName(), model.getAttribute(ModelAttributes.PAGE_TITLE));
+    }
+
+    @Test
+    public void testDisableUserPostReturnsSelectReasonAndUserWhenNoErrors() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        EntraUserDto returnedUser = EntraUserDto.builder()
+                .id(userId.toString())
+                .fullName("Test User")
+                .build();
+
+        DisableUserReasonDto reason = DisableUserReasonDto.builder()
+                .id(UUID.randomUUID())
+                .name("Test Reason")
+                .description("A test reason.")
+                .build();
+
+        DisableUserReasonForm form = new DisableUserReasonForm();
+        form.setReasonId(reason.getId().toString());
+
+        UUID authenticatedUserId = UUID.randomUUID();
+        EntraUser authenticatedUser = EntraUser.builder()
+                .id(authenticatedUserId)
+                .build();
+
+        BindingResult result = mock(BindingResult.class);
+        when(result.hasErrors()).thenReturn(false);
+
+        when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(returnedUser));
+        when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
+
+
+        String view = userController.disableUserReasonsPost(userId.toString(), form, result, authentication, model, session);
+
+        Assertions.assertEquals("disable-user-completed", view);
+        Assertions.assertEquals(returnedUser, model.getAttribute("user"));
+        Assertions.assertEquals(form, model.getAttribute("disableUserReasonsForm"));
+        Assertions.assertEquals("Disable User Success - " + returnedUser.getFullName(), model.getAttribute(ModelAttributes.PAGE_TITLE));
+    }
+
+    @Test
+    public void testDisableUserPostReturnsToReasonsPageWhenThereAreErrors() {
+        // Given
+        DisableUserReasonDto reason = DisableUserReasonDto.builder()
+                .id(UUID.randomUUID())
+                .name("Test Reason")
+                .description("A test reason.")
+                .build();
+
+        List<ObjectError> errors = new ArrayList<>();
+        errors.add(new ObjectError("Reason", "There was an error"));
+        errors.add(new ObjectError("Reason", "There was another error"));
+
+
+        DisableUserReasonForm form = new DisableUserReasonForm();
+        form.setReasonId(reason.getId().toString());
+
+        BindingResult result = mock(BindingResult.class);
+        when(result.hasErrors()).thenReturn(true);
+        when(result.getAllErrors()).thenReturn(errors);
+
+        when(session.getAttribute(eq("disableUserReasonModel"))).thenReturn(model);
+
+        String view = userController.disableUserReasonsPost(UUID.randomUUID().toString(), form, result, authentication, model, session);
+
+        Assertions.assertEquals("disable-user-reason", view);
+        Assertions.assertEquals("There was an error\nThere was another error", model.getAttribute("errorMessage"));
     }
 
     @Nested

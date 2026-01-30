@@ -657,21 +657,6 @@ public class UserService {
 
     }
 
-    @Async
-    public void disableUsers(List<String> ids) throws IOException {
-        Collection<List<String>> batchIds = partitionBasedOnSize(ids, BATCH_SIZE);
-        for (List<String> batch : batchIds) {
-            BatchRequestContent batchRequestContent = new BatchRequestContent(graphClient);
-            for (String id : batch) {
-                User user = new User();
-                user.setAccountEnabled(false);
-                RequestInformation patchMessage = graphClient.users().byUserId(id).toPatchRequestInformation(user);
-                batchRequestContent.addBatchRequestStep(patchMessage);
-            }
-            graphClient.getBatchRequestBuilder().post(batchRequestContent, null);
-        }
-    }
-
     public List<AppDto> getApps() {
         return appRepository.findAll().stream().map(app -> mapper.map(app, AppDto.class))
                 .collect(Collectors.toList());
