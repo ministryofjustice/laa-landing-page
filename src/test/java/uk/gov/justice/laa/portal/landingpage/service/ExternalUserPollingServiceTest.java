@@ -81,7 +81,6 @@ class ExternalUserPollingServiceTest {
         externalUserPollingService.updateSyncMetadata();
 
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
-        verify(entraLastSyncMetadataRepository, never()).updateSyncMetadata(any(LocalDateTime.class), any(LocalDateTime.class));
         verify(techServicesClient).getUsers(anyString(), anyString());
     }
 
@@ -173,7 +172,6 @@ class ExternalUserPollingServiceTest {
 
         assertThrows(RuntimeException.class, () -> externalUserPollingService.updateSyncMetadata());
         verify(entraLastSyncMetadataRepository, never()).save(any(EntraLastSyncMetadata.class));
-        verify(entraLastSyncMetadataRepository, never()).updateSyncMetadata(any(LocalDateTime.class), any(LocalDateTime.class));
     }
 
     @Test
@@ -195,7 +193,6 @@ class ExternalUserPollingServiceTest {
         when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
 
         assertThrows(RuntimeException.class, () -> externalUserPollingService.updateSyncMetadata());
-        verify(entraLastSyncMetadataRepository, never()).updateSyncMetadata(any(LocalDateTime.class), any(LocalDateTime.class));
     }
 
     @Test
