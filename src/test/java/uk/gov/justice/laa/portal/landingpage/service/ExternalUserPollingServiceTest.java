@@ -21,6 +21,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -42,9 +43,11 @@ class ExternalUserPollingServiceTest {
         ReflectionTestUtils.setField(externalUserPollingService, "bufferMinutes", 5);
     }
 
+    private static final String ENTRA_USER_SYNC_ID = "ENTRA_USER_SYNC";
+
     @Test
     void shouldCreateNewMetadata_whenNoExistingMetadata() {
-        when(entraLastSyncMetadataRepository.getSyncMetadata()).thenReturn(Optional.empty());
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(Collections.emptyList())
@@ -66,7 +69,7 @@ class ExternalUserPollingServiceTest {
                 .lastSuccessfulTo(lastSuccessfulTo)
                 .updatedAt(LocalDateTime.now().minusHours(2))
                 .build();
-        when(entraLastSyncMetadataRepository.getSyncMetadata()).thenReturn(Optional.of(existingMetadata));
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.of(existingMetadata));
         
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
@@ -90,7 +93,7 @@ class ExternalUserPollingServiceTest {
                 .lastSuccessfulTo(lastSuccessfulTo)
                 .updatedAt(LocalDateTime.now().minusMinutes(30))
                 .build();
-        when(entraLastSyncMetadataRepository.getSyncMetadata()).thenReturn(Optional.of(existingMetadata));
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.of(existingMetadata));
         
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
@@ -113,7 +116,7 @@ class ExternalUserPollingServiceTest {
                 .lastSuccessfulTo(lastSuccessfulTo)
                 .updatedAt(LocalDateTime.now().minusHours(3))
                 .build();
-        when(entraLastSyncMetadataRepository.getSyncMetadata()).thenReturn(Optional.of(existingMetadata));
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.of(existingMetadata));
         
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
@@ -130,7 +133,7 @@ class ExternalUserPollingServiceTest {
 
     @Test
     void shouldProcessUsersSuccessfully_whenApiReturnsUsers() {
-        when(entraLastSyncMetadataRepository.getSyncMetadata()).thenReturn(Optional.empty());
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
         
         GetUsersResponse.TechServicesUser user1 = GetUsersResponse.TechServicesUser.builder()
                 .id("user1")
@@ -158,7 +161,7 @@ class ExternalUserPollingServiceTest {
 
     @Test
     void shouldThrowException_whenApiCallFails() {
-        when(entraLastSyncMetadataRepository.getSyncMetadata()).thenReturn(Optional.empty());
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
         
         TechServicesErrorResponse errorResponse = TechServicesErrorResponse.builder()
                 .success(false)
@@ -181,7 +184,7 @@ class ExternalUserPollingServiceTest {
                 .lastSuccessfulTo(lastSuccessfulTo)
                 .updatedAt(LocalDateTime.now().minusHours(1))
                 .build();
-        when(entraLastSyncMetadataRepository.getSyncMetadata()).thenReturn(Optional.of(existingMetadata));
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.of(existingMetadata));
         
         TechServicesErrorResponse errorResponse = TechServicesErrorResponse.builder()
                 .success(false)
@@ -197,7 +200,7 @@ class ExternalUserPollingServiceTest {
 
     @Test
     void shouldHandleNullUserList_gracefully() {
-        when(entraLastSyncMetadataRepository.getSyncMetadata()).thenReturn(Optional.empty());
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
         
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
@@ -214,7 +217,7 @@ class ExternalUserPollingServiceTest {
 
     @Test
     void shouldUseOneHourDefault_whenNoExistingMetadata() {
-        when(entraLastSyncMetadataRepository.getSyncMetadata()).thenReturn(Optional.empty());
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
         
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")

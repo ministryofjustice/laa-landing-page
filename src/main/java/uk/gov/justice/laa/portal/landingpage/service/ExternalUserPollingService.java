@@ -39,18 +39,17 @@ public class ExternalUserPollingService {
         LocalDateTime toTime = LocalDateTime.now();
         
         try {
-            Optional<EntraLastSyncMetadata> existingMetadata = entraLastSyncMetadataRepository.getSyncMetadata();
-            
-            LocalDateTime fromTime;
-            if (existingMetadata.isPresent() && existingMetadata.get().getLastSuccessfulTo() != null) {
-                fromTime = existingMetadata.get().getLastSuccessfulTo().minusMinutes(bufferMinutes);
-            } else {
-                fromTime = toTime.minusMonths(1);
-            }
+            Optional<EntraLastSyncMetadata> existingMetadata = entraLastSyncMetadataRepository.findById(ENTRA_USER_SYNC_ID);
+
+            LocalDateTime lastTo =
+                    existingMetadata.map(EntraLastSyncMetadata::getLastSuccessfulTo).orElse(null);
+
+            LocalDateTime fromTime = (lastTo != null)
+                    ? lastTo.minusMinutes(bufferMinutes)
+                    : toTime.minusMonths(1);
 
             // Cap the time gap to 30 minutes
-            long minutesBetween = ChronoUnit.MINUTES.between(fromTime, toTime);
-            if (minutesBetween > 30) {
+            if (ChronoUnit.MINUTES.between(fromTime, toTime) > 30) {
                 toTime = fromTime.plusMinutes(30);
             }
 
