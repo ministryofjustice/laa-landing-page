@@ -51,6 +51,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
+import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmUserForm;
 import uk.gov.justice.laa.portal.landingpage.forms.OfficesForm;
 import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
@@ -65,6 +66,7 @@ import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
 
+import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
@@ -76,7 +78,8 @@ import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 @Controller
 @RequiredArgsConstructor
 @RequestMapping("/admin/multi-firm")
-@PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).DELEGATE_EXTERNAL_USER_ACCESS)")
+@PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).DELEGATE_EXTERNAL_USER_ACCESS,"
+        + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).DELEGATE_EXTERNAL_USER_ACCESS_INTERNAL)")
 public class MultiFirmUserController {
 
     private final UserService userService;
@@ -94,6 +97,83 @@ public class MultiFirmUserController {
     private final ModelMapper mapper;
 
     private final FirmService firmService;
+
+
+    @GetMapping("/user/add/profile/select/internalUserFirm")
+    @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).DELEGATE_EXTERNAL_USER_ACCESS_INTERNAL)")
+    public String selectAdminUserFirmGet(FirmSearchForm firmSearchForm, HttpSession session, Model model,
+                                @RequestParam(value = "firmSearchResultCount", defaultValue = "10") Integer count) {
+
+        // If firmSearchForm is already populated from session (e.g., validation
+        // errors), keep it
+        FirmSearchForm existingForm = (FirmSearchForm) session.getAttribute("firmSearchForm");
+        if (existingForm != null) {
+            firmSearchForm = existingForm;
+        } else if (session.getAttribute("firm") != null) {
+            // Grab firm search details from session firm if coming here from the
+            // confirmation screen.
+            FirmDto firm = (FirmDto) session.getAttribute("firm");
+            firmSearchForm = FirmSearchForm.builder()
+                    .selectedFirmId(firm.getId())
+                    .firmSearch(firm.getName())
+                    .build();
+        }
+        int validatedCount = Math.max(10, Math.min(count, 100));
+        model.addAttribute("firmSearchForm", firmSearchForm);
+        model.addAttribute("firmSearchResultCount", validatedCount);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Select firm");
+        return "multi-firm-user/select-admin-firm";
+    }
+
+    @PostMapping("/user/add/profile/select/internalUserFirm")
+    @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).DELEGATE_EXTERNAL_USER_ACCESS_INTERNAL)")
+    public String selectAdminUserFirmPost(@Valid FirmSearchForm firmSearchForm, BindingResult result,
+                                 HttpSession session, Model model) {
+        Boolean isMultiFirmUser = (Boolean) session.getAttribute("isMultiFirmUser");
+        boolean showSkipFirmSelection = Boolean.TRUE.equals(isMultiFirmUser);
+        model.addAttribute("showSkipFirmSelection", showSkipFirmSelection);
+
+        if (result.hasErrors()) {
+            log.debug("Validation errors occurred while searching for firm: {}", result.getAllErrors());
+            // Store the form in session to preserve input on redirect
+            session.setAttribute("firmSearchForm", firmSearchForm);
+            return "multi-firm-user/select-admin-firm";
+        }
+
+        session.removeAttribute("firm");
+        MultiFirmUserForm multiFirmUserForm = (MultiFirmUserForm) session.getAttribute("multiFirmUserForm");
+
+        if (firmSearchForm.getFirmSearch() != null && !firmSearchForm.getFirmSearch().isBlank()) {
+            // Fallback: search by name if no specific firm was selected
+            List<FirmDto> firms = firmService.getAllFirmsFromCache();
+            FirmDto selectedFirm = firms.stream()
+                    .filter(firm -> firm.getName().toLowerCase().contains(firmSearchForm.getFirmSearch().toLowerCase()))
+                    .sorted((s1, s2) -> Integer.compare(relevance(s2, firmSearchForm.getFirmSearch()),
+                            relevance(s1, firmSearchForm.getFirmSearch())))
+                    .findFirst()
+                    .orElse(null);
+
+            if (selectedFirm == null) {
+                result.rejectValue("firmSearch", "error.firm",
+                        "No firm found with that name. Please select from the dropdown.");
+                return "multi-firm-user/select-admin-firm";
+            }
+            firmSearchForm.setFirmSearch(selectedFirm.getName());
+            firmSearchForm.setSelectedFirmId(selectedFirm.getId());
+            session.setAttribute("firm", selectedFirm);
+        }
+
+        //check if the user has the Firm Already Assigned
+        if (userService.hasUserFirmAlreadyAssigned(multiFirmUserForm.getEmail(), firmSearchForm.getSelectedFirmId())) {
+            result.rejectValue("firmSearch", "error.firm",
+                    "User profile already exists for this firm.");
+            return "multi-firm-user/select-admin-firm";
+        }
+        session.setAttribute("firmSearchForm", firmSearchForm);
+        session.setAttribute("delegateTargetFirmId", firmSearchForm.getSelectedFirmId().toString());
+        return "redirect:/admin/multi-firm/user/add/profile/select/apps";
+
+    }
 
     @GetMapping("/user/add/profile/select/firm")
     public String selectDelegateFirm(@RequestParam(value = "q", required = false) String query,
@@ -263,7 +343,11 @@ public class MultiFirmUserController {
 
             model.addAttribute("entraUser", entraUserDto);
             session.setAttribute("entraUser", entraUserDto);
-
+            UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
+            boolean isInternal = currentUserProfile.getUserType() == UserType.INTERNAL;
+            if (isInternal) {
+                return "redirect:/admin/multi-firm/user/add/profile/select/internalUserFirm";
+            }
             model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile - " + entraUserDto.getFullName());
             return "redirect:/admin/multi-firm/user/add/profile/select/apps";
 
@@ -698,6 +782,7 @@ public class MultiFirmUserController {
         model.addAttribute("selectedAppRole", selectedAppRole);
         model.addAttribute("externalUser", true);
         model.addAttribute("isMultiFirmUser", true);
+        model.addAttribute("isInternalUser", currentUserProfile.getUserType() == UserType.INTERNAL);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile - Check your answers - " + user.getFullName());
 
         return "multi-firm-user/add-profile-check-answers";
@@ -734,14 +819,16 @@ public class MultiFirmUserController {
         if (!userOfficeDtos.isEmpty()) {
             String targetFirmId = (String) session.getAttribute("delegateTargetFirmId");
             Firm validationFirm = targetFirmId != null ? firmService.getById(UUID.fromString(targetFirmId)) : userProfile.getFirm();
-            if (validationFirm == null || validationFirm.getOffices() == null
-                    || !validationFirm.getOffices().stream().map(Office::getCode).allMatch(code -> userProfile.getFirm()
-                            .getOffices().stream().map(Office::getCode).anyMatch(code::equals))) {
-                log.error(
-                        "User does not have sufficient permissions to assign the selected offices: userId={}, attemptedOfficeIds={}",
-                        userProfile.getId(),
-                        userOfficeDtos.stream().map(OfficeDto::getId).toList());
-                throw new RuntimeException("Office assignment is not permitted");
+            if (userProfile.getUserType() != UserType.INTERNAL) {
+                if (validationFirm == null || validationFirm.getOffices() == null
+                        || !validationFirm.getOffices().stream().map(Office::getCode).allMatch(code -> userProfile.getFirm()
+                        .getOffices().stream().map(Office::getCode).anyMatch(code::equals))) {
+                    log.error(
+                            "User does not have sufficient permissions to assign the selected offices: userId={}, attemptedOfficeIds={}",
+                            userProfile.getId(),
+                            userOfficeDtos.stream().map(OfficeDto::getId).toList());
+                    throw new RuntimeException("Office assignment is not permitted");
+                }
             }
         }
 
@@ -803,6 +890,8 @@ public class MultiFirmUserController {
         session.removeAttribute("userProfile");
         session.removeAttribute("officesForm");
         session.removeAttribute("delegateTargetFirmId");
+        session.removeAttribute("firmSearchForm");
+        session.removeAttribute("firm");
     }
 
     /**

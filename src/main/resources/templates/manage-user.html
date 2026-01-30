@@ -126,6 +126,10 @@
                                 <ul class="govuk-summary-card__actions">
                                     <li th:if="${canDeleteUser}" class="govuk-summary-card__action">
                                         <a class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
+                                           th:href="@{/admin/users/manage/{id}/disable(id=${user.entraUser.id})}">Disable user</a>
+                                    </li>
+                                    <li th:if="${canDeleteUser}" class="govuk-summary-card__action">
+                                        <a class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
                                            th:href="@{/admin/users/manage/{id}/delete(id=${user.id})}">Delete user</a>
                                     </li>
                                     <li th:if="${canDeleteFirmProfile and user.entraUser.multiFirmUser}" class="govuk-summary-card__action">

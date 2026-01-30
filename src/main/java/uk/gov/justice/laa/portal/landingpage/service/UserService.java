@@ -135,6 +135,18 @@ public class UserService {
         this.notificationService = notificationService;
     }
 
+    public boolean hasUserFirmAlreadyAssigned(String email, UUID firmId) {
+        Optional<EntraUser> entraUserOptional = entraUserRepository.findByEmailIgnoreCase(email);
+        if (entraUserOptional.isPresent()) {
+            EntraUser entraUser = entraUserOptional.get();
+            return entraUser.getUserProfiles().stream()
+                    .anyMatch(profile -> profile.getFirm() != null
+                            && profile.getFirm().getId().equals(firmId));
+        }
+
+        return false;
+    }
+
     static <T> List<List<T>> partitionBasedOnSize(List<T> inputList, int size) {
         List<List<T>> partitions = new ArrayList<>();
         for (int i = 0; i < inputList.size(); i += size) {
@@ -655,21 +667,6 @@ public class UserService {
 
         return mapper.map(entraUser, EntraUserDto.class);
 
-    }
-
-    @Async
-    public void disableUsers(List<String> ids) throws IOException {
-        Collection<List<String>> batchIds = partitionBasedOnSize(ids, BATCH_SIZE);
-        for (List<String> batch : batchIds) {
-            BatchRequestContent batchRequestContent = new BatchRequestContent(graphClient);
-            for (String id : batch) {
-                User user = new User();
-                user.setAccountEnabled(false);
-                RequestInformation patchMessage = graphClient.users().byUserId(id).toPatchRequestInformation(user);
-                batchRequestContent.addBatchRequestStep(patchMessage);
-            }
-            graphClient.getBatchRequestBuilder().post(batchRequestContent, null);
-        }
     }
 
     public List<AppDto> getApps() {

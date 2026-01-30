@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCache;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -37,6 +38,8 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.exception.BadRequestException;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledRequest;
+import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUsersResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
@@ -803,6 +806,96 @@ public class LiveTechServicesClientTest {
     }
 
     @Test
+    public void testEnableUserReturnsSuccessResponseWhenNoErrors() {
+        EntraUserDto user = EntraUserDto.builder()
+                .entraOid(UUID.randomUUID().toString())
+                .build();
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+        when(restClient.patch()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(ChangeAccountEnabledRequest.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toEntity(String.class))
+                .thenReturn(ResponseEntity.ok("{\"success\":true, \"message\":\"User successfully enabled\"}"));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+        TechServicesApiResponse<ChangeAccountEnabledResponse> response = liveTechServicesClient.enableUser(user);
+        Assertions.assertThat(response.isSuccess()).isTrue();
+    }
+
+    @Test
+    public void testEnableUserReturnsErrorResponseWhenErrors() {
+        EntraUserDto user = EntraUserDto.builder()
+                .entraOid(UUID.randomUUID().toString())
+                .build();
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+        when(restClient.patch()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(ChangeAccountEnabledRequest.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        String errorResponse = "{\"success\":false}";
+        when(responseSpec.toEntity(String.class))
+                .thenReturn(new ResponseEntity<>(errorResponse, HttpStatusCode.valueOf(404)));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+        TechServicesApiResponse<ChangeAccountEnabledResponse> response = liveTechServicesClient.enableUser(user);
+        Assertions.assertThat(response.isSuccess()).isFalse();
+    }
+
+    @Test
+    public void testDisableUserReturnsSuccessResponseWhenNoErrors() {
+        EntraUserDto user = EntraUserDto.builder()
+                .entraOid(UUID.randomUUID().toString())
+                .build();
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+        when(restClient.patch()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(ChangeAccountEnabledRequest.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toEntity(String.class))
+                .thenReturn(ResponseEntity.ok("{\"success\":true, \"message\":\"User successfully disabled\"}"));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+        TechServicesApiResponse<ChangeAccountEnabledResponse> response = liveTechServicesClient.disableUser(user, "Test reason");
+        Assertions.assertThat(response.isSuccess()).isTrue();
+    }
+
+    @Test
+    public void testDisableUserReturnsErrorResponseWhenErrors() {
+        EntraUserDto user = EntraUserDto.builder()
+                .entraOid(UUID.randomUUID().toString())
+                .build();
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+        when(restClient.patch()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(ChangeAccountEnabledRequest.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        String errorResponse = "{\"success\":false}";
+        when(responseSpec.toEntity(String.class))
+                .thenReturn(new ResponseEntity<>(errorResponse, HttpStatusCode.valueOf(404)));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+        TechServicesApiResponse<ChangeAccountEnabledResponse> response = liveTechServicesClient.disableUser(user, "Test reason");
+        Assertions.assertThat(response.isSuccess()).isFalse();
+    }
+
+    @Test
     void testGetUsers_Success() {
         AccessToken token = new AccessToken("token", null);
         when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
@@ -811,7 +904,7 @@ public class LiveTechServicesClientTest {
         when(requestHeadersUriSpec.uri(anyString())).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        
+
         when(responseSpec.toEntity(GetUsersResponse.class))
                 .thenReturn(ResponseEntity.ok(GetUsersResponse.builder()
                         .message("Users retrieved successfully")
@@ -851,7 +944,7 @@ public class LiveTechServicesClientTest {
         when(requestHeadersUriSpec.uri(anyString())).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        
+
         when(responseSpec.toEntity(GetUsersResponse.class))
                 .thenReturn(ResponseEntity.ok(GetUsersResponse.builder()
                         .message("No users found")
@@ -878,7 +971,7 @@ public class LiveTechServicesClientTest {
         when(requestHeadersUriSpec.uri(anyString())).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        
+
         String errorBody = """
                 {
                     "success": false,
@@ -910,7 +1003,7 @@ public class LiveTechServicesClientTest {
         when(requestHeadersUriSpec.uri(anyString())).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-        
+
         String errorBody = """
                 {
                     "success": false,
@@ -940,7 +1033,7 @@ public class LiveTechServicesClientTest {
         when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
         when(restClient.get()).thenThrow(new RuntimeException("Network timeout"));
 
-        RuntimeException ex = assertThrows(RuntimeException.class, 
+        RuntimeException ex = assertThrows(RuntimeException.class,
                 () -> liveTechServicesClient.getUsers("2024-01-01T00:00:00Z", "2024-01-15T23:59:59Z"));
 
         assertThat(ex.getMessage()).contains("Unexpected error while getting users from Tech Services");
