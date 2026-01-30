@@ -43,8 +43,8 @@ public class UpdateOfficeCommand {
                 if (associationsRemoved > 0) {
                     log.debug("Removed {} user associations from office {} due to firm switch",
                         associationsRemoved, office.getCode());
-                    result.addWarning("Office " + office.getCode() + " switched firms - removed " +
-                        associationsRemoved + " user association(s)");
+                    result.addWarning("Office " + office.getCode() + " switched firms - removed "
+                        + associationsRemoved + " user association(s)");
                 }
 
                 office.setFirm(firm);
@@ -99,7 +99,9 @@ public class UpdateOfficeCommand {
     }
 
     private boolean equals(String s1, String s2) {
-        if (s1 == null) return s2 == null;
+        if (s1 == null) {
+            return s2 == null;
+        }
         return s1.equals(s2);
     }
 

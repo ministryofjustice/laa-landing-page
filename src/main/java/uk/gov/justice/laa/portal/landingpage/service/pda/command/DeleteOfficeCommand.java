@@ -32,7 +32,7 @@ public class DeleteOfficeCommand implements PdaSyncCommand {
                 + associationsCount + " user associations will be removed");
 
             officeRepository.delete(office);
-        result.setOfficesDeleted(result.getOfficesDeleted() + 1);
+            result.setOfficesDeleted(result.getOfficesDeleted() + 1);
             log.debug("Deleted office: {} (firm: {})", office.getCode(), office.getFirm().getCode());
         } catch (Exception e) {
             log.error("Failed to delete office {}: {}", office.getCode(), e.getMessage());

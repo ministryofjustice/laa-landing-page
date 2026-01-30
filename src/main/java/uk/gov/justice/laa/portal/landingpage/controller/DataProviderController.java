@@ -151,7 +151,7 @@ public class DataProviderController {
             ComparisonResultDto result = dataProviderService.compareWithDatabase();
 
             // Pretty print JSON
-            String json = objectMapper.writerWithDefaultPrettyPrinter()
+            final String json = objectMapper.writerWithDefaultPrettyPrinter()
                     .writeValueAsString(result);
 
             log.debug("Returning comparison - Firms: {} creates, {} updates, {} deletes, {} exists",

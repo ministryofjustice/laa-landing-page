@@ -38,8 +38,8 @@ public class CreateFirmCommand implements PdaSyncCommand {
                 log.debug("Duplicate firm name '{}' detected when creating firm {} - appending firm code to make unique",
                     pdaFirm.getFirmName(), pdaFirm.getFirmNumber());
                 finalName = pdaFirm.getFirmName() + " (" + pdaFirm.getFirmNumber() + ")";
-                result.addWarning("Duplicate firm name '" + pdaFirm.getFirmName() +
-                    "' for firm " + pdaFirm.getFirmNumber() + " - appended firm code to make unique");
+                result.addWarning("Duplicate firm name '" + pdaFirm.getFirmName()
+                    + "' for firm " + pdaFirm.getFirmNumber() + " - appended firm code to make unique");
             }
 
             Firm firm = Firm.builder()

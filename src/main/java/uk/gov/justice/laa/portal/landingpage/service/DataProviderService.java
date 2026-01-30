@@ -154,7 +154,7 @@ public class DataProviderService {
             .filter(f -> f.getCode() != null)
             .collect(Collectors.toMap(Firm::getCode, f -> f, (f1, f2) -> f1));
 
-        Map<String, Firm> firmsByName = allFirms.stream()
+        final Map<String, Firm> firmsByName = allFirms.stream()
             .filter(f -> f.getName() != null)
             .collect(Collectors.toMap(Firm::getName, f -> f, (f1, f2) -> f1));
 
@@ -163,7 +163,7 @@ public class DataProviderService {
             .collect(Collectors.toMap(Office::getCode, o -> o, (o1, o2) -> o1));
 
         // Count firms with NULL codes (filtered out from comparison)
-        long firmsWithNullCode = allFirms.stream()
+        final long firmsWithNullCode = allFirms.stream()
             .filter(f -> f.getCode() == null)
             .count();
 
@@ -193,13 +193,17 @@ public class DataProviderService {
         log.debug("\nFound {} firm(s) with no offices. These will be removed.", firmsWithoutOffices);
 
         // Track separate counts
-        int firmCreates = 0, firmUpdates = 0, firmDeletes = 0, firmExists = 0;
-        int officeCreates = 0, officeUpdates = 0, officeDeletes = 0, officeExists = 0;
+        int firmCreates = 0;
+        int firmUpdates = 0;
+        int firmDeletes = 0;
+        int firmExists = 0;
+        int officeCreates = 0;
+        int officeUpdates = 0;
+        int officeExists = 0;
         int officeCreatesWithParentFirm = 0;  // Offices that can be created immediately (parent firm exists)
         int officeUpdatesSkippedNoParentFirm = 0;  // Existing offices with updates but parent firm doesn't exist
         int officesSwitchedFirm = 0;
         int userAssociationsDeletedFirmSwitch = 0;
-        int userAssociationsDeletedOfficeDeleted = 0;
 
         ComparisonResultDto result = ComparisonResultDto.builder().build();
 
@@ -318,8 +322,8 @@ public class DataProviderService {
                 if (dbOffice != null) {
                     // Office exists but we can't update it without parent firm
                     // Check if dbOffice has a firm (handle orphaned offices in DB)
-                    boolean firmChanged = dbOffice.getFirm() != null &&
-                        !dbOffice.getFirm().getCode().equals(pdaOffice.getFirmNumber());
+                    boolean firmChanged = dbOffice.getFirm() != null
+                        && !dbOffice.getFirm().getCode().equals(pdaOffice.getFirmNumber());
                     boolean addressChanged = !isSameAddress(dbOffice, pdaOffice);
                     if (firmChanged || addressChanged) {
                         officeUpdatesSkippedNoParentFirm++;
@@ -369,6 +373,8 @@ public class DataProviderService {
         }
 
         // Find deleted offices
+        int officeDeletes = 0;
+        int userAssociationsDeletedOfficeDeleted = 0;
         for (Map.Entry<String, Office> entry : officesByCode.entrySet()) {
             String officeCode = entry.getKey();
             if (!processedOfficeCodes.contains(officeCode)) {
@@ -450,18 +456,22 @@ public class DataProviderService {
     }
 
     private boolean isSameAddress(Office office, PdaOfficeData pdaOffice) {
-        if (office.getAddress() == null) return false;
+        if (office.getAddress() == null) {
+            return false;
+        }
 
         // Use emptyToNull normalization to match UpdateOfficeCommand behavior
-        return equals(office.getAddress().getAddressLine1(), emptyToNull(pdaOffice.getAddressLine1())) &&
-               equals(office.getAddress().getAddressLine2(), emptyToNull(pdaOffice.getAddressLine2())) &&
-               equals(office.getAddress().getAddressLine3(), emptyToNull(pdaOffice.getAddressLine3())) &&
-               equals(office.getAddress().getCity(), emptyToNull(pdaOffice.getCity())) &&
-               equals(office.getAddress().getPostcode(), emptyToNull(pdaOffice.getPostcode()));
+        return equals(office.getAddress().getAddressLine1(), emptyToNull(pdaOffice.getAddressLine1()))
+               && equals(office.getAddress().getAddressLine2(), emptyToNull(pdaOffice.getAddressLine2()))
+               && equals(office.getAddress().getAddressLine3(), emptyToNull(pdaOffice.getAddressLine3()))
+               && equals(office.getAddress().getCity(), emptyToNull(pdaOffice.getCity()))
+               && equals(office.getAddress().getPostcode(), emptyToNull(pdaOffice.getPostcode()));
     }
 
     private boolean equals(String s1, String s2) {
-        if (s1 == null) return s2 == null;
+        if (s1 == null) {
+            return s2 == null;
+        }
         return s1.equals(s2);
     }
 
@@ -694,16 +704,16 @@ public class DataProviderService {
                                         pdaFirm.getParentFirmNumber(), firmCode);
                                     firm.setParentFirm(null);
                                     firmRepository.save(firm);
-                                    result.addWarning("Parent firm " + pdaFirm.getParentFirmNumber() +
-                                        " is ADVOCATE type and cannot be a parent for firm " + firmCode);
+                                    result.addWarning("Parent firm " + pdaFirm.getParentFirmNumber()
+                                        + " is ADVOCATE type and cannot be a parent for firm " + firmCode);
                                 } else if (parentFirm.getParentFirm() != null) {
                                     log.warn("Parent firm {} already has parent {} for firm {} - setting to null (multi-level hierarchy not allowed)",
                                         pdaFirm.getParentFirmNumber(), parentFirm.getParentFirm().getCode(), firmCode);
                                     firm.setParentFirm(null);
                                     firmRepository.save(firm);
-                                    result.addWarning("Parent firm " + pdaFirm.getParentFirmNumber() +
-                                        " already has parent " + parentFirm.getParentFirm().getCode() +
-                                        " - multi-level hierarchy not allowed for firm " + firmCode);
+                                    result.addWarning("Parent firm " + pdaFirm.getParentFirmNumber()
+                                        + " already has parent " + parentFirm.getParentFirm().getCode()
+                                        + " - multi-level hierarchy not allowed for firm " + firmCode);
                                 } else {
                                     try {
                                         firm.setParentFirm(parentFirm);
@@ -714,8 +724,8 @@ public class DataProviderService {
                                             pdaFirm.getParentFirmNumber(), firmCode, e.getMessage());
                                         firm.setParentFirm(null);
                                         firmRepository.save(firm);
-                                        result.addWarning("Invalid parent firm " + pdaFirm.getParentFirmNumber() +
-                                            " for firm " + firmCode + ": " + e.getMessage());
+                                        result.addWarning("Invalid parent firm " + pdaFirm.getParentFirmNumber()
+                                            + " for firm " + firmCode + ": " + e.getMessage());
                                     }
                                 }
                             } else {
@@ -774,8 +784,8 @@ public class DataProviderService {
                         officesToDeactivate.add(officeCode);
                         log.warn("Office {} is orphaned (parent firm {} not found) - will be deactivated",
                             officeCode, pdaOffice.getFirmNumber());
-                        result.addWarning("Office " + officeCode + " orphaned (parent firm " +
-                            pdaOffice.getFirmNumber() + " not found) - will be deactivated");
+                        result.addWarning("Office " + officeCode + " orphaned (parent firm "
+                            + pdaOffice.getFirmNumber() + " not found) - will be deactivated");
                     } else {
                         log.debug("Office {} is orphaned (parent firm {} not found) and doesn't exist in DB - skipping",
                             officeCode, pdaOffice.getFirmNumber());
@@ -796,7 +806,7 @@ public class DataProviderService {
                 PdaOfficeData pdaOffice = entry.getValue();
                 processedOfficeCodes.add(officeCode);
 
-                Office dbOffice = dbOffices.get(officeCode);
+                final Office dbOffice = dbOffices.get(officeCode);
                 Firm parentFirm = dbFirms.get(pdaOffice.getFirmNumber());
 
                 // Skip orphaned offices - they're already marked for deactivation
@@ -970,8 +980,8 @@ public class DataProviderService {
     private void checkDataIntegrity(Map<String, PdaFirmData> pdaFirms,
                                      Map<String, PdaOfficeData> pdaOffices,
                                      PdaSyncResultDto result) {
-        int initialFirms = pdaFirms.size();
-        int initialOffices = pdaOffices.size();
+        final int initialFirms = pdaFirms.size();
+        final int initialOffices = pdaOffices.size();
 
         // Check for duplicate codes
         Set<String> firmCodes = new HashSet<>();

@@ -193,14 +193,14 @@ public class SecurityConfig {
                                 + " script-src * 'self' 'unsafe-eval' 'unsafe-inline' blob: data: gap:; object-src * 'self' blob: data: gap:;"
                                 + " img-src * self 'unsafe-inline' blob: data: gap:; connect-src self * 'unsafe-inline' blob: data: gap:;"
                                 + " frame-src * self blob: data: gap:;"))
-            );
+        );
         return http.build();
     }
 
     @Bean
     // CHECKSTYLE.OFF: AbbreviationAsWordInName|MethodName
     public OAuth2AuthorizedClientService oAuth2AuthorizedClientService(JdbcOperations jdbcOperations,
-                                                                       ClientRegistrationRepository clientRegistrationRepository) {
+            ClientRegistrationRepository clientRegistrationRepository) {
         // CHECKSTYLE.ON: AbbreviationAsWordInName|MethodName
         String enabled = environment.getProperty("SPRING_SESSION_JDBC_ENABLED", "false");
         OAuth2AuthorizedClientService service;
