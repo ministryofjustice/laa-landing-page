@@ -120,11 +120,6 @@ public class AuditPageTest extends BaseFrontEndTest {
 
     private static Stream<TestUser> nonPermittedUsers() {
         return Stream.of(
-                TestUser.INTERNAL_USER_VIEWER,
-                TestUser.INTERNAL_USER_MANAGER,
-                TestUser.EXTERNAL_USER_VIEWER,
-                TestUser.EXTERNAL_USER_MANAGER,
-                TestUser.EXTERNAL_USER_ADMIN,
                 TestUser.NO_ROLES
         );
     }

@@ -25,7 +25,7 @@ import uk.gov.justice.laa.portal.landingpage.service.AdminService;
 @Controller
 @RequiredArgsConstructor
 @RequestMapping("/admin")
-@PreAuthorize("@accessControlService.userHasAuthzRole(authentication, T(uk.gov.justice.laa.portal.landingpage.entity.AuthzRole).GLOBAL_ADMIN.roleName)")
+@PreAuthorize("@accessControlService.userHasAuthzRole(authentication, T(uk.gov.justice.laa.portal.landingpage.entity.AuthzRole).SILAS_ADMINISTRATION.roleName)")
 public class AdminController {
 
     private final AdminService adminService;

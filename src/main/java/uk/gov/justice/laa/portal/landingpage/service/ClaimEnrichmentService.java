@@ -15,6 +15,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.ClaimEnrichmentException;
+import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
@@ -52,7 +53,11 @@ public class ClaimEnrichmentService {
         try {
             // 1. Get the EntraUser from database
             EntraUser entraUser = entraUserRepository.findByEntraOid(userId)
-                    .orElseThrow(() -> new ClaimEnrichmentException("User not found in database"));
+                    .orElseThrow(() -> {
+                        log.warn("User not found for the given entra id: {}", userId);
+                        return new UserNotFoundException(
+                                String.format("User not found for the given entra id: %s", userId));
+                    });
 
             // 2. Get app from DB using the app entra id from request
             App app = appRepository.findByEntraAppId(appEntraId)
@@ -169,6 +174,8 @@ public class ClaimEnrichmentService {
         } catch (ClaimEnrichmentException e) {
             log.error("Claim enrichment failed: {}", e.getMessage());
             throw e;
+        } catch (UserNotFoundException e) {
+            throw new UserNotFoundException(String.format("User not found for the given entra id: %s", userId));
         } catch (Exception e) {
             log.error("Unexpected error during claim enrichment", e);
             throw new ClaimEnrichmentException("Failed to process claim enrichment", e);

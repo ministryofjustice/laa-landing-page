@@ -1,0 +1,163 @@
+databaseChangeLog:
+  # Set up disable_user_reason table
+  - changeSet:
+      id: 1753782485210-1
+      author: niall.mcmahon
+      changes:
+        - createTable:
+            columns:
+              - column:
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: disable_user_reason_pkey
+                  name: id
+                  type: UUID
+              - column:
+                  constraints:
+                    nullable: false
+                  name: name
+                  type: VARCHAR(255)
+              - column:
+                  constraints:
+                    nullable: false
+                  name: description
+                  type: VARCHAR(255)
+              - column:
+                  constraints:
+                    nullable: false
+                  name: entra_description
+                  type: VARCHAR(255)
+            tableName: disable_user_reason
+
+  # Set up user_account_status_audit table
+  - changeSet:
+      id: 1753782485210-2
+      author: niall.mcmahon
+      changes:
+        - createTable:
+            columns:
+              - column:
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: user_account_status_audit_pkey
+                  name: id
+                  type: UUID
+              - column:
+                  constraints:
+                    nullable: false
+                  name: entra_user_id
+                  type: UUID
+              - column:
+                  name: disable_user_reason_id
+                  type: UUID
+              - column:
+                  constraints:
+                    nullable: false
+                  name: status_changed_date
+                  type: TIMESTAMP WITHOUT TIME ZONE
+              - column:
+                  constraints:
+                    nullable: false
+                  name: status_change
+                  type: VARCHAR(255)
+              - column:
+                  constraints:
+                    nullable: false
+                  name: status_changed_by
+                  type: VARCHAR(255)
+            tableName: user_account_status_audit
+        - sql:
+            dbms: postgresql
+            sql: "ALTER TABLE user_account_status_audit ADD CONSTRAINT user_account_status_audit_status_change_check check ((status_change)::text = ANY ((ARRAY['ENABLED'::character varying, 'DISABLED'::character varying])::text[]))"
+
+
+  # Set up user_account_status_audit table foreign keys
+  - changeSet:
+      id: 1753782485210-3
+      author: niall.mcmahon
+      changes:
+        - addForeignKeyConstraint:
+            baseColumnNames: entra_user_id
+            baseTableName: user_account_status_audit
+            constraintName: fk_user_account_status_audit_entra_user_id
+            deferrable: false
+            initiallyDeferred: false
+            onDelete: NO ACTION
+            onUpdate: NO ACTION
+            referencedColumnNames: id
+            referencedTableName: entra_user
+            validate: true
+        - addForeignKeyConstraint:
+            baseColumnNames: disable_user_reason_id
+            baseTableName: user_account_status_audit
+            constraintName: fk_user_account_status_audit_disable_user_reason_id
+            deferrable: false
+            initiallyDeferred: false
+            onDelete: NO ACTION
+            onUpdate: NO ACTION
+            referencedColumnNames: id
+            referencedTableName: disable_user_reason
+            validate: true
+
+  # Populate disable_user_reason table.
+  - changeSet:
+      id: 1753782485210-4
+      author: niall.mcmahon
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO disable_user_reason (id, name, description, entra_description) VALUES (gen_random_uuid(), 'Absence', 'User is on extended leave or temporarily unavailable.', 'Absence')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO disable_user_reason (id, name, description, entra_description) VALUES (gen_random_uuid(), 'Compliance Breach', 'Disablement due to non-cyber compliance issues (e.g. regulatory violation).', 'ComplianceBreach')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO disable_user_reason (id, name, description, entra_description) VALUES (gen_random_uuid(), 'Contract Ended', 'Firm''s contract has expired; access must be revoked.', 'ContractEnded')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO disable_user_reason (id, name, description, entra_description) VALUES (gen_random_uuid(), 'Cyber Risk', 'Immediate disablement due to suspected or confirmed security breach.', 'CyberRisk')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO disable_user_reason (id, name, description, entra_description) VALUES (gen_random_uuid(), 'Duplicate Account', 'Account identified as duplicate and needs removal or disablement.', 'DuplicateAccount')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO disable_user_reason (id, name, description, entra_description) VALUES (gen_random_uuid(), 'Firm Closure / Merger', 'Firm ceases operations or merges, requiring user disablement.', 'FirmClosureorMerger')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO disable_user_reason (id, name, description, entra_description) VALUES (gen_random_uuid(), 'Investigation Pending', 'Access suspended during internal or external investigation.', 'InvestigationPending')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO disable_user_reason (id, name, description, entra_description) VALUES (gen_random_uuid(), 'Role Change / No Longer Required', 'User''s role has changed and they no longer need access.', 'RoleChangeorNoLongerRequired')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO disable_user_reason (id, name, description, entra_description) VALUES (gen_random_uuid(), 'User Request', 'User requested account removal or temporary disablement.', 'UserRequest')"
+
+  # Add "disabled" column to entra_user table.
+  - changeSet:
+      id: 1753782485210-5
+      author: niall.mcmahon
+      changes:
+        - addColumn:
+            columns:
+              - column:
+                  defaultValueBoolean: true
+                  name: enabled
+                  type: BOOLEAN
+            tableName: entra_user
+
+  # Add "DISABLE_EXTERNAL_USER" permission to relevant roles.
+  - changeSet:
+      id: 1753782485210-6
+      author: niall.mcmahon
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'DISABLE_EXTERNAL_USER')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Admin'), 'DISABLE_EXTERNAL_USER')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Information & Assurance'), 'DISABLE_EXTERNAL_USER')"

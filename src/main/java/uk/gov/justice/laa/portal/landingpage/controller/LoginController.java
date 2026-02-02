@@ -88,6 +88,7 @@ public class LoginController {
                 boolean isAdmin = false;
                 boolean canViewAuditTable = false;
                 boolean hasSilasAdminRole = false;
+                boolean canViewFirmDirectory = false;
                 if (userSessionData.getUser() != null) {
                     Set<Permission> permissions = userService
                             .getUserPermissionsByUserId(userSessionData.getUser().getId());
@@ -98,10 +99,14 @@ public class LoginController {
                     // Check if user has SiLAS Administration role
                     EntraUser currentUser = loginService.getCurrentEntraUser(authentication);
                     hasSilasAdminRole = currentUser != null
-                            && AccessControlService.userHasAuthzRole(currentUser, AuthzRole.GLOBAL_ADMIN.getRoleName());
+                            && AccessControlService.userHasAuthzRole(currentUser, AuthzRole.SILAS_ADMINISTRATION.getRoleName());
+                    canViewFirmDirectory = currentUser != null
+                            && AccessControlService.userHasAnyGivenPermissions(currentUser, Permission.VIEW_FIRM_DIRECTORY);
+
                 }
                 model.addAttribute("isAdminUser", isAdmin);
                 model.addAttribute("canViewAuditTable", canViewAuditTable);
+                model.addAttribute("canViewFirmDirectory", canViewFirmDirectory);
                 model.addAttribute("hasSilasAdminRole", hasSilasAdminRole);
 
                 // Check if user has no roles assigned and determine user type for custom

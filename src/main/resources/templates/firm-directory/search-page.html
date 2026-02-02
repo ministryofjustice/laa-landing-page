@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'users'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>Firm Directory</title>
+</head>
+
+<body>
+<nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+    <a class="govuk-back-link" th:href="@{/home}">
+        Back
+    </a>
+</nav>
+
+<main class="govuk-main-wrapper" id="main-content" th:if="${#authentication.isAuthenticated()}">
+    <div class="govuk-grid-row">
+        <div class="govuk-grid-column-full">
+            <h1 class="govuk-heading-l">Firm Directory</h1>
+
+            <!-- Search Card -->
+            <div class="search-card">
+                <div class="govuk-form-group">
+                    <fieldset class="govuk-fieldset">
+                        <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
+                            <h2 class="govuk-fieldset__heading">
+                                Search by
+                            </h2>
+                        </legend>
+                        <div class="govuk-hint">
+                            You can search using one or both boxes
+                        </div>
+
+                        <form method="get" th:action="@{firmDirectory}" role="search" id="search-form">
+                            <div class="search-inputs-container">
+                                <!-- Search by firm name or firm code -->
+                                <div class="search-input-group">
+                                    <div class="govuk-form-group">
+                                        <label class="govuk-label govuk-label--s" for="firmSearch">
+                                            Firm name or firm code
+                                        </label>
+                                        <div style="position: relative; display: inline-block; width: 100%;">
+                                            <input class="govuk-input" id="firmSearch"
+                                                   name="firmSearch" type="text" autocomplete="off"
+                                                   th:value="${firmSearch.firmSearch}">
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Search button -->
+                                <div class="search-button-group">
+                                    <div class="govuk-form-group">
+                                        <button type="submit" class="govuk-button govuk-button--secondary"
+                                                data-module="govuk-button">
+                                            Search
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Hidden inputs to preserve current state -->
+                            <input th:if="${requestedPageSize != null and requestedPageSize != 10}" type="hidden"
+                                   name="size" th:value="${requestedPageSize}">
+                            <input th:if="${selectedFirmType != null and selectedFirmType != ''}" type="hidden"
+                                   name="selectedFirmType" th:value="${selectedFirmType}">
+                        </form>
+                    </fieldset>
+                </div>
+            </div>
+
+            <div class="filters-container">
+                <!-- Firm directory type Filter -->
+                <div class="govuk-!-padding-top-2">
+                    <div class="govuk-form-group">
+                        <label class="govuk-label govuk-label--s" for="firmTypeAccessFilter">
+                            Firm type
+                        </label>
+                        <select class="govuk-select" id="firmTypeAccessFilter" name="firmType">
+                            <option value="">All Types</option>
+                            <option th:each="firmType : ${firmTypes}"
+                                    th:value="${firmType}"
+                                    th:text="${firmType.value}"
+                                    th:selected="${firmType.name().equals(selectedFirmType)}">
+                            </option>
+
+                        </select>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Reuse autocomplete styles from users.html */
+        .autocomplete__wrapper {
+            position: relative;
+        }
+
+        .autocomplete__option:hover strong,
+        .autocomplete__option[aria-selected="true"] strong {
+            color: #ffffff;
+        }
+
+        .autocomplete__option:hover small,
+        .autocomplete__option[aria-selected="true"] small {
+            color: #ffffff !important;
+        }
+
+        .autocomplete__option strong {
+            font-weight: 600;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .autocomplete__option small {
+            font-size: 16px;
+            color: #505a5f;
+            display: block;
+        }
+
+        .autocomplete__input {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-color: #ffffff;
+            border: 2px solid #0b0c0c;
+            border-radius: 0;
+            box-sizing: border-box;
+            color: #0b0c0c;
+            font-family: "GDS Transport", arial, sans-serif;
+            font-size: 19px;
+            font-weight: 400;
+            line-height: 1.31579;
+            margin: 0;
+            padding: 5px 4px 4px 30px;
+            width: 100%;
+        }
+
+        .autocomplete__search-icon {
+            position: absolute;
+            top: 50%;
+            left: 12px;
+            transform: translateY(-50%);
+            color: #0b0c0c;
+            pointer-events: none;
+            width: 16px;
+            height: 16px;
+            z-index: 1;
+        }
+
+        .autocomplete__input:focus {
+            border-color: #fd0;
+            box-shadow: inset 0 0 0 2px;
+            outline: 3px solid #fd0;
+            outline-offset: 0;
+        }
+
+        .search-card {
+            padding-right: 0px;
+            border-radius: 0;
+            border-bottom: 1px solid #0b0c0c;
+        }
+
+        .search-card .govuk-fieldset__legend {
+            margin-bottom: 15px;
+        }
+
+        .search-card .govuk-hint {
+            margin-bottom: 20px;
+        }
+
+        .search-inputs-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+
+        .filters-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+
+        .filters-container .govuk-form-group {
+            max-width: 300px;
+        }
+
+        .filters-container .govuk-select {
+            width: 100%;
+        }
+
+        .search-input-group {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .search-button-group {
+            flex: 0 0 auto;
+            margin-top: 30px;
+            margin-left: 0px;
+            margin-right: 50px;
+            margin-bottom: -30px;
+        }
+
+        @media (max-width: 768px) {
+            .search-inputs-container {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .filters-container {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .search-input-group {
+                min-width: 100%;
+            }
+
+            .search-button-group .govuk-form-group {
+                padding-top: 0 !important;
+            }
+        }
+
+        /* Sort button styles */
+        .sort-button {
+            background: none;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: inherit;
+            font-weight: bold;
+            color: inherit;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sort-button:hover {
+            text-decoration: underline;
+        }
+
+        /* Table optimizations with fixed layout */
+        .govuk-table {
+            table-layout: fixed;
+            width: 100%;
+        }
+
+        .table-container {
+            overflow-x: visible !important;
+        }
+
+        .govuk-table__header,
+        .govuk-table__cell {
+            padding: 10px 8px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            hyphens: auto;
+            vertical-align: top;
+        }
+
+        /* Fixed column widths - adjusted to fit without scroll */
+        .govuk-table__header:nth-child(1),
+        .govuk-table__cell:nth-child(1) {
+            width: 19%;
+        }
+
+        .govuk-table__header:nth-child(2),
+        .govuk-table__cell:nth-child(2) {
+            width: 20%;
+        }
+
+        .govuk-table__header:nth-child(3),
+        .govuk-table__cell:nth-child(3) {
+            width: 14%;
+        }
+
+        .govuk-table__header:nth-child(4),
+        .govuk-table__cell:nth-child(4) {
+            width: 16%;
+        }
+
+        .govuk-table__header:nth-child(5),
+        .govuk-table__cell:nth-child(5) {
+            width: 11%;
+        }
+
+        .govuk-table__header:nth-child(6),
+        .govuk-table__cell:nth-child(6) {
+            width: 12%;
+            text-align: center;
+        }
+
+        .govuk-table__header:nth-child(7),
+        .govuk-table__cell:nth-child(7) {
+            width: 12%;
+            text-align: center;
+        }
+
+        /* Prevent table headers from breaking - with proper spacing */
+        .govuk-table__header {
+            white-space: nowrap;
+            line-height: 1.25;
+        }
+
+        .govuk-table__header .sort-button {
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .govuk-table__header .sort-button img {
+            flex-shrink: 0;
+        }
+
+        /* Break on whitespace first for name column, then force break if needed */
+        .govuk-table__cell:nth-child(1) {
+            word-break: break-word;
+            overflow-wrap: break-word;
+        }
+
+        /* Force email column to break long addresses */
+        .govuk-table__cell:nth-child(2) {
+            word-break: break-all;
+            overflow-wrap: anywhere;
+        }
+
+        @media (max-width: 1200px) {
+
+            .govuk-table__header,
+            .govuk-table__cell {
+                padding: 8px 4px;
+            }
+
+            .govuk-table__header .sort-button {
+                gap: 2px;
+            }
+        }
+    </style>
+
+    <script th:src="@{/js/utils/url-utils.js}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const firmSearchInput = document.getElementById('firmSearch');
+
+            if (!firmSearchInput) {
+                return;
+            }
+
+            // Firm Type auto-submit
+            const firmTypeAccessFilter = document.getElementById('firmTypeAccessFilter');
+            if (firmTypeAccessFilter) {
+                firmTypeAccessFilter.addEventListener('change', function () {
+                    const currentUrl = new URL(window.location.href);
+                    if (this.value) {
+                        currentUrl.searchParams.set('selectedFirmType', this.value);
+                    } else {
+                        currentUrl.searchParams.delete('selectedFirmType');
+                    }
+                    currentUrl.searchParams.set('page', '1');
+                    window.location.href = currentUrl.toString();
+                });
+            }
+
+            // Clean up form submissions
+            const forms = document.querySelectorAll('form[method="get"]');
+            forms.forEach(form => {
+                form.addEventListener('submit', function (e) {
+                    e.preventDefault();
+
+                    const formData = new FormData(form);
+                    const params = {};
+
+                    for (const [key, value] of formData.entries()) {
+                        if (value && value.trim() !== '') {
+                            if (key === 'size' && value == '10') continue;
+                            if (key === 'page' && value == '1') continue;
+                            params[key] = value;
+                        }
+                    }
+
+                    const actionUrl = form.getAttribute('action') || '/firmDirectory';
+                    window.location.href = buildCleanUrl(actionUrl, params);
+                });
+            });
+
+            // Handle sort button clicks
+            const sortButtons = document.querySelectorAll('.sort-button');
+            sortButtons.forEach(button => {
+                button.addEventListener('click', function () {
+                    // Save current scroll position
+                    sessionStorage.setItem('firmDirectoryTableScrollPosition', window.scrollY);
+
+                    const params = {
+                        size: this.dataset.size,
+                        page: this.dataset.page,
+                        search: this.dataset.search,
+                        sort: this.dataset.sort,
+                        direction: this.dataset.direction,
+                        firmSearch: this.dataset.firmSearch,
+                        selectedFirmType: this.dataset.selectedFirmType,
+                    };
+                    window.location.href = buildCleanUrl('/firmDirectory', params);
+                });
+            });
+
+            // Restore scroll position if it was saved
+            const savedScrollPosition = sessionStorage.getItem('firmDirectoryTableScrollPosition');
+            if (savedScrollPosition !== null) {
+                window.scrollTo(0, parseInt(savedScrollPosition, 10));
+                sessionStorage.removeItem('firmDirectoryTableScrollPosition');
+            }
+
+            // Add scroll position saving to pagination links
+            const paginationLinks = document.querySelectorAll('.govuk-pagination__link');
+            paginationLinks.forEach(link => {
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    // Save current scroll position
+                    sessionStorage.setItem('firmDirectoryTableScrollPosition', window.scrollY);
+                    const href = this.getAttribute('href');
+                    window.location.href = href;
+                });
+            });
+        });
+    </script>
+
+    <!-- Table -->
+    <div class="govuk-grid-row govuk-!-margin-top-6" id="firmDirectory-table">
+        <div class="govuk-grid-column-full">
+            <div class="table-container">
+                <table class="govuk-table">
+                    <thead class="govuk-table__head">
+                    <tr class="govuk-table__row">
+                        <th scope="col" class="govuk-table__header"
+                            th:aria-sort="${sort == 'name' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
+                            <button type="button" class="sort-button" data-sort="name"
+                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'name' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-type=${selectedFirmType}">
+                                Firm Name
+                                <img th:if="${sort == 'name' and direction == 'asc'}"
+                                     th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
+                                     alt="Sorted ascending">
+                                <img th:if="${sort == 'name' and direction == 'desc'}"
+                                     th:src="@{/assets/images/sort-desc.svg}" width="22" height="22"
+                                     alt="Sorted descending">
+                                <img th:if="${sort != 'name'}" th:src="@{/assets/images/sort-none.svg}"
+                                     width="22" height="22" alt="">
+                            </button>
+                        </th>
+                        <th scope="col" class="govuk-table__header"
+                            th:aria-sort="${sort == 'code' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
+                            <button type="button" class="sort-button" data-sort="code"
+                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'code' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-type=${selectedFirmType}">
+                                Firm Code
+                                <img th:if="${sort == 'code' and direction == 'asc'}"
+                                     th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
+                                     alt="Sorted ascending">
+                                <img th:if="${sort == 'code' and direction == 'desc'}"
+                                     th:src="@{/assets/images/sort-desc.svg}" width="22" height="22"
+                                     alt="Sorted descending">
+                                <img th:if="${sort != 'code'}" th:src="@{/assets/images/sort-none.svg}"
+                                     width="22" height="22" alt="">
+                            </button>
+                        </th>
+                        <th scope="col" class="govuk-table__header"
+                            th:aria-sort="${sort == 'type' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
+                            <button type="button" class="sort-button" data-sort="type"
+                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'type' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-type=${selectedFirmType}">
+                                Type
+                                <img th:if="${sort == 'type' and direction == 'asc'}"
+                                     th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
+                                     alt="Sorted ascending">
+                                <img th:if="${sort == 'type' and direction == 'desc'}"
+                                     th:src="@{/assets/images/sort-desc.svg}" width="22" height="22"
+                                     alt="Sorted descending">
+                                <img th:if="${sort != 'type'}" th:src="@{/assets/images/sort-none.svg}"
+                                     width="22" height="22" alt="">
+                            </button>
+                        </th>
+
+                    </tr>
+                    </thead>
+                    <tbody class="govuk-table__body">
+                    <tr class="govuk-table__row" th:each="firmDirectory : ${firmDirectories}">
+                        <td class="govuk-table__cell">
+                            <a class="govuk-link" th:if="${firmDirectory.firmId != null}"
+                               th:href="@{firmDirectory}"
+                               th:text="${firmDirectory.firmName}"></a>
+                            <!-- Delete the line above and uncomment the line below when the firm details page is ready
+                            <a class="govuk-link" th:if="${firmDirectory.firmId != null}"
+                               th:href="@{firmDirectory/{id}(id=${firmDirectory.firmId})}"
+                               th:text="${firmDirectory.firmName}"></a>
+                               -->
+                        </td>
+                        <td class="govuk-table__cell" th:text="${firmDirectory.firmCode}"></td>
+                        <td class="govuk-table__cell"
+                            th:text="${firmDirectory.firmType}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <nav class="govuk-pagination" aria-label="Pagination" th:if="${totalPages > 1}">
+        <div class="govuk-pagination__prev" th:if="${page > 1}">
+            <a class="govuk-link govuk-pagination__link"
+               th:href="@{firmDirectory(size=${requestedPageSize}, page=${page - 1}, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
+               rel="prev">
+                <svg class="govuk-pagination__icon govuk-pagination__icon--prev" xmlns="http://www.w3.org/2000/svg"
+                     height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
+                    <path
+                            d="m6.5938-0.0078125-6.7266 6.7266 6.7441 6.4062 1.377-1.449-4.1856-3.9768h12.896v-2h-12.984l4.2931-4.293-1.414-1.414z">
+                    </path>
+                </svg>
+                <span class="govuk-pagination__link-title">
+                        Previous<span class="govuk-visually-hidden"> page</span>
+                    </span>
+            </a>
+        </div>
+
+        <ul class="govuk-pagination__list">
+            <!-- Pagination numbers -->
+            <li class="govuk-pagination__item"
+                th:classappend="${page == 1 ? 'govuk-pagination__item--current' : ''}">
+                <a class="govuk-link govuk-pagination__link" th:if="${page != 1}"
+                   th:href="@{firmDirectory(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
+                   th:aria-label="'Page 1'">1</a>
+                <a class="govuk-link govuk-pagination__link" th:if="${page == 1}"
+                   th:href="@{firmDirectory(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
+                   th:aria-label="'Page 1'" aria-current="page">1</a>
+            </li>
+
+            <li class="govuk-pagination__item govuk-pagination__item--ellipses" th:if="${page > 4}">
+                &ctdot;
+            </li>
+
+            <th:block
+                    th:each="i : ${#numbers.sequence(T(java.lang.Math).max(2, page - 2), T(java.lang.Math).min(totalPages - 1, page + 2))}">
+                <li class="govuk-pagination__item" th:if="${i > 1 and i < totalPages}"
+                    th:classappend="${i == page ? 'govuk-pagination__item--current' : ''}">
+                    <a class="govuk-link govuk-pagination__link" th:if="${i != page}"
+                       th:href="@{firmDirectory(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
+                       th:aria-label="'Page ' + ${i}" th:text="${i}"></a>
+                    <a class="govuk-link govuk-pagination__link" th:if="${i == page}"
+                       th:href="@{firmDirectory(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
+                       th:aria-label="'Page ' + ${i}" aria-current="page" th:text="${i}"></a>
+                </li>
+            </th:block>
+
+            <li class="govuk-pagination__item govuk-pagination__item--ellipses" th:if="${page < totalPages - 3}">
+                &ctdot;
+            </li>
+
+            <li class="govuk-pagination__item" th:if="${totalPages > 1}"
+                th:classappend="${page == totalPages ? 'govuk-pagination__item--current' : ''}">
+                <a class="govuk-link govuk-pagination__link" th:if="${page != totalPages}"
+                   th:href="@{firmDirectory(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
+                   th:aria-label="'Page ' + ${totalPages}" th:text="${totalPages}"></a>
+                <a class="govuk-link govuk-pagination__link" th:if="${page == totalPages}"
+                   th:href="@{firmDirectory(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
+                   th:aria-label="'Page ' + ${totalPages}" aria-current="page" th:text="${totalPages}"></a>
+            </li>
+        </ul>
+
+        <div class="govuk-pagination__next" th:if="${page < totalPages}">
+            <a class="govuk-link govuk-pagination__link"
+               th:href="@{firmDirectory(size=${requestedPageSize}, page=${page + 1}, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
+               rel="next">
+                    <span class="govuk-pagination__link-title">
+                        Next<span class="govuk-visually-hidden"> page</span>
+                    </span>
+                <svg class="govuk-pagination__icon govuk-pagination__icon--next" xmlns="http://www.w3.org/2000/svg"
+                     height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
+                    <path
+                            d="m8.107-0.0078125-1.4136 1.414 4.2926 4.293h-12.986v2h12.896l-4.1855 3.9766 1.377 1.4492 6.7441-6.4062-6.7246-6.7266z">
+                    </path>
+                </svg>
+            </a>
+        </div>
+    </nav>
+
+    <p class="moj-pagination__results">Showing <b
+            th:text="${((requestedPageSize ?: 10) * ((page ?: 1) - 1)) + 1}"></b>
+        to <b th:text="${((requestedPageSize ?: 10) * ((page ?: 1) - 1)) + (actualPageSize ?: 10)}"></b>
+        of <b th:text="${totalRows}"></b> results</p>
+</main>
+</body>
+
+</html>
