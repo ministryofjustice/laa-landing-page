@@ -68,8 +68,8 @@ public class UserAccountStatusService {
             throw new RuntimeException(String.format("User %s can not be disabled by themselves", disabledUserId));
         }
 
-        if (userService.isInternal(disabledById) ||
-                (disabledUserFirm != null && disabledByUserFirm != null && disabledByUserFirm.getId().equals(disabledUserFirm.getId()))) {
+        if (userService.isInternal(disabledById)
+                || (disabledUserFirm != null && disabledByUserFirm != null && disabledByUserFirm.getId().equals(disabledUserFirm.getId()))) {
             // Disable user in Entra via tech services.
             TechServicesApiResponse<ChangeAccountEnabledResponse> changeAccountEnabledResponse
                     = techServicesClient.disableUser(mapper.map(disabledUser, EntraUserDto.class), reason.getEntraDescription());
