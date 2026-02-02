@@ -191,7 +191,7 @@ public class RoleBaseAccessDisableUserTest extends RoleBasedAccessIntegrationTes
     @Test
     public void testFirmUserManagerCanDisableUser() throws Exception {
         EntraUser loggedInUser = firmUserManagers.getFirst();
-        EntraUser accessedUser = externalUsersNoRoles.getFirst();
+        EntraUser accessedUser = externalUsersNoRoles.getLast();
         assertThat(accessedUser.isEnabled()).isTrue();
         sendDisableUserPost(loggedInUser, accessedUser, status().isOk());
         accessedUser = entraUserRepository.findById(accessedUser.getId()).orElseThrow();

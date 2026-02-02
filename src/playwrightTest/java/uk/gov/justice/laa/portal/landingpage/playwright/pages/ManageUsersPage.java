@@ -82,6 +82,7 @@ public class ManageUsersPage {
 
         log.info("Navigating to Manage Users page: {}", url);
         page.navigate(url);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
         this.header = page.locator("h1.govuk-heading-xl");
         this.createNewUserButton = page.locator("button.govuk-button[onclick*='/admin/user/create/details']");
