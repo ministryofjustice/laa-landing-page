@@ -169,6 +169,77 @@ public class UserAccountStatusServiceTest {
     }
 
     @Test
+    public void testDisableUserThrowsExceptionWhenDisableMultiFirmUser() {
+        Firm firm = Firm.builder().id(UUID.randomUUID()).name("Test Firm").build();
+        UserProfile disabledUserProfile = UserProfile.builder().id(UUID.randomUUID())
+                .activeProfile(true)
+                .firm(firm)
+                .build();
+        EntraUser disabledUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .firstName("Disabled")
+                .lastName("User")
+                .multiFirmUser(true)
+                .userProfiles(Set.of(disabledUserProfile))
+                .build();
+        UserProfile disabledByUserProfile = UserProfile.builder().id(UUID.randomUUID())
+                .activeProfile(true)
+                .userType(UserType.INTERNAL)
+                .build();
+        EntraUser disabledByUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .firstName("DisabledBy")
+                .lastName("User")
+                .userProfiles(Set.of(disabledByUserProfile))
+                .build();
+        DisableUserReason disableUserReason = DisableUserReason.builder()
+                .id(UUID.randomUUID())
+                .name("Reason")
+                .description("A test reason")
+                .entraDescription("ATestReason")
+                .build();
+
+        when(entraUserRepository.findById(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
+        when(entraUserRepository.findById(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
+        when(disableUserReasonRepository.findById(eq(disableUserReason.getId()))).thenReturn(Optional.of(disableUserReason));
+
+        assertThrows(RuntimeException.class,
+                () -> userAccountStatusService.disableUser(disabledUser.getId(), disableUserReason.getId(), disabledByUser.getId()));
+        assertThat(disabledUser.isEnabled()).isTrue();
+        verify(entraUserRepository, times(0)).saveAndFlush(any());
+        verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
+    }
+
+    @Test
+    public void testDisableUserThrowsExceptionWhenSelfDisable() {
+        UserProfile disabledByUserProfile = UserProfile.builder().id(UUID.randomUUID())
+                .activeProfile(true)
+                .userType(UserType.EXTERNAL)
+                .build();
+        EntraUser disabledByUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .firstName("DisabledBy")
+                .lastName("User")
+                .userProfiles(Set.of(disabledByUserProfile))
+                .build();
+        DisableUserReason disableUserReason = DisableUserReason.builder()
+                .id(UUID.randomUUID())
+                .name("Reason")
+                .description("A test reason")
+                .entraDescription("ATestReason")
+                .build();
+
+        when(entraUserRepository.findById(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
+        when(disableUserReasonRepository.findById(eq(disableUserReason.getId()))).thenReturn(Optional.of(disableUserReason));
+
+        assertThrows(RuntimeException.class,
+                () -> userAccountStatusService.disableUser(disabledByUser.getId(), disableUserReason.getId(), disabledByUser.getId()));
+        assertThat(disabledByUser.isEnabled()).isTrue();
+        verify(entraUserRepository, times(0)).saveAndFlush(any());
+        verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
+    }
+
+    @Test
     public void testDisableUserThrowsExceptionWhenTechServicesRequestIsError() {
         Firm firm = Firm.builder().id(UUID.randomUUID()).name("Test Firm").build();
         UserProfile disabledUserProfile = UserProfile.builder().id(UUID.randomUUID())
@@ -211,6 +282,47 @@ public class UserAccountStatusServiceTest {
         when(techServicesClient.disableUser(any(), any())).thenReturn(techServicesResponse);
 
         assertThrows(TechServicesClientException.class, () -> userAccountStatusService.disableUser(disabledUser.getId(), disableUserReason.getId(), disabledByUser.getId()));
+        assertThat(disabledUser.isEnabled()).isTrue();
+        verify(entraUserRepository, times(0)).saveAndFlush(any());
+        verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
+    }
+
+    @Test
+    public void testDisableUserThrowsExceptionWhenNotInSameFirm() {
+        Firm firm1 = Firm.builder().id(UUID.randomUUID()).name("Test Firm 1").build();
+        UserProfile disabledUserProfile = UserProfile.builder().id(UUID.randomUUID())
+                .activeProfile(true)
+                .firm(firm1)
+                .build();
+        EntraUser disabledUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .firstName("Disabled")
+                .lastName("User")
+                .userProfiles(Set.of(disabledUserProfile))
+                .build();
+        Firm firm2 = Firm.builder().id(UUID.randomUUID()).name("Test Firm 2").build();
+        UserProfile disabledByUserProfile = UserProfile.builder().id(UUID.randomUUID())
+                .activeProfile(true)
+                .firm(firm2)
+                .build();
+        EntraUser disabledByUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .firstName("DisabledBy")
+                .lastName("User")
+                .userProfiles(Set.of(disabledByUserProfile))
+                .build();
+        DisableUserReason disableUserReason = DisableUserReason.builder()
+                .id(UUID.randomUUID())
+                .name("Reason")
+                .description("A test reason")
+                .entraDescription("ATestReason")
+                .build();
+
+        when(entraUserRepository.findById(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
+        when(entraUserRepository.findById(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
+        when(disableUserReasonRepository.findById(eq(disableUserReason.getId()))).thenReturn(Optional.of(disableUserReason));
+
+        assertThrows(RuntimeException.class, () -> userAccountStatusService.disableUser(disabledUser.getId(), disableUserReason.getId(), disabledByUser.getId()));
         assertThat(disabledUser.isEnabled()).isTrue();
         verify(entraUserRepository, times(0)).saveAndFlush(any());
         verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
