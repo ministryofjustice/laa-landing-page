@@ -106,6 +106,7 @@ public abstract class BaseFrontEndTest {
     protected ManageUsersPage loginAndGetManageUsersPage(TestUser user) {
         loginAs(user.email);
         page.navigate(String.format("http://localhost:%d/admin/users", port));
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         return new ManageUsersPage(page, port);
     }
 

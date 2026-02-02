@@ -335,6 +335,7 @@ public class ManageUsersPage {
 
     public boolean searchAndVerifyUser(String email) {
         searchForUser(email);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
         Locator row = page.locator("tbody tr").filter(
                 new Locator.FilterOptions().setHasText(email)
