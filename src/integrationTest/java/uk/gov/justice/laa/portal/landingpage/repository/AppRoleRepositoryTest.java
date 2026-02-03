@@ -119,4 +119,23 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(allRoles).hasSize(3);
     }
 
+    @Test
+    public void testGetExternalRoleNames() {
+
+        App lassie = buildLaaApp("lassie", "Entra App 1", "Security Group Id",
+                "Security Group Name", "Lassie App Title", "Lassie App Description",
+                "Lassie OID Group", "http://localhost:8080/lassie");
+        App crime = buildLaaApp("crime", "Entra App 2", "Security Group Id 2",
+                "Security Group Name 2", "Crime App Title", "Crime App Description",
+                "Crime OID Group", "http://localhost:8080/crime");
+        appRepository.saveAllAndFlush(Arrays.asList(lassie, crime));
+        AppRole externalTestRole = buildLaaExternalAppRole(lassie, "External role test");
+        repository.saveAndFlush(externalTestRole);
+        AppRole internalRole = buildLaaAppRole(crime, "Internal role test");
+        repository.saveAndFlush(internalRole);
+        List<String> externalRoleNames = repository.getExternalRoleNames();
+
+        Assertions.assertThat(externalRoleNames).containsExactly("External role test" ,"Firm User Manager");
+    }
 }
+
