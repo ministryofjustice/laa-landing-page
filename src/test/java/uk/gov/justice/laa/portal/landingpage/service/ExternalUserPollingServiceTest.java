@@ -8,7 +8,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraLastSyncMetadata;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraLastSyncMetadataRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUsersResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesErrorResponse;
@@ -31,6 +33,9 @@ class ExternalUserPollingServiceTest {
 
     @Mock
     private EntraLastSyncMetadataRepository entraLastSyncMetadataRepository;
+
+    @Mock
+    private EntraUserRepository entraUserRepository;
 
     @Mock
     private TechServicesClient techServicesClient;
@@ -226,6 +231,168 @@ class ExternalUserPollingServiceTest {
         externalUserPollingService.updateSyncMetadata();
 
         verify(techServicesClient).getUsers(anyString(), anyString());
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldSynchronizeUserData_whenApiReturnsUsersWithData() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        EntraUser existingUser = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user123")
+                .firstName("OldFirstName")
+                .lastName("OldLastName")
+                .email("user@example.com")
+                .enabled(true)
+                .mailOnly(false)
+                .lastLoginDate(LocalDateTime.of(2025, 1, 1, 10, 0))
+                .build();
+        when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
+
+        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+                .id("user123")
+                .givenName("NewFirstName")
+                .surname("NewLastName")
+                .accountEnabled(false)
+                .isMailOnly(true)
+                .lastSignIn("2025-01-18T10:30:00Z")
+                .build();
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        verify(entraUserRepository).save(existingUser);
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldNotUpdateLastLoginDate_whenApiReturnsNullLastSignIn() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        LocalDateTime existingLoginDate = LocalDateTime.of(2025, 1, 1, 10, 0);
+        EntraUser existingUser = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user123")
+                .firstName("John")
+                .lastName("Doe")
+                .email("user@example.com")
+                .enabled(true)
+                .mailOnly(false)
+                .lastLoginDate(existingLoginDate)
+                .build();
+        when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
+
+        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+                .id("user123")
+                .givenName("John")
+                .surname("Doe")
+                .accountEnabled(true)
+                .isMailOnly(false)
+                .lastSignIn(null) // null lastSignIn
+                .build();
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        verify(entraUserRepository).save(existingUser);
+    }
+
+    @Test
+    void shouldSkipUserUpdate_whenUserNotFoundInDatabase() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        when(entraUserRepository.findByEntraOid("nonexistent123")).thenReturn(Optional.empty());
+
+        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+                .id("nonexistent123")
+                .givenName("John")
+                .surname("Doe")
+                .accountEnabled(true)
+                .isMailOnly(false)
+                .lastSignIn("2025-01-18T10:30:00Z")
+                .build();
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        verify(entraUserRepository, never()).save(any(EntraUser.class));
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldHandleMultipleUsers_inSingleSyncOperation() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+        
+        // Setup multiple existing users
+        EntraUser user1 = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user1")
+                .firstName("John")
+                .lastName("Doe")
+                .email("john@example.com")
+                .enabled(true)
+                .mailOnly(false)
+                .build();
+        EntraUser user2 = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user2")
+                .firstName("Jane")
+                .lastName("Smith")
+                .email("jane@example.com")
+                .enabled(false)
+                .mailOnly(true)
+                .build();
+        
+        when(entraUserRepository.findByEntraOid("user1")).thenReturn(Optional.of(user1));
+        when(entraUserRepository.findByEntraOid("user2")).thenReturn(Optional.of(user2));
+
+        GetUsersResponse.TechServicesUser apiUser1 = GetUsersResponse.TechServicesUser.builder()
+                .id("user1")
+                .givenName("John")
+                .surname("Doe")
+                .accountEnabled(false) // changed
+                .isMailOnly(true) // changed
+                .lastSignIn("2025-01-18T10:30:00Z")
+                .build();
+        GetUsersResponse.TechServicesUser apiUser2 = GetUsersResponse.TechServicesUser.builder()
+                .id("user2")
+                .givenName("Jane")
+                .surname("Smith")
+                .accountEnabled(true) // changed
+                .isMailOnly(false) // changed
+                .lastSignIn("2025-01-19T15:45:00Z")
+                .build();
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser1, apiUser2))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        verify(entraUserRepository).save(user1);
+        verify(entraUserRepository).save(user2);
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
 }
