@@ -202,9 +202,9 @@ public class ExternalUserPollingService {
     }
 
     private boolean shouldDisableUser(GetUsersResponse.TechServicesUser user, EntraUser entraUser) {
-        if (user.getCustomSecurityAttributes() != null && 
-            user.getCustomSecurityAttributes().getGuestUserStatus() != null &&
-            user.getCustomSecurityAttributes().getGuestUserStatus().getDisabledReason() != null) {
+        if (user.getCustomSecurityAttributes() != null
+                && user.getCustomSecurityAttributes().getGuestUserStatus() != null
+                && user.getCustomSecurityAttributes().getGuestUserStatus().getDisabledReason() != null) {
 
             return entraUser.isEnabled();
         }
@@ -243,8 +243,8 @@ public class ExternalUserPollingService {
     private DisableUserReason findOrCreateDisableReason(String reasonFromApi) {
         Optional<DisableUserReason> existingReason = disableUserReasonRepository.findAll()
                 .stream()
-                .filter(reason -> reason.getName().equalsIgnoreCase(reasonFromApi) || 
-                                reason.getEntraDescription().equalsIgnoreCase(reasonFromApi))
+                .filter(reason -> reason.getName().equalsIgnoreCase(reasonFromApi)
+                        || reason.getEntraDescription().equalsIgnoreCase(reasonFromApi))
                 .findFirst();
 
         return existingReason.orElseGet(() -> disableUserReasonRepository.findAll()
