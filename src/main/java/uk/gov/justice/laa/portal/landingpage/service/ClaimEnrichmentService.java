@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentResponse;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentRequest;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserPayloadDto;
+import uk.gov.justice.laa.portal.landingpage.dto.CcmsUserDetailsResponse;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -14,6 +15,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.ClaimEnrichmentException;
+import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
@@ -36,6 +38,7 @@ public class ClaimEnrichmentService {
     private final AppRepository appRepository;
     private final OfficeRepository officeRepository;
     private final FirmRepository firmRepository;
+    private final CcmsUserDetailsService ccmsUserDetailsService;
 
     public ClaimEnrichmentResponse enrichClaim(ClaimEnrichmentRequest request) {
         EntraUserPayloadDto userDetails =
@@ -50,11 +53,23 @@ public class ClaimEnrichmentService {
         try {
             // 1. Get the EntraUser from database
             EntraUser entraUser = entraUserRepository.findByEntraOid(userId)
-                    .orElseThrow(() -> new ClaimEnrichmentException("User not found in database"));
+                    .orElseThrow(() -> {
+                        log.warn("User not found for the given entra id: {}", userId);
+                        return new UserNotFoundException(
+                                String.format("User not found for the given entra id: %s", userId));
+                    });
 
             // 2. Get app from DB using the app entra id from request
             App app = appRepository.findByEntraAppId(appEntraId)
                     .orElseThrow(() -> new ClaimEnrichmentException("Application not found"));
+
+            if (!app.isEnabled()) {
+                log.info("App disabled on SiLAS, so user cannot access the application");
+                return ClaimEnrichmentResponse.builder()
+                        .success(false)
+                        .data(null)
+                        .build();
+            }
 
             // 3. Check if user has access to this app
             boolean hasAccess = entraUser.getUserProfiles().stream()
@@ -131,7 +146,25 @@ public class ClaimEnrichmentService {
                 }
             }
 
-            ClaimEnrichmentResponse.ResponseData responseData = getResponseData(entraUser, userRoles, officeIds, externalFirms);
+            String legacyUserId = entraUser.getUserProfiles().stream()
+                    .filter(UserProfile::isActiveProfile)
+                    .map(UserProfile::getLegacyUserId)
+                    .filter(Objects::nonNull)
+                    .findFirst()
+                    .map(UUID::toString)
+                    .orElse(null);
+
+            String ccmsUsername = null;
+            if (isInternalUser && legacyUserId != null) {
+                CcmsUserDetailsResponse udaResponse = ccmsUserDetailsService.getUserDetailsByLegacyUserId(legacyUserId);
+                if (udaResponse != null
+                        && udaResponse.getCcmsUserDetails() != null
+                        && udaResponse.getCcmsUserDetails().getUserName() != null) {
+                    ccmsUsername = udaResponse.getCcmsUserDetails().getUserName();
+                }
+            }
+
+            ClaimEnrichmentResponse.ResponseData responseData = getResponseData(entraUser, userRoles, officeIds, externalFirms, legacyUserId, ccmsUsername);
 
             return ClaimEnrichmentResponse.builder()
                     .success(true)
@@ -141,6 +174,8 @@ public class ClaimEnrichmentService {
         } catch (ClaimEnrichmentException e) {
             log.error("Claim enrichment failed: {}", e.getMessage());
             throw e;
+        } catch (UserNotFoundException e) {
+            throw new UserNotFoundException(String.format("User not found for the given entra id: %s", userId));
         } catch (Exception e) {
             log.error("Unexpected error during claim enrichment", e);
             throw new ClaimEnrichmentException("Failed to process claim enrichment", e);
@@ -150,21 +185,18 @@ public class ClaimEnrichmentService {
     private static ClaimEnrichmentResponse.ResponseData getResponseData(EntraUser entraUser,
                                                                         List<String> userRoles,
                                                                         List<String> officeIds,
-                                                                        List<Firm> externalFirms) {
-
-        String legacyUserId = entraUser.getUserProfiles().stream()
-                .filter(UserProfile::isActiveProfile)
-                .map(UserProfile::getLegacyUserId)
-                .filter(Objects::nonNull)
-                .findFirst()
-                .map(UUID::toString)
-                .orElse(null);
+                                                                        List<Firm> externalFirms,
+                                                                        String legacyUserId,
+                                                                        String ccmsUsername) {
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("USER_NAME", legacyUserId.toUpperCase());
         claims.put("USER_EMAIL", entraUser.getEmail());
         claims.put("LAA_APP_ROLES", userRoles);
         claims.put("LAA_ACCOUNTS", officeIds);
+        if (ccmsUsername != null && !ccmsUsername.isEmpty()) {
+            claims.put("CCMS_USERNAME", ccmsUsername);
+        }
 
         if (!externalFirms.isEmpty()) {
             List<String> code = externalFirms.stream().map(Firm::getCode).collect(Collectors.toList());

@@ -29,7 +29,7 @@ class CacheServiceTest {
     private CacheService cacheService;
 
     @Test
-    void clearTechServicesCache_WhenCacheExists_ShouldClearCache() {
+    void clearTechServicesCache_WhenCacheExists_ShouldClearFirmsCache() {
         // Given
         when(cacheManager.getCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE))
                 .thenReturn(techServicesCache);
@@ -57,13 +57,13 @@ class CacheServiceTest {
     }
 
     @Test
-    void clearFirmsCache_WhenCacheExists_ShouldClearCache() {
+    void clearFirmsCache_WhenCacheExists_ShouldClearFirmsCache() {
         // Given
         when(cacheManager.getCache(CachingConfig.LIST_OF_FIRMS_CACHE))
                 .thenReturn(firmsCache);
 
         // When
-        cacheService.clearCache();
+        cacheService.clearFirmsCache();
 
         // Then
         verify(firmsCache).clear();
@@ -77,10 +77,11 @@ class CacheServiceTest {
                 .thenReturn(null);
 
         // When
-        cacheService.clearCache();
+        cacheService.clearFirmsCache();
 
         // Then - No exception should be thrown
         verifyNoInteractions(firmsCache);
         verifyNoInteractions(techServicesCache);
     }
+
 }

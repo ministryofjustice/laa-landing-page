@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
@@ -44,4 +45,17 @@ public class DoNothingTechServicesClient implements TechServicesClient {
                 .build());
     }
 
+    @Override
+    public TechServicesApiResponse<ChangeAccountEnabledResponse> disableUser(EntraUserDto user, String reason) {
+        return TechServicesApiResponse.success(ChangeAccountEnabledResponse.builder().success(true)
+                .message("Successfully disabled user.")
+                .build());
+    }
+
+    @Override
+    public TechServicesApiResponse<ChangeAccountEnabledResponse> enableUser(EntraUserDto user) {
+        return TechServicesApiResponse.success(ChangeAccountEnabledResponse.builder().success(true)
+                .message("Successfully enabled user.")
+                .build());
+    }
 }

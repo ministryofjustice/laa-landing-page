@@ -13,6 +13,8 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraAuthenticationContext;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraClaimData;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraServicePrincipalDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserPayloadDto;
+import uk.gov.justice.laa.portal.landingpage.dto.CcmsUserDetails;
+import uk.gov.justice.laa.portal.landingpage.dto.CcmsUserDetailsResponse;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -21,6 +23,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.ClaimEnrichmentException;
+import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
@@ -66,6 +69,8 @@ class ClaimEnrichmentServiceTest {
     private AppRepository appRepository;
     @Mock
     private OfficeRepository officeRepository;
+    @Mock
+    private CcmsUserDetailsService ccmsUserDetailsService;
     @InjectMocks
     private ClaimEnrichmentService claimEnrichmentService;
 
@@ -106,6 +111,7 @@ class ClaimEnrichmentServiceTest {
                 .id(UUID.fromString(APP_ID))
                 .entraAppId(ENTRA_APP_ID)
                 .name(APP_NAME)
+                .enabled(true)
                 .build();
 
         firm = Firm.builder()
@@ -287,15 +293,15 @@ class ClaimEnrichmentServiceTest {
     }
 
     @Test
-    void enrichClaim_InternalUser() {
-        // Arrange
-        AppRole internalRole = AppRole.builder()
+    void enrichClaim_InternalUser_UsesCcmsUsernameFromUda() {
+        AppRole internalLegacyRole = AppRole.builder()
                 .name(INTERNAL_ROLE)
                 .app(app)
                 .build();
-        // Internal users don't have firms
-        UserProfile userProfile = UserProfile.builder().activeProfile(true)
-                .appRoles(Set.of(internalRole))
+
+        UserProfile userProfile = UserProfile.builder()
+                .activeProfile(true)
+                .appRoles(Set.of(internalLegacyRole))
                 .legacyUserId(LEGACY_USER_ID)
                 .firm(null)
                 .userType(UserType.INTERNAL)
@@ -305,30 +311,22 @@ class ClaimEnrichmentServiceTest {
         when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
         when(appRepository.findByEntraAppId(anyString())).thenReturn(Optional.of(app));
 
-        // Act
+        CcmsUserDetails ccmsUserDetails = new CcmsUserDetails();
+        ccmsUserDetails.setUserName("UDA_CCMS_USER");
+        CcmsUserDetailsResponse ccmsResponse = new CcmsUserDetailsResponse();
+        ccmsResponse.setCcmsUserDetails(ccmsUserDetails);
+
+        when(ccmsUserDetailsService.getUserDetailsByLegacyUserId(LEGACY_USER_ID.toString()))
+                .thenReturn(ccmsResponse);
+
         ClaimEnrichmentResponse response = claimEnrichmentService.enrichClaim(request);
 
-        // Assert
         assertNotNull(response);
-        assertNotNull(response.getData());
-        assertEquals("microsoft.graph.onTokenIssuanceStartResponseData", response.getData().getOdataType());
-        
-        // Verify actions
-        assertNotNull(response.getData().getActions());
-        assertEquals(1, response.getData().getActions().size());
-        
         ClaimEnrichmentResponse.ResponseAction action = response.getData().getActions().get(0);
-        assertEquals("microsoft.graph.tokenIssuanceStart.provideClaimsForToken", action.getOdataType());
-        
-        // Verify claims
         Map<String, Object> claims = action.getClaims();
-        assertNotNull(claims);
+
+        assertEquals("UDA_CCMS_USER", claims.get("CCMS_USERNAME"));
         assertEquals(LEGACY_USER_ID.toString().toUpperCase(), claims.get("USER_NAME"));
-        assertEquals(USER_EMAIL, claims.get("USER_EMAIL"));
-        assertEquals(List.of(INTERNAL_ROLE), claims.get("LAA_APP_ROLES"));
-        assertEquals(Collections.emptyList(), claims.get("LAA_ACCOUNTS"));
-        
-        verify(officeRepository, never()).findOfficeByFirm_IdIn(any());
     }
 
     @Test
@@ -337,11 +335,11 @@ class ClaimEnrichmentServiceTest {
         when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.empty());
 
         // Act & Assert
-        ClaimEnrichmentException exception = assertThrows(
-            ClaimEnrichmentException.class,
-            () -> claimEnrichmentService.enrichClaim(request)
+        UserNotFoundException exception = assertThrows(
+                UserNotFoundException.class,
+                () -> claimEnrichmentService.enrichClaim(request)
         );
-        assertEquals("User not found in database", exception.getMessage());
+        assertEquals("User not found for the given entra id: entra-123", exception.getMessage());
         verify(officeRepository, never()).findOfficeByFirm_IdIn(any());
     }
 
@@ -437,6 +435,31 @@ class ClaimEnrichmentServiceTest {
             () -> claimEnrichmentService.enrichClaim(request)
         );
         assertEquals("User has no firm assigned", exception.getMessage());
+        verify(officeRepository, never()).findOfficeByFirm_IdIn(any());
+    }
+
+    @Test
+    void enrichClaim_Success_When_App_Disabled() {
+        // Arrange
+        app.setEnabled(false);
+        UserProfile profile1 = UserProfile.builder().activeProfile(true)
+                .appRoles(Set.of(AppRole.builder().name(EXTERNAL_ROLE).app(app).build()))
+                .legacyUserId(LEGACY_USER_ID)
+                .firm(firm)
+                .unrestrictedOfficeAccess(false)
+                .build();
+        entraUser.setUserProfiles(Set.of(profile1));
+
+        when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(appRepository.findByEntraAppId(anyString())).thenReturn(Optional.of(app));
+
+        // Act
+        ClaimEnrichmentResponse response = claimEnrichmentService.enrichClaim(request);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(false, response.isSuccess());
+        assertEquals(null, response.getData());
         verify(officeRepository, never()).findOfficeByFirm_IdIn(any());
     }
 }

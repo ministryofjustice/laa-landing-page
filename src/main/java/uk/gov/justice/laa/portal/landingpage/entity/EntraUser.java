@@ -1,7 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.entity;
 
+import java.time.LocalDateTime;
 import java.util.Set;
 
+import lombok.Builder;
 import org.hibernate.annotations.ColumnDefault;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -73,6 +75,20 @@ public class EntraUser extends AuditableEntity {
     @Column(name = "multi_firm_user", nullable = false)
     @ColumnDefault("false")
     private boolean multiFirmUser;
+
+    @Column(name = "last_synced_on")
+    private LocalDateTime lastSyncedOn;
+
+    @Column(name = "mail_only")
+    private boolean mailOnly;
+
+    @Column(name = "last_login_date")
+    private LocalDateTime lastLoginDate;
+
+    @Column(name = "enabled", nullable = false)
+    @ColumnDefault("true")
+    @Builder.Default
+    private boolean enabled = true;
 
     @OneToMany(mappedBy = "entraUser", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @ToString.Exclude

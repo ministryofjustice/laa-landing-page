@@ -5,6 +5,7 @@ import com.microsoft.playwright.BrowserContext;
 import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
+import com.microsoft.playwright.options.LoadState;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,9 +19,12 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import uk.gov.justice.laa.portal.landingpage.playwright.pages.ManageUsersPage;
+import uk.gov.justice.laa.portal.landingpage.playwright.pages.UserProfilePage;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -103,5 +107,22 @@ public abstract class BaseFrontEndTest {
         loginAs(user.email);
         page.navigate(String.format("http://localhost:%d/admin/users", port));
         return new ManageUsersPage(page, port);
+    }
+
+    protected ManageUsersPage loginAndGetManageUsersPage(String userEmail) {
+        loginAs(userEmail);
+        page.navigate(String.format("http://localhost:%d/admin/users", port));
+        return new ManageUsersPage(page, port);
+    }
+
+    protected UserProfilePage loginAndGetUserProfilePage(TestUser user, String userEmail) {
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(user);
+        manageUsersPage.searchForUser(userEmail);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        manageUsersPage.clickFirstUserLink();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        assertTrue(page.url().contains("/admin/users/manage/"));
+
+        return new UserProfilePage(page, port);
     }
 }
