@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.playwright.tests;
 
 
 import com.microsoft.playwright.Locator;
+import com.microsoft.playwright.options.LoadState;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.BaseFrontEndTest;
@@ -157,6 +158,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
     void verifyUserDetailsIsPopulated() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
         manageUsersPage.clickFirstUserLink();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         manageUsersPage.verifyUserDetailsPopulated();
     }
 
@@ -191,7 +193,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
     void editUserOfficesAndVerify() {
 
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
-        manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
+        manageUsersPage.clickExternalUserLink("FirmUserManager");
         manageUsersPage.clickOfficesTab();
         manageUsersPage.clickOfficeChange();
         assertTrue(page.url().contains("/admin/users/edit/"));
@@ -201,7 +203,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickConfirmButton();
         assertTrue(page.locator(".govuk-panel__title:has-text('User detail updated')").isVisible());
         manageUsersPage.clickGoBackToManageUsers();
-        manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
+        manageUsersPage.clickExternalUserLink("FirmUserManager");
         manageUsersPage.clickOfficesTab();
         assertTrue(page.locator(".govuk-table__header:has-text('Office Address')").isVisible());
         assertTrue(page.locator(".govuk-table__header:has-text('Account number')").isVisible());
@@ -322,6 +324,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
             manageUsersPage.clickContinueLink();
             manageUsersPage.clickContinueLink();
             manageUsersPage.clickConfirmButton();
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED);
             assertTrue(page.url().contains("/confirmation"));
             assertTrue(page.locator(".govuk-panel__title:has-text('User detail updated')").isVisible());
             manageUsersPage.clickGoBackToManageUsers();
@@ -342,11 +345,13 @@ public class ManageUsersTest extends BaseFrontEndTest {
             manageUsersPage.clickContinueLink();
             manageUsersPage.clickConfirmButton();
             manageUsersPage.clickGoBackToManageUsers();
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED);
             manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
             manageUsersPage.clickOfficesTab();
             assertTrue(page.locator(".govuk-summary-card:has-text('Automation Office 1, City1, 12345')").isVisible());
             assertTrue(page.locator(".govuk-summary-card:has-text('Automation Office 2, City2, 23456')").isVisible());
             manageUsersPage.clickGoBackToManageUsers();
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED);
             manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
             manageUsersPage.clickOfficesTab();
             manageUsersPage.clickOfficeChange();
@@ -355,6 +360,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
             manageUsersPage.clickContinueLink();
             manageUsersPage.clickConfirmButton();
             manageUsersPage.clickGoBackToManageUsers();
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED);
             manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
             manageUsersPage.clickOfficesTab();
             assertTrue(page.locator(".govuk-summary-card:has-text('Automation Office 1, City1, 12345')").isHidden());
@@ -369,6 +375,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         Locator row = manageUsersPage.externalUserRowLocator();
         assertTrue(row.locator(".moj-badge.moj-badge--blue").isVisible());
         manageUsersPage.clickExternalUserLink("Playwright ExternalUserIncomplete");
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         assertTrue(page.locator(".govuk-button:has-text('Manage Access')").isVisible());
         manageUsersPage.clickManageAccess();
         List<String> services = List.of("Manage Your Users");
@@ -379,6 +386,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickContinueLink();
         manageUsersPage.clickContinueLink();
         manageUsersPage.clickConfirmButton();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         assertTrue(page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible());
         manageUsersPage.clickGoBackToManageUsers();
         assertTrue(row.locator(".moj-badge.moj-badge--blue").isHidden());
