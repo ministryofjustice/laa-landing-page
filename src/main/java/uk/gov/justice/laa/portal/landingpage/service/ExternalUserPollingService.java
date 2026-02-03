@@ -5,15 +5,23 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraLastSyncMetadata;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.repository.DisableUserReasonRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraLastSyncMetadataRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUsersResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,6 +34,9 @@ public class ExternalUserPollingService {
     
     private final EntraLastSyncMetadataRepository entraLastSyncMetadataRepository;
     private final EntraUserRepository entraUserRepository;
+    private final UserProfileRepository userProfileRepository;
+    private final DisableUserReasonRepository disableUserReasonRepository;
+    private final UserAccountStatusAuditRepository userAccountStatusAuditRepository;
     private final TechServicesClient techServicesClient;
     
     @Value("${app.entra.sync.buffer.minutes:5}")
@@ -106,6 +117,18 @@ public class ExternalUserPollingService {
                 if (entraUserOptional.isPresent()) {
                     EntraUser entraUser = entraUserOptional.get();
 
+                    if (user.isDeleted()) {
+                        deleteUser(entraUser);
+                        log.info("Deleted user: {}  - marked as deleted in Entra",
+                                entraUser.getEmail());
+                        continue;
+                    }
+
+                    // Update user fields if not deleted
+                    if (shouldDisableUser(user, entraUser)) {
+                        disableUserWithReason(user, entraUser);
+                    }
+
                     if (user.getGivenName() != null && !user.getGivenName().equals(entraUser.getFirstName())) {
                         entraUser.setFirstName(user.getGivenName());
                     }
@@ -139,6 +162,97 @@ public class ExternalUserPollingService {
         
         log.info("User synchronization completed: {} users updated",
                 updatedCount);
+    }
+
+    private void deleteUser(EntraUser entraUser) {
+        try {
+            List<UserProfile> userProfiles = entraUser.getUserProfiles() != null 
+                ? new ArrayList<>(entraUser.getUserProfiles()) 
+                : new ArrayList<>();
+
+            for (UserProfile userProfile : userProfiles) {
+                if (userProfile.getAppRoles() != null) {
+                    userProfile.getAppRoles().clear();
+                }
+                
+                if (userProfile.getOffices() != null) {
+                    userProfile.getOffices().clear();
+                }
+                entraUser.getUserProfiles().remove(userProfile);
+                userProfile.setEntraUser(null);
+
+                userProfileRepository.save(userProfile);
+                userProfileRepository.flush();
+                userProfileRepository.delete(userProfile);
+            }
+
+            userProfileRepository.flush();
+
+            entraUserRepository.delete(entraUser);
+            entraUserRepository.flush();
+            
+            log.debug("Successfully deleted user and all related entities: {} ({})", 
+                    entraUser.getEmail(), entraUser.getEntraOid());
+                    
+        } catch (Exception e) {
+            log.error("Error deleting user {} ({}): {}", 
+                    entraUser.getEmail(), entraUser.getEntraOid(), e.getMessage(), e);
+            throw new RuntimeException("Failed to delete user: " + entraUser.getEmail(), e);
+        }
+    }
+
+    private boolean shouldDisableUser(GetUsersResponse.TechServicesUser user, EntraUser entraUser) {
+        if (user.getCustomSecurityAttributes() != null && 
+            user.getCustomSecurityAttributes().getGuestUserStatus() != null &&
+            user.getCustomSecurityAttributes().getGuestUserStatus().getDisabledReason() != null) {
+
+            return entraUser.isEnabled();
+        }
+        return false;
+    }
+
+    private void disableUserWithReason(GetUsersResponse.TechServicesUser user, EntraUser entraUser) {
+        try {
+            String disabledReasonFromApi = user.getCustomSecurityAttributes()
+                    .getGuestUserStatus().getDisabledReason();
+
+            DisableUserReason disableReason = findOrCreateDisableReason(disabledReasonFromApi);
+
+            entraUser.setEnabled(false);
+            entraUserRepository.save(entraUser);
+
+            UserAccountStatusAudit audit = UserAccountStatusAudit.builder()
+                    .entraUser(entraUser)
+                    .disableUserReason(disableReason)
+                    .statusChange(UserAccountStatus.DISABLED)
+                    .disabledBy("External user sync") // Automated disable from API sync
+                    .disabledDate(LocalDateTime.now())
+                    .build();
+            
+            userAccountStatusAuditRepository.save(audit);
+            
+            log.info("Disabled user: {} ({}) - Reason: {} from API sync", 
+                    entraUser.getEmail(), entraUser.getEntraOid(), disableReason.getName());
+                    
+        } catch (Exception e) {
+            log.error("Error disabling user {} ({}): {}", 
+                    entraUser.getEmail(), entraUser.getEntraOid(), e.getMessage(), e);
+        }
+    }
+
+    private DisableUserReason findOrCreateDisableReason(String reasonFromApi) {
+        Optional<DisableUserReason> existingReason = disableUserReasonRepository.findAll()
+                .stream()
+                .filter(reason -> reason.getName().equalsIgnoreCase(reasonFromApi) || 
+                                reason.getEntraDescription().equalsIgnoreCase(reasonFromApi))
+                .findFirst();
+
+        return existingReason.orElseGet(() -> disableUserReasonRepository.findAll()
+                .stream()
+                .filter(reason -> "Inactivity".equals(reason.getName()))
+                .findFirst()
+                .get());
+
     }
 
     private void updateSyncMetadataOnSuccess(Optional<EntraLastSyncMetadata> existingMetadata, LocalDateTime toTime, String logMessage) {
