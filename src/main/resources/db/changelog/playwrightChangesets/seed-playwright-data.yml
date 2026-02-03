@@ -187,7 +187,7 @@ databaseChangeLog:
                            WHERE u.email = 'playwright-silasadministration@playwrighttest.com'),
                           (SELECT id FROM app_role WHERE name = 'SILAS System Administration'))"
 
-  # Information & Assurance
+  # Security Response
   - changeSet:
       id: 1761063088678-11
       author: chris.marron
@@ -262,7 +262,7 @@ databaseChangeLog:
                    JOIN entra_user u ON up.entra_user_id = u.id
                    WHERE u.email = 'playwright-informationassurance@playwrighttest.com'),
                   (SELECT id FROM app_role
-                   WHERE name = 'Information & Assurance')
+                   WHERE name = 'Security Response')
                 )"
 
   - changeSet:

@@ -236,8 +236,6 @@ spec:
               value: "${DISTRIBUTED_DB_LOCKING_PERIOD}"
             - name: FEATURE_FLAG_ENABLE_USER_AUDIT_TABLE
               value: "${FEATURE_FLAG_ENABLE_USER_AUDIT_TABLE}"
-            - name: FEATURE_FLAG_ENABLE_REASSIGN_FIRM
-              value: "${FEATURE_FLAG_ENABLE_REASSIGN_FIRM}"
             - name: SPRING_SESSION_JDBC_ENABLED
               value: "${SPRING_SESSION_JDBC_ENABLED}"
             - name: APP_MEANS_AND_MATCH_UI1_NAME

@@ -82,6 +82,7 @@ public class ManageUsersPage {
 
         log.info("Navigating to Manage Users page: {}", url);
         page.navigate(url);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
         this.header = page.locator("h1.govuk-heading-xl");
         this.createNewUserButton = page.locator("button.govuk-button[onclick*='/admin/user/create/details']");
@@ -321,6 +322,11 @@ public class ManageUsersPage {
         );
     }
 
+    // SignIn Error
+    public void verifySignInError() {
+        assertTrue(page.getByText("Sorry, but we’re having trouble signing you in.").isVisible());
+    }
+
     // Search
     public void searchForUser(String userEmail) {
         searchInputByName.fill(userEmail);
@@ -330,6 +336,7 @@ public class ManageUsersPage {
 
     public boolean searchAndVerifyUser(String email) {
         searchForUser(email);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
         Locator row = page.locator("tbody tr").filter(
                 new Locator.FilterOptions().setHasText(email)

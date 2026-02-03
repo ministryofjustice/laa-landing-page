@@ -49,9 +49,11 @@ import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto.AuditProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDirectoryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
+import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
 import uk.gov.justice.laa.portal.landingpage.dto.UserFirmReassignmentEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
@@ -69,6 +71,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
+import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
@@ -130,6 +133,18 @@ public class UserService {
         this.firmRepository = firmRepository;
         this.eventService = eventService;
         this.notificationService = notificationService;
+    }
+
+    public boolean hasUserFirmAlreadyAssigned(String email, UUID firmId) {
+        Optional<EntraUser> entraUserOptional = entraUserRepository.findByEmailIgnoreCase(email);
+        if (entraUserOptional.isPresent()) {
+            EntraUser entraUser = entraUserOptional.get();
+            return entraUser.getUserProfiles().stream()
+                    .anyMatch(profile -> profile.getFirm() != null
+                            && profile.getFirm().getId().equals(firmId));
+        }
+
+        return false;
     }
 
     static <T> List<List<T>> partitionBasedOnSize(List<T> inputList, int size) {
@@ -654,21 +669,6 @@ public class UserService {
 
     }
 
-    @Async
-    public void disableUsers(List<String> ids) throws IOException {
-        Collection<List<String>> batchIds = partitionBasedOnSize(ids, BATCH_SIZE);
-        for (List<String> batch : batchIds) {
-            BatchRequestContent batchRequestContent = new BatchRequestContent(graphClient);
-            for (String id : batch) {
-                User user = new User();
-                user.setAccountEnabled(false);
-                RequestInformation patchMessage = graphClient.users().byUserId(id).toPatchRequestInformation(user);
-                batchRequestContent.addBatchRequestStep(patchMessage);
-            }
-            graphClient.getBatchRequestBuilder().post(batchRequestContent, null);
-        }
-    }
-
     public List<AppDto> getApps() {
         return appRepository.findAll().stream().map(app -> mapper.map(app, AppDto.class))
                 .collect(Collectors.toList());
@@ -863,8 +863,8 @@ public class UserService {
      */
     public List<String> getUserAuthorities(String entraId) {
         EntraUser user = entraUserRepository.findByEntraOid(entraId).orElseThrow(() -> {
-            logger.error("User not found for the given entra id: {}", entraId);
-            return new RuntimeException(
+            logger.warn("User not found for the given entra id: {}", entraId);
+            return new UserNotFoundException(
                     String.format("User not found for the given entra id: %s", entraId));
         });
 
