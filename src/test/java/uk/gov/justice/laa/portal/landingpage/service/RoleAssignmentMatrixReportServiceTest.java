@@ -61,7 +61,7 @@ public class RoleAssignmentMatrixReportServiceTest {
             String firmName,
             String firmCode,
             String roleName,
-            Integer count
+            Number count
     ) {
         Tuple t = Mockito.mock(Tuple.class);
 
@@ -69,7 +69,7 @@ public class RoleAssignmentMatrixReportServiceTest {
         when(t.get("firmName", String.class)).thenReturn(firmName);
         when(t.get("firmCode", String.class)).thenReturn(firmCode);
         when(t.get("roleName", String.class)).thenReturn(roleName);
-        when(t.get("roleCount", Integer.class)).thenReturn(count);
+        when(t.get("userCount", Number.class)).thenReturn(count);
 
         return t;
     }

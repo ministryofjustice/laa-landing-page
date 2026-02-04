@@ -1,4 +1,4 @@
-package uk.gov.justice.laa.portal.landingpage.polling;
+package uk.gov.justice.laa.portal.landingpage.reports;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,13 +18,13 @@ import java.time.Duration;
 @ConditionalOnProperty(name = "role.assignment.matrix.reporting.enabled", havingValue = "true")
 @Slf4j
 public class RoleAssignmentMatrixReport {
-    private static final String POLLING_LOCK_KEY = "ROLE_ASSIGNMENT_POLLING_LOCK";
+    private static final String REPORTING_LOCK_KEY = "ROLE_ASSIGNMENT_REPORT_LOCK";
 
     private final RoleAssignmentMatrixReportService roleAssignmentMatrixReportService;
     private final DistributedLockService lockService;
 
     @Value("${role.assignment.matrix.reporting.enabled}")
-    private boolean pollingEnabled;
+    private boolean reportingEnabled;
 
     @Value("${app.enable.distributed.db.locking}")
     private boolean enableDistributedDbLocking;
@@ -35,11 +35,11 @@ public class RoleAssignmentMatrixReport {
     @Scheduled(fixedRateString = "${role.assignment.matrix.reporting.interval}")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void poll() {
-        if (pollingEnabled) {
+        if (reportingEnabled) {
             log.debug("Starting role assignment matrix report process...");
             if (enableDistributedDbLocking) {
                 try {
-                    lockService.withLock(POLLING_LOCK_KEY, Duration.ofMinutes(distributedDbLockingPeriod), () -> {
+                    lockService.withLock(REPORTING_LOCK_KEY, Duration.ofMinutes(distributedDbLockingPeriod), () -> {
                         log.debug("Acquired lock for internal role assignment matrix report");
                         roleAssignmentMatrixReportService.getRoleAssignmentMatrixReport();
                         log.debug("Completed internal role assignment matrix report");
@@ -54,7 +54,7 @@ public class RoleAssignmentMatrixReport {
                 roleAssignmentMatrixReportService.getRoleAssignmentMatrixReport();
             }
         } else {
-            log.debug("Internal user polling is disabled via configuration");
+            log.debug("Role assignment matrix report is disabled via configuration");
         }
     }
 }

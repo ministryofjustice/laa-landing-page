@@ -121,33 +121,12 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
 
     @Test
     public void testFindRoleCountsByFirm () {
-        // Arrange: firm
+
         Firm firm = buildFirm("Firm1", "Firm Code 1");
         firm = repository.saveAndFlush(firm);
+        App app = appRepository.saveAndFlush(buildTestApp("roleCountsTestApp"));
+        AppRole role = appRoleRepository.saveAndFlush(buildExternalRole(app, "roleCountsTestRole"));
 
-        // Arrange: app + role restricted to EXTERNAL
-        App app = App.builder()
-                .name("roleCountsTestApp")
-                .title("Role Counts Test App")
-                .description("Role Counts Test App Description")
-                .oidGroupName("Role Counts Test OID Group")
-                .appType(AppType.LAA)
-                .url("http://localhost/role-counts-test")
-                .enabled(true)
-                .securityGroupOid("role_counts_test_sg_oid")
-                .securityGroupName("role_counts_test_sg_name")
-                .build();
-        app = appRepository.saveAndFlush(app);
-
-        AppRole role = AppRole.builder()
-                .name("roleCountsTestRole")
-                .description("roleCountsTestRole")
-                .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
-                .app(app)
-                .build();
-        role = appRoleRepository.saveAndFlush(role);
-
-        // Arrange: external user profile in firm, linked to role via user_profile_app_role
         EntraUser entraUser = buildEntraUser(generateEntraId(), "role.counts@test.com", "First", "Last");
         entraUser.setUserStatus(UserStatus.ACTIVE);
         entraUser = entraUserRepository.saveAndFlush(entraUser);
@@ -158,10 +137,8 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
         userProfile.setAppRoles(Set.of(role));
         userProfileRepository.saveAndFlush(userProfile);
 
-        // Act
         List<Tuple> result = repository.findRoleCountsByFirm();
 
-        // Assert
         Assertions.assertThat(result)
                 .extracting(t -> tuple(
                         t.get("firmId"),
@@ -184,7 +161,7 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
         Firm firm = repository.saveAndFlush(buildFirm("Firm1", "Firm Code 1"));
         App app = appRepository.saveAndFlush(buildTestApp("roleCountsTestApp"));
 
-        // Role does NOT include EXTERNAL in user_type_restriction => query should exclude it
+        // Role does NOT include EXTERNAL in user_type_restriction - query should exclude it
         AppRole internalOnlyRole = appRoleRepository.saveAndFlush(
                 AppRole.builder()
                         .name("internalOnlyRole")
@@ -231,7 +208,7 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
         AppRole roleA = appRoleRepository.saveAndFlush(buildExternalRole(app, "roleA"));
         AppRole roleB = appRoleRepository.saveAndFlush(buildExternalRole(app, "roleB"));
 
-        // One user has both roles => should produce 2 grouped rows (same firm, different roleName)
+        // One user has more than 1 role roles - should produce 2 grouped rows (same firm, different roleName)
         createExternalUserProfileInFirmWithRoles(firm, "role.counts.4@test.com", Set.of(roleA, roleB));
 
         List<Tuple> result = repository.findRoleCountsByFirm();
@@ -250,7 +227,7 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
 
     @Test
     public void testFindRoleCountsByFirm_ordersByFirmNameThenRoleName() {
-        // Firm names chosen so ordering is deterministic
+
         Firm firmA = repository.saveAndFlush(buildFirm("Alpha Firm", "A1"));
         Firm firmB = repository.saveAndFlush(buildFirm("Beta Firm", "B1"));
         App app = appRepository.saveAndFlush(buildTestApp("roleCountsTestApp"));

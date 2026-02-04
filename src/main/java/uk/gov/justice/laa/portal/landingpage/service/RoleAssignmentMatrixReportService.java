@@ -1,24 +1,21 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 
-import io.netty.util.internal.IntegerHolder;
 import jakarta.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import okio.Buffer;
 import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
-import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -32,20 +29,18 @@ public class RoleAssignmentMatrixReportService {
 
     private final FirmRepository firmRepository;
     private final AppRoleRepository appRoleRepository;
-
-    private String reportDirectory = "\\tmp\\reports";;
-
+    private String reportDirectory = System.getProperty("java.io.tmpdir") + File.separator + "reports";
     private final DateTimeFormatter FILE_TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH:mm");
 
     public void getRoleAssignmentMatrixReport() {
 
         List<String> allRoles = appRoleRepository.getExternalRoleNames();
-
         List<Tuple> rows = firmRepository.findRoleCountsByFirm();
-
         Map<FirmDto, Map<String, Integer>> matrix = buildRoleMatrix(rows);
-
         writeToCsv(allRoles, matrix);
+        log.info("Role assignment matrix report successfully written to file");
+
+//        Upload CSV via Graph API
     }
 
     private Map<FirmDto, Map<String, Integer>> buildRoleMatrix(List<Tuple> rows){
@@ -60,7 +55,11 @@ public class RoleAssignmentMatrixReportService {
 
             matrix.putIfAbsent(firm, new HashMap<>());
             Map<String, Integer> roleMap = matrix.get(firm);
-            roleMap.put(t.get("roleName", String.class), t.get("roleCount", Integer.class));
+            String roleName = t.get("roleName", String.class);
+            Number userCountNumber = t.get("userCount", Number.class);
+            int userCount = (userCountNumber == null) ? 0 : userCountNumber.intValue();
+
+            roleMap.put(roleName, userCount);
         }
 
         return matrix;
