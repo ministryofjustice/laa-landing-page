@@ -66,6 +66,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
@@ -81,6 +82,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditProjection;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
@@ -103,6 +105,7 @@ public class UserService {
     private final AppService appService;
     private final TechServicesClient techServicesClient;
     private final UserProfileRepository userProfileRepository;
+    private final UserAccountStatusAuditRepository userAccountStatusAuditRepository;
     private final RoleChangeNotificationService roleChangeNotificationService;
     private final FirmService firmService;
     private final FirmRepository firmRepository;
@@ -116,6 +119,7 @@ public class UserService {
             OfficeRepository officeRepository,
             AppService appService,
             TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
+            UserAccountStatusAuditRepository userAccountStatusAuditRepository,
             RoleChangeNotificationService roleChangeNotificationService, FirmService firmService,
             FirmRepository firmRepository, EventService eventService,
             NotificationService notificationService) {
@@ -128,6 +132,7 @@ public class UserService {
         this.appService = appService;
         this.techServicesClient = techServicesClient;
         this.userProfileRepository = userProfileRepository;
+        this.userAccountStatusAuditRepository = userAccountStatusAuditRepository;
         this.roleChangeNotificationService = roleChangeNotificationService;
         this.firmService = firmService;
         this.firmRepository = firmRepository;
@@ -381,6 +386,15 @@ public class UserService {
         // first send update to tech services
         techServicesClient.deleteRoleAssignment(userProfile.getEntraUser().getId());
 
+        // Clean up UserAccountStatusAudit records first to avoid foreign key constraint violations
+        List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
+        if (!auditRecords.isEmpty()) {
+            userAccountStatusAuditRepository.deleteAll(auditRecords);
+            userAccountStatusAuditRepository.flush();
+            logger.debug("Deleted {} audit records for user: {} ({})", 
+                    auditRecords.size(), entraUser.getEmail(), entraUser.getId());
+        }
+
         // hard delete from silas db
         List<UserProfile> profiles = userProfileRepository.findAllByEntraUser(entraUser);
         DeletedUser.DeletedUserBuilder builder = new DeletedUser().toBuilder()
@@ -550,6 +564,14 @@ public class UserService {
                     ex);
             throw new RuntimeException(
                     "Failed to notify Entra of user deletion: " + ex.getMessage(), ex);
+        }
+
+        List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
+        if (!auditRecords.isEmpty()) {
+            userAccountStatusAuditRepository.deleteAll(auditRecords);
+            userAccountStatusAuditRepository.flush();
+            logger.info("Deleted {} audit records for user: {} ({})",
+                    auditRecords.size(), entraUser.getEmail(), entraUser.getId());
         }
 
         // Delete from local database

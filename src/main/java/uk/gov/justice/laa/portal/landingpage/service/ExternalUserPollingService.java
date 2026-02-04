@@ -70,7 +70,7 @@ public class ExternalUserPollingService {
             String fromDateTime = fromTime.truncatedTo(ChronoUnit.SECONDS) + ".00Z";
             String toDateTime = toTime.truncatedTo(ChronoUnit.SECONDS) + ".00Z";
 
-            log.debug("Calling Tech Services API to get users from {} to {} (gap: {} minutes)", 
+            log.info("Calling Tech Services API to get users from {} to {} (gap: {} minutes)",
                      fromDateTime, toDateTime, ChronoUnit.MINUTES.between(fromTime, toTime));
             TechServicesApiResponse<GetUsersResponse> response = techServicesClient.getUsers(fromDateTime, toDateTime);
             
@@ -79,7 +79,7 @@ public class ExternalUserPollingService {
                 int userCount = usersResponse.getUsers() != null ? usersResponse.getUsers().size() : 0;
                 log.info("Successfully retrieved {} users from Tech Services", userCount);
 
-                if (usersResponse.getUsers() != null && !usersResponse.getUsers().isEmpty()) {
+                if (userCount > 0) {
                     synchronizeUsers(usersResponse.getUsers(), toTime);
                 }
                 
@@ -119,6 +119,7 @@ public class ExternalUserPollingService {
 
                     if (user.isDeleted()) {
                         deleteUser(entraUser);
+                        updatedCount++;
                         log.info("Deleted user: {}  - marked as deleted in Entra",
                                 entraUser.getEmail());
                         continue;
@@ -153,7 +154,7 @@ public class ExternalUserPollingService {
 
                     entraUserRepository.save(entraUser);
                     updatedCount++;
-                    log.debug("Updated user: {} ({})", entraUser.getEmail(), user.getId());
+                    log.info("Updated user: {} ({})", entraUser.getEmail(), user.getId());
                 }
             } catch (Exception e) {
                 log.error("Error synchronizing user {}: {}", user.getId(), e.getMessage(), e);
@@ -165,25 +166,43 @@ public class ExternalUserPollingService {
     }
 
     private void deleteUser(EntraUser entraUser) {
+        if (entraUser == null) {
+            log.warn("Cannot delete null EntraUser");
+            return;
+        }
+        
         try {
+            List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
+            if (!auditRecords.isEmpty()) {
+                userAccountStatusAuditRepository.deleteAll(auditRecords);
+                userAccountStatusAuditRepository.flush();
+                log.info("Deleted {} audit records for user: {} ({})",
+                        auditRecords.size(), entraUser.getEmail(), entraUser.getEntraOid());
+            }
+
             List<UserProfile> userProfiles = entraUser.getUserProfiles() != null 
                 ? new ArrayList<>(entraUser.getUserProfiles()) 
                 : new ArrayList<>();
 
             for (UserProfile userProfile : userProfiles) {
-                if (userProfile.getAppRoles() != null) {
-                    userProfile.getAppRoles().clear();
-                }
-                
-                if (userProfile.getOffices() != null) {
-                    userProfile.getOffices().clear();
-                }
-                entraUser.getUserProfiles().remove(userProfile);
-                userProfile.setEntraUser(null);
+                if (userProfile != null) {
+                    if (userProfile.getAppRoles() != null) {
+                        userProfile.getAppRoles().clear();
+                    }
+                    
+                    if (userProfile.getOffices() != null) {
+                        userProfile.getOffices().clear();
+                    }
+                    
+                    if (entraUser.getUserProfiles() != null) {
+                        entraUser.getUserProfiles().remove(userProfile);
+                    }
+                    userProfile.setEntraUser(null);
 
-                userProfileRepository.save(userProfile);
-                userProfileRepository.flush();
-                userProfileRepository.delete(userProfile);
+                    userProfileRepository.save(userProfile);
+                    userProfileRepository.flush();
+                    userProfileRepository.delete(userProfile);
+                }
             }
 
             userProfileRepository.flush();
@@ -191,13 +210,14 @@ public class ExternalUserPollingService {
             entraUserRepository.delete(entraUser);
             entraUserRepository.flush();
             
-            log.debug("Successfully deleted user and all related entities: {} ({})", 
+            log.info("Successfully deleted user and all related entities: {} ({})",
                     entraUser.getEmail(), entraUser.getEntraOid());
                     
         } catch (Exception e) {
-            log.error("Error deleting user {} ({}): {}", 
-                    entraUser.getEmail(), entraUser.getEntraOid(), e.getMessage(), e);
-            throw new RuntimeException("Failed to delete user: " + entraUser.getEmail(), e);
+            String email = entraUser.getEmail() != null ? entraUser.getEmail() : "unknown";
+            String oid = entraUser.getEntraOid() != null ? entraUser.getEntraOid() : "unknown";
+            log.error("Error deleting user {} ({}): {}", email, oid, e.getMessage(), e);
+            throw new RuntimeException("Failed to delete user: " + email, e);
         }
     }
 
