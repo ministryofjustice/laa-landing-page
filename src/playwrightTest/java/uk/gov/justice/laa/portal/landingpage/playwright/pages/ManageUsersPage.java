@@ -297,6 +297,23 @@ public class ManageUsersPage {
         }
     }
 
+    public void uncheckSelectedRoles(List<String> roles) {
+        page.locator("input[type='checkbox']").first().waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000));
+        for (String role : roles) {
+            Locator checkbox = page.getByLabel(role);
+            if (checkbox.isChecked()) {
+                checkbox.uncheck();
+            }
+        }
+    }
+
+    public void verifyServicesNotPresent(List<String> roles) {
+        for (String role : roles) {
+            Locator row = page.locator("dd:has-text('" + role + "')");
+            assertThat(row).not().isVisible();
+        }
+    }
+
     public void checkSelectedServices(List<String> services) {
         page.locator("input[type='checkbox']").first().waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000));
         for (String service : services) {
@@ -306,6 +323,8 @@ public class ManageUsersPage {
             }
         }
     }
+
+
 
     public Locator externalUserRowLocator() {
         return page.locator(
