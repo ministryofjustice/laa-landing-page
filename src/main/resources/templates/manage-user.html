@@ -124,9 +124,16 @@
                             <div class="govuk-summary-card__title-wrapper" style="align-items: center;">
                                 <h2 class="govuk-summary-card__title">User details</h2>
                                 <ul class="govuk-summary-card__actions">
-                                    <li th:if="${canDeleteUser}" class="govuk-summary-card__action">
-                                        <a class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
+                                    <li th:if="${canDisableUser}" class="govuk-summary-card__action">
+                                        <a th:if="${userIsEnabled}" class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
                                            th:href="@{/admin/users/manage/{id}/disable(id=${user.entraUser.id})}">Disable user</a>
+                                        <a th:unless="${userIsEnabled}"
+                                           href="#"
+                                           class="govuk-link govuk-!-font-weight-regular"
+                                           th:data-enable-url="@{/admin/users/manage/{id}/enable(id=${user.entraUser.id})}"
+                                           onclick="openEnableModal(this); return false;">
+                                            Enable user
+                                        </a>
                                     </li>
                                     <li th:if="${canDeleteUser}" class="govuk-summary-card__action">
                                         <a class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
@@ -290,6 +297,51 @@
             </div>
         </div>
         </div>
+        <div id="enableUserModal"
+             class="govuk-modal"
+             style="display:none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);">
+
+            <div style="background: white; max-width: 500px; margin: 10% auto; padding: 20px;">
+                <h2 class="govuk-heading-m">
+                    Enable user access
+                </h2>
+
+                <p class="govuk-body">
+                    You are about to enable this user’s access to LAA services via SiLAS.
+                </p>
+
+                <form id="enableUserForm" method="post">
+                    <input type="hidden"
+                           th:name="${_csrf.parameterName}"
+                           th:value="${_csrf.token}" />
+                    <button type="submit" class="govuk-button">
+                        Confirm and enable
+                    </button>
+
+                    <button type="button"
+                            class="govuk-button govuk-button--secondary"
+                            onclick="closeEnableModal();">
+                        Cancel
+                    </button>
+                </form>
+            </div>
+        </div>
+        <script>
+            function openEnableModal(link) {
+                const enableUrl = link.getAttribute('data-enable-url');
+                console.log(enableUrl)
+
+                const form = document.getElementById('enableUserForm');
+                form.action = enableUrl;
+
+                document.getElementById('enableUserModal').style.display = 'block';
+            }
+
+            function closeEnableModal() {
+                document.getElementById('enableUserModal').style.display = 'none';
+            }
+        </script>
+
     </main>
 </body>
 

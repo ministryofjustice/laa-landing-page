@@ -126,7 +126,7 @@ public class UserController {
     private final RoleAssignmentService roleAssignmentService;
     private final EmailValidationService emailValidationService;
     private final AppRoleService appRoleService;
-    private final UserAccountStatusService disableUserService;
+    private final UserAccountStatusService userAccountStatusService;
 
     @GetMapping("/users")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
@@ -359,6 +359,10 @@ public class UserController {
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
         final boolean canDeleteUser = accessControlService.canDeleteUser(id);
         model.addAttribute("canDeleteUser", canDeleteUser);
+        final boolean canDisableUser = accessControlService.canDisableUser(user.getEntraUser().getId());
+        model.addAttribute("canDisableUser", canDisableUser);
+        final boolean userIsEnabled = user.getEntraUser().isEnabled();
+        model.addAttribute("userIsEnabled", userIsEnabled);
         boolean showResendVerificationLink = accessControlService.canSendVerificationEmail(id);
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
 
@@ -463,7 +467,7 @@ public class UserController {
                                      Model model,
                                      HttpSession session) {
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
-        List<DisableUserReasonViewModel> reasons = disableUserService.getDisableUserReasons().stream()
+        List<DisableUserReasonViewModel> reasons = userAccountStatusService.getDisableUserReasons().stream()
                 .map(reason -> mapper.map(reason, DisableUserReasonViewModel.class))
                 .toList();
         model.addAttribute("user", user);
@@ -496,12 +500,28 @@ public class UserController {
         UUID disabledUserId = UUID.fromString(user.getId());
         UUID disabledByUserId = loginService.getCurrentEntraUser(authentication).getId();
         UUID disabledReasonId = UUID.fromString(disableUserReasonForm.getReasonId());
-        disableUserService.disableUser(disabledUserId, disabledReasonId, disabledByUserId);
+        userAccountStatusService.disableUser(disabledUserId, disabledReasonId, disabledByUserId);
 
         model.addAttribute("user", user);
         model.addAttribute("disableUserReasonsForm", disableUserReasonForm);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Disable User Success - " + user.getFullName());
         return "disable-user-completed";
+    }
+
+    @PostMapping("/users/manage/{id}/enable")
+    @PreAuthorize("@accessControlService.canDisableUser(#id)")
+    public String enableUserPost(@PathVariable String id,
+                                         Authentication authentication,
+                                         Model model) {
+
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        UUID enabledUserId = UUID.fromString(user.getId());
+        UUID enabledByUserId = loginService.getCurrentEntraUser(authentication).getId();
+        userAccountStatusService.enableUser(enabledUserId, enabledByUserId);
+
+        model.addAttribute("user", user);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Enable User Success - " + user.getFullName());
+        return "enable-user-completed";
     }
 
     @NotNull
