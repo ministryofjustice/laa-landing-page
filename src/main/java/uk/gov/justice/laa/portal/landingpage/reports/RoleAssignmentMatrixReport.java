@@ -32,7 +32,7 @@ public class RoleAssignmentMatrixReport {
     @Value("${app.distributed.db.locking.period}")
     private int distributedDbLockingPeriod;
 
-    @Scheduled(fixedRateString = "${role.assignment.matrix.reporting.interval}")
+    @Scheduled(fixedRateString = "${role.assignment.matrix.reporting.schedule}")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void getReport() {
         if (reportingEnabled) {
