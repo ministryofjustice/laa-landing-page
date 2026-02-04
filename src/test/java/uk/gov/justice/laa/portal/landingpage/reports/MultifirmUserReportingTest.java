@@ -1,4 +1,4 @@
-package uk.gov.justice.laa.portal.landingpage.polling;
+package uk.gov.justice.laa.portal.landingpage.reports;
 
 
 import org.junit.jupiter.api.BeforeEach;
@@ -37,15 +37,15 @@ public class MultifirmUserReportingTest {
     void setUp() {
         lockService = new DistributedLockService(lockRepository);
         multifirmUserReporting = new MultifirmUserReporting(multifirmUserReportService, lockService);
-        setPollingEnabled(true);
+        setreportingEnabled(true);
         ReflectionTestUtils.setField(multifirmUserReporting, "enableDistributedDbLocking", true);
     }
 
     @Test
-    void shouldAcquireLockAndCallgetMultifirmUsers_whenPollingEnabled() {
+    void shouldAcquireLockAndCallgetMultifirmUsers_whenreportingEnabled() {
         // When
         when(lockRepository.acquireLock(any(), any(), any())).thenReturn(1);
-        multifirmUserReporting.poll();
+        multifirmUserReporting.getReport();
 
         // Then
         verify(multifirmUserReportService).getMultifirmUsers();
@@ -53,11 +53,11 @@ public class MultifirmUserReportingTest {
     }
 
     @Test
-    void shouldNotTryToAcquireLockAndCallgetMultifirmUsers_whenPollingEnabled() {
+    void shouldNotTryToAcquireLockAndCallgetMultifirmUsers_whenreportingEnabled() {
         // Given
         ReflectionTestUtils.setField(multifirmUserReporting, "enableDistributedDbLocking", false);
         // When
-        multifirmUserReporting.poll();
+        multifirmUserReporting.getReport();
 
         // Then
         verify(multifirmUserReportService).getMultifirmUsers();
@@ -65,12 +65,12 @@ public class MultifirmUserReportingTest {
     }
 
     @Test
-    void shouldNotAcquireLock_whenPollingDisabled() {
+    void shouldNotAcquireLock_whenreportingDisabled() {
         // Given
-        setPollingEnabled(false);
+        setreportingEnabled(false);
 
         // When
-        multifirmUserReporting.poll();
+        multifirmUserReporting.getReport();
 
         // Then
         verify(multifirmUserReportService, never()).getMultifirmUsers();
@@ -84,7 +84,7 @@ public class MultifirmUserReportingTest {
                 .acquireLock(any(), any(), any());
 
         // When/Then
-        assertDoesNotThrow(() -> multifirmUserReporting.poll());
+        assertDoesNotThrow(() -> multifirmUserReporting.getReport());
         verify(multifirmUserReportService, never()).getMultifirmUsers();
     }
 
@@ -92,17 +92,17 @@ public class MultifirmUserReportingTest {
     void shouldOnlyAllowOneInstanceToAcquireLock() {
         // Given
         when(lockRepository.acquireLock(any(), any(), any())).thenReturn(1);
-        setPollingEnabled(true);
+        setreportingEnabled(true);
         MultifirmUserReporting anotherInstance = new MultifirmUserReporting(multifirmUserReportService, lockService);
 
         // When
-        multifirmUserReporting.poll();
+        multifirmUserReporting.getReport();
 
         // Then
         verify(multifirmUserReportService).getMultifirmUsers();
 
         // When
-        anotherInstance.poll();
+        anotherInstance.getReport();
 
         // Then
         verify(lockRepository, times(1)).acquireLock(any(), any(), any());
@@ -110,10 +110,10 @@ public class MultifirmUserReportingTest {
     }
 
     @Test
-    void shouldReleaseLockAfterPolling() {
+    void shouldReleaseLockAfterReporting() {
         // When
         when(lockRepository.acquireLock(any(), any(), any())).thenReturn(1);
-        multifirmUserReporting.poll();
+        multifirmUserReporting.getReport();
 
         // Then
         verify(lockRepository).acquireLock(
@@ -124,9 +124,9 @@ public class MultifirmUserReportingTest {
         verify(multifirmUserReportService).getMultifirmUsers();
     }
 
-    // Helper method to set polling enabled state
-    private void setPollingEnabled(boolean enabled) {
-        ReflectionTestUtils.setField(multifirmUserReporting, "pollingEnabled", enabled);
+    // Helper method to set reporting enabled state
+    private void setreportingEnabled(boolean enabled) {
+        ReflectionTestUtils.setField(multifirmUserReporting, "reportingEnabled", enabled);
     }
 }
 

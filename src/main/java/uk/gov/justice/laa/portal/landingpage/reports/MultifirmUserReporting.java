@@ -1,4 +1,4 @@
-package uk.gov.justice.laa.portal.landingpage.polling;
+package uk.gov.justice.laa.portal.landingpage.reports;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,13 +18,13 @@ import java.time.Duration;
 @ConditionalOnProperty(name = "multifirm.user.reporting.enabled", havingValue = "true")
 @Slf4j
 public class MultifirmUserReporting {
-    private static final String POLLING_LOCK_KEY = "MULTIFIRM_USER_REPORTING_LOCK";
+    private static final String REPORTING_LOCK_KEY = "MULTIFIRM_USER_REPORTING_LOCK";
 
     private final MultifirmUserReportService multifirmUserReportService;
     private final DistributedLockService lockService;
 
     @Value("${multifirm.user.reporting.enabled}")
-    private boolean pollingEnabled;
+    private boolean reportingEnabled;
 
     @Value("${app.enable.distributed.db.locking}")
     private boolean enableDistributedDbLocking;
@@ -32,29 +32,29 @@ public class MultifirmUserReporting {
     @Value("${app.distributed.db.locking.period}")
     private int distributedDbLockingPeriod;
 
-    @Scheduled(fixedRateString = "${multifirm.user.polling.interval}")
+    @Scheduled(fixedRateString = "${multifirm.user.reporting.interval}")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void poll() {
-        if (pollingEnabled) {
+    public void getReport() {
+        if (reportingEnabled) {
             log.debug("Starting multifirm user polling process...");
             if (enableDistributedDbLocking) {
                 try {
-                    lockService.withLock(POLLING_LOCK_KEY, Duration.ofMinutes(distributedDbLockingPeriod), () -> {
-                        log.debug("Acquired lock for multifirm user polling");
+                    lockService.withLock(REPORTING_LOCK_KEY, Duration.ofMinutes(distributedDbLockingPeriod), () -> {
+                        log.debug("Acquired lock for multifirm user report");
                         multifirmUserReportService.getMultifirmUsers();
-                        log.debug("Completed multifirm user polling");
+                        log.debug("Completed multifirm user report");
                         return null;
                     });
                 } catch (DistributedLockService.LockAcquisitionException e) {
-                    log.debug("Could not acquire lock for multifirm user polling. Another instance might be running.");
+                    log.debug("Could not acquire lock for multifirm user report. Another instance might be running.");
                 } catch (Exception e) {
-                    log.error("Error during multifirm user polling", e);
+                    log.error("Error during multifirm user report", e);
                 }
             } else {
                 multifirmUserReportService.getMultifirmUsers();
             }
         } else {
-            log.debug("Multifirm user polling is disabled via configuration");
+            log.debug("Multifirm user reporting is disabled via configuration");
         }
     }
 
