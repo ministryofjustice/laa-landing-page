@@ -34,7 +34,7 @@ public class RoleAssignmentMatrixReport {
 
     @Scheduled(fixedRateString = "${role.assignment.matrix.reporting.interval}")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void poll() {
+    public void getReport() {
         if (reportingEnabled) {
             log.debug("Starting role assignment matrix report process...");
             if (enableDistributedDbLocking) {

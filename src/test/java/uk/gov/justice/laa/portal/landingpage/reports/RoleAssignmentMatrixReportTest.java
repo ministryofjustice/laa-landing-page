@@ -38,15 +38,15 @@ public class RoleAssignmentMatrixReportTest {
     void setUp() {
         lockService = new DistributedLockService(lockRepository);
         roleAssignmentMatrixReport = new RoleAssignmentMatrixReport(matrixReportService, lockService);
-        setPollingEnabled(true);
+        setReportingEnabled(true);
         ReflectionTestUtils.setField(roleAssignmentMatrixReport, "enableDistributedDbLocking", true);
     }
 
     @Test
-    void shouldAcquireLockAndCallgetMultifirmUsers_whenPollingEnabled() {
+    void shouldAcquireLockAndCallgetRoleAssignmentMatrixReport_whenEnabled() {
         // When
         when(lockRepository.acquireLock(any(), any(), any())).thenReturn(1);
-        roleAssignmentMatrixReport.poll();
+        roleAssignmentMatrixReport.getReport();
 
         // Then
         verify(matrixReportService).getRoleAssignmentMatrixReport();
@@ -58,7 +58,7 @@ public class RoleAssignmentMatrixReportTest {
         // Given
         ReflectionTestUtils.setField(roleAssignmentMatrixReport, "enableDistributedDbLocking", false);
         // When
-        roleAssignmentMatrixReport.poll();
+        roleAssignmentMatrixReport.getReport();
 
         // Then
         verify(matrixReportService).getRoleAssignmentMatrixReport();
@@ -68,10 +68,10 @@ public class RoleAssignmentMatrixReportTest {
     @Test
     void shouldNotAcquireLock_whenPollingDisabled() {
         // Given
-        setPollingEnabled(false);
+        setReportingEnabled(false);
 
         // When
-        roleAssignmentMatrixReport.poll();
+        roleAssignmentMatrixReport.getReport();
 
         // Then
         verify(matrixReportService, never()).getRoleAssignmentMatrixReport();
@@ -85,7 +85,7 @@ public class RoleAssignmentMatrixReportTest {
                 .acquireLock(any(), any(), any());
 
         // When/Then
-        assertDoesNotThrow(() -> roleAssignmentMatrixReport.poll());
+        assertDoesNotThrow(() -> roleAssignmentMatrixReport.getReport());
         verify(matrixReportService, never()).getRoleAssignmentMatrixReport();
     }
 
@@ -93,17 +93,17 @@ public class RoleAssignmentMatrixReportTest {
     void shouldOnlyAllowOneInstanceToAcquireLock() {
         // Given
         when(lockRepository.acquireLock(any(), any(), any())).thenReturn(1);
-        setPollingEnabled(true);
+        setReportingEnabled(true);
         RoleAssignmentMatrixReport anotherInstance = new RoleAssignmentMatrixReport(matrixReportService, lockService);
 
         // When
-        roleAssignmentMatrixReport.poll();
+        roleAssignmentMatrixReport.getReport();
 
         // Then
         verify(matrixReportService).getRoleAssignmentMatrixReport();
 
         // When
-        anotherInstance.poll();
+        anotherInstance.getReport();
 
         // Then
         verify(lockRepository, times(1)).acquireLock(any(), any(), any());
@@ -111,10 +111,10 @@ public class RoleAssignmentMatrixReportTest {
     }
 
     @Test
-    void shouldReleaseLockAfterPolling() {
+    void shouldReleaseLockAfterReportGeneration() {
         // When
         when(lockRepository.acquireLock(any(), any(), any())).thenReturn(1);
-        roleAssignmentMatrixReport.poll();
+        roleAssignmentMatrixReport.getReport();
 
         // Then
         verify(lockRepository).acquireLock(
@@ -125,8 +125,8 @@ public class RoleAssignmentMatrixReportTest {
         verify(matrixReportService).getRoleAssignmentMatrixReport();
     }
 
-    private void setPollingEnabled(boolean enabled) {
-        ReflectionTestUtils.setField(roleAssignmentMatrixReport, "pollingEnabled", enabled);
+    private void setReportingEnabled(boolean enabled) {
+        ReflectionTestUtils.setField(roleAssignmentMatrixReport, "reportingEnabled", enabled);
     }
 
 }

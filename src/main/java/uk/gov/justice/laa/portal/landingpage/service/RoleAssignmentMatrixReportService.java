@@ -30,7 +30,7 @@ public class RoleAssignmentMatrixReportService {
     private final FirmRepository firmRepository;
     private final AppRoleRepository appRoleRepository;
     private String reportDirectory = System.getProperty("java.io.tmpdir") + File.separator + "reports";
-    private final DateTimeFormatter FILE_TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmm");
+    private final DateTimeFormatter fileTimestamp = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmm");
 
     public void getRoleAssignmentMatrixReport() {
 
@@ -39,11 +39,9 @@ public class RoleAssignmentMatrixReportService {
         Map<FirmDto, Map<String, Integer>> matrix = buildRoleMatrix(rows);
         writeToCsv(allRoles, matrix);
         log.info("Role assignment matrix report successfully written to file");
-
-//        Upload CSV via Graph API
     }
 
-    private Map<FirmDto, Map<String, Integer>> buildRoleMatrix(List<Tuple> rows){
+    private Map<FirmDto, Map<String, Integer>> buildRoleMatrix(List<Tuple> rows) {
         Map<FirmDto, Map<String, Integer>> matrix = new LinkedHashMap<>();
 
         for (Tuple t : rows) {
@@ -65,12 +63,12 @@ public class RoleAssignmentMatrixReportService {
         return matrix;
     }
 
-    public void writeToCsv(List<String> allRoles, Map<FirmDto, Map<String, Integer>> matrix){
+    public void writeToCsv(List<String> allRoles, Map<FirmDto, Map<String, Integer>> matrix) {
 
-        String timestamp = LocalDateTime.now().format(FILE_TIMESTAMP);
+        String timestamp = LocalDateTime.now().format(fileTimestamp);
         Path outputPath = Path.of(reportDirectory, "SiLAS-role-assignment-matrix-report-" + timestamp + ".csv");
 
-        try (BufferedWriter writer = Files.newBufferedWriter(outputPath)){
+        try (BufferedWriter writer = Files.newBufferedWriter(outputPath)) {
             writer.write("Firm Name,Firm Code");
             for (String role : allRoles) {
                 writer.write("," + role);
@@ -79,11 +77,10 @@ public class RoleAssignmentMatrixReportService {
 
             for (Map.Entry<FirmDto, Map<String, Integer>> entry : matrix.entrySet()) {
                 FirmDto firm = entry.getKey();
-                Map<String, Integer> roleCounts = entry.getValue();
-
                 writer.write(csvValue(firm.getName()));
                 writer.write(",");
                 writer.write(csvValue(firm.getCode()));
+                Map<String, Integer> roleCounts = entry.getValue();
 
                 for (String role : allRoles) {
                     writer.write(",");
@@ -91,9 +88,10 @@ public class RoleAssignmentMatrixReportService {
                 }
                 writer.newLine();
             }
-        }catch (IOException e){
+        } catch (IOException e) {
             log.error("Error writing report to file: {}", e.getMessage());
         }
+
     }
 
     private String csvValue(String value) {
