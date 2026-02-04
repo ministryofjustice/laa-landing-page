@@ -30,7 +30,7 @@ public class RoleAssignmentMatrixReportService {
     private final FirmRepository firmRepository;
     private final AppRoleRepository appRoleRepository;
     private String reportDirectory = System.getProperty("java.io.tmpdir") + File.separator + "reports";
-    private final DateTimeFormatter FILE_TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH:mm");
+    private final DateTimeFormatter FILE_TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmm");
 
     public void getRoleAssignmentMatrixReport() {
 
