@@ -135,7 +135,7 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
         repository.saveAndFlush(internalRole);
         List<String> externalRoleNames = repository.getExternalRoleNames();
 
-        Assertions.assertThat(externalRoleNames).containsExactly("External role test" ,"Firm User Manager");
+        Assertions.assertThat(externalRoleNames).containsExactly("External role test", "Firm User Manager");
     }
 }
 

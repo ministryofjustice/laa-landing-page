@@ -120,13 +120,10 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
     }
 
     @Test
-    public void testFindRoleCountsByFirm () {
+    public void testFindRoleCountsByFirm() {
 
         Firm firm = buildFirm("Firm1", "Firm Code 1");
         firm = repository.saveAndFlush(firm);
-        App app = appRepository.saveAndFlush(buildTestApp("roleCountsTestApp"));
-        AppRole role = appRoleRepository.saveAndFlush(buildExternalRole(app, "roleCountsTestRole"));
-
         EntraUser entraUser = buildEntraUser(generateEntraId(), "role.counts@test.com", "First", "Last");
         entraUser.setUserStatus(UserStatus.ACTIVE);
         entraUser = entraUserRepository.saveAndFlush(entraUser);
@@ -134,6 +131,8 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
         UserProfile userProfile = buildLaaUserProfile(entraUser, UserType.EXTERNAL);
         userProfile.setFirm(firm);
         userProfile.setUserProfileStatus(UserProfileStatus.COMPLETE);
+        App app = appRepository.saveAndFlush(buildTestApp("roleCountsTestApp"));
+        AppRole role = appRoleRepository.saveAndFlush(buildExternalRole(app, "roleCountsTestRole"));
         userProfile.setAppRoles(Set.of(role));
         userProfileRepository.saveAndFlush(userProfile);
 
@@ -221,8 +220,7 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
                 ))
                 .contains(
                         tuple(firm.getId(), "roleA", 1L),
-                        tuple(firm.getId(), "roleB", 1L)
-                );
+                        tuple(firm.getId(), "roleB", 1L));
     }
 
     @Test
@@ -249,8 +247,7 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
                 .containsSubsequence(
                         tuple("Alpha Firm", "A Role"),
                         tuple("Alpha Firm", "B Role"),
-                        tuple("Beta Firm", "B Role")
-                );
+                        tuple("Beta Firm", "B Role"));
     }
 
     private App buildTestApp(String name) {
