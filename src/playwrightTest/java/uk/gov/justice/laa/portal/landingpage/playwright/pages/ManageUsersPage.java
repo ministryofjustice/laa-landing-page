@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.microsoft.playwright.options.LoadState;
 import com.microsoft.playwright.options.WaitForSelectorState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,6 +82,7 @@ public class ManageUsersPage {
 
         log.info("Navigating to Manage Users page: {}", url);
         page.navigate(url);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
         this.header = page.locator("h1.govuk-heading-xl");
         this.createNewUserButton = page.locator("button.govuk-button[onclick*='/admin/user/create/details']");
@@ -295,6 +297,23 @@ public class ManageUsersPage {
         }
     }
 
+    public void uncheckSelectedRoles(List<String> roles) {
+        page.locator("input[type='checkbox']").first().waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000));
+        for (String role : roles) {
+            Locator checkbox = page.getByLabel(role);
+            if (checkbox.isChecked()) {
+                checkbox.uncheck();
+            }
+        }
+    }
+
+    public void verifyServicesNotPresent(List<String> roles) {
+        for (String role : roles) {
+            Locator row = page.locator("dd:has-text('" + role + "')");
+            assertThat(row).not().isVisible();
+        }
+    }
+
     public void checkSelectedServices(List<String> services) {
         page.locator("input[type='checkbox']").first().waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000));
         for (String service : services) {
@@ -304,6 +323,8 @@ public class ManageUsersPage {
             }
         }
     }
+
+
 
     public Locator externalUserRowLocator() {
         return page.locator(
@@ -320,6 +341,11 @@ public class ManageUsersPage {
         );
     }
 
+    // SignIn Error
+    public void verifySignInError() {
+        assertTrue(page.getByText("Sorry, but we’re having trouble signing you in.").isVisible());
+    }
+
     // Search
     public void searchForUser(String userEmail) {
         searchInputByName.fill(userEmail);
@@ -329,6 +355,7 @@ public class ManageUsersPage {
 
     public boolean searchAndVerifyUser(String email) {
         searchForUser(email);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
         Locator row = page.locator("tbody tr").filter(
                 new Locator.FilterOptions().setHasText(email)
@@ -384,9 +411,13 @@ public class ManageUsersPage {
 
         clickContinueUserDetails();
 
-        assertTrue(firstNameInvalidCharsError.isVisible());
-        assertTrue(lastNameInvalidCharsError.isVisible());
-        assertTrue(selectUserTypeError.isVisible());
+        // Anchor wait: error summary appears (proves validation ran)
+        Locator errorSummary = page.locator(".govuk-error-summary");
+        assertThat(errorSummary).isVisible();
+
+        assertThat(firstNameInvalidCharsError).isVisible();
+        assertThat(lastNameInvalidCharsError).isVisible();
+        assertThat(selectUserTypeError).isVisible();
     }
 
     // Multi firm
@@ -413,24 +444,35 @@ public class ManageUsersPage {
     }
 
     // Firm selection
+
     public void searchAndSelectFirmByCode(String firmCode) {
 
         firmSearchInput.waitFor(new Locator.WaitForOptions()
                 .setState(WaitForSelectorState.VISIBLE)
                 .setTimeout(5000));
 
-        firmSearchInput.fill(firmCode);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-        // Let autocomplete populate
-        firmSearchListbox.waitFor(new Locator.WaitForOptions()
-                .setState(WaitForSelectorState.VISIBLE)
-                .setTimeout(5000));
+        firmSearchInput.click();
+        firmSearchInput.fill("");
 
-        Locator firmOption = page.locator("li.autocomplete__option")
-                .filter(new Locator.FilterOptions().setHasText("Firm code: " + firmCode));
+        // Trigger autocomplete using real key events
+        firmSearchInput.pressSequentially(firmCode);
+        firmSearchInput.press("ArrowDown");
 
-        firmOption.first().click();
+        // Wait until the combobox is actually open
+        assertThat(firmSearchInput).hasAttribute("aria-expanded", "true");
+
+        // Click option by firm code
+        Locator firmOption = page.locator("#firmSearch__listbox li[role='option'] small")
+                .filter(new Locator.FilterOptions().setHasText("Firm code: " + firmCode))
+                .first()
+                .locator("..");
+
+        assertThat(firmOption).isVisible();
+        firmOption.click();
     }
+
 
     public void clickContinueFirmSelectPage() {
         continueButtonFirmSelection.click();

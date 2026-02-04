@@ -18,6 +18,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -28,9 +29,15 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.Cache.ValueWrapper;
 import org.springframework.cache.CacheManager;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDirectoryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
@@ -79,6 +86,48 @@ class FirmServiceTest {
         when(firmRepository.getReferenceById(firmId)).thenReturn(dbFirm);
         FirmDto firm = firmService.getFirm(firmId.toString());
         assertThat(firm.getId()).isEqualTo(firmId);
+    }
+
+    @Test
+    void getAllFirm() {
+        UUID firmId = UUID.randomUUID();
+        Page<Firm> firmPage = new PageImpl<>(
+                List.of(Firm.builder()
+                                .name("firm1")
+                                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                        .build()),
+                PageRequest.of(0, 2), 2);
+        PaginatedFirmDirectory paginatorExpected = PaginatedFirmDirectory.builder()
+                .firmDirectories(List.of(FirmDirectoryDto.builder()
+                                .firmName("firm1")
+                                .firmType(FirmType.LEGAL_SERVICES_PROVIDER.getValue())
+                        .build()))
+                .build();
+        when(firmRepository.getFirmsPage(any(), any(), any())).thenReturn(firmPage);
+        PaginatedFirmDirectory firmPaginator = firmService.getFirmsPage("", FirmType.LEGAL_SERVICES_PROVIDER.name(), 1, 10, "sort", Sort.Direction.DESC.name());
+        assertThat(firmPaginator.getFirmDirectories())
+                .isEqualTo(paginatorExpected.getFirmDirectories());
+    }
+
+    @Test
+    void getAllFirmFirmTypeNull() {
+        UUID firmId = UUID.randomUUID();
+        Page<Firm> firmPage = new PageImpl<>(
+                List.of(Firm.builder()
+                        .name("firm1")
+                        .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                        .build()),
+                PageRequest.of(0, 2), 2);
+        PaginatedFirmDirectory paginatorExpected = PaginatedFirmDirectory.builder()
+                .firmDirectories(List.of(FirmDirectoryDto.builder()
+                        .firmName("firm1")
+                        .firmType(FirmType.LEGAL_SERVICES_PROVIDER.getValue())
+                        .build()))
+                .build();
+        when(firmRepository.getFirmsPage(any(), any(), any())).thenReturn(firmPage);
+        PaginatedFirmDirectory firmPaginator = firmService.getFirmsPage("", null, 1, 10, "sort", Sort.Direction.DESC.name());
+        assertThat(firmPaginator.getFirmDirectories())
+                .isEqualTo(paginatorExpected.getFirmDirectories());
     }
 
     @Test

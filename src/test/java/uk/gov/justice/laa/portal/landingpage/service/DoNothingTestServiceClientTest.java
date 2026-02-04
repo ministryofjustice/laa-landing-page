@@ -10,6 +10,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.GetUsersResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
@@ -83,6 +85,39 @@ public class DoNothingTestServiceClientTest {
         Assertions.assertThat(response.getData().getMessage()).isNotNull();
         Assertions.assertThat(response.getData().getMessage()).isEqualTo("Activation code has been generated and sent successfully via email.");
         assertLogMessage("Verification email has been resent from Dummy Tech Services Client for user");
+    }
+
+    @Test
+    public void testDisableUserReturnsSuccessResponse() {
+        EntraUserDto user = EntraUserDto.builder().build();
+        TechServicesApiResponse<ChangeAccountEnabledResponse> response = techServicesClient.disableUser(user, "Test Reason");
+        Assertions.assertThat(response.isSuccess()).isTrue();
+        Assertions.assertThat(response.getData().getMessage()).isEqualTo("Successfully disabled user.");
+    }
+
+    @Test
+    public void testEnableUserReturnsSuccessResponse() {
+        EntraUserDto user = EntraUserDto.builder().build();
+        TechServicesApiResponse<ChangeAccountEnabledResponse> response = techServicesClient.enableUser(user);
+        Assertions.assertThat(response.isSuccess()).isTrue();
+        Assertions.assertThat(response.getData().getMessage()).isEqualTo("Successfully enabled user.");
+    }
+
+    @Test
+    void testGetUsers() {
+        String fromDateTime = "2024-01-01T00:00:00Z";
+        String toDateTime = "2024-01-15T23:59:59Z";
+
+        TechServicesApiResponse<GetUsersResponse> response = techServicesClient.getUsers(fromDateTime, toDateTime);
+
+        Assertions.assertThat(response).isNotNull();
+        Assertions.assertThat(response.isSuccess()).isTrue();
+        Assertions.assertThat(response.getError()).isNull();
+        Assertions.assertThat(response.getData()).isNotNull();
+        Assertions.assertThat(response.getData().getMessage()).isEqualTo("Users retrieved successfully");
+        Assertions.assertThat(response.getData().getUsers()).isNotNull();
+        Assertions.assertThat(response.getData().getUsers()).isEmpty();
+        assertLogMessage("Get users request received on Dummy Tech Services Client");
     }
 
     private void assertLogMessage(String message) {
