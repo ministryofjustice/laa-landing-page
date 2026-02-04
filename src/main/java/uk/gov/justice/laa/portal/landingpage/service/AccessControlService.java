@@ -162,8 +162,15 @@ public class AccessControlService {
             return false;
         }
         EntraUserDto accessedUser = accessedUserOptional.get();
-        return authenticatedUserHasPermission(Permission.DISABLE_EXTERNAL_USER)
-                && (accessedUser.isMultiFirmUser() || !userService.isInternal(entraUserId));
+
+        if (accessedUser.isMultiFirmUser() || userService.isInternal(entraUserId)) {
+            return false;
+        }
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
+        return !accessedUser.getId().equals(authenticatedUser.getId().toString())
+                && userHasPermission(authenticatedUser, Permission.DISABLE_EXTERNAL_USER);
     }
 
     /**
