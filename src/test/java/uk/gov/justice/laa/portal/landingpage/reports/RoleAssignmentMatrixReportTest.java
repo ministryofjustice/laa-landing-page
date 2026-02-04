@@ -1,4 +1,4 @@
-package uk.gov.justice.laa.portal.landingpage.polling;
+package uk.gov.justice.laa.portal.landingpage.reports;
 
 
 import org.junit.jupiter.api.BeforeEach;
@@ -7,7 +7,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
-import uk.gov.justice.laa.portal.landingpage.reports.RoleAssignmentMatrixReport;
 import uk.gov.justice.laa.portal.landingpage.repository.DistributedLockRepository;
 import uk.gov.justice.laa.portal.landingpage.service.DistributedLockService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentMatrixReportService;
