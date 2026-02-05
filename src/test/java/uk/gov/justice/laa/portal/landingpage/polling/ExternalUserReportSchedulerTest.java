@@ -6,6 +6,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import uk.gov.justice.laa.portal.landingpage.reports.ExternalUserReportScheduler;
 import uk.gov.justice.laa.portal.landingpage.repository.DistributedLockRepository;
 import uk.gov.justice.laa.portal.landingpage.service.DistributedLockService;
 import uk.gov.justice.laa.portal.landingpage.service.ExternalUserReportingService;

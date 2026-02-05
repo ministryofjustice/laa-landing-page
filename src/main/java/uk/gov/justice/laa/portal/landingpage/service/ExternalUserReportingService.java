@@ -9,6 +9,7 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -32,8 +33,8 @@ public class ExternalUserReportingService {
 
     private final FirmRepository firmRepository;
 
-    private final DateTimeFormatter FILE_TIMESTAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH:mm");
-    private String timestamp = LocalDateTime.now().format(FILE_TIMESTAMP);
+    private final Path reportDirectory = Paths.get(System.getProperty("user.home"), "reports");
+    private final DateTimeFormatter fileTimestamp = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmm");
 
     public void getExternalUsers() {
 
@@ -42,13 +43,13 @@ public class ExternalUserReportingService {
         reportRows.addAll(firmRepository.findAllFirmExternalUserCount());
 
         writeToCsv(reportRows);
-        log.info("External users written to CSV successfully");
+        log.info("External user report written to CSV successfully");
     }
 
     private void writeToCsv(List<Object[]> rows) {
 
-        String reportDirectory = "\\tmp\\reports";
-        Path outputPath = Path.of(reportDirectory, "SiLAS-external-user-report-" + timestamp + ".csv");
+        String timestamp = LocalDateTime.now().format(fileTimestamp);
+        Path outputPath = reportDirectory.resolve("SiLAS-external-user-report-" + timestamp + ".csv");
 
         try (BufferedWriter writer = Files.newBufferedWriter(outputPath)){
             writer.write(String.join(",", HEADERS));
