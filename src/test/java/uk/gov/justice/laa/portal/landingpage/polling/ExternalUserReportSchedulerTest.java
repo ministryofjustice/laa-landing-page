@@ -45,7 +45,7 @@ public class ExternalUserReportSchedulerTest {
     void shouldAcquireLockAndCallPollForNewUsers_whenPollingEnabled() {
         // When
         when(lockRepository.acquireLock(any(), any(), any())).thenReturn(1);
-        externalUserReportScheduler.poll();
+        externalUserReportScheduler.getReport();
 
         // Then
         verify(externalUserReportingService).getExternalUsers();
@@ -57,7 +57,7 @@ public class ExternalUserReportSchedulerTest {
         // Given
         ReflectionTestUtils.setField(externalUserReportScheduler, "enableDistributedDbLocking", false);
         // When
-        externalUserReportScheduler.poll();
+        externalUserReportScheduler.getReport();
 
         // Then
         verify(externalUserReportingService).getExternalUsers();
@@ -70,7 +70,7 @@ public class ExternalUserReportSchedulerTest {
         setPollingEnabled(false);
 
         // When
-        externalUserReportScheduler.poll();
+        externalUserReportScheduler.getReport();
 
         // Then
         verify(externalUserReportingService, never()).getExternalUsers();
@@ -84,7 +84,7 @@ public class ExternalUserReportSchedulerTest {
                 .acquireLock(any(), any(), any());
 
         // When/Then
-        assertDoesNotThrow(() -> externalUserReportScheduler.poll());
+        assertDoesNotThrow(() -> externalUserReportScheduler.getReport());
         verify(externalUserReportingService, never()).getExternalUsers();
     }
 
@@ -96,13 +96,13 @@ public class ExternalUserReportSchedulerTest {
         ExternalUserReportScheduler anotherInstance = new ExternalUserReportScheduler(externalUserReportingService, lockService);
 
         // When
-        externalUserReportScheduler.poll();
+        externalUserReportScheduler.getReport();
 
         // Then
         verify(externalUserReportingService).getExternalUsers();
 
         // When
-        anotherInstance.poll();
+        anotherInstance.getReport();
 
         // Then
         verify(lockRepository, times(1)).acquireLock(any(), any(), any());
@@ -113,7 +113,7 @@ public class ExternalUserReportSchedulerTest {
     void shouldReleaseLockAfterPolling() {
         // When
         when(lockRepository.acquireLock(any(), any(), any())).thenReturn(1);
-        externalUserReportScheduler.poll();
+        externalUserReportScheduler.getReport();
 
         // Then
         verify(lockRepository).acquireLock(
