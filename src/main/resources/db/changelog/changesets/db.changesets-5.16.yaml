@@ -1,0 +1,195 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-missing-permissions-and-assignments-20260205-1
+      author: suresh.kavali
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO role_permission (app_role_id, permission)
+              SELECT ar.id, 'CONVERT_USER_TO_MULTI_FIRM'
+              FROM app_role ar
+              WHERE ar.name = 'External User Admin'
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM role_permission rp
+                  WHERE rp.app_role_id = ar.id
+                    AND rp.permission = 'CONVERT_USER_TO_MULTI_FIRM'
+                );
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO role_permission (app_role_id, permission)
+              SELECT ar.id, 'CONVERT_USER_TO_MULTI_FIRM'
+              FROM app_role ar
+              WHERE ar.name = 'Global Admin'
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM role_permission rp
+                  WHERE rp.app_role_id = ar.id
+                    AND rp.permission = 'CONVERT_USER_TO_MULTI_FIRM'
+                );
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO role_assignment (assigning_role_id, assignable_role_id)
+              SELECT assigning.id, assignable.id
+              FROM app_role assigning, app_role assignable
+              WHERE assigning.name = 'External User Admin'
+                AND assignable.name = 'Multi-firm Delegation'
+                AND NOT EXISTS (
+                  SELECT 1 FROM role_assignment ra
+                  WHERE ra.assigning_role_id = assigning.id
+                    AND ra.assignable_role_id = assignable.id
+                );
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO role_assignment (assigning_role_id, assignable_role_id)
+              SELECT assigning.id, assignable.id
+              FROM app_role assigning, app_role assignable
+              WHERE assigning.name = 'External User Manager'
+                AND assignable.name = 'Multi-firm Delegation'
+                AND NOT EXISTS (
+                  SELECT 1 FROM role_assignment ra
+                  WHERE ra.assigning_role_id = assigning.id
+                    AND ra.assignable_role_id = assignable.id
+                );
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO role_assignment (assigning_role_id, assignable_role_id)
+              SELECT assigning.id, assignable.id
+              FROM app_role assigning, app_role assignable
+              WHERE assigning.name = 'Global Admin'
+                AND assignable.name = 'Multi-firm Delegation'
+                AND NOT EXISTS (
+                  SELECT 1 FROM role_assignment ra
+                  WHERE ra.assigning_role_id = assigning.id
+                    AND ra.assignable_role_id = assignable.id
+                );
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO role_assignment (assigning_role_id, assignable_role_id)
+              SELECT assigning.id, assignable.id
+              FROM app_role assigning, app_role assignable
+              WHERE assigning.name = 'Global Admin'
+                AND assignable.name = 'Audit Export'
+                AND NOT EXISTS (
+                  SELECT 1 FROM role_assignment ra
+                  WHERE ra.assigning_role_id = assigning.id
+                    AND ra.assignable_role_id = assignable.id
+                );
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO role_assignment (assigning_role_id, assignable_role_id)
+              SELECT assigning.id, assignable.id
+              FROM app_role assigning, app_role assignable
+              WHERE assigning.name = 'Internal User Manager'
+                AND assignable.name = 'Multi-firm Delegation'
+                AND NOT EXISTS (
+                  SELECT 1 FROM role_assignment ra
+                  WHERE ra.assigning_role_id = assigning.id
+                    AND ra.assignable_role_id = assignable.id
+                );
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO role_assignment (assigning_role_id, assignable_role_id)
+              SELECT assigning.id, assignable.id
+              FROM app_role assigning, app_role assignable
+              WHERE assigning.name = 'Internal User Manager'
+                AND assignable.name = 'Audit Export'
+                AND NOT EXISTS (
+                  SELECT 1 FROM role_assignment ra
+                  WHERE ra.assigning_role_id = assigning.id
+                    AND ra.assignable_role_id = assignable.id
+                );
+
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: >
+              DELETE FROM role_permission rp
+              USING app_role ar
+              WHERE rp.app_role_id = ar.id
+                AND ar.name = 'External User Admin'
+                AND rp.permission = 'CONVERT_USER_TO_MULTI_FIRM';
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              DELETE FROM role_permission rp
+              USING app_role ar
+              WHERE rp.app_role_id = ar.id
+                AND ar.name = 'Global Admin'
+                AND rp.permission = 'CONVERT_USER_TO_MULTI_FIRM';
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              DELETE FROM role_assignment ra
+              USING app_role assigning, app_role assignable
+              WHERE ra.assigning_role_id = assigning.id
+                AND ra.assignable_role_id = assignable.id
+                AND assigning.name = 'Internal User Manager'
+                AND assignable.name = 'Audit Export';
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              DELETE FROM role_assignment ra
+              USING app_role assigning, app_role assignable
+              WHERE ra.assigning_role_id = assigning.id
+                AND ra.assignable_role_id = assignable.id
+                AND assigning.name = 'Internal User Manager'
+                AND assignable.name = 'Multi-firm Delegation';
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              DELETE FROM role_assignment ra
+              USING app_role assigning, app_role assignable
+              WHERE ra.assigning_role_id = assigning.id
+                AND ra.assignable_role_id = assignable.id
+                AND assigning.name = 'Global Admin'
+                AND assignable.name = 'Audit Export';
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              DELETE FROM role_assignment ra
+              USING app_role assigning, app_role assignable
+              WHERE ra.assigning_role_id = assigning.id
+                AND ra.assignable_role_id = assignable.id
+                AND assigning.name = 'Global Admin'
+                AND assignable.name = 'Multi-firm Delegation';
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              DELETE FROM role_assignment ra
+              USING app_role assigning, app_role assignable
+              WHERE ra.assigning_role_id = assigning.id
+                AND ra.assignable_role_id = assignable.id
+                AND assigning.name = 'External User Manager'
+                AND assignable.name = 'Multi-firm Delegation';
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              DELETE FROM role_assignment ra
+              USING app_role assigning, app_role assignable
+              WHERE ra.assigning_role_id = assigning.id
+                AND ra.assignable_role_id = assignable.id
+                AND assigning.name = 'External User Admin'
+                AND assignable.name = 'Multi-firm Delegation';
