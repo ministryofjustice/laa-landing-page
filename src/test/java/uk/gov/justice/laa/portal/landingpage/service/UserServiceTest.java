@@ -106,6 +106,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditAccountStatusProjection;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
@@ -145,6 +146,8 @@ class UserServiceTest {
     private EventService mockEventService;
     @Mock
     private NotificationService notificationService;
+    @Mock
+    private UserAccountStatusAuditRepository mockUserAccountStatusAuditRepository;
 
     @BeforeEach
     void setUp() {
@@ -158,6 +161,7 @@ class UserServiceTest {
                 appService,
                 techServicesClient,
                 mockUserProfileRepository,
+                mockUserAccountStatusAuditRepository,
                 mockRoleChangeNotificationService,
                 firmService,
                 mockFirmRepository,
