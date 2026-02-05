@@ -30,32 +30,22 @@ public class ExternalUserReportingServiceTest {
 
     private ExternalUserReportingService service;
 
-    private final Path reportDir = Paths.get("\\tmp\\reports");
-    private final String fixedTimestamp = "2025-01-01-12:00";
-    private final String filename = "SiLAS-external-user-report-" + fixedTimestamp + ".csv";
-    private final Path outputPath = reportDir.resolve(filename);
-
     @BeforeEach
     void setUp() throws Exception {
         service = new ExternalUserReportingService(firmRepository);
 
-        // Ensure the service writes into a directory that exists (service uses a literal "\\tmp\\reports")
-        Files.createDirectories(reportDir);
-
-        // Stabilise the generated filename by fixing the timestamp field
-        ReflectionTestUtils.setField(service, "timestamp", fixedTimestamp);
+        ReflectionTestUtils.setField(service, "reportDirectory", tempDir);
     }
 
     @AfterEach
     void tearDown() throws Exception {
         try {
-            if (Files.exists(outputPath)) {
-                Files.delete(outputPath);
-            }
-            // attempt to remove directory if empty
-            if (Files.exists(reportDir) && Files.list(reportDir).findAny().isEmpty()) {
-                Files.delete(reportDir);
-            }
+            Files.list(tempDir).forEach(p -> {
+                try {
+                    Files.deleteIfExists(p);
+                } catch (Exception ignored) {
+                }
+            });
         } catch (Exception ignored) {
         }
     }
@@ -70,7 +60,12 @@ public class ExternalUserReportingServiceTest {
 
         service.getExternalUsers();
 
-        List<String> lines = Files.readAllLines(outputPath);
+        Path csv = Files.list(tempDir)
+                .filter(p -> p.getFileName().toString().startsWith("SiLAS-external-user-report-") && p.getFileName().toString().endsWith(".csv"))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("CSV not created"));
+
+        List<String> lines = Files.readAllLines(csv);
 
         String[] headers = (String[]) ReflectionTestUtils.getField(ExternalUserReportingService.class, "HEADERS");
         assertThat(lines).isNotEmpty();
@@ -91,7 +86,12 @@ public class ExternalUserReportingServiceTest {
 
         service.getExternalUsers();
 
-        List<String> lines = Files.readAllLines(outputPath);
+        Path csv = Files.list(tempDir)
+                .filter(p -> p.getFileName().toString().startsWith("SiLAS-external-user-report-") && p.getFileName().toString().endsWith(".csv"))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("CSV not created"));
+
+        List<String> lines = Files.readAllLines(csv);
 
         // header present
         String[] headers = (String[]) ReflectionTestUtils.getField(ExternalUserReportingService.class, "HEADERS");
@@ -102,5 +102,3 @@ public class ExternalUserReportingServiceTest {
         assertThat(lines.get(1)).isEqualTo(expected);
     }
 }
-
-

@@ -1,4 +1,4 @@
-package uk.gov.justice.laa.portal.landingpage.polling;
+package uk.gov.justice.laa.portal.landingpage.reports;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -6,7 +6,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
-import uk.gov.justice.laa.portal.landingpage.reports.ExternalUserReportScheduler;
 import uk.gov.justice.laa.portal.landingpage.repository.DistributedLockRepository;
 import uk.gov.justice.laa.portal.landingpage.service.DistributedLockService;
 import uk.gov.justice.laa.portal.landingpage.service.ExternalUserReportingService;
@@ -37,7 +36,7 @@ public class ExternalUserReportSchedulerTest {
     void setUp() {
         lockService = new DistributedLockService(lockRepository);
         externalUserReportScheduler = new ExternalUserReportScheduler(externalUserReportingService, lockService);
-        setPollingEnabled(true);
+        setReportingEnabled(true);
         ReflectionTestUtils.setField(externalUserReportScheduler, "enableDistributedDbLocking", true);
     }
 
@@ -67,7 +66,7 @@ public class ExternalUserReportSchedulerTest {
     @Test
     void shouldNotAcquireLock_whenPollingDisabled() {
         // Given
-        setPollingEnabled(false);
+        setReportingEnabled(false);
 
         // When
         externalUserReportScheduler.getReport();
@@ -92,7 +91,7 @@ public class ExternalUserReportSchedulerTest {
     void shouldOnlyAllowOneInstanceToAcquireLock() {
         // Given
         when(lockRepository.acquireLock(any(), any(), any())).thenReturn(1);
-        setPollingEnabled(true);
+        setReportingEnabled(true);
         ExternalUserReportScheduler anotherInstance = new ExternalUserReportScheduler(externalUserReportingService, lockService);
 
         // When
@@ -124,8 +123,7 @@ public class ExternalUserReportSchedulerTest {
         verify(externalUserReportingService).getExternalUsers();
     }
 
-    // Helper method to set polling enabled state
-    private void setPollingEnabled(boolean enabled) {
-        ReflectionTestUtils.setField(externalUserReportScheduler, "pollingEnabled", enabled);
+    private void setReportingEnabled(boolean enabled) {
+        ReflectionTestUtils.setField(externalUserReportScheduler, "reportingEnabled", enabled);
     }
 }
