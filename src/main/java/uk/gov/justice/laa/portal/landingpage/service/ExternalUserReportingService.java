@@ -21,14 +21,14 @@ import java.util.List;
 public class ExternalUserReportingService {
 
     private static final String[] HEADERS = {
-            "Firm Name",
-            "Firm Code",
-            "Firm Type",
-            "Parent Firm Code",
-            "User Count",
-            "Admin User Count",
-            "Multi-Firm User Count",
-            "Disabled User Count"
+        "Firm Name",
+        "Firm Code",
+        "Firm Type",
+        "Parent Firm Code",
+        "User Count",
+        "Admin User Count",
+        "Multi-Firm User Count",
+        "Disabled User Count"
     };
 
     private final FirmRepository firmRepository;
@@ -51,7 +51,7 @@ public class ExternalUserReportingService {
         String timestamp = LocalDateTime.now().format(fileTimestamp);
         Path outputPath = reportDirectory.resolve("SiLAS-external-user-report-" + timestamp + ".csv");
 
-        try (BufferedWriter writer = Files.newBufferedWriter(outputPath)){
+        try (BufferedWriter writer = Files.newBufferedWriter(outputPath)) {
             writer.write(String.join(",", HEADERS));
             writer.newLine();
 
@@ -82,7 +82,7 @@ public class ExternalUserReportingService {
                 writer.write(csvValue(Long.toString(disabledUserCount)));
                 writer.newLine();
             }
-        } catch (IOException e){
+        } catch (IOException e) {
             throw new IllegalStateException("Failed to write external users to CSV", e);
         }
     }

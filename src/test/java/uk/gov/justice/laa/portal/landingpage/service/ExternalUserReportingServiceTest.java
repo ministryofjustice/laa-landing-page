@@ -10,9 +10,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 
 import static java.util.Collections.singletonList;
@@ -39,21 +39,18 @@ public class ExternalUserReportingServiceTest {
 
     @AfterEach
     void tearDown() throws Exception {
-        try {
-            Files.list(tempDir).forEach(p -> {
-                try {
-                    Files.deleteIfExists(p);
-                } catch (Exception ignored) {
-                }
-            });
-        } catch (Exception ignored) {
-        }
+        Files.list(tempDir).forEach(p -> {
+            try {
+                Files.deleteIfExists(p);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     @Test
     void createsCsvWithFullHeaderAndRows() throws Exception {
         when(firmRepository.findAllFirmExternalUserCount()).thenReturn(List.of(
-                // 8 columns: firmName, firmCode, firmType, parentFirmCode, userCount, adminUserCount, multiFirmUserCount, disabledUserCount
                 new Object[] {"Firm A", "FRA", "TypeA", "PARENT1", 5L, 1L, 0L, 0L},
                 new Object[] {"Firm B", null, "TypeB", "PARENT2", 2L, 0L, 0L, 0L}
         ));
@@ -71,7 +68,6 @@ public class ExternalUserReportingServiceTest {
         assertThat(lines).isNotEmpty();
         assertThat(lines.get(0)).isEqualTo(String.join(",", headers));
 
-        // Full rows: all 8 columns expected
         assertThat(lines).contains(
                 "Firm A,FRA,TypeA,PARENT1,5,1,0,0",
                 "Firm B,,TypeB,PARENT2,2,0,0,0"
@@ -93,11 +89,9 @@ public class ExternalUserReportingServiceTest {
 
         List<String> lines = Files.readAllLines(csv);
 
-        // header present
         String[] headers = (String[]) ReflectionTestUtils.getField(ExternalUserReportingService.class, "HEADERS");
         assertThat(lines.get(0)).isEqualTo(String.join(",", headers));
 
-        // Check escaped data row (index 1)
         String expected = "\"Firm, Inc\",\"ABC\"\"123\",\"Type, X\",\"PARENT\"\"Y\",1,0,0,0";
         assertThat(lines.get(1)).isEqualTo(expected);
     }

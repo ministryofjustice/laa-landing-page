@@ -1,10 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.repository;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,7 +19,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static uk.gov.justice.laa.portal.landingpage.entity.FirmType.ADVOCATE;
 
 @DataJpaTest
 public class FirmRepositoryTest extends BaseRepositoryTest {
@@ -144,8 +140,7 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
                 .containsExactlyInAnyOrder(
                         new Object[]{"Firm Epsilon", "EPSILON", "ADVOCATE", null, 1L, 1L, 1L, 0L},
                         new Object[]{"Firm Zeta", "ZETA", "ADVOCATE", null, 2L, 1L, 1L, 1L},
-                        new Object[]{"Firm Eta", "ETA", "ADVOCATE", null, 2L, 1L, 2L, 0L}
-                );
+                        new Object[]{"Firm Eta", "ETA", "ADVOCATE", null, 2L, 1L, 2L, 0L});
     }
 
 }
