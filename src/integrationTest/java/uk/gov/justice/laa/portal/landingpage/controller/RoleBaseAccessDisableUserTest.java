@@ -59,8 +59,15 @@ public class RoleBaseAccessDisableUserTest extends RoleBasedAccessIntegrationTes
     @Test
     public void testFirmUserManagerCanAccessDisableUserReasonPage() throws Exception {
         EntraUser loggedInUser = firmUserManagers.getFirst();
-        EntraUser accessedUser = externalUsersNoRoles.getFirst();
+        EntraUser accessedUser = externalUsersNoRoles.getLast();
         requestDisableUserReasonPage(loggedInUser, accessedUser, status().isOk());
+    }
+
+    @Test
+    public void testFirmUserManagerCannotAccessDisableUserReasonPageIfNotSameFirm() throws Exception {
+        EntraUser loggedInUser = firmUserManagers.getFirst();
+        EntraUser accessedUser = externalUsersNoRoles.getFirst();
+        requestDisableUserReasonPage(loggedInUser, accessedUser, status().is3xxRedirection());
     }
 
     @Test
