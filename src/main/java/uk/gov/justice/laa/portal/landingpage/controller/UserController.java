@@ -210,7 +210,8 @@ public class UserController {
         }
 
         boolean allowDelegateUserAccess = accessControlService
-                .authenticatedUserHasAnyGivenPermissions(Permission.DELEGATE_EXTERNAL_USER_ACCESS);
+                .authenticatedUserHasAnyGivenPermissions(Permission.DELEGATE_EXTERNAL_USER_ACCESS,
+                        Permission.DELEGATE_EXTERNAL_USER_ACCESS_INTERNAL);
 
         model.addAttribute("users", paginatedUsers.getUsers());
         model.addAttribute("requestedPageSize", size);
@@ -1595,8 +1596,10 @@ public class UserController {
      * Convert to Multi-Firm Flow - Show conversion form
      */
     @GetMapping("/users/edit/{id}/convert-to-multi-firm")
-    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_EXTERNAL_USER) && @accessControlService.canEditUser(#id)"
-            + "&& @accessControlService.authenticatedUserIsInternal()")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_EXTERNAL_USER)"
+            + "&& @accessControlService.canEditUser(#id)"
+            + "&& @accessControlService.authenticatedUserIsInternal()"
+            + "&& @accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CONVERT_USER_TO_MULTI_FIRM)")
     public String convertToMultiFirm(@PathVariable String id, ConvertToMultiFirmForm convertToMultiFirmForm,
             Model model, HttpSession session, RedirectAttributes redirectAttributes) {
 
@@ -1628,8 +1631,10 @@ public class UserController {
     }
 
     @PostMapping("/users/edit/{id}/convert-to-multi-firm")
-    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_EXTERNAL_USER) && @accessControlService.canEditUser(#id)"
-            + "&& @accessControlService.authenticatedUserIsInternal()")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_EXTERNAL_USER)"
+            + " && @accessControlService.canEditUser(#id)"
+            + " && @accessControlService.authenticatedUserIsInternal()"
+            + " && @accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CONVERT_USER_TO_MULTI_FIRM)")
     public String convertToMultiFirmPost(@PathVariable String id,
             @Valid ConvertToMultiFirmForm convertToMultiFirmForm,
             BindingResult result,
