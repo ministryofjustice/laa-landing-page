@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.playwright.tests;
 
+import com.microsoft.playwright.options.LoadState;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.BaseFrontEndTest;
@@ -16,6 +17,7 @@ public class RbacTests extends BaseFrontEndTest {
     void verifyInternalUserManagerCanAccessSilas() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.INTERNAL_USER_MANAGER);
         manageUsersPage.clickFirstUserLink();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         manageUsersPage.verifyUserDetailsPopulated();
     }
 
@@ -45,6 +47,7 @@ public class RbacTests extends BaseFrontEndTest {
     void externalUserManagerCanAccessLandingPage() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
         manageUsersPage.clickFirstUserLink();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         manageUsersPage.verifyUserDetailsPopulated();
     }
 
@@ -81,6 +84,7 @@ public class RbacTests extends BaseFrontEndTest {
     void externalUserAdminCanAccessLandingPage() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_ADMIN);
         manageUsersPage.clickFirstUserLink();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         manageUsersPage.verifyUserDetailsPopulated();
     }
 
@@ -153,6 +157,7 @@ public class RbacTests extends BaseFrontEndTest {
     void internalUserViewerCanAccessSilas() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.INTERNAL_USER_VIEWER);
         manageUsersPage.clickFirstUserLink();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         manageUsersPage.verifyUserDetailsPopulated();
     }
 
@@ -189,6 +194,7 @@ public class RbacTests extends BaseFrontEndTest {
     void firmUserManagerCanAccessSilas() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.FIRM_USER_MANAGER);
         manageUsersPage.clickFirstUserLink();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         manageUsersPage.verifyUserDetailsPopulated();
     }
 
