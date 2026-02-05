@@ -35,6 +35,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
 import static uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring.addListAppenderToLogger;
@@ -50,6 +51,9 @@ public class AccessControlServiceTest {
 
     @Mock
     private LoginService loginService;
+
+    @Mock
+    private EntraUserRepository entraUserRepository;
 
     @InjectMocks
     private AccessControlService accessControlService;
@@ -1249,6 +1253,19 @@ public class AccessControlServiceTest {
 
     @Test
     void canDisableUser_returnsFalse_whenUserIsMultiFirm() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).email("test@email.com")
+                .userProfiles(HashSet.newHashSet(1)).build();
+        AppRole appRole = AppRole.builder().authzRole(true)
+                .permissions(Set.of(Permission.EDIT_EXTERNAL_USER, Permission.DISABLE_EXTERNAL_USER)).build();
+        UserProfile userProfile = UserProfile.builder().id(UUID.randomUUID()).activeProfile(true)
+                .entraUser(entraUser).appRoles(Set.of(appRole)).userType(UserType.EXTERNAL).build();
+        entraUser.getUserProfiles().add(userProfile);
+
         String userId = UUID.randomUUID().toString();
         EntraUserDto userDto = EntraUserDto.builder()
                 .id(userId)
@@ -1256,6 +1273,9 @@ public class AccessControlServiceTest {
                 .multiFirmUser(true)
                 .build();
         Mockito.when(userService.getEntraUserById(userId)).thenReturn(Optional.of(userDto));
+
+        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
 
         boolean result = accessControlService.canDisableUser(userId);
 
@@ -1350,12 +1370,13 @@ public class AccessControlServiceTest {
                 .userProfiles(HashSet.newHashSet(1)).build();
         AppRole appRole = AppRole.builder().authzRole(true)
                 .permissions(Set.of(Permission.EDIT_EXTERNAL_USER, Permission.DISABLE_EXTERNAL_USER)).build();
-        UserProfile userProfile = UserProfile.builder().activeProfile(true)
+        UserProfile userProfile = UserProfile.builder().id(UUID.randomUUID()).activeProfile(true)
                 .entraUser(entraUser).appRoles(Set.of(appRole)).userType(UserType.EXTERNAL).build();
         entraUser.getUserProfiles().add(userProfile);
 
         EntraUserDto entraUserDto = EntraUserDto.builder().id("accessedUser").build();
 
+        Mockito.when(entraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
         Mockito.when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(entraUserDto));
         Mockito.when(userService.isInternal(userId.toString())).thenReturn(false);
 

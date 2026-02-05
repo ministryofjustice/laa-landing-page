@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -18,6 +19,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
@@ -55,7 +57,7 @@ public class AccessControlService {
         }
 
         // Global Admin
-        if (userHasAuthzRole(authenticatedUser, "Global Admin")) {
+        if (userHasAuthzRole(authenticatedUser, AuthzRole.GLOBAL_ADMIN.getRoleName())) {
             return true;
         }
 
@@ -98,7 +100,20 @@ public class AccessControlService {
             return false;
         }
 
-        if (optionalAccessedUserProfile.get().getUserType().equals(UserType.INTERNAL)) {
+        UserProfileDto accessedUserProfile = optionalAccessedUserProfile.get();
+        if (accessedUserProfile.getUserType().equals(UserType.INTERNAL)) {
+            return false;
+        }
+
+        boolean isInternalUser = userService.isInternal(authenticatedUser.getId());
+        if (!isInternalUser && accessedUserProfile.getEntraUser().isMultiFirmUser()) {
+            return false;
+        }
+
+        // FUM can only delete own firm user
+        boolean isFirmUserManager = isFirmUserManager(authenticatedUser);
+        boolean sameFirm = usersAreInSameFirm(authenticatedUser, userProfileId);
+        if (isFirmUserManager && !sameFirm) {
             return false;
         }
 
@@ -161,14 +176,36 @@ public class AccessControlService {
         if (accessedUserOptional.isEmpty()) {
             return false;
         }
-        EntraUserDto accessedUser = accessedUserOptional.get();
 
-        if (accessedUser.isMultiFirmUser() || userService.isInternal(entraUserId)) {
+        EntraUserDto accessedUser = accessedUserOptional.get();
+        boolean isAccessedUserInternal = userService.isInternal(entraUserId);
+        if (isAccessedUserInternal) {
             return false;
         }
 
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
+
+        boolean isInternalUser = userService.isInternal(authenticatedUser.getId());
+        if (!isInternalUser && accessedUser.isMultiFirmUser()) {
+            return false;
+        }
+
+        // FUM can only delete own firm user
+        boolean isFirmUserManager = isFirmUserManager(authenticatedUser);
+        UserProfile activeProfile = entraUserRepository.findById(UUID.fromString(entraUserId))
+                        .map(EntraUser::getUserProfiles)
+                        .orElseGet(HashSet::new)
+                        .stream()
+                        .filter(UserProfile::isActiveProfile)
+                        .findFirst()
+                        .orElse(null);
+        boolean sameFirm = activeProfile != null && usersAreInSameFirm(authenticatedUser, activeProfile.getId().toString());
+        if (isFirmUserManager && !sameFirm) {
+            return false;
+        }
+
         return !accessedUser.getId().equals(authenticatedUser.getId().toString())
                 && userHasPermission(authenticatedUser, Permission.DISABLE_EXTERNAL_USER);
     }
@@ -208,11 +245,9 @@ public class AccessControlService {
         // Check if authenticated user is internal (LAA staff)
         boolean isInternalUser = userService.isInternal(authenticatedUser.getId());
 
-        // Only external users (provider admins/firm user managers) can delete firm
-        // profiles
-        // Internal users should not see the revoke link
+        // Internal User with delegate role can revoke firm access
         if (isInternalUser) {
-            return false;
+            return userHasPermission(authenticatedUser, Permission.DELEGATE_EXTERNAL_USER_ACCESS_INTERNAL);
         }
 
         // Check if users are in the same firm
@@ -220,12 +255,8 @@ public class AccessControlService {
 
         // External users (firm admins) with DELEGATE_EXTERNAL_USER_ACCESS can only
         // delete profiles from their own firm
-        if (sameFirm
-                && userHasPermission(authenticatedUser, Permission.DELEGATE_EXTERNAL_USER_ACCESS)) {
-            return true;
-        }
-
-        return false;
+        return sameFirm
+                && userHasPermission(authenticatedUser, Permission.DELEGATE_EXTERNAL_USER_ACCESS);
     }
 
     public boolean canEditUser(String userProfileId) {
@@ -267,6 +298,25 @@ public class AccessControlService {
                     authenticatedUser.getId(), userProfileId);
         }
         return canAccess;
+    }
+
+    private boolean isFirmUserManager(EntraUser user) {
+        return Optional.ofNullable(user)
+                .map(EntraUser::getUserProfiles)
+                .orElse(Set.of())
+                .stream()
+                .filter(p -> p != null && p.isActiveProfile())
+                .findFirst()
+                .map(p -> Optional.ofNullable(p.getAppRoles())
+                        .orElse(Set.of())
+                        .stream()
+                        .anyMatch(r ->
+                                r != null
+                                        && r.getName() != null
+                                        && AuthzRole.FIRM_USER_MANAGER.getRoleName().equals(r.getName())
+                        )
+                )
+                .orElse(false);
     }
 
     private boolean usersAreInSameFirm(EntraUser authenticatedUser, String accessedUserProfileId) {

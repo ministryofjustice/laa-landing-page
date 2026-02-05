@@ -8,5 +8,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface UserAccountStatusAuditRepository extends JpaRepository<UserAccountStatusAudit, UUID> {
+
     List<UserAccountStatusAudit> findByEntraUser(EntraUser entraUser);
 }

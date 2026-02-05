@@ -92,6 +92,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
@@ -264,6 +265,19 @@ class UserServiceTest {
 
         when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(profile));
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
+        UserAccountStatusAudit auditRecord1 =
+            UserAccountStatusAudit.builder()
+                .id(UUID.randomUUID())
+                .entraUser(entraUser)
+                .build();
+        UserAccountStatusAudit auditRecord2 =
+            UserAccountStatusAudit.builder()
+                .id(UUID.randomUUID())
+                .entraUser(entraUser)
+                .build();
+        List<UserAccountStatusAudit> auditRecords =
+            List.of(auditRecord1, auditRecord2);
+        when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(auditRecords);
         when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), any(Set.class), any(Set.class)))
                 .thenReturn(true);
 
@@ -272,6 +286,9 @@ class UserServiceTest {
 
         // Assert
         verify(techServicesClient).deleteRoleAssignment(entraId);
+        verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
+        verify(mockUserAccountStatusAuditRepository).deleteAll(auditRecords);
+        verify(mockUserAccountStatusAuditRepository).flush();
         verify(mockRoleChangeNotificationService, times(1))
                 .sendMessage(any(UserProfile.class), eq(Collections.emptySet()), any(Set.class));
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
@@ -310,6 +327,7 @@ class UserServiceTest {
 
         // Assert
         verify(techServicesClient).deleteRoleAssignment(entraId);
+        verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
         verify(mockRoleChangeNotificationService, never())
                 .sendMessage(any(UserProfile.class), any(Set.class), any(Set.class));
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
@@ -340,12 +358,14 @@ class UserServiceTest {
 
         when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(profile));
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
+        when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
 
         // Act
         var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID());
 
         // Assert
         verify(techServicesClient).deleteRoleAssignment(entraId);
+        verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
         verify(mockEntraUserRepository, times(1)).delete(entraUser);
         assertThat(result).isNotNull();

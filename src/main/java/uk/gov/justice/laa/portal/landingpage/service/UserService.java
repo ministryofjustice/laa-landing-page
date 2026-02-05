@@ -107,6 +107,7 @@ public class UserService {
     private final UserProfileRepository userProfileRepository;
     private final UserAccountStatusAuditRepository userAccountStatusAuditRepository;
     private final RoleChangeNotificationService roleChangeNotificationService;
+    private final UserAccountStatusAuditRepository userAccountStatusAuditRepository;
     private final FirmService firmService;
     private final FirmRepository firmRepository;
     private final EventService eventService;
@@ -391,7 +392,7 @@ public class UserService {
         if (!auditRecords.isEmpty()) {
             userAccountStatusAuditRepository.deleteAll(auditRecords);
             userAccountStatusAuditRepository.flush();
-            logger.debug("Deleted {} audit records for user: {} ({})", 
+            logger.debug("Deleted {} audit records for user: {} ({})",
                     auditRecords.size(), entraUser.getEmail(), entraUser.getId());
         }
 
