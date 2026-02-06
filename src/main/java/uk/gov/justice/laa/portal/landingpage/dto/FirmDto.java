@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.dto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
@@ -15,6 +16,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(of = "id")
 public class FirmDto implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
