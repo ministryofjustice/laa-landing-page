@@ -107,7 +107,6 @@ public class UserService {
     private final UserProfileRepository userProfileRepository;
     private final UserAccountStatusAuditRepository userAccountStatusAuditRepository;
     private final RoleChangeNotificationService roleChangeNotificationService;
-    private final UserAccountStatusAuditRepository userAccountStatusAuditRepository;
     private final FirmService firmService;
     private final FirmRepository firmRepository;
     private final EventService eventService;

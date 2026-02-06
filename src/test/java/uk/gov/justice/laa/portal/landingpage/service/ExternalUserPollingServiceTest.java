@@ -600,4 +600,165 @@ class ExternalUserPollingServiceTest {
         
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
+
+    @Test
+    void shouldHandleUsersNotFoundError_successfully() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+        
+        TechServicesErrorResponse errorResponse = TechServicesErrorResponse.builder()
+                .success(false)
+                .message("Users not found.")
+                .code("404")
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.error(errorResponse);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+        verify(techServicesClient).getUsers(anyString(), anyString());
+    }
+
+    @Test
+    void shouldHandleExactly30MinuteGap() {
+        LocalDateTime lastSuccessfulTo = LocalDateTime.now().minusMinutes(35);
+        EntraLastSyncMetadata existingMetadata = EntraLastSyncMetadata.builder()
+                .id("ENTRA_USER_SYNC")
+                .lastSuccessfulTo(lastSuccessfulTo)
+                .updatedAt(LocalDateTime.now().minusMinutes(35))
+                .build();
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.of(existingMetadata));
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(Collections.emptyList())
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        verify(techServicesClient).getUsers(anyString(), anyString());
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldHandleApiResponseWithNullData() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+        
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(null);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> 
+            externalUserPollingService.updateSyncMetadata());
+        
+        verify(entraLastSyncMetadataRepository, never()).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldHandleUserWithNullCustomSecurityAttributes() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        EntraUser existingUser = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user123")
+                .firstName("John")
+                .lastName("Doe")
+                .email("user@example.com")
+                .enabled(true)
+                .mailOnly(false)
+                .build();
+        when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
+
+        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+                .id("user123")
+                .givenName("John")
+                .surname("Doe")
+                .accountEnabled(true)
+                .isMailOnly(false)
+                .customSecurityAttributes(null)
+                .build();
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        verify(entraUserRepository).save(existingUser);
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldHandleUserDeletionWithAuditRecords() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        EntraUser userToDelete = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user123")
+                .firstName("John")
+                .lastName("Doe")
+                .email("user@example.com")
+                .enabled(true)
+                .mailOnly(false)
+                .build();
+        when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(userToDelete));
+
+        UserAccountStatusAudit auditRecord = UserAccountStatusAudit.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraUser(userToDelete)
+                .build();
+        when(userAccountStatusAuditRepository.findByEntraUser(userToDelete)).thenReturn(List.of(auditRecord));
+
+        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+                .id("user123")
+                .givenName("John")
+                .surname("Doe")
+                .accountEnabled(true)
+                .isMailOnly(false)
+                .deleted(true)
+                .build();
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        verify(userAccountStatusAuditRepository).findByEntraUser(userToDelete);
+        verify(userAccountStatusAuditRepository).deleteAll(List.of(auditRecord));
+        verify(userAccountStatusAuditRepository).flush();
+        verify(entraUserRepository).delete(userToDelete);
+        verify(entraUserRepository).flush();
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldCapTimeGapTo30Minutes_whenGapExceeds30Minutes() {
+        LocalDateTime lastSuccessfulTo = LocalDateTime.now().minusHours(2);
+        EntraLastSyncMetadata existingMetadata = EntraLastSyncMetadata.builder()
+                .id("ENTRA_USER_SYNC")
+                .lastSuccessfulTo(lastSuccessfulTo)
+                .updatedAt(LocalDateTime.now().minusHours(2))
+                .build();
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.of(existingMetadata));
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(Collections.emptyList())
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        verify(techServicesClient).getUsers(anyString(), anyString());
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
 }
