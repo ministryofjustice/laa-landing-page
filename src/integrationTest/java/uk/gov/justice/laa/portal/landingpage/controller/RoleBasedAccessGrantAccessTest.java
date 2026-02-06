@@ -51,6 +51,46 @@ public class RoleBasedAccessGrantAccessTest extends RoleBasedAccessIntegrationTe
     }
 
     @Test
+    public void testSecurityResponseCanOpenGlobalAdminAppsToGrantAccess() throws Exception {
+        canOpenGrantAccessScreen(securityResponseUsers.getFirst(), globalAdmins.getFirst(), status().isOk());
+    }
+
+    @Test
+    public void testSecurityResponseCanOpenInternalUserManagerAppsToGrantAccess() throws Exception {
+        canOpenGrantAccessScreen(securityResponseUsers.getFirst(), internalUserManagers.getFirst(), status().isOk());
+    }
+
+    @Test
+    public void testSecurityResponseCanOpenInternalAndExternalUserManagerAppsToGrantAccess() throws Exception {
+        canOpenGrantAccessScreen(securityResponseUsers.getFirst(), internalAndExternalUserManagers.getFirst(), status().isOk());
+    }
+
+    @Test
+    public void testSecurityResponseCanOpenExternalUserAppsToGrantAccess() throws Exception {
+        canOpenGrantAccessScreen(securityResponseUsers.getFirst(), externalUsersNoRoles.getFirst(), status().isOk());
+    }
+
+    @Test
+    public void testSecurityResponseCanOpenExternalUserManagerAppsToGrantAccess() throws Exception {
+        canOpenGrantAccessScreen(securityResponseUsers.getFirst(), externalOnlyUserManagers.getFirst(), status().isOk());
+    }
+
+    @Test
+    public void testSecurityResponseCanOpenExternalUserAdminAppsToGrantAccess() throws Exception {
+        canOpenGrantAccessScreen(securityResponseUsers.getFirst(), externalUserAdmins.getFirst(), status().isOk());
+    }
+
+    @Test
+    public void testSecurityResponseCanOpenInternalUserWithExternalUserManagerRoleAdminAppsToGrantAccess() throws Exception {
+        canOpenGrantAccessScreen(securityResponseUsers.getFirst(), internalWithExternalOnlyUserManagers.getFirst(), status().isOk());
+    }
+
+    @Test
+    public void testSecurityResponseCanOpenInternalUserAdminAppsToGrantAccess() throws Exception {
+        canOpenGrantAccessScreen(securityResponseUsers.getFirst(), internalUsersNoRoles.getFirst(), status().isOk());
+    }
+
+    @Test
     public void testInternalUserManagerCanOpenInternalUserManagerAppsToGrantAccess() throws Exception {
         canOpenGrantAccessScreen(internalUserManagers.getFirst(), internalUserManagers.getLast(), status().isOk());
     }
