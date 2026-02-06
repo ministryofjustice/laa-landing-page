@@ -57,17 +57,24 @@ public class RoleBaseAccessDisableUserTest extends RoleBasedAccessIntegrationTes
     }
 
     @Test
-    public void testFirmUserManagerCannotAccessDisableUserReasonPage() throws Exception {
+    public void testFirmUserManagerCanAccessDisableUserReasonPage() throws Exception {
+        EntraUser loggedInUser = firmUserManagers.getFirst();
+        EntraUser accessedUser = externalUsersNoRoles.getLast();
+        requestDisableUserReasonPage(loggedInUser, accessedUser, status().isOk());
+    }
+
+    @Test
+    public void testFirmUserManagerCannotAccessDisableUserReasonPageIfNotSameFirm() throws Exception {
         EntraUser loggedInUser = firmUserManagers.getFirst();
         EntraUser accessedUser = externalUsersNoRoles.getFirst();
         requestDisableUserReasonPage(loggedInUser, accessedUser, status().is3xxRedirection());
     }
 
     @Test
-    public void testExternalUserManagerCannotAccessDisableUserReasonPage() throws Exception {
+    public void testExternalUserManagerCanAccessDisableUserReasonPage() throws Exception {
         EntraUser loggedInUser = externalOnlyUserManagers.getFirst();
         EntraUser accessedUser = externalUsersNoRoles.getFirst();
-        requestDisableUserReasonPage(loggedInUser, accessedUser, status().is3xxRedirection());
+        requestDisableUserReasonPage(loggedInUser, accessedUser, status().isOk());
     }
 
     @Test
@@ -169,23 +176,43 @@ public class RoleBaseAccessDisableUserTest extends RoleBasedAccessIntegrationTes
     }
 
     @Test
-    public void testExternalUserManagerCannotDisableUser() throws Exception {
+    public void testExternalUserManagerCanDisableUser() throws Exception {
         EntraUser loggedInUser = externalOnlyUserManagers.getFirst();
         EntraUser accessedUser = externalUsersNoRoles.getFirst();
         assertThat(accessedUser.isEnabled()).isTrue();
-        sendDisableUserPost(loggedInUser, accessedUser, status().is3xxRedirection());
+        sendDisableUserPost(loggedInUser, accessedUser, status().isOk());
         accessedUser = entraUserRepository.findById(accessedUser.getId()).orElseThrow();
-        assertThat(accessedUser.isEnabled()).isTrue();
+        assertThat(accessedUser.isEnabled()).isFalse();
+        List<UserAccountStatusAudit> statusChanges = userAccountStatusAuditRepository.findAll();
+        assertThat(statusChanges.size()).isEqualTo(1);
+        UserAccountStatusAudit statusChange = statusChanges.getFirst();
+        assertThat(statusChange.getEntraUser().getId()).isEqualTo(accessedUser.getId());
+        assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DISABLED);
+        assertThat(statusChange.getDisabledBy()).isEqualTo(loggedInUser.getFirstName() + " " + loggedInUser.getLastName());
+        // Teardown
+        accessedUser.setEnabled(true);
+        entraUserRepository.saveAndFlush(accessedUser);
+        userAccountStatusAuditRepository.delete(statusChange);
     }
 
     @Test
-    public void testFirmUserManagerCannotDisableUser() throws Exception {
+    public void testFirmUserManagerCanDisableUser() throws Exception {
         EntraUser loggedInUser = firmUserManagers.getFirst();
-        EntraUser accessedUser = externalUsersNoRoles.getFirst();
+        EntraUser accessedUser = externalUsersNoRoles.getLast();
         assertThat(accessedUser.isEnabled()).isTrue();
-        sendDisableUserPost(loggedInUser, accessedUser, status().is3xxRedirection());
+        sendDisableUserPost(loggedInUser, accessedUser, status().isOk());
         accessedUser = entraUserRepository.findById(accessedUser.getId()).orElseThrow();
-        assertThat(accessedUser.isEnabled()).isTrue();
+        assertThat(accessedUser.isEnabled()).isFalse();
+        List<UserAccountStatusAudit> statusChanges = userAccountStatusAuditRepository.findAll();
+        assertThat(statusChanges.size()).isEqualTo(1);
+        UserAccountStatusAudit statusChange = statusChanges.getFirst();
+        assertThat(statusChange.getEntraUser().getId()).isEqualTo(accessedUser.getId());
+        assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DISABLED);
+        assertThat(statusChange.getDisabledBy()).isEqualTo(loggedInUser.getFirstName() + " " + loggedInUser.getLastName());
+        // Teardown
+        accessedUser.setEnabled(true);
+        entraUserRepository.saveAndFlush(accessedUser);
+        userAccountStatusAuditRepository.delete(statusChange);
     }
 
     @Test
