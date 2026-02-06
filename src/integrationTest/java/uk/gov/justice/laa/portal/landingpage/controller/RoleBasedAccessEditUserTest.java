@@ -1,11 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.web.servlet.ResultMatcher;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.repository.RoleAssignmentRepository;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -50,6 +48,46 @@ public class RoleBasedAccessEditUserTest extends RoleBasedAccessIntegrationTest 
     @Test
     public void testGlobalAdminCanOpenInternalUserAdminAppsToEdit() throws Exception {
         canOpenEditScreen(globalAdmins.getFirst(), internalUsersNoRoles.getFirst(), status().isOk());
+    }
+
+    @Test
+    public void testSecurityResponseCanOpenGlobalAdminAppsToEdit() throws Exception {
+        canOpenEditScreen(securityResponseUsers.getFirst(), globalAdmins.getFirst(), status().isOk());
+    }
+
+    @Test
+    public void testSecurityResponseCanOpenInternalUserManagerAppsToEdit() throws Exception {
+        canOpenEditScreen(securityResponseUsers.getFirst(), internalUserManagers.getFirst(), status().isOk());
+    }
+
+    @Test
+    public void testSecurityResponseCanOpenInternalAndExternalUserManagerAppsToEdit() throws Exception {
+        canOpenEditScreen(securityResponseUsers.getFirst(), internalAndExternalUserManagers.getFirst(), status().isOk());
+    }
+
+    @Test
+    public void testSecurityResponseCanOpenExternalUserAppsToEdit() throws Exception {
+        canOpenEditScreen(securityResponseUsers.getFirst(), externalUsersNoRoles.getFirst(), status().isOk());
+    }
+
+    @Test
+    public void testSecurityResponseCanOpenExternalUserManagerAppsToEdit() throws Exception {
+        canOpenEditScreen(securityResponseUsers.getFirst(), externalOnlyUserManagers.getFirst(), status().isOk());
+    }
+
+    @Test
+    public void testSecurityResponseCanOpenExternalUserAdminAppsToEdit() throws Exception {
+        canOpenEditScreen(securityResponseUsers.getFirst(), externalUserAdmins.getFirst(), status().isOk());
+    }
+
+    @Test
+    public void testSecurityResponseCanOpenInternalUserWithExternalUserManagerRoleAdminAppsToEdit() throws Exception {
+        canOpenEditScreen(securityResponseUsers.getFirst(), internalWithExternalOnlyUserManagers.getFirst(), status().isOk());
+    }
+
+    @Test
+    public void testSecurityResponseCanOpenInternalUserAdminAppsToEdit() throws Exception {
+        canOpenEditScreen(securityResponseUsers.getFirst(), internalUsersNoRoles.getFirst(), status().isOk());
     }
 
     @Test

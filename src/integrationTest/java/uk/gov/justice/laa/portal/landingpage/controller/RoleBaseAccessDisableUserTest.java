@@ -43,8 +43,8 @@ public class RoleBaseAccessDisableUserTest extends RoleBasedAccessIntegrationTes
     }
 
     @Test
-    public void testInformationAndAssuranceCanAccessDisableUserReasonPage() throws Exception {
-        EntraUser loggedInUser = informationAndAssuranceUsers.getFirst();
+    public void testSecurityResponseCanAccessDisableUserReasonPage() throws Exception {
+        EntraUser loggedInUser = securityResponseUsers.getFirst();
         EntraUser accessedUser = externalUsersNoRoles.getFirst();
         requestDisableUserReasonPage(loggedInUser, accessedUser, status().isOk());
     }
@@ -126,8 +126,8 @@ public class RoleBaseAccessDisableUserTest extends RoleBasedAccessIntegrationTes
     }
 
     @Test
-    public void testExternalUserAdminCanDisableUser() throws Exception {
-        EntraUser loggedInUser = externalUserAdmins.getFirst();
+    public void testSecurityResponseCanDisableUser() throws Exception {
+        EntraUser loggedInUser = securityResponseUsers.getFirst();
         EntraUser accessedUser = externalUsersNoRoles.getFirst();
         assertThat(accessedUser.isEnabled()).isTrue();
         sendDisableUserPost(loggedInUser, accessedUser, status().isOk());
@@ -146,8 +146,8 @@ public class RoleBaseAccessDisableUserTest extends RoleBasedAccessIntegrationTes
     }
 
     @Test
-    public void testInformationAndAssuranceCanDisableUser() throws Exception {
-        EntraUser loggedInUser = informationAndAssuranceUsers.getFirst();
+    public void testExternalUserAdminCanDisableUser() throws Exception {
+        EntraUser loggedInUser = externalUserAdmins.getFirst();
         EntraUser accessedUser = externalUsersNoRoles.getFirst();
         assertThat(accessedUser.isEnabled()).isTrue();
         sendDisableUserPost(loggedInUser, accessedUser, status().isOk());
