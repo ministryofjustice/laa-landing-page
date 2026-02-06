@@ -25,4 +25,6 @@ public class EntraUserDto implements Serializable {
     private String lastName;
     private boolean multiFirmUser;
     private UserStatus userStatus;
+    @Builder.Default
+    private boolean enabled = true;
 }
