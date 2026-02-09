@@ -946,6 +946,20 @@
             </div>
         </div>
 
+        <!-- Export CSV -->
+        <div class="moj-button-group moj-button-group--inline moj-button-group--with-divider"
+             th:if="${exportCsv and firmSearch.getSelectedFirmId() == null}">
+            <a class="govuk-button" disabled=".govuk-button" title="Select a single firm to enable CSV export.">Export as CSV</a>
+        </div>
+
+        <div class="moj-nutton-group moj-button-group--inline moj-button-group--with-divider"
+             th:if="${exportCsv and firmSearch.getSelectedFirmId() != null and firmSearch.getSelectedFirmId() != ''}">
+            <a class="govuk-button"
+               th:href="@{/users/audit/{id}/download(id=${firmSearch.selectedFirmId})}">
+                Export as CSV
+            </a>
+        </div>
+
         <!-- Pagination -->
         <nav class="govuk-pagination" aria-label="Pagination" th:if="${totalPages > 1}">
             <div class="govuk-pagination__prev" th:if="${page > 1}">

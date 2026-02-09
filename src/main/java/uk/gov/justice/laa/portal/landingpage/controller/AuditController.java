@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import uk.gov.justice.laa.portal.landingpage.auth.AuthenticatedUser;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -28,6 +29,8 @@ import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
+import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
+import uk.gov.justice.laa.portal.landingpage.service.AuditExportService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
@@ -41,6 +44,9 @@ public class AuditController {
     private final UserService userService;
     private final LoginService loginService;
     private final EventService eventService;
+    private final AccessControlService accessControlService;
+    private final AuthenticatedUser authenticatedUser;
+    private final AuditExportService auditExportService;
 
     /**
      * Display the User Access Audit Table
@@ -89,6 +95,8 @@ public class AuditController {
                 criteria.getSelectedUserType() != null ? criteria.getSelectedUserType().toString() : "");
         model.addAttribute("sort", criteria.getSort());
         model.addAttribute("direction", criteria.getDirection());
+        model.addAttribute("exportCsv",
+                accessControlService.userHasAuthzRole(authenticatedUser.getCurrentEntraUser(userService), "Audit Export"));
     }
 
     /**
@@ -196,5 +204,11 @@ public class AuditController {
         model.addAttribute(ModelAttributes.PAGE_TITLE, "User deleted");
 
         return "user-audit/delete-user-success";
+    }
+
+    @PostMapping("/users/audit/{id}/download")
+    @PreAuthorize("@accessControlService.userHasAuthzRole(authenticated, 'Audit Export')")
+    public void auditExportCsv(@PathVariable String id, Model model) {
+        auditExportService.downloadAuditCsv(id);
     }
 }
