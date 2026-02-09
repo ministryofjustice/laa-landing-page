@@ -102,6 +102,14 @@ public class RoleBasedAccessCreateUserTest extends RoleBasedAccessIntegrationTes
     }
 
     @Test
+    public void testSecurityResponseCannotCreateUser() throws Exception {
+        String email = "securityresponseuser@creatingexternal.com";
+        MvcResult result = createUser(securityResponseUsers.getFirst(), email, status().is3xxRedirection());
+        assertThat(result.getResponse()).isNotNull();
+        assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/not-authorised");
+    }
+
+    @Test
     public void testInternalUserManagerCannotCreateUser() throws Exception {
         String email = "internalUserManager@creatingexternal.com";
         MvcResult result = createUser(internalUserManagers.getFirst(), email, status().is3xxRedirection());
