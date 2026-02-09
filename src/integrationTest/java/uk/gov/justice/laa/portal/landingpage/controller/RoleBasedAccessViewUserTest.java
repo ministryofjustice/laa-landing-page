@@ -37,6 +37,41 @@ public class RoleBasedAccessViewUserTest extends RoleBasedAccessIntegrationTest 
     }
 
     @Test
+    public void testGlobalAdminCanAccessSecurityResponseProfile() throws Exception {
+        testCanAccessUser(globalAdmins.getFirst(), securityResponseUsers.getFirst(), status().isOk());
+    }
+
+    @Test
+    public void testSecurityResponseCanAccessGlobalAdminProfile() throws Exception {
+        testCanAccessUser(securityResponseUsers.getFirst(), globalAdmins.getFirst(), status().isOk());
+    }
+
+    @Test
+    public void testSecurityResponseCanAccessInternalUserManagerProfile() throws Exception {
+        testCanAccessUser(securityResponseUsers.getFirst(), internalUserManagers.getFirst(), status().isOk());
+    }
+
+    @Test
+    public void testSecurityResponseCanAccessInternalAndExternalUserManagerProfile() throws Exception {
+        testCanAccessUser(securityResponseUsers.getFirst(), internalAndExternalUserManagers.getFirst(), status().isOk());
+    }
+
+    @Test
+    public void testSecurityResponseCanAccessExternalUserProfile() throws Exception {
+        testCanAccessUser(securityResponseUsers.getFirst(), externalUsersNoRoles.getFirst(), status().isOk());
+    }
+
+    @Test
+    public void testSecurityResponseCanAccessExternalUserAdminProfile() throws Exception {
+        testCanAccessUser(securityResponseUsers.getFirst(), externalUserAdmins.getFirst(), status().isOk());
+    }
+
+    @Test
+    public void testSecurityResponseCanAccessSecurityResponseProfile() throws Exception {
+        testCanAccessUser(securityResponseUsers.getFirst(), securityResponseUsers.getFirst(), status().isOk());
+    }
+
+    @Test
     public void testInternalAndExternalUserManagerCanAccessGlobalAdminProfile() throws Exception {
         testCanAccessUser(internalAndExternalUserManagers.getFirst(), globalAdmins.getFirst(), status().isOk());
 

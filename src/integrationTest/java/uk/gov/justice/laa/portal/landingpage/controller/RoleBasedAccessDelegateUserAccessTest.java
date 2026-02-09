@@ -80,6 +80,36 @@ public class RoleBasedAccessDelegateUserAccessTest extends RoleBasedAccessIntegr
 
     @Test
     @Transactional
+    public void testSecurityResponseCannotAccessDelegateFirmAccessToExternalUser() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        EntraUser editorUser = securityResponseUsers.getFirst();
+        MvcResult result = this.mockMvc.perform(get("/admin/multi-firm/user/add/profile")
+                        .with(userOauth2Login(editorUser))
+                        .with(csrf())
+                        .session(session))
+                .andExpect(status().is4xxClientError())
+                .andReturn();
+        assertThat(result.getResponse()).isNotNull();
+        assertThat(result.getResponse().getErrorMessage()).isEqualTo("Forbidden");
+    }
+
+    @Test
+    @Transactional
+    public void testSecurityResponseCannotPostToDelegateFirmAccessToExternalUser() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        EntraUser editorUser = securityResponseUsers.getFirst();
+        MvcResult result = this.mockMvc.perform(post("/admin/multi-firm/user/add/profile")
+                        .with(userOauth2Login(editorUser))
+                        .with(csrf())
+                        .session(session))
+                .andExpect(status().is4xxClientError())
+                .andReturn();
+        assertThat(result.getResponse()).isNotNull();
+        assertThat(result.getResponse().getErrorMessage()).isEqualTo("Forbidden");
+    }
+
+    @Test
+    @Transactional
     public void testExternalUserManagerCannotAccessDelegateFirmAccessToExternalUser() throws Exception {
         MockHttpSession session = new MockHttpSession();
         EntraUser editorUser = internalWithExternalOnlyUserManagers.getFirst();

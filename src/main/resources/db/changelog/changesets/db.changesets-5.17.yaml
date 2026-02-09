@@ -1,0 +1,177 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-security-response-assignments-and-permissions-20260206-1
+      author: suresh.kavali
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO role_assignment (assigning_role_id, assignable_role_id)
+              VALUES
+                ((SELECT id FROM app_role WHERE name='Security Response'),
+                 (SELECT id FROM app_role WHERE name='Firm User Manager'))
+              ON CONFLICT DO NOTHING;
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO role_assignment (assigning_role_id, assignable_role_id)
+              VALUES
+                ((SELECT id FROM app_role WHERE name='Security Response'),
+                 (SELECT id FROM app_role WHERE name='Internal User Viewer'))
+              ON CONFLICT DO NOTHING;
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO role_assignment (assigning_role_id, assignable_role_id)
+              VALUES
+                ((SELECT id FROM app_role WHERE name='Security Response'),
+                 (SELECT id FROM app_role WHERE name='Internal User Manager'))
+              ON CONFLICT DO NOTHING;
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO role_assignment (assigning_role_id, assignable_role_id)
+              VALUES
+                ((SELECT id FROM app_role WHERE name='Security Response'),
+                 (SELECT id FROM app_role WHERE name='External User Viewer'))
+              ON CONFLICT DO NOTHING;
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO role_assignment (assigning_role_id, assignable_role_id)
+              VALUES
+                ((SELECT id FROM app_role WHERE name='Security Response'),
+                 (SELECT id FROM app_role WHERE name='External User Manager'))
+              ON CONFLICT DO NOTHING;
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO role_assignment (assigning_role_id, assignable_role_id)
+              VALUES
+                ((SELECT id FROM app_role WHERE name='Security Response'),
+                 (SELECT id FROM app_role WHERE name='External User Admin'))
+              ON CONFLICT DO NOTHING;
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO role_assignment (assigning_role_id, assignable_role_id)
+              VALUES
+                ((SELECT id FROM app_role WHERE name='Security Response'),
+                 (SELECT id FROM app_role WHERE name='Global Admin'))
+              ON CONFLICT DO NOTHING;
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO role_assignment (assigning_role_id, assignable_role_id)
+              VALUES
+                ((SELECT id FROM app_role WHERE name='Security Response'),
+                 (SELECT id FROM app_role WHERE name='Security Response'))
+              ON CONFLICT DO NOTHING;
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO role_assignment (assigning_role_id, assignable_role_id)
+              VALUES
+                ((SELECT id FROM app_role WHERE name='Security Response'),
+                 (SELECT id FROM app_role WHERE name='SILAS System Administration'))
+              ON CONFLICT DO NOTHING;
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO role_assignment (assigning_role_id, assignable_role_id)
+              VALUES
+                ((SELECT id FROM app_role WHERE name='Security Response'),
+                 (SELECT id FROM app_role WHERE name='Multi-firm Delegation'))
+              ON CONFLICT DO NOTHING;
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO role_assignment (assigning_role_id, assignable_role_id)
+              VALUES
+                ((SELECT id FROM app_role WHERE name='Security Response'),
+                 (SELECT id FROM app_role WHERE name='Audit Export'))
+              ON CONFLICT DO NOTHING;
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO role_permission (app_role_id, permission)
+              VALUES
+                ((SELECT id FROM app_role WHERE name='External User Manager'), 'VIEW_FIRM_DIRECTORY'),
+                ((SELECT id FROM app_role WHERE name='External User Admin'), 'VIEW_FIRM_DIRECTORY'),
+                ((SELECT id FROM app_role WHERE name='Global Admin'), 'VIEW_FIRM_DIRECTORY'),
+                ((SELECT id FROM app_role WHERE name='External User Viewer'), 'VIEW_FIRM_DIRECTORY'),
+                ((SELECT id FROM app_role WHERE name='Security Response'), 'VIEW_FIRM_DIRECTORY')
+              ON CONFLICT DO NOTHING;
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO role_permission (app_role_id, permission)
+              VALUES
+                ((SELECT id FROM app_role WHERE name='Security Response'), 'VIEW_ALL_USER_MULTI_FIRM_PROFILES'),
+                ((SELECT id FROM app_role WHERE name='Security Response'), 'VIEW_USER_OFFICE'),
+                ((SELECT id FROM app_role WHERE name='Security Response'), 'DELETE_AUDIT_USER')
+              ON CONFLICT DO NOTHING;
+
+      rollback:
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              DELETE FROM role_permission rp
+              USING app_role ar
+              WHERE rp.app_role_id = ar.id
+                AND rp.permission = 'VIEW_FIRM_DIRECTORY'
+                AND ar.name IN (
+                  'External User Manager',
+                  'External User Admin',
+                  'Global Admin',
+                  'External User Viewer',
+                  'Security Response'
+                );
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              DELETE FROM role_permission rp
+              USING app_role ar
+              WHERE rp.app_role_id = ar.id
+                AND ar.name = 'Security Response'
+                AND rp.permission IN (
+                  'VIEW_ALL_USER_MULTI_FIRM_PROFILES',
+                  'VIEW_USER_OFFICE',
+                  'DELETE_AUDIT_USER'
+                );
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              DELETE FROM role_assignment ra
+              USING app_role assigning, app_role assignable
+              WHERE ra.assigning_role_id = assigning.id
+                AND ra.assignable_role_id = assignable.id
+                AND assigning.name = 'Security Response'
+                AND assignable.name IN (
+                  'Firm User Manager',
+                  'Internal User Viewer',
+                  'Internal User Manager',
+                  'External User Viewer',
+                  'External User Manager',
+                  'External User Admin',
+                  'Global Admin',
+                  'Security Response',
+                  'SILAS System Administration',
+                  'Multi-firm Delegation',
+                  'Audit Export'
+                );
