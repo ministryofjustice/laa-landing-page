@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -36,12 +37,12 @@ import uk.gov.justice.laa.portal.landingpage.dto.PdaSyncResultDto;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.service.pda.command.CreateFirmCommand;
 import uk.gov.justice.laa.portal.landingpage.service.pda.command.CreateOfficeCommand;
-import uk.gov.justice.laa.portal.landingpage.service.pda.command.DeleteOfficeCommand;
 import uk.gov.justice.laa.portal.landingpage.service.pda.command.DisableFirmCommand;
 import uk.gov.justice.laa.portal.landingpage.service.pda.command.UpdateFirmCommand;
 import uk.gov.justice.laa.portal.landingpage.service.pda.command.UpdateOfficeCommand;
@@ -661,9 +662,20 @@ public class DataProviderService {
                 }
             }
 
-            // Deactivate/delete firms (must use individual deletes for cascade handling)
-            for (String firmCode : firmsToDeactivate) {
-                deactivateFirm(dbFirms.get(firmCode), result);
+            // Deactivate/delete firms - only process firms that are currently enabled
+            List<Firm> firmsToDisable = firmsToDeactivate.stream()
+                .map(dbFirms::get)
+                .filter(firm -> firm != null && firm.getEnabled())
+                .collect(Collectors.toList());
+
+            if (!firmsToDisable.isEmpty()) {
+                log.info("Disabling {} enabled firms (out of {} total to deactivate)",
+                    firmsToDisable.size(), firmsToDeactivate.size());
+                for (Firm firm : firmsToDisable) {
+                    deactivateFirm(firm, result);
+                }
+            } else {
+                log.debug("No enabled firms to deactivate (all {} already disabled)", firmsToDeactivate.size());
             }
 
             // If errors occurred during deactivation, stop immediately
@@ -851,24 +863,88 @@ public class DataProviderService {
                 return result;
             }
 
-            // Now deactivate offices that are not in PDA data
-            for (String officeCode : officesToDeactivate) {
-                deactivateOffice(dbOffices.get(officeCode), result);
+            // Now deactivate offices that are not in PDA data (batch operation for performance)
+            if (!officesToDeactivate.isEmpty()) {
+                log.info("Starting batch office deletion for {} offices", officesToDeactivate.size());
+
+                List<Office> officesToDelete = officesToDeactivate.stream()
+                    .map(dbOffices::get)
+                    .filter(office -> office != null)
+                    .collect(Collectors.toList());
+
+                if (!officesToDelete.isEmpty()) {
+                    log.debug("Filtered to {} valid office entities for deletion", officesToDelete.size());
+
+                    // Collect all office IDs
+                    List<UUID> officeIds = officesToDelete.stream()
+                        .map(Office::getId)
+                        .collect(Collectors.toList());
+
+                    log.debug("Querying user profiles for {} office IDs using batch query", officeIds.size());
+
+                    // Batch query: Get all user profiles associated with any of these offices in a single query
+                    List<UserProfile> affectedProfiles = userProfileRepository.findByOfficeIdIn(officeIds);
+
+                    log.debug("Found {} unique user profiles associated with offices to delete", affectedProfiles.size());
+
+                    // Remove all office associations in memory
+                    if (!affectedProfiles.isEmpty()) {
+                        log.debug("Removing office associations from {} user profiles", affectedProfiles.size());
+                        for (UserProfile profile : affectedProfiles) {
+                            profile.getOffices().removeAll(officesToDelete);
+                        }
+                        // Batch save all modified profiles
+                        log.debug("Batch saving {} user profiles", affectedProfiles.size());
+                        userProfileRepository.saveAll(affectedProfiles);
+                        log.info("Removed {} offices from {} user profiles", officesToDelete.size(), affectedProfiles.size());
+                    } else {
+                        log.debug("No user profiles affected by office deletions");
+                    }
+
+                    // Batch delete all offices
+                    log.debug("Executing batch delete for {} offices", officesToDelete.size());
+                    officeRepository.deleteAll(officesToDelete);
+                    result.setOfficesDeleted(result.getOfficesDeleted() + officesToDelete.size());
+                    log.info("Successfully batch deleted {} offices", officesToDelete.size());
+                }
             }
 
             // Flush all changes and verify constraint compliance before commit
             entityManager.flush();
             entityManager.clear(); // Clear cache to get fresh data
 
-            // FINAL SAFETY CHECK: Verify no firms exist without offices
+            // FINAL SAFETY CHECK: Verify no ENABLED firms exist without offices
             // This catches edge cases where office operations failed silently
+            // Query already filters for enabled=true firms
             List<Firm> firmsStillWithoutOffices = firmRepository.findFirmsWithoutOffices();
 
             if (!firmsStillWithoutOffices.isEmpty()) {
-                log.debug("Found {} firms without offices - this violates database constraint", firmsStillWithoutOffices.size());
-                for (Firm firm : firmsStillWithoutOffices) {
-                    log.debug("Firm {} has no offices - disabling to prevent constraint violation", firm.getCode());
-                    deactivateFirm(firm, result);
+                log.info("Found {} ENABLED firms without offices - disabling to prevent constraint violation", firmsStillWithoutOffices.size());
+
+                // Batch disable all firms without offices (double-check they're enabled)
+                List<Firm> firmsThatNeedDisabling = firmsStillWithoutOffices.stream()
+                    .filter(Firm::getEnabled)
+                    .collect(Collectors.toList());
+
+                if (!firmsThatNeedDisabling.isEmpty()) {
+                    for (Firm firm : firmsThatNeedDisabling) {
+                        firm.setEnabled(false);
+                        // Clear parent/child relationships
+                        if (firm.getParentFirm() != null) {
+                            firm.setParentFirm(null);
+                        }
+                        if (firm.getChildFirms() != null && !firm.getChildFirms().isEmpty()) {
+                            for (Firm childFirm : firm.getChildFirms()) {
+                                childFirm.setParentFirm(null);
+                            }
+                            firm.getChildFirms().clear();
+                        }
+                    }
+
+                    // Batch save all disabled firms
+                    firmRepository.saveAll(firmsThatNeedDisabling);
+                    result.setFirmsDisabled(result.getFirmsDisabled() + firmsThatNeedDisabling.size());
+                    log.info("Successfully batch disabled {} firms without offices", firmsThatNeedDisabling.size());
                 }
             }
 
@@ -964,10 +1040,6 @@ public class DataProviderService {
 
     private void updateOffice(Office office, PdaOfficeData pdaOffice, Firm firm, PdaSyncResultDto result) {
         new UpdateOfficeCommand(officeRepository, userProfileRepository, office, pdaOffice, firm).execute(result);
-    }
-
-    private void deactivateOffice(Office office, PdaSyncResultDto result) {
-        new DeleteOfficeCommand(officeRepository, userProfileRepository, office).execute(result);
     }
 
     /**

@@ -25,11 +25,17 @@ public class DeleteOfficeCommand implements PdaSyncCommand {
     public void execute(PdaSyncResultDto result) {
         try {
             // CRITICAL RULE: MUST remove user associations before deleting office
-            removeUserProfileOfficeAssociations(office);
-            int associationsCount = countUserProfileOfficeAssociations(office);
-            log.debug("Would remove {} user profile associations for office: {}", associationsCount, office.getCode());
-            result.addWarning("Office " + office.getCode() + " being deleted: "
-                + associationsCount + " user associations will be removed");
+            List<UserProfile> profiles = userProfileRepository.findByOfficeId(office.getId());
+
+            if (!profiles.isEmpty()) {
+                // Remove office from all profiles in memory
+                for (UserProfile profile : profiles) {
+                    profile.getOffices().remove(office);
+                }
+                // Batch save all modified profiles
+                userProfileRepository.saveAll(profiles);
+                log.debug("Removed office {} from {} user profiles", office.getCode(), profiles.size());
+            }
 
             officeRepository.delete(office);
             result.setOfficesDeleted(result.getOfficesDeleted() + 1);
@@ -38,24 +44,5 @@ public class DeleteOfficeCommand implements PdaSyncCommand {
             log.error("Failed to delete office {}: {}", office.getCode(), e.getMessage());
             result.addError("Failed to delete office " + office.getCode() + ": " + e.getMessage());
         }
-    }
-
-    /**
-     * Removes all user profile associations for an office before deletion.
-     */
-    private void removeUserProfileOfficeAssociations(Office office) {
-        List<UserProfile> profiles = userProfileRepository.findByOfficeId(office.getId());
-        for (UserProfile profile : profiles) {
-            profile.getOffices().remove(office);
-            userProfileRepository.save(profile);
-            log.debug("Removed office {} from user profile {}", office.getCode(), profile.getId());
-        }
-    }
-
-    /**
-     * Counts user profile associations for an office.
-     */
-    private int countUserProfileOfficeAssociations(Office office) {
-        return userProfileRepository.findByOfficeId(office.getId()).size();
     }
 }

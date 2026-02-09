@@ -155,6 +155,13 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
     List<UserProfile> findByOfficeId(@Param("officeId") UUID officeId);
 
     @Query("""
+            SELECT DISTINCT ups FROM UserProfile ups
+                        JOIN ups.offices o
+            WHERE o.id IN :officeIds
+            """)
+    List<UserProfile> findByOfficeIdIn(@Param("officeIds") List<UUID> officeIds);
+
+    @Query("""
             SELECT ups FROM UserProfile ups
             WHERE ups.firm.id = :firmId
             """)
