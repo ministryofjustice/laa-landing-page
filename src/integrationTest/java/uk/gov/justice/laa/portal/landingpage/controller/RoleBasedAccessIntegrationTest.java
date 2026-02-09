@@ -75,7 +75,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
     protected List<EntraUser> multiFirmUsers = new ArrayList<>();
     protected List<EntraUser> globalAdmins = new ArrayList<>();
     protected List<EntraUser> firmUserManagers = new ArrayList<>();
-    protected List<EntraUser> informationAndAssuranceUsers = new ArrayList<>();
+    protected List<EntraUser> securityResponseUsers = new ArrayList<>();
     protected List<EntraUser> allUsers = new ArrayList<>();
 
     @BeforeAll
@@ -311,7 +311,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         multiFirmUsers.add(entraUserRepository.saveAndFlush(user));
 
         // Set up Security Response User
-        user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "Internal", "InformationAndAssuranceUser");
+        user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "Internal", "SecurityResponseUser");
         profile = buildLaaUserProfile(user, UserType.INTERNAL, true);
         AppRole informationAndAssuranceRole = allAppRoles.stream()
                 .filter(AppRole::isAuthzRole)
@@ -321,7 +321,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         profile.setAppRoles(Set.of(informationAndAssuranceRole));
         user.setUserProfiles(Set.of(profile));
         profile.setEntraUser(user);
-        informationAndAssuranceUsers.add(entraUserRepository.saveAndFlush(user));
+        securityResponseUsers.add(entraUserRepository.saveAndFlush(user));
 
 
         allUsers.addAll(internalUsersNoRoles);
@@ -336,7 +336,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         allUsers.addAll(internalUserViewers);
         allUsers.addAll(externalUserViewers);
         allUsers.addAll(multiFirmUsers);
-        allUsers.addAll(informationAndAssuranceUsers);
+        allUsers.addAll(securityResponseUsers);
     }
 
     protected void clearRepositories() {

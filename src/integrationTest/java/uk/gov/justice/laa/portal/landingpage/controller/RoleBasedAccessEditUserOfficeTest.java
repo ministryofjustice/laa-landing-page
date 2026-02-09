@@ -11,7 +11,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 
 import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -80,6 +79,30 @@ public class RoleBasedAccessEditUserOfficeTest extends RoleBasedAccessIntegratio
 
     @Test
     @Transactional
+    public void testSecurityResponseCannotEditUserOffice() throws Exception {
+        EntraUser editedUser = externalUsersNoRoles.getFirst();
+
+        UserProfile editedUserProfile = editedUser.getUserProfiles().stream()
+                .findFirst()
+                .orElseThrow();
+
+        Firm editedUserFirm = editedUserProfile.getFirm();
+
+        Office newOffice = editedUserFirm.getOffices()
+                .stream()
+                .findFirst()
+                .orElseThrow();
+
+        MvcResult result = changeUserOffice(securityResponseUsers.getFirst(), editedUser, newOffice, false);
+
+        assertThat(result.getResponse()).isNotNull();
+        assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/not-authorised");
+        UserProfile savedProfile = userProfileRepository.findById(editedUserProfile.getId()).orElseThrow();
+        assertThat(savedProfile.getOffices()).isEmpty();
+    }
+
+    @Test
+    @Transactional
     public void testInternalUserWithExternalUserManagerCanEditUserOfficeSameFirm() throws Exception {
         EntraUser editedUser = externalUsersNoRoles.getFirst();
 
@@ -134,21 +157,6 @@ public class RoleBasedAccessEditUserOfficeTest extends RoleBasedAccessIntegratio
         UserProfile savedProfile = userProfileRepository.findById(editedUserProfile.getId()).orElseThrow();
         assertThat(savedProfile.getOffices()).isEmpty();
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     @Test
     @Transactional
