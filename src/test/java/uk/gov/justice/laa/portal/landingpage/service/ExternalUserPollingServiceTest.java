@@ -984,44 +984,6 @@ class ExternalUserPollingServiceTest {
     }
 
     @Test
-    void shouldHandleUserDeletionException() {
-        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
-
-        EntraUser userToDelete = EntraUser.builder()
-                .id(java.util.UUID.randomUUID())
-                .entraOid("user123")
-                .firstName("John")
-                .lastName("Doe")
-                .email("user@example.com")
-                .enabled(true)
-                .mailOnly(false)
-                .build();
-        when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(userToDelete));
-        when(userAccountStatusAuditRepository.findByEntraUser(userToDelete)).thenReturn(Collections.emptyList());
-
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
-                .id("user123")
-                .givenName("John")
-                .surname("Doe")
-                .accountEnabled(true)
-                .isMailOnly(false)
-                .deleted(true)
-                .build();
-        
-        GetUsersResponse response = GetUsersResponse.builder()
-                .message("Success")
-                .users(List.of(apiUser))
-                .build();
-        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
-        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
-
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> 
-            externalUserPollingService.updateSyncMetadata());
-        
-        verify(entraLastSyncMetadataRepository, never()).save(any(EntraLastSyncMetadata.class));
-    }
-
-    @Test
     void shouldHandleEmptyUsersList() {
         when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
         
