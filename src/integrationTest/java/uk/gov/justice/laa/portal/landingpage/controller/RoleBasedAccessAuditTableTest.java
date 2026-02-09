@@ -21,52 +21,52 @@ public class RoleBasedAccessAuditTableTest extends RoleBasedAccessIntegrationTes
     }
 
     @Test
-    public void testInformationAndAssuranceCanAccessAuditTableAndSeeLink() throws Exception {
-        EntraUser informationAndAssuranceUser = informationAndAssuranceUsers.getFirst();
-        testCanAccessAuditTable(informationAndAssuranceUser, status().isOk());
-        testCanSeeAuditLink(informationAndAssuranceUser, true);
+    public void testSecurityResponseCanAccessAuditTableAndSeeLink() throws Exception {
+        EntraUser globalAdmin = securityResponseUsers.getFirst();
+        testCanAccessAuditTable(globalAdmin, status().isOk());
+        testCanSeeAuditLink(globalAdmin, true);
     }
 
     @Test
-    public void testInternalUserManagerCannotAccessAuditTableAndCannotSeeLink() throws Exception {
+    public void testInternalUserManagerCanAccessAuditTableAndCanSeeLink() throws Exception {
         EntraUser internalUserManager = internalUserManagers.getFirst();
-        testCanAccessAuditTable(internalUserManager, status().is4xxClientError());
-        testCanSeeAuditLink(internalUserManager, false);
+        testCanAccessAuditTable(internalUserManager, status().isOk());
+        testCanSeeAuditLink(internalUserManager, true);
     }
 
     @Test
-    public void testInternalUserWithExternalUserManagerCannotAccessAuditTableAndCannotSeeLink() throws Exception {
+    public void testInternalUserWithExternalUserManagerCanAccessAuditTableAndCanSeeLink() throws Exception {
         EntraUser internalUserWithExternalUserManager = internalWithExternalOnlyUserManagers.getFirst();
-        testCanAccessAuditTable(internalUserWithExternalUserManager, status().is4xxClientError());
-        testCanSeeAuditLink(internalUserWithExternalUserManager, false);
+        testCanAccessAuditTable(internalUserWithExternalUserManager, status().isOk());
+        testCanSeeAuditLink(internalUserWithExternalUserManager, true);
     }
 
     @Test
-    public void testInternalUserWithInternalAndExternalUserManagerCannotAccessAuditTableAndCannotSeeLink() throws Exception {
+    public void testInternalUserWithInternalAndExternalUserManagerCanAccessAuditTableAndCanSeeLink() throws Exception {
         EntraUser internalUserWithInternalAndExternalUserManager = internalAndExternalUserManagers.getFirst();
-        testCanAccessAuditTable(internalUserWithInternalAndExternalUserManager, status().is4xxClientError());
-        testCanSeeAuditLink(internalUserWithInternalAndExternalUserManager, false);
+        testCanAccessAuditTable(internalUserWithInternalAndExternalUserManager, status().isOk());
+        testCanSeeAuditLink(internalUserWithInternalAndExternalUserManager, true);
     }
 
     @Test
-    public void testInternalUserViewerCannotAccessAuditTableAndCannotSeeLink() throws Exception {
+    public void testInternalUserViewerCanAccessAuditTableAndCanSeeLink() throws Exception {
         EntraUser internalUserViewer = internalUserViewers.getFirst();
-        testCanAccessAuditTable(internalUserViewer, status().is4xxClientError());
-        testCanSeeAuditLink(internalUserViewer, false);
+        testCanAccessAuditTable(internalUserViewer, status().isOk());
+        testCanSeeAuditLink(internalUserViewer, true);
     }
 
     @Test
-    public void testExternalUserViewerCannotAccessAuditTableAndCannotSeeLink() throws Exception {
+    public void testExternalUserViewerCanAccessAuditTableAndCanSeeLink() throws Exception {
         EntraUser externalUserViewer = externalUserViewers.getFirst();
-        testCanAccessAuditTable(externalUserViewer, status().is4xxClientError());
-        testCanSeeAuditLink(externalUserViewer, false);
+        testCanAccessAuditTable(externalUserViewer, status().isOk());
+        testCanSeeAuditLink(externalUserViewer, true);
     }
 
     @Test
-    public void testExternalUserAdminCannotAccessAuditTableAndCannotSeeLink() throws Exception {
+    public void testExternalUserAdminCanAccessAuditTableAndCanSeeLink() throws Exception {
         EntraUser externalUserAdmin = externalUserAdmins.getFirst();
-        testCanAccessAuditTable(externalUserAdmin, status().is4xxClientError());
-        testCanSeeAuditLink(externalUserAdmin, false);
+        testCanAccessAuditTable(externalUserAdmin, status().isOk());
+        testCanSeeAuditLink(externalUserAdmin, true);
     }
 
     @Test
@@ -83,16 +83,12 @@ public class RoleBasedAccessAuditTableTest extends RoleBasedAccessIntegrationTes
         testCanSeeAuditLink(externalUserNoRoles, false);
     }
 
-
-
     @Test
-    public void testFirmUserManagerCannotAccessAuditTableAndCannotSeeLink() throws Exception {
+    public void testFirmUserManagerCanAccessAuditTableAndCanSeeLink() throws Exception {
         EntraUser firmUserManager = externalOnlyUserManagers.getFirst();
-        testCanAccessAuditTable(firmUserManager, status().is4xxClientError());
-        testCanSeeAuditLink(firmUserManager, false);
+        testCanAccessAuditTable(firmUserManager, status().isOk());
+        testCanSeeAuditLink(firmUserManager, true);
     }
-
-
 
     public void testCanAccessAuditTable(EntraUser loggedInUser, ResultMatcher expectedResult) throws Exception {
         this.mockMvc.perform(get("/admin/users/audit")

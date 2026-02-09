@@ -82,6 +82,7 @@ public class ManageUsersPage {
 
         log.info("Navigating to Manage Users page: {}", url);
         page.navigate(url);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
         this.header = page.locator("h1.govuk-heading-xl");
         this.createNewUserButton = page.locator("button.govuk-button[onclick*='/admin/user/create/details']");
@@ -296,6 +297,23 @@ public class ManageUsersPage {
         }
     }
 
+    public void uncheckSelectedRoles(List<String> roles) {
+        page.locator("input[type='checkbox']").first().waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000));
+        for (String role : roles) {
+            Locator checkbox = page.getByLabel(role);
+            if (checkbox.isChecked()) {
+                checkbox.uncheck();
+            }
+        }
+    }
+
+    public void verifyServicesNotPresent(List<String> roles) {
+        for (String role : roles) {
+            Locator row = page.locator("dd:has-text('" + role + "')");
+            assertThat(row).not().isVisible();
+        }
+    }
+
     public void checkSelectedServices(List<String> services) {
         page.locator("input[type='checkbox']").first().waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE).setTimeout(5000));
         for (String service : services) {
@@ -305,6 +323,8 @@ public class ManageUsersPage {
             }
         }
     }
+
+
 
     public Locator externalUserRowLocator() {
         return page.locator(
@@ -335,6 +355,7 @@ public class ManageUsersPage {
 
     public boolean searchAndVerifyUser(String email) {
         searchForUser(email);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
         Locator row = page.locator("tbody tr").filter(
                 new Locator.FilterOptions().setHasText(email)
