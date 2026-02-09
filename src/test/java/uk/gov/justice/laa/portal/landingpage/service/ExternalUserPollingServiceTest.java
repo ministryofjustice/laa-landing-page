@@ -649,7 +649,7 @@ class ExternalUserPollingServiceTest {
         TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(null);
         when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
 
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> 
+        assertThrows(RuntimeException.class, () -> 
             externalUserPollingService.updateSyncMetadata());
         
         verify(entraLastSyncMetadataRepository, never()).save(any(EntraLastSyncMetadata.class));
@@ -759,6 +759,301 @@ class ExternalUserPollingServiceTest {
         externalUserPollingService.updateSyncMetadata();
 
         verify(techServicesClient).getUsers(anyString(), anyString());
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldHandleNullEntraUserInDeleteUser() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+                .id("nonexistent123")
+                .givenName("John")
+                .surname("Doe")
+                .accountEnabled(true)
+                .isMailOnly(false)
+                .deleted(true)
+                .build();
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+        when(entraUserRepository.findByEntraOid("nonexistent123")).thenReturn(Optional.empty());
+
+        externalUserPollingService.updateSyncMetadata();
+
+        verify(entraUserRepository, never()).delete(any(EntraUser.class));
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldHandleUserWithDifferentFields() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        EntraUser existingUser = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user123")
+                .firstName("OldFirstName")
+                .lastName("OldLastName")
+                .email("user@example.com")
+                .enabled(false)
+                .mailOnly(true)
+                .build();
+        when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
+
+        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+                .id("user123")
+                .givenName("NewFirstName")
+                .surname("NewLastName")
+                .accountEnabled(true)
+                .isMailOnly(false)
+                .lastSignIn("2025-01-18T10:30:00Z")
+                .build();
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        verify(entraUserRepository).save(existingUser);
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldHandleUserWithNullFields() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        EntraUser existingUser = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user123")
+                .firstName("John")
+                .lastName("Doe")
+                .email("user@example.com")
+                .enabled(true)
+                .mailOnly(false)
+                .build();
+        when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
+
+        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+                .id("user123")
+                .givenName(null)
+                .surname(null)
+                .accountEnabled(true)
+                .isMailOnly(false)
+                .lastSignIn(null)
+                .build();
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        verify(entraUserRepository).save(existingUser);
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldHandleUserSynchronizationException() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        when(entraUserRepository.findByEntraOid("user123")).thenThrow(new RuntimeException("Database error"));
+
+        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+                .id("user123")
+                .givenName("John")
+                .surname("Doe")
+                .accountEnabled(true)
+                .isMailOnly(false)
+                .build();
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldHandleDisableUserException() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        EntraUser existingUser = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user123")
+                .firstName("John")
+                .lastName("Doe")
+                .email("user@example.com")
+                .enabled(true)
+                .mailOnly(false)
+                .build();
+        when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
+        when(entraUserRepository.save(existingUser)).thenThrow(new RuntimeException("Database error"));
+
+        DisableUserReason inactivityReason = DisableUserReason.builder()
+                .id(java.util.UUID.randomUUID())
+                .name("Inactivity")
+                .description("Disabled due to inactivity")
+                .entraDescription("Inactivity")
+                .userSelectable(false)
+                .build();
+        when(disableUserReasonRepository.findAll()).thenReturn(List.of(inactivityReason));
+
+        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+                .id("user123")
+                .givenName("John")
+                .surname("Doe")
+                .accountEnabled(true)
+                .isMailOnly(false)
+                .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
+                        .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
+                                .odataType("#microsoft.graph.customSecurityAttributeValue")
+                                .disabledReason("NoGroupsDisable")
+                                .build())
+                        .build())
+                .build();
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldHandleUserWithAlreadyDisabledStatus() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        EntraUser existingUser = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user123")
+                .firstName("John")
+                .lastName("Doe")
+                .email("user@example.com")
+                .enabled(false)
+                .mailOnly(false)
+                .build();
+        when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
+
+        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+                .id("user123")
+                .givenName("John")
+                .surname("Doe")
+                .accountEnabled(true)
+                .isMailOnly(false)
+                .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
+                        .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
+                                .odataType("#microsoft.graph.customSecurityAttributeValue")
+                                .disabledReason("NoGroupsDisable")
+                                .build())
+                        .build())
+                .build();
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        verify(entraUserRepository).save(existingUser);
+        verify(userAccountStatusAuditRepository, never()).save(any(UserAccountStatusAudit.class));
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldHandleUserDeletionException() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        EntraUser userToDelete = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user123")
+                .firstName("John")
+                .lastName("Doe")
+                .email("user@example.com")
+                .enabled(true)
+                .mailOnly(false)
+                .build();
+        when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(userToDelete));
+        when(userAccountStatusAuditRepository.findByEntraUser(userToDelete)).thenReturn(Collections.emptyList());
+
+        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+                .id("user123")
+                .givenName("John")
+                .surname("Doe")
+                .accountEnabled(true)
+                .isMailOnly(false)
+                .deleted(true)
+                .build();
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> 
+            externalUserPollingService.updateSyncMetadata());
+        
+        verify(entraLastSyncMetadataRepository, never()).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldHandleEmptyUsersList() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(Collections.emptyList())
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        verify(techServicesClient).getUsers(anyString(), anyString());
+        verify(entraUserRepository, never()).save(any(EntraUser.class));
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldHandleNullUsersList() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(null)
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        verify(techServicesClient).getUsers(anyString(), anyString());
+        verify(entraUserRepository, never()).save(any(EntraUser.class));
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
 }
