@@ -23,7 +23,7 @@ public class PdaSyncResultDto {
     private int firmsUpdated = 0;
 
     @Builder.Default
-    private int firmsDeleted = 0;
+    private int firmsDisabled = 0;
 
     @Builder.Default
     private int officesCreated = 0;

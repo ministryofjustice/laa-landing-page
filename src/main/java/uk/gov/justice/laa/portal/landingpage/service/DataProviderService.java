@@ -41,8 +41,8 @@ import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.service.pda.command.CreateFirmCommand;
 import uk.gov.justice.laa.portal.landingpage.service.pda.command.CreateOfficeCommand;
-import uk.gov.justice.laa.portal.landingpage.service.pda.command.DeactivateFirmCommand;
 import uk.gov.justice.laa.portal.landingpage.service.pda.command.DeleteOfficeCommand;
+import uk.gov.justice.laa.portal.landingpage.service.pda.command.DisableFirmCommand;
 import uk.gov.justice.laa.portal.landingpage.service.pda.command.UpdateFirmCommand;
 import uk.gov.justice.laa.portal.landingpage.service.pda.command.UpdateOfficeCommand;
 
@@ -538,8 +538,8 @@ public class DataProviderService {
                 if (!result.getErrors().isEmpty()) {
                     log.warn("PDA sync completed with {} errors (changes were committed)", result.getErrors().size());
                 }
-                log.info("Async PDA synchronization completed - Firms: {} created, {} updated, {} deleted | Offices: {} created, {} updated, {} deleted",
-                    result.getFirmsCreated(), result.getFirmsUpdated(), result.getFirmsDeleted(),
+                log.info("Async PDA synchronization completed - Firms: {} created, {} updated, {} reactivated, {} disabled | Offices: {} created, {} updated, {} deleted",
+                    result.getFirmsCreated(), result.getFirmsUpdated(), result.getFirmsReactivated(), result.getFirmsDisabled(),
                     result.getOfficesCreated(), result.getOfficesUpdated(), result.getOfficesDeleted());
             }
 
@@ -867,9 +867,8 @@ public class DataProviderService {
             if (!firmsStillWithoutOffices.isEmpty()) {
                 log.debug("Found {} firms without offices - this violates database constraint", firmsStillWithoutOffices.size());
                 for (Firm firm : firmsStillWithoutOffices) {
-                    log.debug("Firm {} has no offices - deactivating to prevent constraint violation", firm.getCode());
+                    log.debug("Firm {} has no offices - disabling to prevent constraint violation", firm.getCode());
                     deactivateFirm(firm, result);
-                    result.setFirmsDeleted(result.getFirmsDeleted() + 1);
                 }
             }
 
@@ -878,17 +877,19 @@ public class DataProviderService {
                 + "\nPDA Sync Delta Analysis"
                 + "\n========================================"
                 + "\n\nFirms:"
-                + "\n  Updated:  {}"
-                + "\n  Created:  {}"
-                + "\n  Deleted:  {}"
+                + "\n  Created:         {}"
+                + "\n  Updated:         {}"
+                + "\n  Reactivated:     {}"
+                + "\n  Disabled:        {}"
                 + "\n\nOffices:"
                 + "\n  Created:         {}"
                 + "\n  Updated:         {}"
                 + "\n  Switched firm:   {}"
                 + "\n  Deleted:         {}",
-                result.getFirmsUpdated(),
                 result.getFirmsCreated(),
-                result.getFirmsDeleted(),
+                result.getFirmsUpdated(),
+                result.getFirmsReactivated(),
+                result.getFirmsDisabled(),
                 result.getOfficesCreated(),
                 result.getOfficesUpdated(),
                 result.getWarnings().stream().filter(w -> w.contains("switched firms - removed")).count(),
@@ -954,7 +955,7 @@ public class DataProviderService {
     }
 
     private void deactivateFirm(Firm firm, PdaSyncResultDto result) {
-        new DeactivateFirmCommand(firmRepository, officeRepository, userProfileRepository, firm).execute(result);
+        new DisableFirmCommand(firmRepository, firm).execute(result);
     }
 
     private void createOffice(PdaOfficeData pdaOffice, Firm firm, PdaSyncResultDto result) {

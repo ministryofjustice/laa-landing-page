@@ -26,7 +26,6 @@ import org.springframework.security.oauth2.client.web.OAuth2LoginAuthenticationF
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
@@ -51,13 +50,15 @@ public class SecurityConfig {
     private final CustomLogoutHandler logoutHandler;
     private final Environment environment;
     private final UserDisabledFilter userDisabledFilter;
+    private final FirmDisabledFilter firmDisabledFilter;
 
     public SecurityConfig(AuthzOidcUserDetailsService authzOidcUserDetailsService, CustomLogoutHandler logoutHandler, Environment environment,
-                          UserDisabledFilter userDisabledFilter) {
+                          UserDisabledFilter userDisabledFilter, FirmDisabledFilter firmDisabledFilter) {
         this.authzOidcUserDetailsService = authzOidcUserDetailsService;
         this.logoutHandler = logoutHandler;
         this.environment = environment;
         this.userDisabledFilter = userDisabledFilter;
+        this.firmDisabledFilter = firmDisabledFilter;
     }
 
     @Bean
@@ -134,6 +135,7 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf
                 .ignoringRequestMatchers("/api/data-provider/**")  // TEMP FOR TESTING - REMOVE LATER
         ).addFilterAfter(userDisabledFilter, OAuth2LoginAuthenticationFilter.class)
+                .addFilterAfter(firmDisabledFilter, UserDisabledFilter.class)
                 .authorizeHttpRequests((authorize) -> authorize
                 .requestMatchers("/api/data-provider/**").permitAll()  // TEMP FOR TESTING - REMOVE LATER
                 .requestMatchers("/admin/users/**", "/pda/**")

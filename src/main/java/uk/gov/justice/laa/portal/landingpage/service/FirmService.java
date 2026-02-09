@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -30,9 +31,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
-
-import java.util.ArrayList;
-
 import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
 
 /**
@@ -60,20 +58,22 @@ public class FirmService {
 
     public PaginatedFirmDirectory getFirmsPage(String searchTerm, String firmType,
                                                int page, int pageSize, String sort, String direction) {
-        Page<Firm> firmsPage = null;
+
         PageRequest pageRequest = PageRequest.of(
                 page - 1,
                 pageSize,
                 Sort.by(Sort.Direction.fromString(direction), sort));
 
         FirmType type = firmType == null ? null : FirmType.valueOf(firmType);
-        firmsPage = firmRepository.getFirmsPage(searchTerm, type, pageRequest);
+        // Include disabled firms for admin viewing (they can see the disabled status)
+        Page<Firm> firmsPage = firmRepository.getFirmsPage(searchTerm, type, true, pageRequest);
         // Map to DTOs
         List<FirmDirectoryDto> firmDirectoryDtos = firmsPage.getContent().stream().map(map -> FirmDirectoryDto.builder()
                 .firmName(map.getName())
                 .firmId(map.getId())
                 .firmCode(map.getCode())
                 .firmType(map.getType().getValue())
+                .enabled(map.getEnabled())
                 .build()
         ).collect(Collectors.toList());
 

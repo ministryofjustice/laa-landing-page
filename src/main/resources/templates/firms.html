@@ -1,5 +1,6 @@
 <ul>
     <li th:each="firm : ${firms}">
         <a th:href="@{/pda/firms/{id}(id=${firm.getId()})}"><span th:text="${firm.getName()}"></span></a>
+        <span th:if="${!firm.enabled}" class="govuk-tag govuk-tag--grey" style="margin-left: 10px;">Disabled</span>
     </li>
 </ul>

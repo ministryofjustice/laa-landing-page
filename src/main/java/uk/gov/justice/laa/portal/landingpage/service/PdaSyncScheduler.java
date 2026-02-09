@@ -135,7 +135,7 @@ public class PdaSyncScheduler {
         // Firm metrics
         firmCreatesCounter.increment(result.getFirmsCreated());
         firmUpdatesCounter.increment(result.getFirmsUpdated());
-        firmDeletesCounter.increment(result.getFirmsDeleted());
+        firmDeletesCounter.increment(result.getFirmsDisabled());
         firmReactivatesCounter.increment(result.getFirmsReactivated());
 
         // Office metrics
@@ -176,7 +176,7 @@ public class PdaSyncScheduler {
                 syncSuccessCounter.increment();
                 log.debug("Scheduled PDA sync completed successfully in {} seconds. Firms: {} created, {} updated, {} deleted | Offices: {} created, {} updated, {} deleted",
                     Duration.ofNanos(duration).toSeconds(),
-                    result.getFirmsCreated(), result.getFirmsUpdated(), result.getFirmsDeleted(),
+                    result.getFirmsCreated(), result.getFirmsUpdated(), result.getFirmsReactivated(), result.getFirmsDisabled(),
                     result.getOfficesCreated(), result.getOfficesUpdated(), result.getOfficesDeleted());
             } else {
                 syncFailureCounter.increment();

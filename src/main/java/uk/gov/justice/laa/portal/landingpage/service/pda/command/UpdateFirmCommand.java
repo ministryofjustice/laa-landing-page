@@ -29,6 +29,15 @@ public class UpdateFirmCommand implements PdaSyncCommand {
         try {
             boolean updated = false;
 
+            // Re-enable firm if it was previously disabled
+            if (!firm.getEnabled()) {
+                log.info("Re-enabling previously disabled firm {} as it has returned in PDA data",
+                    pdaFirm.getFirmNumber());
+                firm.setEnabled(true);
+                result.setFirmsReactivated(result.getFirmsReactivated() + 1);
+                updated = true;
+            }
+
             // Check firmType - CRITICAL: Type should NOT change (Python script requirement)
             // Handle empty or null firmType gracefully
             if (pdaFirm.getFirmType() == null || pdaFirm.getFirmType().trim().isEmpty()) {

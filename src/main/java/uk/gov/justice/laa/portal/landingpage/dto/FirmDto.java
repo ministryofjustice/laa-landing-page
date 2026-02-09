@@ -22,6 +22,7 @@ public class FirmDto implements Serializable {
     private String name;
     private String code;
     private FirmType type;
+    private boolean enabled;
     private boolean skipFirmSelection;
     private boolean canChange;
 

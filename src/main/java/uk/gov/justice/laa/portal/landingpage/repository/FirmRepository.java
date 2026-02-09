@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 
@@ -18,10 +19,12 @@ public interface FirmRepository extends JpaRepository<Firm, UUID> {
 
     Firm findByCode(String code);
 
+    Firm findByCodeAndEnabledTrue(String code);
+
     @Query("SELECT f FROM Firm f WHERE LOWER(f.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR LOWER(f.code) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
     List<Firm> findByNameOrCodeContaining(@Param("searchTerm") String searchTerm);
 
-    @Query("SELECT f FROM Firm f LEFT JOIN Office o ON o.firm.id = f.id GROUP BY f HAVING COUNT(o.id) = 0")
+    @Query("SELECT f FROM Firm f WHERE f.enabled = true AND NOT EXISTS (SELECT 1 FROM Office o WHERE o.firm.id = f.id)")
     List<Firm> findFirmsWithoutOffices();
 
     // Performance Optimizations for PDA Sync
@@ -34,7 +37,7 @@ public interface FirmRepository extends JpaRepository<Firm, UUID> {
 
     /**
      * Query for Firm directory - fetches all firms
-     * Supports filtering by search Term, FirmID and Firm Type
+     * Supports filtering by search Term, FirmID, Firm Type, and enabled status
      */
 
     @Query(
@@ -45,6 +48,7 @@ public interface FirmRepository extends JpaRepository<Firm, UUID> {
                            LOWER(f.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR
                            LOWER(f.code) LIKE LOWER(CONCAT('%', :searchTerm, '%')))
                       AND (COALESCE(:firmType, f.type) = f.type)
+                      AND (:includeDisabled = true OR f.enabled = true)
                     """,
             countQuery = """
                     SELECT COUNT(DISTINCT f.id)
@@ -53,10 +57,12 @@ public interface FirmRepository extends JpaRepository<Firm, UUID> {
                            LOWER(f.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR
                            LOWER(f.code) LIKE LOWER(CONCAT('%', :searchTerm, '%')))
                       AND (COALESCE(:firmType, f.type) = f.type)
+                      AND (:includeDisabled = true OR f.enabled = true)
                     """
     )
     Page<Firm> getFirmsPage(
             @Param("searchTerm") String searchTerm,
             @Param("firmType") FirmType firmType,
+            @Param("includeDisabled") boolean includeDisabled,
             Pageable pageable);
 }

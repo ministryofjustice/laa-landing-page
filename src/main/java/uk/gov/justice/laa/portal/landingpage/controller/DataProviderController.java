@@ -128,7 +128,7 @@ public class DataProviderController {
         // Firm metrics
         firmCreatesCounter.increment(result.getFirmsCreated());
         firmUpdatesCounter.increment(result.getFirmsUpdated());
-        firmDeletesCounter.increment(result.getFirmsDeleted());
+        firmDeletesCounter.increment(result.getFirmsDisabled());
         firmReactivatesCounter.increment(result.getFirmsReactivated());
 
         // Office metrics

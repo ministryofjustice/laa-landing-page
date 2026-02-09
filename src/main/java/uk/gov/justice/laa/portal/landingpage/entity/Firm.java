@@ -54,6 +54,11 @@ public class Firm extends BaseEntity {
     @Size(max = 255, message = "Firm code must be less than 255 characters")
     private String code;
 
+    @Column(name = "enabled", nullable = false)
+    @NotNull(message = "Firm enabled status must be provided")
+    @Builder.Default
+    private Boolean enabled = true;
+
     @OneToMany(mappedBy = "firm", fetch = FetchType.LAZY)
     @ToString.Exclude
     @JsonIgnore
