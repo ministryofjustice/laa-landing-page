@@ -1,0 +1,86 @@
+databaseChangeLog:
+  - changeSet:
+      id: insert-initial-admin-app-rows-20260209
+      author: suresh.kavali
+      changes:
+        - insert:
+            schemaName: public
+            tableName: app
+            columns:
+              - column: { name: id, value: "cd158e35-b07d-43b6-ae72-c5a3a3bf5e83" }
+              - column: { name: entra_app_id, value: null }
+              - column: { name: name, value: "SiLAS Administration" }
+              - column: { name: security_group_name, value: "SiLAS Administration" }
+              - column: { name: security_group_oid, value: "SiLAS Administration" }
+              - column: { name: ordinal, valueNumeric: 1 }
+              - column: { name: enabled, valueBoolean: true }
+              - column: { name: title, value: "SiLAS Administration" }
+              - column: { name: description, value: "Manage admin services including user roles and permissions" }
+              - column: { name: assigned_app_id, value: null }
+              - column: { name: alternative_description, value: null }
+              - column: { name: oid_group_name, value: "SiLAS Administration" }
+              - column: { name: url, value: "#" }
+              - column: { name: app_type, value: "AUTHZ" }
+
+        - insert:
+            schemaName: public
+            tableName: app
+            columns:
+              - column: { name: id, value: "7e841533-1e97-494e-9d79-76dd395485ed" }
+              - column: { name: entra_app_id, value: null }
+              - column: { name: name, value: "User Access Audit Table" }
+              - column: { name: security_group_name, value: "User Access Audit Table" }
+              - column: { name: security_group_oid, value: "User Access Audit Table" }
+              - column: { name: ordinal, valueNumeric: 2 }
+              - column: { name: enabled, valueBoolean: true }
+              - column: { name: title, value: "User Access Audit Table" }
+              - column: { name: description, value: "View all registered users including account status and role assignments" }
+              - column: { name: assigned_app_id, value: null }
+              - column: { name: alternative_description, value: null }
+              - column: { name: oid_group_name, value: "User Access Audit Table" }
+              - column: { name: url, value: "#" }
+              - column: { name: app_type, value: "AUTHZ" }
+
+        - insert:
+            schemaName: public
+            tableName: app
+            columns:
+              - column: { name: id, value: "146d0867-bbf4-42fb-965f-eedb9bb37381" }
+              - column: { name: entra_app_id, value: null }
+              - column: { name: name, value: "Firm Directory" }
+              - column: { name: security_group_name, value: "Firm Directory" }
+              - column: { name: security_group_oid, value: "Firm Directory" }
+              - column: { name: ordinal, valueNumeric: 3 }
+              - column: { name: enabled, valueBoolean: true }
+              - column: { name: title, value: "Firm Directory" }
+              - column: { name: description, value: "View all registered Firms" }
+              - column: { name: assigned_app_id, value: null }
+              - column: { name: alternative_description, value: null }
+              - column: { name: oid_group_name, value: "Firm Directory" }
+              - column: { name: url, value: "#" }
+              - column: { name: app_type, value: "AUTHZ" }
+
+        - insert:
+            schemaName: public
+            tableName: app
+            columns:
+              - column: { name: id, value: "c3a15de5-8ab5-48f8-a569-91c54f3c1e58" }
+              - column: { name: entra_app_id, value: null }
+              - column: { name: name, value: "Test LAA App" }
+              - column: { name: security_group_name, value: "Test LAA App" }
+              - column: { name: security_group_oid, value: "Test LAA App" }
+              - column: { name: ordinal, valueNumeric: 3 }
+              - column: { name: enabled, valueBoolean: true }
+              - column: { name: title, value: "Test LAA App" }
+              - column: { name: description, value: "Test LAA App" }
+              - column: { name: assigned_app_id, value: null }
+              - column: { name: alternative_description, value: null }
+              - column: { name: oid_group_name, value: "Test LAA App" }
+              - column: { name: url, value: "#" }
+              - column: { name: app_type, value: "LAA" }
+
+      rollback:
+        - delete:
+            schemaName: public
+            tableName: app
+            where: "id in ('66b82716-397a-4f37-a24f-933dfba032e9','cd158e35-b07d-43b6-ae72-c5a3a3bf5e83','7e841533-1e97-494e-9d79-76dd395485ed','146d0867-bbf4-42fb-965f-eedb9bb37381','c3a15de5-8ab5-48f8-a569-91c54f3c1e58')"

@@ -14,8 +14,10 @@ import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AdminAppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppAdminDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
-import uk.gov.justice.laa.portal.landingpage.service.AdminService;
+import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.service.AppService;
 
 /**
  * Controller for SiLAS Administration section
@@ -28,7 +30,7 @@ import uk.gov.justice.laa.portal.landingpage.service.AdminService;
 @PreAuthorize("@accessControlService.userHasAuthzRole(authentication, T(uk.gov.justice.laa.portal.landingpage.entity.AuthzRole).SILAS_ADMINISTRATION.roleName)")
 public class AdminController {
 
-    private final AdminService adminService;
+    private final AppService appService;
 
     /**
      * Display SiLAS Administration landing page with Admin Services tab by default
@@ -43,27 +45,27 @@ public class AdminController {
         model.addAttribute("activeTab", tab);
 
         // Load all admin apps data for admin-apps tab
-        List<AdminAppDto> adminApps = adminService.getAllAdminApps();
+        List<AppDto> adminApps = appService.getAllAdminApps();
         model.addAttribute("adminApps", adminApps);
 
         // Load all apps data for apps tab
-        List<AppAdminDto> apps = adminService.getAllApps();
+        List<AppDto> apps = appService.getAllLaaApps();
         model.addAttribute("apps", apps);
 
-        List<AppRoleAdminDto> roles;
+        List<AppRoleDto> roles;
         if (appFilter != null && !appFilter.isEmpty()) {
-            roles = adminService.getAppRolesByApp(appFilter);
+            roles = appService.getAppRolesByApp(appFilter);
         } else {
-            roles = adminService.getAllAppRoles();
+            roles = appService.getAllAppRolesForAdmin();
         }
         model.addAttribute("roles", roles);
         model.addAttribute("appFilter", appFilter);
 
         // Get distinct app names for filter dropdown
-        List<String> appNames = adminService.getAllApps().stream()
-                .map(AppAdminDto::getName)
-                .distinct()
+        List<AppDto> allApps = appService.getAllAppsForAdmin();
+        List<String> appNames = allApps.stream()
                 .sorted()
+                .map(AppDto::getName)
                 .toList();
         model.addAttribute("appNames", appNames);
 

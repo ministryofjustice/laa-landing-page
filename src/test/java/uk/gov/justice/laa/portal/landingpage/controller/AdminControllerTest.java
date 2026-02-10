@@ -1,6 +1,8 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -9,6 +11,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -16,36 +20,40 @@ import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
-import uk.gov.justice.laa.portal.landingpage.dto.AdminAppDto;
-import uk.gov.justice.laa.portal.landingpage.dto.AppAdminDto;
-import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
-import uk.gov.justice.laa.portal.landingpage.service.AdminService;
+import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.entity.AppType;
+import uk.gov.justice.laa.portal.landingpage.service.AppService;
 
 @ExtendWith(MockitoExtension.class)
 class AdminControllerTest {
 
-    @Mock
-    private AdminService adminService;
-
     private AdminController adminController;
+    @Mock
+    private AppService appService;
     private Model model;
+
+    private List<AppDto> adminApps;
+    private List<AppDto> laaApps;
+    private List<AppDto> allApps;
+
+    private AppRoleDto ccmsAppRole;
+    private List<AppRoleDto> allAppRoles;
 
     @BeforeEach
     void setUp() {
-        adminController = new AdminController(adminService);
+        adminController = new AdminController(appService);
         model = new ExtendedModelMap();
+        loadAppsAndRoles();
     }
 
     @Test
     void testShowAdministration_WithDefaultTab_LoadsAllData() {
         // Arrange
-        List<AdminAppDto> adminApps = createMockAdminApps();
-        List<AppAdminDto> apps = createMockApps();
-        List<AppRoleAdminDto> roles = createMockRoles();
-
-        when(adminService.getAllAdminApps()).thenReturn(adminApps);
-        when(adminService.getAllApps()).thenReturn(apps);
-        when(adminService.getAllAppRoles()).thenReturn(roles);
+        when(appService.getAllAdminApps()).thenReturn(adminApps);
+        when(appService.getAllLaaApps()).thenReturn(laaApps);
+        when(appService.getAllAppRolesForAdmin()).thenReturn(allAppRoles);
+        when(appService.getAllAppsForAdmin()).thenReturn(allApps);
 
         // Act
         String viewName = adminController.showAdministration("admin-apps", null, model);
@@ -56,25 +64,22 @@ class AdminControllerTest {
         assertEquals("admin-apps", model.getAttribute("activeTab"));
 
         assertThat(model.getAttribute("adminApps")).isEqualTo(adminApps);
-        assertThat(model.getAttribute("apps")).isEqualTo(apps);
-        assertThat(model.getAttribute("roles")).isEqualTo(roles);
+        assertThat(model.getAttribute("apps")).isEqualTo(laaApps);
+        assertThat(model.getAttribute("roles")).isEqualTo(allAppRoles);
 
-        verify(adminService).getAllAdminApps();
-        // getAllApps is called twice - once for apps data and once for app names filter
-        verify(adminService, org.mockito.Mockito.times(2)).getAllApps();
-        verify(adminService).getAllAppRoles();
+        verify(appService, times(1)).getAllAdminApps();
+        verify(appService, times(1)).getAllLaaApps();
+        verify(appService, times(1)).getAllAppRolesForAdmin();
+        verify(appService, times(1)).getAllAppsForAdmin();
     }
 
     @Test
     void testShowAdministration_WithRolesTab_LoadsAllData() {
         // Arrange
-        List<AdminAppDto> adminApps = createMockAdminApps();
-        List<AppAdminDto> apps = createMockApps();
-        List<AppRoleAdminDto> roles = createMockRoles();
-
-        when(adminService.getAllAdminApps()).thenReturn(adminApps);
-        when(adminService.getAllApps()).thenReturn(apps);
-        when(adminService.getAllAppRoles()).thenReturn(roles);
+        when(appService.getAllAdminApps()).thenReturn(adminApps);
+        when(appService.getAllLaaApps()).thenReturn(laaApps);
+        when(appService.getAllAppRolesForAdmin()).thenReturn(allAppRoles);
+        when(appService.getAllAppsForAdmin()).thenReturn(allApps);
 
         // Act
         String viewName = adminController.showAdministration("roles", null, model);
@@ -83,29 +88,22 @@ class AdminControllerTest {
         assertEquals("silas-administration/administration", viewName);
         assertEquals("roles", model.getAttribute("activeTab"));
 
-        assertThat(model.getAttribute("roles")).isEqualTo(roles);
+        assertThat(model.getAttribute("roles")).isEqualTo(allAppRoles);
 
-        verify(adminService).getAllAppRoles();
+        verify(appService).getAllAppRolesForAdmin();
     }
 
     @Test
     void testShowAdministration_WithAppFilter_FiltersRolesByApp() {
         // Arrange
         String appFilter = "CCMS case transfer requests";
-        List<AdminAppDto> adminApps = createMockAdminApps();
-        List<AppAdminDto> apps = createMockApps();
-        List<AppRoleAdminDto> filteredRoles = Arrays.asList(
-            AppRoleAdminDto.builder()
-                .name("CCMS Viewer")
-                .description("View only role")
-                .parentApp("CCMS case transfer requests")
-                .ordinal(0)
-                .build()
-        );
+        when(appService.getAllAdminApps()).thenReturn(adminApps);
+        when(appService.getAllLaaApps()).thenReturn(laaApps);
+        when(appService.getAllAppsForAdmin()).thenReturn(allApps);
 
-        when(adminService.getAllAdminApps()).thenReturn(adminApps);
-        when(adminService.getAllApps()).thenReturn(apps);
-        when(adminService.getAppRolesByApp(appFilter)).thenReturn(filteredRoles);
+        List<AppRoleDto> filteredRoles = Collections.singletonList(ccmsAppRole);
+
+        when(appService.getAppRolesByApp(appFilter)).thenReturn(filteredRoles);
 
         // Act
         String viewName = adminController.showAdministration("roles", appFilter, model);
@@ -115,21 +113,16 @@ class AdminControllerTest {
         assertThat(model.getAttribute("roles")).isEqualTo(filteredRoles);
         assertThat(model.getAttribute("appFilter")).isEqualTo(appFilter);
 
-        verify(adminService).getAppRolesByApp(appFilter);
+        verify(appService, times(1)).getAppRolesByApp(appFilter);
     }
 
     @Test
     void testShowAdministration_LoadsAppNamesForFilter() {
         // Arrange
-        List<AppAdminDto> apps = Arrays.asList(
-            AppAdminDto.builder().name("App C").build(),
-            AppAdminDto.builder().name("App A").build(),
-            AppAdminDto.builder().name("App B").build()
-        );
-
-        when(adminService.getAllAdminApps()).thenReturn(createMockAdminApps());
-        when(adminService.getAllApps()).thenReturn(apps);
-        when(adminService.getAllAppRoles()).thenReturn(createMockRoles());
+        when(appService.getAllAdminApps()).thenReturn(adminApps);
+        when(appService.getAllLaaApps()).thenReturn(laaApps);
+        when(appService.getAllAppsForAdmin()).thenReturn(allApps);
+        when(appService.getAllAppRolesForAdmin()).thenReturn(allAppRoles);
 
         // Act
         adminController.showAdministration("roles", null, model);
@@ -137,19 +130,16 @@ class AdminControllerTest {
         // Assert
         @SuppressWarnings("unchecked")
         List<String> appNames = (List<String>) model.getAttribute("appNames");
-        assertThat(appNames).containsExactly("App A", "App B", "App C");
+        assertThat(appNames).containsExactly("LAA App 3", "LAA App 2", "LAA App 1", "CCMS case transfer requests",
+                "Admin App 3", "Admin App 2", "Admin App 1");
     }
 
     @Test
     void testShowAdministration_WithAppsTab_LoadsAllData() {
         // Arrange
-        List<AdminAppDto> adminApps = createMockAdminApps();
-        List<AppAdminDto> apps = createMockApps();
-        List<AppRoleAdminDto> roles = createMockRoles();
-
-        when(adminService.getAllAdminApps()).thenReturn(adminApps);
-        when(adminService.getAllApps()).thenReturn(apps);
-        when(adminService.getAllAppRoles()).thenReturn(roles);
+        when(appService.getAllAdminApps()).thenReturn(adminApps);
+        when(appService.getAllLaaApps()).thenReturn(laaApps);
+        when(appService.getAllAppRolesForAdmin()).thenReturn(allAppRoles);
 
         // Act
         String viewName = adminController.showAdministration("apps", null, model);
@@ -157,75 +147,59 @@ class AdminControllerTest {
         // Assert
         assertEquals("silas-administration/administration", viewName);
         assertEquals("apps", model.getAttribute("activeTab"));
-        assertThat(model.getAttribute("apps")).isEqualTo(apps);
+        assertThat(model.getAttribute("apps")).isEqualTo(laaApps);
     }
 
     @Test
     void testShowAdministration_WithEmptyAppFilter_LoadsAllRoles() {
         // Arrange
-        List<AppRoleAdminDto> allRoles = createMockRoles();
-
-        when(adminService.getAllAdminApps()).thenReturn(createMockAdminApps());
-        when(adminService.getAllApps()).thenReturn(createMockApps());
-        when(adminService.getAllAppRoles()).thenReturn(allRoles);
+        when(appService.getAllAdminApps()).thenReturn(adminApps);
+        when(appService.getAllLaaApps()).thenReturn(laaApps);
+        when(appService.getAllAppRolesForAdmin()).thenReturn(allAppRoles);
 
         // Act
         adminController.showAdministration("roles", "", model);
 
         // Assert
-        assertThat(model.getAttribute("roles")).isEqualTo(allRoles);
-        verify(adminService).getAllAppRoles();
+        assertThat(model.getAttribute("roles")).isEqualTo(allAppRoles);
+        verify(appService).getAllAppRolesForAdmin();
     }
 
-    // Helper methods to create mock data
-    private List<AdminAppDto> createMockAdminApps() {
-        return Arrays.asList(
-            AdminAppDto.builder()
-                .name("Manage your users")
-                .description("Manage user access and permissions")
-                .ordinal(0)
-                .build(),
-            AdminAppDto.builder()
-                .name("User access audit table")
-                .description("View all registered users")
-                .ordinal(1)
-                .build()
-        );
-    }
+    private void loadAppsAndRoles() {
+        adminApps = new ArrayList<>();
+        laaApps = new ArrayList<>();
+        allApps = new ArrayList<>();
 
-    private List<AppAdminDto> createMockApps() {
-        return Arrays.asList(
-            AppAdminDto.builder()
-                .name("Apply for criminal legal aid")
-                .description("Make an application for criminal legal aid")
-                .ordinal(0)
-                .build(),
-            AppAdminDto.builder()
-                .name("Submit a crime form")
-                .description("Submit crime forms")
-                .ordinal(1)
-                .build()
-        );
-    }
+        List<AppRoleDto> adminAppRoles = new ArrayList<>();
+        List<AppRoleDto> laaAppRoles = new ArrayList<>();
+        allAppRoles = new ArrayList<>();
 
-    private List<AppRoleAdminDto> createMockRoles() {
-        return Arrays.asList(
-            AppRoleAdminDto.builder()
-                .name("CCMS case transfer requests - Viewer")
-                .description("CCMS case transfer requests - Internal User Viewer Role")
-                .parentApp("CCMS case transfer requests")
-                .ccmsCode("ccms.transfer.viewer")
-                .ordinal(0)
-                .roleGroup("Default")
-                .build(),
-            AppRoleAdminDto.builder()
-                .name("CCMS case transfer requests - Internal")
-                .description("CCMS case transfer requests - Internal User Role")
-                .parentApp("CCMS case transfer requests")
-                .ccmsCode("ccms.transfer.internal")
-                .ordinal(1)
-                .roleGroup("Default")
-                .build()
-        );
+        AppDto adminApp1 = AppDto.builder().name("Admin App 1").appType(AppType.AUTHZ).build();
+        AppDto adminApp2 = AppDto.builder().name("Admin App 2").appType(AppType.AUTHZ).build();
+        AppDto adminApp3 = AppDto.builder().name("Admin App 3").appType(AppType.AUTHZ).build();
+        adminApps.addAll(Arrays.asList(adminApp1, adminApp2, adminApp3));
+        allApps.addAll(adminApps);
+
+        AppRoleDto adminAppRole1 = AppRoleDto.builder().name("Admin Role 1").app(adminApp1).authzRole(true).build();
+        AppRoleDto adminAppRole2 = AppRoleDto.builder().name("Admin Role 2").app(adminApp1).authzRole(true).build();
+        AppRoleDto adminAppRole3 = AppRoleDto.builder().name("Admin Role 3").app(adminApp2).authzRole(true).build();
+        AppRoleDto adminAppRole4 = AppRoleDto.builder().name("Admin Role 4").app(adminApp3).authzRole(true).build();
+        adminAppRoles.addAll(Arrays.asList(adminAppRole1, adminAppRole2, adminAppRole3, adminAppRole4));
+        allAppRoles.addAll(adminAppRoles);
+
+        AppDto laaApp1 = AppDto.builder().name("LAA App 1").appType(AppType.LAA).build();
+        AppDto laaApp2 = AppDto.builder().name("LAA App 2").appType(AppType.LAA).build();
+        AppDto laaApp3 = AppDto.builder().name("LAA App 3").appType(AppType.LAA).build();
+        AppDto ccmsApp = AppDto.builder().name("CCMS case transfer requests").appType(AppType.LAA).build();
+        laaApps.addAll(Arrays.asList(laaApp1, laaApp2, laaApp3, ccmsApp));
+        allApps.addAll(laaApps);
+
+        AppRoleDto laaAppRole1 = AppRoleDto.builder().name("LAA Role 1").app(laaApp1).build();
+        AppRoleDto laaAppRole2 = AppRoleDto.builder().name("LAA Role 2").app(laaApp2).build();
+        AppRoleDto laaAppRole3 = AppRoleDto.builder().name("LAA Role 3").app(laaApp2).build();
+        AppRoleDto laaAppRole4 = AppRoleDto.builder().name("LAA Role 4").app(laaApp3).build();
+        ccmsAppRole = AppRoleDto.builder().name("CCMS Role 1").app(ccmsApp).ccmsCode("XXCCMS_TEST_ROLE").build();
+        laaAppRoles.addAll(Arrays.asList(laaAppRole1, laaAppRole2, laaAppRole3, laaAppRole4, ccmsAppRole));
+        allAppRoles.addAll(laaAppRoles);
     }
 }
