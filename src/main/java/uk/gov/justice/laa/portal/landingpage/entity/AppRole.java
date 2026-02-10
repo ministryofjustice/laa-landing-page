@@ -54,7 +54,7 @@ public class AppRole extends BaseEntity {
     private int ordinal;
 
     @Column(name = "ccms_code", nullable = true, length = 30, unique = true)
-    @Size(min = 1, max = 30, message = "Application role CCMS Code must be between 1 and 30 characters")
+    @Size(max = 30, message = "Application role CCMS Code must be no more than 30 characters")
     private String ccmsCode;
 
     @Column(name = "legacy_sync", nullable = false)

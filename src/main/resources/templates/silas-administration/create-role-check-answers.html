@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      breadcrumbs=~{::#breadcrumbs},
+      pageCategory=${'admin'})}" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>Check Your Answers - Create New Role</title>
+</head>
+
+<body>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <ol class="govuk-breadcrumbs__list">
+            <li class="govuk-breadcrumbs__list-item">
+                <a class="govuk-breadcrumbs__link" href="/">Home</a>
+            </li>
+            <li class="govuk-breadcrumbs__list-item">
+                <a class="govuk-breadcrumbs__link" href="/admin/silas-administration?tab=roles-permissions">SiLAS Administration</a>
+            </li>
+            <li class="govuk-breadcrumbs__list-item">
+                <a class="govuk-breadcrumbs__link" href="/admin/roles/create">Create New Role</a>
+            </li>
+            <li class="govuk-breadcrumbs__list-item">
+                Check Your Answers
+            </li>
+        </ol>
+    </nav>
+
+    <main class="govuk-main-wrapper" id="main-content">
+        <div class="govuk-grid-row">
+            <div class="govuk-grid-column-two-thirds">
+                <h1 class="govuk-heading-xl">Check your answers</h1>
+
+                <h2 class="govuk-heading-m">Role details</h2>
+
+                <dl class="govuk-summary-list">
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">
+                            Parent Application
+                        </dt>
+                        <dd class="govuk-summary-list__value" th:text="${roleCreationDto.parentAppName}">
+                            Manage Your Users
+                        </dd>
+                        <dd class="govuk-summary-list__actions">
+                            <a class="govuk-link" href="/admin/roles/create">
+                                Change<span class="govuk-visually-hidden"> parent application</span>
+                            </a>
+                        </dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">
+                            Role Name
+                        </dt>
+                        <dd class="govuk-summary-list__value" th:text="${roleCreationDto.name}">
+                            Example Role Name
+                        </dd>
+                        <dd class="govuk-summary-list__actions">
+                            <a class="govuk-link" href="/admin/roles/create">
+                                Change<span class="govuk-visually-hidden"> role name</span>
+                            </a>
+                        </dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">
+                            Description
+                        </dt>
+                        <dd class="govuk-summary-list__value" th:text="${roleCreationDto.description}">
+                            Example role description
+                        </dd>
+                        <dd class="govuk-summary-list__actions">
+                            <a class="govuk-link" href="/admin/roles/create">
+                                Change<span class="govuk-visually-hidden"> description</span>
+                            </a>
+                        </dd>
+                    </div>
+                    <div class="govuk-summary-list__row" th:if="${roleCreationDto.ccmsCode != null and !roleCreationDto.ccmsCode.isEmpty()}">
+                        <dt class="govuk-summary-list__key">
+                            CCMS Code
+                        </dt>
+                        <dd class="govuk-summary-list__value" th:text="${roleCreationDto.ccmsCode}">
+                            CCMS123
+                        </dd>
+                        <dd class="govuk-summary-list__actions">
+                            <a class="govuk-link" href="/admin/roles/create">
+                                Change<span class="govuk-visually-hidden"> CCMS code</span>
+                            </a>
+                        </dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">
+                            User Type Restriction
+                        </dt>
+                        <dd class="govuk-summary-list__value">
+                            <span th:if="${roleCreationDto.userTypeRestriction == null or roleCreationDto.userTypeRestriction.isEmpty()}">
+                                No restrictions
+                            </span>
+                            <span th:if="${roleCreationDto.userTypeRestriction != null and !roleCreationDto.userTypeRestriction.isEmpty()}">
+                                <span th:each="userType, iterStat : ${roleCreationDto.userTypeRestriction}">
+                                    <span th:text="${userType.name()}">USER_TYPE</span><span th:if="${!iterStat.last}">, </span>
+                                </span>
+                            </span>
+                        </dd>
+                        <dd class="govuk-summary-list__actions">
+                            <a class="govuk-link" href="/admin/roles/create">
+                                Change<span class="govuk-visually-hidden"> user type restriction</span>
+                            </a>
+                        </dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">
+                            Firm Type Restriction
+                        </dt>
+                        <dd class="govuk-summary-list__value">
+                            <span th:if="${roleCreationDto.firmTypeRestriction == null or roleCreationDto.firmTypeRestriction.isEmpty()}">
+                                No restrictions
+                            </span>
+                            <span th:if="${roleCreationDto.firmTypeRestriction != null and !roleCreationDto.firmTypeRestriction.isEmpty()}">
+                                <span th:each="firmType, iterStat : ${roleCreationDto.firmTypeRestriction}">
+                                    <span th:text="${firmType.name()}">FIRM_TYPE</span><span th:if="${!iterStat.last}">, </span>
+                                </span>
+                            </span>
+                        </dd>
+                        <dd class="govuk-summary-list__actions">
+                            <a class="govuk-link" href="/admin/roles/create">
+                                Change<span class="govuk-visually-hidden"> firm type restriction</span>
+                            </a>
+                        </dd>
+                    </div>
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">
+                            Legacy Sync
+                        </dt>
+                        <dd class="govuk-summary-list__value">
+                            <span th:text="${roleCreationDto.legacySync ? 'Yes' : 'No'}">No</span>
+                        </dd>
+                        <dd class="govuk-summary-list__actions">
+                            <a class="govuk-link" href="/admin/roles/create">
+                                Change<span class="govuk-visually-hidden"> legacy sync</span>
+                            </a>
+                        </dd>
+                    </div>
+                </dl>
+
+                <form th:action="@{/admin/roles/create/confirm}" method="post">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    <div class="govuk-button-group">
+                        <button class="govuk-button" data-module="govuk-button" type="submit">
+                            Confirm and Save
+                        </button>
+                        <a class="govuk-link" href="/admin/roles/create">Go back and edit</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>

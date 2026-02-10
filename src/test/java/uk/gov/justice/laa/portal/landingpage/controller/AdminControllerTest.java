@@ -11,15 +11,22 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AdminAppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
+import uk.gov.justice.laa.portal.landingpage.dto.RoleCreationDto;
 import uk.gov.justice.laa.portal.landingpage.service.AdminService;
+import uk.gov.justice.laa.portal.landingpage.service.RoleCreationService;
 
 @ExtendWith(MockitoExtension.class)
 class AdminControllerTest {
@@ -27,12 +34,15 @@ class AdminControllerTest {
     @Mock
     private AdminService adminService;
 
+    @Mock
+    private RoleCreationService roleCreationService;
+
     private AdminController adminController;
     private Model model;
 
     @BeforeEach
     void setUp() {
-        adminController = new AdminController(adminService);
+        adminController = new AdminController(adminService, roleCreationService);
         model = new ExtendedModelMap();
     }
 
@@ -175,6 +185,69 @@ class AdminControllerTest {
         // Assert
         assertThat(model.getAttribute("roles")).isEqualTo(allRoles);
         verify(adminService).getAllAppRoles();
+    }
+
+
+    @Test
+    void testShowCheckYourAnswers_ReturnsCheckAnswersView() {
+        // Arrange
+        MockHttpSession session = new MockHttpSession();
+        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
+                .name("Test Role")
+                .description("Test Description")
+                .build();
+        session.setAttribute("roleCreationDto", roleCreationDto);
+
+        // Act
+        String result = adminController.showCheckYourAnswers(model, session);
+
+        // Assert
+        assertEquals("silas-administration/create-role-check-answers", result);
+        assertThat(model.getAttribute("roleCreationDto")).isEqualTo(roleCreationDto);
+    }
+
+    @Test
+    void testConfirmRoleCreation_CreatesRoleAndRedirects() {
+        // Arrange
+        MockHttpSession session = new MockHttpSession();
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
+                .name("Test Role")
+                .description("Test Description")
+                .build();
+        session.setAttribute("roleCreationDto", roleCreationDto);
+
+        doNothing().when(roleCreationService).createRole(roleCreationDto);
+
+        // Act
+        String result = adminController.confirmRoleCreation(session, redirectAttributes);
+
+        // Assert
+        assertEquals("redirect:/admin/silas-administration?tab=roles", result);
+        verify(roleCreationService).createRole(roleCreationDto);
+        assertThat(session.getAttribute("roleCreationDto")).isNull();
+    }
+
+    @Test
+    void testConfirmRoleCreation_WithServiceException_HandlesError() {
+        // Arrange
+        MockHttpSession session = new MockHttpSession();
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
+                .name("Test Role")
+                .description("Test Description")
+                .build();
+        session.setAttribute("roleCreationDto", roleCreationDto);
+
+        RuntimeException exception = new RuntimeException("Test error");
+        doThrow(exception).when(roleCreationService).createRole(roleCreationDto);
+
+        // Act
+        String result = adminController.confirmRoleCreation(session, redirectAttributes);
+
+        // Assert
+        assertEquals("redirect:/admin/silas-administration?tab=roles", result);
+        verify(roleCreationService).createRole(roleCreationDto);
     }
 
     // Helper methods to create mock data
