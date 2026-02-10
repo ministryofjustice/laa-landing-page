@@ -955,8 +955,7 @@
         <div class="moj-nutton-group moj-button-group--inline moj-button-group--with-divider"
              th:if="${exportCsv and firmSearch.getSelectedFirmId() != null and firmSearch.getSelectedFirmId() != ''}">
             <a class="govuk-button"
-               th:href="@{/users/audit/{id}/download(id=${firmSearch.selectedFirmId})}">
-                Export as CSV
+               th:href="@{/admin/users/audit/{id}/download(id=${firmSearch.selectedFirmId},roleFilter=${selectedSilasRole},selectedAppId=${selectedAppId},userTypeFilter=${selectedUserType})}">Export as CSV
             </a>
         </div>
 

@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.repository;
 import java.util.List;
 import java.util.UUID;
 
+import jakarta.persistence.Tuple;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -46,8 +47,8 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             ))
             """)
     Page<UserProfile> findByNameOrEmailAndPermissionsAndFirm(@Param("search") String search,
-            @Param("firmId") UUID firmId, @Param("userType") UserType userType,
-            @Param("showFirmAdmins") boolean showFirmAdmins, Pageable pageable);
+                                                             @Param("firmId") UUID firmId, @Param("userType") UserType userType,
+                                                             @Param("showFirmAdmins") boolean showFirmAdmins, Pageable pageable);
 
     @Query(value = """
                         SELECT new uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto(ups.id, ups.activeProfile,
@@ -73,7 +74,7 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                         SELECT COUNT(ups) FROM UserProfile ups
                                     JOIN ups.entraUser u
                                     LEFT JOIN ups.firm f
-            WHERE (:#{#criteria.firmSearch.selectedFirmId} IS NULL
+                    WHERE (:#{#criteria.firmSearch.selectedFirmId} IS NULL
                    OR ups.firm.id = :#{#criteria.firmSearch.selectedFirmId}
                    OR (ups.firm.parentFirm IS NOT NULL AND ups.firm.parentFirm.id = :#{#criteria.firmSearch.selectedFirmId}))
                         AND (:#{#criteria.userType} IS NULL OR ups.userType = :#{#criteria.userType})
@@ -101,7 +102,7 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             )
             """)
     Page<UserProfile> findFirmUserByAuthzRoleAndFirm(@Param("firmId") UUID firmId, @Param("role") String role,
-            Pageable pageable);
+                                                     Pageable pageable);
 
     @Query("""
             SELECT ups FROM UserProfile ups
@@ -129,7 +130,7 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             )
             """)
     List<UserProfile> findByEntraUserIdAndFirmSearch(@Param("entraUserId") UUID entraUserId,
-            @Param("search") String search);
+                                                     @Param("search") String search);
 
     @Query("""
             SELECT COUNT(ups) FROM UserProfile ups
@@ -146,4 +147,37 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                 AND ars.legacySync = true
             """)
     List<UserProfile> findUserProfilesForCcmsSync();
+
+    @Query(value = """
+        SELECT DISTINCT
+            eu.firstName AS userName,
+            eu.email AS email,
+            f.name AS firmName,
+            f.id AS firmId,
+            eu.multiFirmUser AS multifirm
+         FROM UserProfile up
+         JOIN up.firm f
+         JOIN up.entraUser eu
+         WHERE up.firm.id = :id
+            AND (:selectedUserType IS NULL OR up.userType = :selectedUserType)
+            AND (
+                :roleFilter IS NULL OR EXISTS (
+                    SELECT 1 FROM up.appRoles arRole
+                    WHERE arRole.name = :roleFilter
+                )
+            )
+            AND (
+                :selectedAppId IS NULL OR EXISTS (
+                    SELECT 1 FROM up.appRoles arApp
+                    WHERE arApp.app.id = :selectedAppId
+                )
+            )
+    """)
+    List<Tuple> findFirmUsers(@Param("id") UUID id,
+                              @Param("roleFilter") String roleFilter,
+                              @Param("selectedAppId") UUID selectedAppId,
+                              @Param("selectedUserType") String selectedUserType);
 }
+
+
+

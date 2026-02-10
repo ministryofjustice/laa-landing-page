@@ -1,8 +1,16 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import jakarta.persistence.Tuple;
+import org.hibernate.metamodel.model.domain.TupleType;
+import org.springframework.data.domain.Page;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -17,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.ResponseBody;
 import uk.gov.justice.laa.portal.landingpage.auth.AuthenticatedUser;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -26,8 +35,11 @@ import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
+import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
+import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
+import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AuditExportService;
@@ -206,9 +218,36 @@ public class AuditController {
         return "user-audit/delete-user-success";
     }
 
-    @PostMapping("/users/audit/{id}/download")
-    @PreAuthorize("@accessControlService.userHasAuthzRole(authenticated, 'Audit Export')")
-    public void auditExportCsv(@PathVariable String id, Model model) {
-        auditExportService.downloadAuditCsv(id);
+    @GetMapping(value = "/users/audit/{id}/download", produces = "text/csv")
+    public ResponseEntity<byte[]> downloadAuditCsv(
+            @PathVariable String id,
+            @RequestParam(name = "roleFilter", required = false) String roleFilter,
+            @RequestParam(name = "selectedAppId", required = false) UUID selectedAppId,
+            @RequestParam(name = "selectedUserType", required = false) String selectedUserType) {
+
+        if (roleFilter != null && roleFilter.isBlank()) {
+            roleFilter = null;
+        }
+
+        if (selectedAppId != null && selectedAppId.toString().isBlank()) {
+            selectedAppId = null;
+        }
+        if (
+                selectedUserType != null && selectedUserType.isBlank()) {
+            selectedUserType = null;
+        }
+
+        AuditExportService.AuditCsvExport export =
+                auditExportService.downloadAuditCsv(id, roleFilter, selectedAppId, selectedUserType);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("text/csv"));
+        headers.setContentDisposition(
+                ContentDisposition.attachment().filename(export.filename()).build()
+        );
+        return ResponseEntity
+                .ok()
+                .headers(headers)
+                .body(export.bytes());
     }
 }
