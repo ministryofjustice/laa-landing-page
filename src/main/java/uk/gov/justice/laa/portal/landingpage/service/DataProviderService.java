@@ -98,7 +98,7 @@ public class DataProviderService {
             } else {
                 // Fetch from API
                 response = dataProviderRestClient.get()
-                        .uri("/api/v1/provider-offices/snapshot")
+                        .uri("/provider-offices/snapshot")
                         .retrieve()
                         .body(String.class);
                 log.debug("Successfully fetched provider offices snapshot from PDA API");
@@ -1009,7 +1009,7 @@ public class DataProviderService {
         Map<String, PdaOfficeData> offices = new HashMap<>();
         for (int i = 0; i < pdaTable.rowCount(); i++) {
             PdaOfficeData officeData = PdaOfficeData.builder()
-                .officeAccountNo(getStringValue(pdaTable, "officeAccountNo", i))
+                .officeAccountNo(getStringValue(pdaTable, "officeAccountNumber", i))
                 .firmNumber(getStringValue(pdaTable, "firmNumber", i))
                 .addressLine1(getStringValue(pdaTable, "officeAddressLine1", i))
                 .addressLine2(getStringValue(pdaTable, "officeAddressLine2", i))

@@ -30,6 +30,16 @@ public class CreateFirmCommand implements PdaSyncCommand {
                 return;
             }
 
+            // Check for duplicate code BEFORE attempting to create to avoid aborting transaction
+            Firm existingFirmWithCode = firmRepository.findByCode(pdaFirm.getFirmNumber());
+            if (existingFirmWithCode != null) {
+                log.error("Cannot create firm {}: code {} already exists (existing firm ID: {})",
+                    pdaFirm.getFirmNumber(), pdaFirm.getFirmNumber(), existingFirmWithCode.getId());
+                result.addError("Cannot create firm " + pdaFirm.getFirmNumber()
+                    + ": code already exists (duplicate in PDA data or database)");
+                return;
+            }
+
             // Check for duplicate name BEFORE attempting to create to avoid aborting transaction
             Firm existingFirmWithName = firmRepository.findFirmByName(pdaFirm.getFirmName());
             String finalName = pdaFirm.getFirmName();
