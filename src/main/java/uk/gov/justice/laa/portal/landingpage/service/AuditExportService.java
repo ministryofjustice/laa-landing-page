@@ -1,47 +1,42 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import jakarta.persistence.Tuple;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 @AllArgsConstructor
 public class AuditExportService {
 
-    private final UserProfileRepository repository;
     private final DateTimeFormatter fileTimestamp = DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmm");
 
-    public AuditCsvExport downloadAuditCsv(String id, String roleFilter, UUID selectedAppId, String selectedUserType) {
-
-        List<Tuple> firmData = repository.findFirmUsers(UUID.fromString(id), roleFilter, selectedAppId, selectedUserType);
+    public AuditCsvExport downloadAuditCsv(String id, List<AuditUserDto> data) {
 
         String timestamp = LocalDateTime.now().format(fileTimestamp);
         String filename = "user-access-audit_" + id + "_" + timestamp + ".csv";
-
-        String csv = buildCsv(firmData);
+        String csv = buildCsv(id, data);
         return new AuditCsvExport(filename, csv.getBytes(StandardCharsets.UTF_8));
     }
 
-    private String buildCsv(List<Tuple> firmData) {
+    private String buildCsv(String id, List<AuditUserDto> data) {
         StringBuilder sb = new StringBuilder();
 
         // Header row (as requested)
         sb.append("name,email,firmName,firmId,multifirm").append('\n');
 
-        for (Tuple item : firmData) {
-            sb.append(csvValue(toStringSafe(item.get("userName")))).append(',')
-                    .append(csvValue(toStringSafe(item.get("email")))).append(',')
-                    .append(csvValue(toStringSafe(item.get("firmName")))).append(',')
-                    .append(csvValue(toStringSafe(item.get("firmId")))).append(',')
-                    .append(csvValue(toStringSafe(item.get("multifirm")))).append('\n');
+        for (AuditUserDto user : data) {
+            sb.append(csvValue(toStringSafe(user.getName()))).append(',')
+                    .append(csvValue(toStringSafe(user.getEmail()))).append(',')
+                    .append(csvValue(toStringSafe(user.getFirmAssociation()))).append(',')
+                    .append(csvValue(toStringSafe(id))).append(',')
+                    .append(csvValue(toStringSafe(user.isMultiFirmUser()))).append('\n');
         }
 
         return sb.toString();

@@ -148,35 +148,6 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             """)
     List<UserProfile> findUserProfilesForCcmsSync();
 
-    @Query(value = """
-        SELECT DISTINCT
-            eu.firstName AS userName,
-            eu.email AS email,
-            f.name AS firmName,
-            f.id AS firmId,
-            eu.multiFirmUser AS multifirm
-         FROM UserProfile up
-         JOIN up.firm f
-         JOIN up.entraUser eu
-         WHERE up.firm.id = :id
-            AND (:selectedUserType IS NULL OR up.userType = :selectedUserType)
-            AND (
-                :roleFilter IS NULL OR EXISTS (
-                    SELECT 1 FROM up.appRoles arRole
-                    WHERE arRole.name = :roleFilter
-                )
-            )
-            AND (
-                :selectedAppId IS NULL OR EXISTS (
-                    SELECT 1 FROM up.appRoles arApp
-                    WHERE arApp.app.id = :selectedAppId
-                )
-            )
-    """)
-    List<Tuple> findFirmUsers(@Param("id") UUID id,
-                              @Param("roleFilter") String roleFilter,
-                              @Param("selectedAppId") UUID selectedAppId,
-                              @Param("selectedUserType") String selectedUserType);
 }
 
 
