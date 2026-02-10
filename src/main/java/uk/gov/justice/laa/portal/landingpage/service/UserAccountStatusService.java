@@ -125,7 +125,7 @@ public class UserAccountStatusService {
 
         if (userService.isInternal(enabledById)
                 || (enabledUserFirm != null && enabledByUserFirm != null && enabledByUserFirm.getId().equals(enabledUserFirm.getId()))) {
-            // Disable user in Entra via tech services.
+            // Enable user in Entra via tech services.
             TechServicesApiResponse<ChangeAccountEnabledResponse> changeAccountEnabledResponse
                     = techServicesClient.enableUser(mapper.map(enabledUser, EntraUserDto.class));
             if (!changeAccountEnabledResponse.isSuccess()) {
