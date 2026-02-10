@@ -21,10 +21,10 @@ public class RoleBasedAccessAuditTableTest extends RoleBasedAccessIntegrationTes
     }
 
     @Test
-    public void testInformationAndAssuranceCanAccessAuditTableAndSeeLink() throws Exception {
-        EntraUser informationAndAssuranceUser = informationAndAssuranceUsers.getFirst();
-        testCanAccessAuditTable(informationAndAssuranceUser, status().isOk());
-        testCanSeeAuditLink(informationAndAssuranceUser, true);
+    public void testSecurityResponseCanAccessAuditTableAndSeeLink() throws Exception {
+        EntraUser globalAdmin = securityResponseUsers.getFirst();
+        testCanAccessAuditTable(globalAdmin, status().isOk());
+        testCanSeeAuditLink(globalAdmin, true);
     }
 
     @Test
@@ -83,16 +83,12 @@ public class RoleBasedAccessAuditTableTest extends RoleBasedAccessIntegrationTes
         testCanSeeAuditLink(externalUserNoRoles, false);
     }
 
-
-
     @Test
     public void testFirmUserManagerCanAccessAuditTableAndCanSeeLink() throws Exception {
         EntraUser firmUserManager = externalOnlyUserManagers.getFirst();
         testCanAccessAuditTable(firmUserManager, status().isOk());
         testCanSeeAuditLink(firmUserManager, true);
     }
-
-
 
     public void testCanAccessAuditTable(EntraUser loggedInUser, ResultMatcher expectedResult) throws Exception {
         this.mockMvc.perform(get("/admin/users/audit")

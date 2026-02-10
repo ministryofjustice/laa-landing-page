@@ -17,6 +17,13 @@ public class RoleBasedAccessViewCreateUserPageTest extends RoleBasedAccessIntegr
     }
 
     @Test
+    public void testSecurityResponseCannotAccessCreateUserPage() throws Exception {
+        MvcResult result = accessCreateUserScreen(securityResponseUsers.getFirst(), status().is3xxRedirection());
+        assertThat(result.getResponse()).isNotNull();
+        assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/not-authorised");
+    }
+
+    @Test
     public void testExternalUserAdminCanAccessCreateUserPage() throws Exception {
         accessCreateUserScreen(externalUserAdmins.getFirst(), status().isOk());
     }

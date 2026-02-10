@@ -24,7 +24,8 @@ public enum Permission {
     ENABLE_EXTERNAL_USER,
     EXPORT_AUDIT_DATA,
     VIEW_FIRM_DIRECTORY,
-    TRIGGER_CCMS_ROLE_SYNC;
+    TRIGGER_CCMS_ROLE_SYNC,
+    CONVERT_USER_TO_MULTI_FIRM;
 
     public static final String[] ADMIN_PERMISSIONS = {
             VIEW_INTERNAL_USER.name(),

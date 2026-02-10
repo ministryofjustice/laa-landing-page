@@ -229,9 +229,6 @@ public class UserAccountStatusServiceTest {
                 .entraDescription("ATestReason")
                 .build();
 
-        when(entraUserRepository.findById(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
-        when(disableUserReasonRepository.findById(eq(disableUserReason.getId()))).thenReturn(Optional.of(disableUserReason));
-
         assertThrows(RuntimeException.class,
                 () -> userAccountStatusService.disableUser(disabledByUser.getId(), disableUserReason.getId(), disabledByUser.getId()));
         assertThat(disabledByUser.isEnabled()).isTrue();

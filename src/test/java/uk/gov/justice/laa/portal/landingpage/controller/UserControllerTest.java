@@ -163,6 +163,7 @@ class UserControllerTest {
         userController = new UserController(loginService, userService, officeService, eventService, firmService,
                 new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService,
                 appRoleService, disableUserService);
+        userController.disableUserFeatureEnabled = true;
         model = new ExtendedModelMap();
         firmSearchForm = FirmSearchForm.builder().build();
     }

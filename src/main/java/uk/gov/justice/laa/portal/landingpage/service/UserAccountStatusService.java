@@ -42,6 +42,10 @@ public class UserAccountStatusService {
 
     @SuppressWarnings("checkstyle:VariableDeclarationUsageDistance")
     public void disableUser(UUID disabledUserId, UUID disableReasonId, UUID disabledById) {
+        if (disabledUserId.equals(disabledById)) {
+            throw new RuntimeException(String.format("User %s can not be disabled by themselves", disabledUserId));
+        }
+
         // Fetch entities
         EntraUser disabledUser = entraUserRepository.findById(disabledUserId)
                 .orElseThrow(() -> new RuntimeException(String.format("Could not find a user account to disable with id \"%s\"", disabledUserId)));
@@ -50,7 +54,8 @@ public class UserAccountStatusService {
         DisableUserReason reason = disableUserReasonRepository.findById(disableReasonId)
                 .orElseThrow(() -> new RuntimeException(String.format("Could not find a disable user reason with id \"%s\"", disableReasonId)));
 
-        if (disabledUser.isMultiFirmUser()) {
+        boolean isDisabledByAnInternalUser = userService.isInternal(disabledById);
+        if (!isDisabledByAnInternalUser && disabledUser.isMultiFirmUser()) {
             throw new RuntimeException(String.format("Multi firm user %s can not be disabled", disabledUserId));
         }
 
@@ -63,10 +68,6 @@ public class UserAccountStatusService {
                 .filter(UserProfile::isActiveProfile)
                 .findFirst()
                 .map(UserProfile::getFirm).orElse(null);
-
-        if (disabledUserId.equals(disabledById)) {
-            throw new RuntimeException(String.format("User %s can not be disabled by themselves", disabledUserId));
-        }
 
         if (userService.isInternal(disabledById)
                 || (disabledUserFirm != null && disabledByUserFirm != null && disabledByUserFirm.getId().equals(disabledUserFirm.getId()))) {
