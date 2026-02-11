@@ -17,6 +17,24 @@
     </nav>
 
     <main class="govuk-main-wrapper" id="main-content" th:if="${#authentication.isAuthenticated()}">
+        <div id="csv-empty-toast"
+             class="govuk-notification-banner govuk-notification-banner--warning"
+             role="alert"
+             aria-live="polite"
+             aria-labelledby="csv-empty-toast-title"
+             data-module="govuk-notification-banner"
+             hidden>
+            <div class="govuk-notification-banner__header">
+                <h2 class="govuk-notification-banner__title" id="csv-empty-toast-title">
+                    CSV Export
+                </h2>
+            </div>
+            <div class="govuk-notification-banner__content">
+                <p class="govuk-notification-banner__heading">
+                    No rows matched filters; exported header only.
+                </p>
+            </div>
+        </div>
         <div class="govuk-grid-row">
             <div class="govuk-grid-column-full">
                 <h1 class="govuk-heading-l">User Access Audit Table</h1>
@@ -803,6 +821,32 @@
                     });
                 });
             });
+
+            // Checks for empty csv
+            document.addEventListener('DOMContentLoaded', function () {
+                const exportLink = document.querySelector('.js-export-csv');
+                const toast = document.getElementById('csv-empty-toast');
+
+                if (!exportLink || !toast) return;
+
+                function showToast() {
+                    toast.hidden = false;
+                    toast.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                    window.clearTimeout(showToast._t);
+                    showToast._t = window.setTimeout(() => {
+                        toast.hidden = true;
+                    }, 6000);
+                }
+
+                exportLink.addEventListener('click', function (e) {
+                    const usersEmpty = exportLink.getAttribute('data-users-empty') === 'true';
+
+                    if (usersEmpty) {
+                        showToast();
+                    }
+                });
+            });
         </script>
 
         <!-- Audit Table -->
@@ -954,8 +998,10 @@
 
         <div class="moj-nutton-group moj-button-group--inline moj-button-group--with-divider"
              th:if="${exportCsv and firmSearch.getSelectedFirmId() != null and firmSearch.getSelectedFirmId() != ''}">
-            <a class="govuk-button"
-               th:href="@{/admin/users/audit/{id}/download(id=${firmSearch.selectedFirmId},selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole},selectedAppId=${selectedAppId},selectedUserType=${selectedUserType})}">Export as CSV
+            <a class="govuk-button js-export-csv"
+               th:attr="data-users-empty=${#lists.isEmpty(users)}"
+               th:href="@{/admin/users/audit/{id}/download(id=${firmSearch.selectedFirmId},selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole},selectedAppId=${selectedAppId},selectedUserType=${selectedUserType})}">
+                Export as CSV
             </a>
         </div>
 

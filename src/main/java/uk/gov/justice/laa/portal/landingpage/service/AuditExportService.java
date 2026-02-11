@@ -1,7 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import lombok.AllArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
@@ -29,7 +28,7 @@ public class AuditExportService {
         StringBuilder sb = new StringBuilder();
 
         // Header row (as requested)
-        sb.append("name,email,firmName,firmId,multifirm").append('\n');
+        sb.append("Name, Email, Firm Name,Firm ID, Multi-firm").append('\n');
 
         for (AuditUserDto user : data) {
             sb.append(csvValue(toStringSafe(user.getName()))).append(',')
