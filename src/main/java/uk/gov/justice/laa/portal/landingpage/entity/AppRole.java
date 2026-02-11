@@ -19,6 +19,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -54,7 +55,8 @@ public class AppRole extends BaseEntity {
     private int ordinal;
 
     @Column(name = "ccms_code", nullable = true, length = 30, unique = true)
-    @Size(max = 30, message = "Application role CCMS Code must be no more than 30 characters")
+    @Size(min = 1, max = 30, message = "Application role CCMS Code must be between 1 and 30 characters")
+    @Pattern(regexp = "^(?!\\s*$).+", message = "Application role CCMS Code cannot be empty or contain only whitespace")
     private String ccmsCode;
 
     @Column(name = "legacy_sync", nullable = false)
