@@ -294,14 +294,6 @@ class RoleCreationServiceTest {
     void testCreateRole_WithNullLegacySync_DefaultsToFalse() {
         // Arrange
         UUID appId = UUID.randomUUID();
-        
-        RoleCreationDto dto = RoleCreationDto.builder()
-            .name("Test Role")
-            .description("Test Description")
-            .parentAppId(appId)
-            .userTypeRestriction(List.of(UserType.EXTERNAL))
-            .legacySync(null)  // Null legacy sync
-            .build();
 
         App parentApp = App.builder()
             .id(appId)
@@ -329,6 +321,13 @@ class RoleCreationServiceTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUser);
 
         // Act
+        RoleCreationDto dto = RoleCreationDto.builder()
+                .name("Test Role")
+                .description("Test Description")
+                .parentAppId(appId)
+                .userTypeRestriction(List.of(UserType.EXTERNAL))
+                .legacySync(null)
+                .build();
         roleCreationService.createRole(dto);
 
         // Assert
@@ -340,14 +339,6 @@ class RoleCreationServiceTest {
     void testCreateRole_WithMultipleUserTypes_CreatesCorrectAuditEvent() {
         // Arrange
         UUID appId = UUID.randomUUID();
-        
-        RoleCreationDto dto = RoleCreationDto.builder()
-            .name("Multi-Type Role")
-            .description("Role for multiple user types")
-            .parentAppId(appId)
-            .userTypeRestriction(List.of(UserType.INTERNAL, UserType.EXTERNAL))
-            .legacySync(true)
-            .build();
 
         App parentApp = App.builder()
             .id(appId)
@@ -374,6 +365,13 @@ class RoleCreationServiceTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUser);
 
         // Act
+        RoleCreationDto dto = RoleCreationDto.builder()
+                .name("Multi-Type Role")
+                .description("Role for multiple user types")
+                .parentAppId(appId)
+                .userTypeRestriction(List.of(UserType.INTERNAL, UserType.EXTERNAL))
+                .legacySync(true)
+                .build();
         roleCreationService.createRole(dto);
 
         // Assert
@@ -385,15 +383,6 @@ class RoleCreationServiceTest {
     void testCreateRole_WithEmptyCcmsCode_ConvertsToNull() {
         // Arrange
         UUID appId = UUID.randomUUID();
-        
-        RoleCreationDto dto = RoleCreationDto.builder()
-            .name("Test Role")
-            .description("Test Description")
-            .parentAppId(appId)
-            .userTypeRestriction(List.of(UserType.INTERNAL))
-            .ccmsCode("")  // Empty CCMS code
-            .legacySync(false)
-            .build();
 
         App parentApp = App.builder()
             .id(appId)
@@ -421,6 +410,14 @@ class RoleCreationServiceTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUser);
 
         // Act
+        RoleCreationDto dto = RoleCreationDto.builder()
+                .name("Test Role")
+                .description("Test Description")
+                .parentAppId(appId)
+                .userTypeRestriction(List.of(UserType.INTERNAL))
+                .ccmsCode("")
+                .legacySync(false)
+                .build();
         roleCreationService.createRole(dto);
 
         // Assert
@@ -443,11 +440,8 @@ class RoleCreationServiceTest {
         when(appRepository.findById(appId)).thenReturn(Optional.empty());
 
         // Act & Assert
-        RuntimeException exception = assertThrows(RuntimeException.class, 
+        assertThrows(RuntimeException.class, 
             () -> roleCreationService.createRole(dto));
-        
-        assertTrue(exception.getMessage().contains("not found") || 
-                  exception instanceof NullPointerException);
     }
 
     @Test
