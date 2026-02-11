@@ -301,4 +301,140 @@ class AdminControllerTest {
                 .build()
         );
     }
+
+    @Test
+    void testShowCheckYourAnswers_WithCompleteRoleData_DisplaysAllFields() {
+        // Arrange
+        MockHttpSession session = new MockHttpSession();
+        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
+                .name("Complete Test Role")
+                .description("Complete test description")
+                .ccmsCode("TEST123")
+                .legacySync(true)
+                .authzRole(true)
+                .build();
+        session.setAttribute("roleCreationDto", roleCreationDto);
+
+        // Act
+        String result = adminController.showCheckYourAnswers(model, session);
+
+        // Assert
+        assertEquals("silas-administration/create-role-check-answers", result);
+        assertThat(model.getAttribute("roleCreationDto")).isEqualTo(roleCreationDto);
+    }
+
+    @Test
+    void testConfirmRoleCreation_WithValidationException_HandlesError() {
+        // Arrange
+        MockHttpSession session = new MockHttpSession();
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
+                .name("Invalid Role")
+                .description("Test Description")
+                .build();
+        session.setAttribute("roleCreationDto", roleCreationDto);
+
+        IllegalArgumentException exception = new IllegalArgumentException("Role name already exists");
+        doThrow(exception).when(roleCreationService).createRole(roleCreationDto);
+
+        // Act
+        String result = adminController.confirmRoleCreation(session, redirectAttributes);
+
+        // Assert
+        assertEquals("redirect:/admin/silas-administration?tab=roles", result);
+        verify(roleCreationService).createRole(roleCreationDto);
+        // Session should not be cleared on error to preserve user input
+        assertThat(session.getAttribute("roleCreationDto")).isNotNull();
+    }
+
+    @Test
+    void testConfirmRoleCreation_WithCompleteRoleData_ProcessesSuccessfully() {
+        // Arrange
+        MockHttpSession session = new MockHttpSession();
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
+                .name("Complete Role")
+                .description("Complete description")
+                .ccmsCode("COMPLETE123")
+                .legacySync(false)
+                .authzRole(true)
+                .build();
+        session.setAttribute("roleCreationDto", roleCreationDto);
+
+        doNothing().when(roleCreationService).createRole(roleCreationDto);
+
+        // Act
+        String result = adminController.confirmRoleCreation(session, redirectAttributes);
+
+        // Assert
+        assertEquals("redirect:/admin/silas-administration?tab=roles", result);
+        verify(roleCreationService).createRole(roleCreationDto);
+        assertThat(session.getAttribute("roleCreationDto")).isNull();
+    }
+
+    @Test
+    void testConfirmRoleCreation_WithDatabaseException_HandlesError() {
+        // Arrange
+        MockHttpSession session = new MockHttpSession();
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
+                .name("DB Error Role")
+                .description("Test Description")
+                .build();
+        session.setAttribute("roleCreationDto", roleCreationDto);
+
+        RuntimeException dbException = new RuntimeException("Database connection failed");
+        doThrow(dbException).when(roleCreationService).createRole(roleCreationDto);
+
+        // Act
+        String result = adminController.confirmRoleCreation(session, redirectAttributes);
+
+        // Assert
+        assertEquals("redirect:/admin/silas-administration?tab=roles", result);
+        verify(roleCreationService).createRole(roleCreationDto);
+    }
+
+    @Test
+    void testConfirmRoleCreation_WithEmptyRoleData_HandlesGracefully() {
+        // Arrange
+        MockHttpSession session = new MockHttpSession();
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
+                .name("")
+                .description("")
+                .build();
+        session.setAttribute("roleCreationDto", roleCreationDto);
+
+        doNothing().when(roleCreationService).createRole(roleCreationDto);
+
+        // Act
+        String result = adminController.confirmRoleCreation(session, redirectAttributes);
+
+        // Assert
+        assertEquals("redirect:/admin/silas-administration?tab=roles", result);
+        verify(roleCreationService).createRole(roleCreationDto);
+        assertThat(session.getAttribute("roleCreationDto")).isNull();
+    }
+
+    @Test
+    void testConfirmRoleCreation_WithConcurrentModification_HandlesError() {
+        // Arrange
+        MockHttpSession session = new MockHttpSession();
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
+                .name("Concurrent Role")
+                .description("Test Description")
+                .build();
+        session.setAttribute("roleCreationDto", roleCreationDto);
+
+        RuntimeException concurrencyException = new RuntimeException("Optimistic locking failure");
+        doThrow(concurrencyException).when(roleCreationService).createRole(roleCreationDto);
+
+        // Act
+        String result = adminController.confirmRoleCreation(session, redirectAttributes);
+
+        // Assert
+        assertEquals("redirect:/admin/silas-administration?tab=roles", result);
+        verify(roleCreationService).createRole(roleCreationDto);
+    }
 }
