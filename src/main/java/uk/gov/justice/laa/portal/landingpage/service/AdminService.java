@@ -8,14 +8,12 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import uk.gov.justice.laa.portal.landingpage.dto.AdminAppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
-import uk.gov.justice.laa.portal.landingpage.entity.AdminApp;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.repository.AdminAppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 
@@ -29,15 +27,13 @@ public class AdminService {
 
     private final AppRepository appRepository;
     private final AppRoleRepository appRoleRepository;
-    private final AdminAppRepository adminAppRepository;
 
     /**
      * Get all admin apps for administration display
      */
-    public List<AdminAppDto> getAllAdminApps() {
-        return adminAppRepository.findAll().stream()
-                .filter(AdminApp::isEnabled)
-                .map(this::mapToAdminAppDto)
+    public List<AppAdminDto> getAllAdminApps() {
+        return appRepository.findAppsByAppTypeAndEnabled(AppType.AUTHZ, true).stream()
+                .map(this::mapToAppAdminDto)
                 .sorted((a, b) -> Integer.compare(a.getOrdinal(), b.getOrdinal()))
                 .collect(Collectors.toList());
     }
@@ -46,7 +42,7 @@ public class AdminService {
      * Get all apps for administration display
      */
     public List<AppAdminDto> getAllApps() {
-        return appRepository.findAll().stream()
+        return appRepository.findAppsByAppType(AppType.LAA).stream()
                 .map(this::mapToAppAdminDto)
                 .sorted((a, b) -> Integer.compare(a.getOrdinal(), b.getOrdinal()))
                 .collect(Collectors.toList());
@@ -117,19 +113,6 @@ public class AdminService {
                 .ordinal(appRole.getOrdinal())
                 .authzRole(appRole.isAuthzRole())
                 .ccmsCode(appRole.getCcmsCode() != null ? appRole.getCcmsCode() : "")
-                .build();
-    }
-
-    /**
-     * Map AdminApp entity to AdminAppDto
-     */
-    private AdminAppDto mapToAdminAppDto(AdminApp adminApp) {
-        return AdminAppDto.builder()
-                .id(adminApp.getId().toString())
-                .name(adminApp.getName())
-                .description(adminApp.getDescription())
-                .ordinal(adminApp.getOrdinal())
-                .enabled(adminApp.isEnabled())
                 .build();
     }
 }

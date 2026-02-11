@@ -16,7 +16,6 @@ import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
-import uk.gov.justice.laa.portal.landingpage.dto.AdminAppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
 import uk.gov.justice.laa.portal.landingpage.service.AdminService;
@@ -39,7 +38,7 @@ class AdminControllerTest {
     @Test
     void testShowAdministration_WithDefaultTab_LoadsAllData() {
         // Arrange
-        List<AdminAppDto> adminApps = createMockAdminApps();
+        List<AppAdminDto> adminApps = createMockAdminApps();
         List<AppAdminDto> apps = createMockApps();
         List<AppRoleAdminDto> roles = createMockRoles();
 
@@ -68,7 +67,7 @@ class AdminControllerTest {
     @Test
     void testShowAdministration_WithRolesTab_LoadsAllData() {
         // Arrange
-        List<AdminAppDto> adminApps = createMockAdminApps();
+        List<AppAdminDto> adminApps = createMockAdminApps();
         List<AppAdminDto> apps = createMockApps();
         List<AppRoleAdminDto> roles = createMockRoles();
 
@@ -92,7 +91,7 @@ class AdminControllerTest {
     void testShowAdministration_WithAppFilter_FiltersRolesByApp() {
         // Arrange
         String appFilter = "CCMS case transfer requests";
-        List<AdminAppDto> adminApps = createMockAdminApps();
+        List<AppAdminDto> adminApps = createMockAdminApps();
         List<AppAdminDto> apps = createMockApps();
         List<AppRoleAdminDto> filteredRoles = Arrays.asList(
             AppRoleAdminDto.builder()
@@ -143,7 +142,7 @@ class AdminControllerTest {
     @Test
     void testShowAdministration_WithAppsTab_LoadsAllData() {
         // Arrange
-        List<AdminAppDto> adminApps = createMockAdminApps();
+        List<AppAdminDto> adminApps = createMockAdminApps();
         List<AppAdminDto> apps = createMockApps();
         List<AppRoleAdminDto> roles = createMockRoles();
 
@@ -178,17 +177,23 @@ class AdminControllerTest {
     }
 
     // Helper methods to create mock data
-    private List<AdminAppDto> createMockAdminApps() {
+    private List<AppAdminDto> createMockAdminApps() {
         return Arrays.asList(
-            AdminAppDto.builder()
+            AppAdminDto.builder()
                 .name("Manage your users")
                 .description("Manage user access and permissions")
                 .ordinal(0)
+                .url("/admin/users")
+                .enabled(true)
+                .appType("AUTHZ")
                 .build(),
-            AdminAppDto.builder()
+            AppAdminDto.builder()
                 .name("User access audit table")
                 .description("View all registered users")
                 .ordinal(1)
+                .url("/admin/users/audit")
+                .enabled(true)
+                .appType("AUTHZ")
                 .build()
         );
     }

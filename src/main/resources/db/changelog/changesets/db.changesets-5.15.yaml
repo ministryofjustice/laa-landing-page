@@ -1,0 +1,118 @@
+databaseChangeLog:
+  # Migrate admin_app entries to app table with AppType.AUTHZ
+  - changeSet:
+      id: 1739293200001-1
+      author: sankavi.mohanraj
+      preconditions:
+        - tableExists:
+            tableName: admin_app
+      changes:
+        # Insert admin_app entries into app table with AppType.AUTHZ
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO app (
+                id, 
+                name, 
+                title, 
+                description, 
+                oid_group_name, 
+                app_type, 
+                ordinal, 
+                url, 
+                enabled, 
+                entra_app_id, 
+                security_group_oid, 
+                security_group_name
+              )
+              SELECT 
+                aa.id,
+                aa.name,
+                aa.name as title,
+                aa.description,
+                aa.name as oid_group_name,
+                'AUTHZ' as app_type,
+                aa.ordinal,
+                '#' as url,
+                aa.enabled,
+                null as entra_app_id,
+                aa.name as security_group_oid,
+                aa.name as security_group_name
+              FROM admin_app aa
+              WHERE NOT EXISTS (
+                SELECT 1 FROM app a WHERE a.name = aa.name
+              );
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM app WHERE app_type = 'AUTHZ' AND id IN (SELECT id FROM admin_app)"
+
+  # Drop admin_app table after successful migration
+  - changeSet:
+      id: 1739293200001-2
+      author: sankavi.mohanraj
+      preconditions:
+        - onFail: MARK_RAN
+        - tableExists:
+            tableName: admin_app
+      changes:
+        - dropTable:
+            tableName: admin_app
+      rollback:
+        # Recreate admin_app table structure if rollback needed
+        - createTable:
+            tableName: admin_app
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: description
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: ordinal
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: enabled
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+        - createIndex:
+            indexName: AdminAppNameIdx
+            tableName: admin_app
+            columns:
+              - column:
+                  name: name
+        # Restore admin_app data from app table if rollback needed
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO admin_app (id, name, description, ordinal, enabled, created_at, updated_at)
+              SELECT id, name, description, ordinal, enabled, created_at, updated_at
+              FROM app 
+              WHERE app_type = 'AUTHZ' AND oid_group_name = name AND security_group_oid = name AND security_group_name = name

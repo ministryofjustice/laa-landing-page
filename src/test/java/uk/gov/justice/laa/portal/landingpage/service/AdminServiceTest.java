@@ -13,14 +13,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import uk.gov.justice.laa.portal.landingpage.dto.AdminAppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
-import uk.gov.justice.laa.portal.landingpage.entity.AdminApp;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.repository.AdminAppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 
@@ -33,33 +31,26 @@ class AdminServiceTest {
     @Mock
     private AppRoleRepository appRoleRepository;
 
-    @Mock
-    private AdminAppRepository adminAppRepository;
-
     private AdminService adminService;
 
     @BeforeEach
     void setUp() {
         adminService = new AdminService(
             appRepository,
-            appRoleRepository,
-            adminAppRepository
+            appRoleRepository
         );
     }
 
     @Test
     void testGetAllAdminApps_ReturnsEnabledAppsSortedByOrdinal() {
         // Arrange
-        List<AdminApp> adminApps = Arrays.asList(
+        when(appRepository.findAppsByAppTypeAndEnabled(AppType.AUTHZ, true)).thenReturn(Arrays.asList(
             createAdminApp("App 2", 2, true),
-            createAdminApp("App 1", 1, true),
-            createAdminApp("Disabled App", 0, false)
-        );
-
-        when(adminAppRepository.findAll()).thenReturn(adminApps);
+            createAdminApp("App 1", 1, true)
+        ));
 
         // Act
-        List<AdminAppDto> result = adminService.getAllAdminApps();
+        List<AppAdminDto> result = adminService.getAllAdminApps();
 
         // Assert
         assertThat(result).hasSize(2);
@@ -68,21 +59,18 @@ class AdminServiceTest {
         assertThat(result.get(1).getName()).isEqualTo("App 2");
         assertThat(result.get(1).getOrdinal()).isEqualTo(2);
 
-        verify(adminAppRepository).findAll();
+        verify(appRepository).findAppsByAppTypeAndEnabled(AppType.AUTHZ, true);
     }
 
     @Test
     void testGetAllAdminApps_FiltersDisabledApps() {
         // Arrange
-        List<AdminApp> adminApps = Arrays.asList(
-            createAdminApp("Enabled App", 1, true),
-            createAdminApp("Disabled App", 2, false)
-        );
-
-        when(adminAppRepository.findAll()).thenReturn(adminApps);
+        when(appRepository.findAppsByAppTypeAndEnabled(AppType.AUTHZ, true)).thenReturn(Arrays.asList(
+            createAdminApp("Enabled App", 1, true)
+        ));
 
         // Act
-        List<AdminAppDto> result = adminService.getAllAdminApps();
+        List<AppAdminDto> result = adminService.getAllAdminApps();
 
         // Assert
         assertThat(result).hasSize(1);
@@ -98,7 +86,7 @@ class AdminServiceTest {
             createApp("App B", 2)
         );
 
-        when(appRepository.findAll()).thenReturn(apps);
+        when(appRepository.findAppsByAppType(AppType.LAA)).thenReturn(apps);
 
         // Act
         List<AppAdminDto> result = adminService.getAllApps();
@@ -109,7 +97,7 @@ class AdminServiceTest {
         assertThat(result.get(1).getName()).isEqualTo("App B");
         assertThat(result.get(2).getName()).isEqualTo("App C");
 
-        verify(appRepository).findAll();
+        verify(appRepository).findAppsByAppType(AppType.LAA);
     }
 
     @Test
@@ -184,7 +172,7 @@ class AdminServiceTest {
 
         // Assert
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).getUserTypeRestriction()).contains("INTERNAL", "EXTERNAL");
+        assertThat(result.getFirst().getUserTypeRestriction()).contains("INTERNAL", "EXTERNAL");
     }
 
     @Test
@@ -206,8 +194,8 @@ class AdminServiceTest {
 
         // Assert
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).getParentApp()).isEmpty();
-        assertThat(result.get(0).getParentAppId()).isEmpty();
+        assertThat(result.getFirst().getParentApp()).isEmpty();
+        assertThat(result.getFirst().getParentAppId()).isEmpty();
     }
 
     @Test
@@ -223,13 +211,20 @@ class AdminServiceTest {
     }
 
     // Helper methods to create test entities
-    private AdminApp createAdminApp(String name, int ordinal, boolean enabled) {
-        return AdminApp.builder()
+    private App createAdminApp(String name, int ordinal, boolean enabled) {
+        return App.builder()
             .id(UUID.randomUUID())
             .name(name)
+            .title(name)
             .description("Description for " + name)
+            .oidGroupName("admin-services")
+            .appType(AppType.AUTHZ)
             .ordinal(ordinal)
+            .url("/admin/" + name.toLowerCase().replace(" ", "-"))
             .enabled(enabled)
+            .entraAppId(null)
+            .securityGroupOid("admin-services-group-oid")
+            .securityGroupName("Admin Services Group")
             .build();
     }
 
@@ -239,6 +234,7 @@ class AdminServiceTest {
             .name(name)
             .description("Description for " + name)
             .ordinal(ordinal)
+            .appType(AppType.LAA)
             .url("https://example.com/" + name.toLowerCase())
             .enabled(true)
             .build();

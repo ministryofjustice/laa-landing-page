@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
-import uk.gov.justice.laa.portal.landingpage.dto.AdminAppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
 import uk.gov.justice.laa.portal.landingpage.service.AdminService;
@@ -43,7 +42,7 @@ public class AdminController {
         model.addAttribute("activeTab", tab);
 
         // Load all admin apps data for admin-apps tab
-        List<AdminAppDto> adminApps = adminService.getAllAdminApps();
+        List<AppAdminDto> adminApps = adminService.getAllAdminApps();
         model.addAttribute("adminApps", adminApps);
 
         // Load all apps data for apps tab
