@@ -133,8 +133,6 @@ public class UserController {
     private final AppRoleService appRoleService;
     private final UserAccountStatusService userAccountStatusService;
 
-    @Value("${feature.flag.disable.user}")
-    public boolean disableUserFeatureEnabled;
 
     @Value("${feature.flag.disable.user}")
     public boolean disableUserFeatureEnabled;
