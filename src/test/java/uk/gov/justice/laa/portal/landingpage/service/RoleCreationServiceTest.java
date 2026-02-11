@@ -22,9 +22,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class RoleCreationServiceTest {
@@ -109,27 +113,10 @@ class RoleCreationServiceTest {
     void testCreateRole_WithValidDto_CreatesRoleAndAuditEvent() {
         // Arrange
         UUID appId = UUID.randomUUID();
-        UUID roleId = UUID.randomUUID();
-        
-        RoleCreationDto dto = RoleCreationDto.builder()
-            .name("Test Role")
-            .description("Test Description")
-            .parentAppId(appId)
-            .userTypeRestriction(List.of(UserType.INTERNAL))
-            .legacySync(true)
-            .build();
 
         App parentApp = App.builder()
             .id(appId)
             .name("Test App")
-            .build();
-
-        AppRole savedRole = AppRole.builder()
-            .id(roleId)
-            .name("Test Role")
-            .description("Test Description")
-            .userTypeRestriction(new UserType[]{UserType.INTERNAL})
-            .app(parentApp)
             .build();
 
         CurrentUserDto currentUser = new CurrentUserDto();
@@ -138,10 +125,26 @@ class RoleCreationServiceTest {
 
         when(appRepository.findById(appId)).thenReturn(Optional.of(parentApp));
         when(appRoleRepository.findByName("Test Role")).thenReturn(Optional.empty());
+
+        AppRole savedRole = AppRole.builder()
+                .id(UUID.randomUUID())
+                .name("Test Role")
+                .description("Test Description")
+                .userTypeRestriction(new UserType[]{UserType.INTERNAL})
+                .app(parentApp)
+                .build();
         when(appRoleRepository.save(any(AppRole.class))).thenReturn(savedRole);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUser);
 
+
+        RoleCreationDto dto = RoleCreationDto.builder()
+                .name("Test Role")
+                .description("Test Description")
+                .parentAppId(appId)
+                .userTypeRestriction(List.of(UserType.INTERNAL))
+                .legacySync(true)
+                .build();
         // Act
         roleCreationService.createRole(dto);
 
