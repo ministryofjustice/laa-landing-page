@@ -75,7 +75,6 @@ databaseChangeLog:
       id: 20260126-3-assign-permissions
       author: suresh.kavali
       dbms: postgresql
-      context: prod
       comment: Assign permissions across roles with idempotent inserts
       runOnChange: false
       runAlways: false
