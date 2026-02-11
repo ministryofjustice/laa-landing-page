@@ -163,8 +163,40 @@ class UserControllerTest {
         userController = new UserController(loginService, userService, officeService, eventService, firmService,
                 new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService,
                 appRoleService, disableUserService);
+        userController.disableUserFeatureEnabled = true;
         model = new ExtendedModelMap();
         firmSearchForm = FirmSearchForm.builder().build();
+    }
+
+    @Test
+    public void testEnableUserPostReturnsCorrectViewAndModelWhenIdIsValid() {
+        UUID enabledUserId = UUID.randomUUID();
+        UUID enabledByUserId = UUID.randomUUID();
+        EntraUserDto enabledUser = EntraUserDto.builder()
+                .id(enabledUserId.toString())
+                .fullName("Test User")
+                .build();
+        EntraUser enabledByUser = EntraUser.builder()
+                .id(enabledByUserId)
+                .build();
+
+        when(userService.getEntraUserById(enabledUserId.toString())).thenReturn(Optional.of(enabledUser));
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(enabledByUser);
+
+        String view = userController.enableUserPost(enabledUserId.toString(), authentication, model);
+
+        assertThat(view).isEqualTo("enable-user-completed");
+        assertThat(model.getAttribute("user")).isEqualTo(enabledUser);
+        assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Enable User Success - " + enabledUser.getFullName());
+    }
+
+    @Test
+    public void testEnableUserPostThrowsNoValuePresentWhenUserNotFound() {
+        UUID noUserId = UUID.randomUUID();
+        when(userService.getEntraUserById(noUserId.toString())).thenReturn(Optional.empty());
+
+        assertThrows(NoSuchElementException.class, () -> userController.enableUserPost(noUserId.toString(), authentication, model));
+
     }
 
     @Test
