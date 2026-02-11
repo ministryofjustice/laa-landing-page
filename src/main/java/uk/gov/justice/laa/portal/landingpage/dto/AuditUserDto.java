@@ -46,6 +46,9 @@ public class AuditUserDto implements Serializable {
      */
     private String firmAssociation;
 
+
+    private String firmCode;
+
     /**
      * Account status: Active, Inactive, Pending, or Disabled
      */

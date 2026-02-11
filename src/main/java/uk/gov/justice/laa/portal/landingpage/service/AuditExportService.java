@@ -5,6 +5,9 @@ import org.springframework.stereotype.Service;
 
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -25,20 +28,29 @@ public class AuditExportService {
     }
 
     private String buildCsv(String id, List<AuditUserDto> data) {
-        StringBuilder sb = new StringBuilder();
+        StringWriter stringWriter = new StringWriter();
 
-        // Header row (as requested)
-        sb.append("Name, Email, Firm Name,Firm ID, Multi-firm").append('\n');
+        try (BufferedWriter writer = new BufferedWriter(stringWriter)) {
+            writer.write("Name,Email,Firm Name,Firm Code,Multi-firm");
+            writer.write('\n');
 
-        for (AuditUserDto user : data) {
-            sb.append(csvValue(toStringSafe(user.getName()))).append(',')
-                    .append(csvValue(toStringSafe(user.getEmail()))).append(',')
-                    .append(csvValue(toStringSafe(user.getFirmAssociation()))).append(',')
-                    .append(csvValue(toStringSafe(id))).append(',')
-                    .append(csvValue(toStringSafe(user.isMultiFirmUser()))).append('\n');
+            for (AuditUserDto user : data) {
+                writer.write(csvValue(toStringSafe(user.getName())));
+                writer.write(',');
+                writer.write(csvValue(toStringSafe(user.getEmail())));
+                writer.write(',');
+                writer.write(csvValue(toStringSafe(user.getFirmAssociation())));
+                writer.write(',');
+                writer.write(csvValue(toStringSafe(user.getFirmCode())));
+                writer.write(',');
+                writer.write(csvValue(user.isMultiFirmUser() ? "Yes" : "No"));
+                writer.write('\n');
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to build audit CSV", e);
         }
 
-        return sb.toString();
+        return stringWriter.toString();
     }
 
     private String toStringSafe(Object value) {
