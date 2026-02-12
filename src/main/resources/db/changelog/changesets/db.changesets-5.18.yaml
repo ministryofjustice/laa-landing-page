@@ -1,0 +1,26 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1770893113-1
+      author: sankavi.mohanraj
+      dbms: postgresql
+      comment: Remove VIEW_AUDIT_TABLE permission from Firm User Manager role
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              DELETE FROM role_permission
+              WHERE (app_role_id, permission) IN (
+                ((SELECT id FROM app_role WHERE name = 'Firm User Manager'), 'VIEW_AUDIT_TABLE')
+              );
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO role_permission (app_role_id, permission)
+              SELECT (SELECT id FROM app_role WHERE name = 'Firm User Manager'),
+                     'VIEW_AUDIT_TABLE'
+              WHERE NOT EXISTS (
+                SELECT 1 FROM role_permission
+                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'Firm User Manager')
+                  AND permission = 'VIEW_AUDIT_TABLE'
+              );
