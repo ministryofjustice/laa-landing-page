@@ -154,8 +154,8 @@ public class DataProviderController {
             final String json = objectMapper.writerWithDefaultPrettyPrinter()
                     .writeValueAsString(result);
 
-            log.debug("Returning comparison - Firms: {} creates, {} updates, {} deletes, {} exists",
-                result.getFirmCreates(), result.getFirmUpdates(), result.getFirmDeletes(), result.getFirmExists());
+            log.debug("Returning comparison - Firms: {} creates, {} updates, {} disables, {} exists",
+                result.getFirmCreates(), result.getFirmUpdates(), result.getFirmDisables(), result.getFirmExists());
             log.debug("Returning comparison - Offices: {} creates, {} updates, {} deletes, {} exists",
                 result.getOfficeCreates(), result.getOfficeUpdates(), result.getOfficeDeletes(), result.getOfficeExists());
             log.debug("Returning comparison - Total: {} creates, {} updates, {} deletes, {} exists",

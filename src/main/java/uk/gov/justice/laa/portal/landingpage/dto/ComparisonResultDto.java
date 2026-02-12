@@ -28,7 +28,7 @@ public class ComparisonResultDto {
     // Separate counts for firms and offices
     private int firmCreates;
     private int firmUpdates;
-    private int firmDeletes;
+    private int firmDisables;
     private int firmExists;
 
     private int officeCreates;

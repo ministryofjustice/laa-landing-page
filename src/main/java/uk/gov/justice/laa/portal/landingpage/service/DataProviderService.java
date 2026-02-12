@@ -196,7 +196,7 @@ public class DataProviderService {
         // Track separate counts
         int firmCreates = 0;
         int firmUpdates = 0;
-        int firmDeletes = 0;
+        int firmDisables = 0;
         int firmExists = 0;
         int officeCreates = 0;
         int officeUpdates = 0;
@@ -286,7 +286,7 @@ public class DataProviderService {
                     .name(firm.getName())
                     .dbId(firm.getId())
                     .build());
-                firmDeletes++;
+                firmDisables++;
             }
         }
 
@@ -403,9 +403,9 @@ public class DataProviderService {
         log.info("Delta Analysis -----------------------\n");
         log.info("No. of firms updated: {}", firmUpdates);
         log.info("No. of new firms: {}", firmCreates);
-        log.info("No. of removed firms: {}", firmDeletes);
+        log.info("No. of removed firms: {}", firmDisables);
         if (firmsWithNullCode > 0) {
-            log.info("    -> {} with valid codes", firmDeletes);
+            log.info("    -> {} with valid codes", firmDisables);
             log.info("    -> {} with NULL codes (skipped from comparison)", firmsWithNullCode);
         }
         log.info("");
@@ -446,7 +446,7 @@ public class DataProviderService {
         // Set the separate counts in the result
         result.setFirmCreates(firmCreates);
         result.setFirmUpdates(firmUpdates);
-        result.setFirmDeletes(firmDeletes);
+        result.setFirmDisables(firmDisables);
         result.setFirmExists(firmExists);
         result.setOfficeCreates(officeCreates);
         result.setOfficeUpdates(officeUpdates);
