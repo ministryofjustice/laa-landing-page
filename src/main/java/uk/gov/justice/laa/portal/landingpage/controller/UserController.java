@@ -22,6 +22,10 @@ import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.NotNull;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.actuate.autoconfigure.observation.ObservationProperties;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authorization.AuthorizationDeniedException;
@@ -38,6 +42,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 import org.springframework.http.HttpStatus;
@@ -127,6 +132,9 @@ public class UserController {
     private final EmailValidationService emailValidationService;
     private final AppRoleService appRoleService;
     private final UserAccountStatusService disableUserService;
+
+    @Value("${feature.flag.disable.user}")
+    public boolean disableUserFeatureEnabled;
 
     @GetMapping("/users")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
@@ -360,6 +368,8 @@ public class UserController {
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
         final boolean canDeleteUser = accessControlService.canDeleteUser(id);
         model.addAttribute("canDeleteUser", canDeleteUser);
+        final boolean canDisableUser = disableUserFeatureEnabled && accessControlService.canDisableUser(user.getEntraUser().getId());
+        model.addAttribute("canDisableUser", canDisableUser);
         boolean showResendVerificationLink = accessControlService.canSendVerificationEmail(id);
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
 
@@ -463,6 +473,9 @@ public class UserController {
                                      DisableUserReasonForm disableUserReasonForm,
                                      Model model,
                                      HttpSession session) {
+        if (!disableUserFeatureEnabled) {
+            throw new ResponseStatusException(HttpStatusCode.valueOf(404));
+        }
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
         List<DisableUserReasonViewModel> reasons = disableUserService.getDisableUserReasons().stream()
                 .map(reason -> mapper.map(reason, DisableUserReasonViewModel.class))
@@ -483,6 +496,9 @@ public class UserController {
                                      Authentication authentication,
                                      Model model,
                                      HttpSession session) {
+        if (!disableUserFeatureEnabled) {
+            throw new ResponseStatusException(HttpStatusCode.valueOf(404));
+        }
         if (result.hasErrors()) {
             String errorMessage = buildErrorString(result);
             Model modelFromSession = getObjectFromHttpSession(session, "disableUserReasonModel", Model.class).orElseThrow();
