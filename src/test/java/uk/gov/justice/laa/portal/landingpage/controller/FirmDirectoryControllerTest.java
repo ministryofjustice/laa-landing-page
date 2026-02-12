@@ -6,6 +6,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
@@ -38,6 +39,7 @@ class FirmDirectoryControllerTest {
     @BeforeEach
     void setUp() {
         model = new ExtendedModelMap();
+        ReflectionTestUtils.setField(firmDirectoryController, "firmDirectoryEnabled", true);
     }
 
     @Test
