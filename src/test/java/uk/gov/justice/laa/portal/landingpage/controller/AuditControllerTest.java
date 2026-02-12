@@ -27,6 +27,7 @@ import org.springframework.ui.Model;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import uk.gov.justice.laa.portal.landingpage.auth.AuthenticatedUser;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditTableSearchCriteria;
@@ -36,6 +37,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
+import uk.gov.justice.laa.portal.landingpage.service.AuditExportService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
@@ -58,13 +60,20 @@ class AuditControllerTest {
     @Mock
     private AccessControlService accessControlService;
 
+    @Mock
+    private AuthenticatedUser authenticatedUser;
+
+    @Mock
+    private AuditExportService auditExportService;
+
     private PaginatedAuditUsers mockPaginatedUsers;
     private List<AppRoleDto> mockSilasRoles;
     private Model model;
 
     @BeforeEach
     void setUp() {
-        auditController = new AuditController(userService, loginService, eventService, accessControlService);
+        auditController = new AuditController(userService, loginService, eventService, accessControlService,
+                authenticatedUser, auditExportService);
         model = new ExtendedModelMap();
         // Setup mock audit users
         AuditUserDto user1 = AuditUserDto.builder()

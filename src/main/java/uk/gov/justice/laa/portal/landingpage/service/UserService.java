@@ -1543,6 +1543,9 @@ public class UserService {
         // Get firm associations
         String firmAssociation = determineFirmAssociation(profiles);
 
+        // Get firm code
+        String firmCode = determineFirmCode(profiles);
+
         // Get account status
         String accountStatus = determineAccountStatus(user, profiles);
 
@@ -1556,7 +1559,7 @@ public class UserService {
 
         return AuditUserDto.builder().name(user.getFirstName() + " " + user.getLastName())
                 .email(user.getEmail()).userId(userId).entraUserId(user.getId().toString())
-                .userType(userType).firmAssociation(firmAssociation).accountStatus(accountStatus)
+                .userType(userType).firmAssociation(firmAssociation).firmCode(firmCode).accountStatus(accountStatus)
                 .isMultiFirmUser(user.isMultiFirmUser()).profileCount(profileCount)
                 .createdDate(user.getCreatedDate()).createdBy(user.getCreatedBy())
                 // TODO: Fetch lastLoginDate from Microsoft Graph or Silas API
@@ -1615,6 +1618,24 @@ public class UserService {
         }
 
         return String.join(", ", firmNames);
+    }
+
+    /**
+     * Determine firm codes for audit table Returns firm code(s) or "None"
+     */
+    private String determineFirmCode(List<UserProfile> profiles) {
+        if (profiles.isEmpty()) {
+            return "Unknown";
+        }
+
+        Set<String> firmCodes = profiles.stream().map(UserProfile::getFirm).filter(Objects::nonNull)
+                .map(Firm::getName).collect(Collectors.toCollection(TreeSet::new));
+
+        if (firmCodes.isEmpty()) {
+            return "Unknown";
+        }
+
+        return String.join(", ", firmCodes);
     }
 
     /**
