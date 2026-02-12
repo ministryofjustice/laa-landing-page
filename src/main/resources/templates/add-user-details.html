@@ -21,7 +21,17 @@
                     Add user details
                 </h1>
             </legend>
-            <form th:action="@{/admin/user/create/details}" th:method="post" th:object="${userDetailsForm}">
+            <form id="userDetailsForm" th:action="@{/admin/user/create/details}" th:method="post" th:object="${userDetailsForm}">
+                <div id="error-summary" class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
+                     aria-describedby="error-summary-description" data-module="govuk-error-summary" style="display: none;">
+                    <h2 class="govuk-error-summary__title" id="error-summary-title">
+                        There is a problem
+                    </h2>
+                    <div class="govuk-error-summary__body" id="error-summary-description">
+                        <ul class="govuk-list govuk-error-summary__list" id="error-list">
+                        </ul>
+                    </div>
+                </div>
                 <div th:if="${#fields.hasErrors()}">
                     <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
                         aria-describedby="error-summary-description" data-module="govuk-error-summary">
@@ -126,6 +136,98 @@
             </form>
         </fieldset>
     </main>
+
+    <script th:if="${ajaxFormSubmissionEnabled}">
+        document.getElementById('userDetailsForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Clear previous errors
+            clearErrors();
+            
+            // Get form data
+            const formData = {
+                email: document.getElementById('email').value,
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
+                userManager: document.querySelector('input[name="userManager"]:checked')?.value === 'true'
+            };
+            
+            // Submit via AJAX
+            fetch('/admin/user/create/details', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = data.redirectUrl;
+                } else if (data.errors) {
+                    displayErrors(data.errors);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Fallback to regular form submission
+                this.removeEventListener('submit', arguments.callee);
+                this.submit();
+            });
+        });
+        
+        function clearErrors() {
+            // Hide error summary
+            document.getElementById('error-summary').style.display = 'none';
+            document.getElementById('error-list').innerHTML = '';
+            
+            // Clear field errors
+            ['email', 'firstName', 'lastName'].forEach(field => {
+                const formGroup = document.getElementById(field).closest('.govuk-form-group');
+                formGroup.classList.remove('govuk-form-group--error');
+                const errorMsg = formGroup.querySelector('.govuk-error-message');
+                if (errorMsg) errorMsg.remove();
+            });
+        }
+        
+        function displayErrors(errors) {
+            const errorList = document.getElementById('error-list');
+            const errorSummary = document.getElementById('error-summary');
+            
+            Object.keys(errors).forEach(field => {
+                const error = errors[field];
+                
+                // Add to error summary
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = '#' + field;
+                a.textContent = error;
+                li.appendChild(a);
+                errorList.appendChild(li);
+                
+                // Add field error
+                const formGroup = document.getElementById(field).closest('.govuk-form-group');
+                formGroup.classList.add('govuk-form-group--error');
+                
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'govuk-error-message';
+                const errorP = document.createElement('p');
+                errorP.id = field + '-error';
+                errorP.textContent = error;
+                errorDiv.appendChild(errorP);
+                
+                const label = formGroup.querySelector('.govuk-label');
+                label.insertAdjacentElement('afterend', errorDiv);
+                
+                // Update aria-describedby
+                document.getElementById(field).setAttribute('aria-describedby', field + '-error');
+            });
+            
+            errorSummary.style.display = 'block';
+            errorSummary.scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
 </body>
 
 </html>

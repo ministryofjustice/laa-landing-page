@@ -38,6 +38,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -252,6 +253,100 @@ public class UserController {
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage your users");
 
         return "users";
+    }
+
+    @PostMapping(value = "/users/search", consumes = "application/json")
+    @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
+            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_INTERNAL_USER)")
+    @ResponseBody
+    public ResponseEntity<?> searchUsersJson(@RequestBody Map<String, Object> searchRequest, 
+                                           HttpSession session, Authentication authentication) {
+        
+        // Extract search parameters from JSON
+        int size = (Integer) searchRequest.getOrDefault("size", 10);
+        int page = (Integer) searchRequest.getOrDefault("page", 1);
+        String sort = (String) searchRequest.get("sort");
+        String direction = (String) searchRequest.get("direction");
+        String usertype = (String) searchRequest.get("usertype");
+        String search = (String) searchRequest.getOrDefault("search", "");
+        boolean showFirmAdmins = (Boolean) searchRequest.getOrDefault("showFirmAdmins", false);
+        boolean showMultiFirmUsers = (Boolean) searchRequest.getOrDefault("showMultiFirmUsers", false);
+        
+        // Handle firm search form
+        FirmSearchForm firmSearchForm = new FirmSearchForm();
+        @SuppressWarnings("unchecked")
+        Map<String, Object> firmSearchData = (Map<String, Object>) searchRequest.get("firmSearch");
+        if (firmSearchData != null) {
+            firmSearchForm.setFirmSearch((String) firmSearchData.get("firmSearch"));
+            String selectedFirmId = (String) firmSearchData.get("selectedFirmId");
+            if (selectedFirmId != null && !selectedFirmId.isEmpty()) {
+                try {
+                    firmSearchForm.setSelectedFirmId(UUID.fromString(selectedFirmId));
+                } catch (IllegalArgumentException e) {
+                    // Invalid UUID format, ignore
+                }
+            }
+        }
+        
+        // Process search (reuse existing logic)
+        search = search == null ? "" : search.trim();
+        Map<String, Object> processedFilters = processRequestFilters(size, page, sort, direction, usertype, search,
+                showFirmAdmins, showMultiFirmUsers, false, session, firmSearchForm);
+        
+        // Extract processed values
+        size = (Integer) processedFilters.get("size");
+        page = (Integer) processedFilters.get("page");
+        sort = (String) processedFilters.get("sort");
+        direction = (String) processedFilters.get("direction");
+        search = (String) processedFilters.get("search");
+        firmSearchForm = (FirmSearchForm) processedFilters.get("firmSearchForm");
+        showFirmAdmins = Boolean.parseBoolean(String.valueOf(processedFilters.get("showFirmAdmins")));
+        showMultiFirmUsers = Boolean.parseBoolean(String.valueOf(processedFilters.get("showMultiFirmUsers")));
+        
+        // Execute search (reuse existing logic)
+        EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
+        boolean canSeeAllUsers = accessControlService.authenticatedUserHasAnyGivenPermissions(
+                Permission.VIEW_EXTERNAL_USER, Permission.VIEW_INTERNAL_USER);
+        boolean internal = accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER);
+        
+        PaginatedUsers paginatedUsers;
+        
+        if (canSeeAllUsers) {
+            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, null, showFirmAdmins,
+                    showMultiFirmUsers);
+            paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
+        } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)) {
+            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.INTERNAL,
+                    showFirmAdmins, showMultiFirmUsers);
+            paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
+        } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER) && internal) {
+            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.EXTERNAL,
+                    showFirmAdmins, showMultiFirmUsers);
+            paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
+        } else {
+            // External user - restrict to their firm only
+            Optional<FirmDto> optionalFirm = firmService.getUserFirm(entraUser);
+            if (optionalFirm.isPresent()) {
+                FirmSearchForm searchForm = Optional.ofNullable(firmSearchForm)
+                        .orElse(FirmSearchForm.builder().build());
+                searchForm.setSelectedFirmId(optionalFirm.get().getId());
+                UserSearchCriteria searchCriteria = new UserSearchCriteria(search, searchForm, UserType.EXTERNAL,
+                        showFirmAdmins, showMultiFirmUsers);
+                paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
+            } else {
+                paginatedUsers = new PaginatedUsers();
+            }
+        }
+        
+        // Return JSON response
+        Map<String, Object> response = new HashMap<>();
+        response.put("users", paginatedUsers.getUsers());
+        response.put("totalUsers", paginatedUsers.getTotalUsers());
+        response.put("totalPages", paginatedUsers.getTotalPages());
+        response.put("currentPage", page);
+        response.put("pageSize", size);
+        
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -608,6 +703,60 @@ public class UserController {
 
         // Check feature flag to determine next step
         return "redirect:/admin/user/create/multi-firm";
+    }
+
+    @PostMapping(value = "/user/create/details", consumes = "application/json")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
+    @ResponseBody
+    public ResponseEntity<?> postUserJson(@RequestBody UserDetailsForm userDetailsForm, 
+                                         HttpSession session) {
+        
+        EntraUserDto user = (EntraUserDto) session.getAttribute("user");
+        if (Objects.isNull(user)) {
+            user = new EntraUserDto();
+        }
+        
+        // Validate email
+        Map<String, String> errors = new HashMap<>();
+        
+        if (Objects.nonNull(userDetailsForm.getEmail()) && !userDetailsForm.getEmail().isEmpty()) {
+            if (userService.userExistsByEmail(userDetailsForm.getEmail())) {
+                if (userService.isMultiFirmUserByEmail(userDetailsForm.getEmail())) {
+                    errors.put("email", "This email address is already registered as a multi-firm user");
+                } else {
+                    errors.put("email", "Email address already exists");
+                }
+            }
+
+            if (!emailValidationService.isValidEmailDomain(userDetailsForm.getEmail())) {
+                errors.put("email", "The email address domain is not valid or cannot receive emails.");
+            }
+        }
+        
+        // Validate other fields
+        if (Objects.isNull(userDetailsForm.getFirstName()) || userDetailsForm.getFirstName().trim().isEmpty()) {
+            errors.put("firstName", "First name is required");
+        }
+        
+        if (Objects.isNull(userDetailsForm.getLastName()) || userDetailsForm.getLastName().trim().isEmpty()) {
+            errors.put("lastName", "Last name is required");
+        }
+        
+        if (!errors.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("errors", errors));
+        }
+        
+        // Update user object
+        user.setEmail(userDetailsForm.getEmail());
+        user.setFirstName(userDetailsForm.getFirstName());
+        user.setLastName(userDetailsForm.getLastName());
+        
+        // Store in session
+        session.setAttribute("user", user);
+        session.setAttribute("isUserManager", userDetailsForm.getUserManager());
+        session.removeAttribute("createUserDetailsModel");
+        
+        return ResponseEntity.ok(Map.of("success", true, "redirectUrl", "/admin/user/create/multi-firm"));
     }
 
     @GetMapping("/user/create/multi-firm")

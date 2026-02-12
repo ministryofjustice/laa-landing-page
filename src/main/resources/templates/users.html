@@ -952,6 +952,145 @@
         </div>
         </div>
     </main>
+
+    <script th:if="${ajaxFormSubmissionEnabled}">
+        // Handle search form submission via AJAX
+        document.getElementById('search-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            performSearch();
+        });
+
+        // Handle firm admins form submission via AJAX
+        document.getElementById('firm-admins-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            performSearch();
+        });
+
+        function performSearch() {
+            // Collect all search parameters
+            const searchData = {
+                search: document.querySelector('input[name="search"]')?.value || '',
+                size: parseInt(document.querySelector('input[name="size"]')?.value) || 10,
+                page: parseInt(document.querySelector('input[name="page"]')?.value) || 1,
+                sort: document.querySelector('input[name="sort"]')?.value || null,
+                direction: document.querySelector('input[name="direction"]')?.value || null,
+                usertype: document.querySelector('input[name="usertype"]')?.value || null,
+                showFirmAdmins: document.querySelector('input[name="showFirmAdmins"]')?.checked || false,
+                showMultiFirmUsers: document.querySelector('input[name="showMultiFirmUsers"]')?.checked || false,
+                firmSearch: {
+                    firmSearch: document.querySelector('input[name="firmSearchForm.firmSearch"]')?.value || '',
+                    selectedFirmId: document.querySelector('input[name="firmSearchForm.selectedFirmId"]')?.value || null
+                }
+            };
+
+            // Submit search via AJAX
+            fetch('/admin/users/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify(searchData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.users) {
+                    updateUserTable(data);
+                    updatePagination(data);
+                } else {
+                    console.error('Invalid response format:', data);
+                    // Fallback to regular form submission
+                    fallbackToRegularSubmission();
+                }
+            })
+            .catch(error => {
+                console.error('Search error:', error);
+                // Fallback to regular form submission
+                fallbackToRegularSubmission();
+            });
+        }
+
+        function updateUserTable(data) {
+            // Update the user table with new results
+            const tbody = document.querySelector('.govuk-table__body');
+            if (!tbody) return;
+
+            tbody.innerHTML = '';
+            
+            data.users.forEach(user => {
+                const row = document.createElement('tr');
+                row.className = 'govuk-table__row';
+                
+                row.innerHTML = `
+                    <td class="govuk-table__cell">
+                        <a href="/admin/users/manage/${user.id}" class="govuk-link">${user.firstName} ${user.lastName}</a>
+                    </td>
+                    <td class="govuk-table__cell">${user.email}</td>
+                    <td class="govuk-table__cell">${user.firmName || ''}</td>
+                    <td class="govuk-table__cell">${user.userType || ''}</td>
+                    <td class="govuk-table__cell">${user.status || ''}</td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+
+            // Update result count
+            const resultCount = document.querySelector('.govuk-body');
+            if (resultCount && resultCount.textContent.includes('results')) {
+                resultCount.innerHTML = `Showing <b>${data.users.length}</b> of <b>${data.totalUsers}</b> results`;
+            }
+        }
+
+        function updatePagination(data) {
+            // Update pagination if it exists
+            const pagination = document.querySelector('.moj-pagination');
+            if (pagination && data.totalPages > 1) {
+                // This would need more complex logic to rebuild pagination
+                // For now, just update the current page info
+                console.log(`Page ${data.currentPage} of ${data.totalPages}`);
+            }
+        }
+
+        function fallbackToRegularSubmission() {
+            // Remove event listeners and submit normally
+            const searchForm = document.getElementById('search-form');
+            const firmAdminsForm = document.getElementById('firm-admins-form');
+            
+            searchForm.removeEventListener('submit', arguments.callee);
+            firmAdminsForm.removeEventListener('submit', arguments.callee);
+            
+            // Submit the form that was originally triggered
+            if (document.activeElement && document.activeElement.form) {
+                document.activeElement.form.submit();
+            } else {
+                searchForm.submit();
+            }
+        }
+
+        // Handle autocomplete form submissions
+        const originalSubmitHandlers = [];
+        document.querySelectorAll('form').forEach(form => {
+            if (form.id === 'search-form' || form.id === 'firm-admins-form') {
+                // Already handled above
+                return;
+            }
+            
+            const originalHandler = form.onsubmit;
+            if (originalHandler) {
+                originalSubmitHandlers.push({ form, handler: originalHandler });
+                form.onsubmit = function(e) {
+                    // Check if this is a search-related submission
+                    if (this.action.includes('/admin/users')) {
+                        e.preventDefault();
+                        performSearch();
+                    } else {
+                        // Let other forms submit normally
+                        return originalHandler.call(this, e);
+                    }
+                };
+            }
+        });
+    </script>
 </body>
 
 </html>
