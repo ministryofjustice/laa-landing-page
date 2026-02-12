@@ -390,12 +390,12 @@ class AuditControllerTest {
 
     @Test
     void displayAuditTable_withInvalidAppId_logsError() {
+        when(authenticatedUser.getCurrentEntraUser(userService)).thenReturn(mock(EntraUser.class));
         // Given
         String selectedAppId = "notAValidUUID";
         when(userService.getAuditUsers(anyString(), any(), any(), eq(null), any(), anyInt(), anyInt(),
                 anyString(), anyString())).thenReturn(mockPaginatedUsers);
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
-        when(authenticatedUser.getCurrentEntraUser(userService)).thenReturn(mock(EntraUser.class));
         ListAppender<ILoggingEvent> listAppender = LogMonitoring
                 .addListAppenderToLogger(AuditTableSearchCriteria.class);
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
@@ -416,12 +416,12 @@ class AuditControllerTest {
 
     @Test
     void displayAuditTable_withInvalidUserType_logsError() {
+        when(authenticatedUser.getCurrentEntraUser(userService)).thenReturn(mock(EntraUser.class));
         // Given
         String userType = "invalidUserType";
         when(userService.getAuditUsers(anyString(), any(), any(), any(), eq(null), anyInt(), anyInt(),
                 anyString(), anyString())).thenReturn(mockPaginatedUsers);
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
-        when(authenticatedUser.getCurrentEntraUser(userService)).thenReturn(mock(EntraUser.class));
         ListAppender<ILoggingEvent> listAppender = LogMonitoring
                 .addListAppenderToLogger(AuditTableSearchCriteria.class);
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
@@ -510,9 +510,9 @@ class AuditControllerTest {
         when(userService.getAuditUsers(anyString(), any(), any(), eq(null), any(), anyInt(), anyInt(),
                 anyString(), anyString())).thenReturn(mockPaginatedUsers);
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
-        when(authenticatedUser.getCurrentEntraUser(userService)).thenReturn(mock(EntraUser.class));
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
         criteria.setSelectedAppId(selectedAppId);
+        when(authenticatedUser.getCurrentEntraUser(userService)).thenReturn(mock(EntraUser.class));
 
         // When
         String viewName = auditController.displayAuditTable(criteria, model);
@@ -833,7 +833,7 @@ class AuditControllerTest {
     }
 
     @Test
-    void downloadAuditCSV_shouldReturnNoErrors() {
+    void downloadAuditCsv_shouldReturnSuccess() {
 
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
         criteria.setSearch("TestSearch");
@@ -861,10 +861,10 @@ class AuditControllerTest {
                 .build();
 
         when(userService.getAuditUsers(
-                eq("TestSearch"), isNull(), isNull(), isNull(), isNull(), eq(1), eq(500), eq("name"), eq("asc"))).thenReturn(page1);
+                eq("TestSearch"), any(), any(), any(), any(), eq(1), eq(500), eq("name"), eq("asc"))).thenReturn(page1);
 
         when(userService.getAuditUsers(
-                eq("TestSearch"), isNull(), isNull(), isNull(), isNull(), eq(2), eq(500), eq("name"), eq("asc"))).thenReturn(page2);
+                eq("TestSearch"), any(), any(), any(), any(), eq(2), eq(500), eq("name"), eq("asc"))).thenReturn(page2);
 
         byte[] csvBytes = "Name,Email\nP1,p1@example.com\n".getBytes(java.nio.charset.StandardCharsets.UTF_8);
         AuditExportService.AuditCsvExport export = new AuditExportService.AuditCsvExport("audit.csv", csvBytes);
