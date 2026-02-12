@@ -1,3 +1,4 @@
 <div>
     <h2 th:text="${firm.getName()}"></h2>
+    <span th:if="${!firm.enabled}" class="govuk-tag govuk-tag--grey">Disabled - Temporarily Unavailable</span>
 </div>

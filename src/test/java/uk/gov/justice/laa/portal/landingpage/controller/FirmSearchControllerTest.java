@@ -1,16 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.core.Authentication;
-import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.service.FirmService;
-import uk.gov.justice.laa.portal.landingpage.service.LoginService;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -19,10 +8,21 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
+import org.mockito.Mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.Authentication;
+
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.service.FirmService;
+import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 
 @ExtendWith(MockitoExtension.class)
 class FirmSearchControllerTest {
@@ -46,7 +46,7 @@ class FirmSearchControllerTest {
         // Arrange
         String searchQuery = "Firm 1";
         EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
-        FirmDto firm1 = new FirmDto(UUID.randomUUID(), "Test Firm 1", "F1", null, false, false);
+        FirmDto firm1 = new FirmDto(UUID.randomUUID(), "Test Firm 1", "F1", null, false, false, false);
 
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         when(firmService.getUserAccessibleFirms(entraUser, searchQuery)).thenReturn(List.of(firm1));
@@ -64,7 +64,7 @@ class FirmSearchControllerTest {
         // Arrange
         String searchQuery = "F2";
         EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
-        FirmDto firm2 = new FirmDto(UUID.randomUUID(), "Test Firm 2", "F2", null, false, false);
+        FirmDto firm2 = new FirmDto(UUID.randomUUID(), "Test Firm 2", "F2", null, false, false, false);
 
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         when(firmService.getUserAccessibleFirms(entraUser, searchQuery)).thenReturn(List.of(firm2));
@@ -83,8 +83,8 @@ class FirmSearchControllerTest {
         String searchQuery = "";
         EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
         List<FirmDto> expectedFirms = List.of(
-                new FirmDto(UUID.randomUUID(), "Firm A", "F1", null, false, false),
-                new FirmDto(UUID.randomUUID(), "Firm B", "F2", null, false, false));
+                new FirmDto(UUID.randomUUID(), "Firm A", "F1", null, false, false, false),
+                new FirmDto(UUID.randomUUID(), "Firm B", "F2", null, false, false, false));
 
         // Act
         List<FirmDto> result = firmSearchController.getFirms(authentication, searchQuery);
