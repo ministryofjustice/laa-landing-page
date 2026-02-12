@@ -13,12 +13,12 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -28,11 +28,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.cache.Cache;
 import org.springframework.cache.Cache.ValueWrapper;
 import org.springframework.cache.CacheManager;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDirectoryDto;
@@ -101,9 +101,10 @@ class FirmServiceTest {
                 .firmDirectories(List.of(FirmDirectoryDto.builder()
                                 .firmName("firm1")
                                 .firmType(FirmType.LEGAL_SERVICES_PROVIDER.getValue())
+                                .enabled(true)
                         .build()))
                 .build();
-        when(firmRepository.getFirmsPage(any(), any(), any())).thenReturn(firmPage);
+        when(firmRepository.getFirmsPage(any(), any(), anyBoolean(), any())).thenReturn(firmPage);
         PaginatedFirmDirectory firmPaginator = firmService.getFirmsPage("", FirmType.LEGAL_SERVICES_PROVIDER.name(), 1, 10, "sort", Sort.Direction.DESC.name());
         assertThat(firmPaginator.getFirmDirectories())
                 .isEqualTo(paginatorExpected.getFirmDirectories());
@@ -122,9 +123,10 @@ class FirmServiceTest {
                 .firmDirectories(List.of(FirmDirectoryDto.builder()
                         .firmName("firm1")
                         .firmType(FirmType.LEGAL_SERVICES_PROVIDER.getValue())
+                        .enabled(true)
                         .build()))
                 .build();
-        when(firmRepository.getFirmsPage(any(), any(), any())).thenReturn(firmPage);
+        when(firmRepository.getFirmsPage(any(), any(), anyBoolean(), any())).thenReturn(firmPage);
         PaginatedFirmDirectory firmPaginator = firmService.getFirmsPage("", null, 1, 10, "sort", Sort.Direction.DESC.name());
         assertThat(firmPaginator.getFirmDirectories())
                 .isEqualTo(paginatorExpected.getFirmDirectories());
@@ -291,9 +293,9 @@ class FirmServiceTest {
                     .build();
 
             allFirms = List.of(
-                    new FirmDto(UUID.randomUUID(), "Test Firm 1", "TF1", null, false, false),
-                    new FirmDto(UUID.randomUUID(), "Test Firm 2", "TF2", null, false, false),
-                    new FirmDto(UUID.randomUUID(), "Another Firm", "AF1", null, false, false)
+                new FirmDto(UUID.randomUUID(), "Test Firm 1", "TF1", null, false, false, false),
+                new FirmDto(UUID.randomUUID(), "Test Firm 2", "TF2", null, false, false, false),
+                new FirmDto(UUID.randomUUID(), "Another Firm", "AF1", null, false, false, false)
             );
 
             // Setup cache mock

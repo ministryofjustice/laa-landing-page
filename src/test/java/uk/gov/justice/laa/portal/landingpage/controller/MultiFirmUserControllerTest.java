@@ -1374,7 +1374,10 @@ public class MultiFirmUserControllerTest {
         String view = controller.checkAnswerAndAddProfile(model, authentication, session);
 
         assertThat(view).isEqualTo("multi-firm-user/add-profile-check-answers");
-        assertThat(model.getAttribute("firm")).isEqualTo(profileDto.getFirm());
+        FirmDto expectedFirm = new FirmDto(profileDto.getFirm().getId(), profileDto.getFirm().getName(), 
+                profileDto.getFirm().getCode(), profileDto.getFirm().getType(), true, 
+                profileDto.getFirm().isSkipFirmSelection(), profileDto.getFirm().isCanChange());
+        assertThat(model.getAttribute("firm")).isEqualTo(expectedFirm);
         assertThat(model.getAttribute("userOffices")).isInstanceOf(List.class);
         assertThat(model.getAttribute("selectedAppRole")).isInstanceOf(List.class);
         assertThat(model.getAttribute("externalUser")).isEqualTo(true);
