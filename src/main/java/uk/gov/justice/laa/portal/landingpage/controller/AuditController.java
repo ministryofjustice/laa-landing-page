@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -41,6 +42,7 @@ import uk.gov.justice.laa.portal.landingpage.service.AuditExportService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.service.AuditExportService.AuditCsvExport;
 
 @Slf4j
 @Controller
@@ -213,27 +215,67 @@ public class AuditController {
         return "user-audit/delete-user-success";
     }
 
-@GetMapping(value = "/users/audit/{id}/download", produces = "text/csv")
-public ResponseEntity<byte[]> downloadAuditCsv(@PathVariable String id, @ModelAttribute AuditTableSearchCriteria criteria){
+//@GetMapping(value = "/users/audit/download", produces = "text/csv")
+//public ResponseEntity<byte[]> downloadAuditCsv(@ModelAttribute AuditTableSearchCriteria criteria){
+//
+//        PaginatedAuditUsers page = userService.getAuditUsers(criteria.getSearch(), criteria.getSelectedFirmId(),
+//                criteria.getSilasRole(),criteria.getSelectedAppId(), criteria.getSelectedUserType(), 1,
+//                Integer.MAX_VALUE, criteria.getSort(), criteria.getDirection());
+//
+//        List<AuditUserDto> data = page.getUsers();
+//        AuditExportService.AuditCsvExport export =
+//                auditExportService.downloadAuditCsv(data);
+//        log.info("Audit CSV export complete");
+//
+//        HttpHeaders headers = new HttpHeaders();
+//        headers.setContentType(MediaType.parseMediaType("text/csv"));
+//        headers.setContentDisposition(
+//                ContentDisposition.attachment().filename(export.filename()).build()
+//        );
+//        return ResponseEntity
+//                .ok()
+//                .headers(headers)
+//                .body(export.bytes());
+//}
 
+    @GetMapping(value = "/users/audit/download", produces = "text/csv")
+    public ResponseEntity<byte[]> downloadAuditCsv(@ModelAttribute AuditTableSearchCriteria criteria) {
 
-        PaginatedAuditUsers page = userService.getAuditUsers(criteria.getSearch(), criteria.getSelectedFirmId(),
-                criteria.getSilasRole(),criteria.getSelectedAppId(), criteria.getSelectedUserType(), 1,
-                Integer.MAX_VALUE, criteria.getSort(), criteria.getDirection());
+        final int pageSize = 500;
+        int page = 1;
 
-        List<AuditUserDto> data = page.getUsers();
-        AuditExportService.AuditCsvExport export =
-                auditExportService.downloadAuditCsv(id, data);
+        List<AuditUserDto> firmData = new ArrayList<>(pageSize);
+
+        PaginatedAuditUsers result;
+        do {
+            result = userService.getAuditUsers(
+                    criteria.getSearch(),
+                    criteria.getSelectedFirmId(),
+                    criteria.getSilasRole(),
+                    criteria.getSelectedAppId(),
+                    criteria.getSelectedUserType(),
+                    page,
+                    pageSize,
+                    criteria.getSort(),
+                    criteria.getDirection()
+            );
+
+            firmData.addAll(result.getUsers());
+            page++;
+
+        } while (!isLastPage(result, pageSize));
+
+        AuditCsvExport export = auditExportService.downloadAuditCsv(firmData);
         log.info("Audit CSV export complete");
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.parseMediaType("text/csv"));
-        headers.setContentDisposition(
-                ContentDisposition.attachment().filename(export.filename()).build()
-        );
-        return ResponseEntity
-                .ok()
-                .headers(headers)
-                .body(export.bytes());
-}
+        headers.setContentDisposition(ContentDisposition.attachment().filename(export.filename()).build());
+
+        return ResponseEntity.ok().headers(headers).body(export.bytes());
+    }
+
+    private boolean isLastPage(PaginatedAuditUsers page, int size) {
+        return page.getUsers().size() < size;
+    }
 }

@@ -1000,7 +1000,7 @@
              th:if="${exportCsv and firmSearch.getSelectedFirmId() != null and firmSearch.getSelectedFirmId() != ''}">
             <a class="govuk-button js-export-csv"
                th:attr="data-users-empty=${#lists.isEmpty(users)}"
-               th:href="@{/admin/users/audit/{id}/download(id=${firmSearch.selectedFirmId},selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole},selectedAppId=${selectedAppId},selectedUserType=${selectedUserType})}">
+               th:href="@{/admin/users/audit/download(selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole},selectedAppId=${selectedAppId},selectedUserType=${selectedUserType})}">
                 Export as CSV
             </a>
         </div>

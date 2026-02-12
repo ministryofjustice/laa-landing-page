@@ -19,22 +19,23 @@ public class AuditExportService {
 
     private final DateTimeFormatter fileTimestamp = DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmm");
 
-    public AuditCsvExport downloadAuditCsv(String id, List<AuditUserDto> data) {
+    public AuditCsvExport downloadAuditCsv(List<AuditUserDto> firmData) {
 
         String timestamp = LocalDateTime.now().format(fileTimestamp);
-        String filename = "user-access-audit_" + id + "_" + timestamp + ".csv";
-        String csv = buildCsv(id, data);
+        String firmCode = firmData.stream().findFirst().map(AuditUserDto::getFirmCode).orElse("");
+        String filename = "user-access-audit_" + firmCode  + "_" + timestamp + "_UTC.csv";
+        String csv = buildCsv(firmData);
         return new AuditCsvExport(filename, csv.getBytes(StandardCharsets.UTF_8));
     }
 
-    private String buildCsv(String id, List<AuditUserDto> data) {
+    private String buildCsv(List<AuditUserDto> firmData) {
         StringWriter stringWriter = new StringWriter();
 
         try (BufferedWriter writer = new BufferedWriter(stringWriter)) {
             writer.write("Name,Email,Firm Name,Firm Code,Multi-firm");
             writer.write('\n');
 
-            for (AuditUserDto user : data) {
+            for (AuditUserDto user : firmData) {
                 writer.write(csvValue(toStringSafe(user.getName())));
                 writer.write(',');
                 writer.write(csvValue(toStringSafe(user.getEmail())));
