@@ -133,5 +133,148 @@ class DataProviderServiceTest {
             assertThat(result.getFirmsCreated()).isZero();
             assertThat(result.getFirmsUpdated()).isZero();
         }
+
+        @Test
+        void shouldSetShutdownFlagOnPreDestroy() {
+            // When
+            dataProviderService.onShutdown();
+
+            // Then - flag should be set (verified indirectly by async abort test above)
+            // This test documents the shutdown lifecycle behavior
+        }
+    }
+
+    @Nested
+    class UtilityMethodTests {
+
+        @Test
+        void testEqualsWithBothNull() throws Exception {
+            // Use reflection to access private equals method for testing
+            java.lang.reflect.Method method = DataProviderService.class.getDeclaredMethod("equals", String.class, String.class);
+            method.setAccessible(true);
+
+            // When
+            boolean result = (boolean) method.invoke(dataProviderService, null, null);
+
+            // Then
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        void testEqualsWithFirstNull() throws Exception {
+            // Use reflection to access private equals method
+            java.lang.reflect.Method method = DataProviderService.class.getDeclaredMethod("equals", String.class, String.class);
+            method.setAccessible(true);
+
+            // When
+            boolean result = (boolean) method.invoke(dataProviderService, null, "test");
+
+            // Then
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        void testEqualsWithSecondNull() throws Exception {
+            // Use reflection to access private equals method
+            java.lang.reflect.Method method = DataProviderService.class.getDeclaredMethod("equals", String.class, String.class);
+            method.setAccessible(true);
+
+            // When
+            boolean result = (boolean) method.invoke(dataProviderService, "test", null);
+
+            // Then
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        void testEqualsWithSameValues() throws Exception {
+            // Use reflection to access private equals method
+            java.lang.reflect.Method method = DataProviderService.class.getDeclaredMethod("equals", String.class, String.class);
+            method.setAccessible(true);
+
+            // When
+            boolean result = (boolean) method.invoke(dataProviderService, "test", "test");
+
+            // Then
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        void testEqualsWithDifferentValues() throws Exception {
+            // Use reflection to access private equals method
+            java.lang.reflect.Method method = DataProviderService.class.getDeclaredMethod("equals", String.class, String.class);
+            method.setAccessible(true);
+
+            // When
+            boolean result = (boolean) method.invoke(dataProviderService, "test1", "test2");
+
+            // Then
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        void testEmptyToNullWithNull() throws Exception {
+            // Use reflection to access private emptyToNull method
+            java.lang.reflect.Method method = DataProviderService.class.getDeclaredMethod("emptyToNull", String.class);
+            method.setAccessible(true);
+
+            // When
+            String result = (String) method.invoke(dataProviderService, (String) null);
+
+            // Then
+            assertThat(result).isNull();
+        }
+
+        @Test
+        void testEmptyToNullWithEmptyString() throws Exception {
+            // Use reflection to access private emptyToNull method
+            java.lang.reflect.Method method = DataProviderService.class.getDeclaredMethod("emptyToNull", String.class);
+            method.setAccessible(true);
+
+            // When
+            String result = (String) method.invoke(dataProviderService, "");
+
+            // Then
+            assertThat(result).isNull();
+        }
+
+        @Test
+        void testEmptyToNullWithWhitespace() throws Exception {
+            // Use reflection to access private emptyToNull method
+            java.lang.reflect.Method method = DataProviderService.class.getDeclaredMethod("emptyToNull", String.class);
+            method.setAccessible(true);
+
+            // When
+            String result = (String) method.invoke(dataProviderService, "   ");
+
+            // Then
+            assertThat(result).isNull();
+        }
+
+        @Test
+        void testEmptyToNullWithValue() throws Exception {
+            // Use reflection to access private emptyToNull method
+            java.lang.reflect.Method method = DataProviderService.class.getDeclaredMethod("emptyToNull", String.class);
+            method.setAccessible(true);
+
+            // When
+            String result = (String) method.invoke(dataProviderService, "test");
+
+            // Then
+            assertThat(result).isEqualTo("test");
+        }
+
+        @Test
+        void testEmptyToNullWithValueAndWhitespace() throws Exception {
+            // Use reflection to access private emptyToNull method
+            java.lang.reflect.Method method = DataProviderService.class.getDeclaredMethod("emptyToNull", String.class);
+            method.setAccessible(true);
+
+            // When
+            String result = (String) method.invoke(dataProviderService, "  test  ");
+
+            // Then
+            assertThat(result).isEqualTo("  test  "); // Value returned as-is (not trimmed)
+        }
     }
 }

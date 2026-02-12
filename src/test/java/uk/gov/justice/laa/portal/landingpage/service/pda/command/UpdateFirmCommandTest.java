@@ -15,6 +15,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import uk.gov.justice.laa.portal.landingpage.dto.PdaFirmData;
 import uk.gov.justice.laa.portal.landingpage.dto.PdaSyncResultDto;
@@ -500,6 +501,308 @@ class UpdateFirmCommandTest {
             // Then
             assertThat(existingFirm.getParentFirm()).isNull();
             assertThat(result.getFirmsUpdated()).isEqualTo(0);
+            verify(firmRepository, never()).save(any());
+        }
+    }
+
+    @Nested
+    class FirmReenablingTests {
+
+        @Test
+        void shouldReenableDisabledFirm() {
+            // Given
+            Firm existingFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("12345")
+                .name("Test Firm")
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .enabled(false) // Disabled
+                .build();
+
+            PdaFirmData pdaFirm = PdaFirmData.builder()
+                .firmNumber("12345")
+                .firmName("Test Firm")
+                .firmType("Legal Services Provider")
+                .build();
+
+            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm, firmsByCode);
+
+            // When
+            command.execute(result);
+
+            // Then
+            assertThat(existingFirm.getEnabled()).isTrue();
+            assertThat(result.getFirmsReactivated()).isEqualTo(1);
+            assertThat(result.getFirmsUpdated()).isEqualTo(1);
+            verify(firmRepository).save(existingFirm);
+        }
+
+        @Test
+        void shouldNotCountAsReactivatedIfAlreadyEnabled() {
+            // Given
+            Firm existingFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("12345")
+                .name("Old Name")
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .enabled(true) // Already enabled
+                .build();
+
+            PdaFirmData pdaFirm = PdaFirmData.builder()
+                .firmNumber("12345")
+                .firmName("New Name")
+                .firmType("Legal Services Provider")
+                .build();
+
+            when(firmRepository.findFirmByName("New Name")).thenReturn(null);
+
+            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm, firmsByCode);
+
+            // When
+            command.execute(result);
+
+            // Then
+            assertThat(result.getFirmsReactivated()).isEqualTo(0);
+            assertThat(result.getFirmsUpdated()).isEqualTo(1); // Updated but not reactivated
+        }
+    }
+
+    @Nested
+    class ErrorHandlingTests {
+
+        @Test
+        void shouldHandleEmptyFirmType() {
+            // Given
+            Firm existingFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("12345")
+                .name("Test Firm")
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .build();
+
+            PdaFirmData pdaFirm = PdaFirmData.builder()
+                .firmNumber("12345")
+                .firmName("Test Firm")
+                .firmType("") // Empty firmType
+                .build();
+
+            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm, firmsByCode);
+
+            // When
+            command.execute(result);
+
+            // Then
+            assertThat(result.getFirmsUpdated()).isEqualTo(0);
+            assertThat(result.getErrors()).hasSize(1);
+            assertThat(result.getErrors().get(0)).contains("firmType is empty or null");
+            verify(firmRepository, never()).save(any());
+        }
+
+        @Test
+        void shouldHandleNullFirmType() {
+            // Given
+            Firm existingFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("12345")
+                .name("Test Firm")
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .build();
+
+            PdaFirmData pdaFirm = PdaFirmData.builder()
+                .firmNumber("12345")
+                .firmName("Test Firm")
+                .firmType(null) // Null firmType
+                .build();
+
+            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm, firmsByCode);
+
+            // When
+            command.execute(result);
+
+            // Then
+            assertThat(result.getFirmsUpdated()).isEqualTo(0);
+            assertThat(result.getErrors()).hasSize(1);
+            assertThat(result.getErrors().get(0)).contains("firmType is empty or null");
+            verify(firmRepository, never()).save(any());
+        }
+
+        @Test
+        void shouldHandleDataIntegrityViolationWithDuplicateName() {
+            // Given
+            Firm existingFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("12345")
+                .name("Old Name")
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .build();
+
+            PdaFirmData pdaFirm = PdaFirmData.builder()
+                .firmNumber("12345")
+                .firmName("Duplicate Name")
+                .firmType("Legal Services Provider")
+                .build();
+
+            when(firmRepository.findFirmByName("Duplicate Name")).thenReturn(null);
+            when(firmRepository.save(any(Firm.class)))
+                .thenThrow(new DataIntegrityViolationException("firm_name_key constraint violation"));
+
+            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm, firmsByCode);
+
+            // When
+            command.execute(result);
+
+            // Then
+            assertThat(result.getFirmsUpdated()).isEqualTo(0);
+            assertThat(result.getWarnings()).hasSize(1);
+            assertThat(result.getWarnings().get(0)).contains("Duplicate firm name");
+            assertThat(result.getWarnings().get(0)).contains("update skipped");
+            assertThat(result.getErrors()).isEmpty(); // Warning, not error
+        }
+
+        @Test
+        void shouldHandleDataIntegrityViolationForOtherReasons() {
+            // Given
+            Firm existingFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("12345")
+                .name("Old Name")
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .build();
+
+            PdaFirmData pdaFirm = PdaFirmData.builder()
+                .firmNumber("12345")
+                .firmName("New Name")
+                .firmType("Legal Services Provider")
+                .build();
+
+            when(firmRepository.findFirmByName("New Name")).thenReturn(null);
+            when(firmRepository.save(any(Firm.class)))
+                .thenThrow(new DataIntegrityViolationException("other constraint violation"));
+
+            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm, firmsByCode);
+
+            // When
+            command.execute(result);
+
+            // Then
+            assertThat(result.getFirmsUpdated()).isEqualTo(0);
+            assertThat(result.getErrors()).hasSize(1);
+            assertThat(result.getErrors().get(0)).contains("Data integrity violation");
+        }
+
+        @Test
+        void shouldHandleGenericExceptionWithDuplicateName() {
+            // Given
+            Firm existingFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("12345")
+                .name("Old Name")
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .build();
+
+            PdaFirmData pdaFirm = PdaFirmData.builder()
+                .firmNumber("12345")
+                .firmName("Duplicate Name")
+                .firmType("Legal Services Provider")
+                .build();
+
+            when(firmRepository.findFirmByName("Duplicate Name")).thenReturn(null);
+            when(firmRepository.save(any(Firm.class)))
+                .thenThrow(new RuntimeException("firm_name_key constraint violation"));
+
+            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm, firmsByCode);
+
+            // When
+            command.execute(result);
+
+            // Then
+            assertThat(result.getFirmsUpdated()).isEqualTo(0);
+            assertThat(result.getWarnings()).hasSize(1);
+            assertThat(result.getWarnings().get(0)).contains("Duplicate firm name");
+            assertThat(result.getErrors()).isEmpty(); // Warning, not error
+        }
+
+        @Test
+        void shouldHandleGenericException() {
+            // Given
+            Firm existingFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("12345")
+                .name("Old Name")
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .build();
+
+            PdaFirmData pdaFirm = PdaFirmData.builder()
+                .firmNumber("12345")
+                .firmName("New Name")
+                .firmType("Legal Services Provider")
+                .build();
+
+            when(firmRepository.findFirmByName("New Name")).thenReturn(null);
+            when(firmRepository.save(any(Firm.class)))
+                .thenThrow(new RuntimeException("Database error"));
+
+            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm, firmsByCode);
+
+            // When
+            command.execute(result);
+
+            // Then
+            assertThat(result.getFirmsUpdated()).isEqualTo(0);
+            assertThat(result.getErrors()).hasSize(1);
+            assertThat(result.getErrors().get(0)).contains("Failed to update firm");
+        }
+    }
+
+    @Nested
+    class MultiLevelHierarchyTests {
+
+        @Test
+        void shouldRejectParentWithExistingParent() {
+            // Given
+            Firm grandparentFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("GRANDPARENT")
+                .name("Grandparent Firm")
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .build();
+
+            Firm parentFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("PARENT")
+                .name("Parent Firm")
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .parentFirm(grandparentFirm) // Already has a parent
+                .build();
+
+            Firm existingFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("12345")
+                .name("Test Firm")
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .parentFirm(null)
+                .build();
+
+            PdaFirmData pdaFirm = PdaFirmData.builder()
+                .firmNumber("12345")
+                .firmName("Test Firm")
+                .firmType("Legal Services Provider")
+                .parentFirmNumber("PARENT")
+                .build();
+
+            firmsByCode.put("PARENT", parentFirm);
+
+            UpdateFirmCommand command = new UpdateFirmCommand(firmRepository, existingFirm, pdaFirm, firmsByCode);
+
+            // When
+            command.execute(result);
+
+            // Then
+            assertThat(existingFirm.getParentFirm()).isNull(); // Parent not set
+            assertThat(result.getFirmsUpdated()).isEqualTo(0);
+            assertThat(result.getWarnings()).hasSize(1);
+            assertThat(result.getWarnings().get(0)).contains("already has parent");
+            assertThat(result.getWarnings().get(0)).contains("multi-level hierarchy not allowed");
             verify(firmRepository, never()).save(any());
         }
     }

@@ -10,6 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -259,6 +260,108 @@ class CreateFirmCommandTest {
             Firm savedFirm = firmCaptor.getValue();
             // Parent should NOT be set during creation (handled in second pass)
             assertThat(savedFirm.getParentFirm()).isNull();
+        }
+    }
+
+    @Nested
+    class FirmTypeValidationTests {
+
+        @Test
+        void shouldRejectEmptyFirmType() {
+            // Given
+            PdaFirmData pdaFirm = PdaFirmData.builder()
+                .firmNumber("12345")
+                .firmName("Test Firm")
+                .firmType("") // Empty firmType
+                .build();
+
+            CreateFirmCommand command = new CreateFirmCommand(firmRepository, pdaFirm);
+
+            // When
+            command.execute(result);
+
+            // Then
+            assertThat(result.getFirmsCreated()).isEqualTo(0);
+            assertThat(result.getErrors()).hasSize(1);
+            assertThat(result.getErrors().get(0)).contains("firmType is empty or null");
+            verify(firmRepository, never()).save(any(Firm.class));
+        }
+
+        @Test
+        void shouldRejectNullFirmType() {
+            // Given
+            PdaFirmData pdaFirm = PdaFirmData.builder()
+                .firmNumber("12345")
+                .firmName("Test Firm")
+                .firmType(null) // Null firmType
+                .build();
+
+            CreateFirmCommand command = new CreateFirmCommand(firmRepository, pdaFirm);
+
+            // When
+            command.execute(result);
+
+            // Then
+            assertThat(result.getFirmsCreated()).isEqualTo(0);
+            assertThat(result.getErrors()).hasSize(1);
+            assertThat(result.getErrors().get(0)).contains("firmType is empty or null");
+            verify(firmRepository, never()).save(any(Firm.class));
+        }
+
+        @Test
+        void shouldRejectWhitespaceFirmType() {
+            // Given
+            PdaFirmData pdaFirm = PdaFirmData.builder()
+                .firmNumber("12345")
+                .firmName("Test Firm")
+                .firmType("   ") // Whitespace only
+                .build();
+
+            CreateFirmCommand command = new CreateFirmCommand(firmRepository, pdaFirm);
+
+            // When
+            command.execute(result);
+
+            // Then
+            assertThat(result.getFirmsCreated()).isEqualTo(0);
+            assertThat(result.getErrors()).hasSize(1);
+            assertThat(result.getErrors().get(0)).contains("firmType is empty or null");
+            verify(firmRepository, never()).save(any(Firm.class));
+        }
+    }
+
+    @Nested
+    class DuplicateCodeValidationTests {
+
+        @Test
+        void shouldRejectDuplicateCode() {
+            // Given
+            Firm existingFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("DUPLICATE")
+                .name("Existing Firm")
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .build();
+
+            PdaFirmData pdaFirm = PdaFirmData.builder()
+                .firmNumber("DUPLICATE")
+                .firmName("New Firm")
+                .firmType("Legal Services Provider")
+                .build();
+
+            when(firmRepository.findByCode("DUPLICATE")).thenReturn(existingFirm);
+
+            CreateFirmCommand command = new CreateFirmCommand(firmRepository, pdaFirm);
+
+            // When
+            command.execute(result);
+
+            // Then
+            assertThat(result.getFirmsCreated()).isEqualTo(0);
+            assertThat(result.getErrors()).hasSize(1);
+            assertThat(result.getErrors().get(0)).contains("code already exists");
+            assertThat(result.getErrors().get(0)).contains("DUPLICATE");
+            verify(firmRepository, never()).save(any(Firm.class));
         }
     }
 }
