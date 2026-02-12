@@ -47,7 +47,7 @@ public class AuditUserDto implements Serializable {
     private String firmAssociation;
 
     /**
-     * Firm code(s) or "None" if no profile Multiple firms separated by comma for multi-firm users
+     * Firm code(s) or "None" if no profile Multiple firm codes separated by comma for multi-firm users
      */
     private String firmCode;
 
