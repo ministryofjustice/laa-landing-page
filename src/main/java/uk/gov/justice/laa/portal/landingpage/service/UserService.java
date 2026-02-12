@@ -1629,7 +1629,7 @@ public class UserService {
         }
 
         Set<String> firmCodes = profiles.stream().map(UserProfile::getFirm).filter(Objects::nonNull)
-                .map(Firm::getName).collect(Collectors.toCollection(TreeSet::new));
+                .map(Firm::getCode).collect(Collectors.toCollection(TreeSet::new));
 
         if (firmCodes.isEmpty()) {
             return "Unknown";
