@@ -184,7 +184,6 @@ public class AdminController {
                                         Authentication authentication,
                                         Model model,
                                         HttpSession session) {
-        CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
         String appIdFromSession = getObjectFromHttpSession(session, "appId", String.class)
                 .orElseThrow(() -> new RuntimeException("App ID not found in session"));
         AppDetailsForm appDetailsForm = getObjectFromHttpSession(session, "appDetailsForm", AppDetailsForm.class)
@@ -203,6 +202,7 @@ public class AdminController {
 
         App updatedApp = appService.save(appDto);
 
+        CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
         UpdateAppDetailsAuditEvent updateAppDetailsAuditEvent = new UpdateAppDetailsAuditEvent(currentUserDto,
                 appName, updatedApp.isEnabled(), appDto.isEnabled(), updatedApp.getDescription(), appDto.getDescription());
         eventService.logEvent(updateAppDetailsAuditEvent);

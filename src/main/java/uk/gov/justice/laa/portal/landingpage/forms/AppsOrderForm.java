@@ -30,7 +30,9 @@ public class AppsOrderForm implements Serializable {
 
     @AssertTrue(message = "Two or more applications have the same ordinal. Each ordinal must be unique.")
     public boolean isOrdinalsUnique() {
-        if (apps == null || apps.isEmpty()) return true;
+        if (apps == null || apps.isEmpty()) {
+            return true;
+        }
 
         List<Integer> ordinals = apps.stream()
                 .map(AppOrderDetailsForm::getOrdinal)

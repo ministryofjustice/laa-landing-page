@@ -134,12 +134,12 @@ class AppServiceTest {
 
     @Test
     void updateAppsOrder_UpdatesAndReturnsSortedDtos() {
-        AppsOrderForm.AppOrderDetailsForm appOrderDetails = new AppsOrderForm.AppOrderDetailsForm(app.getId().toString(), 1);
-        List<AppsOrderForm.AppOrderDetailsForm> orderDetails = List.of(appOrderDetails);
         app.setOrdinal(1);
         when(appRepository.findAppsByAppType(AppType.LAA)).thenReturn(List.of(app));
         when(appRepository.saveAll(List.of(app))).thenReturn(List.of(app));
 
+        AppsOrderForm.AppOrderDetailsForm appOrderDetails = new AppsOrderForm.AppOrderDetailsForm(app.getId().toString(), 1);
+        List<AppsOrderForm.AppOrderDetailsForm> orderDetails = List.of(appOrderDetails);
         List<AppDto> result = appService.updateAppsOrder(orderDetails);
 
         assertThat(result).hasSize(1);
@@ -149,6 +149,7 @@ class AppServiceTest {
         verify(appRepository).findAppsByAppType(AppType.LAA);
         verify(appRepository).saveAll(List.of(app));
     }
+
     @Test
     void save_UpdatesAndReturnsUpdatedApp() {
         UUID appId = UUID.randomUUID();
