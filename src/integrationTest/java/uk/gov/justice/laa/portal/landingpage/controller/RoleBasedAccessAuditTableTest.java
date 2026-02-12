@@ -84,10 +84,10 @@ public class RoleBasedAccessAuditTableTest extends RoleBasedAccessIntegrationTes
     }
 
     @Test
-    public void testFirmUserManagerCanAccessAuditTableAndCanSeeLink() throws Exception {
+    public void testFirmUserManagerCannotAccessAuditTableAndCanSeeLink() throws Exception {
         EntraUser firmUserManager = externalOnlyUserManagers.getFirst();
-        testCanAccessAuditTable(firmUserManager, status().isOk());
-        testCanSeeAuditLink(firmUserManager, true);
+        testCanAccessAuditTable(firmUserManager,  status().is4xxClientError());
+        testCanSeeAuditLink(firmUserManager, false);
     }
 
     public void testCanAccessAuditTable(EntraUser loggedInUser, ResultMatcher expectedResult) throws Exception {
