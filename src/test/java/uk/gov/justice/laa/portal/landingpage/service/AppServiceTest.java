@@ -9,6 +9,7 @@ import org.modelmapper.ModelMapper;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
+import uk.gov.justice.laa.portal.landingpage.forms.AppsOrderForm;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 
 import java.util.Collections;
@@ -105,4 +106,81 @@ class AppServiceTest {
         verify(appRepository).findAppsByAppTypeAndEnabled(AppType.LAA, true);
     }
 
+    @Test
+    void findById_ReturnsMappedDto_WhenAppExists() {
+        UUID appId = UUID.randomUUID();
+        when(appRepository.findById(appId)).thenReturn(Optional.of(app));
+
+        Optional<AppDto> result = appService.findById(appId);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getName()).isEqualTo(app.getName());
+        assertThat(result.get().getDescription()).isEqualTo(app.getDescription());
+
+        verify(appRepository).findById(appId);
+    }
+
+    @Test
+    void findById_ReturnsEmpty_WhenAppDoesNotExist() {
+        UUID appId = UUID.randomUUID();
+        when(appRepository.findById(appId)).thenReturn(Optional.empty());
+
+        Optional<AppDto> result = appService.findById(appId);
+
+        assertThat(result).isEmpty();
+
+        verify(appRepository).findById(appId);
+    }
+
+    @Test
+    void updateAppsOrder_UpdatesAndReturnsSortedDtos() {
+        AppsOrderForm.AppOrderDetailsForm appOrderDetails = new AppsOrderForm.AppOrderDetailsForm(app.getId().toString(), 1);
+        List<AppsOrderForm.AppOrderDetailsForm> orderDetails = List.of(appOrderDetails);
+        app.setOrdinal(1);
+        when(appRepository.findAppsByAppType(AppType.LAA)).thenReturn(List.of(app));
+        when(appRepository.saveAll(List.of(app))).thenReturn(List.of(app));
+
+        List<AppDto> result = appService.updateAppsOrder(orderDetails);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.stream().findFirst().get().getName()).isEqualTo(app.getName());
+        assertThat(result.stream().findFirst().get().getDescription()).isEqualTo(app.getDescription());
+
+        verify(appRepository).findAppsByAppType(AppType.LAA);
+        verify(appRepository).saveAll(List.of(app));
+    }
+    @Test
+    void save_UpdatesAndReturnsUpdatedApp() {
+        UUID appId = UUID.randomUUID();
+        app.setId(appId);
+        appDto.setId(appId.toString());
+        appDto.setEnabled(true);
+        appDto.setDescription("Updated description");
+
+        when(appRepository.findById(appId)).thenReturn(Optional.of(app));
+        when(appRepository.save(app)).thenReturn(app);
+
+        App result = appService.save(appDto);
+
+        assertThat(result).isNotNull();
+        assertThat(result.isEnabled()).isTrue();
+        assertThat(result.getDescription()).isEqualTo("Updated description");
+
+        verify(appRepository).findById(appId);
+        verify(appRepository).save(app);
+    }
+
+    @Test
+    void save_ThrowsException_WhenAppNotFound() {
+        UUID appId = UUID.randomUUID();
+        appDto.setId(appId.toString());
+
+        when(appRepository.findById(appId)).thenReturn(Optional.empty());
+
+        RuntimeException exception = org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () -> appService.save(appDto));
+
+        assertThat(exception.getMessage()).isEqualTo(String.format("App not found for the give app id: %s", appId));
+
+        verify(appRepository).findById(appId);
+    }
 }
