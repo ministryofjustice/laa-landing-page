@@ -49,7 +49,7 @@ class AuditExportServiceTest {
         assertNotNull(export);
 
         String csv = new String(export.bytes(), StandardCharsets.UTF_8);
-        assertEquals("Name,Email,Firm Name,Firm Code,Multi-firm\n", csv);
+        assertEquals("Name,Email,\"Firm Name\",\"Firm Code\",Multi-firm\n", csv);
     }
 
     @Test
@@ -68,7 +68,7 @@ class AuditExportServiceTest {
         String csv = new String(export.bytes(), StandardCharsets.UTF_8);
 
         String expected =
-                "Name,Email,Firm Name,Firm Code,Multi-firm\n"
+                "Name,Email,\"Firm Name\",\"Firm Code\",Multi-firm\n"
                         + "\"Doe, John\",\"a\"\"b@example.com\",\"Firm\nName\",FC1,Yes\n";
 
         assertEquals(expected, csv);

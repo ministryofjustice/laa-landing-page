@@ -221,6 +221,7 @@ public class AuditController {
     }
 
     @GetMapping(value = "/users/audit/download", produces = "text/csv")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission('EXPORT_AUDIT_DATA')")
     public ResponseEntity<byte[]> downloadAuditCsv(@ModelAttribute AuditTableSearchCriteria criteria) {
 
         final int pageSize = 500;
