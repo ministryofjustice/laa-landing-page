@@ -1,0 +1,22 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1738696020000-1
+      author: sankavi.mohanraj
+      changes:
+        - addColumn:
+            tableName: disable_user_reason
+            columns:
+              - column:
+                  name: user_selectable
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 1738696020000-2
+      author: sankavi.mohanraj
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO disable_user_reason (id, name, description, entra_description, user_selectable) VALUES (gen_random_uuid(), 'Inactivity', 'Disabled due to inactivity', 'Inactivity', false)"

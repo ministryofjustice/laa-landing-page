@@ -36,6 +36,7 @@ public class UserAccountStatusService {
     public List<DisableUserReasonDto> getDisableUserReasons() {
         List<DisableUserReason> reasons = disableUserReasonRepository.findAll();
         return reasons.stream()
+                .filter(DisableUserReason::isUserSelectable)
                 .map(reason -> mapper.map(reason, DisableUserReasonDto.class))
                 .toList();
     }
