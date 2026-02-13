@@ -132,9 +132,9 @@ databaseChangeLog:
                   VALUES (gen_random_uuid(), 'playwright-externaluseradmin@playwrighttest.com', 'Playwright', 'ExternalUserAdmin', gen_random_uuid(), 'ACTIVE', false, 'System', 'System', NOW(), NOW())"
         - sql:
             dbms: postgresql
-            sql: "INSERT INTO user_profile (id, entra_user_id, active_profile, status, user_type, created_date, last_modified_date, created_by, last_modified_by, last_sync_successful)
+            sql: "INSERT INTO user_profile (id, entra_user_id, firm_id, active_profile, status, user_type, created_date, last_modified_date, created_by, last_modified_by, last_sync_successful, unrestricted_office_access)
                   VALUES (gen_random_uuid(), (SELECT id FROM entra_user WHERE email = 'playwright-externaluseradmin@playwrighttest.com'),
-                  true, 'COMPLETE', 'INTERNAL', NOW(), NOW(), 'System', 'System', false)"
+                  '11111111-1111-1111-1111-111111111111', true, 'COMPLETE', 'EXTERNAL', NOW(), NOW(), 'System', 'System', false, true)"
         - sql:
             dbms: postgresql
             sql: "INSERT INTO user_profile_app_role (user_profile_id, app_role_id)
@@ -154,9 +154,9 @@ databaseChangeLog:
                   VALUES (gen_random_uuid(), 'playwright-externaluserviewer@playwrighttest.com', 'Playwright', 'ExternalUserViewer', gen_random_uuid(), 'ACTIVE', false, 'System', 'System', NOW(), NOW())"
         - sql:
             dbms: postgresql
-            sql: "INSERT INTO user_profile (id, entra_user_id, active_profile, status, user_type, created_date, last_modified_date, created_by, last_modified_by, last_sync_successful)
+            sql: "INSERT INTO user_profile (id, entra_user_id, firm_id, active_profile, status, user_type, created_date, last_modified_date, created_by, last_modified_by, last_sync_successful, unrestricted_office_access)
                   VALUES (gen_random_uuid(), (SELECT id FROM entra_user WHERE email = 'playwright-externaluserviewer@playwrighttest.com'),
-                  true, 'COMPLETE', 'INTERNAL', NOW(), NOW(), 'System', 'System', false)"
+                  '11111111-1111-1111-1111-111111111111', true, 'COMPLETE', 'EXTERNAL', NOW(), NOW(), 'System', 'System', false, true)"
         - sql:
             dbms: postgresql
             sql: "INSERT INTO user_profile_app_role (user_profile_id, app_role_id)
@@ -416,3 +416,26 @@ databaseChangeLog:
                  FROM app_role
                  WHERE name = 'Firm User Manager')
               );
+
+  # External User in Different Firm - testing cross-firm access restrictions
+  - changeSet:
+      id: 1761063088678-13
+      author: yusuf.shah
+      context: playwright
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO entra_user (id, email, first_name, last_name, entra_oid, status, multi_firm_user, created_by, last_modified_by, created_date, last_modified_date)
+                  VALUES (gen_random_uuid(), 'playwright-firmtwouserviewer@playwrighttest.com', 'Playwright', 'FirmTwoUserViewer', gen_random_uuid(), 'ACTIVE', false, 'System', 'System', NOW(), NOW())"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO user_profile (id, entra_user_id, firm_id, active_profile, status, user_type, created_date, last_modified_date, created_by, last_modified_by, last_sync_successful, unrestricted_office_access)
+                  VALUES (gen_random_uuid(), (SELECT id FROM entra_user WHERE email = 'playwright-firmtwouserviewer@playwrighttest.com'),
+                  '22222222-2222-2222-2222-222222222222', true, 'COMPLETE', 'EXTERNAL', NOW(), NOW(), 'System', 'System', false, true)"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO user_profile_app_role (user_profile_id, app_role_id)
+                  VALUES ((SELECT up.id FROM user_profile up JOIN entra_user u ON up.entra_user_id = u.id
+                           WHERE u.email = 'playwright-firmtwouserviewer@playwrighttest.com'),
+                          (SELECT id FROM app_role WHERE name = 'External User Viewer'))"
+

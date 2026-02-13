@@ -120,7 +120,9 @@ public class RbacTests extends BaseFrontEndTest {
     @DisplayName("External User Viewer can access SILAS")
     void externalUserViewerCanAccessSilas() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_VIEWER);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         manageUsersPage.clickFirstUserLink();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         manageUsersPage.verifyUserDetailsPopulated();
     }
 
@@ -219,6 +221,65 @@ public class RbacTests extends BaseFrontEndTest {
         assertFalse(
                 manageUsersPage.isCreateUserVisible(),
                 "Create User button should not be visible for Firm User Manager"
+        );
+    }
+
+    @Test
+    @DisplayName("Firm User Manager can delete single-firm users in same firm")
+    void firmUserManagerCanDeleteSingleFirmUserInSameFirm() {
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.FIRM_USER_MANAGER);
+
+        // Firm User Manager should be able to view and manage External User Viewer from same firm
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser("playwright-externaluserviewer@playwrighttest.com"),
+                "External User Viewer should be visible to Firm User Manager"
+        );
+        manageUsersPage.clickFirstUserLink();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Verify the delete button is visible (Firm User Manager has DELETE_EXTERNAL_USER permission)
+        assertTrue(
+                manageUsersPage.isDeleteUserVisible(),
+                "Delete user button should be visible for Firm User Manager when viewing single-firm user in same firm"
+        );
+    }
+
+    @Test
+    @DisplayName("A Firm User Manager can delete a user from the same firm")
+    void firmUserManagerCanDeleteUserFromSameFirm() {
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.FIRM_USER_MANAGER);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser("playwright-externaluseradmin@playwrighttest.com"),
+                "External User Admin should be visible to Firm User Manager"
+        );
+
+        manageUsersPage.clickFirstUserLink();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.verifyUserDetailsPopulated();
+
+        assertTrue(
+                manageUsersPage.isDeleteUserVisible(),
+                "Delete user button must be visible for Firm User Manager viewing a user from the same firm"
+        );
+
+        assertTrue(
+                page.locator("a.govuk-link[href*='/admin/users/manage/'][href$='disable']").isVisible(),
+                "Disable user button should also be visible for Firm User Manager"
+        );
+    }
+
+    @Test
+    @DisplayName("A Firm User Manager cannot delete a user if they belong to a different firm")
+    void firmUserManagerCannotDeleteUserFromDifferentFirm() {
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.FIRM_USER_MANAGER);
+
+        // Firm User Manager should NOT be able to see users from different firm
+
+        assertFalse(
+                manageUsersPage.searchAndVerifyUser("playwright-firmtwouserviewer@playwrighttest.com"),
+                "User from different firm (Firm Two) should NOT be visible to Firm User Manager from Firm One"
         );
     }
 

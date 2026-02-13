@@ -1,18 +1,11 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import org.assertj.core.api.Assertions;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -20,24 +13,21 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
-
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
-import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.Firm;
-import uk.gov.justice.laa.portal.landingpage.entity.Permission;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.entity.*;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
+import java.util.*;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring.addListAppenderToLogger;
 
 @ExtendWith(MockitoExtension.class)
@@ -877,6 +867,172 @@ public class AccessControlServiceTest {
 
         boolean canDeleteInternal = accessControlService.canDeleteUser(internalTargetId.toString());
         Assertions.assertThat(canDeleteInternal).isFalse();
+    }
+
+    @Test
+    public void testFirmUserManagerCanDeleteSingleFirmUserInSameFirm() {
+        // Setup authentication
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        // Create Firm User Manager with DELETE_EXTERNAL_USER permission
+        UUID fumId = UUID.randomUUID();
+        UUID firmId = UUID.randomUUID();
+        Permission deletePermission = Permission.DELETE_EXTERNAL_USER;
+        AppRole fumRole = AppRole.builder()
+                .id(UUID.randomUUID())
+                .name("Firm User Manager")
+                .authzRole(true)
+                .permissions(Set.of(deletePermission))
+                .build();
+        EntraUser firmUserManager = EntraUser.builder()
+                .id(fumId)
+                .email("fum@lawfirm.com")
+                .userProfiles(HashSet.newHashSet(1))
+                .build();
+        UserProfile fumProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(firmUserManager)
+                .appRoles(Set.of(fumRole))
+                .userType(UserType.EXTERNAL)
+                .build();
+        firmUserManager.getUserProfiles().add(fumProfile);
+
+        // Target: Single-firm external user in the same firm
+        UUID targetProfileId = UUID.randomUUID();
+        EntraUserDto targetEntra = EntraUserDto.builder()
+                .id(UUID.randomUUID().toString())
+                .multiFirmUser(false)
+                .build();
+        UserProfileDto targetProfile = UserProfileDto.builder()
+                .id(targetProfileId)
+                .userType(UserType.EXTERNAL)
+                .entraUser(targetEntra)
+                .build();
+
+        FirmDto firmDto = FirmDto.builder().id(firmId).build();
+
+        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(firmUserManager);
+        Mockito.when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
+        Mockito.when(userService.isInternal(fumId)).thenReturn(false);
+        Mockito.when(firmService.getUserActiveAllFirms(firmUserManager)).thenReturn(List.of(firmDto));
+        Mockito.when(firmService.getUserFirmsByUserId(targetProfileId.toString())).thenReturn(List.of(firmDto));
+
+        boolean canDelete = accessControlService.canDeleteUser(targetProfileId.toString());
+        assertThat(canDelete).isTrue();
+    }
+
+    @Test
+    public void testFirmUserManagerCannotDeleteMultiFirmUser() {
+
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+
+        UUID fumId = UUID.randomUUID();
+        UUID firmId = UUID.randomUUID();
+        Permission deletePermission = Permission.DELETE_EXTERNAL_USER;
+        AppRole fumRole = AppRole.builder()
+                .id(UUID.randomUUID())
+                .name("Firm User Manager")
+                .authzRole(true)
+                .permissions(Set.of(deletePermission))
+                .build();
+        EntraUser firmUserManager = EntraUser.builder()
+                .id(fumId)
+                .email("fum@lawfirm.com")
+                .userProfiles(HashSet.newHashSet(1))
+                .build();
+        UserProfile fumProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(firmUserManager)
+                .appRoles(Set.of(fumRole))
+                .userType(UserType.EXTERNAL)
+                .build();
+        firmUserManager.getUserProfiles().add(fumProfile);
+
+
+        UUID targetProfileId = UUID.randomUUID();
+        EntraUserDto targetEntra = EntraUserDto.builder()
+                .id(UUID.randomUUID().toString())
+                .multiFirmUser(true)
+                .build();
+        UserProfileDto targetProfile = UserProfileDto.builder()
+                .id(targetProfileId)
+                .userType(UserType.EXTERNAL)
+                .entraUser(targetEntra)
+                .build();
+
+        FirmDto firmDto = FirmDto.builder().id(firmId).build();
+
+        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(firmUserManager);
+        Mockito.when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
+        Mockito.when(userService.isInternal(fumId)).thenReturn(false);
+
+
+        boolean canDelete = accessControlService.canDeleteUser(targetProfileId.toString());
+        assertThat(canDelete).isFalse();
+    }
+
+    @Test
+    public void testFirmUserManagerCannotDeleteUserFromDifferentFirm() {
+
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+
+        UUID fumId = UUID.randomUUID();
+        UUID fumFirmId = UUID.randomUUID();
+        UUID targetFirmId = UUID.randomUUID(); // Different firm
+        Permission deletePermission = Permission.DELETE_EXTERNAL_USER;
+        AppRole fumRole = AppRole.builder()
+                .id(UUID.randomUUID())
+                .name("Firm User Manager")
+                .authzRole(true)
+                .permissions(Set.of(deletePermission))
+                .build();
+        EntraUser firmUserManager = EntraUser.builder()
+                .id(fumId)
+                .email("fum@lawfirm.com")
+                .userProfiles(HashSet.newHashSet(1))
+                .build();
+        UserProfile fumProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(firmUserManager)
+                .appRoles(Set.of(fumRole))
+                .userType(UserType.EXTERNAL)
+                .build();
+        firmUserManager.getUserProfiles().add(fumProfile);
+
+
+        UUID targetProfileId = UUID.randomUUID();
+        EntraUserDto targetEntra = EntraUserDto.builder()
+                .id(UUID.randomUUID().toString())
+                .multiFirmUser(false)
+                .build();
+        UserProfileDto targetProfile = UserProfileDto.builder()
+                .id(targetProfileId)
+                .userType(UserType.EXTERNAL)
+                .entraUser(targetEntra)
+                .build();
+
+        FirmDto fumFirmDto = FirmDto.builder().id(fumFirmId).build();
+        FirmDto targetFirmDto = FirmDto.builder().id(targetFirmId).build();
+
+        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(firmUserManager);
+        Mockito.when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
+        Mockito.when(userService.isInternal(fumId)).thenReturn(false);
+        Mockito.when(firmService.getUserActiveAllFirms(firmUserManager)).thenReturn(List.of(fumFirmDto));
+        Mockito.when(firmService.getUserFirmsByUserId(targetProfileId.toString())).thenReturn(List.of(targetFirmDto));
+
+        boolean canDelete = accessControlService.canDeleteUser(targetProfileId.toString());
+        assertThat(canDelete).isFalse();
     }
 
     @Test

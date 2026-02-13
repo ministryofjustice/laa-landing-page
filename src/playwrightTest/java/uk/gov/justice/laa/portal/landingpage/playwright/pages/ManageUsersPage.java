@@ -171,6 +171,9 @@ public class ManageUsersPage {
         );
     }
 
+    public boolean isDeleteUserVisible() {
+        return deleteUserLink.isVisible();
+    }
 
     // Edit user - backwards compatible
     public void clickEditUser() {
