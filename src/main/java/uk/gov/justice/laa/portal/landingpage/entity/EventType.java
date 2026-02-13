@@ -7,4 +7,5 @@ public enum EventType {
     USER_DELETE_EXECUTED,
     USER_DELETE_ATTEMPT,
     SWITCH_FIRM,
+    CREATE_ROLE,
 }

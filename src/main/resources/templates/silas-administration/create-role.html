@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      breadcrumbs=~{::#breadcrumbs},
+      pageCategory=${'admin'})}" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>Create New Role</title>
+</head>
+
+<body>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <ol class="govuk-breadcrumbs__list">
+            <li class="govuk-breadcrumbs__list-item">
+                <a class="govuk-breadcrumbs__link" href="/">Home</a>
+            </li>
+            <li class="govuk-breadcrumbs__list-item">
+                <a class="govuk-breadcrumbs__link" href="/admin/silas-administration?tab=roles-permissions">SiLAS Administration</a>
+            </li>
+            <li class="govuk-breadcrumbs__list-item">
+                Create New Role
+            </li>
+        </ol>
+    </nav>
+
+    <main class="govuk-main-wrapper" id="main-content">
+        <div class="govuk-grid-row">
+            <div class="govuk-grid-column-two-thirds">
+                <h1 class="govuk-heading-xl">Create New Role</h1>
+
+                <form th:action="@{/admin/roles/create}" method="post" th:object="${roleCreationDto}">
+                    
+                    <!-- Parent App Selection -->
+                    <div class="govuk-form-group" th:classappend="${#fields.hasErrors('parentAppId')} ? 'govuk-form-group--error'">
+                        <label class="govuk-label govuk-label--m" for="parentAppId">
+                            Parent Application
+                        </label>
+                        <div class="govuk-hint" id="parentAppId-hint">
+                            Select the application this role will belong to
+                        </div>
+                        <div th:if="${#fields.hasErrors('parentAppId')}" class="govuk-error-message">
+                            <span class="govuk-visually-hidden">Error:</span>
+                            <span th:errors="*{parentAppId}"></span>
+                        </div>
+                        <select class="govuk-select" th:classappend="${#fields.hasErrors('parentAppId')} ? 'govuk-select--error'" 
+                                id="parentAppId" name="parentAppId" th:field="*{parentAppId}" 
+                                aria-describedby="parentAppId-hint">
+                            <option value="">Select an application</option>
+                            <option th:each="app : ${apps}" th:value="${app.id}" th:text="${app.name}">App Name</option>
+                        </select>
+                    </div>
+
+                    <!-- Role Name -->
+                    <div class="govuk-form-group" th:classappend="${#fields.hasErrors('name')} ? 'govuk-form-group--error'">
+                        <label class="govuk-label govuk-label--m" for="name">
+                            Role Name
+                        </label>
+                        <div class="govuk-hint" id="name-hint">
+                            Enter a unique name for this role within the selected application
+                        </div>
+                        <div th:if="${#fields.hasErrors('name')}" class="govuk-error-message">
+                            <span class="govuk-visually-hidden">Error:</span>
+                            <span th:errors="*{name}"></span>
+                        </div>
+                        <input class="govuk-input" th:classappend="${#fields.hasErrors('name')} ? 'govuk-input--error'" 
+                               id="name" name="name" type="text" th:field="*{name}" 
+                               aria-describedby="name-hint" maxlength="255">
+                    </div>
+
+                    <!-- Description -->
+                    <div class="govuk-form-group" th:classappend="${#fields.hasErrors('description')} ? 'govuk-form-group--error'">
+                        <label class="govuk-label govuk-label--m" for="description">
+                            Description
+                        </label>
+                        <div class="govuk-hint" id="description-hint">
+                            Provide a clear description of what this role allows users to do
+                        </div>
+                        <div th:if="${#fields.hasErrors('description')}" class="govuk-error-message">
+                            <span class="govuk-visually-hidden">Error:</span>
+                            <span th:errors="*{description}"></span>
+                        </div>
+                        <textarea class="govuk-textarea" th:classappend="${#fields.hasErrors('description')} ? 'govuk-textarea--error'" 
+                                  id="description" name="description" rows="3" th:field="*{description}" 
+                                  aria-describedby="description-hint" maxlength="255"></textarea>
+                    </div>
+
+                    <!-- User Type Restriction -->
+                    <div class="govuk-form-group" th:classappend="${#fields.hasErrors('userTypeRestriction')} ? 'govuk-form-group--error'">
+                        <fieldset class="govuk-fieldset">
+                            <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
+                                User Type Restriction
+                            </legend>
+                            <div class="govuk-hint">
+                                Select which user types can be assigned this role
+                            </div>
+                            <div th:if="${#fields.hasErrors('userTypeRestriction')}" class="govuk-error-message">
+                                <span class="govuk-visually-hidden">Error:</span>
+                                <span th:errors="*{userTypeRestriction}"></span>
+                            </div>
+                            <div class="govuk-checkboxes" data-module="govuk-checkboxes">
+                                <div class="govuk-checkboxes__item" th:each="userType : ${userTypes}">
+                                    <input class="govuk-checkboxes__input"
+                                           th:id="'userType-' + ${userType.name()}"
+                                           th:name="userTypeRestriction"
+                                           th:value="${userType}"
+                                           type="checkbox"
+                                           th:checked="${roleCreationDto.userTypeRestriction != null and roleCreationDto.userTypeRestriction.contains(userType)}">
+                                    <label class="govuk-label govuk-checkboxes__label"
+                                           th:for="'userType-' + ${userType.name()}"
+                                           th:text="${userType.name()}">
+                                        User Type
+                                    </label>
+                                </div>
+                            </div>
+                        </fieldset>
+                    </div>
+
+                    <!-- Legacy Sync -->
+                    <div class="govuk-form-group" th:classappend="${#fields.hasErrors('legacySync')} ? 'govuk-form-group--error'">
+                        <fieldset class="govuk-fieldset">
+                            <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
+                                Legacy Sync
+                            </legend>
+                            <div class="govuk-hint">
+                                Enable if this role should be synchronized with legacy systems
+                            </div>
+                            <div th:if="${#fields.hasErrors('legacySync')}" class="govuk-error-message">
+                                <span class="govuk-visually-hidden">Error:</span>
+                                <span th:errors="*{legacySync}"></span>
+                            </div>
+                            <div class="govuk-radios" data-module="govuk-radios">
+                                <div class="govuk-radios__item">
+                                    <input class="govuk-radios__input" id="legacySync-true" name="legacySync" type="radio" value="true" th:checked="*{legacySync != null and legacySync}">
+                                    <label class="govuk-label govuk-radios__label" for="legacySync-true">
+                                        Yes
+                                    </label>
+                                </div>
+                                <div class="govuk-radios__item">
+                                    <input class="govuk-radios__input" id="legacySync-false" name="legacySync" type="radio" value="false" th:checked="*{legacySync != null and !legacySync}">
+                                    <label class="govuk-label govuk-radios__label" for="legacySync-false">
+                                        No
+                                    </label>
+                                </div>
+                            </div>
+                        </fieldset>
+                    </div>
+
+                    <!-- CCMS Code -->
+                    <div class="govuk-form-group" th:classappend="${#fields.hasErrors('ccmsCode')} ? 'govuk-form-group--error'">
+                        <label class="govuk-label govuk-label--m" for="ccmsCode">
+                            CCMS Code (Optional)
+                        </label>
+                        <div class="govuk-hint" id="ccmsCode-hint">
+                            Enter the CCMS code if this role maps to a CCMS system role
+                        </div>
+                        <div th:if="${#fields.hasErrors('ccmsCode')}" class="govuk-error-message">
+                            <span class="govuk-visually-hidden">Error:</span>
+                            <span th:errors="*{ccmsCode}"></span>
+                        </div>
+                        <input class="govuk-input govuk-!-width-one-third" th:classappend="${#fields.hasErrors('ccmsCode')} ? 'govuk-input--error'" 
+                               id="ccmsCode" name="ccmsCode" type="text" th:field="*{ccmsCode}" 
+                               aria-describedby="ccmsCode-hint" maxlength="30">
+                    </div>
+
+                    <!-- Firm Type Restriction -->
+                    <div class="govuk-form-group">
+                        <fieldset class="govuk-fieldset">
+                            <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
+                                Firm Type Restriction (Optional)
+                            </legend>
+                            <div class="govuk-hint">
+                                Select which firm types can be assigned this role (leave blank for no restriction)
+                            </div>
+                            <div class="govuk-checkboxes" data-module="govuk-checkboxes">
+                                <div class="govuk-checkboxes__item" th:each="firmType : ${firmTypes}">
+                                    <input class="govuk-checkboxes__input" 
+                                           th:id="'firmType-' + ${firmType.name()}" 
+                                           th:name="firmTypeRestriction" 
+                                           th:value="${firmType}" 
+                                           type="checkbox"
+                                           th:checked="${roleCreationDto.firmTypeRestriction != null and roleCreationDto.firmTypeRestriction.contains(firmType)}">
+                                    <label class="govuk-label govuk-checkboxes__label" 
+                                           th:for="'firmType-' + ${firmType.name()}" 
+                                           th:text="${firmType.name()}">
+                                        Firm Type
+                                    </label>
+                                </div>
+                            </div>
+                        </fieldset>
+                    </div>
+
+                    <div class="govuk-button-group">
+                        <button class="govuk-button" data-module="govuk-button" type="submit">
+                            Continue
+                        </button>
+                        <a class="govuk-link" href="/admin/silas-administration?tab=roles-permissions">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>
