@@ -91,6 +91,11 @@ public class BaseRepositoryTest {
                 .userTypeRestriction(new UserType[]{UserType.INTERNAL}).app(app).build();
     }
 
+    protected AppRole buildLaaExternalAppRole(App app, String name) {
+        return AppRole.builder().name(name).description(name)
+                .userTypeRestriction(new UserType[]{UserType.EXTERNAL}).app(app).build();
+    }
+
     protected AppRole buildLaaAppRoleWithUserTypes(App app, String name, UserType[] userTypes, Set<Permission> permissions) {
         return AppRole.builder().name(name).description(name)
                 .userTypeRestriction(userTypes)
