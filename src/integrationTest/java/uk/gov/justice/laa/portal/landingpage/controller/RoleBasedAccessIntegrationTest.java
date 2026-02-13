@@ -74,6 +74,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
     protected List<EntraUser> externalUserViewers = new ArrayList<>();
     protected List<EntraUser> multiFirmUsers = new ArrayList<>();
     protected List<EntraUser> globalAdmins = new ArrayList<>();
+    protected List<EntraUser> silasAdmins = new ArrayList<>();
     protected List<EntraUser> firmUserManagers = new ArrayList<>();
     protected List<EntraUser> securityResponseUsers = new ArrayList<>();
     protected List<EntraUser> allUsers = new ArrayList<>();
@@ -323,6 +324,18 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         profile.setEntraUser(user);
         securityResponseUsers.add(entraUserRepository.saveAndFlush(user));
 
+        user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "SiLAS", "AdminUser");
+        profile = buildLaaUserProfile(user, UserType.INTERNAL, true);
+        AppRole silasAdminRole = allAppRoles.stream()
+                .filter(AppRole::isAuthzRole)
+                .filter(role -> role.getName().equals("SILAS System Administration"))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Could not find app role"));
+        profile.setAppRoles(Set.of(silasAdminRole));
+        user.setUserProfiles(Set.of(profile));
+        profile.setEntraUser(user);
+        silasAdmins.add(entraUserRepository.saveAndFlush(user));
+
 
         allUsers.addAll(internalUsersNoRoles);
         allUsers.addAll(internalUserManagers);
@@ -337,6 +350,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         allUsers.addAll(externalUserViewers);
         allUsers.addAll(multiFirmUsers);
         allUsers.addAll(securityResponseUsers);
+        allUsers.addAll(silasAdmins);
     }
 
     protected void clearRepositories() {

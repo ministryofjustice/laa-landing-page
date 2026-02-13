@@ -109,15 +109,18 @@
                                 <td class="govuk-table__cell"></td>
                                 <td class="govuk-table__cell" th:text="${app.ordinal}">0</td>
                                 <td class="govuk-table__cell">
-                                    <a href="#" class="govuk-link">Change</a>
+                                    <a th:href="@{'/admin/silas-administration/app/' + ${app.id}}" class="govuk-link">Change</a>
                                 </td>
                             </tr>
                         </tbody>
                     </table>
 
-                    <button class="govuk-button govuk-button--secondary" data-module="govuk-button" type="button">
-                        Reorder legal aid services
-                    </button>
+                    <form class="govuk-!-padding-top-6" th:action="@{/admin/silas-administration/apps/reorder}" method="get">
+                        <button type="submit" class="govuk-button" data-module="govuk-button">
+                            Reorder legal aid services
+                        </button>
+                    </form>
+
                 </div>
 
                 <div th:if="${apps == null or apps.isEmpty()}" class="govuk-inset-text">

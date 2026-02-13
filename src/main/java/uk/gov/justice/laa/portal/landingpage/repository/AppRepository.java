@@ -18,4 +18,6 @@ public interface AppRepository extends JpaRepository<App, UUID> {
     Optional<App> findByEntraAppId(String entraAppOid);
 
     List<App> findAppsByAppTypeAndEnabled(AppType appType, boolean enabled);
+
+    List<App> findAppsByAppType(AppType appType);
 }
