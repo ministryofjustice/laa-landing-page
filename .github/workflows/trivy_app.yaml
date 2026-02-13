@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
 
       # enable vulnerability and secret detection as well as misconfiguration detection
       - name: Run Trivy Vulnerability Scanner in Repo Mode
