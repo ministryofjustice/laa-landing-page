@@ -132,9 +132,9 @@ databaseChangeLog:
                   VALUES (gen_random_uuid(), 'playwright-externaluseradmin@playwrighttest.com', 'Playwright', 'ExternalUserAdmin', gen_random_uuid(), 'ACTIVE', false, 'System', 'System', NOW(), NOW())"
         - sql:
             dbms: postgresql
-            sql: "INSERT INTO user_profile (id, entra_user_id, firm_id, active_profile, status, user_type, created_date, last_modified_date, created_by, last_modified_by, last_sync_successful, unrestricted_office_access)
+            sql: "INSERT INTO user_profile (id, entra_user_id, active_profile, status, user_type, created_date, last_modified_date, created_by, last_modified_by, last_sync_successful)
                   VALUES (gen_random_uuid(), (SELECT id FROM entra_user WHERE email = 'playwright-externaluseradmin@playwrighttest.com'),
-                  '11111111-1111-1111-1111-111111111111', true, 'COMPLETE', 'EXTERNAL', NOW(), NOW(), 'System', 'System', false, true)"
+                  true, 'COMPLETE', 'INTERNAL', NOW(), NOW(), 'System', 'System', false)"
         - sql:
             dbms: postgresql
             sql: "INSERT INTO user_profile_app_role (user_profile_id, app_role_id)
@@ -154,9 +154,9 @@ databaseChangeLog:
                   VALUES (gen_random_uuid(), 'playwright-externaluserviewer@playwrighttest.com', 'Playwright', 'ExternalUserViewer', gen_random_uuid(), 'ACTIVE', false, 'System', 'System', NOW(), NOW())"
         - sql:
             dbms: postgresql
-            sql: "INSERT INTO user_profile (id, entra_user_id, firm_id, active_profile, status, user_type, created_date, last_modified_date, created_by, last_modified_by, last_sync_successful, unrestricted_office_access)
+            sql: "INSERT INTO user_profile (id, entra_user_id, active_profile, status, user_type, created_date, last_modified_date, created_by, last_modified_by, last_sync_successful)
                   VALUES (gen_random_uuid(), (SELECT id FROM entra_user WHERE email = 'playwright-externaluserviewer@playwrighttest.com'),
-                  '11111111-1111-1111-1111-111111111111', true, 'COMPLETE', 'EXTERNAL', NOW(), NOW(), 'System', 'System', false, true)"
+                  true, 'COMPLETE', 'INTERNAL', NOW(), NOW(), 'System', 'System', false)"
         - sql:
             dbms: postgresql
             sql: "INSERT INTO user_profile_app_role (user_profile_id, app_role_id)
