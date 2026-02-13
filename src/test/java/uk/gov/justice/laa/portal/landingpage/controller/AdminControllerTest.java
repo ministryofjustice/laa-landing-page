@@ -113,9 +113,6 @@ class AdminControllerTest {
     @Test
     void testShowAdministration_WithAppFilter_FiltersRolesByApp() {
         // Arrange
-        String appFilter = "CCMS case transfer requests";
-        List<AdminAppDto> adminApps = createMockAdminApps();
-        List<AppDto> apps = createMockApps();
         List<AppRoleAdminDto> filteredRoles = new ArrayList<>();
         filteredRoles.add(
             AppRoleAdminDto.builder()
@@ -125,6 +122,9 @@ class AdminControllerTest {
                 .ordinal(0)
                 .build()
         );
+        List<AdminAppDto> adminApps = createMockAdminApps();
+        List<AppDto> apps = createMockApps();
+        String appFilter = "CCMS case transfer requests";
 
         when(adminService.getAllAdminApps()).thenReturn(adminApps);
         when(appService.getAllLaaApps()).thenReturn(apps);

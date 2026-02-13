@@ -331,16 +331,16 @@ class AppServiceTest {
     @Test
     void save_modifiesOnlyEnabledAndDescription_notOtherId() {
         UUID appId = UUID.randomUUID();
+        appDto.setId(appId.toString());
+        appDto.setEnabled(true);
+        appDto.setDescription("New Description");
+
         App existingApp = App.builder()
                 .id(appId)
                 .name("Original Name")
                 .description("Original Description")
                 .enabled(false)
                 .build();
-
-        appDto.setId(appId.toString());
-        appDto.setEnabled(true);
-        appDto.setDescription("New Description");
 
         when(appRepository.findById(appId)).thenReturn(Optional.of(existingApp));
         when(appRepository.save(existingApp)).thenReturn(existingApp);
