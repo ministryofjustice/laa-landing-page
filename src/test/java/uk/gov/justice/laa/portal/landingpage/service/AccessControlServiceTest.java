@@ -1,11 +1,18 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -17,17 +24,20 @@ import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
-import uk.gov.justice.laa.portal.landingpage.entity.*;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
-import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring.addListAppenderToLogger;
 
 @ExtendWith(MockitoExtension.class)
@@ -871,13 +881,12 @@ public class AccessControlServiceTest {
 
     @Test
     public void testFirmUserManagerCanDeleteSingleFirmUserInSameFirm() {
-        // Setup authentication
+
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
         Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
-        // Create Firm User Manager with DELETE_EXTERNAL_USER permission
         UUID fumId = UUID.randomUUID();
         UUID firmId = UUID.randomUUID();
         Permission deletePermission = Permission.DELETE_EXTERNAL_USER;
@@ -900,7 +909,6 @@ public class AccessControlServiceTest {
                 .build();
         firmUserManager.getUserProfiles().add(fumProfile);
 
-        // Target: Single-firm external user in the same firm
         UUID targetProfileId = UUID.randomUUID();
         EntraUserDto targetEntra = EntraUserDto.builder()
                 .id(UUID.randomUUID().toString())
@@ -925,13 +933,12 @@ public class AccessControlServiceTest {
     }
 
     @Test
-    public void testFirmUserManagerCannotDeleteMultiFirmUser() {
+    public void testFirmUserManagerCannotDeleteMultiFirmUsers() {
 
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
         Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
-
 
         UUID fumId = UUID.randomUUID();
         UUID firmId = UUID.randomUUID();
@@ -954,7 +961,6 @@ public class AccessControlServiceTest {
                 .userType(UserType.EXTERNAL)
                 .build();
         firmUserManager.getUserProfiles().add(fumProfile);
-
 
         UUID targetProfileId = UUID.randomUUID();
         EntraUserDto targetEntra = EntraUserDto.builder()
@@ -986,7 +992,6 @@ public class AccessControlServiceTest {
         Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
-
         UUID fumId = UUID.randomUUID();
         UUID fumFirmId = UUID.randomUUID();
         UUID targetFirmId = UUID.randomUUID(); // Different firm
@@ -1009,7 +1014,6 @@ public class AccessControlServiceTest {
                 .userType(UserType.EXTERNAL)
                 .build();
         firmUserManager.getUserProfiles().add(fumProfile);
-
 
         UUID targetProfileId = UUID.randomUUID();
         EntraUserDto targetEntra = EntraUserDto.builder()
