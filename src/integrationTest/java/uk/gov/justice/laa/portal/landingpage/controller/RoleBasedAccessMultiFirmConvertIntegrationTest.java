@@ -36,6 +36,22 @@ public class RoleBasedAccessMultiFirmConvertIntegrationTest extends RoleBasedAcc
     }
 
     @Test
+    public void testSecurityResponseCannotAccessConvertMultiUserPage() throws Exception {
+        EntraUser loggedInUser = securityResponseUsers.getFirst();
+        EntraUser accessedUser = externalUsersNoRoles.getFirst();
+        boolean canAccessConvertMultiUserPage = canAccessConvertMultiUserPage(loggedInUser, accessedUser);
+        Assertions.assertFalse(canAccessConvertMultiUserPage);
+    }
+
+    @Test
+    public void testSecurityResponseCannotPostConvertMultiUser() throws Exception {
+        EntraUser loggedInUser = securityResponseUsers.getFirst();
+        EntraUser accessedUser = externalUsersNoRoles.getFirst();
+        boolean canPostMultiFirmUserConversion = canPostMultiFirmUserConversion(loggedInUser, accessedUser);
+        Assertions.assertFalse(canPostMultiFirmUserConversion);
+    }
+
+    @Test
     public void testFirmUserManagerCannotAccessConvertMultiUserPage() throws Exception {
         EntraUser loggedInUser = firmUserManagers.getFirst();
         UserProfile loggedInUserProfile = loggedInUser.getUserProfiles()
