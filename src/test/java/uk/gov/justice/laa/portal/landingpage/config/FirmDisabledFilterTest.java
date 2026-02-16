@@ -89,7 +89,7 @@ class FirmDisabledFilterTest {
         }
 
         @Test
-        void shouldAllowAccessWhenAuthenticationNotOAuth2() throws Exception {
+        void shouldAllowAccessWhenAuthenticationNotOauth2() throws Exception {
             // Given
             Authentication auth = org.mockito.Mockito.mock(Authentication.class);
             when(securityContext.getAuthentication()).thenReturn(auth);
