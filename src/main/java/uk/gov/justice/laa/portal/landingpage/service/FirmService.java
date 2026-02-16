@@ -49,7 +49,7 @@ public class FirmService {
     private static final String ALL_FIRMS = "all_firms";
 
     protected List<FirmDto> getFirms() {
-        return firmRepository.findAll()
+        return firmRepository.findAllByEnabledTrue()
                 .stream()
                 .map(firm -> mapper.map(firm, FirmDto.class))
                 .collect(Collectors.toList());
@@ -65,8 +65,8 @@ public class FirmService {
                 Sort.by(Sort.Direction.fromString(direction), sort));
 
         FirmType type = firmType == null ? null : FirmType.valueOf(firmType);
-        // Include disabled firms for admin viewing (they can see the disabled status)
-        Page<Firm> firmsPage = firmRepository.getFirmsPage(searchTerm, type, true, pageRequest);
+        // Only include enabled firms
+        Page<Firm> firmsPage = firmRepository.getFirmsPage(searchTerm, type, false, pageRequest);
         // Map to DTOs
         List<FirmDirectoryDto> firmDirectoryDtos = firmsPage.getContent().stream().map(map -> FirmDirectoryDto.builder()
                 .firmName(map.getName())
@@ -104,12 +104,14 @@ public class FirmService {
         return entraUser.getUserProfiles().stream()
                 .filter(UserProfile::isActiveProfile)
                 .filter(userProfile -> userProfile.getFirm() != null)
+                .filter(userProfile -> userProfile.getFirm().getEnabled())
                 .map(userProfile -> mapper.map(userProfile.getFirm(), FirmDto.class)).toList();
     }
 
     public List<FirmDto> getUserAllFirms(EntraUser entraUser) {
         return entraUser.getUserProfiles().stream()
                 .filter(userProfile -> userProfile.getFirm() != null)
+                .filter(userProfile -> userProfile.getFirm().getEnabled())
                 .map(userProfile -> mapper.map(userProfile.getFirm(), FirmDto.class)).toList();
     }
 
@@ -117,11 +119,13 @@ public class FirmService {
         List<FirmDto> userFirms = new ArrayList<>(entraUser.getUserProfiles().stream()
                 .filter(UserProfile::isActiveProfile)
                 .filter(userProfile -> userProfile.getFirm() != null)
+                .filter(userProfile -> userProfile.getFirm().getEnabled())
                 .map(userProfile -> mapper.map(userProfile.getFirm(), FirmDto.class)).toList());
         List<FirmDto> child = entraUser.getUserProfiles().stream()
                 .filter(up -> up.isActiveProfile() && Objects.nonNull(up.getFirm())
                         && Objects.nonNull(up.getFirm().getChildFirms()) && !up.getFirm().getChildFirms().isEmpty())
                 .map(userProfile -> userProfile.getFirm().getChildFirms()).flatMap(Collection::stream)
+                .filter(firm -> firm.getEnabled())
                 .map(firm -> mapper.map(firm, FirmDto.class))
                 .toList();
         userFirms.addAll(child);
@@ -201,7 +205,7 @@ public class FirmService {
 
             switch (userType) {
                 case INTERNAL -> {
-                    // Internal users can search all firms via database
+                    // Internal users can search all enabled firms via database
                     return firmRepository.findByNameOrCodeContaining(trimmedSearchTerm)
                             .stream()
                             .map(firm -> mapper.map(firm, FirmDto.class))
@@ -249,7 +253,9 @@ public class FirmService {
     public List<Firm> getFilteredChildFirms(Firm parentFirm, String query) {
         List<Firm> childFirms = parentFirm.getChildFirms() == null
                 ? List.of()
-                : parentFirm.getChildFirms().stream().toList();
+                : parentFirm.getChildFirms().stream()
+                        .filter(firm -> firm.getEnabled())
+                        .toList();
         if (query == null || query.trim().isEmpty()) {
             return childFirms;
         }

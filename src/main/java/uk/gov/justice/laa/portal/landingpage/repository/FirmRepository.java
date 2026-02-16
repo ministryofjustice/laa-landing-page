@@ -21,8 +21,10 @@ public interface FirmRepository extends JpaRepository<Firm, UUID> {
 
     Firm findByCodeAndEnabledTrue(String code);
 
-    @Query("SELECT f FROM Firm f WHERE LOWER(f.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR LOWER(f.code) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
+    @Query("SELECT f FROM Firm f WHERE f.enabled = true AND (LOWER(f.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR LOWER(f.code) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
     List<Firm> findByNameOrCodeContaining(@Param("searchTerm") String searchTerm);
+
+    List<Firm> findAllByEnabledTrue();
 
     @Query("SELECT f FROM Firm f WHERE f.enabled = true AND NOT EXISTS (SELECT 1 FROM Office o WHERE o.firm.id = f.id)")
     List<Firm> findFirmsWithoutOffices();

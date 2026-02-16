@@ -122,6 +122,7 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                         JOIN FETCH ups.entraUser u
                         JOIN FETCH ups.firm f
             WHERE ups.entraUser.id = :entraUserId
+            AND f.enabled = true
             AND (
                 :search IS NULL OR :search = '' OR
                 LOWER(f.name) LIKE LOWER(CONCAT('%', :search, '%')) OR

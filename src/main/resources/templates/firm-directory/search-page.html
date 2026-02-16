@@ -499,7 +499,6 @@
                                th:href="@{firmDirectory/{id}(id=${firmDirectory.firmId})}"
                                th:text="${firmDirectory.firmName}"></a>
                                -->
-                            <span th:if="${!firmDirectory.enabled}" class="govuk-tag govuk-tag--grey" style="margin-left: 10px;">Disabled</span>
                         </td>
                         <td class="govuk-table__cell" th:text="${firmDirectory.firmCode}"></td>
                         <td class="govuk-table__cell"
