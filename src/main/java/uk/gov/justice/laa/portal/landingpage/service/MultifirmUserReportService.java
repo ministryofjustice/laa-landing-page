@@ -1,15 +1,19 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.dataformat.csv.CsvGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import com.fasterxml.jackson.dataformat.csv.CsvMapper;
+import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
+import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
@@ -24,7 +28,8 @@ public class MultifirmUserReportService {
 
     private final FirmRepository firmRepository;
     private final EntraUserRepository entraUserRepository;
-    private String reportDirectory = System.getProperty("java.io.tmpdir") + File.separator + "reports";
+    //private String reportDirectory = System.getProperty("java.io.tmpdir") + File.separator + "reports";
+    private String reportDirectory = "/Users/joshua.halladey/Desktop";
     private final DateTimeFormatter fileTimestamp = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmm");
 
     public void getMultifirmUsers() {
@@ -38,39 +43,48 @@ public class MultifirmUserReportService {
         log.info("Multifirm users written to CSV successfully");
     }
 
-    private void writeToCsv(List<Object[]> rows){
+    private String writeToCsv(List<Object[]> rows) {
 
         String timestamp = LocalDateTime.now().format(fileTimestamp);
         Path outputPath = Path.of(reportDirectory, "SiLAS-multifirm-user-report-" + timestamp + ".csv");
 
-        try (BufferedWriter writer = Files.newBufferedWriter(outputPath)){
-            writer.write("Firm Name, Firm Code, Count");
-            writer.newLine();
+        try {
+            Files.createDirectories(outputPath.getParent());
 
+            CsvMapper csvMapper = CsvMapper.builder().build();
+
+            CsvSchema schema = CsvSchema.builder()
+                    .addColumn("Firm Name")
+                    .addColumn("Firm Code")
+                    .addColumn("Count")
+                    .setUseHeader(true)
+                    .build();
+
+            List<ReportRow> reportRows = new ArrayList<>(rows.size());
             for (Object[] row : rows) {
                 String firmName = (String) row[0];
                 String firmCode = row[1] == null ? "" : (String) row[1];
                 long count = ((Number) row[2]).longValue();
-
-                writer.write(csvValue(firmName));
-                writer.write(",");
-                writer.write(csvValue(firmCode));
-                writer.write(",");
-                writer.write(Long.toString(count));
-                writer.newLine();
+                reportRows.add(new ReportRow(firmName, firmCode, count));
             }
-        } catch (IOException e){
+
+            try (StringWriter out = new StringWriter()){
+                csvMapper.writer(schema).writeValues(out).writeAll(reportRows);
+
+                if (rows.isEmpty() && !out.toString().endsWith("\n")) {
+                    out.append('\n');
+                }
+            }
+            return outputPath.toString();
+
+        } catch (IOException e) {
             throw new IllegalStateException("Failed to write multifirm users to CSV", e);
         }
     }
 
-    private String csvValue(String value) {
-        if (value == null) {
-            return "";
-        }
-        if (value.contains(",") || value.contains("\"")) {
-            return "\"" + value.replace("\"", "\"\"") + "\"";
-        }
-        return value;
-    }
+    private record ReportRow(
+            @JsonProperty("Firm Name") String firmName,
+            @JsonProperty("Firm Code") String firmCode,
+            @JsonProperty("Count") long count
+    ) { }
 }
