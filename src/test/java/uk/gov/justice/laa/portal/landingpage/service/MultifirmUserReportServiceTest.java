@@ -74,11 +74,12 @@ public class MultifirmUserReportServiceTest {
         List<String> lines = Files.readAllLines(csvPath);
 
         assertThat(lines).containsExactly(
-                "Firm Name, Firm Code, Count",
+                "\"Firm Name\",\"Firm Code\",Count",
                 "firm1,67,10",
                 "firm2,21,20",
-                "Unlinked multi-firm users,,30",
-                "Total multi-firm users,,50"
+                "\"Unlinked multi-firm users\",,30",
+                "\"Total multi-firm users\",,50",
+                ""
         );
     }
 

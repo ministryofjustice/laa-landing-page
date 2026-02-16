@@ -2,7 +2,6 @@ package uk.gov.justice.laa.portal.landingpage.service;
 
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.dataformat.csv.CsvGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -13,7 +12,6 @@ import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
@@ -28,8 +26,7 @@ public class MultifirmUserReportService {
 
     private final FirmRepository firmRepository;
     private final EntraUserRepository entraUserRepository;
-    //private String reportDirectory = System.getProperty("java.io.tmpdir") + File.separator + "reports";
-    private String reportDirectory = "/Users/joshua.halladey/Desktop";
+    private String reportDirectory = System.getProperty("java.io.tmpdir") + File.separator + "reports";
     private final DateTimeFormatter fileTimestamp = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmm");
 
     public void getMultifirmUsers() {
@@ -68,14 +65,12 @@ public class MultifirmUserReportService {
                 reportRows.add(new ReportRow(firmName, firmCode, count));
             }
 
-            try (StringWriter out = new StringWriter()){
-                csvMapper.writer(schema).writeValues(out).writeAll(reportRows);
-
-                if (rows.isEmpty() && !out.toString().endsWith("\n")) {
-                    out.append('\n');
-                }
+            try (var writer = Files.newBufferedWriter(outputPath)) {
+                csvMapper.writer(schema).writeValues(writer).writeAll(reportRows);
+                writer.write(System.lineSeparator());
             }
-            return outputPath.toString();
+
+            return outputPath.toAbsolutePath().toString();
 
         } catch (IOException e) {
             throw new IllegalStateException("Failed to write multifirm users to CSV", e);
