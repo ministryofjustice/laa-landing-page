@@ -139,6 +139,7 @@ public class AuditController {
         model.addAttribute("profilePage", profilePage);
         model.addAttribute("profileSize", profileSize);
         model.addAttribute("canDisableUser", disableUserFeatureEnabled && canDisableUser);
+        model.addAttribute("userIsEnabled", userDetail.isEnabled());
 
         return "user-audit/details";
     }

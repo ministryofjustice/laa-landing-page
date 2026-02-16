@@ -500,8 +500,6 @@ public class UserAccountStatusServiceTest {
                 .userProfiles(Set.of(enabledByUserProfile))
                 .build();
 
-        when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
-
         assertThrows(RuntimeException.class,
                 () -> userAccountStatusService.enableUser(enabledUser.getId(), enabledUser.getId()));
         assertThat(enabledUser.isEnabled()).isFalse();

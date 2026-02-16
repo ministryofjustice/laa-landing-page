@@ -524,6 +524,17 @@ public class UserController {
         return "disable-user-completed";
     }
 
+    @GetMapping("/users/manage/{id}/enable")
+    @PreAuthorize("@accessControlService.canDisableUser(#id)")
+    public String enableUserGet(@PathVariable String id,
+                                 Model model) {
+
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        model.addAttribute("user", user);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Enable User - " + user.getFullName());
+        return "enable-user-confirmation";
+    }
+
     @PostMapping("/users/manage/{id}/enable")
     @PreAuthorize("@accessControlService.canDisableUser(#id)")
     public String enableUserPost(@PathVariable String id,

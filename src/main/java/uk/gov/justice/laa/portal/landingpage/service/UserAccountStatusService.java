@@ -100,12 +100,15 @@ public class UserAccountStatusService {
 
     @SuppressWarnings("checkstyle:VariableDeclarationUsageDistance")
     public void enableUser(UUID enabledUserId, UUID enabledById) {
+        if (enabledUserId.equals(enabledById)) {
+            throw new RuntimeException(String.format("User %s can not be enabled by themselves", enabledUserId));
+        }
         // Fetch entities
         EntraUser enabledUser = entraUserRepository.findById(enabledUserId)
                 .orElseThrow(() -> new RuntimeException(String.format("Could not find a user account to disable with id \"%s\"", enabledUserId)));
         EntraUser enabledByUser = entraUserRepository.findById(enabledById)
                 .orElseThrow(() -> new RuntimeException(String.format("Could not find a user account with id \"%s\"", enabledById)));
-        if (enabledByUser.isMultiFirmUser()) {
+        if (!userService.isInternal(enabledById) && enabledUser.isMultiFirmUser()) {
             throw new RuntimeException(String.format("Multi firm user %s can not be enabled", enabledUserId));
         }
 
@@ -118,10 +121,6 @@ public class UserAccountStatusService {
                 .filter(UserProfile::isActiveProfile)
                 .findFirst()
                 .map(UserProfile::getFirm).orElse(null);
-
-        if (enabledUserId.equals(enabledById)) {
-            throw new RuntimeException(String.format("User %s can not be enabled by themselves", enabledUserId));
-        }
 
         if (userService.isInternal(enabledById)
                 || (enabledUserFirm != null && enabledByUserFirm != null && enabledByUserFirm.getId().equals(enabledUserFirm.getId()))) {
