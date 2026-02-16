@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.playwright.tests;
 
 
 import com.microsoft.playwright.Locator;
+import com.microsoft.playwright.options.LoadState;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.BaseFrontEndTest;
@@ -125,6 +126,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
 
         //Failed Login with deleted user
         ManageUsersPage manageUsersPageDeletedUser = loginAndGetManageUsersPage(email);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         manageUsersPageDeletedUser.verifySignInError();
     }
 
@@ -157,7 +159,19 @@ public class ManageUsersTest extends BaseFrontEndTest {
     void verifyUserDetailsIsPopulated() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
         manageUsersPage.clickFirstUserLink();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         manageUsersPage.verifyUserDetailsPopulated();
+    }
+
+    @Test
+    @DisplayName("Verify Disable User link is accessible for EUM")
+    void verifyUserDetailsPageShowsDisableUserLink() {
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+        manageUsersPage.clickFirstUserLink();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        manageUsersPage.verifyUserDetailsPopulated();
+        // Disable link visible
+        assertTrue(page.locator("#user-details ul.govuk-summary-card__actions a.govuk-link:has-text(\"Disable user\")").isVisible());
     }
 
     @Test
@@ -179,11 +193,70 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.checkSelectedRoles(roles);
         manageUsersPage.clickContinueUserDetails();
         manageUsersPage.clickConfirmButton();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        assertTrue(page.locator(".govuk-panel__title:has-text('User detail updated')").isVisible());
         manageUsersPage.clickGoBackToManageUsers();
         manageUsersPage.searchForUser("playwright-informationassurance@playwrighttest.com");
         manageUsersPage.clickFirstUserLink();
         manageUsersPage.clickServicesTab();
+        assertTrue(page.locator("#services .govuk-summary-card__title:has-text('Services')").isVisible());
         manageUsersPage.verifySelectedUserServices(roles);
+    }
+
+    @Test
+    @DisplayName("Remove services from a user and verify they are removed")
+    void removeServicesAndVerify() {
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        // First, add services to ensure they exist
+        manageUsersPage.searchForUser("playwright-informationassurance@playwrighttest.com");
+        manageUsersPage.clickFirstUserLink();
+        assertTrue(page.url().contains("/admin/users/manage/"));
+        manageUsersPage.clickServicesTab();
+        manageUsersPage.clickChangeLink();
+        manageUsersPage.clickContinueFirmSelectPage();
+
+        List<String> allRoles = List.of(
+                TestRole.INTERNAL_USER_MANAGER.roleName,
+                TestRole.EXTERNAL_USER_MANAGER.roleName,
+                TestRole.EXTERNAL_USER_VIEWER.roleName
+        );
+        manageUsersPage.checkSelectedRoles(allRoles);
+        manageUsersPage.clickContinueUserDetails();
+        manageUsersPage.clickConfirmButton();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        assertTrue(page.locator(".govuk-panel__title:has-text('User detail updated')").isVisible());
+
+        // Now remove some services
+        manageUsersPage.clickGoBackToManageUsers();
+        manageUsersPage.searchForUser("playwright-informationassurance@playwrighttest.com");
+        manageUsersPage.clickFirstUserLink();
+        manageUsersPage.clickServicesTab();
+        manageUsersPage.clickChangeLink();
+        manageUsersPage.clickContinueFirmSelectPage();
+
+        List<String> rolesToRemove = List.of(
+                TestRole.INTERNAL_USER_MANAGER.roleName,
+                TestRole.EXTERNAL_USER_VIEWER.roleName
+        );
+        manageUsersPage.uncheckSelectedRoles(rolesToRemove);
+
+        manageUsersPage.clickContinueUserDetails();
+        manageUsersPage.clickConfirmButton();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        assertTrue(page.locator(".govuk-panel__title:has-text('User detail updated')").isVisible());
+
+        // Verify the services were removed
+        manageUsersPage.clickGoBackToManageUsers();
+        manageUsersPage.searchForUser("playwright-informationassurance@playwrighttest.com");
+        manageUsersPage.clickFirstUserLink();
+        manageUsersPage.clickServicesTab();
+
+        manageUsersPage.verifyServicesNotPresent(rolesToRemove);
+
+        // Verify remaining service is still present
+        List<String> remainingRoles = List.of(TestRole.EXTERNAL_USER_MANAGER.roleName);
+        manageUsersPage.verifySelectedUserServices(remainingRoles);
     }
 
     @Test
@@ -191,7 +264,8 @@ public class ManageUsersTest extends BaseFrontEndTest {
     void editUserOfficesAndVerify() {
 
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
-        manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
+        manageUsersPage.searchForUser("playwright-firmusermanager@playwrighttest.com");
+        manageUsersPage.clickFirstUserLink();
         manageUsersPage.clickOfficesTab();
         manageUsersPage.clickOfficeChange();
         assertTrue(page.url().contains("/admin/users/edit/"));
@@ -199,9 +273,11 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.checkSelectedOffices(offices);
         manageUsersPage.clickContinueUserDetails();
         manageUsersPage.clickConfirmButton();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         assertTrue(page.locator(".govuk-panel__title:has-text('User detail updated')").isVisible());
         manageUsersPage.clickGoBackToManageUsers();
-        manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
+        manageUsersPage.searchForUser("playwright-firmusermanager@playwrighttest.com");
+        manageUsersPage.clickFirstUserLink();
         manageUsersPage.clickOfficesTab();
         assertTrue(page.locator(".govuk-table__header:has-text('Office Address')").isVisible());
         assertTrue(page.locator(".govuk-table__header:has-text('Account number')").isVisible());
@@ -307,6 +383,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
             ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(user);
             assertTrue(page.locator(".govuk-table__body:has-text('External')").isVisible());
             assertTrue(page.locator(".govuk-table__body:has-text('Internal')").isHidden());
+            manageUsersPage.clickAndConfirmSignOut();
         }
     }
 
@@ -322,9 +399,11 @@ public class ManageUsersTest extends BaseFrontEndTest {
             manageUsersPage.clickContinueLink();
             manageUsersPage.clickContinueLink();
             manageUsersPage.clickConfirmButton();
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED);
             assertTrue(page.url().contains("/confirmation"));
             assertTrue(page.locator(".govuk-panel__title:has-text('User detail updated')").isVisible());
             manageUsersPage.clickGoBackToManageUsers();
+            manageUsersPage.clickAndConfirmSignOut();
         }
     }
 
@@ -342,11 +421,13 @@ public class ManageUsersTest extends BaseFrontEndTest {
             manageUsersPage.clickContinueLink();
             manageUsersPage.clickConfirmButton();
             manageUsersPage.clickGoBackToManageUsers();
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED);
             manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
             manageUsersPage.clickOfficesTab();
             assertTrue(page.locator(".govuk-summary-card:has-text('Automation Office 1, City1, 12345')").isVisible());
             assertTrue(page.locator(".govuk-summary-card:has-text('Automation Office 2, City2, 23456')").isVisible());
             manageUsersPage.clickGoBackToManageUsers();
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED);
             manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
             manageUsersPage.clickOfficesTab();
             manageUsersPage.clickOfficeChange();
@@ -355,10 +436,12 @@ public class ManageUsersTest extends BaseFrontEndTest {
             manageUsersPage.clickContinueLink();
             manageUsersPage.clickConfirmButton();
             manageUsersPage.clickGoBackToManageUsers();
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED);
             manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
             manageUsersPage.clickOfficesTab();
             assertTrue(page.locator(".govuk-summary-card:has-text('Automation Office 1, City1, 12345')").isHidden());
             assertTrue(page.locator(".govuk-summary-card:has-text('Automation Office 2, City2, 23456')").isVisible());
+            manageUsersPage.clickAndConfirmSignOut();
         }
     }
 
@@ -369,6 +452,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         Locator row = manageUsersPage.externalUserRowLocator();
         assertTrue(row.locator(".moj-badge.moj-badge--blue").isVisible());
         manageUsersPage.clickExternalUserLink("Playwright ExternalUserIncomplete");
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         assertTrue(page.locator(".govuk-button:has-text('Manage Access')").isVisible());
         manageUsersPage.clickManageAccess();
         List<String> services = List.of("Manage Your Users");
@@ -379,6 +463,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickContinueLink();
         manageUsersPage.clickContinueLink();
         manageUsersPage.clickConfirmButton();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         assertTrue(page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible());
         manageUsersPage.clickGoBackToManageUsers();
         assertTrue(row.locator(".moj-badge.moj-badge--blue").isHidden());

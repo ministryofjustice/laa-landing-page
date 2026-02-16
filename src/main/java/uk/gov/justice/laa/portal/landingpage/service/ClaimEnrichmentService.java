@@ -159,8 +159,8 @@ public class ClaimEnrichmentService {
                 CcmsUserDetailsResponse udaResponse = ccmsUserDetailsService.getUserDetailsByLegacyUserId(legacyUserId);
                 if (udaResponse != null
                         && udaResponse.getCcmsUserDetails() != null
-                        && udaResponse.getCcmsUserDetails().getUserName() != null) {
-                    ccmsUsername = udaResponse.getCcmsUserDetails().getUserName();
+                        && udaResponse.getCcmsUserDetails().getUserLoginId() != null) {
+                    ccmsUsername = udaResponse.getCcmsUserDetails().getUserLoginId();
                 }
             }
 

@@ -21,6 +21,14 @@ public class RoleBaseAccessDeleteExternalUserTest extends RoleBasedAccessIntegra
 
     @Test
     @Transactional
+    public void testSecurityResponseCanDeleteExternalUser() throws Exception {
+        EntraUser loggedInUser = securityResponseUsers.getFirst();
+        EntraUser deletedUser = externalUsersNoRoles.getFirst();
+        canAccessDeleteUserScreens(loggedInUser, deletedUser, status().isOk());
+    }
+
+    @Test
+    @Transactional
     public void testExternalUserAdminCanDeleteExternalUser() throws Exception {
         EntraUser loggedInUser = externalUserAdmins.getFirst();
         EntraUser deletedUser = externalUsersNoRoles.getFirst();
@@ -29,8 +37,16 @@ public class RoleBaseAccessDeleteExternalUserTest extends RoleBasedAccessIntegra
 
     @Test
     @Transactional
-    public void testExternalUserManagerCannotDeleteExternalUser() throws Exception {
+    public void testFirmUserManagerCanDeleteExternalUser() throws Exception {
         EntraUser loggedInUser = externalOnlyUserManagers.getFirst();
+        EntraUser deletedUser = externalUsersNoRoles.getFirst();
+        canAccessDeleteUserScreens(loggedInUser, deletedUser, status().isOk());
+    }
+
+    @Test
+    @Transactional
+    public void testExternalUserManagerCannotDeleteExternalUser() throws Exception {
+        EntraUser loggedInUser = internalWithExternalOnlyUserManagers.getFirst();
         EntraUser deletedUser = externalUsersNoRoles.getFirst();
         canAccessDeleteUserScreens(loggedInUser, deletedUser, status().is3xxRedirection());
     }
@@ -47,6 +63,14 @@ public class RoleBaseAccessDeleteExternalUserTest extends RoleBasedAccessIntegra
     @Transactional
     public void testGlobalAdminCannotDeleteInternalUser() throws Exception {
         EntraUser loggedInUser = globalAdmins.getFirst();
+        EntraUser deletedUser = internalUsersNoRoles.getFirst();
+        canAccessDeleteUserScreens(loggedInUser, deletedUser, status().is3xxRedirection());
+    }
+
+    @Test
+    @Transactional
+    public void testSecurityResponseCannotDeleteInternalUser() throws Exception {
+        EntraUser loggedInUser = securityResponseUsers.getFirst();
         EntraUser deletedUser = internalUsersNoRoles.getFirst();
         canAccessDeleteUserScreens(loggedInUser, deletedUser, status().is3xxRedirection());
     }
