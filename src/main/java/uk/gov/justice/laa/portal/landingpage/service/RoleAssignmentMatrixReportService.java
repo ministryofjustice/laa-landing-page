@@ -1,6 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 
+import com.fasterxml.jackson.databind.SequenceWriter;
+import com.fasterxml.jackson.dataformat.csv.CsvMapper;
+import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import jakarta.persistence.Tuple;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,9 +12,9 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
+import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
@@ -68,39 +71,45 @@ public class RoleAssignmentMatrixReportService {
         String timestamp = LocalDateTime.now().format(fileTimestamp);
         Path outputPath = Path.of(reportDirectory, "SiLAS-role-assignment-matrix-report-" + timestamp + ".csv");
 
-        try (BufferedWriter writer = Files.newBufferedWriter(outputPath)) {
-            writer.write("Firm Name,Firm Code");
+        try {
+            Files.createDirectories(outputPath.getParent());
+
+            CsvSchema.Builder schemaBuilder = CsvSchema.builder()
+                    .addColumn("Firm Name")
+                    .addColumn("Firm Code");
+
             for (String role : allRoles) {
-                writer.write("," + role);
+                schemaBuilder.addColumn(role);
             }
-            writer.newLine();
 
-            for (Map.Entry<FirmDto, Map<String, Integer>> entry : matrix.entrySet()) {
-                FirmDto firm = entry.getKey();
-                writer.write(csvValue(firm.getName()));
-                writer.write(",");
-                writer.write(csvValue(firm.getCode()));
-                Map<String, Integer> roleCounts = entry.getValue();
+            CsvSchema schema = schemaBuilder
+                    .setUseHeader(true)
+                    .build();
 
-                for (String role : allRoles) {
-                    writer.write(",");
-                    writer.write(csvValue(String.valueOf(roleCounts.getOrDefault(role, 0))));
+            CsvMapper csvMapper = CsvMapper.builder().build();
+
+            try (Writer writer = Files.newBufferedWriter(outputPath);
+                 SequenceWriter sequenceWriter = csvMapper.writer(schema).writeValues(writer)) {
+
+                for (Map.Entry<FirmDto, Map<String, Integer>> entry : matrix.entrySet()) {
+                    FirmDto firm = entry.getKey();
+                    Map<String, Integer> roleCounts = entry.getValue();
+
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("Firm Name", firm.getName());
+                    row.put("Firm Code", firm.getCode());
+
+                    for (String role : allRoles) {
+                        row.put(role, roleCounts.getOrDefault(role, 0));
+                    }
+
+                    sequenceWriter.write(row);
                 }
-                writer.newLine();
             }
+
         } catch (IOException e) {
             log.error("Error writing report to file: {}", e.getMessage());
         }
-
     }
 
-    private String csvValue(String value) {
-        if (value == null) {
-            return "";
-        }
-        if (value.contains(",") || value.contains("\"")) {
-            return "\"" + value.replace("\"", "\"\"") + "\"";
-        }
-        return value;
-    }
 }

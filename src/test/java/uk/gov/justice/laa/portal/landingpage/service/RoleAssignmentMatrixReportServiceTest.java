@@ -97,7 +97,7 @@ public class RoleAssignmentMatrixReportServiceTest {
         assertThat(csvPath).exists();
 
         assertThat(lines).containsExactly(
-                "Firm Name,Firm Code,ROLE_1,ROLE_2",
+                "\"Firm Name\",\"Firm Code\",ROLE_1,ROLE_2",
                 "Firm1,F1,2,1",
                 "Firm2,F2,5,0"
         );
