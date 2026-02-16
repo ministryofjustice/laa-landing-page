@@ -26,6 +26,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.actuate.autoconfigure.observation.ObservationProperties;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authorization.AuthorizationDeniedException;
@@ -133,6 +135,9 @@ public class UserController {
     private final AppRoleService appRoleService;
     private final UserAccountStatusService userAccountStatusService;
 
+
+    @Value("${feature.flag.disable.user}")
+    public boolean disableUserFeatureEnabled;
 
     @Value("${feature.flag.disable.user}")
     public boolean disableUserFeatureEnabled;
@@ -375,6 +380,9 @@ public class UserController {
         model.addAttribute("userIsEnabled", userIsEnabled);
         boolean showResendVerificationLink = accessControlService.canSendVerificationEmail(id);
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
+        boolean canConvertToMultiFirm = externalUser
+                && accessControlService.canConvertUserToMultiFirm(user.getEntraUser().getId());
+        model.addAttribute("canConvertUserToMultiFirm", canConvertToMultiFirm);
 
 
         // Multi-firm user information

@@ -702,6 +702,7 @@ class UserControllerTest {
         assertThat(model.getAttribute("canManageOffices")).isNotNull();
         assertThat(model.getAttribute("canEditUser")).isNotNull();
         assertThat(model.getAttribute("showResendVerificationLink")).isNotNull();
+        assertThat(model.getAttribute("canConvertUserToMultiFirm")).isNotNull();
         verify(userService).getUserProfileById(mockUser.getId().toString());
     }
 
@@ -3296,6 +3297,7 @@ class UserControllerTest {
         when(accessControlService.canEditUser(viewedProfileId.toString())).thenReturn(true);
         when(accessControlService.canDeleteFirmProfile(viewedProfileId.toString())).thenReturn(true);
         when(accessControlService.canViewAllFirmsOfMultiFirmUser()).thenReturn(true);
+        when(accessControlService.canConvertUserToMultiFirm(entraUserId.toString())).thenReturn(false);
 
         // When
         String view = userController.manageUser(viewedProfileId.toString(), false, model, session, authentication);

@@ -194,7 +194,7 @@
                                             <a th:if="${user.entraUser.multiFirmUser && canViewAllProfiles}"
                                                class="govuk-link"
                                                th:href="@{/admin/users (search=${user.entraUser.email})}">View all firms for <span th:text="${user.entraUser.fullName}"></span></a>
-                                            <a th:if="${!user.entraUser.multiFirmUser and canEditUser and editorInternalUser}"
+                                            <a th:if="${canConvertUserToMultiFirm}"
                                                class="govuk-link"
                                                th:href="@{/admin/users/edit/{id}/convert-to-multi-firm(id=${user.id})}">
                                                 Convert to multi-firm
