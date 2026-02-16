@@ -23,8 +23,6 @@ import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.actuate.autoconfigure.observation.ObservationProperties;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -372,6 +370,9 @@ public class UserController {
         model.addAttribute("canDisableUser", canDisableUser);
         boolean showResendVerificationLink = accessControlService.canSendVerificationEmail(id);
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
+        boolean canConvertToMultiFirm = externalUser
+                && accessControlService.canConvertUserToMultiFirm(user.getEntraUser().getId());
+        model.addAttribute("canConvertUserToMultiFirm", canConvertToMultiFirm);
 
 
         // Multi-firm user information
