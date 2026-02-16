@@ -139,9 +139,6 @@ public class UserController {
     @Value("${feature.flag.disable.user}")
     public boolean disableUserFeatureEnabled;
 
-    @Value("${feature.flag.disable.user}")
-    public boolean disableUserFeatureEnabled;
-
     @GetMapping("/users")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
             + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_INTERNAL_USER)")
