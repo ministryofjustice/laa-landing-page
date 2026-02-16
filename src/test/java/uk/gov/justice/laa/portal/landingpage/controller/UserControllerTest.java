@@ -3266,7 +3266,7 @@ class UserControllerTest {
         when(accessControlService.canEditUser(viewedProfileId.toString())).thenReturn(true);
         when(accessControlService.canDeleteFirmProfile(viewedProfileId.toString())).thenReturn(true);
         when(accessControlService.canViewAllFirmsOfMultiFirmUser()).thenReturn(true);
-        when(accessControlService.canConvertUserToMultiFirm(viewedProfileId.toString())).thenReturn(false);
+        when(accessControlService.canConvertUserToMultiFirm(entraUserId.toString())).thenReturn(false);
 
         // When
         String view = userController.manageUser(viewedProfileId.toString(), false, model, session, authentication);
