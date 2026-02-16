@@ -24,6 +24,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 
 @Service
@@ -89,6 +90,16 @@ public class AccessControlService {
 
     public boolean canViewAllFirmsOfMultiFirmUser() {
         return authenticatedUserHasPermission(Permission.VIEW_ALL_USER_MULTI_FIRM_PROFILES);
+    }
+
+    public boolean canConvertUserToMultiFirm(String entraUserId) {
+        EntraUserDto accessedUser = userService.getEntraUserById(entraUserId)
+                .orElseThrow(() -> new UserNotFoundException(String.format("User with id '%s' not found", entraUserId)));
+
+        boolean isMultiFirmUser = accessedUser.isMultiFirmUser();
+
+        return !isMultiFirmUser && authenticatedUserIsInternal() && authenticatedUserHasPermission(Permission.EDIT_EXTERNAL_USER)
+                && authenticatedUserHasPermission(Permission.CONVERT_USER_TO_MULTI_FIRM);
     }
 
     public boolean canDeleteUser(String userProfileId) {
