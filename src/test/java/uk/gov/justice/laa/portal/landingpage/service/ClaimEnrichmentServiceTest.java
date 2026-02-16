@@ -312,7 +312,7 @@ class ClaimEnrichmentServiceTest {
         when(appRepository.findByEntraAppId(anyString())).thenReturn(Optional.of(app));
 
         CcmsUserDetails ccmsUserDetails = new CcmsUserDetails();
-        ccmsUserDetails.setUserName("UDA_CCMS_USER");
+        ccmsUserDetails.setUserLoginId("UDA_CCMS_USER");
         CcmsUserDetailsResponse ccmsResponse = new CcmsUserDetailsResponse();
         ccmsResponse.setCcmsUserDetails(ccmsUserDetails);
 
