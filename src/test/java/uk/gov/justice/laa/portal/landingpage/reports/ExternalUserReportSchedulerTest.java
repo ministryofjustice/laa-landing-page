@@ -47,7 +47,7 @@ public class ExternalUserReportSchedulerTest {
         externalUserReportScheduler.getReport();
 
         // Then
-        verify(externalUserReportingService).getExternalUsers();
+        verify(externalUserReportingService).downloadExternalUserCsv();
         verify(lockRepository, times(1)).acquireLock(any(), any(), any());
     }
 
@@ -59,7 +59,7 @@ public class ExternalUserReportSchedulerTest {
         externalUserReportScheduler.getReport();
 
         // Then
-        verify(externalUserReportingService).getExternalUsers();
+        verify(externalUserReportingService).downloadExternalUserCsv();
         verify(lockRepository, never()).acquireLock(any(), any(), any());
     }
 
@@ -72,7 +72,7 @@ public class ExternalUserReportSchedulerTest {
         externalUserReportScheduler.getReport();
 
         // Then
-        verify(externalUserReportingService, never()).getExternalUsers();
+        verify(externalUserReportingService, never()).downloadExternalUserCsv();
     }
 
     @Test
@@ -84,7 +84,7 @@ public class ExternalUserReportSchedulerTest {
 
         // When/Then
         assertDoesNotThrow(() -> externalUserReportScheduler.getReport());
-        verify(externalUserReportingService, never()).getExternalUsers();
+        verify(externalUserReportingService, never()).downloadExternalUserCsv();
     }
 
     @Test
@@ -98,14 +98,14 @@ public class ExternalUserReportSchedulerTest {
         externalUserReportScheduler.getReport();
 
         // Then
-        verify(externalUserReportingService).getExternalUsers();
+        verify(externalUserReportingService).downloadExternalUserCsv();
 
         // When
         anotherInstance.getReport();
 
         // Then
         verify(lockRepository, times(1)).acquireLock(any(), any(), any());
-        verify(externalUserReportingService).getExternalUsers();
+        verify(externalUserReportingService).downloadExternalUserCsv();
     }
 
     @Test
@@ -120,7 +120,7 @@ public class ExternalUserReportSchedulerTest {
                 any(LocalDateTime.class),
                 anyString()
         );
-        verify(externalUserReportingService).getExternalUsers();
+        verify(externalUserReportingService).downloadExternalUserCsv();
     }
 
     private void setReportingEnabled(boolean enabled) {

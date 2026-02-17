@@ -1,5 +1,8 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import com.fasterxml.jackson.databind.SequenceWriter;
+import com.fasterxml.jackson.dataformat.csv.CsvMapper;
+import com.fasterxml.jackson.dataformat.csv.CsvSchema;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,28 +23,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ExternalUserReportingService {
 
-    private static final String[] HEADERS = {
-        "Firm Name",
-        "Firm Code",
-        "Firm Type",
-        "Parent Firm Code",
-        "User Count",
-        "Admin User Count",
-        "Multi-Firm User Count",
-        "Disabled User Count"
-    };
-
     private final FirmRepository firmRepository;
 
     private final Path reportDirectory = Paths.get(System.getProperty("user.home"), "reports");
     private final DateTimeFormatter fileTimestamp = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmm");
 
-    public void getExternalUsers() {
-
-        List<Object[]> reportRows = new ArrayList<>();
-
-        reportRows.addAll(firmRepository.findAllFirmExternalUserCount());
-
+    public void downloadExternalUserCsv() {
+        List<Object[]> reportRows = new ArrayList<>(firmRepository.findAllFirmExternalUserCount());
         writeToCsv(reportRows);
         log.info("External user report written to CSV successfully");
     }
@@ -51,49 +39,42 @@ public class ExternalUserReportingService {
         String timestamp = LocalDateTime.now().format(fileTimestamp);
         Path outputPath = reportDirectory.resolve("SiLAS-external-user-report-" + timestamp + ".csv");
 
-        try (BufferedWriter writer = Files.newBufferedWriter(outputPath)) {
-            writer.write(String.join(",", HEADERS));
-            writer.newLine();
+        CsvMapper mapper = CsvMapper.builder().build();
+
+        CsvSchema schema = CsvSchema.builder()
+                .addColumn("Firm Name")
+                .addColumn("Firm Code")
+                .addColumn("Firm Type")
+                .addColumn("Parent Firm Code")
+                .addColumn("User Count")
+                .addColumn("Admin User Count")
+                .addColumn("Multi-Firm User Count")
+                .addColumn("Disabled User Count")
+                .setUseHeader(true)
+                .build();
+
+        try (BufferedWriter writer = Files.newBufferedWriter(outputPath);
+             SequenceWriter sequenceWriter = mapper
+                     .writer(schema)
+                     .writeValues(writer)) {
 
             for (Object[] row : rows) {
-                String firmName = (String) row[0];
-                String firmCode = row[1] == null ? "" : (String) row[1];
-                String firmType = (String) row[2];
-                String parentFirmCode = row[3] == null ? "" : (String) row[3];
-                long userCount = (Long) row[4];
-                long adminUserCount = (Long) row[5];
-                long multiFirmUserCount = (Long) row[6];
-                long disabledUserCount = (Long) row[7];
 
-                writer.write(csvValue(firmName));
-                writer.write(",");
-                writer.write(csvValue(firmCode));
-                writer.write(",");
-                writer.write(csvValue(firmType));
-                writer.write(",");
-                writer.write(csvValue(parentFirmCode));
-                writer.write(",");
-                writer.write(csvValue(Long.toString(userCount)));
-                writer.write(",");
-                writer.write(csvValue(Long.toString(adminUserCount)));
-                writer.write(",");
-                writer.write(csvValue(Long.toString(multiFirmUserCount)));
-                writer.write(",");
-                writer.write(csvValue(Long.toString(disabledUserCount)));
-                writer.newLine();
+                List<Object> csvRow = List.of(
+                        row[0],
+                        row[1] == null ? "" : row[1],
+                        row[2],
+                        row[3] == null ? "" : row[3],
+                        row[4],
+                        row[5],
+                        row[6],
+                        row[7]
+                );
+                sequenceWriter.write(csvRow);
             }
+
         } catch (IOException e) {
             throw new IllegalStateException("Failed to write external users to CSV", e);
         }
-    }
-
-    private String csvValue(String value) {
-        if (value == null) {
-            return "";
-        }
-        if (value.contains(",") || value.contains("\"")) {
-            return "\"" + value.replace("\"", "\"\"") + "\"";
-        }
-        return value;
     }
 }

@@ -41,7 +41,7 @@ public class ExternalUserReportScheduler {
                 try {
                     lockService.withLock(REPORTING_LOCK_KEY, Duration.ofMinutes(distributedDbLockingPeriod), () -> {
                         log.debug("Acquired lock for external user report");
-                        externalUserReportingService.getExternalUsers();
+                        externalUserReportingService.downloadExternalUserCsv();
                         log.debug("Completed external user report");
                         return null;
                     });
@@ -51,7 +51,7 @@ public class ExternalUserReportScheduler {
                     log.error("Error during external user report", e);
                 }
             } else {
-                externalUserReportingService.getExternalUsers();
+                externalUserReportingService.downloadExternalUserCsv();
             }
         } else {
             log.debug("External user report is disabled via configuration");
