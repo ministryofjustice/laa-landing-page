@@ -71,7 +71,7 @@
                         !</div>
                     <p class="govuk-body" style="margin: 0; padding-top: 0.25rem;">
                         This user is set up as a multi-firm user.
-                        <a class="govuk-link" th:href="@{/admin/users/audit(search=${user.email})}">
+                        <a th:if="${user.profiles != null && user.profiles.size() > 1}" class="govuk-link" th:href="@{/admin/users(search=${user.email})}">
                             <span th:text="'View all firms for ' + ${user.fullName} + '.'">View all firms for
                                 user.</span>
                         </a>
@@ -359,7 +359,7 @@
                     </a>
                     <!-- Disable Button - Only for users without profiles -->
                     <a class="govuk-button govuk-button--warning"
-                       th:if="${@accessControlService.canDisableUser(user.getUserId())}"
+                       th:if="${canDisableUser}"
                        th:href="@{/admin/users/manage/{id}/disable(id=${user.userId})}">
                         Disable User
                     </a>

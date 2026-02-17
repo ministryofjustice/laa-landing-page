@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -29,9 +30,16 @@ public class FirmDirectoryController {
     private final FirmService firmService;
     public static final String SEARCH_PAGE = "firm-directory/search-page";
 
+    @Value("${feature.flag.firm.directory.enabled}")
+    private boolean firmDirectoryEnabled;
+
     @GetMapping()
     public String displayAllFirmDirectory(@ModelAttribute FirmDirectorySearchCriteria criteria,
                                           Model model) {
+        if (!firmDirectoryEnabled) {
+            return "redirect:/";
+        }
+        
         log.debug("FirmDirectoryController.displayAllFirmDirectory - {}", criteria);
 
         PaginatedFirmDirectory paginatedFirmDirectory = firmService.getFirmsPage(criteria.getFirmSearch(),
