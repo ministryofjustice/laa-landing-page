@@ -34,6 +34,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
@@ -107,7 +108,7 @@ public class AuditController {
         model.addAttribute("sort", criteria.getSort());
         model.addAttribute("direction", criteria.getDirection());
         model.addAttribute("exportCsv",
-                accessControlService.userHasAuthzRole(authenticatedUser.getCurrentEntraUser(userService), "Audit Export"));
+                accessControlService.authenticatedUserHasPermission(Permission.EXPORT_AUDIT_DATA));
     }
 
     /**
