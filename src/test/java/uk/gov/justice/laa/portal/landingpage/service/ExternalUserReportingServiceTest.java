@@ -56,8 +56,8 @@ class ExternalUserReportingServiceTest {
         assertThat(lines).isNotEmpty();
 
         assertThat(lines.get(0)).isEqualTo(
-                "\"Firm Name\",\"Firm Code\",\"Firm Type\",\"Parent Firm Code\"," +
-                        "\"User Count\",\"Admin User Count\",\"Multi-Firm User Count\",\"Disabled User Count\""
+                "\"Firm Name\",\"Firm Code\",\"Firm Type\",\"Parent Firm Code\","
+                        + "\"User Count\",\"Admin User Count\",\"Multi-Firm User Count\",\"Disabled User Count\""
         );
 
         assertThat(lines).contains(
