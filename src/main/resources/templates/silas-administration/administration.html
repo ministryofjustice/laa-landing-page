@@ -186,15 +186,18 @@
                                 <td class="govuk-table__cell" th:text="${role.ordinal}">0</td>
                                 <td class="govuk-table__cell" th:text="${role.roleGroup}">Default</td>
                                 <td class="govuk-table__cell">
-                                    <a href="#" class="govuk-link">Change</a>
+                                    <a th:href="@{'/admin/silas-administration/role/' + ${role.id}}" class="govuk-link">Change</a>
                                 </td>
                             </tr>
                         </tbody>
                     </table>
 
-                    <button class="govuk-button govuk-button--secondary" data-module="govuk-button" type="button">
-                        Reorder roles and permissions
-                    </button>
+                    <form class="govuk-!-padding-top-6" th:action="@{/admin/silas-administration/roles/reorder}" method="get">
+                        <button type="submit" class="govuk-button" data-module="govuk-button">
+                            Reorder application roles
+                        </button>
+                    </form>
+
                 </div>
 
                 <div th:if="${roles == null or roles.isEmpty()}" class="govuk-inset-text">

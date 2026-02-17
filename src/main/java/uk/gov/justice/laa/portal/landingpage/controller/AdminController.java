@@ -25,13 +25,20 @@ import uk.gov.justice.laa.portal.landingpage.dto.AdminAppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateAppDetailsAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateAppDisplayOrderAuditEvent;
+import uk.gov.justice.laa.portal.landingpage.dto.UpdateAppRoleDetailsAuditEvent;
+import uk.gov.justice.laa.portal.landingpage.dto.UpdateAppRoleDisplayOrderAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.forms.AppDetailsForm;
+import uk.gov.justice.laa.portal.landingpage.forms.AppRoleDetailsForm;
+import uk.gov.justice.laa.portal.landingpage.forms.AppRolesOrderForm;
 import uk.gov.justice.laa.portal.landingpage.forms.AppsOrderForm;
 import uk.gov.justice.laa.portal.landingpage.service.AdminService;
+import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
 import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
@@ -53,6 +60,7 @@ public class AdminController {
     private final EventService eventService;
     private final AdminService adminService;
     private final AppService appService;
+    private final AppRoleService appRoleService;
 
     /**
      * Display SiLAS Administration landing page with Admin Services tab by default
@@ -73,6 +81,8 @@ public class AdminController {
         session.removeAttribute("appDetailsFormModel");
         session.removeAttribute("appId");
         session.removeAttribute("appsOrderForm");
+        session.removeAttribute("appRoleDetailsForm");
+        session.removeAttribute("appRoleDetailsFormModel");
 
         // Load all admin apps data for admin-apps tab
         List<AdminAppDto> adminApps = adminService.getAllAdminApps();
@@ -86,10 +96,17 @@ public class AdminController {
         if (appFilter != null && !appFilter.isEmpty()) {
             roles = adminService.getAppRolesByApp(appFilter);
         } else {
-            roles = adminService.getAllAppRoles();
+            appFilter = getObjectFromHttpSession(session, "appFilter", String.class).orElse(null);
+
+            if (appFilter == null) {
+                roles = adminService.getAllAppRoles();
+            } else {
+                roles = adminService.getAppRolesByApp(appFilter);
+            }
         }
         model.addAttribute("roles", roles);
         model.addAttribute("appFilter", appFilter);
+        session.setAttribute("appFilter", appFilter);
 
         // Get distinct app names for filter dropdown
         List<String> appNames = adminService.getAllApps().stream()
@@ -274,6 +291,210 @@ public class AdminController {
         session.removeAttribute("appsOrderForm");
 
         return "silas-administration/edit-apps-order-confirmation";
+    }
+
+    @GetMapping("/silas-administration/role/{roleId}")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_LAA_APP_METADATA)")
+    public String editAppRoleDetailsGet(@PathVariable String roleId,
+                                    Model model,
+                                    HttpSession session) {
+        AppRoleDto appRoleDto = appRoleService.findById(UUID.fromString(roleId))
+                .orElseThrow(() -> new RuntimeException("App details not found"));
+        model.addAttribute("appRole", appRoleDto);
+
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "SiLAS Administration");
+        model.addAttribute(ModelAttributes.PAGE_SUMMARY, "Legal Aid Services");
+        AppRoleDetailsForm appRoleDetailsForm = (AppRoleDetailsForm) session.getAttribute("appRoleDetailsForm");
+
+        if (appRoleDetailsForm == null) {
+            appRoleDetailsForm = AppRoleDetailsForm.builder()
+                    .appRoleId(appRoleDto.getId())
+                    .name(appRoleDto.getName())
+                    .description(appRoleDto.getDescription())
+                    .build();
+        }
+
+        model.addAttribute("appRoleDetailsForm", appRoleDetailsForm);
+        session.setAttribute("appRoleDetailsForm", appRoleDetailsForm);
+        session.setAttribute("appRoleDetailsFormModel", model);
+        return "silas-administration/edit-role-details";
+    }
+
+    @PostMapping("/silas-administration/role/{roleId}")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_LAA_APP_METADATA)")
+    public String editAppRoleDetailsPost(@PathVariable String roleId,
+                                     @Valid AppRoleDetailsForm appRoleDetailsForm,
+                                     BindingResult result,
+                                     Model model,
+                                     HttpSession session) {
+        if (result.hasErrors()) {
+            String errorMessage = buildErrorString(result);
+            AppRoleDto appRoleDto = appRoleService.findById(UUID.fromString(roleId))
+                    .orElseThrow(() -> new RuntimeException("App role details not found"));
+            model.addAttribute("appRole", appRoleDto);
+            model.addAttribute("errorMessage", errorMessage);
+            return "silas-administration/edit-role-details";
+        }
+
+        session.setAttribute("roleId", roleId);
+        session.setAttribute("appRoleDetailsForm", appRoleDetailsForm);
+
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "SiLAS Administration");
+
+        return String.format("redirect:/admin/silas-administration/role/%s/check-answers", roleId);
+    }
+
+    @GetMapping("/silas-administration/role/{roleId}/check-answers")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_LAA_APP_METADATA)")
+    public String confirmAppRoleDetailsGet(@PathVariable String roleId,
+                                       Model model,
+                                       HttpSession session) {
+        String roleIdFromSession = getObjectFromHttpSession(session, "roleId", String.class)
+                .orElseThrow(() -> new RuntimeException("Role ID not found in session"));
+        AppRoleDetailsForm roleDetailsForm = getObjectFromHttpSession(session, "appRoleDetailsForm", AppRoleDetailsForm.class)
+                .orElseThrow(() -> new RuntimeException("App role details not found in session"));
+
+        if (!roleId.equals(roleIdFromSession)) {
+            throw new RuntimeException("Invalid request for app details change");
+        }
+
+        AppRoleDto roleDto = appRoleService.findById(UUID.fromString(roleId))
+                .orElseThrow(() -> new RuntimeException("App role details not found"));
+
+        model.addAttribute("appRole", roleDto);
+        model.addAttribute("appRoleDetailsForm", roleDetailsForm);
+
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "SiLAS Administration");
+
+        return "silas-administration/edit-role-details-check-answers";
+    }
+
+    @PostMapping("/silas-administration/role/{roleId}/check-answers")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_LAA_APP_METADATA)")
+    public String confirmAppRoleDetailsPost(@PathVariable String roleId,
+                                        Authentication authentication,
+                                        Model model,
+                                        HttpSession session) {
+        String roleIdFromSession = getObjectFromHttpSession(session, "roleId", String.class)
+                .orElseThrow(() -> new RuntimeException("App Role ID not found in session"));
+        AppRoleDetailsForm roleDetailsForm = getObjectFromHttpSession(session, "appRoleDetailsForm", AppRoleDetailsForm.class)
+                .orElseThrow(() -> new RuntimeException("App role details not found in session"));
+
+        if (!roleId.equals(roleIdFromSession)) {
+            throw new RuntimeException("Invalid request for app role details change");
+        }
+
+        AppRoleDto roleDto = appRoleService.findById(UUID.fromString(roleId))
+                .orElseThrow(() -> new RuntimeException("App details not found"));
+        String appRoleName = roleDto.getName();
+        String appRoleDescription = roleDto.getDescription();
+
+        roleDto.setName(roleDetailsForm.getName());
+        roleDto.setDescription(roleDetailsForm.getDescription());
+
+        AppRole updatedAppRole = appRoleService.save(roleDto);
+
+        CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+        UpdateAppRoleDetailsAuditEvent updateAppRoleDetailsAuditEvent = new UpdateAppRoleDetailsAuditEvent(currentUserDto,
+                updatedAppRole.getName(), appRoleName, updatedAppRole.getDescription(), appRoleDescription);
+        eventService.logEvent(updateAppRoleDetailsAuditEvent);
+
+        model.addAttribute("appRole", roleDto);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "SiLAS Administration");
+
+        session.removeAttribute("appRoleDetailsForm");
+        session.removeAttribute("appRoleDetailsFormModel");
+        session.removeAttribute("roleId");
+
+        return "silas-administration/edit-role-details-confirmation";
+    }
+
+    @GetMapping("/silas-administration/roles/reorder")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_LAA_APP_METADATA)")
+    public String editAppRolesOrderGet(Model model,
+                                  HttpSession session) {
+        String appName = getObjectFromHttpSession(session, "appFilter", String.class)
+                .orElseThrow(() -> new RuntimeException("App not selected for role ordering"));
+        AppRolesOrderForm appRolesOrderForm = getObjectFromHttpSession(session, "appRolesOrderForm", AppRolesOrderForm.class).orElse(null);
+        if (appRolesOrderForm == null) {
+            List<AppRoleAdminDto> appRoles = adminService.getAppRolesByApp(appName);
+            List<AppRolesOrderForm.AppRolesOrderDetailsForm> appRoleOrderDetailsForm = appRoles.stream()
+                    .map(AppRolesOrderForm.AppRolesOrderDetailsForm::new)
+                    .toList();
+            appRolesOrderForm = AppRolesOrderForm.builder().appRoles(appRoleOrderDetailsForm).build();
+        }
+
+        model.addAttribute("appName", appName);
+        model.addAttribute("appRolesOrderForm", appRolesOrderForm);
+
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "SiLAS Administration");
+
+        return "silas-administration/edit-app-roles-order";
+    }
+
+    @PostMapping("/silas-administration/roles/reorder")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_LAA_APP_METADATA)")
+    public String editAppRolesOrderPost(@Valid AppRolesOrderForm appRolesOrderForm,
+                                   BindingResult result,
+                                   Model model,
+                                   HttpSession session) {
+        String appName = getObjectFromHttpSession(session, "appFilter", String.class)
+                .orElseThrow(() -> new RuntimeException("App not selected for role ordering"));
+        model.addAttribute("appName", appName);
+
+        if (result.hasErrors()) {
+            String errorMessage = buildErrorString(result);
+            model.addAttribute("errorMessage", errorMessage);
+            return "silas-administration/edit-app-roles-order";
+        }
+
+        appRolesOrderForm.getAppRoles().sort(Comparator.comparingInt(AppRolesOrderForm.AppRolesOrderDetailsForm::getOrdinal));
+        session.setAttribute("appRolesOrderForm", appRolesOrderForm);
+        model.addAttribute("appRolesOrderList", appRolesOrderForm.getAppRoles());
+
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "SiLAS Administration");
+
+        return "silas-administration/edit-app-roles-order-check-answers";
+    }
+
+    @PostMapping("/silas-administration/roles/reorder/check-answers")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_LAA_APP_METADATA)")
+    public String confirmEditAppRolesOrderPost(Authentication authentication, Model model,
+                                          HttpSession session) {
+        AppRolesOrderForm appRolesOrderForm = getObjectFromHttpSession(session, "appRolesOrderForm", AppRolesOrderForm.class)
+                .orElseThrow(() -> new RuntimeException("App role order details not found in session"));
+        String appName = getObjectFromHttpSession(session, "appFilter", String.class)
+                .orElseThrow(() -> new RuntimeException("App name not found in session"));
+        CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+
+        appRoleService.updateAppRolesOrder(appRolesOrderForm.getAppRoles());
+
+        UpdateAppRoleDisplayOrderAuditEvent updateAppOrdinalAuditEvent = new UpdateAppRoleDisplayOrderAuditEvent(currentUserDto,
+                appName, appName);
+        eventService.logEvent(updateAppOrdinalAuditEvent);
+
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "SiLAS Administration");
+        session.removeAttribute("appsOrderForm");
+        session.removeAttribute("appFilter");
+        session.removeAttribute("roleId");
+        session.removeAttribute("appRolesOrderForm");
+
+        return "silas-administration/edit-app-roles-order-confirmation";
+    }
+
+    @GetMapping("/silas-administration/cancel")
+    public String cancel(HttpSession session) {
+        session.removeAttribute("appDetailsForm");
+        session.removeAttribute("appDetailsFormModel");
+        session.removeAttribute("appId");
+        session.removeAttribute("appRoleDetailsForm");
+        session.removeAttribute("appRoleDetailsFormModel");
+        session.removeAttribute("appsOrderForm");
+        session.removeAttribute("appFilter");
+        session.removeAttribute("roleId");
+        session.removeAttribute("appRolesOrderForm");
+
+        return "redirect:/admin/silas-administration";
     }
 
     private static String buildErrorString(BindingResult result) {

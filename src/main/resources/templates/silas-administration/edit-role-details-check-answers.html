@@ -2,7 +2,7 @@
 <html lang="en" th:replace="~{layout :: layout(
       title=~{::title},
       mainContent=~{::#main-content},
-      pageCategory=${'edit-app-details-check-answers'},
+      pageCategory=${'edit-role-details-check-answers'},
       breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
 
 <head>
@@ -14,7 +14,7 @@
     <ol class="govuk-breadcrumbs__list">
         <li class="govuk-breadcrumbs__list-item">
             <a class="govuk-breadcrumbs__link"
-               th:href="@{'/admin/silas-administration/app/' + ${app.id}}">< Back</a>
+               th:href="@{'/admin/silas-administration/role/' + ${appRole.id}}">< Back</a>
         </li>
     </ol>
 </nav>
@@ -43,35 +43,35 @@
                 <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
                 <strong class="govuk-warning-text__text">
                     <span class="govuk-visually-hidden">Warning</span>
-                    You are about to update app details
+                    You are about to update app role details
                 </strong>
             </div>
 
             <dl class="govuk-summary-list">
-                <!-- Current App Status -->
+                <!-- Current App Role Name -->
                 <div class="govuk-summary-list__row">
                     <dt class="govuk-summary-list__key">
-                        Current App Status
+                        Current App Role Name
                     </dt>
                     <dd class="govuk-summary-list__value"
-                        th:text="${app.enabled}?'Enabled':'Disabled'">
-                        Current App Status
+                        th:text="${appRole.name}">
+                        Current App Role Name
                     </dd>
                     <dd class="govuk-summary-list__actions">
                     </dd>
                 </div>
 
-                <!-- New App Status -->
+                <!-- New App Role Name -->
                 <div class="govuk-summary-list__row">
                     <dt class="govuk-summary-list__key">
-                        New App Status
+                        New App Role Name
                     </dt>
-                    <dd class="govuk-summary-list__value" th:text="${appDetailsForm.enabled}?'Enabled':'Disabled'">
-                        New App Status
+                    <dd class="govuk-summary-list__value" th:text="${appRoleDetailsForm.name}">
+                        New App Role Name
                     </dd>
                     <dd class="govuk-summary-list__actions">
                         <a class="govuk-link"
-                           th:href="@{'/admin/silas-administration/app/' + ${app.id}}">
+                           th:href="@{'/admin/silas-administration/role/' + ${appRole.id}}">
                             Change<span class="govuk-visually-hidden"></span>
                         </a>
                     </dd>
@@ -80,27 +80,27 @@
                 <!-- Current App Description -->
                 <div class="govuk-summary-list__row">
                     <dt class="govuk-summary-list__key">
-                        Current App Description
+                        Current App Role Description
                     </dt>
                     <dd class="govuk-summary-list__value"
-                        th:text="${app.description}">
-                        Current App Description
+                        th:text="${appRole.description}">
+                        Current App Role Description
                     </dd>
                     <dd class="govuk-summary-list__actions">
                     </dd>
                 </div>
 
-                <!-- New App Description -->
+                <!-- New App Role Description -->
                 <div class="govuk-summary-list__row">
                     <dt class="govuk-summary-list__key">
-                        New App Description
+                        New App Role Description
                     </dt>
-                    <dd class="govuk-summary-list__value" th:text="${appDetailsForm.description}">
-                        New App Description
+                    <dd class="govuk-summary-list__value" th:text="${appRoleDetailsForm.description}">
+                        New App Role Description
                     </dd>
                     <dd class="govuk-summary-list__actions">
                         <a class="govuk-link"
-                           th:href="@{'/admin/silas-administration/app/' + ${app.id}}">
+                           th:href="@{'/admin/silas-administration/role/' + ${appRole.id}}">
                             Change<span class="govuk-visually-hidden"></span>
                         </a>
                     </dd>
@@ -109,7 +109,7 @@
 
             </dl>
 
-            <form method="post" th:action="@{'/admin/silas-administration/app/' + ${app.id} + '/check-answers'}">
+            <form method="post" th:action="@{'/admin/silas-administration/role/' + ${appRole.id} + '/check-answers'}">
                 <div class="govuk-button-group">
                     <button type="submit" class="govuk-button" data-module="govuk-button">
                         Confirm

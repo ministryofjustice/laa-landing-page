@@ -2,7 +2,7 @@
 <html lang="en" th:replace="~{layout :: layout(
       title=~{::title},
       mainContent=~{::#main-content},
-      pageCategory=${'edit-apps-order-check-answers'},
+      pageCategory=${'edit-app-roles-order-check-answers'},
       breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
 
 <head>
@@ -14,7 +14,7 @@
     <ol class="govuk-breadcrumbs__list">
         <li class="govuk-breadcrumbs__list-item">
             <a class="govuk-breadcrumbs__link"
-               th:href="@{'/admin/silas-administration/apps/reorder'}">< Back</a>
+               th:href="@{'/admin/silas-administration/roles/reorder'}">< Back</a>
         </li>
     </ol>
 </nav>
@@ -29,34 +29,34 @@
                 <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
                 <strong class="govuk-warning-text__text">
                     <span class="govuk-visually-hidden">Warning</span>
-                    You are about to update app display order
+                    You are about to update app role display order for : <span th:text="${appName}"></span>
                 </strong>
             </div>
 
             <div>
                 <dl class="govuk-summary-list">
                     <div class="govuk-summary-list__row">
-                        <dt class="govuk-summary-list__key" style="width: 50%;" th:text="'Service name'"></dt>
-                        <dd class="govuk-summary-list__key" style="width: 25%;" th:text="'App Ordinal'"></dd>
+                        <dt class="govuk-summary-list__key" style="width: 50%;" th:text="'Role name'"></dt>
+                        <dd class="govuk-summary-list__key" style="width: 25%;" th:text="'Ordinal'"></dd>
                         <dd class="govuk-summary-list__key" style="width: 25%;"></dd>
                     </div>
-                    <div class="govuk-summary-list__row" th:each="app : ${appsOrderList}">
-                        <dt class="govuk-summary-list__key" style="width: 50%;" th:text="${app.name}">
-                            Service name
+                    <div class="govuk-summary-list__row" th:each="role : ${appRolesOrderList}">
+                        <dt class="govuk-summary-list__key" style="width: 50%;" th:text="${role.name}">
+                            Role name
                         </dt>
-                        <dd class="govuk-summary-list__value" style="width: 25%;" th:text="${app.ordinal}">
-                            App Ordinal
+                        <dd class="govuk-summary-list__value" style="width: 25%;" th:text="${role.ordinal}">
+                            Ordinal
                         </dd>
                         <dd class="govuk-summary-list__actions" style="width: 25%;">
                             <a class="govuk-link"
-                               th:href="@{'/admin/silas-administration/apps/reorder'}">
+                               th:href="@{'/admin/silas-administration/roles/reorder'}">
                                 Change<span class="govuk-visually-hidden"></span>
                             </a>
                         </dd>
                     </div>
                 </dl>
 
-                <form method="post" th:action="@{'/admin/silas-administration/apps/reorder/check-answers'}">
+                <form method="post" th:action="@{'/admin/silas-administration/roles/reorder/check-answers'}">
                     <div class="govuk-button-group">
                         <button type="submit" class="govuk-button" data-module="govuk-button">
                             Confirm
