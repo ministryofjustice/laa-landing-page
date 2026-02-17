@@ -8,6 +8,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmUserForm;
@@ -67,6 +68,36 @@ public class RoleBasedAccessDelegateUserAccessTest extends RoleBasedAccessIntegr
     public void testGlobalAdminCannotPostToDelegateFirmAccessToExternalUser() throws Exception {
         MockHttpSession session = new MockHttpSession();
         EntraUser editorUser = globalAdmins.getFirst();
+        MvcResult result = this.mockMvc.perform(post("/admin/multi-firm/user/add/profile")
+                        .with(userOauth2Login(editorUser))
+                        .with(csrf())
+                        .session(session))
+                .andExpect(status().is4xxClientError())
+                .andReturn();
+        assertThat(result.getResponse()).isNotNull();
+        assertThat(result.getResponse().getErrorMessage()).isEqualTo("Forbidden");
+    }
+
+    @Test
+    @Transactional
+    public void testSecurityResponseCannotAccessDelegateFirmAccessToExternalUser() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        EntraUser editorUser = securityResponseUsers.getFirst();
+        MvcResult result = this.mockMvc.perform(get("/admin/multi-firm/user/add/profile")
+                        .with(userOauth2Login(editorUser))
+                        .with(csrf())
+                        .session(session))
+                .andExpect(status().is4xxClientError())
+                .andReturn();
+        assertThat(result.getResponse()).isNotNull();
+        assertThat(result.getResponse().getErrorMessage()).isEqualTo("Forbidden");
+    }
+
+    @Test
+    @Transactional
+    public void testSecurityResponseCannotPostToDelegateFirmAccessToExternalUser() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        EntraUser editorUser = securityResponseUsers.getFirst();
         MvcResult result = this.mockMvc.perform(post("/admin/multi-firm/user/add/profile")
                         .with(userOauth2Login(editorUser))
                         .with(csrf())
@@ -218,6 +249,113 @@ public class RoleBasedAccessDelegateUserAccessTest extends RoleBasedAccessIntegr
                 .getFirm()
                 .getOffices()
                 .stream()
+                .findFirst()
+                .orElseThrow();
+
+        this.mockMvc.perform(post("/admin/multi-firm/user/add/profile/select/offices")
+                        .with(userOauth2Login(loggedInUser))
+                        .with(csrf())
+                        .session(session)
+                        .param("offices", office.getId().toString()))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+
+        return this.mockMvc.perform(post("/admin/multi-firm/user/add/profile/check-answers")
+                        .with(userOauth2Login(loggedInUser))
+                        .with(csrf())
+                        .session(session))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+    }
+
+    private MvcResult delegateFirmAccessInternalUser(EntraUser loggedInUser, EntraUser editedUser) throws Exception {
+        // Build test app
+        App testExternalApp = buildLaaApp("Test Internal App", generateEntraId(), "TestInternalAppSecurityGroupOid", "TestInternalAppSecurityGroup");
+
+        // Build test role
+        AppRole testInternalAppRole = buildLaaAppRole(testExternalApp, "Test Internal App Role");
+        testInternalAppRole.setPermissions(Set.of(Permission.DELEGATE_EXTERNAL_USER_ACCESS_INTERNAL));
+        testInternalAppRole.setUserTypeRestriction(new UserType[]{UserType.INTERNAL});
+
+        // Persist app and role.
+        testExternalApp.setAppRoles(Set.of(testInternalAppRole));
+        testExternalApp = appRepository.saveAndFlush(testExternalApp);
+        testInternalAppRole = testExternalApp.getAppRoles().stream().findFirst().orElseThrow();
+
+        UserProfile editedUserProfile = editedUser.getUserProfiles().stream().findFirst().orElseThrow();
+        MockHttpSession session = new MockHttpSession();
+
+        MultiFirmUserForm multiFirmUserForm = MultiFirmUserForm.builder().email(editedUserProfile.getEntraUser().getEmail()).build();
+
+        // Select user email using post request.
+        MvcResult postEmailResult = this.mockMvc.perform(post("/admin/multi-firm/user/add/profile")
+                        .with(userOauth2Login(loggedInUser))
+                        .with(csrf())
+                        .session(session)
+                        .formField("email", multiFirmUserForm.getEmail()))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+
+        assertThat(postEmailResult.getResponse()).isNotNull();
+        String redirectedUrl = postEmailResult.getResponse().getRedirectedUrl();
+        assertThat(redirectedUrl).isEqualTo("/admin/multi-firm/user/add/profile/select/internalUserFirm");
+
+        // add internal firm  post method
+        MvcResult postInternalUserFirm = this.mockMvc.perform(post("/admin/multi-firm/user/add/profile/select/internalUserFirm")
+                        .with(userOauth2Login(loggedInUser))
+                        .with(csrf())
+                        .session(session)
+                        .param("firmSearch", testFirm2.getName()))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+        assertThat(postInternalUserFirm.getResponse()).isNotNull();
+        redirectedUrl = postInternalUserFirm.getResponse().getRedirectedUrl();
+        assertThat(redirectedUrl).isEqualTo("/admin/multi-firm/user/add/profile/select/apps");
+
+        // Select Apps
+        MvcResult postSelectApps = this.mockMvc.perform(post("/admin/multi-firm/user/add/profile/select/apps")
+                        .with(userOauth2Login(loggedInUser))
+                        .with(csrf())
+                        .session(session)
+                        .param("apps", testExternalApp.getId().toString()))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+
+        assertThat(postSelectApps.getResponse()).isNotNull();
+        redirectedUrl = postSelectApps.getResponse().getRedirectedUrl();
+        assertThat(redirectedUrl).isEqualTo("/admin/multi-firm/user/add/profile/select/roles");
+
+        // Post Role
+        MvcResult getAppRolesResult = this.mockMvc.perform(get("/admin/multi-firm/user/add/profile/select/roles")
+                        .with(userOauth2Login(loggedInUser))
+                        .with(csrf())
+                        .session(session))
+                .andExpect(status().is2xxSuccessful())
+                .andReturn();
+
+        // Post Role
+        MvcResult postAppRolesResult = this.mockMvc.perform(post("/admin/multi-firm/user/add/profile/select/roles")
+                        .with(userOauth2Login(loggedInUser))
+                        .with(csrf())
+                        .param("roles", testInternalAppRole.getId().toString())
+                        .param("selectedAppIndex", "0")
+                        .session(session))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+
+        assertThat(postAppRolesResult.getResponse()).isNotNull();
+        redirectedUrl = postAppRolesResult.getResponse().getRedirectedUrl();
+        assertThat(redirectedUrl).isEqualTo("/admin/multi-firm/user/add/profile/select/offices");
+
+        // Access Offices page
+        mockMvc.perform(get("/admin/multi-firm/user/add/profile/select/offices")
+                        .with(userOauth2Login(loggedInUser))
+                        .with(csrf())
+                        .session(session))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        Office office = testFirm2.getOffices().stream()
                 .findFirst()
                 .orElseThrow();
 

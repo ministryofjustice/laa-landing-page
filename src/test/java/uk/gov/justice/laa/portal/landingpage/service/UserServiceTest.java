@@ -21,11 +21,15 @@ import java.util.stream.IntStream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.Assertions;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
@@ -69,7 +73,6 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import okhttp3.Request;
-import uk.gov.justice.laa.portal.landingpage.config.LaaAppsConfig;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -77,16 +80,19 @@ import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserFirmReassignmentEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
@@ -94,7 +100,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
-import uk.gov.justice.laa.portal.landingpage.model.LaaApplication;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
@@ -102,6 +107,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditAccountStatusProjection;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
@@ -116,7 +122,7 @@ class UserServiceTest {
     @InjectMocks
     private UserService userService;
     @Mock
-    private LaaAppsConfig.LaaApplicationsList laaApplicationsList;
+    private AppService appService;
     @Mock
     private GraphServiceClient mockGraphServiceClient;
     @Mock
@@ -141,6 +147,8 @@ class UserServiceTest {
     private EventService mockEventService;
     @Mock
     private NotificationService notificationService;
+    @Mock
+    private UserAccountStatusAuditRepository mockUserAccountStatusAuditRepository;
 
     @BeforeEach
     void setUp() {
@@ -151,14 +159,82 @@ class UserServiceTest {
                 mockAppRoleRepository,
                 new MapperConfig().modelMapper(),
                 mockOfficeRepository,
-                laaApplicationsList,
+                appService,
                 techServicesClient,
                 mockUserProfileRepository,
+                mockUserAccountStatusAuditRepository,
                 mockRoleChangeNotificationService,
                 firmService,
                 mockFirmRepository,
                 mockEventService,
                 notificationService);
+    }
+
+    @Test
+    void hasUserFirmAlreadyAssigned() {
+        // Given
+        UUID firmId = UUID.randomUUID();
+        String mail = "test@test.com";
+        Optional<EntraUser> entraUserOptional = Optional.ofNullable(EntraUser.builder()
+                .email(mail)
+                .userProfiles(Set.of(UserProfile.builder()
+                        .firm(Firm.builder()
+                                .id(firmId)
+                                .build())
+                        .build()))
+                .build());
+
+        when(mockEntraUserRepository.findByEmailIgnoreCase(any()))
+                .thenReturn(entraUserOptional);
+
+        // When
+        boolean result = userService.hasUserFirmAlreadyAssigned(mail, firmId);
+
+        // Then
+        assertTrue(result);
+
+    }
+
+    @Test
+    void hasNotUserFirmAlreadyAssignedWithoutMatch() {
+        // Given
+        UUID firmId = UUID.randomUUID();
+        String mail = "test@test.com";
+        Optional<EntraUser> entraUserOptional = Optional.ofNullable(EntraUser.builder()
+                .email(mail)
+                .userProfiles(Set.of(UserProfile.builder()
+                        .firm(Firm.builder()
+                                .id(UUID.randomUUID())
+                                .build())
+                        .build()))
+                .build());
+
+        when(mockEntraUserRepository.findByEmailIgnoreCase(any()))
+                .thenReturn(entraUserOptional);
+
+        // When
+        boolean result = userService.hasUserFirmAlreadyAssigned(mail, firmId);
+
+        // Then
+        assertFalse(result);
+
+    }
+
+
+    @Test
+    void hasNotUserFirmAlreadyAssigned() {
+        // Given
+        UUID firmId = UUID.randomUUID();
+        String mail = "test@test.com";
+        when(mockEntraUserRepository.findByEmailIgnoreCase(any()))
+                .thenReturn(Optional.empty());
+
+        // When
+        boolean result = userService.hasUserFirmAlreadyAssigned(mail, firmId);
+
+        // Then
+        assertFalse(result);
+
     }
 
     @Test
@@ -189,6 +265,19 @@ class UserServiceTest {
 
         when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(profile));
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
+        UserAccountStatusAudit auditRecord1 =
+            UserAccountStatusAudit.builder()
+                .id(UUID.randomUUID())
+                .entraUser(entraUser)
+                .build();
+        UserAccountStatusAudit auditRecord2 =
+            UserAccountStatusAudit.builder()
+                .id(UUID.randomUUID())
+                .entraUser(entraUser)
+                .build();
+        List<UserAccountStatusAudit> auditRecords =
+            List.of(auditRecord1, auditRecord2);
+        when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(auditRecords);
         when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), any(Set.class), any(Set.class)))
                 .thenReturn(true);
 
@@ -197,6 +286,9 @@ class UserServiceTest {
 
         // Assert
         verify(techServicesClient).deleteRoleAssignment(entraId);
+        verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
+        verify(mockUserAccountStatusAuditRepository).deleteAll(auditRecords);
+        verify(mockUserAccountStatusAuditRepository).flush();
         verify(mockRoleChangeNotificationService, times(1))
                 .sendMessage(any(UserProfile.class), eq(Collections.emptySet()), any(Set.class));
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
@@ -235,6 +327,7 @@ class UserServiceTest {
 
         // Assert
         verify(techServicesClient).deleteRoleAssignment(entraId);
+        verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
         verify(mockRoleChangeNotificationService, never())
                 .sendMessage(any(UserProfile.class), any(Set.class), any(Set.class));
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
@@ -265,12 +358,14 @@ class UserServiceTest {
 
         when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(profile));
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
+        when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
 
         // Act
         var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID());
 
         // Assert
         verify(techServicesClient).deleteRoleAssignment(entraId);
+        verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
         verify(mockEntraUserRepository, times(1)).delete(entraUser);
         assertThat(result).isNotNull();
@@ -322,28 +417,6 @@ class UserServiceTest {
                 () -> userService.deleteExternalUser(profileId.toString(), "reason", UUID.randomUUID()));
         assertThat(ex.getMessage()).contains("Deletion is only permitted for external users");
         verify(techServicesClient, never()).deleteRoleAssignment(any());
-    }
-
-    @Test
-    void disableUsers() throws IOException {
-        BatchRequestBuilder batchRequestBuilder = mock(BatchRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(mockGraphServiceClient.getBatchRequestBuilder()).thenReturn(batchRequestBuilder);
-
-        RequestAdapter requestAdapter = mock(RequestAdapter.class, RETURNS_DEEP_STUBS);
-        Request request = mock(Request.class, RETURNS_DEEP_STUBS);
-        when(requestAdapter.convertToNativeRequest(any())).thenReturn(request);
-        when(mockGraphServiceClient.getRequestAdapter()).thenReturn(requestAdapter);
-
-        BatchResponseContent responseContent = mock(BatchResponseContent.class, RETURNS_DEEP_STUBS);
-        RequestInformation requestInformation = mock(RequestInformation.class, RETURNS_DEEP_STUBS);
-        UsersRequestBuilder usersRequestBuilder = mock(UsersRequestBuilder.class, RETURNS_DEEP_STUBS);
-        when(mockGraphServiceClient.users()).thenReturn(usersRequestBuilder);
-        when(usersRequestBuilder.byUserId(any()).toPatchRequestInformation(any())).thenReturn(requestInformation);
-        when(batchRequestBuilder.post(any(BatchRequestContent.class), any())).thenReturn(responseContent);
-
-        userService.disableUsers(List.of("user1", "user2"));
-
-        verify(mockGraphServiceClient, times(1)).getBatchRequestBuilder();
     }
 
     @Test
@@ -825,10 +898,16 @@ class UserServiceTest {
         App app1 = App.builder()
                 .id(appId1)
                 .name("Test App 1")
+                .ordinal(1)
+                .appType(AppType.LAA)
+                .enabled(true)
                 .build();
         App app2 = App.builder()
                 .id(appId2)
                 .name("Test App 2")
+                .ordinal(2)
+                .appType(AppType.LAA)
+                .enabled(true)
                 .build();
         AppRole appRole1 = AppRole.builder()
                 .id(appRoleId1)
@@ -855,11 +934,11 @@ class UserServiceTest {
                 .build();
         when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
         when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
-        List<LaaApplication> applications = Arrays.asList(
-                LaaApplication.builder().name("Test App 1").laaApplicationDetails("a//b//c").ordinal(0).build(),
-                LaaApplication.builder().name("Test App 2").laaApplicationDetails("d//e//f").ordinal(1).build(),
-                LaaApplication.builder().name("Test App 3").laaApplicationDetails("g//h//i").ordinal(2).build());
-        when(laaApplicationsList.getApplications()).thenReturn(applications);
+        List<AppDto> applications = Arrays.asList(
+                AppDto.builder().name("Test App 1").appType(AppType.LAA).ordinal(0).enabled(true).build(),
+                AppDto.builder().name("Test App 2").appType(AppType.LAA).ordinal(1).enabled(true).build(),
+                AppDto.builder().name("Test App 3").appType(AppType.LAA).ordinal(2).enabled(true).build());
+        when(appService.getAllActiveLaaApps()).thenReturn(applications);
         // When
         Set<LaaApplicationForView> returnedApps = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
 
@@ -2443,8 +2522,8 @@ class UserServiceTest {
             UUID appId1 = UUID.randomUUID();
             UUID appId2 = UUID.randomUUID();
 
-            App app1 = App.builder().id(appId1).name("Test App 1").build();
-            App app2 = App.builder().id(appId2).name("Test App 2").build();
+            App app1 = App.builder().id(appId1).name("Test App 1").ordinal(1).appType(AppType.LAA).enabled(true).build();
+            App app2 = App.builder().id(appId2).name("Test App 2").ordinal(2).appType(AppType.LAA).enabled(true).build();
 
             AppRole role1 = AppRole.builder().app(app1).build();
             AppRole role2 = AppRole.builder().app(app2).build();
@@ -2463,12 +2542,12 @@ class UserServiceTest {
             when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
-            List<LaaApplication> configuredApps = List.of(
-                    LaaApplication.builder().name("Test App 1").ordinal(1).build(),
-                    LaaApplication.builder().name("Test App 2").ordinal(2).build(),
-                    LaaApplication.builder().name("Test App 3").ordinal(3).build(),
-                    LaaApplication.builder().name("Non-matching App").ordinal(4).build());
-            when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
+            List<AppDto> configuredApps = List.of(
+                    AppDto.builder().name("Test App 1").appType(AppType.LAA).ordinal(1).enabled(true).build(),
+                    AppDto.builder().name("Test App 2").appType(AppType.LAA).ordinal(2).enabled(true).build(),
+                    AppDto.builder().name("Test App 3").appType(AppType.LAA).ordinal(3).enabled(true).build(),
+                    AppDto.builder().name("Non-matching App").appType(AppType.LAA).ordinal(4).enabled(true).build());
+            when(appService.getAllActiveLaaApps()).thenReturn(configuredApps);
 
             // Act
             Set<LaaApplicationForView> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
@@ -2501,9 +2580,9 @@ class UserServiceTest {
             when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
-            List<LaaApplication> configuredApps = List.of(
-                    LaaApplication.builder().name("Different App").ordinal(1).build());
-            when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
+            List<AppDto> configuredApps = List.of(
+                    AppDto.builder().name("Different App").appType(AppType.LAA).ordinal(1).enabled(true).build());
+            when(appService.getAllActiveLaaApps()).thenReturn(configuredApps);
 
             // Act
             Set<LaaApplicationForView> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
@@ -2517,9 +2596,9 @@ class UserServiceTest {
             // Arrange
             UUID entraUserId = UUID.randomUUID();
             UUID userProfileId = UUID.randomUUID();
-            App app1 = App.builder().name("App C").build();
-            App app2 = App.builder().name("App A").build();
-            App app3 = App.builder().name("App B").build();
+            App app1 = App.builder().name("App C").ordinal(3).appType(AppType.LAA).enabled(true).build();
+            App app2 = App.builder().name("App A").ordinal(1).appType(AppType.LAA).enabled(true).build();
+            App app3 = App.builder().name("App B").ordinal(2).appType(AppType.LAA).enabled(true).build();
 
             AppRole role1 = AppRole.builder().app(app1).build();
             AppRole role2 = AppRole.builder().app(app2).build();
@@ -2539,11 +2618,11 @@ class UserServiceTest {
             when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
-            List<LaaApplication> configuredApps = List.of(
-                    LaaApplication.builder().name("App C").ordinal(3).build(),
-                    LaaApplication.builder().name("App A").ordinal(1).build(),
-                    LaaApplication.builder().name("App B").ordinal(2).build());
-            when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
+            List<AppDto> configuredApps = List.of(
+                    AppDto.builder().name("App C").ordinal(3).build(),
+                    AppDto.builder().name("App A").ordinal(1).build(),
+                    AppDto.builder().name("App B").ordinal(2).build());
+            when(appService.getAllActiveLaaApps()).thenReturn(configuredApps);
 
             // Act
             Set<LaaApplicationForView> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
@@ -2559,10 +2638,17 @@ class UserServiceTest {
         @Test
         void getUserAssignedAppsforLandingPage_returnsDefaultDescription() {
             // Arrange
+            UUID appAsId = UUID.randomUUID();
+            UUID appBsId = UUID.randomUUID();
+            UUID appCsId = UUID.randomUUID();
             UUID entraUserId = UUID.randomUUID();
             UUID userProfileId = UUID.randomUUID();
-            App app1 = App.builder().name("App C").build();
-            App app2 = App.builder().name("App A").build();
+            App app1 = App.builder().id(appCsId).name("App C").description("Default description for App C").ordinal(3).appType(AppType.LAA).enabled(true).build();
+            App app2 = App.builder().id(appAsId).name("App A").description("Default description for App A").ordinal(1).appType(AppType.LAA).enabled(true)
+                    .alternativeAppDescription(App.AlternativeAppDescription.builder()
+                            .assignedAppId(appBsId)
+                            .alternativeDescription("Alternative description for App A").build())
+                    .build();
 
             AppRole role1 = AppRole.builder().app(app1).build();
             AppRole role2 = AppRole.builder().app(app2).build();
@@ -2581,15 +2667,15 @@ class UserServiceTest {
             when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
-            List<LaaApplication> configuredApps = List.of(
-                    LaaApplication.builder().name("App C").ordinal(3).build(),
-                    LaaApplication.builder().name("App A").ordinal(1).description("Default description for App A")
-                            .descriptionIfAppAssigned(LaaApplication.DescriptionIfAppAssigned.builder()
-                                    .appAssigned("App B")
-                                    .description("Alternative description for App A").build())
+            List<AppDto> configuredApps = List.of(
+                    AppDto.builder().id(appCsId.toString()).name("App C").ordinal(3).description("Default description for App C").build(),
+                    AppDto.builder().id(appAsId.toString()).name("App A").ordinal(1).description("Default description for App A")
+                            .alternativeAppDescription(AppDto.AlternativeAppDescriptionDto.builder()
+                                    .assignedAppId(appBsId.toString())
+                                    .alternativeDescription("Alternative description for App A").build())
                             .build(),
-                    LaaApplication.builder().name("App B").ordinal(2).build());
-            when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
+                    AppDto.builder().id(appBsId.toString()).name("App B").ordinal(2).description("Default description for App B").build());
+            when(appService.getAllActiveLaaApps()).thenReturn(configuredApps);
 
             // Act
             Set<LaaApplicationForView> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
@@ -2605,11 +2691,18 @@ class UserServiceTest {
         @Test
         void getUserAssignedAppsforLandingPage_returnsWithAlternativeDescription() {
             // Arrange
+            UUID appAsId = UUID.randomUUID();
+            UUID appBsId = UUID.randomUUID();
+            UUID appCsId = UUID.randomUUID();
             UUID entraUserId = UUID.randomUUID();
             UUID userProfileId = UUID.randomUUID();
-            App app1 = App.builder().name("App C").build();
-            App app2 = App.builder().name("App A").build();
-            App app3 = App.builder().name("App B").build();
+            App app1 = App.builder().id(appCsId).name("App C").ordinal(3).appType(AppType.LAA).enabled(true).build();
+            App app2 = App.builder().id(appAsId).name("App A").ordinal(1).appType(AppType.LAA).enabled(true)
+                    .alternativeAppDescription(App.AlternativeAppDescription.builder()
+                            .assignedAppId(appBsId)
+                            .alternativeDescription("Alternative description for App A").build())
+                    .build();
+            App app3 = App.builder().id(appBsId).name("App B").ordinal(2).appType(AppType.LAA).enabled(true).build();
 
             AppRole role1 = AppRole.builder().app(app1).build();
             AppRole role2 = AppRole.builder().app(app2).build();
@@ -2629,15 +2722,15 @@ class UserServiceTest {
             when(mockEntraUserRepository.findById(entraUserId)).thenReturn(Optional.of(user));
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
 
-            List<LaaApplication> configuredApps = List.of(
-                    LaaApplication.builder().name("App C").ordinal(3).build(),
-                    LaaApplication.builder().name("App A").ordinal(1)
-                            .descriptionIfAppAssigned(LaaApplication.DescriptionIfAppAssigned.builder()
-                                    .appAssigned("App B")
-                                    .description("Alternative description for App A").build())
+            List<AppDto> configuredApps = List.of(
+                    AppDto.builder().id(appCsId.toString()).name("App C").ordinal(3).build(),
+                    AppDto.builder().id(appAsId.toString()).name("App A").ordinal(1)
+                            .alternativeAppDescription(AppDto.AlternativeAppDescriptionDto.builder()
+                                    .assignedAppId(appBsId.toString())
+                                    .alternativeDescription("Alternative description for App A").build())
                             .build(),
-                    LaaApplication.builder().name("App B").ordinal(2).build());
-            when(laaApplicationsList.getApplications()).thenReturn(configuredApps);
+                    AppDto.builder().id(appBsId.toString()).name("App B").ordinal(2).build());
+            when(appService.getAllActiveLaaApps()).thenReturn(configuredApps);
 
             // Act
             Set<LaaApplicationForView> result = userService.getUserAssignedAppsforLandingPage(entraUserId.toString());
@@ -7582,4 +7675,207 @@ class UserServiceTest {
             assertThat(result).isEmpty();
         }
     }
+
+    @Test
+    void shouldReassignUserFirmSuccessfully() {
+        final ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
+
+        final UUID userProfileId = UUID.randomUUID();
+        final UUID entraUserId = UUID.randomUUID();
+        final UUID newFirmId = UUID.randomUUID();
+        final UUID oldFirmId = UUID.randomUUID();
+        final UUID performedById = UUID.randomUUID();
+        final UUID oldLegacyUserId = UUID.randomUUID();
+
+
+        Firm oldFirm = Firm.builder().id(oldFirmId).name("OldFirm").code("OLD_FIRM").build();
+        Firm newFirm = Firm.builder().id(newFirmId).name("NewFirm").code("NEW_FIRM").build();
+        EntraUser entraUser = EntraUser.builder()
+                .id(entraUserId)
+                .email("user@example.com")
+                .build();
+        UserProfile userProfile = UserProfile.builder().id(userProfileId)
+                .userType(UserType.EXTERNAL).firm(oldFirm)
+                .legacyUserId(oldLegacyUserId)
+                .appRoles(Collections.emptySet())
+                .offices(Collections.emptySet())
+                .entraUser(entraUser)
+                .build();
+
+        when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+        when(mockFirmRepository.findById(newFirmId)).thenReturn(Optional.of(newFirm));
+
+        userService.reassignUserFirm(userProfileId.toString(), newFirmId, "Valid reason", performedById, "AdminUser");
+
+        assertThat(userProfile.getFirm()).isEqualTo(newFirm);
+        assertThat(userProfile.getOffices()).isEmpty();
+        assertThat(userProfile.getLegacyUserId()).isNotNull();
+        assertThat(userProfile.getLegacyUserId()).isNotEqualTo(oldLegacyUserId);
+        verify(mockUserProfileRepository).save(userProfile);
+        verify(mockEventService).logEvent(any(UserFirmReassignmentEvent.class));
+
+        List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
+        assertThat(infoLogs.size()).isEqualTo(1);
+        assertThat(infoLogs.getFirst().getFormattedMessage())
+                .contains(String.format("User profile %s reassigned from firm %s to firm %s",
+                        userProfileId, oldFirm.getName(), newFirm.getName()));
+
+    }
+
+    @Test
+    void shouldThrowWhenUserProfileIdIsNull() {
+        assertThatThrownBy(() ->
+                userService.reassignUserFirm(null, UUID.randomUUID(), "reason", UUID.randomUUID(), "AdminUser")
+        ).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("User profile ID is required");
+    }
+
+    @Test
+    void shouldThrowWhenNewFirmIdIsNull() {
+        assertThatThrownBy(() ->
+                userService.reassignUserFirm(UUID.randomUUID().toString(), null, "reason", UUID.randomUUID(), "AdminUser")
+        ).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("New firm ID is required");
+    }
+
+    @Test
+    void shouldThrowWhenReasonIsEmpty() {
+        assertThatThrownBy(() ->
+                userService.reassignUserFirm(UUID.randomUUID().toString(), UUID.randomUUID(), "   ", UUID.randomUUID(), "AdminUser")
+        ).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Reason for reassignment is required");
+    }
+
+    @Test
+    void shouldThrowWhenUserProfileNotFound() {
+        when(mockUserProfileRepository.findById(any(UUID.class))).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() ->
+                userService.reassignUserFirm(UUID.randomUUID().toString(), UUID.randomUUID(), "reason", UUID.randomUUID(), "AdminUser")
+        ).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("User profile not found");
+    }
+
+    @Test
+    void shouldThrowWhenUserTypeIsNotExternal() {
+        final UUID userProfileId = UUID.randomUUID();
+        final UUID entraUserId = UUID.randomUUID();
+        final UUID newFirmId = UUID.randomUUID();
+        final UUID performedById = UUID.randomUUID();
+
+        EntraUser entraUser = EntraUser.builder()
+                .id(entraUserId)
+                .email("user@example.com")
+                .build();
+        UserProfile userProfile = UserProfile.builder().id(userProfileId)
+                .userType(UserType.INTERNAL)
+                .appRoles(Collections.emptySet())
+                .offices(Collections.emptySet())
+                .entraUser(entraUser)
+                .build();
+        userProfile.setUserType(UserType.INTERNAL);
+        when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+
+        assertThatThrownBy(() ->
+                userService.reassignUserFirm(userProfileId.toString(), newFirmId, "reason", performedById, "AdminUser")
+        ).isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Only external users");
+    }
+
+    @Test
+    void shouldThrowWhenNewFirmIsSameAsCurrent() {
+        final UUID userProfileId = UUID.randomUUID();
+        final UUID entraUserId = UUID.randomUUID();
+        final UUID oldFirmId = UUID.randomUUID();
+        final UUID performedById = UUID.randomUUID();
+        final UUID legacyUserId = UUID.randomUUID();
+
+
+        Firm oldFirm = Firm.builder().id(oldFirmId).name("OldFirm").code("OLD_FIRM").build();
+        EntraUser entraUser = EntraUser.builder()
+                .id(entraUserId)
+                .email("user@example.com")
+                .build();
+        UserProfile userProfile = UserProfile.builder().id(userProfileId)
+                .userType(UserType.EXTERNAL).firm(oldFirm)
+                .legacyUserId(legacyUserId)
+                .appRoles(Collections.emptySet())
+                .offices(Collections.emptySet())
+                .entraUser(entraUser)
+                .build();
+
+
+        when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+
+        assertThatThrownBy(() ->
+                userService.reassignUserFirm(userProfileId.toString(), oldFirmId, "reason", performedById, "AdminUser")
+        ).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("New firm must be different");
+    }
+
+    @Test
+    void shouldThrowWhenNewFirmNotFound() {
+        final UUID userProfileId = UUID.randomUUID();
+        final UUID entraUserId = UUID.randomUUID();
+        final UUID newFirmId = UUID.randomUUID();
+        final UUID oldFirmId = UUID.randomUUID();
+        final UUID performedById = UUID.randomUUID();
+        final UUID legacyUserId = UUID.randomUUID();
+
+
+        Firm oldFirm = Firm.builder().id(oldFirmId).name("OldFirm").code("OLD_FIRM").build();
+        EntraUser entraUser = EntraUser.builder()
+                .id(entraUserId)
+                .email("user@example.com")
+                .build();
+        UserProfile userProfile = UserProfile.builder().id(userProfileId)
+                .userType(UserType.EXTERNAL).firm(oldFirm)
+                .legacyUserId(legacyUserId)
+                .appRoles(Collections.emptySet())
+                .offices(Collections.emptySet())
+                .entraUser(entraUser)
+                .build();
+
+        when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+
+        assertThatThrownBy(() ->
+                userService.reassignUserFirm(userProfileId.toString(), newFirmId, "reason", performedById, "AdminUser")
+        ).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("New firm not found");
+    }
+
+    @Test
+    void shouldThrowWhenAppRolesNotEmpty() {
+
+        final UUID userProfileId = UUID.randomUUID();
+        final UUID entraUserId = UUID.randomUUID();
+        final UUID newFirmId = UUID.randomUUID();
+        final UUID oldFirmId = UUID.randomUUID();
+        final UUID performedById = UUID.randomUUID();
+        final UUID legacyUserId = UUID.randomUUID();
+
+
+        Firm oldFirm = Firm.builder().id(oldFirmId).name("OldFirm").code("OLD_FIRM").build();
+        Firm newFirm = Firm.builder().id(newFirmId).name("NewFirm").code("NEW_FIRM").build();
+        EntraUser entraUser = EntraUser.builder()
+                .id(entraUserId)
+                .email("user@example.com")
+                .build();
+        UserProfile userProfile = UserProfile.builder().id(userProfileId)
+                .userType(UserType.EXTERNAL).firm(oldFirm)
+                .legacyUserId(legacyUserId)
+                .appRoles(Set.of(AppRole.builder().name("ROLE_USER").build()))
+                .offices(Collections.emptySet())
+                .entraUser(entraUser)
+                .build();
+
+        when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+        when(mockFirmRepository.findById(newFirmId)).thenReturn(Optional.of(newFirm));
+
+        assertThatThrownBy(() ->
+                userService.reassignUserFirm(userProfileId.toString(), newFirmId, "reason", performedById, "AdminUser")
+        ).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("All app assignment must be removed");
+    }
+
 }

@@ -54,6 +54,19 @@
                     </div>
                 </div>
 
+                <div th:if="${hasSilasAdminRole}" class="govuk-!-margin-bottom-6">
+                    <div class="govuk-grid-row">
+                        <div class="govuk-grid-column-full">
+                            <div class="moj-ticket-panel__content moj-ticket-panel__content--blue">
+                                <h3 class="govuk-heading-m">
+                                    <a href="/admin/silas-administration" class="govuk-link govuk-link--no-visited-state">SiLAS Administration</a>
+                                </h3>
+                                <p class="govuk-body">Manage user access and permissions</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div th:if="${canViewAuditTable && enableUserAuditTable}" class="govuk-grid-row govuk-!-margin-top-4">
                     <div class="govuk-grid-column-full">
                         <div class="moj-ticket-panel__content moj-ticket-panel__content--blue">
@@ -61,6 +74,17 @@
                                 <a href="/admin/users/audit" class="govuk-link govuk-link--no-visited-state">User Access Audit Table</a>
                             </h3>
                             <p class="govuk-body">View all registered users including account status and role assignments</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div th:if="${canViewFirmDirectory and firmDirectoryEnabled}" class="govuk-grid-row govuk-!-margin-top-4">
+                    <div class="govuk-grid-column-full">
+                        <div class="moj-ticket-panel__content moj-ticket-panel__content--blue">
+                            <h3 class="govuk-heading-m">
+                                <a href="/admin/firmDirectory" class="govuk-link govuk-link--no-visited-state">Firm Directory</a>
+                            </h3>
+                            <p class="govuk-body">View all registered firms including status, offices and role assignments</p>
                         </div>
                     </div>
                 </div>

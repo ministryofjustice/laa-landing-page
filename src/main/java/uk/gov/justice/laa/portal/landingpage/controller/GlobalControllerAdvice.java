@@ -29,8 +29,8 @@ public class GlobalControllerAdvice {
     @Value("${feature.flag.enable.user.audit.table}")
     private boolean enableUserAuditTable;
 
-    @Value("${feature.flag.enable.reassign.firm}")
-    private boolean enableReassignFirm;
+    @Value("${feature.flag.firm.directory.enabled}")
+    private boolean firmDirectoryEnabled;
 
     public GlobalControllerAdvice(LoginService loginService) {
         this.loginService = loginService;
@@ -95,9 +95,9 @@ public class GlobalControllerAdvice {
         return enableUserAuditTable;
     }
 
-    @ModelAttribute("enableReassignFirm")
-    public boolean getReassignFirmEnabledFlag() {
-        return enableReassignFirm;
+    @ModelAttribute("firmDirectoryEnabled")
+    public boolean getFirmDirectoryEnabledFlag() {
+        return firmDirectoryEnabled;
     }
 
     @ModelAttribute("currentUser")

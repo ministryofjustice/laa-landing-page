@@ -26,7 +26,7 @@
                         </h2>
                         <div class="govuk-error-summary__body" id="error-summary-description">
                             <ul th:if="${#fields.hasErrors()}" class="govuk-list govuk-error-summary__list">
-                                <li th:each="error : ${#fields.errors()}"><a href="#" th:text="${error}"></a></li>
+                                <li th:each="error : ${#fields.errors()}"><a th:href="'#role-input-' + ${roles.get(0).id}" th:text="${error}"></a></li>
                             </ul>
                             <ul th:if="${errorMessage}" class="govuk-list govuk-error-summary__list">
                                 <li><a href="#" th:text="${errorMessage}"></a></li>
@@ -184,7 +184,7 @@
                 </div>
                 <div class="govuk-button-group">
                     <button type="submit" class="govuk-button">Continue</button>
-                    <a th:href="@{/admin/users/edit/{id}/cancel(id=${user.id})}" class="govuk-link">Cancel</a>
+                    <a th:href="@{/admin/users/edit/{id}/cancel/confirmation(id=${user.id})}" class="govuk-link">Cancel</a>
                 </div>
             </form>
         </div>

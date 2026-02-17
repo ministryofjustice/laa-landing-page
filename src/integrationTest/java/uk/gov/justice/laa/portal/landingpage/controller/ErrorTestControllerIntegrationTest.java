@@ -15,29 +15,28 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import uk.gov.justice.laa.portal.landingpage.exception.GlobalExceptionHandler;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 
-@WebMvcTest(controllers = ErrorTestController.class)
-@Import({GlobalExceptionHandler.class, GlobalControllerAdvice.class})  // Import exception handler for proper error handling
 @TestPropertySource(properties = {
     "app.test.error-pages.enabled=true"
 })
-class ErrorTestControllerIntegrationTest {
+class ErrorTestControllerIntegrationTest extends BaseIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     // Mock OAuth2 beans to avoid security auto-configuration issues
-    @MockBean
+    @MockitoBean
     private ClientRegistrationRepository clientRegistrationRepository;
 
-    @MockBean
+    @MockitoBean
     private OAuth2AuthorizedClientRepository authorizedClientRepository;
 
-    @MockBean
+    @MockitoBean
     private LoginService loginService;
 
     @Test

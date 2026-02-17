@@ -20,7 +20,10 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.jetbrains.annotations.NotNull;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authorization.AuthorizationDeniedException;
@@ -28,6 +31,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,11 +40,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.beans.factory.annotation.Value;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -72,6 +76,7 @@ import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncomple
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm;
+import uk.gov.justice.laa.portal.landingpage.forms.DisableUserReasonForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmReassignmentForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
@@ -87,6 +92,7 @@ import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
+import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
@@ -100,6 +106,7 @@ import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
 import uk.gov.justice.laa.portal.landingpage.utils.RolesUtils;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
+import uk.gov.justice.laa.portal.landingpage.viewmodel.DisableUserReasonViewModel;
 
 /**
  * User Controller
@@ -122,6 +129,10 @@ public class UserController {
     private final RoleAssignmentService roleAssignmentService;
     private final EmailValidationService emailValidationService;
     private final AppRoleService appRoleService;
+    private final UserAccountStatusService disableUserService;
+
+    @Value("${feature.flag.disable.user}")
+    public boolean disableUserFeatureEnabled;
 
     @GetMapping("/users")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
@@ -205,7 +216,8 @@ public class UserController {
         }
 
         boolean allowDelegateUserAccess = accessControlService
-                .authenticatedUserHasAnyGivenPermissions(Permission.DELEGATE_EXTERNAL_USER_ACCESS);
+                .authenticatedUserHasAnyGivenPermissions(Permission.DELEGATE_EXTERNAL_USER_ACCESS,
+                        Permission.DELEGATE_EXTERNAL_USER_ACCESS_INTERNAL);
 
         model.addAttribute("users", paginatedUsers.getUsers());
         model.addAttribute("requestedPageSize", size);
@@ -288,16 +300,6 @@ public class UserController {
     }
 
     /**
-     * Disable group of users via graph SDK
-     */
-    @PreAuthorize("hasAuthority('SCOPE_User.EnableDisableAccount.All')")
-    @PostMapping("/users/disable")
-    public String disableUsers(@RequestParam("disable-user") List<String> id) throws IOException {
-        userService.disableUsers(id);
-        return "redirect:/users";
-    }
-
-    /**
      * Manage user via graph SDK
      */
     @GetMapping("/users/manage/{id}")
@@ -315,6 +317,7 @@ public class UserController {
 
         List<AppRoleDto> userAppRoles = user.getAppRoles() != null
                 ? user.getAppRoles().stream()
+                        .filter(appRoleDto -> appRoleDto.getApp().isEnabled())
                         .map(appRoleDto -> mapper.map(appRoleDto, AppRoleDto.class))
                         .sorted()
                         .collect(Collectors.toList())
@@ -363,8 +366,13 @@ public class UserController {
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
         final boolean canDeleteUser = accessControlService.canDeleteUser(id);
         model.addAttribute("canDeleteUser", canDeleteUser);
+        final boolean canDisableUser = disableUserFeatureEnabled && accessControlService.canDisableUser(user.getEntraUser().getId());
+        model.addAttribute("canDisableUser", canDisableUser);
         boolean showResendVerificationLink = accessControlService.canSendVerificationEmail(id);
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
+        boolean canConvertToMultiFirm = externalUser
+                && accessControlService.canConvertUserToMultiFirm(user.getEntraUser().getId());
+        model.addAttribute("canConvertUserToMultiFirm", canConvertToMultiFirm);
 
 
         // Multi-firm user information
@@ -458,6 +466,74 @@ public class UserController {
         model.addAttribute("user", optionalUser.get());
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Remove access - " + optionalUser.get().getFullName());
         return "delete-user-reason";
+    }
+
+    @GetMapping("/users/manage/{id}/disable")
+    @PreAuthorize("@accessControlService.canDisableUser(#id)")
+    public String disableUserReasonsGet(@PathVariable String id,
+                                     DisableUserReasonForm disableUserReasonForm,
+                                     Model model,
+                                     HttpSession session) {
+        if (!disableUserFeatureEnabled) {
+            throw new ResponseStatusException(HttpStatusCode.valueOf(404));
+        }
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        List<DisableUserReasonViewModel> reasons = disableUserService.getDisableUserReasons().stream()
+                .map(reason -> mapper.map(reason, DisableUserReasonViewModel.class))
+                .toList();
+        model.addAttribute("user", user);
+        model.addAttribute("reasons", reasons);
+        model.addAttribute("disableUserReasonsForm", disableUserReasonForm);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Disable User - " + user.getFullName());
+        session.setAttribute("disableUserReasonModel", model);
+        return "disable-user-reason";
+    }
+
+    @PostMapping("/users/manage/{id}/disable")
+    @PreAuthorize("@accessControlService.canDisableUser(#id)")
+    public String disableUserReasonsPost(@PathVariable String id,
+                                     @Valid DisableUserReasonForm disableUserReasonForm,
+                                     BindingResult result,
+                                     Authentication authentication,
+                                     Model model,
+                                     HttpSession session) {
+        if (!disableUserFeatureEnabled) {
+            throw new ResponseStatusException(HttpStatusCode.valueOf(404));
+        }
+        if (result.hasErrors()) {
+            String errorMessage = buildErrorString(result);
+            Model modelFromSession = getObjectFromHttpSession(session, "disableUserReasonModel", Model.class).orElseThrow();
+            EntraUserDto user = (EntraUserDto) modelFromSession.getAttribute("user");
+            model.addAttribute("reasons", modelFromSession.getAttribute("reasons"));
+            model.addAttribute("user", user);
+            model.addAttribute("disableUserReasonsForm", disableUserReasonForm);
+            model.addAttribute("errorMessage", errorMessage);
+            return "disable-user-reason";
+        }
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        UUID disabledUserId = UUID.fromString(user.getId());
+        UUID disabledByUserId = loginService.getCurrentEntraUser(authentication).getId();
+        UUID disabledReasonId = UUID.fromString(disableUserReasonForm.getReasonId());
+        disableUserService.disableUser(disabledUserId, disabledReasonId, disabledByUserId);
+
+        model.addAttribute("user", user);
+        model.addAttribute("disableUserReasonsForm", disableUserReasonForm);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Disable User Success - " + user.getFullName());
+        return "disable-user-completed";
+    }
+
+    @NotNull
+    private static String buildErrorString(BindingResult result) {
+        StringBuilder errorMessage = new StringBuilder();
+        List<ObjectError> errors = result.getAllErrors();
+        for (int i = 0; i < errors.size(); i++) {
+            ObjectError error = errors.get(i);
+            errorMessage.append(error.getDefaultMessage());
+            if (i < errors.size() - 1) {
+                errorMessage.append("\n");
+            }
+        }
+        return errorMessage.toString();
     }
 
     @GetMapping("/user/create/details")
@@ -798,6 +874,11 @@ public class UserController {
         return "add-user-created";
     }
 
+    @GetMapping("/user/create/cancel/confirmation")
+    public String confirmCancelCreateUser() {
+        return "cancel-add-user-confirmation";
+    }
+
     @GetMapping("/user/create/cancel")
     public String cancelUserCreation(HttpSession session) {
         session.removeAttribute("user");
@@ -929,6 +1010,7 @@ public class UserController {
         List<AppDto> availableApps = userService.getAppsByUserType(userType);
 
         List<AppDto> editableApps = availableApps.stream()
+                .filter(AppDto::isEnabled)
                 .filter(app -> roleAssignmentService.canUserAssignRolesForApp(currentUserProfile, app))
                 .toList();
 
@@ -1181,6 +1263,7 @@ public class UserController {
         List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
                 .orElseGet(ArrayList::new);
         Map<String, AppDto> editableApps = userService.getAppsByUserType(userType).stream()
+                .filter(AppDto::isEnabled)
                 .filter(app -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, app))
                 .filter(app -> selectedApps.contains(app.getId()))
                 .collect(Collectors.toMap(AppDto::getId, Function.identity()));
@@ -1258,7 +1341,8 @@ public class UserController {
                 .flatMap(List::stream)
                 .toList();
         List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
-                .filter(role -> !roleAssignmentService.canAssignRole(editorUserProfile.getAppRoles(), List.of(role.getId())))
+                .filter(role -> !role.getApp().isEnabled()
+                        || !roleAssignmentService.canAssignRole(editorUserProfile.getAppRoles(), List.of(role.getId())))
                 .map(AppRoleDto::getId)
                 .toList();
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
@@ -1486,6 +1570,20 @@ public class UserController {
         return "edit-user-confirmation";
     }
 
+    @GetMapping("/users/edit/{id}/cancel/confirmation")
+    public String confirmCancelEditUserApps(@PathVariable String id, Model model) {
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        model.addAttribute("user", user);
+        return "cancel-edit-user-confirmation";
+    }
+
+    @GetMapping("/users/edit/{id}/cancel/offices/confirmation")
+    public String confirmCancelEditUserOffices(@PathVariable String id, Model model) {
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        model.addAttribute("user", user);
+        return "cancel-edit-user-firm-confirmation";
+    }
+
     @GetMapping("/users/edit/{id}/cancel")
     public String cancelUserEdit(@PathVariable String id, HttpSession session) {
         // Clear all edit-related session attributes
@@ -1515,8 +1613,10 @@ public class UserController {
      * Convert to Multi-Firm Flow - Show conversion form
      */
     @GetMapping("/users/edit/{id}/convert-to-multi-firm")
-    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_EXTERNAL_USER) && @accessControlService.canEditUser(#id)"
-            + "&& @accessControlService.authenticatedUserIsInternal()")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_EXTERNAL_USER)"
+            + "&& @accessControlService.canEditUser(#id)"
+            + "&& @accessControlService.authenticatedUserIsInternal()"
+            + "&& @accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CONVERT_USER_TO_MULTI_FIRM)")
     public String convertToMultiFirm(@PathVariable String id, ConvertToMultiFirmForm convertToMultiFirmForm,
             Model model, HttpSession session, RedirectAttributes redirectAttributes) {
 
@@ -1548,8 +1648,10 @@ public class UserController {
     }
 
     @PostMapping("/users/edit/{id}/convert-to-multi-firm")
-    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_EXTERNAL_USER) && @accessControlService.canEditUser(#id)"
-            + "&& @accessControlService.authenticatedUserIsInternal()")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_EXTERNAL_USER)"
+            + " && @accessControlService.canEditUser(#id)"
+            + " && @accessControlService.authenticatedUserIsInternal()"
+            + " && @accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CONVERT_USER_TO_MULTI_FIRM)")
     public String convertToMultiFirmPost(@PathVariable String id,
             @Valid ConvertToMultiFirmForm convertToMultiFirmForm,
             BindingResult result,
@@ -1639,6 +1741,7 @@ public class UserController {
         List<AppDto> availableApps = userService.getAppsByUserType(userType);
 
         List<AppDto> editableApps = availableApps.stream()
+                .filter(AppDto::isEnabled)
                 .filter(app -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, app))
                 .toList();
 
@@ -1692,7 +1795,8 @@ public class UserController {
 
         session.setAttribute("grantAccessSelectedApps", selectedApps);
         List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
-                .filter(role -> !roleAssignmentService.canAssignRole(currentUserProfile.getAppRoles(), List.of(role.getId())))
+                .filter(role -> !role.getApp().isEnabled()
+                        || !roleAssignmentService.canAssignRole(currentUserProfile.getAppRoles(), List.of(role.getId())))
                 .map(AppRoleDto::getId)
                 .toList();
         session.setAttribute("nonEditableRoles", nonEditableRoles);
@@ -1849,7 +1953,8 @@ public class UserController {
                     .flatMap(List::stream)
                     .collect(Collectors.toSet());
             List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
-                    .filter(role -> !roleAssignmentService.canUserAssignRolesForApp(currentUserProfile, role.getApp()))
+                    .filter(role -> !role.getApp().isEnabled()
+                            || !roleAssignmentService.canUserAssignRolesForApp(currentUserProfile, role.getApp()))
                     .map(AppRoleDto::getId)
                     .toList();
             session.setAttribute("allSelectedRoles", allSelectedRoles);
@@ -2202,6 +2307,13 @@ public class UserController {
         return "grant-access-confirmation";
     }
 
+    @GetMapping("/users/grant-access/{id}/cancel/confirmation")
+    public String confirmCancelGrantingAccess(@PathVariable String id, Model model) {
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        model.addAttribute("user", user);
+        return "cancel-grant-access-user-confirmation";
+    }
+
     /**
      * Cancel the grant access flow and clean up session data
      *
@@ -2345,14 +2457,14 @@ public class UserController {
             @RequestParam(value = "selectedFirmId", required = false) String selectedFirmId,
             @RequestParam(value = "selectedFirmName", required = false) String selectedFirmName,
             @RequestParam(value = "reason", required = false) String reason,
-            Model model) {
+            Model model, RedirectAttributes redirectAttributes) {
         try {
             Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
 
             if (optionalUser.isEmpty()) {
                 log.warn("User not found for reassignment: {}", id);
                 model.addAttribute("errorMessage", "User not found");
-                return "error";
+                return "errors/error-generic";
             }
 
             UserProfileDto user = optionalUser.get();
@@ -2360,7 +2472,16 @@ public class UserController {
             if (user.getUserType() != UserType.EXTERNAL) {
                 log.warn("Attempted to reassign internal user: {}", id);
                 model.addAttribute("errorMessage", "Only external users can be reassigned to different firms");
-                return "error";
+                return "errors/error-generic";
+            }
+
+            if (!user.getAppRoles().isEmpty()) {
+                log.warn("App roles not removed prior to firm switch for user: {}", id);
+                redirectAttributes.addFlashAttribute("errorMessage",
+                        "All app assignments must be removed before assigning a different firm to the account");
+                model.addAttribute("errorMessage",
+                        "All app assignments must be removed before assigning a different firm to the account");
+                return "redirect:/admin/users/manage/" + id;
             }
 
             FirmReassignmentForm form = new FirmReassignmentForm();
@@ -2381,7 +2502,7 @@ public class UserController {
         } catch (Exception e) {
             log.error("Error loading firm reassignment page for user {}: {}", id, e.getMessage(), e);
             model.addAttribute("errorMessage", "An error occurred while loading the page");
-            return "error";
+            return "errors/error-generic";
         }
     }
 
@@ -2461,7 +2582,7 @@ public class UserController {
             if (optionalUser.isEmpty()) {
                 log.warn("User not found for reassignment: {}", id);
                 model.addAttribute("errorMessage", "User not found");
-                return "error";
+                return "errors/error-generic";
             }
 
             UserProfileDto user = optionalUser.get();
@@ -2469,7 +2590,14 @@ public class UserController {
             if (user.getUserType() != UserType.EXTERNAL) {
                 log.warn("Attempted to reassign internal user: {}", id);
                 model.addAttribute("errorMessage", "Only external users can be reassigned to different firms");
-                return "error";
+                return "errors/error-generic";
+            }
+
+            if (!user.getAppRoles().isEmpty()) {
+                log.warn("App roles not removed prior to firm switch for user: {}", id);
+                model.addAttribute("errorMessage",
+                        "All app assignments must be removed before assigning a different firm to the account");
+                return "errors/error-generic";
             }
 
             ReassignmentReasonForm reasonForm = new ReassignmentReasonForm();
@@ -2487,7 +2615,7 @@ public class UserController {
         } catch (Exception e) {
             log.error("Error loading reason page for user {}: {}", id, e.getMessage(), e);
             model.addAttribute("errorMessage", "An error occurred while loading the page");
-            return "error";
+            return "errors/error-generic";
         }
     }
 
@@ -2520,7 +2648,7 @@ public class UserController {
             if (user.getUserType() != UserType.EXTERNAL) {
                 log.warn("Attempted to reassign internal user: {}", id);
                 model.addAttribute("errorMessage", "Only external users can be reassigned to different firms");
-                return "error";
+                return "errors/error-generic";
             }
 
             if (bindingResult.hasFieldErrors("reason")) {
@@ -2563,7 +2691,7 @@ public class UserController {
             if (optionalUser.isEmpty()) {
                 log.warn("User not found for reassignment: {}", id);
                 model.addAttribute("errorMessage", "User not found");
-                return "error";
+                return "errors/error-generic";
             }
 
             UserProfileDto user = optionalUser.get();
@@ -2571,7 +2699,13 @@ public class UserController {
             if (user.getUserType() != UserType.EXTERNAL) {
                 log.warn("Attempted to reassign internal user: {}", id);
                 model.addAttribute("errorMessage", "Only external users can be reassigned to different firms");
-                return "error";
+                return "errors/error-generic";
+            }
+
+            if (!user.getAppRoles().isEmpty()) {
+                log.warn("App roles not removed prior to firm switch for user: {}", id);
+                model.addAttribute("errorMessage", "All app assignments must be removed before assigning a different firm to the account");
+                return "errors/error-generic";
             }
 
             model.addAttribute("user", user);
@@ -2584,7 +2718,7 @@ public class UserController {
         } catch (Exception e) {
             log.error("Error loading check answers page for user {}: {}", id, e.getMessage(), e);
             model.addAttribute("errorMessage", "An error occurred while loading the page");
-            return "error";
+            return "errors/error-generic";
         }
     }
 
@@ -2683,7 +2817,7 @@ public class UserController {
             if (optionalUser.isEmpty()) {
                 log.warn("User not found for confirmation page: {}", id);
                 model.addAttribute("errorMessage", "User not found");
-                return "error";
+                return "errors/error-generic";
             }
 
             UserProfileDto user = optionalUser.get();
@@ -2694,7 +2828,7 @@ public class UserController {
         } catch (Exception e) {
             log.error("Error loading confirmation page for user {}: {}", id, e.getMessage(), e);
             model.addAttribute("errorMessage", "An error occurred while loading the page");
-            return "error";
+            return "errors/error-generic";
         }
     }
 

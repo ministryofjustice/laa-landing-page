@@ -38,6 +38,38 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void handleUserNotFoundException() {
+        // Arrange
+        String errorMessage = "Test error message";
+        UserNotFoundException exception = new UserNotFoundException(errorMessage);
+
+        // Act
+        ResponseEntity<ClaimEnrichmentResponse> response = exceptionHandler.handleUserNotFoundExceptionException(exception);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(404, response.getStatusCode().value());
+        assertFalse(response.getBody().isSuccess());
+        assertEquals(errorMessage, response.getBody().getMessage());
+    }
+
+    @Test
+    void handleBadRequestException() {
+        // Arrange
+        String errorMessage = "Test error message";
+        BadRequestException exception = new BadRequestException(errorMessage);
+
+        // Act
+        ResponseEntity<ClaimEnrichmentResponse> response = exceptionHandler.handleBadRequestExceptionException(exception);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(400, response.getStatusCode().value());
+        assertFalse(response.getBody().isSuccess());
+        assertEquals(errorMessage, response.getBody().getMessage());
+    }
+
+    @Test
     void handleClaimEnrichmentException() {
         // Arrange
         String errorMessage = "Test error message";
