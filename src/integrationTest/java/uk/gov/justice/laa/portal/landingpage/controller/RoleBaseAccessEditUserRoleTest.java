@@ -125,6 +125,94 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
 
     @Test
     @Transactional
+    public void testSecurityResponseCannotAssignInternalUserManagerRoleToExternalUser() throws Exception {
+        EntraUser loggedInUser = securityResponseUsers.getFirst();
+        EntraUser editedUser = externalUsersNoRoles.getFirst();
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.INTERNAL_USER_MANAGER.getRoleName(), false);
+    }
+
+    @Test
+    @Transactional
+    public void testSecurityResponseCanAssignInternalUserManagerRoleToInternalUser() throws Exception {
+        EntraUser loggedInUser = securityResponseUsers.getFirst();
+        EntraUser editedUser = internalUsersNoRoles.getFirst();
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.INTERNAL_USER_MANAGER.getRoleName(), true);
+    }
+
+    @Test
+    @Transactional
+    public void testSecurityResponseCanAssignExternalUserManagerRoleToInternalUser() throws Exception {
+        EntraUser loggedInUser = securityResponseUsers.getFirst();
+        EntraUser editedUser = internalUsersNoRoles.getFirst();
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.EXTERNAL_USER_MANAGER.getRoleName(), true);
+    }
+
+    @Test
+    @Transactional
+    public void testSecurityResponseCannotAssignExternalUserManagerRoleToExternalUser() throws Exception {
+        EntraUser loggedInUser = securityResponseUsers.getFirst();
+        EntraUser editedUser = externalUsersNoRoles.getFirst();
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.EXTERNAL_USER_MANAGER.getRoleName(), false);
+    }
+
+    @Test
+    @Transactional
+    public void testSecurityResponseCanAssignFirmUserManagerRoleToExternalUser() throws Exception {
+        EntraUser loggedInUser = securityResponseUsers.getFirst();
+        EntraUser editedUser = externalUsersNoRoles.getFirst();
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.FIRM_USER_MANAGER.getRoleName(), true);
+    }
+
+    @Test
+    @Transactional
+    public void testSecurityResponseCannotAssignGlobalAdminRoleToExternalUser() throws Exception {
+        EntraUser loggedInUser = securityResponseUsers.getFirst();
+        EntraUser editedUser = externalUsersNoRoles.getFirst();
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.GLOBAL_ADMIN.getRoleName(), false);
+    }
+
+    @Test
+    @Transactional
+    public void testSecurityResponseCannotAssignExternalUserAdminRoleToExternalUser() throws Exception {
+        EntraUser loggedInUser = securityResponseUsers.getFirst();
+        EntraUser editedUser = externalUsersNoRoles.getFirst();
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName(), false);
+    }
+
+    @Test
+    @Transactional
+    public void testSecurityResponseCanAssignInternalUserViewerRoleToInternalUser() throws Exception {
+        EntraUser loggedInUser = securityResponseUsers.getFirst();
+        EntraUser editedUser = internalUsersNoRoles.getFirst();
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.INTERNAL_USER_VIEWER.getRoleName(), true);
+    }
+
+    @Test
+    @Transactional
+    public void testSecurityResponseCannotAssignInternalUserViewerRoleToExternalUser() throws Exception {
+        EntraUser loggedInUser = securityResponseUsers.getFirst();
+        EntraUser editedUser = externalUsersNoRoles.getFirst();
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.INTERNAL_USER_VIEWER.getRoleName(), false);
+    }
+
+    @Test
+    @Transactional
+    public void testSecurityResponseCanAssignExternalUserViewerRoleToInternalUser() throws Exception {
+        EntraUser loggedInUser = securityResponseUsers.getFirst();
+        EntraUser editedUser = internalUsersNoRoles.getFirst();
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.EXTERNAL_USER_VIEWER.getRoleName(), true);
+    }
+
+    @Test
+    @Transactional
+    public void testSecurityResponseCannotAssignExternalUserViewerRoleToExternalUser() throws Exception {
+        EntraUser loggedInUser = securityResponseUsers.getFirst();
+        EntraUser editedUser = externalUsersNoRoles.getFirst();
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.EXTERNAL_USER_VIEWER.getRoleName(), false);
+    }
+
+    @Test
+    @Transactional
     public void testInternalUserManagerCanAssignInternalUserManagerRoleToInternalUser() throws Exception {
         EntraUser loggedInUser = internalUserManagers.getFirst();
         EntraUser editedUser = internalUsersNoRoles.getFirst();
