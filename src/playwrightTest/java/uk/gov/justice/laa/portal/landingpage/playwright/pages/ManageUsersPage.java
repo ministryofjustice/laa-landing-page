@@ -1,7 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.playwright.pages;
+import uk.gov.justice.laa.portal.landingpage.playwright.TestData_ManageAccess;
 
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
+import java.util.regex.Pattern;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -60,6 +62,16 @@ public class ManageUsersPage {
     private final Locator lastNameInvalidCharsError;
     private final Locator selectUserTypeError;
 
+    private final Locator manageAccessButton;
+    private final Locator grantAccess_heading;
+    private final Locator hint;
+    private final Locator userDetails;
+
+    //Role access locators
+    private final Locator roleAccessHeading;
+    private final Locator rolesHint;
+
+
 
     public ManageUsersPage(Page page, int port) {
         this.page = page;
@@ -104,6 +116,18 @@ public class ManageUsersPage {
         this.firstNameInvalidCharsError = page.locator("div.govuk-error-message p:has-text('First name must not contain numbers or special characters')");
         this.lastNameInvalidCharsError = page.locator("div.govuk-error-message p:has-text('Last name must not contain numbers or special characters')");
         this.selectUserTypeError = page.locator("div.govuk-error-message p:has-text('Select a user type')");
+
+        this.grantAccess_heading = page.locator("h1.govuk-fieldset__heading");
+        this.hint = page.locator("#apps-hint");
+        this.manageAccessButton = page.locator("button.govuk-button:has-text('Manage access')");
+        this.userDetails = page.locator("a.govuk-tabs__tab[href='#user-details']");
+
+        //firm user manager access
+        this.roleAccessHeading =
+                page.locator("fieldset.govuk-fieldset legend h1.govuk-fieldset__heading");
+
+        this.rolesHint = page.locator("#roles-hint"); // changed from "#apps-hint"
+
     }
 
 
@@ -256,4 +280,187 @@ public class ManageUsersPage {
 
         return new AuditPage(page, port);
     }
-}
+    public String createUserForManageAccess() {
+        clickCreateUser();
+        String email = fillInUserDetails(true);
+        selectMultiFirmAccess(false);
+        searchAndSelectFirmByCode("90001");
+        clickContinueFirmSelectPage();
+        clickConfirmButton();
+        clickGoBackToManageUsers();
+        return email;
+    }
+    // Manage access button
+    public void manageAccessButton(String email) {
+        // Find the row containing the user's email
+        searchForUser(email);
+        Locator user_link = page.locator("a.govuk-link[href*='/admin/users/manage/']");
+        user_link.click();
+        assertThat(manageAccessButton).isVisible();
+        manageAccessButton.click();
+        assertThat(grantAccess_heading).isVisible();
+        String headingText = grantAccess_heading.textContent().trim();
+        assertTrue(headingText.startsWith("Which of these services will"));
+        assertTrue(headingText.contains("need access to?"));
+        assertThat(hint).isVisible();
+        assertThat(hint).hasText("Select all that apply");
+        Locator checkboxLabel = page.locator(
+                "label.govuk-label.govuk-checkboxes__label span",
+                new Page.LocatorOptions().setHasText("Manage Your Users"));
+        assertThat(checkboxLabel).isVisible();
+        //checkboxLabel.click();
+        goToUserDetailsTab();
+        assertThat(continueButton).isVisible();
+        continueButton.click();
+
+
+//        for (String labelText : TestData_ManageAccess.CHECKBOX_LABELS) {
+//            Locator checkboxLabel = page.locator(
+//                "label.govuk-label.govuk-checkboxes__label span",
+//                new Page.LocatorOptions().setHasText(labelText)
+//            );
+//            assertThat(checkboxLabel).isVisible();
+      //  }
+    }
+    void goToUserDetailsTab() {
+        assertThat(cancelLink).isVisible();
+        cancelLink.click();
+        assertThat(userDetails).isVisible();
+        manageAccessButton.click();
+
+    }
+    public void roleAccessPage() {
+        String headingText = roleAccessHeading.textContent().trim();
+        assertTrue(headingText.contains("What roles will Test User have for Manage Your Users?"));
+            assertThat(rolesHint).hasText("Select all that apply");
+            Locator roleCheckbox = page.locator("input[type='checkbox'][name='roles']");
+            Locator checkboxLabel = page.locator("label.govuk-label");
+            assertTrue(roleCheckbox.isChecked()); // HTML shows checked="checked" in snippet
+            assertThat(checkboxLabel).hasText("Firm User Manager");
+
+            // Checkbox hint
+            Locator checkboxHint = page.locator("div.govuk-checkboxes__hint");
+            assertThat(checkboxHint).hasText("An external firm user manager");
+
+            // Buttons / links
+            assertThat(continueButton).isVisible();
+            assertThat(cancelLink).isVisible();
+            String cancelHref = cancelLink.getAttribute("href");
+            assertTrue(cancelHref != null && cancelHref.contains("/cancel"));
+            continueButton.click();
+        }
+
+    public void validateOfficesAccessPage() {
+
+        Locator heading = page.locator("h1.govuk-fieldset__heading");
+        assertThat(heading).isVisible();
+        String headingText = heading.textContent().trim();
+        assertTrue(headingText.contains("Which of these offices will"));
+        //assertTrue(headingText.contains(expectedUserName));
+
+        Locator officesHint = page.locator("#offices-hint");
+        assertThat(officesHint).isVisible();
+        assertThat(officesHint).hasText("Select all that apply");
+
+        // "Access to all offices" checkbox + hint
+        Locator allOfficesCheckbox = page.locator("input#offices-all[name='offices'][type='checkbox']");
+        assertThat(allOfficesCheckbox).isVisible();
+        assertTrue(allOfficesCheckbox.isChecked());
+        Locator allOfficesHint = page.locator("#all-offices-hint");
+        assertThat(allOfficesHint).isVisible();
+        assertThat(allOfficesHint).hasText("This will include all current and future offices associated to the firm");
+
+        Locator otherOffices = page.locator(
+                "input[type='checkbox'][name='offices']:not([value='ALL'])"
+        );
+        if (allOfficesCheckbox.isChecked()) {
+            allOfficesCheckbox.uncheck();
+            for (int i = 0; i < otherOffices.count(); i++) {
+                otherOffices.nth(i).check();
+            }
+        }
+        Locator continueBtn = page.locator("button.govuk-button:has-text('Continue')");
+        Locator cancelLink = page.locator("a.govuk-link:has-text('Cancel')");
+        assertThat(continueBtn).isVisible();
+        assertThat(cancelLink).isVisible();
+        String cancelHref = cancelLink.getAttribute("href");
+        assertTrue(cancelHref != null && cancelHref.contains("/cancel"));
+        continueBtn.click();
+    }
+
+    public void confirmPage(){
+        assertThat(page.locator("h1.govuk-heading-l"))
+                        .hasText("Check your answers and confirm");
+
+        Locator form = page.locator("form[action*='check-answers']");
+                assertThat(form).isVisible();
+                Locator userPermissionsCard = page.locator(
+                        "h2.govuk-summary-card__title",
+                        new Page.LocatorOptions().setHasText("User permissions")
+                ).locator("xpath=ancestor::div[contains(@class,'govuk-summary-card')]");
+
+                assertThat(userPermissionsCard).isVisible();
+
+                // Permission key & value
+                assertThat(userPermissionsCard.locator(".govuk-summary-list__key"))
+                        .hasText("Manage Your Users");
+
+                assertThat(userPermissionsCard.locator(".govuk-summary-list__value"))
+                        .hasText("Firm User Manager");
+
+                // Change link
+                assertThat(userPermissionsCard.locator("a.govuk-link",
+                        new Locator.LocatorOptions().setHasText("Change")))
+                        .isVisible();
+
+                Locator officesCard = page.locator(
+                        "h2.govuk-summary-card__title",
+                        new Page.LocatorOptions().setHasText("Offices")
+                ).locator("xpath=ancestor::div[contains(@class,'govuk-summary-card')]");
+]
+                assertThat(officesCard).isVisible();
+
+                Locator officeValues = officesCard.locator(".govuk-summary-list__value span");
+
+                if (officeValues.count() < 1) {
+                    throw new AssertionError("At least one office must be displayed");
+                }
+
+                for (int i = 0; i < officeValues.count(); i++) {
+                    String text = officeValues.nth(i).innerText().trim();
+                    if (text.isEmpty()) {
+                        throw new AssertionError("Office entry text should not be empty");
+                    }
+                }
+
+
+                assertThat(officesCard.locator("a.govuk-link",
+                        new Locator.LocatorOptions().setHasText("Change")))
+                        .isVisible();
+                assertThat(page.locator("h2.govuk-heading-m"))
+                        .hasText("Confirm access");
+
+                assertThat(page.locator("p.govuk-body"))
+                        .containsText("When you confirm");
+
+                // Buttons
+                assertThat(page.locator("button[type='submit']"))
+                        .hasText("Confirm");
+
+        assertThat(cancelLink)
+                .hasAttribute("href",
+                        Pattern.compile(".*/admin/users/grant-access/.*/cancel")
+                );
+
+
+    }
+        }
+
+
+
+
+
+
+
+
+

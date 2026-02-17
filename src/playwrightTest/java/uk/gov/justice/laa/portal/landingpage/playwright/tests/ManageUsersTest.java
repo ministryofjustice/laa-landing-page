@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.playwright.tests;
 
+import com.sun.tools.jconsole.JConsoleContext;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.BaseFrontEndTest;
@@ -35,6 +36,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickConfirmButton();
         manageUsersPage.clickGoBackToManageUsers();
         manageUsersPage.searchAndVerifyUser(email);
+
     }
 
     @Test
@@ -89,7 +91,21 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickCreateUser();
         manageUsersPage.enterInvalidNameAndVerifyError();
     }
+    @Test
+    @DisplayName("Verify manage access button is visible and clickable")
+    void manageAccess() {
 
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+        String email = manageUsersPage.createUserForManageAccess();
+        System.out.println(email);
+        manageUsersPage.manageAccessButton(email);
+        manageUsersPage.roleAccessPage();
+        manageUsersPage.validateOfficesAccessPage();
+        manageUsersPage.confirmPage();
+
+
+
+    }
     /**
      * Logs in as the specified user and navigates to the Manage Users page.
      */

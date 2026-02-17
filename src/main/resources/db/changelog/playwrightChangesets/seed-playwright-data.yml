@@ -159,3 +159,23 @@ databaseChangeLog:
               ('55555555-5555-5555-5555-555555555555', '22222222-2222-2222-2222-222222222222', '34567', 'Automation Office 1', '', 'City3'),
               ('66666666-6666-6666-6666-666666666666', '22222222-2222-2222-2222-222222222222', '45678', 'Automation Office 2', '', 'City4'),
               ('77777777-7777-7777-7777-777777777777', '22222222-2222-2222-2222-222222222222', '56789', 'Automation Office 3', '', 'City5');
+  # External User Viewer
+#  - changeSet:
+#      id: 1761063088678-30
+#      author: chris.marron
+#      context: playwright
+#      changes:
+#        - sql:
+#            dbms: postgresql
+#            sql: "INSERT INTO app (id, name, description, created_by, last_modified_by, created_date, last_modified_date)"
+#                  VALUES (gen_random_uuid(), 'Playwright App', 'Application for Playwright Testing', 'System', 'System', NOW(), NOW())"
+#        - sql:
+#            dbms: postgresql
+#            sql: "INSERT INTO app_role(id, app_id, name, description, created_by, last_modified_by, created_date, last_modified_date)"
+#                  VALUES (gen_random_uuid(), (SELECT id FROM app WHERE name = 'Playwright App'), 'External User Viewer', 'Role for External User Viewer in Playwright App', 'System', 'System', NOW(), NOW())"
+#        - sql:
+#            dbms: postgresql
+#            sql: "INSERT INTO user_profile_app_role (user_profile_id, app_role_id)
+#                  VALUES ((SELECT up.id FROM user_profile up JOIN entra_user u ON up.entra_user_id = u.id
+#                           WHERE u.email = 'playwright-externaluserviewer@playwrighttest.com'),
+#                          (SELECT id FROM app_role WHERE name = 'External User Viewer'))"
