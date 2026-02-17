@@ -80,7 +80,6 @@ class AuditControllerTest {
 
     private PaginatedAuditUsers mockPaginatedUsers;
     private List<AppRoleDto> mockSilasRoles;
-    private Permission mockPermission;
     private Model model;
 
     @BeforeEach
