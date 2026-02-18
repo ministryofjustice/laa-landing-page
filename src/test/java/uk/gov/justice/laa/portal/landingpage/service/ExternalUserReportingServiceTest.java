@@ -3,8 +3,8 @@ package uk.gov.justice.laa.portal.landingpage.service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 
@@ -22,17 +22,11 @@ class ExternalUserReportingServiceTest {
     @Mock
     private FirmRepository firmRepository;
 
-    @TempDir
-    Path tempDir;
-
-    private ExternalUserReportingService service;
+    private ExternalUserReportingService externalUserReportingService;
 
     @BeforeEach
     void setUp() {
-        service = new ExternalUserReportingService(firmRepository);
-
-        org.springframework.test.util.ReflectionTestUtils
-                .setField(service, "reportDirectory", tempDir);
+        externalUserReportingService = Mockito.spy(new ExternalUserReportingService(firmRepository));
     }
 
     @Test
@@ -43,11 +37,18 @@ class ExternalUserReportingServiceTest {
                 new Object[]{"Firm B", null, "TypeB", "PARENT2", 2L, 0L, 0L, 0L}
         ));
 
-        service.downloadExternalUserCsv();
+        Path systemTemp = Path.of(System.getProperty("java.io.tmpdir"));
 
-        Path csv = Files.list(tempDir)
-                .filter(p -> p.getFileName().toString().startsWith("SiLAS-external-user-report-")
-                        && p.getFileName().toString().endsWith(".csv"))
+        List<Path> before = Files.list(systemTemp).toList();
+
+        externalUserReportingService.downloadExternalUserCsv();
+
+        List<Path> after = Files.list(systemTemp).toList();
+
+        Path csv = after.stream()
+                .filter(p -> !before.contains(p))
+                .filter(p -> p.getFileName().toString().startsWith("SiLAS-external-user-report-"))
+                .filter(p -> p.getFileName().toString().endsWith(".csv"))
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("CSV not created"));
 
@@ -73,11 +74,17 @@ class ExternalUserReportingServiceTest {
                 new Object[]{"Firm, Inc", "ABC\"123", "Type, X", "PARENT\"Y", 1L, 0L, 0L, 0L}
         ));
 
-        service.downloadExternalUserCsv();
+        Path systemTemp = Path.of(System.getProperty("java.io.tmpdir"));
+        List<Path> before = Files.list(systemTemp).toList();
 
-        Path csv = Files.list(tempDir)
-                .filter(p -> p.getFileName().toString().startsWith("SiLAS-external-user-report-")
-                        && p.getFileName().toString().endsWith(".csv"))
+        externalUserReportingService.downloadExternalUserCsv();
+
+        List<Path> after = Files.list(systemTemp).toList();
+
+        Path csv = after.stream()
+                .filter(p -> !before.contains(p))
+                .filter(p -> p.getFileName().toString().startsWith("SiLAS-external-user-report-"))
+                .filter(p -> p.getFileName().toString().endsWith(".csv"))
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("CSV not created"));
 
