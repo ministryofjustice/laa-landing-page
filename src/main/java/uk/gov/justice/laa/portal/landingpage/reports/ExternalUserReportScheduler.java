@@ -36,7 +36,7 @@ public class ExternalUserReportScheduler {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void getReport() {
         if (reportingEnabled) {
-            log.debug("Starting external user polling process...");
+            log.debug("Starting external user report process...");
             if (enableDistributedDbLocking) {
                 try {
                     lockService.withLock(REPORTING_LOCK_KEY, Duration.ofMinutes(distributedDbLockingPeriod), () -> {

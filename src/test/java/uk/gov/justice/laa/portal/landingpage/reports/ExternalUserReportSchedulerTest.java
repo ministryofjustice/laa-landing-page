@@ -41,7 +41,7 @@ public class ExternalUserReportSchedulerTest {
     }
 
     @Test
-    void shouldAcquireLockAndCallPollForNewUsers_whenPollingEnabled() {
+    void shouldAcquireLockAndCallReportForNewUsers_whenReportEnabled() {
         // When
         when(lockRepository.acquireLock(any(), any(), any())).thenReturn(1);
         externalUserReportScheduler.getReport();
@@ -52,7 +52,7 @@ public class ExternalUserReportSchedulerTest {
     }
 
     @Test
-    void shouldNotTryToAcquireLockAndCallPollForNewUsers_whenPollingEnabled() {
+    void shouldNotTryToAcquireLockAndCallReportForNewUsers_whenReportEnabled() {
         // Given
         ReflectionTestUtils.setField(externalUserReportScheduler, "enableDistributedDbLocking", false);
         // When
@@ -64,7 +64,7 @@ public class ExternalUserReportSchedulerTest {
     }
 
     @Test
-    void shouldNotAcquireLock_whenPollingDisabled() {
+    void shouldNotAcquireLock_whenReportDisabled() {
         // Given
         setReportingEnabled(false);
 
@@ -109,7 +109,7 @@ public class ExternalUserReportSchedulerTest {
     }
 
     @Test
-    void shouldReleaseLockAfterPolling() {
+    void shouldReleaseLockAfterReporting() {
         // When
         when(lockRepository.acquireLock(any(), any(), any())).thenReturn(1);
         externalUserReportScheduler.getReport();
