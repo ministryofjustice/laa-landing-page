@@ -21,7 +21,7 @@ public class AppDetailsForm implements Serializable {
     private boolean enabled;
     private String name;
     @NotBlank(message = "Application description cannot be empty")
-    @Size(min = 1, max = 1000, message = "Application description cannot exceed 1000 characters")
+    @Size(max = 1000, message = "Application description cannot exceed 1000 characters")
     private String description;
     private String code;
     private int ordinal;

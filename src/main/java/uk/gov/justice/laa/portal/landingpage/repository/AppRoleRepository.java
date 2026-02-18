@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 
 @Repository
 public interface AppRoleRepository extends JpaRepository<AppRole, UUID> {
@@ -47,4 +48,8 @@ public interface AppRoleRepository extends JpaRepository<AppRole, UUID> {
 
 
     List<AppRole> findAppRolesByAppName(String appName);
+
+    List<AppRole> findByApp_AppType(AppType appType);
+
+    List<AppRole> findByApp_NameAndApp_AppType(String appName, AppType appType);
 }

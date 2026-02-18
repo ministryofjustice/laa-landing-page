@@ -19,10 +19,10 @@ public class AppRoleDetailsForm implements Serializable {
     private static final long serialVersionUID = 1L;
     private String appRoleId;
     @NotBlank(message = "Application role name cannot be empty")
-    @Size(min = 1, max = 255, message = "Application name cannot exceed 255 characters")
+    @Size(max = 255, message = "Application name cannot exceed 255 characters")
     private String name;
     @NotBlank(message = "Application description cannot be empty")
-    @Size(min = 1, max = 1000, message = "Application description cannot exceed 1000 characters")
+    @Size(max = 1000, message = "Application description cannot exceed 1000 characters")
     private String description;
     private int ordinal;
 }

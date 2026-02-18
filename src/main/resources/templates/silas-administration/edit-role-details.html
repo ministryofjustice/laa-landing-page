@@ -32,7 +32,7 @@
                 <div class="govuk-error-summary__body">
                     <ul class="govuk-list govuk-error-summary__list">
                         <li>
-                            <a href="#name-error" th:text="${errorMessage}"></a>
+                            <a href="#role-name-error" th:utext="${errorMessage}"></a>
                         </li>
                     </ul>
                 </div>
@@ -47,20 +47,18 @@
                 <input type="hidden" name="appRoleId" th:value="${appRoleId}" />
 
                 <div class="govuk-form-group" th:classappend="${#fields.hasErrors('name')} ? 'govuk-form-group--error' : ''" id="app-name-group">
-                    <label class="govuk-label govuk-label--m" for="app-name">
+                    <label class="govuk-label govuk-label--m" for="role-name">
                         Name
                     </label>
-                    <div th:if="${#fields.hasErrors('name')}" class="govuk-error-message" id="app-name-error">
+                    <div th:if="${#fields.hasErrors('name')}" class="govuk-error-message" id="role-name-error">
                         <span class="govuk-visually-hidden">Error:</span>
                         <span th:errors="*{name}"></span>
                     </div>
 
-                    <textarea class="govuk-textarea"
-                              th:classappend="${#fields.hasErrors('name')} ? 'govuk-textarea--error' : ''"
-                              id="app-name"
-                              name="name"
-                              rows="8"
-                              th:field="*{name}"></textarea>
+                    <input class="govuk-input" name="name" type="text"
+                           th:field="*{name}" id="role-name"
+                           th:aria-describedby="${#fields.hasErrors('name')} ? 'name-error' : null" />
+
                 </div>
 
 
