@@ -14,6 +14,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -32,7 +33,6 @@ public class RoleAssignmentMatrixReportService {
 
     private final FirmRepository firmRepository;
     private final AppRoleRepository appRoleRepository;
-    private String reportDirectory = System.getProperty("java.io.tmpdir") + File.separator + "reports";
     private final DateTimeFormatter fileTimestamp = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmm");
 
     public void getRoleAssignmentMatrixReport() {
@@ -40,7 +40,8 @@ public class RoleAssignmentMatrixReportService {
         List<String> allRoles = appRoleRepository.getExternalRoleNames();
         List<Tuple> rows = firmRepository.findRoleCountsByFirm();
         Map<FirmDto, Map<String, Integer>> matrix = buildRoleMatrix(rows);
-        writeToCsv(allRoles, matrix);
+        File matrixCsv = writeToCsv(allRoles, matrix);
+        // Upload code goes here
         log.info("Role assignment matrix report successfully written to file");
     }
 
@@ -66,13 +67,12 @@ public class RoleAssignmentMatrixReportService {
         return matrix;
     }
 
-    public void writeToCsv(List<String> allRoles, Map<FirmDto, Map<String, Integer>> matrix) {
+    public File writeToCsv(List<String> allRoles, Map<FirmDto, Map<String, Integer>> matrix) {
 
         String timestamp = LocalDateTime.now().format(fileTimestamp);
-        Path outputPath = Path.of(reportDirectory, "SiLAS-role-assignment-matrix-report-" + timestamp + ".csv");
+        String fileName = "SiLAS-role-assignment-matrix-report-" + timestamp;
 
         try {
-            Files.createDirectories(outputPath.getParent());
 
             CsvSchema.Builder schemaBuilder = CsvSchema.builder()
                     .addColumn("Firm Name")
@@ -88,7 +88,9 @@ public class RoleAssignmentMatrixReportService {
 
             CsvMapper csvMapper = CsvMapper.builder().build();
 
-            try (Writer writer = Files.newBufferedWriter(outputPath);
+            Path tempFile = Files.createTempFile(fileName, ".csv");
+
+            try (Writer writer = Files.newBufferedWriter(tempFile);
                  SequenceWriter sequenceWriter = csvMapper.writer(schema).writeValues(writer)) {
 
                 for (Map.Entry<FirmDto, Map<String, Integer>> entry : matrix.entrySet()) {
@@ -106,10 +108,9 @@ public class RoleAssignmentMatrixReportService {
                     sequenceWriter.write(row);
                 }
             }
-
+            return tempFile.toFile();
         } catch (IOException e) {
-            log.error("Error writing report to file: {}", e.getMessage());
+            throw new UncheckedIOException("Failed to write role assignment matrix csv", e);
         }
     }
-
 }

@@ -1,32 +1,34 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-
 import jakarta.persistence.Tuple;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.io.TempDir;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Stream;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.anyList;
+import static org.mockito.Mockito.anyMap;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 public class RoleAssignmentMatrixReportServiceTest {
-
 
     @InjectMocks
     private RoleAssignmentMatrixReportService matrixReportService;
@@ -37,23 +39,10 @@ public class RoleAssignmentMatrixReportServiceTest {
     @Mock
     private AppRoleRepository appRoleRepository;
 
-    @TempDir
-    Path tempDir;
-
-    private Path getGeneratedCsvFile() throws IOException {
-        try (Stream<Path> files = Files.list(tempDir)) {
-            return files
-                    .filter(path -> path.getFileName().toString().endsWith(".csv"))
-                    .findFirst()
-                    .orElseThrow(() -> new AssertionError("No CSV file found"));
-        }
-    }
-
     @BeforeEach
     void setUp() {
-        matrixReportService = new RoleAssignmentMatrixReportService(firmRepository, appRoleRepository);
-
-        ReflectionTestUtils.setField(matrixReportService, "reportDirectory", tempDir.toString());
+        // Use a spy so we can capture the File returned by writeToCsv()
+        matrixReportService = Mockito.spy(new RoleAssignmentMatrixReportService(firmRepository, appRoleRepository));
     }
 
     private Tuple mockResponse(
@@ -76,7 +65,6 @@ public class RoleAssignmentMatrixReportServiceTest {
 
     @Test
     void generatesCorrectReport() throws IOException {
-
         UUID firm1 = UUID.randomUUID();
         UUID firm2 = UUID.randomUUID();
 
@@ -88,18 +76,38 @@ public class RoleAssignmentMatrixReportServiceTest {
 
         when(firmRepository.findRoleCountsByFirm()).thenReturn(List.of(row1, row2, row3));
 
+        AtomicReference<File> generated = new AtomicReference<>();
+        doAnswer(invocation -> {
+            File f = (File) invocation.callRealMethod();
+            generated.set(f);
+            return f;
+        }).when(matrixReportService).writeToCsv(anyList(), anyMap());
+
         matrixReportService.getRoleAssignmentMatrixReport();
 
-        Path csvPath = getGeneratedCsvFile();
+        File csvFile = generated.get();
+        assertThat(csvFile).as("CSV file should be generated").isNotNull();
+        assertThat(csvFile).exists();
 
-        List<String> lines = Files.readAllLines(csvPath);
-
-        assertThat(csvPath).exists();
-
+        List<String> lines = Files.readAllLines(csvFile.toPath());
         assertThat(lines).containsExactly(
                 "\"Firm Name\",\"Firm Code\",ROLE_1,ROLE_2",
                 "Firm1,F1,2,1",
                 "Firm2,F2,5,0"
         );
+    }
+
+    @Test
+    void propagatesFailureWhenCsvWriteFails() {
+        when(appRoleRepository.getExternalRoleNames()).thenReturn(List.of("ROLE_1"));
+        when(firmRepository.findRoleCountsByFirm()).thenReturn(List.of());
+
+        doThrow(new UncheckedIOException("Failed to write role assignment matrix csv", new IOException("boom")))
+                .when(matrixReportService)
+                .writeToCsv(anyList(), anyMap());
+
+        assertThatThrownBy(() -> matrixReportService.getRoleAssignmentMatrixReport())
+                .isInstanceOf(UncheckedIOException.class)
+                .hasMessageContaining("Failed to write role assignment matrix csv");
     }
 }
