@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -58,7 +59,7 @@ class EnableFirmCommandTest {
 
         @Test
         void shouldEnableAlreadyEnabledFirm() {
-            // Given - although this scenario is unlikely in practice
+            // Given - firm is already enabled
             Firm firm = Firm.builder()
                 .id(UUID.randomUUID())
                 .code("12345")
@@ -72,10 +73,10 @@ class EnableFirmCommandTest {
             // When
             command.execute(result);
 
-            // Then
+            // Then - should skip reactivation since already enabled
             assertThat(firm.getEnabled()).isTrue();
-            assertThat(result.getFirmsReactivated()).isEqualTo(1);
-            verify(firmRepository).save(firm);
+            assertThat(result.getFirmsReactivated()).isEqualTo(0);
+            verify(firmRepository, never()).save(firm);
         }
 
         @Test

@@ -105,10 +105,10 @@ class AsyncConfigTest {
         executor.submit(blockingTask);
         executor.submit(blockingTask);
 
-        // Then - 4th task should be rejected with RuntimeException
+        // Then - 4th task should be rejected with TaskRejectedException (wraps RejectedExecutionException)
         assertThatThrownBy(() -> executor.submit(blockingTask))
-            .isInstanceOf(RuntimeException.class)
-            .hasMessageContaining("Too many concurrent sync operations");
+            .hasRootCauseInstanceOf(java.util.concurrent.RejectedExecutionException.class)
+            .hasRootCauseMessage("Too many concurrent sync operations. Please try again later.");
 
         // Cleanup
         executor.shutdown();
