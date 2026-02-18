@@ -174,9 +174,9 @@ public class PdaSyncScheduler {
 
             if (result.getErrors().isEmpty()) {
                 syncSuccessCounter.increment();
-                log.debug("Scheduled PDA sync completed successfully in {} seconds. Firms: {} created, {} updated, {} deleted | Offices: {} created, {} updated, {} deleted",
+                log.debug("Scheduled PDA sync completed successfully in {} seconds. Firms: {} created, {} updated, {} disabled, {} reactivated | Offices: {} created, {} updated, {} deleted",
                     Duration.ofNanos(duration).toSeconds(),
-                    result.getFirmsCreated(), result.getFirmsUpdated(), result.getFirmsReactivated(), result.getFirmsDisabled(),
+                    result.getFirmsCreated(), result.getFirmsUpdated(), result.getFirmsDisabled(), result.getFirmsReactivated(),
                     result.getOfficesCreated(), result.getOfficesUpdated(), result.getOfficesDeleted());
             } else {
                 syncFailureCounter.increment();
