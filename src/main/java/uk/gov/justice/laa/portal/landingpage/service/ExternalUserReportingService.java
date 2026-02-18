@@ -29,7 +29,7 @@ public class ExternalUserReportingService {
 
     public void downloadExternalUserCsv() {
         List<Object[]> reportRows = new ArrayList<>(firmRepository.findAllFirmExternalUserCount());
-        File Csv = writeToCsv(reportRows);
+        File csv = writeToCsv(reportRows);
         //TODO: Output path code
 
         log.info("External user report written to CSV successfully");
