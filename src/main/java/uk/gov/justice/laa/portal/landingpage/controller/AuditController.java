@@ -1,9 +1,14 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -18,21 +23,26 @@ import org.springframework.web.bind.annotation.RequestParam;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import uk.gov.justice.laa.portal.landingpage.auth.AuthenticatedUser;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditTableSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
+import uk.gov.justice.laa.portal.landingpage.service.AuditExportService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.service.AuditExportService.AuditCsvExport;
 
 @Slf4j
 @Controller
@@ -44,6 +54,8 @@ public class AuditController {
     private final LoginService loginService;
     private final EventService eventService;
     private final AccessControlService accessControlService;
+    private final AuthenticatedUser authenticatedUser;
+    private final AuditExportService auditExportService;
 
     @Value("${feature.flag.disable.user}")
     private boolean disableUserFeatureEnabled;
@@ -95,6 +107,8 @@ public class AuditController {
                 criteria.getSelectedUserType() != null ? criteria.getSelectedUserType().toString() : "");
         model.addAttribute("sort", criteria.getSort());
         model.addAttribute("direction", criteria.getDirection());
+        model.addAttribute("exportCsv",
+                accessControlService.authenticatedUserHasPermission(Permission.EXPORT_AUDIT_DATA));
     }
 
     /**
@@ -205,5 +219,47 @@ public class AuditController {
         model.addAttribute(ModelAttributes.PAGE_TITLE, "User deleted");
 
         return "user-audit/delete-user-success";
+    }
+
+    @GetMapping(value = "/users/audit/download", produces = "text/csv")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission('EXPORT_AUDIT_DATA')")
+    public ResponseEntity<byte[]> downloadAuditCsv(@ModelAttribute AuditTableSearchCriteria criteria) {
+
+        final int pageSize = 500;
+        int page = 1;
+
+        List<AuditUserDto> firmData = new ArrayList<>(pageSize);
+
+        PaginatedAuditUsers result;
+        do {
+            result = userService.getAuditUsers(
+                    criteria.getSearch(),
+                    criteria.getSelectedFirmId(),
+                    criteria.getSilasRole(),
+                    criteria.getSelectedAppId(),
+                    criteria.getSelectedUserType(),
+                    page,
+                    pageSize,
+                    criteria.getSort(),
+                    criteria.getDirection()
+            );
+
+            firmData.addAll(result.getUsers());
+            page++;
+
+        } while (!isLastPage(result, pageSize));
+
+        AuditCsvExport export = auditExportService.downloadAuditCsv(firmData);
+        log.info("Audit CSV export complete");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("text/csv"));
+        headers.setContentDisposition(ContentDisposition.attachment().filename(export.filename()).build());
+
+        return ResponseEntity.ok().headers(headers).body(export.bytes());
+    }
+
+    private boolean isLastPage(PaginatedAuditUsers page, int size) {
+        return page.getUsers().size() < size;
     }
 }
