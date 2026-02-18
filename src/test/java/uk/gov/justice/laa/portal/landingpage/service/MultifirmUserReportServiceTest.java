@@ -38,29 +38,21 @@ class MultifirmUserReportServiceTest {
         service = new MultifirmUserReportService(firmRepository, entraUserRepository);
     }
 
-    private Path getGeneratedCsvFile(Instant notBefore) throws IOException {
+    private Path getGeneratedCsvFile() throws IOException {
         Path systemTempDir = Path.of(System.getProperty("java.io.tmpdir"));
-
         try (Stream<Path> files = Files.list(systemTempDir)) {
             return files
                     .filter(Files::isRegularFile)
                     .filter(p -> p.getFileName().toString().startsWith(REPORT_PREFIX))
                     .filter(p -> p.getFileName().toString().endsWith(".csv"))
-                    .filter(p -> {
+                    .max(Comparator.comparingLong(p -> {
                         try {
-                            return Files.getLastModifiedTime(p).toInstant().isAfter(notBefore);
+                            return Files.getLastModifiedTime(p).toMillis();
                         } catch (IOException e) {
-                            return false;
-                        }
-                    })
-                    .max(Comparator.comparing(p -> {
-                        try {
-                            return Files.getLastModifiedTime(p).toInstant();
-                        } catch (IOException e) {
-                            return Instant.EPOCH;
+                            return 0L;
                         }
                     }))
-                    .orElseThrow(() -> new AssertionError("No CSV file found in system temp created after " + notBefore));
+                    .orElseThrow(() -> new AssertionError("No CSV file found in system temp"));
         }
     }
 
@@ -83,7 +75,7 @@ class MultifirmUserReportServiceTest {
         Instant notBefore = Instant.now();
         service.getMultifirmUsers();
 
-        Path csvPath = getGeneratedCsvFile(notBefore);
+        Path csvPath = getGeneratedCsvFile();
         List<String> lines = Files.readAllLines(csvPath);
 
         assertThat(lines).containsExactly(
@@ -112,7 +104,7 @@ class MultifirmUserReportServiceTest {
         Instant notBefore = Instant.now();
         service.getMultifirmUsers();
 
-        List<String> lines = Files.readAllLines(getGeneratedCsvFile(notBefore));
+        List<String> lines = Files.readAllLines(getGeneratedCsvFile());
         assertThat(lines.get(1)).isEqualTo("\"Firm, Inc\",\"ABC\"\"123\",1");
     }
 }

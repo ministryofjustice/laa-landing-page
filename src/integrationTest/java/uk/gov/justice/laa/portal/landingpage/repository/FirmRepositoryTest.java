@@ -251,40 +251,6 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
                         tuple("Beta Firm", "B Role"));
     }
 
-    private App buildTestApp(String name) {
-        return App.builder()
-                .name(name)
-                .title(name + " Title")
-                .description(name + " Description")
-                .oidGroupName(name + " OID Group")
-                .appType(AppType.LAA)
-                .url("http://localhost/" + name)
-                .enabled(true)
-                .securityGroupOid(name + "_sg_oid")
-                .securityGroupName(name + "_sg_name")
-                .build();
-    }
-
-    private AppRole buildExternalRole(App app, String roleName) {
-        return AppRole.builder()
-                .name(roleName)
-                .description(roleName)
-                .userTypeRestriction(new UserType[]{UserType.EXTERNAL})
-                .app(app)
-                .build();
-    }
-
-    private void createExternalUserProfileInFirmWithRoles(Firm firm, String email, Set<AppRole> roles) {
-        EntraUser entraUser = buildEntraUser(generateEntraId(), email, "First", "Last");
-        entraUser.setUserStatus(UserStatus.ACTIVE);
-        entraUser = entraUserRepository.saveAndFlush(entraUser);
-
-        UserProfile userProfile = buildLaaUserProfile(entraUser, UserType.EXTERNAL);
-        userProfile.setFirm(firm);
-        userProfile.setUserProfileStatus(UserProfileStatus.COMPLETE);
-        userProfile.setAppRoles(roles);
-        userProfileRepository.saveAndFlush(userProfile);
-    }
     @Test
     public void testFindMultiFirmUserCountsByFirm() {
 
@@ -328,8 +294,41 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
                 .containsExactlyInAnyOrder(
                         new Object[]{"Firm Epsilon", "EPSILON", 1L},
                         new Object[]{"Firm Zeta", "ZETA", 1L},
-                        new Object[]{"Firm Eta", "ETA", 2L}
-                );
+                        new Object[]{"Firm Eta", "ETA", 2L});
     }
 
+    private App buildTestApp(String name) {
+        return App.builder()
+                .name(name)
+                .title(name + " Title")
+                .description(name + " Description")
+                .oidGroupName(name + " OID Group")
+                .appType(AppType.LAA)
+                .url("http://localhost/" + name)
+                .enabled(true)
+                .securityGroupOid(name + "_sg_oid")
+                .securityGroupName(name + "_sg_name")
+                .build();
+    }
+
+    private AppRole buildExternalRole(App app, String roleName) {
+        return AppRole.builder()
+                .name(roleName)
+                .description(roleName)
+                .userTypeRestriction(new UserType[]{UserType.EXTERNAL})
+                .app(app)
+                .build();
+    }
+
+    private void createExternalUserProfileInFirmWithRoles(Firm firm, String email, Set<AppRole> roles) {
+        EntraUser entraUser = buildEntraUser(generateEntraId(), email, "First", "Last");
+        entraUser.setUserStatus(UserStatus.ACTIVE);
+        entraUser = entraUserRepository.saveAndFlush(entraUser);
+
+        UserProfile userProfile = buildLaaUserProfile(entraUser, UserType.EXTERNAL);
+        userProfile.setFirm(firm);
+        userProfile.setUserProfileStatus(UserProfileStatus.COMPLETE);
+        userProfile.setAppRoles(roles);
+        userProfileRepository.saveAndFlush(userProfile);
+    }
 }

@@ -72,5 +72,5 @@ public interface FirmRepository extends JpaRepository<Firm, UUID> {
             WHERE eu.multiFirmUser = TRUE
             GROUP BY f.id, f.name, f.code
             """)
-    List<Object[]>findMultiFirmUserCountsByFirm();
+    List<Object[]> findMultiFirmUserCountsByFirm();
 }
