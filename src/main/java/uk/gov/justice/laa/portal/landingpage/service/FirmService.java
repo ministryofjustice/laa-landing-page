@@ -17,6 +17,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
@@ -115,6 +116,7 @@ public class FirmService {
                 .map(userProfile -> mapper.map(userProfile.getFirm(), FirmDto.class)).toList();
     }
 
+    @Transactional(readOnly = true)
     public List<FirmDto> getUserActiveAllFirms(EntraUser entraUser) {
         List<FirmDto> userFirms = new ArrayList<>(entraUser.getUserProfiles().stream()
                 .filter(UserProfile::isActiveProfile)

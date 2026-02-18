@@ -115,7 +115,12 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             """)
     Page<UserProfile> findInternalUserByAuthzRole(@Param("role") String role, Pageable pageable);
 
-    List<UserProfile> findAllByEntraUser(EntraUser entraUser);
+    @Query("""
+            SELECT up FROM UserProfile up
+            LEFT JOIN FETCH up.firm
+            WHERE up.entraUser = :entraUser
+            """)
+    List<UserProfile> findAllByEntraUser(@Param("entraUser") EntraUser entraUser);
 
     @Query("""
             SELECT ups FROM UserProfile ups
