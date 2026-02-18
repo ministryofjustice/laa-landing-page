@@ -3,7 +3,6 @@ package uk.gov.justice.laa.portal.landingpage.repository;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
-import java.util.List;
 
 import jakarta.persistence.Tuple;
 import org.assertj.core.api.Assertions;
@@ -18,14 +17,11 @@ import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import static org.assertj.core.api.Assertions.tuple;
@@ -58,14 +54,6 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
     private AppRoleRepository appRoleRepository;
-
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    @Autowired
-    private UserProfileRepository userProfileRepository;
-
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    @Autowired
-    private EntraUserRepository entraUserRepository;
 
     @BeforeEach
     public void beforeEach() {
