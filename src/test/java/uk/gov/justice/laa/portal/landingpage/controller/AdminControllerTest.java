@@ -30,6 +30,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.forms.AppDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.AppsOrderForm;
 import uk.gov.justice.laa.portal.landingpage.service.AdminService;
+import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
 import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
@@ -47,6 +48,8 @@ class AdminControllerTest {
     @Mock
     private AppService appService;
     @Mock
+    private AppRoleService appRoleService;
+    @Mock
     private MockHttpSession mockHttpSession;
 
     private AdminController adminController;
@@ -54,7 +57,7 @@ class AdminControllerTest {
 
     @BeforeEach
     void setUp() {
-        adminController = new AdminController(loginService, eventService, adminService, appService);
+        adminController = new AdminController(loginService, eventService, adminService, appService, appRoleService);
         model = new ExtendedModelMap();
     }
 
@@ -67,7 +70,7 @@ class AdminControllerTest {
 
         when(adminService.getAllAdminApps()).thenReturn(adminApps);
         when(appService.getAllLaaApps()).thenReturn(apps);
-        when(adminService.getAllAppRoles()).thenReturn(roles);
+        when(appRoleService.getAllLaaAppRoles()).thenReturn(roles);
 
         // Act
         String viewName = adminController.showAdministration("admin-apps", null, model, mockHttpSession);
@@ -84,7 +87,7 @@ class AdminControllerTest {
         verify(adminService).getAllAdminApps();
         // getAllApps is called twice - once for apps data and once for app names filter
         verify(appService, times(1)).getAllLaaApps();
-        verify(adminService).getAllAppRoles();
+        verify(appRoleService).getAllLaaAppRoles();
     }
 
     @Test
@@ -96,7 +99,7 @@ class AdminControllerTest {
 
         when(adminService.getAllAdminApps()).thenReturn(adminApps);
         when(appService.getAllLaaApps()).thenReturn(apps);
-        when(adminService.getAllAppRoles()).thenReturn(roles);
+        when(appRoleService.getAllLaaAppRoles()).thenReturn(roles);
 
         // Act
         String viewName = adminController.showAdministration("roles", null, model, mockHttpSession);
@@ -107,7 +110,7 @@ class AdminControllerTest {
 
         assertThat(model.getAttribute("roles")).isEqualTo(roles);
 
-        verify(adminService).getAllAppRoles();
+        verify(appRoleService).getAllLaaAppRoles();
     }
 
     @Test
@@ -128,7 +131,7 @@ class AdminControllerTest {
 
         when(adminService.getAllAdminApps()).thenReturn(adminApps);
         when(appService.getAllLaaApps()).thenReturn(apps);
-        when(adminService.getAppRolesByApp(appFilter)).thenReturn(filteredRoles);
+        when(appRoleService.getLaaAppRolesByAppName(appFilter)).thenReturn(filteredRoles);
 
         // Act
         String viewName = adminController.showAdministration("roles", appFilter, model, mockHttpSession);
@@ -138,7 +141,7 @@ class AdminControllerTest {
         assertThat(model.getAttribute("roles")).isEqualTo(filteredRoles);
         assertThat(model.getAttribute("appFilter")).isEqualTo(appFilter);
 
-        verify(adminService).getAppRolesByApp(appFilter);
+        verify(appRoleService).getLaaAppRolesByAppName(appFilter);
     }
 
     @Test
@@ -379,7 +382,7 @@ class AdminControllerTest {
 
         when(adminService.getAllAdminApps()).thenReturn(createMockAdminApps());
         when(appService.getAllLaaApps()).thenReturn(createMockApps());
-        when(adminService.getAllAppRoles()).thenReturn(createMockRoles());
+        when(appRoleService.getAllLaaAppRoles()).thenReturn(createMockRoles());
 
         adminController.showAdministration("admin-apps", null, model, session);
 
@@ -395,12 +398,12 @@ class AdminControllerTest {
 
         when(adminService.getAllAdminApps()).thenReturn(createMockAdminApps());
         when(appService.getAllLaaApps()).thenReturn(createMockApps());
-        when(adminService.getAllAppRoles()).thenReturn(allRoles);
+        when(appRoleService.getAllLaaAppRoles()).thenReturn(allRoles);
 
         adminController.showAdministration("roles", null, model, mockHttpSession);
 
         assertThat(model.getAttribute("roles")).isEqualTo(allRoles);
-        verify(adminService).getAllAppRoles();
+        verify(appRoleService).getAllLaaAppRoles();
     }
 
     @Test
@@ -413,7 +416,7 @@ class AdminControllerTest {
 
         when(adminService.getAllAdminApps()).thenReturn(createMockAdminApps());
         when(appService.getAllLaaApps()).thenReturn(createMockApps());
-        when(adminService.getAllAppRoles()).thenReturn(createMockRoles());
+        when(appRoleService.getAllLaaAppRoles()).thenReturn(createMockRoles());
         when(adminService.getAllApps()).thenReturn(mockApps);
 
         adminController.showAdministration("roles", null, model, mockHttpSession);
@@ -457,7 +460,7 @@ class AdminControllerTest {
         String errorMessage = (String) model.getAttribute("errorMessage");
         assertThat(errorMessage).contains("Description is required");
         assertThat(errorMessage).contains("Name is required");
-        assertThat(errorMessage).contains("\n");
+        assertThat(errorMessage).contains("<br/>");
     }
 
     @Test
@@ -544,7 +547,7 @@ class AdminControllerTest {
         String errorMessage = (String) model.getAttribute("errorMessage");
         assertThat(errorMessage).contains("Error 1");
         assertThat(errorMessage).contains("Error 2");
-        assertThat(errorMessage).contains("\n");
+        assertThat(errorMessage).contains("<br/>");
     }
 
     @Test
