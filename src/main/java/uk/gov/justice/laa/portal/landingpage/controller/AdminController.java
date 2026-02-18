@@ -328,6 +328,7 @@ public class AdminController {
 
         model.addAttribute("appRoleDetailsForm", appRoleDetailsForm);
         session.setAttribute(S_APP_ROLE_DETAILS_FORM, appRoleDetailsForm);
+
         return "silas-administration/edit-role-details";
     }
 
