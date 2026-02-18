@@ -22,7 +22,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AppRoleServiceTest {
@@ -80,8 +80,10 @@ class AppRoleServiceTest {
         AppRole ar2 = AppRole.builder().id(id2).name("Y").build();
 
         when(appRoleRepository.findAllById(List.of(id1, id2))).thenReturn(List.of(ar1, ar2));
-        when(modelMapper.map(ar1, AppRoleDto.class)).thenReturn(AppRoleDto.builder().id(ar1.getId().toString()).name(ar1.getName()).ordinal(ar1.getOrdinal()).description(ar1.getDescription()).ccmsCode(ar1.getCcmsCode()).app(null).userTypeRestriction(null).build());
-        when(modelMapper.map(ar2, AppRoleDto.class)).thenReturn(AppRoleDto.builder().id(ar2.getId().toString()).name(ar2.getName()).ordinal(ar2.getOrdinal()).description(ar2.getDescription()).ccmsCode(ar2.getCcmsCode()).app(null).userTypeRestriction(null).build());
+        when(modelMapper.map(ar1, AppRoleDto.class)).thenReturn(AppRoleDto.builder().id(ar1.getId().toString())
+                .name(ar1.getName()).ordinal(ar1.getOrdinal()).description(ar1.getDescription()).ccmsCode(ar1.getCcmsCode()).app(null).userTypeRestriction(null).build());
+        when(modelMapper.map(ar2, AppRoleDto.class)).thenReturn(AppRoleDto.builder().id(ar2.getId().toString())
+                .name(ar2.getName()).ordinal(ar2.getOrdinal()).description(ar2.getDescription()).ccmsCode(ar2.getCcmsCode()).app(null).userTypeRestriction(null).build());
 
         List<AppRoleDto> result = appRoleService.getByIds(List.of(id1.toString(), id2.toString()));
 
@@ -97,9 +99,8 @@ class AppRoleServiceTest {
 
         when(appRoleRepository.findAllById(List.of(id1, id2))).thenReturn(List.of(ar1));
 
-        assertThatThrownBy(() -> appRoleService.getByIds(List.of(id1.toString(), id2.toString())))
-            .isInstanceOf(RuntimeException.class)
-            .hasMessageContaining("Failed to load all app roles");
+        assertThatThrownBy(() -> appRoleService.getByIds(List.of(id1.toString(), id2.toString()))).isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Failed to load all app roles");
     }
 
     @Test
@@ -107,10 +108,10 @@ class AppRoleServiceTest {
         UUID id = UUID.randomUUID();
         AppRole ar = AppRole.builder().id(id).name("Name").build();
         when(appRoleRepository.findById(id)).thenReturn(Optional.of(ar));
-        when(modelMapper.map(ar, uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto.class))
-            .thenReturn(AppRoleDto.builder().id(ar.getId().toString()).name(ar.getName()).ordinal(ar.getOrdinal()).description(ar.getDescription()).ccmsCode(ar.getCcmsCode()).app(null).userTypeRestriction(null).build());
+        when(modelMapper.map(ar, AppRoleDto.class)).thenReturn(AppRoleDto.builder().id(ar.getId().toString())
+                .name(ar.getName()).ordinal(ar.getOrdinal()).description(ar.getDescription()).ccmsCode(ar.getCcmsCode()).app(null).userTypeRestriction(null).build());
 
-        Optional<uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto> result = appRoleService.findById(id);
+        Optional<AppRoleDto> result = appRoleService.findById(id);
 
         assertThat(result).isPresent();
         assertThat(result.get().getId()).isEqualTo(id.toString());
@@ -147,8 +148,7 @@ class AppRoleServiceTest {
         AppRole entity = AppRole.builder().id(id).ordinal(5).build();
         when(appRoleRepository.findById(id)).thenReturn(Optional.of(entity));
 
-        AppRolesOrderForm.AppRolesOrderDetailsForm form = AppRolesOrderForm.AppRolesOrderDetailsForm.builder()
-            .appRoleId(id.toString()).ordinal(2).build();
+        AppRolesOrderForm.AppRolesOrderDetailsForm form = AppRolesOrderForm.AppRolesOrderDetailsForm.builder().appRoleId(id.toString()).ordinal(2).build();
 
         appRoleService.updateAppRolesOrder(List.of(form));
 
@@ -160,49 +160,17 @@ class AppRoleServiceTest {
         UUID appId = UUID.randomUUID();
         App app = App.builder().id(appId).name("Parent App").build();
 
-        AppRole authzRole = AppRole.builder()
-            .id(UUID.randomUUID())
-            .name("Authz")
-            .description("Authz role")
-            .ordinal(1)
-            .authzRole(true)
-            .ccmsCode("XXCCMS_TEST")
-            .userTypeRestriction(new UserType[]{UserType.INTERNAL, UserType.EXTERNAL})
-            .app(app)
-            .build();
+        AppRole authzRole = AppRole.builder().id(UUID.randomUUID()).name("Authz").description("Authz role").ordinal(1)
+                .authzRole(true).ccmsCode("XXCCMS_TEST").userTypeRestriction(new UserType[]{UserType.INTERNAL, UserType.EXTERNAL}).app(app).build();
 
-        AppRole ccmsRole = AppRole.builder()
-            .id(UUID.randomUUID())
-            .name("CCMS")
-            .description("CCMS role")
-            .ordinal(2)
-            .authzRole(false)
-            .ccmsCode("XXCCMS_FIRM_X")
-            .userTypeRestriction(new UserType[]{UserType.INTERNAL})
-            .app(app)
-            .build();
+        AppRole ccmsRole = AppRole.builder().id(UUID.randomUUID()).name("CCMS").description("CCMS role").ordinal(2)
+                .authzRole(false).ccmsCode("XXCCMS_FIRM_X").userTypeRestriction(new UserType[]{UserType.INTERNAL}).app(app).build();
 
-        AppRole defaultRole = AppRole.builder()
-            .id(UUID.randomUUID())
-            .name("Default")
-            .description("Default role")
-            .ordinal(3)
-            .authzRole(false)
-            .ccmsCode(null)
-            .userTypeRestriction(null)
-            .app(app)
-            .build();
+        AppRole defaultRole = AppRole.builder().id(UUID.randomUUID()).name("Default").description("Default role").ordinal(3)
+                .authzRole(false).ccmsCode(null).userTypeRestriction(null).app(app).build();
 
-        AppRole noAppRole = AppRole.builder()
-            .id(UUID.randomUUID())
-            .name("NoApp")
-            .description("No app role")
-            .ordinal(4)
-            .authzRole(false)
-            .ccmsCode(null)
-            .userTypeRestriction(null)
-            .app(null)
-            .build();
+        AppRole noAppRole = AppRole.builder().id(UUID.randomUUID()).name("NoApp").description("No app role").ordinal(4)
+                .authzRole(false).ccmsCode(null).userTypeRestriction(null).app(null).build();
 
         when(appRoleRepository.findByApp_AppType(AppType.LAA)).thenReturn(List.of(authzRole, ccmsRole, defaultRole, noAppRole));
 
