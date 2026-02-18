@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.config;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -25,7 +26,7 @@ public class AsyncConfig {
      * Configured with:
      * - Single core thread to prevent resource exhaustion
      * - Queue to handle concurrent requests
-     * - Caller runs policy to provide backpressure
+     * - Rejection policy that throws exception to prevent queue overflow
      * - Timeout for idle threads
      */
     @Bean(name = "pdaSyncExecutor")
@@ -45,12 +46,12 @@ public class AsyncConfig {
         // Timeout for idle threads
         executor.setKeepAliveSeconds(60);
 
-        // Rejection policy: caller runs (provides backpressure)
+        // Rejection policy: throw exception when queue is full
         executor.setRejectedExecutionHandler(new RejectedExecutionHandler() {
             @Override
             public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
                 log.warn("PDA sync task rejected - too many concurrent sync operations");
-                throw new RuntimeException("Too many concurrent sync operations. Please try again later.");
+                throw new RejectedExecutionException("Too many concurrent sync operations. Please try again later.");
             }
         });
 
