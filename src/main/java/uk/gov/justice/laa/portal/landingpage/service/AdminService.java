@@ -73,8 +73,7 @@ public class AdminService {
      * Get app roles filtered by app
      */
     public List<AppRoleAdminDto> getAppRolesByApp(String appName) {
-        return appRoleRepository.findAll().stream()
-                .filter(role -> role.getApp() != null && role.getApp().getName().equals(appName))
+        return appRoleRepository.findAppRolesByAppName(appName).stream()
                 .map(this::mapToAppRoleAdminDto)
                 .sorted((a, b) -> Integer.compare(a.getOrdinal(), b.getOrdinal()))
                 .collect(Collectors.toList());

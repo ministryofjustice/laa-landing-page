@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import jakarta.servlet.http.HttpSession;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -93,17 +95,17 @@ public class AdminController {
         model.addAttribute("apps", apps);
 
         List<AppRoleAdminDto> roles;
+
+        if (appFilter == null) {
+            appFilter = getObjectFromHttpSession(session, "appFilter", String.class).orElse(null);
+        }
+
         if (appFilter != null && !appFilter.isEmpty()) {
             roles = adminService.getAppRolesByApp(appFilter);
         } else {
-            appFilter = getObjectFromHttpSession(session, "appFilter", String.class).orElse(null);
-
-            if (appFilter == null) {
-                roles = adminService.getAllAppRoles();
-            } else {
-                roles = adminService.getAppRolesByApp(appFilter);
-            }
+            roles = adminService.getAllAppRoles();
         }
+
         model.addAttribute("roles", roles);
         model.addAttribute("appFilter", appFilter);
         session.setAttribute("appFilter", appFilter);
@@ -412,19 +414,25 @@ public class AdminController {
     @GetMapping("/silas-administration/roles/reorder")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_LAA_APP_METADATA)")
     public String editAppRolesOrderGet(Model model,
+                                  RedirectAttributes redirectAttributes,
                                   HttpSession session) {
-        String appName = getObjectFromHttpSession(session, "appFilter", String.class)
-                .orElseThrow(() -> new RuntimeException("App not selected for role ordering"));
+        Optional<String> appName = getObjectFromHttpSession(session, "appFilter", String.class);
+
+        if (appName.isEmpty() || appName.get().isBlank()) {
+            redirectAttributes.addFlashAttribute("appRolesErrorMessage", "Please select an application to reorder its roles");
+            return "redirect:/admin/silas-administration#roles";
+        }
+
         AppRolesOrderForm appRolesOrderForm = getObjectFromHttpSession(session, "appRolesOrderForm", AppRolesOrderForm.class).orElse(null);
         if (appRolesOrderForm == null) {
-            List<AppRoleAdminDto> appRoles = adminService.getAppRolesByApp(appName);
+            List<AppRoleAdminDto> appRoles = adminService.getAppRolesByApp(appName.get());
             List<AppRolesOrderForm.AppRolesOrderDetailsForm> appRoleOrderDetailsForm = appRoles.stream()
                     .map(AppRolesOrderForm.AppRolesOrderDetailsForm::new)
                     .toList();
             appRolesOrderForm = AppRolesOrderForm.builder().appRoles(appRoleOrderDetailsForm).build();
         }
 
-        model.addAttribute("appName", appName);
+        model.addAttribute("appName", appName.get());
         model.addAttribute("appRolesOrderForm", appRolesOrderForm);
 
         model.addAttribute(ModelAttributes.PAGE_TITLE, "SiLAS Administration");
@@ -482,8 +490,8 @@ public class AdminController {
         return "silas-administration/edit-app-roles-order-confirmation";
     }
 
-    @GetMapping("/silas-administration/cancel")
-    public String cancel(HttpSession session) {
+    @GetMapping("/silas-administration/cancel/{tab}")
+    public String cancel(HttpSession session, @PathVariable String tab) {
         session.removeAttribute("appDetailsForm");
         session.removeAttribute("appDetailsFormModel");
         session.removeAttribute("appId");
@@ -494,7 +502,7 @@ public class AdminController {
         session.removeAttribute("roleId");
         session.removeAttribute("appRolesOrderForm");
 
-        return "redirect:/admin/silas-administration";
+        return "redirect:/admin/silas-administration#"+tab;
     }
 
     private static String buildErrorString(BindingResult result) {

@@ -46,4 +46,5 @@ public interface AppRoleRepository extends JpaRepository<AppRole, UUID> {
     List<AppRole> findByAppIdUserTypeRestriction(@Param("appsId")Collection<UUID> appIds, @Param("userType") String userType);
 
 
+    List<AppRole> findAppRolesByAppName(String appName);
 }
