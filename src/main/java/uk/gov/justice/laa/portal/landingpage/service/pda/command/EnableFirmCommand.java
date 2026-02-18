@@ -24,15 +24,21 @@ public class EnableFirmCommand implements PdaSyncCommand {
     @Override
     public void execute(PdaSyncResultDto result) {
         try {
-            // Mark firm as enabled (restore from soft disable)
-            firm.setEnabled(true);
+            // Only re-enable if firm is currently disabled
+            if (Boolean.FALSE.equals(firm.getEnabled())) {
+                // Mark firm as enabled (restore from soft disable)
+                firm.setEnabled(true);
 
-            // Save the enabled firm
-            firmRepository.save(firm);
-            result.setFirmsReactivated(result.getFirmsReactivated() + 1);
+                // Save the enabled firm
+                firmRepository.save(firm);
+                result.setFirmsReactivated(result.getFirmsReactivated() + 1);
 
-            log.info("Re-enabled firm: {} (name: {}) - restoring user access",
-                firm.getCode(), firm.getName());
+                log.info("Re-enabled firm: {} (name: {}) - restoring user access",
+                    firm.getCode(), firm.getName());
+            } else {
+                log.debug("Firm {} is already enabled, skipping reactivation",
+                    firm.getCode());
+            }
         } catch (Exception e) {
             log.error("Failed to enable firm {}: {}", firm.getCode(), e.getMessage());
             result.addError("Failed to enable firm " + firm.getCode() + ": " + e.getMessage());
