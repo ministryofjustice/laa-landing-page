@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -28,6 +29,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
+import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
@@ -41,6 +43,10 @@ public class AuditController {
     private final UserService userService;
     private final LoginService loginService;
     private final EventService eventService;
+    private final AccessControlService accessControlService;
+
+    @Value("${feature.flag.disable.user}")
+    private boolean disableUserFeatureEnabled;
 
     /**
      * Display the User Access Audit Table
@@ -108,11 +114,13 @@ public class AuditController {
                 userId, isEntraId, profilePage, profileSize);
 
         AuditUserDetailDto userDetail;
+        boolean canDisableUser = false;
 
         // Determine if this is an EntraUser ID or UserProfile ID
         if (isEntraId) {
             // Load user by EntraUser ID (for users without profiles)
             userDetail = userService.getAuditUserDetailByEntraId(userId);
+            canDisableUser = accessControlService.canDisableUser(userId.toString());
         } else {
             // Try to load by UserProfile ID first (existing behavior)
             try {
@@ -130,6 +138,7 @@ public class AuditController {
         model.addAttribute("profileId", userId); // Add profile ID for pagination links
         model.addAttribute("profilePage", profilePage);
         model.addAttribute("profileSize", profileSize);
+        model.addAttribute("canDisableUser", disableUserFeatureEnabled && canDisableUser);
 
         return "user-audit/details";
     }

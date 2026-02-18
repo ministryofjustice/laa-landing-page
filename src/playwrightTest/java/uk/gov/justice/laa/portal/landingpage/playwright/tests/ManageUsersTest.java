@@ -126,6 +126,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
 
         //Failed Login with deleted user
         ManageUsersPage manageUsersPageDeletedUser = loginAndGetManageUsersPage(email);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         manageUsersPageDeletedUser.verifySignInError();
     }
 
@@ -160,6 +161,17 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickFirstUserLink();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         manageUsersPage.verifyUserDetailsPopulated();
+    }
+
+    @Test
+    @DisplayName("Verify Disable User link is accessible for EUM")
+    void verifyUserDetailsPageShowsDisableUserLink() {
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+        manageUsersPage.clickFirstUserLink();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        manageUsersPage.verifyUserDetailsPopulated();
+        // Disable link visible
+        assertTrue(page.locator("#user-details ul.govuk-summary-card__actions a.govuk-link:has-text(\"Disable user\")").isVisible());
     }
 
     @Test
