@@ -3,6 +3,12 @@ databaseChangeLog:
       id: add-firm-enabled-column-20260209-1
       author: paul.snowdon
       comment: Add enabled column to firm table to support soft disable for PDA contract gaps
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - columnExists:
+                tableName: firm
+                columnName: enabled
       changes:
         - sql:
             dbms: postgresql
