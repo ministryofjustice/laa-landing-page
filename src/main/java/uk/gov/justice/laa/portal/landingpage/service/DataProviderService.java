@@ -78,6 +78,36 @@ public class DataProviderService {
     }
 
     /**
+     * Enables the bypass flag for firm-office constraint checking during PDA sync.
+     * Sets a session variable that the trigger function checks to skip expensive validation.
+     * Uses regular SET (not SET LOCAL) so it persists through COMMIT when the constraint trigger fires.
+     */
+    private void enableFirmOfficeCheckBypass() {
+        try {
+            entityManager.createNativeQuery("SET app.internal.pda_sync_bypass_constraint_check = 'true'")
+                .executeUpdate();
+            log.info("Enabled firm-office constraint bypass for PDA sync (persists through COMMIT)");
+        } catch (Exception e) {
+            log.error("Failed to enable firm-office constraint bypass: {}", e.getMessage(), e);
+            throw new RuntimeException("Cannot enable constraint bypass", e);
+        }
+    }
+
+    /**
+     * Resets the firm-office constraint bypass flag after PDA sync completes.
+     */
+    private void resetFirmOfficeCheckBypass() {
+        try {
+            entityManager.createNativeQuery("RESET app.internal.pda_sync_bypass_constraint_check")
+                .executeUpdate();
+            log.info("Reset firm-office constraint bypass after PDA sync");
+        } catch (Exception e) {
+            log.error("Failed to reset firm-office constraint bypass: {}", e.getMessage(), e);
+            // Don't throw - we want to continue even if reset fails
+        }
+    }
+
+    /**
      * Fetches provider offices snapshot from PDA and returns as TableSaw dataframe.
      *
      * @return TableSaw Table containing provider offices snapshot data
@@ -503,6 +533,10 @@ public class DataProviderService {
             // Use TransactionTemplate to ensure proper transaction boundary
             // @Transactional doesn't work when called from same class due to proxy bypass
             PdaSyncResultDto result = transactionTemplate.execute(status -> {
+                // Set bypass flag inside transaction - using SET (not SET LOCAL) so it persists through COMMIT
+                // Constraint triggers fire during COMMIT and will see this setting
+                enableFirmOfficeCheckBypass();
+
                 // Re-check shutdown flag inside transaction
                 if (shuttingDown.get()) {
                     log.warn("PDA sync aborted during transaction - application is shutting down");
@@ -550,6 +584,16 @@ public class DataProviderService {
             PdaSyncResultDto errorResult = PdaSyncResultDto.builder().build();
             errorResult.addError("Async synchronization failed: " + e.getMessage());
             return CompletableFuture.completedFuture(errorResult);
+        } finally {
+            // Always reset the bypass flag after sync completes in its own transaction
+            try {
+                transactionTemplate.execute(status -> {
+                    resetFirmOfficeCheckBypass();
+                    return null;
+                });
+            } catch (Exception e) {
+                log.error("Failed to reset bypass flag: {}", e.getMessage());
+            }
         }
     }
 
@@ -701,7 +745,9 @@ public class DataProviderService {
                 String firmCode = entry.getKey();
                 PdaFirmData pdaFirm = entry.getValue();
 
-                if (pdaFirm.getParentFirmNumber() != null && !pdaFirm.getParentFirmNumber().isEmpty()) {
+                if (pdaFirm.getParentFirmNumber() != null
+                    && !pdaFirm.getParentFirmNumber().isEmpty()
+                    && !pdaFirm.getParentFirmNumber().trim().equalsIgnoreCase("null")) {
                     Firm firm = dbFirms.get(firmCode);
                     if (firm != null) {
                         String currentParentCode = firm.getParentFirm() != null ? firm.getParentFirm().getCode() : null;

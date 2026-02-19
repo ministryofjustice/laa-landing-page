@@ -1,6 +1,6 @@
 databaseChangeLog:
   - changeSet:
-      id: add-performance-indexes-pda-sync-5.15
+      id: add-performance-indexes-pda-sync-5.20
       author: paul.snowdon
       runInTransaction: false
       comment: Add performance indexes to optimize PDA synchronization operations
@@ -37,6 +37,10 @@ databaseChangeLog:
             dbms: postgresql
             comment: Create user profile office association index
             sql: CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_profile_office_office_id ON user_profile_office(office_id) WHERE office_id IS NOT NULL
+        - sql:
+            dbms: postgresql
+            comment: Create firm enabled index for constraint trigger optimization
+            sql: CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_firm_enabled ON firm(enabled)
       rollback:
         - sql:
             dbms: postgresql
@@ -62,3 +66,6 @@ databaseChangeLog:
         - sql:
             dbms: postgresql
             sql: DROP INDEX CONCURRENTLY IF EXISTS idx_user_profile_office_office_id
+        - sql:
+            dbms: postgresql
+            sql: DROP INDEX CONCURRENTLY IF EXISTS idx_firm_enabled

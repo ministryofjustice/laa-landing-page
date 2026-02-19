@@ -31,10 +31,11 @@ public interface FirmRepository extends JpaRepository<Firm, UUID> {
 
     // Performance Optimizations for PDA Sync
     /**
-     * Fetch all firms with parent firm eagerly loaded (avoids N+1 queries).
+     * Fetch all enabled firms with parent firm eagerly loaded (avoids N+1 queries).
      * Use this instead of findAll() when parent firm relationships are needed.
+     * Only returns enabled firms to prevent disabled firms from entering the persistence context.
      */
-    @Query("SELECT DISTINCT f FROM Firm f LEFT JOIN FETCH f.parentFirm")
+    @Query("SELECT DISTINCT f FROM Firm f LEFT JOIN FETCH f.parentFirm WHERE f.enabled = true")
     List<Firm> findAllWithParentFirm();
 
     /**
