@@ -127,6 +127,9 @@ jobs:
           APP_CIVIL_CLAIM_FOR_PAYMENT_NAME: ${{ vars.APP_CIVIL_CLAIM_FOR_PAYMENT_NAME || 'Civil Claim for Payment' }}
           APP_CIVIL_CLAIM_FOR_PAYMENT_DETAILS: ${{ vars.APP_CIVIL_CLAIM_FOR_PAYMENT_DETAILS || 'ccfp//ccfp//ccfp' }}
           APP_CIVIL_CLAIM_FOR_PAYMENT_URL: ${{ secrets.APP_CIVIL_CLAIM_FOR_PAYMENT_URL || '#' }}
+          APP_ASSESS_A_CIVIL_CLAIM_NAME: ${{ vars.APP_ASSESS_A_CIVIL_CLAIM_NAME || 'Assess a Civil Claim' }}
+          APP_ASSESS_A_CIVIL_CLAIM_DETAILS: ${{ vars.APP_ASSESS_A_CIVIL_CLAIM_DETAILS || 'aacc//aacc//aacc' }}
+          APP_ASSESS_A_CIVIL_CLAIM_URL: ${{ secrets.APP_ASSESS_A_CIVIL_CLAIM_URL || '#' }}
           APP_MEANS_AND_MATCH_UI1_NAME: ${{ vars.APP_MEANS_AND_MATCH_UI1_NAME || 'LAA Means And Match Spike UI 1' }}
           APP_MEANS_AND_MATCH_UI1_DETAILS: ${{ vars.APP_MEANS_AND_MATCH_UI1_DETAILS || 'mam_ui1//mam_ui1//mam_ui1' }}
           APP_MEANS_AND_MATCH_UI1_URL: ${{ secrets.APP_MEANS_AND_MATCH_UI1_URL || '#' }}
