@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'edit-apps-order-confirmation'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>App Order Updated</title>
+</head>
+
+<body>
+<nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+    <ol class="govuk-breadcrumbs__list">
+        <li class="govuk-breadcrumbs__list-item">
+            <a class="govuk-breadcrumbs__link" th:href="@{'/admin/silas-administration'}">< Back</a>
+        </li>
+    </ol>
+</nav>
+
+<main class="govuk-main-wrapper" id="main-content">
+    <div class="govuk-grid-row">
+        <div class="govuk-grid-column-two-thirds">
+
+            <!-- Success Panel -->
+            <div class="govuk-panel govuk-panel--confirmation">
+                <h1 class="govuk-panel__title">Apps order updated</h1>
+            </div>
+
+            <br>
+
+            <!-- Go Back Button -->
+            <a class="govuk-button" data-module="govuk-button" th:href="@{'/admin/silas-administration'}">
+                Go back to app administration
+            </a>
+
+        </div>
+    </div>
+</main>
+</body>
+
+</html>

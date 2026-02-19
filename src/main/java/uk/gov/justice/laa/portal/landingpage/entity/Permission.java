@@ -25,7 +25,9 @@ public enum Permission {
     EXPORT_AUDIT_DATA,
     VIEW_FIRM_DIRECTORY,
     TRIGGER_CCMS_ROLE_SYNC,
-    CONVERT_USER_TO_MULTI_FIRM;
+    CONVERT_USER_TO_MULTI_FIRM,
+    VIEW_LAA_APP_METADATA,
+    EDIT_LAA_APP_METADATA;
 
     public static final String[] ADMIN_PERMISSIONS = {
             VIEW_INTERNAL_USER.name(),
