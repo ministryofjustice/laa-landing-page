@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -54,7 +55,6 @@ public class AuditController {
     private final LoginService loginService;
     private final EventService eventService;
     private final AccessControlService accessControlService;
-    private final AuthenticatedUser authenticatedUser;
     private final AuditExportService auditExportService;
 
     @Value("${feature.flag.disable.user}")
@@ -76,7 +76,7 @@ public class AuditController {
         PaginatedAuditUsers paginatedUsers = userService.getAuditUsers(
                 criteria.getSearch(), criteria.getSelectedFirmId(), criteria.getSilasRole(),
                 criteria.getSelectedAppId(), criteria.getSelectedUserType(),
-                criteria.getPage(), criteria.getSize(), criteria.getSort(), criteria.getDirection());
+                criteria.getPage(), criteria.getSize(), criteria.getSort(), criteria.getDirection(), false);
         // Build firm search form
         FirmSearchForm firmSearchForm = new FirmSearchForm(criteria.getFirmSearch(), criteria.getSelectedFirmId());
         // Add attributes to model
@@ -241,7 +241,8 @@ public class AuditController {
                     page,
                     pageSize,
                     criteria.getSort(),
-                    criteria.getDirection()
+                    criteria.getDirection(),
+                    true
             );
 
             firmData.addAll(result.getUsers());
@@ -250,7 +251,8 @@ public class AuditController {
         } while (!isLastPage(result, pageSize));
 
         AuditCsvExport export = auditExportService.downloadAuditCsv(firmData);
-        log.info("Audit CSV export complete");
+        log.info("CSV Audit Export complete");
+
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.parseMediaType("text/csv"));
