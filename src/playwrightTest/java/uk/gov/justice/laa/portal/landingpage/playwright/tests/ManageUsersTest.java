@@ -14,6 +14,7 @@ import uk.gov.justice.laa.portal.landingpage.playwright.pages.ManageUsersPage;
 import java.util.Arrays;
 import java.util.List;
 
+import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -467,5 +468,22 @@ public class ManageUsersTest extends BaseFrontEndTest {
         assertTrue(page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible());
         manageUsersPage.clickGoBackToManageUsers();
         assertTrue(row.locator(".moj-badge.moj-badge--blue").isHidden());
+    }
+
+    @Test
+    @DisplayName("Verify success screen and incomplete user created.")
+    public void verifySuccessScreenAndIncompleteUserCreated() {
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+        manageUsersPage.clickCreateUser();
+        final String email = manageUsersPage.fillInUserDetails(true);
+        manageUsersPage.selectMultiFirmAccess(false);
+        manageUsersPage.searchAndSelectFirmByCode("90001");
+        manageUsersPage.clickContinueFirmSelectPage();
+        manageUsersPage.clickConfirmNewUserButton();
+        assertTrue(page.locator(".govuk-panel__title:has-text('User created')").isVisible());
+        manageUsersPage.clickGoBackToManageUsers();
+        assertTrue(manageUsersPage.searchAndVerifyUser(email));
+        Locator badge = manageUsersPage.firstIncompleteUserRowLocator();
+        assertThat(badge).isVisible();
     }
 }

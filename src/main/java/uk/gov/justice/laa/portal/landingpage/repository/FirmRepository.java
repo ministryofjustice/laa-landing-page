@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.repository;
 
+import jakarta.persistence.Tuple;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -46,4 +47,21 @@ public interface FirmRepository extends JpaRepository<Firm, UUID> {
             @Param("searchTerm") String searchTerm,
             @Param("firmType") FirmType firmType,
             Pageable pageable);
+
+    @Query(value = """
+        SELECT
+                f.id AS firmId,
+                f.name AS firmName,
+                f.code AS firmCode,
+                r.name AS roleName,
+                COUNT(DISTINCT up.id) AS userCount
+        FROM firm f
+        JOIN user_profile up ON up.firm_id = f.id
+        JOIN user_profile_app_role upar ON upar.user_profile_id = up.id
+        JOIN app_role r ON r.id = upar.app_role_id
+        WHERE 'EXTERNAL' = ANY(r.user_type_restriction)
+        GROUP BY f.id, f.name, f.code, r.name
+        ORDER BY f.name, r.name
+        """, nativeQuery = true)
+    List<Tuple> findRoleCountsByFirm();
 }
