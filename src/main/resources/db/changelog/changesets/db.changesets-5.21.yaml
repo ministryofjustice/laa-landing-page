@@ -1,42 +1,71 @@
 databaseChangeLog:
   - changeSet:
-      id: modify-check-firms-function-skip-flag-20260219-1
+      id: add-performance-indexes-pda-sync-5.21
       author: paul.snowdon
-      comment: Modify check_firms_have_office function to check for session variable that bypasses validation during PDA sync
+      runInTransaction: false
+      comment: Add performance indexes to optimize PDA synchronization operations
       changes:
         - sql:
             dbms: postgresql
-            splitStatements: false
-            comment: Add session variable check to allow PDA sync to bypass constraint
-            sql: |
-              CREATE OR REPLACE FUNCTION check_firms_have_office() 
-              RETURNS trigger LANGUAGE plpgsql AS $$ 
-              BEGIN 
-                /* Skip check if session variable is set (for PDA sync) */
-                IF current_setting('app.internal.pda_sync_bypass_constraint_check', true) = 'true' THEN
-                  IF TG_OP = 'DELETE' THEN 
-                    RETURN OLD; 
-                  ELSE 
-                    RETURN NEW; 
-                  END IF; 
-                END IF;
-                
-                /* Normal validation */
-                IF EXISTS ( 
-                  SELECT 1 
-                  FROM firm f 
-                  WHERE f.enabled = true 
-                  AND NOT EXISTS ( 
-                    SELECT 1 FROM office o 
-                    WHERE o.firm_id = f.id 
-                  ) 
-                ) THEN 
-                  RAISE EXCEPTION 'Enabled firm must have at least one office'; 
-                END IF; 
-                IF TG_OP = 'DELETE' THEN 
-                  RETURN OLD; 
-                ELSE 
-                  RETURN NEW; 
-                END IF; 
-              END; 
-              $$
+            comment: Create firm code index for sync lookups
+            sql: CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_firm_code ON firm(code) WHERE code IS NOT NULL
+        - sql:
+            dbms: postgresql
+            comment: Create firm name index for duplicate checks
+            sql: CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_firm_name ON firm(name) WHERE name IS NOT NULL
+        - sql:
+            dbms: postgresql
+            comment: Create firm parent relationship index
+            sql: CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_firm_parent_firm_id ON firm(parent_firm_id) WHERE parent_firm_id IS NOT NULL
+        - sql:
+            dbms: postgresql
+            comment: Create office code index for sync lookups
+            sql: CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_office_code ON office(code) WHERE code IS NOT NULL
+        - sql:
+            dbms: postgresql
+            comment: Create office firm relationship index
+            sql: CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_office_firm_id ON office(firm_id) WHERE firm_id IS NOT NULL
+        - sql:
+            dbms: postgresql
+            comment: Create composite office index for firm validation
+            sql: CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_office_firm_id_code ON office(firm_id, code) WHERE firm_id IS NOT NULL AND code IS NOT NULL
+        - sql:
+            dbms: postgresql
+            comment: Create user profile firm index for impact analysis
+            sql: CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_profile_firm_id ON user_profile(firm_id) WHERE firm_id IS NOT NULL
+        - sql:
+            dbms: postgresql
+            comment: Create user profile office association index
+            sql: CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_profile_office_office_id ON user_profile_office(office_id) WHERE office_id IS NOT NULL
+        - sql:
+            dbms: postgresql
+            comment: Create firm enabled index for constraint trigger optimization
+            sql: CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_firm_enabled ON firm(enabled)
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: DROP INDEX CONCURRENTLY IF EXISTS idx_firm_code
+        - sql:
+            dbms: postgresql
+            sql: DROP INDEX CONCURRENTLY IF EXISTS idx_firm_name
+        - sql:
+            dbms: postgresql
+            sql: DROP INDEX CONCURRENTLY IF EXISTS idx_firm_parent_firm_id
+        - sql:
+            dbms: postgresql
+            sql: DROP INDEX CONCURRENTLY IF EXISTS idx_office_code
+        - sql:
+            dbms: postgresql
+            sql: DROP INDEX CONCURRENTLY IF EXISTS idx_office_firm_id
+        - sql:
+            dbms: postgresql
+            sql: DROP INDEX CONCURRENTLY IF EXISTS idx_office_firm_id_code
+        - sql:
+            dbms: postgresql
+            sql: DROP INDEX CONCURRENTLY IF EXISTS idx_user_profile_firm_id
+        - sql:
+            dbms: postgresql
+            sql: DROP INDEX CONCURRENTLY IF EXISTS idx_user_profile_office_office_id
+        - sql:
+            dbms: postgresql
+            sql: DROP INDEX CONCURRENTLY IF EXISTS idx_firm_enabled
