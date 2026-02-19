@@ -14,7 +14,7 @@ public class DeleteUserSuccessAuditEvent extends AuditEvent implements Serializa
     private final String reason;
 
     private static final String DELETE_USER_TEMPLATE = """
-            User deleted successfully, deleted user id %s for reason %s. %s roles removed. %s offices detached
+            User deleted successfully, deleted user with id %s, entraOid %s for reason %s. %s roles removed. %s offices detached
             """;
 
     public DeleteUserSuccessAuditEvent(String reason, UUID userId, DeletedUser deletedUser) {
@@ -30,6 +30,6 @@ public class DeleteUserSuccessAuditEvent extends AuditEvent implements Serializa
 
     @Override
     public String getDescription() {
-        return String.format(DELETE_USER_TEMPLATE, deletedUser.getDeletedUserId(), reason, deletedUser.getRemovedRolesCount(), deletedUser.getDetachedOfficesCount());
+        return String.format(DELETE_USER_TEMPLATE, deletedUser.getDeletedUserId(), deletedUser.getDeletedUserEntraOid(), reason, deletedUser.getRemovedRolesCount(), deletedUser.getDetachedOfficesCount());
     }
 }

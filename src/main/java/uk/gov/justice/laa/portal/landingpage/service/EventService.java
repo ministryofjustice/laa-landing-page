@@ -12,7 +12,7 @@ public class EventService {
     private static final Logger logger = LoggerFactory.getLogger(EventService.class);
 
     private static final String EVENT_TEMPLATE = """
-            %s: Audit event %s, by User with user id %s, %s
+            %s: Audit event %s, by User with entra oid %s, %s
             """;
 
     public void logEvent(AuditEvent event) {

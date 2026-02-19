@@ -362,7 +362,7 @@ public class UserService {
      *                      logging)
      */
     @Transactional
-    public DeletedUser deleteExternalUser(String userProfileId, String reason, UUID actorId) {
+    public DeletedUser deleteExternalUser(String userProfileId, String reason, UUID actorId, String actorEntraUserId) {
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
         if (optionalUserProfile.isEmpty()) {
             throw new RuntimeException("User profile not found: " + userProfileId);
@@ -379,7 +379,7 @@ public class UserService {
                     "Associated Entra user not found for profile: " + userProfileId);
         }
 
-        logger.info(
+        logger.debug(
                 "Deleting external user. actorId={}, userProfileId={}, entraUserId={}, email={}, reason=\"{}\"",
                 actorId, userProfileId, entraUser.getId(), entraUser.getEmail(), reason);
 
@@ -398,7 +398,8 @@ public class UserService {
         // hard delete from silas db
         List<UserProfile> profiles = userProfileRepository.findAllByEntraUser(entraUser);
         DeletedUser.DeletedUserBuilder builder = new DeletedUser().toBuilder()
-                .deletedUserId(userProfile.getEntraUser().getId());
+                .deletedUserEntraOid(userProfile.getEntraUser().getEntraOid())
+                .deletedUserId(userProfile.getId());
         if (profiles != null && !profiles.isEmpty()) {
             for (UserProfile up : profiles) {
                 Set<String> puiRoles = new HashSet<>();
@@ -552,7 +553,7 @@ public class UserService {
             throw new RuntimeException("Cannot delete internal users");
         }
 
-        logger.info(
+        logger.debug(
                 "Deleting Entra user without profile. actorId={}, entraUserId={}, email={}, reason=\"{}\"",
                 actorId, entraUserId, entraUser.getEmail(), reason);
 
@@ -570,7 +571,7 @@ public class UserService {
         if (!auditRecords.isEmpty()) {
             userAccountStatusAuditRepository.deleteAll(auditRecords);
             userAccountStatusAuditRepository.flush();
-            logger.info("Deleted {} audit records for user: {} ({})",
+            logger.debug("Deleted {} audit records for user: {} ({})",
                     auditRecords.size(), entraUser.getEmail(), entraUser.getId());
         }
 
@@ -578,7 +579,7 @@ public class UserService {
         entraUserRepository.delete(entraUser);
         entraUserRepository.flush();
 
-        return DeletedUser.builder().deletedUserId(entraUser.getId()).removedRolesCount(0)
+        return DeletedUser.builder().deletedUserEntraOid(entraUser.getEntraOid()).removedRolesCount(0)
                 .detachedOfficesCount(0).build();
     }
 
@@ -921,7 +922,7 @@ public class UserService {
                 .map(appRole -> mapper.map(appRole, AppRoleDto.class)).toList();
     }
 
-    public EntraUser getUserByEntraId(UUID userId) {
+    public EntraUser getUserByEntraId(UUID userId) { // here
         Optional<EntraUser> optionalUser = entraUserRepository.findByEntraOid(userId.toString());
         return optionalUser.orElse(null);
     }
@@ -1161,7 +1162,7 @@ public class UserService {
                 userProfile.setUnrestrictedOfficeAccess(false);
             }
             userProfileRepository.saveAndFlush(userProfile);
-            logger.info("Successfully updated user offices for user ID: {}", userId);
+            logger.debug("Successfully updated user offices for user ID: {}", userId);
         } else {
             logger.warn("User profile with id {} not found. Could not update offices.", userId);
             throw new IOException("User profile not found for user ID: " + userId);
@@ -1258,7 +1259,7 @@ public class UserService {
             user.setLastModifiedBy(currentUserName);
             user.setLastModified(LocalDateTime.now());
             userProfileRepository.saveAndFlush(user);
-            logger.info("Access granted for user profile ID: {} by {}", userId, currentUserName);
+            logger.debug("Access granted for user profile ID: {} by {}", userId, currentUserName);
             return true;
         } else {
             logger.warn("User profile with id {} not found. Could not grant access.", userId);
@@ -1385,7 +1386,7 @@ public class UserService {
      * @param entraUserId The Entra user ID
      * @return List of user profiles for the Entra user
      */
-    public List<UserProfile> getUserProfilesByEntraUserId(UUID entraUserId) {
+    public List<UserProfile> getUserProfilesByEntraUserId(UUID entraUserId) { //here
         Optional<EntraUser> optionalEntraUser = entraUserRepository.findById(entraUserId);
         if (optionalEntraUser.isPresent()) {
             EntraUser entraUser = optionalEntraUser.get();
@@ -1959,9 +1960,9 @@ public class UserService {
                 performedByEntraUserId,
                 performedByName,
                 userProfile.getId().toString(),
-                userProfile.getEntraUser().getEmail(),
-                oldFirm.getName(),
-                newFirm.getName(),
+                userProfile.getEntraUser().getEntraOid(),
+                oldFirm.getId(),
+                newFirmId,
                 reason.trim()
             );
 

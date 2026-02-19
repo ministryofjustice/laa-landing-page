@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.Assertions;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
@@ -282,7 +283,7 @@ class UserServiceTest {
                 .thenReturn(true);
 
         // Act
-        userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID());
+        userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID(), anyString());
 
         // Assert
         verify(techServicesClient).deleteRoleAssignment(entraId);
@@ -323,7 +324,7 @@ class UserServiceTest {
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
 
         // Act
-        userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID());
+        userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID(), anyString());
 
         // Assert
         verify(techServicesClient).deleteRoleAssignment(entraId);
@@ -343,6 +344,7 @@ class UserServiceTest {
         EntraUser entraUser = EntraUser.builder()
                 .id(entraId)
                 .email("user@example.com")
+                .entraOid(entraId.toString())
                 .build();
 
         AppRole role1 = AppRole.builder().name("Role1").build();
@@ -361,7 +363,7 @@ class UserServiceTest {
         when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
 
         // Act
-        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID());
+        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID(), entraId.toString());
 
         // Assert
         verify(techServicesClient).deleteRoleAssignment(entraId);
@@ -369,7 +371,7 @@ class UserServiceTest {
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
         verify(mockEntraUserRepository, times(1)).delete(entraUser);
         assertThat(result).isNotNull();
-        assertThat(result.getDeletedUserId()).isEqualTo(entraId);
+        assertEquals(result.getDeletedUserEntraOid(), entraId.toString());
     }
 
     @Test
@@ -392,7 +394,7 @@ class UserServiceTest {
 
         // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID()));
+                () -> userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID(), anyString()));
         assertThat(ex.getMessage()).contains("tech services down");
         verify(mockUserProfileRepository, never()).deleteAll(any());
         verify(mockEntraUserRepository, never()).delete(any());
@@ -414,7 +416,7 @@ class UserServiceTest {
 
         // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> userService.deleteExternalUser(profileId.toString(), "reason", UUID.randomUUID()));
+                () -> userService.deleteExternalUser(profileId.toString(), "reason", UUID.randomUUID(), anyString()));
         assertThat(ex.getMessage()).contains("Deletion is only permitted for external users");
         verify(techServicesClient, never()).deleteRoleAssignment(any());
     }

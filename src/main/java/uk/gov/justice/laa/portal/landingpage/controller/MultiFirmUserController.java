@@ -422,7 +422,7 @@ public class MultiFirmUserController {
             // Capture audit data before deletion
             final int removedRolesCount = userProfile.getAppRoles() != null ? userProfile.getAppRoles().size() : 0;
             final int detachedOfficesCount = userProfile.getOffices() != null ? userProfile.getOffices().size() : 0;
-            final String firmCode = userProfile.getFirm() != null ? userProfile.getFirm().getCode() : null;
+            final UUID firmId = userProfile.getFirm().getId();
 
             // Delete the firm profile
             boolean deleted = userService.deleteFirmProfile(userProfileId, actorId);
@@ -432,9 +432,8 @@ public class MultiFirmUserController {
                 DeleteFirmProfileAuditEvent auditEvent = new DeleteFirmProfileAuditEvent(
                         actorId,
                         UUID.fromString(userProfileId),
-                        entraUser.getEmail(),
-                        firmName,
-                        firmCode,
+                        entraUser.getEntraOid(),
+                        firmId,
                         removedRolesCount,
                         detachedOfficesCount);
                 eventService.logEvent(auditEvent);

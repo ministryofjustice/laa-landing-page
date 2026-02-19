@@ -688,7 +688,7 @@ class UserControllerTest {
                 .entraUser(entraUserDto)
                 .userType(UserType.EXTERNAL)
                 .build();
-        EntraUser currentUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        EntraUser currentUser = EntraUser.builder().id(UUID.randomUUID()).entraOid(UUID.randomUUID().toString()).build();
         when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(targetProfile));
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
         String reason = "email typo";
@@ -697,7 +697,7 @@ class UserControllerTest {
 
         // Assert
         assertThat(view).isEqualTo("delete-user-success");
-        verify(userService).deleteExternalUser(eq(userProfileId), eq(reason.trim()), eq(currentUser.getId()));
+        verify(userService).deleteExternalUser(eq(userProfileId), eq(reason.trim()), eq(currentUser.getId()), eq(currentUser.getEntraOid()));
         verify(eventService).logEvent(any(DeleteUserSuccessAuditEvent.class));
     }
 
@@ -717,7 +717,7 @@ class UserControllerTest {
         EntraUser currentUser = EntraUser.builder().id(UUID.randomUUID()).build();
         when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(targetProfile));
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
-        when(userService.deleteExternalUser(anyString(), anyString(), any(UUID.class)))
+        when(userService.deleteExternalUser(anyString(), anyString(), any(UUID.class), anyString()))
                 .thenThrow(new RuntimeException("Tech Services unavailable"));
         String reason = "email typo";
         // Act
@@ -726,7 +726,7 @@ class UserControllerTest {
         // Assert
         assertThat(view).isEqualTo("delete-user-reason");
         assertThat(model.getAttribute("globalErrorMessage")).isEqualTo("User delete failed, please try again later");
-        verify(userService).deleteExternalUser(eq(userProfileId), eq(reason.trim()), eq(currentUser.getId()));
+        verify(userService).deleteExternalUser(eq(userProfileId), eq(reason.trim()), eq(currentUser.getId()), eq(currentUser.getEntraOid()));
         verify(eventService).logEvent(any(DeleteUserAttemptAuditEvent.class));
     }
 
@@ -955,16 +955,18 @@ class UserControllerTest {
     @Test
     void addUserCheckAnswersGetFirmAdmin() {
         HttpSession session = new MockHttpSession();
-        FirmDto firmDto = new FirmDto();
+        FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
         session.setAttribute("user", new EntraUserDto());
         session.setAttribute("isUserManager", false);
         session.setAttribute("firm", firmDto);
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("tester");
+
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
         when(userService.createUser(any(), any(), anyBoolean(), any(), anyBoolean())).thenReturn(user);
         String redirectUrl = userController.addUserCheckAnswers(session, authentication, model);
+
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(session.getAttribute("user")).isNotNull();
         assertThat(session.getAttribute("userProfile")).isNotNull();
@@ -983,14 +985,16 @@ class UserControllerTest {
         session.setAttribute("roles", selectedRoles);
         session.setAttribute("user", new EntraUserDto());
         session.setAttribute("officeData", new OfficeData());
-        session.setAttribute("firm", FirmDto.builder().build());
+        session.setAttribute("firm", FirmDto.builder().id(UUID.randomUUID()).build());
         session.setAttribute("isUserManager", false);
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("tester");
+
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
         when(userService.createUser(any(), any(), anyBoolean(), any(), anyBoolean())).thenReturn(user);
         String redirectUrl = userController.addUserCheckAnswers(session, authentication, model);
+
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(session.getAttribute("user")).isNotNull();
         assertThat(session.getAttribute("userProfile")).isNotNull();
@@ -3351,7 +3355,7 @@ class UserControllerTest {
     @Test
     void addUserCheckAnswers_shouldCallCreateUserAndRedirect() {
         MockHttpSession mockSession = new MockHttpSession();
-        FirmDto firmDto = new FirmDto();
+        FirmDto firmDto =  FirmDto.builder().id(UUID.randomUUID()).build();
         EntraUserDto user = new EntraUserDto();
         mockSession.setAttribute("user", user);
         mockSession.setAttribute("isUserManager", true);
@@ -6607,6 +6611,7 @@ class UserControllerTest {
         void convertToMultiFirmPost_withValidYes_convertsUserAndRedirectsToManageUser() {
             // Given
             final String userId = UUID.randomUUID().toString();
+            final String entraOid = UUID.randomUUID().toString();
             final MockHttpSession session = new MockHttpSession();
             final Authentication authentication = Mockito.mock(Authentication.class);
 
@@ -6615,6 +6620,7 @@ class UserControllerTest {
                     .userType(UserType.EXTERNAL)
                     .entraUser(EntraUserDto.builder()
                             .id(userId)
+                            .entraOid(entraOid)
                             .firstName("John")
                             .lastName("Doe")
                             .multiFirmUser(false)
