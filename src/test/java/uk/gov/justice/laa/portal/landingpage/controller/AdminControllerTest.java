@@ -36,6 +36,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.forms.AppDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRoleDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRolesOrderForm;
@@ -278,6 +279,7 @@ class AdminControllerTest {
         App appEntity = App.builder().id(UUID.fromString(appId)).name("App").description("New Desc").enabled(false).build();
 
         when(loginService.getCurrentUser(auth)).thenReturn(currentUser);
+        when(loginService.getCurrentProfile(auth)).thenReturn(UserProfile.builder().id(UUID.randomUUID()).build());
         when(appService.findById(UUID.fromString(appId))).thenReturn(Optional.of(appDto));
         when(appService.save(org.mockito.ArgumentMatchers.any())).thenReturn(appEntity);
 
@@ -364,6 +366,7 @@ class AdminControllerTest {
         currentUser.setName("Admin");
 
         when(loginService.getCurrentUser(auth)).thenReturn(currentUser);
+        when(loginService.getCurrentProfile(auth)).thenReturn(UserProfile.builder().id(UUID.randomUUID()).build());
 
         String view = adminController.confirmEditAppOrderPost(auth, model, session);
 
@@ -595,6 +598,7 @@ class AdminControllerTest {
         currentUser.setUserId(UUID.randomUUID());
 
         when(loginService.getCurrentUser(auth)).thenReturn(currentUser);
+        when(loginService.getCurrentProfile(auth)).thenReturn(UserProfile.builder().id(UUID.randomUUID()).build());
 
         String view = adminController.confirmEditAppRolesOrderPost(auth, model, session);
 
@@ -675,6 +679,7 @@ class AdminControllerTest {
                 .build();
 
         when(loginService.getCurrentUser(auth)).thenReturn(currentUser);
+        when(loginService.getCurrentProfile(auth)).thenReturn(UserProfile.builder().id(UUID.randomUUID()).build());
         when(appRoleService.findById(UUID.fromString(roleId))).thenReturn(Optional.of(roleDto));
         when(appRoleService.save(org.mockito.ArgumentMatchers.any())).thenReturn(roleEntity);
 
@@ -807,6 +812,7 @@ class AdminControllerTest {
         currentUser.setName("Admin");
 
         when(loginService.getCurrentUser(auth)).thenReturn(currentUser);
+        when(loginService.getCurrentProfile(auth)).thenReturn(UserProfile.builder().id(UUID.randomUUID()).build());
 
         String view = adminController.confirmEditAppRolesOrderPost(auth, model, session);
 
@@ -1036,6 +1042,7 @@ class AdminControllerTest {
                 .build();
 
         when(loginService.getCurrentUser(auth)).thenReturn(currentUser);
+        when(loginService.getCurrentProfile(auth)).thenReturn(UserProfile.builder().id(UUID.randomUUID()).build());
         when(appService.findById(UUID.fromString(appId))).thenReturn(Optional.of(appDto));
         when(appService.save(org.mockito.ArgumentMatchers.any())).thenReturn(appEntity);
 
@@ -1077,6 +1084,7 @@ class AdminControllerTest {
                 .build();
 
         when(loginService.getCurrentUser(auth)).thenReturn(currentUser);
+        when(loginService.getCurrentProfile(auth)).thenReturn(UserProfile.builder().id(UUID.randomUUID()).build());
         when(appRoleService.findById(UUID.fromString(roleId))).thenReturn(Optional.of(roleDto));
         when(appRoleService.save(org.mockito.ArgumentMatchers.any())).thenReturn(roleEntity);
 

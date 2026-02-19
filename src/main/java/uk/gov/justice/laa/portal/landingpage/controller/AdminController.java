@@ -39,6 +39,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UpdateAppRoleDetailsAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateAppRoleDisplayOrderAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.forms.AppDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRoleDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRolesOrderForm;
@@ -233,8 +234,9 @@ public class AdminController {
         App updatedApp = appService.save(appDto);
 
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
         UpdateAppDetailsAuditEvent updateAppDetailsAuditEvent = new UpdateAppDetailsAuditEvent(currentUserDto,
-                appName, updatedApp.isEnabled(), appDto.isEnabled(), updatedApp.getDescription(), appDto.getDescription());
+                currentUserProfile.getId(), appName, updatedApp.isEnabled(), appDto.isEnabled(), updatedApp.getDescription(), appDto.getDescription());
         eventService.logEvent(updateAppDetailsAuditEvent);
 
         model.addAttribute("app", appDto);
@@ -297,7 +299,9 @@ public class AdminController {
 
         appService.updateAppsOrder(appsOrderForm.getApps());
 
-        UpdateAppDisplayOrderAuditEvent updateAppOrdinalAuditEvent = new UpdateAppDisplayOrderAuditEvent(currentUserDto);
+        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
+        UpdateAppDisplayOrderAuditEvent updateAppOrdinalAuditEvent = new UpdateAppDisplayOrderAuditEvent(currentUserDto,
+                currentUserProfile.getId());
         eventService.logEvent(updateAppOrdinalAuditEvent);
 
         model.addAttribute(ModelAttributes.PAGE_TITLE, "SiLAS Administration");
@@ -403,9 +407,11 @@ public class AdminController {
 
         AppRole updatedAppRole = appRoleService.save(roleDto);
 
+
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
         UpdateAppRoleDetailsAuditEvent updateAppRoleDetailsAuditEvent = new UpdateAppRoleDetailsAuditEvent(currentUserDto,
-                updatedAppRole.getName(), appRoleName, updatedAppRole.getDescription(), appRoleDescription);
+                currentUserProfile.getId(), updatedAppRole.getName(), appRoleName, updatedAppRole.getDescription(), appRoleDescription);
         eventService.logEvent(updateAppRoleDetailsAuditEvent);
 
         model.addAttribute("appRole", roleDto);
@@ -484,8 +490,9 @@ public class AdminController {
 
         appRoleService.updateAppRolesOrder(appRolesOrderForm.getAppRoles());
 
+        UserProfile userProfile = loginService.getCurrentProfile(authentication);
         UpdateAppRoleDisplayOrderAuditEvent updateAppOrdinalAuditEvent = new UpdateAppRoleDisplayOrderAuditEvent(currentUserDto,
-                appName, appName);
+                userProfile.getId(), appName, appName);
         eventService.logEvent(updateAppOrdinalAuditEvent);
 
         model.addAttribute(ModelAttributes.PAGE_TITLE, "SiLAS Administration");
