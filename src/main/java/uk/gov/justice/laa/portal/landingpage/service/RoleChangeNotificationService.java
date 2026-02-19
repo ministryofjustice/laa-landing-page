@@ -94,6 +94,7 @@ public class RoleChangeNotificationService {
 
             Map<String, MessageAttributeValue> userTypeAttribute = Map.of(USER_TYPE_ATTRIBUTE, MessageAttributeValue.builder()
                     .stringValue(userProfile.getUserType().toString())
+                    .dataType("String")
                     .build());
 
             SendMessageRequest sendMessageRequest = SendMessageRequest.builder()
