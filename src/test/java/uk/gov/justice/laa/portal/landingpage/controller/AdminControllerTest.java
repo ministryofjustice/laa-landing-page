@@ -30,7 +30,6 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AdminAppDto;
-import uk.gov.justice.laa.portal.landingpage.dto.AppAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -422,22 +421,15 @@ class AdminControllerTest {
 
     @Test
     void showAdministration_loadsAppNamesForFilter_sorted() {
-        List<AppAdminDto> mockApps = Arrays.asList(
-                AppAdminDto.builder().id("1").name("Zebra App").ordinal(0).build(),
-                AppAdminDto.builder().id("2").name("Alpha App").ordinal(1).build(),
-                AppAdminDto.builder().id("3").name("Beta App").ordinal(2).build()
-        );
-
         when(adminService.getAllAdminApps()).thenReturn(createMockAdminApps());
         when(appService.getAllLaaApps()).thenReturn(createMockApps());
         when(appRoleService.getAllLaaAppRoles()).thenReturn(createMockRoles());
-        when(adminService.getAllApps()).thenReturn(mockApps);
 
         adminController.showAdministration("roles", null, model, mockHttpSession);
 
         @SuppressWarnings("unchecked")
         List<String> appNames = (List<String>) model.getAttribute("appNames");
-        assertThat(appNames).containsExactly("Alpha App", "Beta App", "Zebra App");
+        assertThat(appNames).containsExactly("Apply for criminal legal aid", "Submit a crime form");
     }
 
     @Test

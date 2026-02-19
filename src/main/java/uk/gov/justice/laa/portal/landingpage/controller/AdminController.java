@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AdminAppDto;
-import uk.gov.justice.laa.portal.landingpage.dto.AppAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -128,8 +127,8 @@ public class AdminController {
         session.setAttribute("appFilter", appFilter);
 
         // Get distinct app names for filter dropdown
-        List<String> appNames = adminService.getAllApps().stream()
-                .map(AppAdminDto::getName)
+        List<String> appNames = apps.stream()
+                .map(AppDto::getName)
                 .distinct()
                 .sorted()
                 .toList();
