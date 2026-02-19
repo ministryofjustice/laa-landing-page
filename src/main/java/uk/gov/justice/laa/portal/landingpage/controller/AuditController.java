@@ -2,8 +2,12 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ContentDisposition;
@@ -31,13 +35,16 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditTableSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
+import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AuditExportService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
@@ -56,6 +63,8 @@ public class AuditController {
     private final EventService eventService;
     private final AccessControlService accessControlService;
     private final AuditExportService auditExportService;
+    private final FirmRepository firmRepository;
+    private final AuthenticatedUser authenticatedUser;
 
     @Value("${feature.flag.disable.user}")
     private boolean disableUserFeatureEnabled;
@@ -228,6 +237,24 @@ public class AuditController {
         final int pageSize = 500;
         int page = 1;
 
+
+
+        String actor = authenticatedUser.getCurrentUser()
+                .map(CurrentUserDto::getUserId)
+                .map(Object::toString)
+                .orElse("unknown");
+
+
+        List<String> values = Stream.of(
+                        criteria.getSilasRole(),
+                        criteria.getSelectedUserType() == null ? "" : String.valueOf(criteria.getSelectedUserType()),
+                        criteria.getSelectedAppId() == null ? "" : String.valueOf(criteria.getSelectedAppId())
+                )
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        var firmCode = firmRepository.findById(criteria.getSelectedFirmId()).map(Firm::getCode).orElse("");
+
         List<AuditUserDto> firmData = new ArrayList<>(pageSize);
 
         PaginatedAuditUsers result;
@@ -250,8 +277,14 @@ public class AuditController {
 
         } while (!isLastPage(result, pageSize));
 
-        AuditCsvExport export = auditExportService.downloadAuditCsv(firmData);
-        log.info("CSV Audit Export complete");
+        if (result.getUsers().isEmpty()) {
+            log.info("No audit users found for search criteria: {}", Arrays.toString(values.toArray()));
+        }
+
+        AuditCsvExport export = auditExportService.downloadAuditCsv(firmData, firmCode);
+        log.info("CSV Audit Export complete - actor= {}, timestamp= {}, Firm Code= {}, Filter Summary (Silas Role, "
+                + "UserType, App Id)= {}, "
+                + "row count= {}", actor, LocalDateTime.now(), firmCode, values, result.getUsers().size());
 
 
         HttpHeaders headers = new HttpHeaders();

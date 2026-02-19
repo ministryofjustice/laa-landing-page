@@ -48,6 +48,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
+import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AuditExportService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
@@ -76,6 +77,9 @@ class AuditControllerTest {
     private AuthenticatedUser authenticatedUser;
 
     @Mock
+    private FirmRepository firmRepository;
+
+    @Mock
     private AuditExportService auditExportService;
 
     private PaginatedAuditUsers mockPaginatedUsers;
@@ -84,7 +88,8 @@ class AuditControllerTest {
 
     @BeforeEach
     void setUp() {
-        auditController = new AuditController(userService, loginService, eventService, accessControlService, auditExportService);
+        auditController = new AuditController(userService, loginService, eventService, accessControlService,
+                auditExportService, firmRepository, authenticatedUser);
         model = new ExtendedModelMap();
 
         // Setup mock audit users
@@ -852,7 +857,7 @@ class AuditControllerTest {
 
         byte[] csvBytes = "Name,Email\nP1,p1@example.com\n".getBytes(java.nio.charset.StandardCharsets.UTF_8);
         AuditExportService.AuditCsvExport export = new AuditExportService.AuditCsvExport("audit.csv", csvBytes);
-        when(auditExportService.downloadAuditCsv(any())).thenReturn(export);
+        when(auditExportService.downloadAuditCsv(any(), any())).thenReturn(export);
 
         ResponseEntity<byte[]> response = auditController.downloadAuditCsv(criteria);
 
@@ -866,6 +871,6 @@ class AuditControllerTest {
 
         verify(userService, times(1)).getAuditUsers("TestSearch", null, null, null, null, 1, 500, "name", "asc", true);
         verify(userService, times(1)).getAuditUsers("TestSearch", null, null, null, null, 2, 500, "name", "asc", true);
-        verify(auditExportService, times(1)).downloadAuditCsv(any());
+        verify(auditExportService, times(1)).downloadAuditCsv(any(), any());
     }
 }

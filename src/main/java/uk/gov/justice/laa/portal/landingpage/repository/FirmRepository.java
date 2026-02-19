@@ -64,4 +64,12 @@ public interface FirmRepository extends JpaRepository<Firm, UUID> {
         ORDER BY f.name, r.name
         """, nativeQuery = true)
     List<Tuple> findRoleCountsByFirm();
+
+    @Query(value = """
+        SELECT firm_code
+        FROM firm
+        WHERE firm_id = :firm_id;
+        """, nativeQuery = true)
+
+    String findFirmCodeByFirmId(UUID firmId);
 }
