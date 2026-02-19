@@ -410,6 +410,7 @@ public class UserController {
         Map<String, Object> filters = (Map<String, Object>) session.getAttribute("userListFilters");
         boolean hasFilters = hasActiveFilters(filters);
         model.addAttribute("hasFilters", hasFilters);
+        model.addAttribute("isMailOnly", user.getEntraUser().isMailOnly());
 
         return "manage-user";
     }
