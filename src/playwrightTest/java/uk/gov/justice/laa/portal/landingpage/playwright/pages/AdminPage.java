@@ -99,7 +99,7 @@ public class AdminPage {
         this.rolesTable = rolesAndPermissionsPanel.locator("table.govuk-table");
         this.rolesHeaders = rolesTable.locator("thead th.govuk-table__header");
         this.rolesRows = rolesTable.locator("tbody.govuk-table__body tr.govuk-table__row");
-        this.reorderRolesButton = rolesAndPermissionsPanel.locator("button.govuk-button--secondary:has-text('Reorder roles and permissions')");
+        this.reorderRolesButton = rolesAndPermissionsPanel.locator("button.govuk-button:has-text('Reorder application roles')");
 
         //Forbidden Access Page
         this.accessForbiddenHeading = page.locator("h1.govuk-heading-l:has-text('Access forbidden')");
