@@ -140,4 +140,37 @@ public class BaseRepositoryTest {
         appRepository.deleteAll(nonAuthzApps);
     }
 
+    protected EntraUser buildMultifirmEntraUser(String entraId, String email, String firstName, String lastName,
+                                                Boolean multiFirmUser) {
+        return EntraUser.builder().email(email).entraOid(entraId)
+                .userProfiles(HashSet.newHashSet(11))
+                .firstName(firstName).lastName(lastName)
+                .userStatus(UserStatus.ACTIVE)
+                .createdDate(LocalDateTime.now()).createdBy("Test").multiFirmUser(multiFirmUser).build();
+    }
+
+    protected EntraUser buildDeactiveEntraUser(String entraId, String email, String firstName, String lastName,
+                                                Boolean multiFirmUser) {
+        return EntraUser.builder().email(email).entraOid(entraId)
+                .userProfiles(HashSet.newHashSet(11))
+                .firstName(firstName).lastName(lastName)
+                .userStatus(UserStatus.DEACTIVE)
+                .createdDate(LocalDateTime.now()).createdBy("Test").multiFirmUser(multiFirmUser).build();
+    }
+
+    protected UserProfile buildFirmUserManagerProfile(EntraUser entraUser, UserType userType, boolean active) {
+        List<AppRole> allAppRoles = appRoleRepository.findAllWithPermissions();
+        AppRole globalAdminAppRole = allAppRoles.stream()
+                .filter(AppRole::isAuthzRole)
+                .filter(role -> role.getName().equals("Firm User Manager"))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Could not find app role"));
+        return UserProfile.builder().entraUser(entraUser)
+                .userType(userType).appRoles(new HashSet<>(Set.of(globalAdminAppRole)))
+                .createdDate(LocalDateTime.now()).createdBy("Test").activeProfile(active)
+                .userProfileStatus(UserProfileStatus.COMPLETE)
+                .lastCcmsSyncSuccessful(true).build();
+    }
+
+
 }
