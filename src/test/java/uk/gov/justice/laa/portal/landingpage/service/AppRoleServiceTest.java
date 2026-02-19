@@ -163,7 +163,7 @@ class AppRoleServiceTest {
         AppRole authzRole = AppRole.builder().id(UUID.randomUUID()).name("Authz").description("Authz role").ordinal(1)
                 .authzRole(true).ccmsCode("XXCCMS_TEST").userTypeRestriction(new UserType[]{UserType.INTERNAL, UserType.EXTERNAL}).app(app).build();
 
-        AppRole ccmsRole = AppRole.builder().id(UUID.randomUUID()).name("CCMS").description("CCMS role").ordinal(2)
+        AppRole ccmsRole = AppRole.builder().id(UUID.randomUUID()).name("CCMS").description("CCMS role").ordinal(2).legacySync(true)
                 .authzRole(false).ccmsCode("XXCCMS_FIRM_X").userTypeRestriction(new UserType[]{UserType.INTERNAL}).app(app).build();
 
         AppRole defaultRole = AppRole.builder().id(UUID.randomUUID()).name("Default").description("Default role").ordinal(3)
@@ -184,19 +184,19 @@ class AppRoleServiceTest {
 
         // authzRole should have userTypeRestriction joined and roleGroup Authorization
         assertThat(authzDto.getUserTypeRestriction()).isEqualTo("INTERNAL, EXTERNAL");
-        assertThat(authzDto.getRoleGroup()).isEqualTo("Authorization");
+        assertThat(authzDto.getLegacySync()).isEqualTo("No");
         assertThat(authzDto.getParentApp()).isEqualTo("Parent App");
         assertThat(authzDto.getParentAppId()).isEqualTo(appId.toString());
         assertThat(authzDto.getCcmsCode()).isEqualTo("XXCCMS_TEST");
 
         // ccms role should have roleGroup CCMS and single user type
-        assertThat(ccmsDto.getRoleGroup()).isEqualTo("CCMS");
+        assertThat(ccmsDto.getLegacySync()).isEqualTo("Yes");
         assertThat(ccmsDto.getUserTypeRestriction()).isEqualTo("INTERNAL");
         assertThat(ccmsDto.getCcmsCode()).isEqualTo("XXCCMS_FIRM_X");
 
         // default role should have empty userTypeRestriction and Default roleGroup
         assertThat(defaultDto.getUserTypeRestriction()).isEqualTo("");
-        assertThat(defaultDto.getRoleGroup()).isEqualTo("Default");
+        assertThat(defaultDto.getLegacySync()).isEqualTo("No");
         assertThat(defaultDto.getCcmsCode()).isEqualTo("");
 
         // noAppRole should have empty parent app fields

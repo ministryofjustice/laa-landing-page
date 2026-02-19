@@ -13,7 +13,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRolesOrderForm;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
-import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -58,14 +57,7 @@ public class AppRoleService {
     public List<AppRoleAdminDto> getAllLaaAppRoles() {
         return appRoleRepository.findByApp_AppType(AppType.LAA).stream()
                 .map(this::mapToAppRoleAdminDto)
-                .sorted((a, b) -> {
-                    // Sort by parent app name, then by ordinal
-                    int appCompare = a.getParentApp().compareTo(b.getParentApp());
-                    if (appCompare != 0) {
-                        return appCompare;
-                    }
-                    return Integer.compare(a.getOrdinal(), b.getOrdinal());
-                })
+                .sorted()
                 .collect(Collectors.toList());
     }
 
@@ -75,7 +67,7 @@ public class AppRoleService {
     public List<AppRoleAdminDto> getLaaAppRolesByAppName(String appName) {
         return appRoleRepository.findByApp_NameAndApp_AppType(appName, AppType.LAA).stream()
                 .map(this::mapToAppRoleAdminDto)
-                .sorted((a, b) -> Integer.compare(a.getOrdinal(), b.getOrdinal()))
+                .sorted()
                 .collect(Collectors.toList());
     }
 
@@ -97,11 +89,10 @@ public class AppRoleService {
                 .userTypeRestriction(userTypeRestriction)
                 .parentApp(appRole.getApp() != null ? appRole.getApp().getName() : "")
                 .parentAppId(appRole.getApp() != null ? appRole.getApp().getId().toString() : "")
-                .roleGroup(appRole.isAuthzRole() ? "Authorization" :
-                        CcmsRoleGroupsUtil.isCcmsRole(appRole.getCcmsCode()) ? "CCMS" : "Default")
+                .ccmsCode(appRole.getCcmsCode() == null ? "" : appRole.getCcmsCode())
+                .legacySync(appRole.isLegacySync() ? "Yes" : "No")
                 .ordinal(appRole.getOrdinal())
                 .authzRole(appRole.isAuthzRole())
-                .ccmsCode(appRole.getCcmsCode() != null ? appRole.getCcmsCode() : "")
                 .build();
     }
 

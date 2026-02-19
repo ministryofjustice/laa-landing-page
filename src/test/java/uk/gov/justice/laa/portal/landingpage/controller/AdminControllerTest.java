@@ -997,7 +997,7 @@ class AdminControllerTest {
                         .parentApp("CCMS case transfer requests")
                         .ccmsCode("ccms.transfer.viewer")
                         .ordinal(0)
-                        .roleGroup("Default")
+                        .legacySync("No")
                         .build(),
                 AppRoleAdminDto.builder()
                         .name("CCMS case transfer requests - Internal")
@@ -1005,7 +1005,7 @@ class AdminControllerTest {
                         .parentApp("CCMS case transfer requests")
                         .ccmsCode("ccms.transfer.internal")
                         .ordinal(1)
-                        .roleGroup("Default")
+                        .legacySync("No")
                         .build()
         );
     }
