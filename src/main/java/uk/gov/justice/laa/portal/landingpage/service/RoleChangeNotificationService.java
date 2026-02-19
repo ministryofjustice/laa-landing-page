@@ -9,6 +9,7 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.sqs.model.MessageAttributeValue;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 import software.amazon.awssdk.services.sqs.model.SendMessageResponse;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
@@ -22,6 +23,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -36,6 +38,8 @@ public class RoleChangeNotificationService {
     private final ObjectMapper objectMapper;
     private final String sqsQueueUrl;
     private final UserProfileRepository userProfileRepository;
+
+    private static final String USER_TYPE_ATTRIBUTE = "userType";
 
     /**
      * This method will automatically retry up to 3 times with 0.1 second delays
@@ -88,9 +92,14 @@ public class RoleChangeNotificationService {
             String messageBody = objectMapper.writeValueAsString(message);
             log.info("CCMS role change message: {}", messageBody);
 
+            Map<String, MessageAttributeValue> userTypeAttribute = Map.of(USER_TYPE_ATTRIBUTE, MessageAttributeValue.builder()
+                    .stringValue(userProfile.getUserType().toString())
+                    .build());
+
             SendMessageRequest sendMessageRequest = SendMessageRequest.builder()
                     .queueUrl(sqsQueueUrl)
                     .messageBody(messageBody)
+                    .messageAttributes(userTypeAttribute)
                     .messageGroupId(userProfile.getLegacyUserId().toString())
                     .messageDeduplicationId(generateDeduplicationId(userProfile, newPuiRoles))
                     .build();
