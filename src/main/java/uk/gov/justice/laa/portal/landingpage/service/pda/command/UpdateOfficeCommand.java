@@ -15,13 +15,14 @@ import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
 @Slf4j
 @RequiredArgsConstructor
-public class UpdateOfficeCommand {
+public class UpdateOfficeCommand implements PdaSyncCommand {
     private final OfficeRepository officeRepository;
     private final UserProfileRepository userProfileRepository;
     private final Office office;
     private final PdaOfficeData pdaOffice;
     private final Firm firm;
 
+    @Override
     public void execute(PdaSyncResultDto result) {
         try {
             boolean hasChanges = false;
