@@ -46,7 +46,7 @@ public class PdaSyncScheduler {
     private final Counter syncErrorsCounter;
     private final Counter firmCreatesCounter;
     private final Counter firmUpdatesCounter;
-    private final Counter firmDeletesCounter;
+    private final Counter firmDisablesCounter;
     private final Counter firmReactivatesCounter;
     private final Counter officeCreatesCounter;
     private final Counter officeUpdatesCounter;
@@ -95,8 +95,8 @@ public class PdaSyncScheduler {
                 .tag("source", "scheduler")
                 .register(meterRegistry);
 
-        this.firmDeletesCounter = Counter.builder("pda.sync.firms.deleted")
-                .description("Number of firms deleted during sync")
+        this.firmDisablesCounter = Counter.builder("pda.sync.firms.disabled")
+                .description("Number of firms disabled during sync")
                 .tag("source", "scheduler")
                 .register(meterRegistry);
 
@@ -135,7 +135,7 @@ public class PdaSyncScheduler {
         // Firm metrics
         firmCreatesCounter.increment(result.getFirmsCreated());
         firmUpdatesCounter.increment(result.getFirmsUpdated());
-        firmDeletesCounter.increment(result.getFirmsDisabled());
+        firmDisablesCounter.increment(result.getFirmsDisabled());
         firmReactivatesCounter.increment(result.getFirmsReactivated());
 
         // Office metrics
