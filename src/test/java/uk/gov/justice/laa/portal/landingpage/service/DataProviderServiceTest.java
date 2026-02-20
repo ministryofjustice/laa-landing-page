@@ -1149,15 +1149,15 @@ class DataProviderServiceTest {
         @Test
         void shouldDetectNewFirm() throws Exception {
             // Given - PDA has a firm that doesn't exist in DB
-            String pdaJson = "{\"offices\":[{" +
-                "\"firmNumber\":\"F001\"," +
-                "\"firmName\":\"New Firm\"," +
-                "\"firmType\":\"LEGAL_SERVICES_PROVIDER\"," +
-                "\"officeAccountNumber\":\"O001\"," +
-                "\"officeAddressLine1\":\"123 Main St\"," +
-                "\"officeAddressCity\":\"London\"," +
-                "\"officeAddressPostcode\":\"SW1A 1AA\"" +
-                "}]}";
+            String pdaJson = "{\"offices\":[{"
+                + "\"firmNumber\":\"F001\","
+                + "\"firmName\":\"New Firm\","
+                + "\"firmType\":\"LEGAL_SERVICES_PROVIDER\","
+                + "\"officeAccountNumber\":\"O001\","
+                + "\"officeAddressLine1\":\"123 Main St\","
+                + "\"officeAddressCity\":\"London\","
+                + "\"officeAddressPostcode\":\"SW1A 1AA\""
+                + "}]}";
             Path jsonFile = tempDir.resolve("compare-test.json");
             Files.writeString(jsonFile, pdaJson);
 
@@ -1432,7 +1432,7 @@ class DataProviderServiceTest {
                 );
         }
 
-        private String createJsonResponse(Table _unusedTable) {
+        private String createJsonResponse(Table unusedTable) {
             return "{\"offices\":[]}";
         }
     }
@@ -1831,7 +1831,7 @@ class DataProviderServiceTest {
                 );
         }
 
-        private String createJsonResponse(Table _unusedTable) {
+        private String createJsonResponse(Table unusedTable) {
             return "{\"offices\":[]}";
         }
     }
