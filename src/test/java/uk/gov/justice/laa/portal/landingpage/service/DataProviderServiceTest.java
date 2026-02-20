@@ -1442,7 +1442,9 @@ class DataProviderServiceTest {
             }
             StringBuilder json = new StringBuilder("{\"offices\":[");
             for (int i = 0; i < table.rowCount(); i++) {
-                if (i > 0) json.append(",");
+                if (i > 0) {
+                    json.append(",");
+                }
                 json.append("{");
                 json.append("\"firmNumber\":\"").append(table.stringColumn("firmNumber").get(i)).append("\",");
                 json.append("\"firmName\":\"").append(table.stringColumn("firmName").get(i)).append("\",");
@@ -1471,7 +1473,7 @@ class DataProviderServiceTest {
                 json.append("\"officeAddressPostcode\":\"").append(table.stringColumn("officeAddressPostcode").get(i)).append("\"");
                 json.append("}");
             }
-            json.append("]}" );
+            json.append("]}");
             return json.toString();
         }
     }
@@ -1901,7 +1903,9 @@ class DataProviderServiceTest {
             }
             StringBuilder json = new StringBuilder("{\"offices\":[");
             for (int i = 0; i < table.rowCount(); i++) {
-                if (i > 0) json.append(",");
+                if (i > 0) {
+                    json.append(",");
+                }
                 json.append("{");
                 json.append("\"firmNumber\":\"").append(table.stringColumn("firmNumber").get(i)).append("\",");
                 json.append("\"firmName\":\"").append(table.stringColumn("firmName").get(i)).append("\",");
