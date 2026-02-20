@@ -28,6 +28,11 @@ public class DisableFirmCommand implements PdaSyncCommand {
     @Override
     public void execute(PdaSyncResultDto result) {
         try {
+            // Skip if already disabled (idempotent behavior)
+            if (Boolean.FALSE.equals(firm.getEnabled())) {
+                return;
+            }
+
             // Mark firm as disabled (soft delete)
             firm.setEnabled(false);
 
@@ -40,7 +45,7 @@ public class DisableFirmCommand implements PdaSyncCommand {
 
             // Clear this firm as parent from all child firms
             if (firm.getChildFirms() != null && !firm.getChildFirms().isEmpty()) {
-                log.debug("Clearing parent reference from {} child firms for disabled firm {}",
+                    log.debug("Clearing parent reference from {} child firms for disabled firm {}",
                     firm.getChildFirms().size(), firm.getCode());
                 for (Firm childFirm : firm.getChildFirms()) {
                     childFirm.setParentFirm(null);
