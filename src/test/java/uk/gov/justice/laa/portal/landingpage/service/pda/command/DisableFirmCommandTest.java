@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -74,10 +75,10 @@ class DisableFirmCommandTest {
             // When
             command.execute(result);
 
-            // Then
+            // Then - idempotent operation, no changes made
             assertThat(firm.getEnabled()).isFalse();
-            assertThat(result.getFirmsDisabled()).isEqualTo(1);
-            verify(firmRepository).save(firm);
+            assertThat(result.getFirmsDisabled()).isEqualTo(0); // No increment since already disabled
+            verify(firmRepository, never()).save(firm); // No save needed
         }
     }
 
