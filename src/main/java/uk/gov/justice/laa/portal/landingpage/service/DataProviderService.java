@@ -276,8 +276,8 @@ public class DataProviderService {
                     && !pdaFirm.getParentFirmNumber().trim().isEmpty()
                     && !pdaFirm.getParentFirmNumber().trim().equalsIgnoreCase("null"))
                     ? pdaFirm.getParentFirmNumber().trim() : null;
-                
-                if ((currentParentCode == null && newParentCode != null) 
+
+                if ((currentParentCode == null && newParentCode != null)
                     || (currentParentCode != null && !currentParentCode.equals(newParentCode))) {
                     parentChanged = true;
                 }
@@ -293,7 +293,7 @@ public class DataProviderService {
                         needsUpdate = true;
                     }
                 }
-                
+
                 if (parentChanged) {
                     log.debug("COMPARE: Firm {} needs parent firm update: '{}' -> '{}'", firmCode, currentParentCode, newParentCode);
                     needsUpdate = true;
