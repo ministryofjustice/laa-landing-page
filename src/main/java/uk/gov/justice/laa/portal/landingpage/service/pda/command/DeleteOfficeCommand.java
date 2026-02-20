@@ -28,9 +28,10 @@ public class DeleteOfficeCommand implements PdaSyncCommand {
             List<UserProfile> profiles = userProfileRepository.findByOfficeId(office.getId());
 
             if (!profiles.isEmpty()) {
-                // Remove office from all profiles in memory
+                // Remove office from all profiles by matching ID
+                // Cannot rely on Office.equals() as it uses reference equality
                 for (UserProfile profile : profiles) {
-                    profile.getOffices().remove(office);
+                    profile.getOffices().removeIf(o -> o.getId().equals(office.getId()));
                 }
                 // Batch save all modified profiles
                 userProfileRepository.saveAll(profiles);
