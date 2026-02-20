@@ -1021,12 +1021,13 @@ public class UserService {
      * @param lastName  The user's last name
      * @throws IOException If an error occurs during the update
      */
-    public void updateUserDetails(String userId, String firstName, String lastName)
+    public void updateUserDetails(String userId, String email, String firstName, String lastName)
             throws IOException {
         // Update local database
         Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
         if (optionalUser.isPresent()) {
             EntraUser entraUser = optionalUser.get();
+            entraUser.setEmail(email);
             entraUser.setFirstName(firstName);
             entraUser.setLastName(lastName);
 

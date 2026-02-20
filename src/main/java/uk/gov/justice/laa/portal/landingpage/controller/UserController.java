@@ -940,17 +940,43 @@ public class UserController {
     @PostMapping("/users/edit/{id}/details")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String updateUserDetails(@PathVariable String id,
-            @Valid EditUserDetailsForm editUserDetailsForm, BindingResult result,
-            HttpSession session) throws IOException {
+                                    @Valid EditUserDetailsForm editUserDetailsForm,
+                                    BindingResult result,
+                                    HttpSession session,
+                                    Model model) throws IOException {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        model.addAttribute("user", user);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user details - " + user.getFullName());
         session.setAttribute("user", user);
         session.setAttribute("editUserDetailsForm", editUserDetailsForm);
+        if (Objects.nonNull(editUserDetailsForm.getEmail()) && !editUserDetailsForm.getEmail().isEmpty()) {
+            boolean isSameEmail = Objects.equals(user.getEntraUser().getEmail(), editUserDetailsForm.getEmail());
+            if (!isSameEmail && userService.userExistsByEmail(editUserDetailsForm.getEmail())) {
+                // Check if the existing user is a multi-firm user
+                if (userService.isMultiFirmUserByEmail(editUserDetailsForm.getEmail())) {
+                    result.rejectValue("email", "error.email",
+                            "This email address is already registered as a multi-firm user");
+                } else {
+                    result.rejectValue("email", "error.email", "This email address is already associated with another user.");
+                }
+            }
+
+            if (!emailValidationService.isValidEmailDomain(editUserDetailsForm.getEmail())) {
+                result.rejectValue("email", "email.invalidDomain",
+                        "The email address domain is not valid or cannot receive emails.");
+            }
+        }
         if (result.hasErrors()) {
-            log.debug("Validation errors occurred while updating user details: {}", result.getAllErrors());
-            // If there are validation errors, return to the edit user details page with
-            // errors
+            log.info("Validation errors occurred while updating user details: {}", result.getAllErrors());
             return "edit-user-details";
         }
+        // Update user details
+        // TODO audit log needed
+        userService.updateUserDetails(user.getEntraUser().getId(),
+                editUserDetailsForm.getEmail(),
+                editUserDetailsForm.getFirstName(),
+                editUserDetailsForm.getLastName());
+        session.removeAttribute("editUserDetailsForm");
         return "redirect:/admin/users/edit/" + id + "/details-check-answer";
     }
 
@@ -970,7 +996,7 @@ public class UserController {
         return "edit-user-details-check-answer";
     }
 
-    /**
+/*    *//**
      * Update user details
      *
      * @param id      User ID
@@ -978,7 +1004,7 @@ public class UserController {
      * @return Redirect to user management page
      * @throws IOException              If an error occurs during user update
      * @throws IllegalArgumentException If the user ID is invalid or not found
-     */
+     *//*
     @PostMapping("/users/edit/{id}/details-check-answer")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String updateUserDetailsSubmit(@PathVariable String id,
@@ -990,11 +1016,11 @@ public class UserController {
         }
         // Update user details
         // TODO audit log needed
-        userService.updateUserDetails(user.getEntraUser().getId(), editUserDetailsForm.getFirstName(),
+        userService.updateUserDetails(user.getEntraUser().getId(), editUserDetailsForm.getEmail(), editUserDetailsForm.getFirstName(),
                 editUserDetailsForm.getLastName());
         session.removeAttribute("editUserDetailsForm");
         return "redirect:/admin/users/edit/" + id + "/confirmation";
-    }
+    }*/
 
     /**
      * Retrieves available apps for user and their currently assigned apps.

@@ -31,7 +31,7 @@
                         </h2>
                         <div class="govuk-error-summary__body" id="error-summary-description">
                             <ul class="govuk-list govuk-error-summary__list">
-                                <li th:each="error : ${#fields.errors()}"><a href="#" th:text="${error}"></a></li>
+                                <li th:each="error : ${#fields.detailedErrors()}"><a th:href="'#' + ${error.fieldName}" th:text="${error.message}"></a></li>
                             </ul>
                         </div>
                     </div>
@@ -41,15 +41,11 @@
                     <label class="govuk-label govuk-label--m" for="email">
                         Email address
                     </label>
-                    <p class="govuk-hint">
-                        Email address can not be edited.
-                    </p>
                     <div th:if="${#fields.hasErrors('email')}" class="govuk-error-message">
                         <p th:each="err : ${#fields.errors('email')}" th:text="${err}"></p>
                     </div>
                     <input class="govuk-input govuk-!-width-one-third" name="email" th:value="*{email}" id="email"
-                        th:aria-describedby="${#fields.hasErrors('email')} ? 'email-error' : null"
-                        style="background-color: #f3f2f1; color: #505a5f; cursor: not-allowed;" />
+                        th:aria-describedby="${#fields.hasErrors('email')} ? 'email-error' : null"/>
                 </div>
                 <div class="govuk-form-group"
                     th:classappend="${#fields.hasErrors('firstName')} ? 'govuk-form-group--error'">
