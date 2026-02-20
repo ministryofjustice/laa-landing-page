@@ -154,8 +154,8 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
     List<UserProfile> findUserProfilesForCcmsSync();
 
     @Query("""
-            SELECT ups FROM UserProfile ups
-                        JOIN ups.offices o
+            SELECT DISTINCT ups FROM UserProfile ups
+                        JOIN FETCH ups.offices o
             WHERE o.id = :officeId
             """)
     List<UserProfile> findByOfficeId(@Param("officeId") UUID officeId);
