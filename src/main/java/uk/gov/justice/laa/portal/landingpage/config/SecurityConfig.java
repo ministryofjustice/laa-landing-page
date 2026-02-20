@@ -181,7 +181,6 @@ public class SecurityConfig {
                 .maximumSessions(1)
                 .expiredUrl("/?message=session-expired")
         ).csrf(csrf -> csrf
-                .ignoringRequestMatchers("/api/data-provider/**")  // TEMP FOR TESTING - REMOVE LATER
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
         ).headers(headers -> headers
                 .httpStrictTransportSecurity(hsts -> hsts
