@@ -201,7 +201,7 @@ class PdaSyncSchedulerTest {
         // Then
         assertThat(meterRegistry.find("pda.sync.firms.created").counter().count()).isEqualTo(2.0);
         assertThat(meterRegistry.find("pda.sync.firms.updated").counter().count()).isEqualTo(3.0);
-        assertThat(meterRegistry.find("pda.sync.firms.deleted").counter().count()).isEqualTo(1.0);
+        assertThat(meterRegistry.find("pda.sync.firms.disabled").counter().count()).isEqualTo(1.0);
         assertThat(meterRegistry.find("pda.sync.firms.reactivated").counter().count()).isEqualTo(1.0);
     }
 

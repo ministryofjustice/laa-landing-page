@@ -16,7 +16,6 @@ import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -153,7 +152,7 @@ class UpdateOfficeCommandTest {
         command.execute(result);
 
         // Then
-        verify(userProfileRepository, times(2)).save(any(UserProfile.class));
+        verify(userProfileRepository).saveAll(any());
         assertThat(office.getFirm()).isEqualTo(newFirm);
         assertThat(result.getWarnings()).hasSize(1);
         assertThat(result.getWarnings().get(0)).contains("switched firms");
