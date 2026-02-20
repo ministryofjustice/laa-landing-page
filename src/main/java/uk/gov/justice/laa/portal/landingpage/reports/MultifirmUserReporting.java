@@ -36,7 +36,7 @@ public class MultifirmUserReporting {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void getReport() {
         if (reportingEnabled) {
-            log.debug("Starting multifirm user polling process...");
+            log.debug("Starting multifirm user reporting process...");
             if (enableDistributedDbLocking) {
                 try {
                     lockService.withLock(REPORTING_LOCK_KEY, Duration.ofMinutes(distributedDbLockingPeriod), () -> {
