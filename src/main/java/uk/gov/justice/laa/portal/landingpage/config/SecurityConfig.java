@@ -133,11 +133,11 @@ public class SecurityConfig {
     public SecurityFilterChain webSecurityFilterChain(HttpSecurity http,
             ClientRegistrationRepository clientRegistrationRepository) throws Exception {
         http.csrf(csrf -> csrf
-                .ignoringRequestMatchers("/api/pda/**")  // TEMP FOR TESTING - REMOVE LATER
+                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
         ).addFilterAfter(userDisabledFilter, OAuth2LoginAuthenticationFilter.class)
                 .addFilterAfter(firmDisabledFilter, UserDisabledFilter.class)
                 .authorizeHttpRequests((authorize) -> authorize
-                .requestMatchers("/api/pda/**").permitAll()  // TEMP FOR TESTING - REMOVE LATER
+                .requestMatchers("/api/pda/**").hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
                 .requestMatchers("/admin/users/**", "/pda/**")
                 .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
                 .requestMatchers("/admin/user/**")
