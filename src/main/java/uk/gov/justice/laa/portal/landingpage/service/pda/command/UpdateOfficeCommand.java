@@ -33,18 +33,19 @@ public class UpdateOfficeCommand {
 
                 // Remove all user profile associations for this office
                 List<UserProfile> profiles = userProfileRepository.findByOfficeId(office.getId());
-                int associationsRemoved = 0;
-                for (UserProfile profile : profiles) {
-                    profile.getOffices().remove(office);
-                    userProfileRepository.save(profile);
-                    associationsRemoved++;
-                }
+                if (!profiles.isEmpty()) {
+                    // Remove office from all profiles by matching ID
+                    // Cannot rely on Office.equals() as it uses reference equality
+                    for (UserProfile profile : profiles) {
+                        profile.getOffices().removeIf(o -> o.getId().equals(office.getId()));
+                    }
+                    // Batch save all modified profiles
+                    userProfileRepository.saveAll(profiles);
 
-                if (associationsRemoved > 0) {
                     log.debug("Removed {} user associations from office {} due to firm switch",
-                        associationsRemoved, office.getCode());
+                        profiles.size(), office.getCode());
                     result.addWarning("Office " + office.getCode() + " switched firms - removed "
-                        + associationsRemoved + " user association(s)");
+                        + profiles.size() + " user association(s)");
                 }
 
                 office.setFirm(firm);
