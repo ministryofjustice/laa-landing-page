@@ -1,23 +1,24 @@
 package uk.gov.justice.laa.portal.landingpage.playwright.tests;
 
 
-import com.microsoft.playwright.Locator;
-import com.microsoft.playwright.options.LoadState;
+import java.util.Arrays;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import com.microsoft.playwright.Locator;
+import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+import com.microsoft.playwright.options.LoadState;
+
 import uk.gov.justice.laa.portal.landingpage.playwright.common.BaseFrontEndTest;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.TestRole;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.TestUser;
 import uk.gov.justice.laa.portal.landingpage.playwright.pages.AuditPage;
 import uk.gov.justice.laa.portal.landingpage.playwright.pages.ManageUsersPage;
-
-import java.util.Arrays;
-import java.util.List;
-
-import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ManageUsersTest extends BaseFrontEndTest {
 

@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PreDestroy;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import tech.tablesaw.api.Table;
 import tech.tablesaw.io.json.JsonReadOptions;
@@ -52,18 +51,32 @@ import uk.gov.justice.laa.portal.landingpage.service.pda.command.UpdateOfficeCom
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class DataProviderService {
 
-    @Qualifier("dataProviderRestClient")
     private final RestClient dataProviderRestClient;
-
     private final ObjectMapper objectMapper;
     private final FirmRepository firmRepository;
     private final OfficeRepository officeRepository;
     private final UserProfileRepository userProfileRepository;
     private final TransactionTemplate transactionTemplate;
     private final DataProviderConfig dataProviderConfig;
+
+    public DataProviderService(
+            @Qualifier("dataProviderRestClient") RestClient dataProviderRestClient,
+            ObjectMapper objectMapper,
+            FirmRepository firmRepository,
+            OfficeRepository officeRepository,
+            UserProfileRepository userProfileRepository,
+            TransactionTemplate transactionTemplate,
+            DataProviderConfig dataProviderConfig) {
+        this.dataProviderRestClient = dataProviderRestClient;
+        this.objectMapper = objectMapper;
+        this.firmRepository = firmRepository;
+        this.officeRepository = officeRepository;
+        this.userProfileRepository = userProfileRepository;
+        this.transactionTemplate = transactionTemplate;
+        this.dataProviderConfig = dataProviderConfig;
+    }
 
     @PersistenceContext
     private EntityManager entityManager;
