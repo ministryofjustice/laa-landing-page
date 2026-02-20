@@ -263,12 +263,24 @@ public class DataProviderService {
                     .build());
                 firmCreates++;
             } else {
-                // Check if firm needs updating
-                // IMPORTANT: UpdateFirmCommand is only called for NAME changes in sync Pass 1
-                // Parent firm updates happen separately in sync Pass 2 via direct repository save
-                // So we should ONLY check name changes here to match actual UpdateFirmCommand usage
+                // Check if firm needs updating (name or parent firm)
+                // UpdateFirmCommand handles name changes in Pass 1
+                // Pass 2 handles parent firm references via direct repository save
                 boolean nameChanged = !pdaFirm.getFirmName().equals(dbFirm.getName());
+                boolean parentChanged = false;
                 boolean needsUpdate = false;
+
+                // Check parent firm changes
+                String currentParentCode = dbFirm.getParentFirm() != null ? dbFirm.getParentFirm().getCode() : null;
+                String newParentCode = (pdaFirm.getParentFirmNumber() != null
+                    && !pdaFirm.getParentFirmNumber().trim().isEmpty()
+                    && !pdaFirm.getParentFirmNumber().trim().equalsIgnoreCase("null"))
+                    ? pdaFirm.getParentFirmNumber().trim() : null;
+                
+                if ((currentParentCode == null && newParentCode != null) 
+                    || (currentParentCode != null && !currentParentCode.equals(newParentCode))) {
+                    parentChanged = true;
+                }
 
                 if (nameChanged) {
                     // SYNC RULE: Skip name update if duplicate name exists (UpdateFirmCommand behavior)
@@ -280,6 +292,11 @@ public class DataProviderService {
                         log.debug("COMPARE: Firm {} needs name update: '{}' -> '{}'", firmCode, dbFirm.getName(), pdaFirm.getFirmName());
                         needsUpdate = true;
                     }
+                }
+                
+                if (parentChanged) {
+                    log.debug("COMPARE: Firm {} needs parent firm update: '{}' -> '{}'", firmCode, currentParentCode, newParentCode);
+                    needsUpdate = true;
                 }
 
                 if (needsUpdate) {
