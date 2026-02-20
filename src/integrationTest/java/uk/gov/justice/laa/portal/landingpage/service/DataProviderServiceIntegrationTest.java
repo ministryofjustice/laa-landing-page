@@ -53,6 +53,7 @@ import static org.mockito.Mockito.when;
 @SpringBootTest
 @Testcontainers
 @ActiveProfiles("test")
+@SuppressWarnings("removal") // MockBean deprecated in Spring Boot 3.4.0+, will migrate when replacement is available
 @TestPropertySource(properties = {
     "app.data.provider.use-local-file=true",
     "app.data.provider.local-file-path=/tmp/test-pda-data.json",
