@@ -1934,7 +1934,7 @@ class DataProviderServiceTest {
                 json.append("\"officeAddressPostcode\":\"").append(table.stringColumn("officeAddressPostcode").get(i)).append("\"");
                 json.append("}");
             }
-            json.append("]}" );
+            json.append("]}");
             return json.toString();
         }
     }

@@ -689,8 +689,8 @@ class DataProviderServiceIntegrationTest {
                 .build())
             .build();
         officeToKeep = officeRepository.save(officeToKeep);
-        existingFirm.setEnabled(true);
-        existingFirm = firmRepository.save(existingFirm);
+            existingFirm.setEnabled(true);
+            existingFirm = firmRepository.save(existingFirm);
 
         // Create user with office association
         EntraUser entraUser = EntraUser.builder()
