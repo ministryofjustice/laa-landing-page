@@ -1720,7 +1720,7 @@ class DataProviderServiceTest {
 
             String jsonResponse = createJsonResponse(pdaTable);
             String jsonArray = jsonResponse.substring(jsonResponse.indexOf("["), jsonResponse.lastIndexOf("]") + 1);
-            
+
             when(dataProviderConfig.isUseLocalFile()).thenReturn(false);
             doReturn(requestHeadersUriSpec).when(dataProviderRestClient).get();
             doReturn(requestHeadersUriSpec).when(requestHeadersUriSpec).uri(anyString());
