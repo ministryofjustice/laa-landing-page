@@ -45,8 +45,8 @@ public class DisableFirmCommand implements PdaSyncCommand {
 
             // Clear this firm as parent from all child firms
             if (firm.getChildFirms() != null && !firm.getChildFirms().isEmpty()) {
-                    log.debug("Clearing parent reference from {} child firms for disabled firm {}",
-                    firm.getChildFirms().size(), firm.getCode());
+                log.debug("Clearing parent reference from {} child firms for disabled firm {}",
+                        firm.getChildFirms().size(), firm.getCode());
                 for (Firm childFirm : firm.getChildFirms()) {
                     childFirm.setParentFirm(null);
                     firmRepository.save(childFirm);
