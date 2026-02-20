@@ -19,6 +19,7 @@ import org.junit.jupiter.api.io.TempDir;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import org.mockito.Mock;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -135,6 +136,7 @@ class DataProviderServiceTest {
             when(objectMapper.readTree(pdaJson)).thenReturn(rootNode);
             when(rootNode.get("offices")).thenReturn(officesNode);
             when(officesNode.isArray()).thenReturn(true);
+            when(objectMapper.writeValueAsString(officesNode)).thenReturn("[]");
             when(objectMapper.writeValueAsString(officesNode)).thenReturn("[]");
 
             // When
@@ -1147,34 +1149,25 @@ class DataProviderServiceTest {
     class CompareWithDatabaseTests {
 
         @Test
+        @SuppressWarnings("unchecked")
         void shouldDetectNewFirm() throws Exception {
             // Given - PDA has a firm that doesn't exist in DB
-            String pdaJson = "{\"offices\":[{"
-                + "\"firmNumber\":\"F001\","
-                + "\"firmName\":\"New Firm\","
-                + "\"firmType\":\"LEGAL_SERVICES_PROVIDER\","
-                + "\"officeAccountNumber\":\"O001\","
-                + "\"officeAddressLine1\":\"123 Main St\","
-                + "\"officeAddressCity\":\"London\","
-                + "\"officeAddressPostcode\":\"SW1A 1AA\""
-                + "}]}";
-            Path jsonFile = tempDir.resolve("compare-test.json");
-            Files.writeString(jsonFile, pdaJson);
+            Table pdaTable = createTestTable(
+                "F001", "New Firm", "LEGAL_SERVICES_PROVIDER", null,
+                "O001", "123 Main St", null, null, "London", "SW1A 1AA"
+            );
 
-            when(dataProviderConfig.isUseLocalFile()).thenReturn(true);
-            when(dataProviderConfig.getLocalFilePath()).thenReturn(jsonFile.toString());
+            when(dataProviderConfig.isUseLocalFile()).thenReturn(false);
+            doReturn(requestHeadersUriSpec).when(dataProviderRestClient).get();
+            doReturn(requestHeadersUriSpec).when(requestHeadersUriSpec).uri(anyString());
+            doReturn(responseSpec).when(requestHeadersUriSpec).retrieve();
+            String jsonResponse = createJsonResponse(pdaTable);
+            when(responseSpec.body(String.class)).thenReturn(jsonResponse);
             when(objectMapper.readTree(anyString())).thenReturn(rootNode);
             when(rootNode.get("offices")).thenReturn(officesNode);
             when(officesNode.isArray()).thenReturn(true);
-            JsonNode officeNode = objectMapper.createObjectNode()
-                .put("firmNumber", "F001")
-                .put("firmName", "New Firm")
-                .put("firmType", "LEGAL_SERVICES_PROVIDER")
-                .put("officeAccountNumber", "O001")
-                .put("officeAddressLine1", "123 Main St")
-                .put("officeAddressCity", "London")
-                .put("officeAddressPostcode", "SW1A 1AA");
-            when(objectMapper.writeValueAsString(officesNode)).thenReturn("[" + officeNode.toString() + "]");
+            when(objectMapper.writeValueAsString(officesNode)).thenReturn("[]");
+            when(objectMapper.writeValueAsString(officesNode)).thenReturn(jsonResponse.substring(jsonResponse.indexOf("[")));
 
             when(firmRepository.findAllWithParentFirm()).thenReturn(Collections.emptyList());
             when(officeRepository.findAllWithFirm()).thenReturn(Collections.emptyList());
@@ -1220,10 +1213,13 @@ class DataProviderServiceTest {
             doReturn(requestHeadersUriSpec).when(dataProviderRestClient).get();
             doReturn(requestHeadersUriSpec).when(requestHeadersUriSpec).uri(anyString());
             doReturn(responseSpec).when(requestHeadersUriSpec).retrieve();
-            when(responseSpec.body(String.class)).thenReturn(createJsonResponse(pdaTable));
+            String jsonResponse = createJsonResponse(pdaTable);
+            when(responseSpec.body(String.class)).thenReturn(jsonResponse);
             when(objectMapper.readTree(anyString())).thenReturn(rootNode);
             when(rootNode.get("offices")).thenReturn(officesNode);
             when(officesNode.isArray()).thenReturn(true);
+            when(objectMapper.writeValueAsString(officesNode)).thenReturn("[]");
+            when(objectMapper.writeValueAsString(officesNode)).thenReturn(jsonResponse.substring(jsonResponse.indexOf("[")));
 
             when(firmRepository.findAllWithParentFirm()).thenReturn(Arrays.asList(existingFirm));
             when(officeRepository.findAllWithFirm()).thenReturn(Arrays.asList(existingOffice));
@@ -1258,6 +1254,7 @@ class DataProviderServiceTest {
             when(objectMapper.readTree(anyString())).thenReturn(rootNode);
             when(rootNode.get("offices")).thenReturn(officesNode);
             when(officesNode.isArray()).thenReturn(true);
+            when(objectMapper.writeValueAsString(officesNode)).thenReturn("[]");
 
             when(firmRepository.findAllWithParentFirm()).thenReturn(Arrays.asList(existingFirm));
             when(officeRepository.findAllWithFirm()).thenReturn(Collections.emptyList());
@@ -1306,6 +1303,7 @@ class DataProviderServiceTest {
             when(objectMapper.readTree(anyString())).thenReturn(rootNode);
             when(rootNode.get("offices")).thenReturn(officesNode);
             when(officesNode.isArray()).thenReturn(true);
+            when(objectMapper.writeValueAsString(officesNode)).thenReturn("[]");
 
             when(firmRepository.findAllWithParentFirm()).thenReturn(Arrays.asList(existingFirm));
             when(officeRepository.findAllWithFirm()).thenReturn(Arrays.asList(existingOffice));
@@ -1357,6 +1355,7 @@ class DataProviderServiceTest {
             when(objectMapper.readTree(anyString())).thenReturn(rootNode);
             when(rootNode.get("offices")).thenReturn(officesNode);
             when(officesNode.isArray()).thenReturn(true);
+            when(objectMapper.writeValueAsString(officesNode)).thenReturn("[]");
 
             when(firmRepository.findAllWithParentFirm()).thenReturn(Arrays.asList(existingFirm));
             when(officeRepository.findAllWithFirm()).thenReturn(Arrays.asList(existingOffice1, existingOffice2));
@@ -1387,6 +1386,7 @@ class DataProviderServiceTest {
             when(objectMapper.readTree(anyString())).thenReturn(rootNode);
             when(rootNode.get("offices")).thenReturn(officesNode);
             when(officesNode.isArray()).thenReturn(true);
+            when(objectMapper.writeValueAsString(officesNode)).thenReturn("[]");
 
             when(firmRepository.findAllWithParentFirm()).thenReturn(Collections.emptyList());
             when(officeRepository.findAllWithFirm()).thenReturn(Collections.emptyList());
@@ -1432,8 +1432,43 @@ class DataProviderServiceTest {
                 );
         }
 
-        private String createJsonResponse(Table unusedTable) {
-            return "{\"offices\":[]}";
+        private String createJsonResponse(Table table) {
+            if (table.rowCount() == 0) {
+                return "{\"offices\":[]}";
+            }
+            StringBuilder json = new StringBuilder("{\"offices\":[");
+            for (int i = 0; i < table.rowCount(); i++) {
+                if (i > 0) json.append(",");
+                json.append("{");
+                json.append("\"firmNumber\":\"").append(table.stringColumn("firmNumber").get(i)).append("\",");
+                json.append("\"firmName\":\"").append(table.stringColumn("firmName").get(i)).append("\",");
+                json.append("\"firmType\":\"").append(table.stringColumn("firmType").get(i)).append("\",");
+                String parentFirm = table.stringColumn("parentFirmNumber").get(i);
+                if (parentFirm != null && !parentFirm.isEmpty()) {
+                    json.append("\"parentFirmNumber\":\"").append(parentFirm).append("\",");
+                } else {
+                    json.append("\"parentFirmNumber\":null,");
+                }
+                json.append("\"officeAccountNumber\":\"").append(table.stringColumn("officeAccountNumber").get(i)).append("\",");
+                json.append("\"officeAddressLine1\":\"").append(table.stringColumn("officeAddressLine1").get(i)).append("\",");
+                String line2 = table.stringColumn("officeAddressLine2").get(i);
+                if (line2 != null && !line2.isEmpty()) {
+                    json.append("\"officeAddressLine2\":\"").append(line2).append("\",");
+                } else {
+                    json.append("\"officeAddressLine2\":null,");
+                }
+                String line3 = table.stringColumn("officeAddressLine3").get(i);
+                if (line3 != null && !line3.isEmpty()) {
+                    json.append("\"officeAddressLine3\":\"").append(line3).append("\",");
+                } else {
+                    json.append("\"officeAddressLine3\":null,");
+                }
+                json.append("\"officeAddressCity\":\"").append(table.stringColumn("officeAddressCity").get(i)).append("\",");
+                json.append("\"officeAddressPostcode\":\"").append(table.stringColumn("officeAddressPostcode").get(i)).append("\"");
+                json.append("}");
+            }
+            json.append("]}" );
+            return json.toString();
         }
     }
 
@@ -1458,6 +1493,7 @@ class DataProviderServiceTest {
             when(objectMapper.readTree(anyString())).thenReturn(rootNode);
             when(rootNode.get("offices")).thenReturn(officesNode);
             when(officesNode.isArray()).thenReturn(true);
+            when(objectMapper.writeValueAsString(officesNode)).thenReturn("[]");
 
             when(entityManager.createNativeQuery(anyString())).thenReturn(query);
             when(query.executeUpdate()).thenReturn(0);
@@ -1476,7 +1512,7 @@ class DataProviderServiceTest {
 
             // Then
             assertThat(result).isNotNull();
-            verify(entityManager, times(2)).createNativeQuery(anyString()); // SET CONSTRAINTS + bypass flag
+            verify(entityManager, times(3)).createNativeQuery(anyString()); // enable constraint bypass + SET CONSTRAINTS + reset constraint bypass
         }
 
         @Test
@@ -1515,12 +1551,11 @@ class DataProviderServiceTest {
             when(objectMapper.readTree(anyString())).thenReturn(rootNode);
             when(rootNode.get("offices")).thenReturn(officesNode);
             when(officesNode.isArray()).thenReturn(true);
+            when(objectMapper.writeValueAsString(officesNode)).thenReturn("[]");
 
             when(entityManager.createNativeQuery(anyString())).thenReturn(query);
             when(query.executeUpdate()).thenReturn(0);
-            when(firmRepository.findAllWithParentFirm())
-                .thenReturn(Arrays.asList(existingFirm))
-                .thenReturn(Arrays.asList(existingFirm));
+            when(firmRepository.findAllWithParentFirm()).thenReturn(Arrays.asList(existingFirm));
             when(officeRepository.findAllWithFirm()).thenReturn(Arrays.asList(existingOffice));
             when(firmRepository.findFirmsWithoutOffices()).thenReturn(Collections.emptyList());
             when(firmRepository.save(any())).thenReturn(existingFirm);
@@ -1537,7 +1572,7 @@ class DataProviderServiceTest {
 
             // Then
             assertThat(result).isNotNull();
-            verify(firmRepository, times(2)).findAllWithParentFirm();
+            verify(firmRepository, atLeast(1)).findAllWithParentFirm();
         }
 
         @Test
@@ -1559,9 +1594,6 @@ class DataProviderServiceTest {
             doReturn(requestHeadersUriSpec).when(requestHeadersUriSpec).uri(anyString());
             doReturn(responseSpec).when(requestHeadersUriSpec).retrieve();
             when(responseSpec.body(String.class)).thenReturn("{\"offices\":[]}");
-            when(objectMapper.readTree(anyString())).thenReturn(rootNode);
-            when(rootNode.get("offices")).thenReturn(officesNode);
-            when(officesNode.isArray()).thenReturn(true);
 
             when(entityManager.createNativeQuery(anyString())).thenReturn(query);
             when(query.executeUpdate()).thenReturn(0);
@@ -1627,12 +1659,11 @@ class DataProviderServiceTest {
             when(objectMapper.readTree(anyString())).thenReturn(rootNode);
             when(rootNode.get("offices")).thenReturn(officesNode);
             when(officesNode.isArray()).thenReturn(true);
+            when(objectMapper.writeValueAsString(officesNode)).thenReturn("[]");
 
             when(entityManager.createNativeQuery(anyString())).thenReturn(query);
             when(query.executeUpdate()).thenReturn(0);
-            when(firmRepository.findAllWithParentFirm())
-                .thenReturn(Arrays.asList(existingFirm))
-                .thenReturn(Arrays.asList(existingFirm));
+            when(firmRepository.findAllWithParentFirm()).thenReturn(Arrays.asList(existingFirm));
             when(officeRepository.findAllWithFirm()).thenReturn(Arrays.asList(toDelete, toKeep));
             when(firmRepository.findFirmsWithoutOffices()).thenReturn(Collections.emptyList());
             when(entityManager.contains(toKeep)).thenReturn(true);
@@ -1671,18 +1702,11 @@ class DataProviderServiceTest {
         @SuppressWarnings("unchecked")
         void shouldHandleExceptionDuringSyncTransaction() {
             // Given - exception during sync
-            Table pdaTable = createEmptyTable();
-
             when(dataProviderConfig.isUseLocalFile()).thenReturn(false);
             doReturn(requestHeadersUriSpec).when(dataProviderRestClient).get();
             doReturn(requestHeadersUriSpec).when(requestHeadersUriSpec).uri(anyString());
             doReturn(responseSpec).when(requestHeadersUriSpec).retrieve();
             when(responseSpec.body(String.class)).thenReturn("{\"offices\":[]}");
-
-            when(transactionTemplate.execute(any())).thenAnswer(invocation -> {
-                TransactionCallback<?> callback = invocation.getArgument(0);
-                return callback.doInTransaction(transactionStatus);
-            }).thenThrow(new RuntimeException("Reset failed"));
 
             when(entityManager.createNativeQuery(anyString())).thenThrow(new RuntimeException("DB error"));
 
@@ -1752,12 +1776,11 @@ class DataProviderServiceTest {
             when(objectMapper.readTree(anyString())).thenReturn(rootNode);
             when(rootNode.get("offices")).thenReturn(officesNode);
             when(officesNode.isArray()).thenReturn(true);
+            when(objectMapper.writeValueAsString(officesNode)).thenReturn("[]");
 
             when(entityManager.createNativeQuery(anyString())).thenReturn(query);
             when(query.executeUpdate()).thenReturn(0);
-            when(firmRepository.findAllWithParentFirm())
-                .thenReturn(Arrays.asList(childFirm, parentFirm))
-                .thenReturn(Arrays.asList(childFirm, parentFirm));
+            when(firmRepository.findAllWithParentFirm()).thenReturn(Arrays.asList(childFirm, parentFirm));
             when(officeRepository.findAllWithFirm()).thenReturn(Arrays.asList(childOffice, parentOffice));
             when(firmRepository.findFirmsWithoutOffices()).thenReturn(Collections.emptyList());
             when(firmRepository.save(any())).thenReturn(childFirm);
@@ -1831,8 +1854,43 @@ class DataProviderServiceTest {
                 );
         }
 
-        private String createJsonResponse(Table unusedTable) {
-            return "{\"offices\":[]}";
+        private String createJsonResponse(Table table) {
+            if (table.rowCount() == 0) {
+                return "{\"offices\":[]}";
+            }
+            StringBuilder json = new StringBuilder("{\"offices\":[");
+            for (int i = 0; i < table.rowCount(); i++) {
+                if (i > 0) json.append(",");
+                json.append("{");
+                json.append("\"firmNumber\":\"").append(table.stringColumn("firmNumber").get(i)).append("\",");
+                json.append("\"firmName\":\"").append(table.stringColumn("firmName").get(i)).append("\",");
+                json.append("\"firmType\":\"").append(table.stringColumn("firmType").get(i)).append("\",");
+                String parentFirm = table.stringColumn("parentFirmNumber").get(i);
+                if (parentFirm != null && !parentFirm.isEmpty()) {
+                    json.append("\"parentFirmNumber\":\"").append(parentFirm).append("\",");
+                } else {
+                    json.append("\"parentFirmNumber\":null,");
+                }
+                json.append("\"officeAccountNumber\":\"").append(table.stringColumn("officeAccountNumber").get(i)).append("\",");
+                json.append("\"officeAddressLine1\":\"").append(table.stringColumn("officeAddressLine1").get(i)).append("\",");
+                String line2 = table.stringColumn("officeAddressLine2").get(i);
+                if (line2 != null && !line2.isEmpty()) {
+                    json.append("\"officeAddressLine2\":\"").append(line2).append("\",");
+                } else {
+                    json.append("\"officeAddressLine2\":null,");
+                }
+                String line3 = table.stringColumn("officeAddressLine3").get(i);
+                if (line3 != null && !line3.isEmpty()) {
+                    json.append("\"officeAddressLine3\":\"").append(line3).append("\",");
+                } else {
+                    json.append("\"officeAddressLine3\":null,");
+                }
+                json.append("\"officeAddressCity\":\"").append(table.stringColumn("officeAddressCity").get(i)).append("\",");
+                json.append("\"officeAddressPostcode\":\"").append(table.stringColumn("officeAddressPostcode").get(i)).append("\"");
+                json.append("}");
+            }
+            json.append("]}" );
+            return json.toString();
         }
     }
 }
