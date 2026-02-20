@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.service;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -25,6 +26,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.PdaSyncResultDto;
  * - app.pda.sync.scheduler.enabled: Enable/disable automatic sync (default: false)
  * - app.pda.sync.scheduler.cron: Cron expression for sync schedule (default: daily at 7 AM)
  * - app.pda.sync.scheduler.run-on-startup: Run sync immediately on application startup (default: false)
+ * - app.pda.sync.scheduler.timeout-minutes: Max time to wait for sync completion (default: 10 minutes)
  *
  * The scheduler can be disabled via configuration while keeping the manual /sync endpoint available.
  */
@@ -37,6 +39,9 @@ public class PdaSyncScheduler {
 
     @Value("${app.pda.sync.scheduler.run-on-startup:false}")
     private boolean runOnStartup;
+
+    @Value("${app.pda.sync.scheduler.timeout-minutes:10}")
+    private long timeoutMinutes;
 
     // Metrics
     private final Timer syncTimer;
@@ -162,8 +167,8 @@ public class PdaSyncScheduler {
         try {
             CompletableFuture<PdaSyncResultDto> future = dataProviderService.synchronizeWithPdaAsync();
 
-            // Wait for completion and get result
-            PdaSyncResultDto result = future.get();
+            // Wait for completion with timeout to prevent indefinite blocking
+            PdaSyncResultDto result = future.get(timeoutMinutes, TimeUnit.MINUTES);
 
             // Record timing metric
             long duration = System.nanoTime() - startTime;
@@ -191,6 +196,12 @@ public class PdaSyncScheduler {
                 result.getWarnings().forEach(warning -> log.debug("Sync warning: {}", warning));
             }
 
+        } catch (TimeoutException e) {
+            long duration = System.nanoTime() - startTime;
+            syncTimer.record(duration, TimeUnit.NANOSECONDS);
+            syncFailureCounter.increment();
+            syncErrorsCounter.increment();
+            log.error("Scheduled PDA sync timed out after {} minutes", timeoutMinutes, e);
         } catch (Exception e) {
             long duration = System.nanoTime() - startTime;
             syncTimer.record(duration, TimeUnit.NANOSECONDS);
