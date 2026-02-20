@@ -65,6 +65,15 @@ public interface FirmRepository extends JpaRepository<Firm, UUID> {
         """, nativeQuery = true)
     List<Tuple> findRoleCountsByFirm();
 
+    @Query("""
+            SELECT f.name, f.code, COUNT(up.id) FROM Firm f
+            JOIN UserProfile up ON up.firm.id = f.id
+            JOIN EntraUser eu ON eu.id = up.entraUser.id
+            WHERE eu.multiFirmUser = TRUE
+            GROUP BY f.id, f.name, f.code
+            """)
+    List<Object[]> findMultiFirmUserCountsByFirm();
+
     @Query(
             value = """
         SELECT
