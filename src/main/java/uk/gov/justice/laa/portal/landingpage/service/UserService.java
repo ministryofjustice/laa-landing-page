@@ -48,12 +48,15 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto.AuditProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.CreateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDirectoryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
+import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
+import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserInfoAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserFirmReassignmentEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
@@ -1023,7 +1026,6 @@ public class UserService {
      */
     public void updateUserDetails(String userId, String email, String firstName, String lastName)
             throws IOException {
-        // Update local database
         Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
         if (optionalUser.isPresent()) {
             EntraUser entraUser = optionalUser.get();
@@ -1032,7 +1034,11 @@ public class UserService {
             entraUser.setLastName(lastName);
 
             try {
-                entraUserRepository.saveAndFlush(entraUser);
+                //update user information
+                EntraUser updateEntraUser = entraUserRepository.saveAndFlush(entraUser);
+                UpdateUserInfoAuditEvent updateUserInfoAuditEvent = new UpdateUserInfoAuditEvent(
+                        entraUser, updateEntraUser);
+                eventService.logEvent(updateUserInfoAuditEvent);
                 logger.info("Successfully updated user details in database for user ID: {}",
                         userId);
             } catch (Exception e) {
@@ -1041,7 +1047,7 @@ public class UserService {
                 throw new IOException("Failed to update user details in database", e);
             }
         } else {
-            logger.warn(
+            logger.info(
                     "User with id {} not found in database. Could not update local user details.",
                     userId);
         }
