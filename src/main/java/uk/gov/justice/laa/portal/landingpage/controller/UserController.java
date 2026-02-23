@@ -988,48 +988,6 @@ public class UserController {
         return "redirect:/admin/users/manage/" + id;
     }
 
-    @GetMapping("/users/edit/{id}/details-check-answer")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
-    public String updateUserDetailsCheck(@PathVariable String id, Model model,
-            HttpSession session) throws IOException {
-        EditUserDetailsForm editUserDetailsForm = (EditUserDetailsForm) session.getAttribute("editUserDetailsForm");
-        if (Objects.isNull(editUserDetailsForm)) {
-            return "redirect:/admin/users/manage/" + id;
-        }
-        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-        model.addAttribute("editUserDetailsForm", editUserDetailsForm);
-        model.addAttribute("user", user);
-        model.addAttribute(ModelAttributes.PAGE_TITLE,
-                "Edit user details - Check your answers - " + user.getFullName());
-        return "edit-user-details-check-answer";
-    }
-
-/*    *//**
-     * Update user details
-     *
-     * @param id      User ID
-     * @param session HttpSession to store user details
-     * @return Redirect to user management page
-     * @throws IOException              If an error occurs during user update
-     * @throws IllegalArgumentException If the user ID is invalid or not found
-     *//*
-    @PostMapping("/users/edit/{id}/details-check-answer")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
-    public String updateUserDetailsSubmit(@PathVariable String id,
-            HttpSession session) throws IOException {
-        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-        EditUserDetailsForm editUserDetailsForm = (EditUserDetailsForm) session.getAttribute("editUserDetailsForm");
-        if (Objects.isNull(editUserDetailsForm)) {
-            return "redirect:/admin/users/manage/" + id;
-        }
-        // Update user details
-        // TODO audit log needed
-        userService.updateUserDetails(user.getEntraUser().getId(), editUserDetailsForm.getEmail(), editUserDetailsForm.getFirstName(),
-                editUserDetailsForm.getLastName());
-        session.removeAttribute("editUserDetailsForm");
-        return "redirect:/admin/users/edit/" + id + "/confirmation";
-    }*/
-
     /**
      * Retrieves available apps for user and their currently assigned apps.
      */
