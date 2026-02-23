@@ -472,7 +472,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         assertTrue(row.locator(".moj-badge.moj-badge--blue").isHidden());
     }
 
-    @Disabled("Test disabled - user creation logic may have changed. Users created with only firm selection appear to get COMPLETE status instead of PENDING/INCOMPLETE. Needs investigation of user creation workflow changes.")
+    @Disabled("Test disabled - user creation logic changed. Users with only firm selection get COMPLETE status instead of PENDING. Needs investigation.")
     @Test
     @DisplayName("Verify success screen and incomplete user created.")
     public void verifySuccessScreenAndIncompleteUserCreated() {
