@@ -28,6 +28,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AdminAppDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AppAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
@@ -37,12 +38,11 @@ import uk.gov.justice.laa.portal.landingpage.dto.RoleCreationDto;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.service.AdminService;
+import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
 import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
-import uk.gov.justice.laa.portal.landingpage.service.RoleCreationService;
-import org.springframework.validation.BindingResult;
 import org.springframework.validation.BeanPropertyBindingResult;
 
 import java.util.UUID;
@@ -59,6 +59,8 @@ class AdminControllerTest {
     @Mock
     private AppService appService;
     @Mock
+    private AppRoleService appRoleService;
+    @Mock
     private MockHttpSession mockHttpSession;
 
     private AdminController adminController;
@@ -66,7 +68,7 @@ class AdminControllerTest {
 
     @BeforeEach
     void setUp() {
-        adminController = new AdminController(loginService, eventService, adminService, appService);
+        adminController = new AdminController(loginService, eventService, adminService, appService, appRoleService);
         model = new ExtendedModelMap();
     }
 
@@ -445,14 +447,14 @@ class AdminControllerTest {
                 .build();
         session.setAttribute("roleCreationDto", roleCreationDto);
 
-        doNothing().when(roleCreationService).createRole(roleCreationDto);
+        doNothing().when(appRoleService).createRole(roleCreationDto);
 
         // Act
         String result = adminController.confirmRoleCreation(session, redirectAttributes);
 
         // Assert
-        assertEquals("redirect:/admin/silas-administration?tab=roles", result);
-        verify(roleCreationService).createRole(roleCreationDto);
+        assertEquals("redirect:/admin/silas-administration?tab=roles#roles", result);
+        verify(appRoleService).createRole(roleCreationDto);
         assertThat(session.getAttribute("roleCreationDto")).isNull();
     }
 
@@ -468,14 +470,14 @@ class AdminControllerTest {
         session.setAttribute("roleCreationDto", roleCreationDto);
 
         RuntimeException exception = new RuntimeException("Test error");
-        doThrow(exception).when(roleCreationService).createRole(roleCreationDto);
+        doThrow(exception).when(appRoleService).createRole(roleCreationDto);
 
         // Act
         String result = adminController.confirmRoleCreation(session, redirectAttributes);
 
         // Assert
-        assertEquals("redirect:/admin/silas-administration?tab=roles", result);
-        verify(roleCreationService).createRole(roleCreationDto);
+        assertEquals("redirect:/admin/silas-administration?tab=roles#roles", result);
+        verify(appRoleService).createRole(roleCreationDto);
     }
 
     @Test
@@ -645,6 +647,402 @@ class AdminControllerTest {
         );
     }
 
+    @Test
+    void testShowCheckYourAnswers_WithCompleteRoleData_DisplaysAllFields() {
+        // Arrange
+        MockHttpSession session = new MockHttpSession();
+        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
+                .name("Complete Test Role")
+                .description("Complete test description")
+                .ccmsCode("TEST123")
+                .legacySync(true)
+                .authzRole(true)
+                .build();
+        session.setAttribute("roleCreationDto", roleCreationDto);
+
+        // Act
+        String result = adminController.showCheckYourAnswers(model, session);
+
+        // Assert
+        assertEquals("silas-administration/create-role-check-answers", result);
+        assertThat(model.getAttribute("roleCreationDto")).isEqualTo(roleCreationDto);
+    }
+
+    @Test
+    void testConfirmRoleCreation_WithValidationException_HandlesError() {
+        // Arrange
+        MockHttpSession session = new MockHttpSession();
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
+                .name("Invalid Role")
+                .description("Test Description")
+                .build();
+        session.setAttribute("roleCreationDto", roleCreationDto);
+
+        IllegalArgumentException exception = new IllegalArgumentException("Role name already exists");
+        doThrow(exception).when(appRoleService).createRole(roleCreationDto);
+
+        // Act
+        String result = adminController.confirmRoleCreation(session, redirectAttributes);
+
+        // Assert
+        assertEquals("redirect:/admin/silas-administration?tab=roles#roles", result);
+        verify(appRoleService).createRole(roleCreationDto);
+        // Session should not be cleared on error to preserve user input
+        assertThat(session.getAttribute("roleCreationDto")).isNotNull();
+    }
+
+    @Test
+    void testConfirmRoleCreation_WithCompleteRoleData_ProcessesSuccessfully() {
+        // Arrange
+        MockHttpSession session = new MockHttpSession();
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
+                .name("Complete Role")
+                .description("Complete description")
+                .ccmsCode("COMPLETE123")
+                .legacySync(false)
+                .authzRole(true)
+                .build();
+        session.setAttribute("roleCreationDto", roleCreationDto);
+
+        doNothing().when(appRoleService).createRole(roleCreationDto);
+
+        // Act
+        String result = adminController.confirmRoleCreation(session, redirectAttributes);
+
+        // Assert
+        assertEquals("redirect:/admin/silas-administration?tab=roles#roles", result);
+        verify(appRoleService).createRole(roleCreationDto);
+        assertThat(session.getAttribute("roleCreationDto")).isNull();
+    }
+
+    @Test
+    void testConfirmRoleCreation_WithDatabaseException_HandlesError() {
+        // Arrange
+        MockHttpSession session = new MockHttpSession();
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
+                .name("DB Error Role")
+                .description("Test Description")
+                .build();
+        session.setAttribute("roleCreationDto", roleCreationDto);
+
+        RuntimeException dbException = new RuntimeException("Database connection failed");
+        doThrow(dbException).when(appRoleService).createRole(roleCreationDto);
+
+        // Act
+        String result = adminController.confirmRoleCreation(session, redirectAttributes);
+
+        // Assert
+        assertEquals("redirect:/admin/silas-administration?tab=roles#roles", result);
+        verify(appRoleService).createRole(roleCreationDto);
+    }
+
+    @Test
+    void testConfirmRoleCreation_WithEmptyRoleData_HandlesGracefully() {
+        // Arrange
+        MockHttpSession session = new MockHttpSession();
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
+                .name("")
+                .description("")
+                .build();
+        session.setAttribute("roleCreationDto", roleCreationDto);
+
+        doNothing().when(appRoleService).createRole(roleCreationDto);
+
+        // Act
+        String result = adminController.confirmRoleCreation(session, redirectAttributes);
+
+        // Assert
+        assertEquals("redirect:/admin/silas-administration?tab=roles#roles", result);
+        verify(appRoleService).createRole(roleCreationDto);
+        assertThat(session.getAttribute("roleCreationDto")).isNull();
+    }
+
+    @Test
+    void testConfirmRoleCreation_WithConcurrentModification_HandlesError() {
+        // Arrange
+        MockHttpSession session = new MockHttpSession();
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
+                .name("Concurrent Role")
+                .description("Test Description")
+                .build();
+        session.setAttribute("roleCreationDto", roleCreationDto);
+
+        RuntimeException concurrencyException = new RuntimeException("Optimistic locking failure");
+        doThrow(concurrencyException).when(appRoleService).createRole(roleCreationDto);
+
+        // Act
+        String result = adminController.confirmRoleCreation(session, redirectAttributes);
+
+        // Assert
+        assertEquals("redirect:/admin/silas-administration?tab=roles#roles", result);
+        verify(appRoleService).createRole(roleCreationDto);
+    }
+
+    @Test
+    void testShowRoleCreationForm_WithNoSessionData_CreatesNewDto() {
+        // Arrange
+        MockHttpSession session = new MockHttpSession();
+        List<AppAdminDto> apps = createMockAppAdminDtos();
+        when(adminService.getAllApps()).thenReturn(apps);
+
+        // Act
+        String result = adminController.showRoleCreationForm(model, session);
+
+        // Assert
+        assertEquals("silas-administration/create-role", result);
+        assertThat(model.getAttribute("roleCreationDto")).isInstanceOf(RoleCreationDto.class);
+        assertThat(model.getAttribute("apps")).isEqualTo(apps);
+        assertThat(model.getAttribute("userTypes")).isEqualTo(UserType.values());
+        assertThat(model.getAttribute("firmTypes")).isEqualTo(FirmType.values());
+    }
+
+    @Test
+    void testShowRoleCreationForm_WithExistingSessionData_UsesExistingDto() {
+        // Arrange
+        MockHttpSession session = new MockHttpSession();
+        RoleCreationDto existingDto = RoleCreationDto.builder()
+                .name("Existing Role")
+                .description("Existing Description")
+                .build();
+        session.setAttribute("roleCreationDto", existingDto);
+
+        List<AppAdminDto> apps = createMockAppAdminDtos();
+        when(adminService.getAllApps()).thenReturn(apps);
+
+        // Act
+        String result = adminController.showRoleCreationForm(model, session);
+
+        // Assert
+        assertEquals("silas-administration/create-role", result);
+        assertThat(model.getAttribute("roleCreationDto")).isEqualTo(existingDto);
+        assertThat(model.getAttribute("apps")).isEqualTo(apps);
+        assertThat(model.getAttribute("userTypes")).isEqualTo(UserType.values());
+        assertThat(model.getAttribute("firmTypes")).isEqualTo(FirmType.values());
+    }
+
+    @Test
+    void testProcessRoleCreation_WithValidData_RedirectsToCheckAnswers() {
+        // Arrange
+        MockHttpSession session = new MockHttpSession();
+        UUID appId = UUID.randomUUID();
+        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
+                .name("Valid Role")
+                .description("Valid Description")
+                .parentAppId(appId)
+                .build();
+
+        BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
+
+        RoleCreationDto enrichedDto = RoleCreationDto.builder()
+                .name("Valid Role")
+                .description("Valid Description")
+                .parentAppId(appId)
+                .ordinal(1)
+                .authzRole(false)
+                .build();
+
+        when(appRoleService.isRoleNameExistsInApp("Valid Role", appId)).thenReturn(false);
+        when(appRoleService.enrichRoleCreationDto(roleCreationDto)).thenReturn(enrichedDto);
+
+        // Act
+        String result = adminController.processRoleCreation(roleCreationDto, bindingResult, model, session);
+
+        // Assert
+        assertEquals("redirect:/admin/silas-administration/roles/create/check-your-answers", result);
+        assertThat(session.getAttribute("roleCreationDto")).isEqualTo(enrichedDto);
+        verify(appRoleService).enrichRoleCreationDto(roleCreationDto);
+    }
+
+    @Test
+    void testProcessRoleCreation_WithDuplicateRoleName_ShowsValidationError() {
+        // Arrange
+        MockHttpSession session = new MockHttpSession();
+        UUID appId = UUID.randomUUID();
+        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
+                .name("Duplicate Role")
+                .description("Valid Description")
+                .parentAppId(appId)
+                .build();
+
+        BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
+        List<AppAdminDto> apps = createMockAppAdminDtos();
+
+        when(appRoleService.isRoleNameExistsInApp("Duplicate Role", appId)).thenReturn(true);
+        when(adminService.getAllApps()).thenReturn(apps);
+
+        // Act
+        String result = adminController.processRoleCreation(roleCreationDto, bindingResult, model, session);
+
+        // Assert
+        assertEquals("silas-administration/create-role", result);
+        assertThat(bindingResult.hasErrors()).isTrue();
+        assertThat(bindingResult.getFieldError("name")).isNotNull();
+        assertThat(model.getAttribute("apps")).isEqualTo(apps);
+        assertThat(model.getAttribute("userTypes")).isEqualTo(UserType.values());
+        assertThat(model.getAttribute("firmTypes")).isEqualTo(FirmType.values());
+    }
+
+    @Test
+    void testProcessRoleCreation_WithBindingErrors_ReturnsToForm() {
+        // Arrange
+        MockHttpSession session = new MockHttpSession();
+        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
+                .name("")  // Invalid empty name
+                .description("Valid Description")
+                .build();
+
+        BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
+        bindingResult.rejectValue("name", "required", "Name is required");
+        List<AppAdminDto> apps = createMockAppAdminDtos();
+
+        when(adminService.getAllApps()).thenReturn(apps);
+
+        // Act
+        String result = adminController.processRoleCreation(roleCreationDto, bindingResult, model, session);
+
+        // Assert
+        assertEquals("silas-administration/create-role", result);
+        assertThat(bindingResult.hasErrors()).isTrue();
+        assertThat(model.getAttribute("apps")).isEqualTo(apps);
+        assertThat(model.getAttribute("userTypes")).isEqualTo(UserType.values());
+        assertThat(model.getAttribute("firmTypes")).isEqualTo(FirmType.values());
+    }
+
+    @Test
+    void testProcessRoleCreation_WithNullAppId_SkipsValidation() {
+        // Arrange
+        MockHttpSession session = new MockHttpSession();
+        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
+                .name("Valid Role")
+                .description("Valid Description")
+                .parentAppId(null)  // Null app ID
+                .build();
+
+        BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
+
+        RoleCreationDto enrichedDto = RoleCreationDto.builder()
+                .name("Valid Role")
+                .description("Valid Description")
+                .parentAppId(null)
+                .ordinal(1)
+                .build();
+
+        when(appRoleService.enrichRoleCreationDto(roleCreationDto)).thenReturn(enrichedDto);
+
+        // Act
+        String result = adminController.processRoleCreation(roleCreationDto, bindingResult, model, session);
+
+        // Assert
+        assertEquals("redirect:/admin/silas-administration/roles/create/check-your-answers", result);
+        assertThat(session.getAttribute("roleCreationDto")).isEqualTo(enrichedDto);
+    }
+
+    @Test
+    void testProcessRoleCreation_WithNullRoleName_SkipsValidation() {
+        // Arrange
+        MockHttpSession session = new MockHttpSession();
+        UUID appId = UUID.randomUUID();
+        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
+                .name(null)  // Null role name
+                .description("Valid Description")
+                .parentAppId(appId)
+                .build();
+
+        BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
+
+        RoleCreationDto enrichedDto = RoleCreationDto.builder()
+                .name(null)
+                .description("Valid Description")
+                .parentAppId(appId)
+                .ordinal(1)
+                .build();
+
+        when(appRoleService.enrichRoleCreationDto(roleCreationDto)).thenReturn(enrichedDto);
+
+        // Act
+        String result = adminController.processRoleCreation(roleCreationDto, bindingResult, model, session);
+
+        // Assert
+        assertEquals("redirect:/admin/silas-administration/roles/create/check-your-answers", result);
+        assertThat(session.getAttribute("roleCreationDto")).isEqualTo(enrichedDto);
+    }
+
+    @Test
+    void testShowAdministration_WithAppFilter_FiltersRoles() {
+        // Arrange
+        List<AdminAppDto> adminApps = createMockAdminApps();
+        List<AppDto> apps = createMockApps();
+        List<AppRoleAdminDto> filteredRoles = Arrays.asList(
+                AppRoleAdminDto.builder()
+                        .name("Filtered Role")
+                        .parentApp("Test App")
+                        .build()
+        );
+
+        when(adminService.getAllAdminApps()).thenReturn(adminApps);
+        when(adminService.getAllApps()).thenReturn(createMockAppAdminDtos());
+        when(adminService.getAppRolesByApp("Test App")).thenReturn(filteredRoles);
+
+        // Act
+        String result = adminController.showAdministration("roles", "Test App", model, mockHttpSession);
+
+        // Assert
+        assertEquals("silas-administration/administration", result);
+        assertThat(model.getAttribute("roles")).isEqualTo(filteredRoles);
+        assertThat(model.getAttribute("appFilter")).isEqualTo("Test App");
+        verify(adminService).getAppRolesByApp("Test App");
+    }
+
+    @Test
+    void testShowAdministration_WithEmptyAppFilter_LoadsAllRolesAgain() {
+        // Arrange
+        List<AdminAppDto> adminApps = createMockAdminApps();
+        List<AppDto> apps = createMockApps();
+        List<AppRoleAdminDto> allRoles = createMockRoles();
+
+        when(adminService.getAllAdminApps()).thenReturn(adminApps);
+        when(adminService.getAllApps()).thenReturn(createMockAppAdminDtos());
+        when(adminService.getAllAppRoles()).thenReturn(allRoles);
+
+        // Act
+        String result = adminController.showAdministration("roles", "", model, mockHttpSession);
+
+        // Assert
+        assertEquals("silas-administration/administration", result);
+        assertThat(model.getAttribute("roles")).isEqualTo(allRoles);
+        assertThat(model.getAttribute("appFilter")).isEqualTo("");
+        verify(adminService).getAllAppRoles();
+    }
+
+    @Test
+    void testShowAdministration_WithDifferentTabs_SetsCorrectActiveTab() {
+        // Arrange
+        List<AdminAppDto> adminApps = createMockAdminApps();
+        List<AppDto> apps = createMockApps();
+        List<AppRoleAdminDto> allRoles = createMockRoles();
+
+        when(adminService.getAllAdminApps()).thenReturn(adminApps);
+        when(adminService.getAllApps()).thenReturn(createMockAppAdminDtos());
+        when(adminService.getAllAppRoles()).thenReturn(allRoles);
+
+        String result1 = adminController.showAdministration("admin-apps", null, model, mockHttpSession);
+        assertEquals("silas-administration/administration", result1);
+        assertThat(model.getAttribute("activeTab")).isEqualTo("admin-apps");
+
+        String result2 = adminController.showAdministration("apps", null, model, mockHttpSession);
+        assertEquals("silas-administration/administration", result2);
+        assertThat(model.getAttribute("activeTab")).isEqualTo("apps");
+
+        String result3 = adminController.showAdministration("roles", null, model, mockHttpSession);
+        assertEquals("silas-administration/administration", result3);
+        assertThat(model.getAttribute("activeTab")).isEqualTo("roles");
+    }
+
     // Helper methods to create mock data
     private List<AdminAppDto> createMockAdminApps() {
         return Arrays.asList(
@@ -697,401 +1095,20 @@ class AdminControllerTest {
         );
     }
 
-    @Test
-    void testShowCheckYourAnswers_WithCompleteRoleData_DisplaysAllFields() {
-        // Arrange
-        MockHttpSession session = new MockHttpSession();
-        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
-                .name("Complete Test Role")
-                .description("Complete test description")
-                .ccmsCode("TEST123")
-                .legacySync(true)
-                .authzRole(true)
-                .build();
-        session.setAttribute("roleCreationDto", roleCreationDto);
-
-        // Act
-        String result = adminController.showCheckYourAnswers(model, session);
-
-        // Assert
-        assertEquals("silas-administration/create-role-check-answers", result);
-        assertThat(model.getAttribute("roleCreationDto")).isEqualTo(roleCreationDto);
-    }
-
-    @Test
-    void testConfirmRoleCreation_WithValidationException_HandlesError() {
-        // Arrange
-        MockHttpSession session = new MockHttpSession();
-        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
-        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
-                .name("Invalid Role")
-                .description("Test Description")
-                .build();
-        session.setAttribute("roleCreationDto", roleCreationDto);
-
-        IllegalArgumentException exception = new IllegalArgumentException("Role name already exists");
-        doThrow(exception).when(roleCreationService).createRole(roleCreationDto);
-
-        // Act
-        String result = adminController.confirmRoleCreation(session, redirectAttributes);
-
-        // Assert
-        assertEquals("redirect:/admin/silas-administration?tab=roles", result);
-        verify(roleCreationService).createRole(roleCreationDto);
-        // Session should not be cleared on error to preserve user input
-        assertThat(session.getAttribute("roleCreationDto")).isNotNull();
-    }
-
-    @Test
-    void testConfirmRoleCreation_WithCompleteRoleData_ProcessesSuccessfully() {
-        // Arrange
-        MockHttpSession session = new MockHttpSession();
-        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
-        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
-                .name("Complete Role")
-                .description("Complete description")
-                .ccmsCode("COMPLETE123")
-                .legacySync(false)
-                .authzRole(true)
-                .build();
-        session.setAttribute("roleCreationDto", roleCreationDto);
-
-        doNothing().when(roleCreationService).createRole(roleCreationDto);
-
-        // Act
-        String result = adminController.confirmRoleCreation(session, redirectAttributes);
-
-        // Assert
-        assertEquals("redirect:/admin/silas-administration?tab=roles", result);
-        verify(roleCreationService).createRole(roleCreationDto);
-        assertThat(session.getAttribute("roleCreationDto")).isNull();
-    }
-
-    @Test
-    void testConfirmRoleCreation_WithDatabaseException_HandlesError() {
-        // Arrange
-        MockHttpSession session = new MockHttpSession();
-        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
-        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
-                .name("DB Error Role")
-                .description("Test Description")
-                .build();
-        session.setAttribute("roleCreationDto", roleCreationDto);
-
-        RuntimeException dbException = new RuntimeException("Database connection failed");
-        doThrow(dbException).when(roleCreationService).createRole(roleCreationDto);
-
-        // Act
-        String result = adminController.confirmRoleCreation(session, redirectAttributes);
-
-        // Assert
-        assertEquals("redirect:/admin/silas-administration?tab=roles", result);
-        verify(roleCreationService).createRole(roleCreationDto);
-    }
-
-    @Test
-    void testConfirmRoleCreation_WithEmptyRoleData_HandlesGracefully() {
-        // Arrange
-        MockHttpSession session = new MockHttpSession();
-        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
-        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
-                .name("")
-                .description("")
-                .build();
-        session.setAttribute("roleCreationDto", roleCreationDto);
-
-        doNothing().when(roleCreationService).createRole(roleCreationDto);
-
-        // Act
-        String result = adminController.confirmRoleCreation(session, redirectAttributes);
-
-        // Assert
-        assertEquals("redirect:/admin/silas-administration?tab=roles", result);
-        verify(roleCreationService).createRole(roleCreationDto);
-        assertThat(session.getAttribute("roleCreationDto")).isNull();
-    }
-
-    @Test
-    void testConfirmRoleCreation_WithConcurrentModification_HandlesError() {
-        // Arrange
-        MockHttpSession session = new MockHttpSession();
-        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
-        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
-                .name("Concurrent Role")
-                .description("Test Description")
-                .build();
-        session.setAttribute("roleCreationDto", roleCreationDto);
-
-        RuntimeException concurrencyException = new RuntimeException("Optimistic locking failure");
-        doThrow(concurrencyException).when(roleCreationService).createRole(roleCreationDto);
-
-        // Act
-        String result = adminController.confirmRoleCreation(session, redirectAttributes);
-
-        // Assert
-        assertEquals("redirect:/admin/silas-administration?tab=roles", result);
-        verify(roleCreationService).createRole(roleCreationDto);
-    }
-
-    @Test
-    void testShowRoleCreationForm_WithNoSessionData_CreatesNewDto() {
-        // Arrange
-        MockHttpSession session = new MockHttpSession();
-        List<AppAdminDto> apps = createMockApps();
-        when(adminService.getAllApps()).thenReturn(apps);
-
-        // Act
-        String result = adminController.showRoleCreationForm(model, session);
-
-        // Assert
-        assertEquals("silas-administration/create-role", result);
-        assertThat(model.getAttribute("roleCreationDto")).isInstanceOf(RoleCreationDto.class);
-        assertThat(model.getAttribute("apps")).isEqualTo(apps);
-        assertThat(model.getAttribute("userTypes")).isEqualTo(UserType.values());
-        assertThat(model.getAttribute("firmTypes")).isEqualTo(FirmType.values());
-    }
-
-    @Test
-    void testShowRoleCreationForm_WithExistingSessionData_UsesExistingDto() {
-        // Arrange
-        MockHttpSession session = new MockHttpSession();
-        RoleCreationDto existingDto = RoleCreationDto.builder()
-                .name("Existing Role")
-                .description("Existing Description")
-                .build();
-        session.setAttribute("roleCreationDto", existingDto);
-
-        List<AppAdminDto> apps = createMockApps();
-        when(adminService.getAllApps()).thenReturn(apps);
-
-        // Act
-        String result = adminController.showRoleCreationForm(model, session);
-
-        // Assert
-        assertEquals("silas-administration/create-role", result);
-        assertThat(model.getAttribute("roleCreationDto")).isEqualTo(existingDto);
-        assertThat(model.getAttribute("apps")).isEqualTo(apps);
-        assertThat(model.getAttribute("userTypes")).isEqualTo(UserType.values());
-        assertThat(model.getAttribute("firmTypes")).isEqualTo(FirmType.values());
-    }
-
-    @Test
-    void testProcessRoleCreation_WithValidData_RedirectsToCheckAnswers() {
-        // Arrange
-        MockHttpSession session = new MockHttpSession();
-        UUID appId = UUID.randomUUID();
-        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
-                .name("Valid Role")
-                .description("Valid Description")
-                .parentAppId(appId)
-                .build();
-
-        BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
-
-        RoleCreationDto enrichedDto = RoleCreationDto.builder()
-                .name("Valid Role")
-                .description("Valid Description")
-                .parentAppId(appId)
+    private List<AppAdminDto> createMockAppAdminDtos() {
+        return Arrays.asList(
+            AppAdminDto.builder()
+                .id("1")
+                .name("Apply for criminal legal aid")
+                .description("Make an application for criminal legal aid")
+                .ordinal(0)
+                .build(),
+            AppAdminDto.builder()
+                .id("2")
+                .name("Submit a crime form")
+                .description("Submit crime forms")
                 .ordinal(1)
-                .authzRole(false)
-                .build();
-
-        when(roleCreationService.isRoleNameExistsInApp("Valid Role", appId)).thenReturn(false);
-        when(roleCreationService.enrichRoleCreationDto(roleCreationDto)).thenReturn(enrichedDto);
-
-        // Act
-        String result = adminController.processRoleCreation(roleCreationDto, bindingResult, model, session);
-
-        // Assert
-        assertEquals("redirect:/admin/roles/create/check-your-answers", result);
-        assertThat(session.getAttribute("roleCreationDto")).isEqualTo(enrichedDto);
-        verify(roleCreationService).enrichRoleCreationDto(roleCreationDto);
-    }
-
-    @Test
-    void testProcessRoleCreation_WithDuplicateRoleName_ShowsValidationError() {
-        // Arrange
-        MockHttpSession session = new MockHttpSession();
-        UUID appId = UUID.randomUUID();
-        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
-                .name("Duplicate Role")
-                .description("Valid Description")
-                .parentAppId(appId)
-                .build();
-
-        BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
-        List<AppAdminDto> apps = createMockApps();
-
-        when(roleCreationService.isRoleNameExistsInApp("Duplicate Role", appId)).thenReturn(true);
-        when(adminService.getAllApps()).thenReturn(apps);
-
-        // Act
-        String result = adminController.processRoleCreation(roleCreationDto, bindingResult, model, session);
-
-        // Assert
-        assertEquals("silas-administration/create-role", result);
-        assertThat(bindingResult.hasErrors()).isTrue();
-        assertThat(bindingResult.getFieldError("name")).isNotNull();
-        assertThat(model.getAttribute("apps")).isEqualTo(apps);
-        assertThat(model.getAttribute("userTypes")).isEqualTo(UserType.values());
-        assertThat(model.getAttribute("firmTypes")).isEqualTo(FirmType.values());
-    }
-
-    @Test
-    void testProcessRoleCreation_WithBindingErrors_ReturnsToForm() {
-        // Arrange
-        MockHttpSession session = new MockHttpSession();
-        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
-                .name("")  // Invalid empty name
-                .description("Valid Description")
-                .build();
-
-        BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
-        bindingResult.rejectValue("name", "required", "Name is required");
-        List<AppAdminDto> apps = createMockApps();
-
-        when(adminService.getAllApps()).thenReturn(apps);
-
-        // Act
-        String result = adminController.processRoleCreation(roleCreationDto, bindingResult, model, session);
-
-        // Assert
-        assertEquals("silas-administration/create-role", result);
-        assertThat(bindingResult.hasErrors()).isTrue();
-        assertThat(model.getAttribute("apps")).isEqualTo(apps);
-        assertThat(model.getAttribute("userTypes")).isEqualTo(UserType.values());
-        assertThat(model.getAttribute("firmTypes")).isEqualTo(FirmType.values());
-    }
-
-    @Test
-    void testProcessRoleCreation_WithNullAppId_SkipsValidation() {
-        // Arrange
-        MockHttpSession session = new MockHttpSession();
-        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
-                .name("Valid Role")
-                .description("Valid Description")
-                .parentAppId(null)  // Null app ID
-                .build();
-
-        BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
-
-        RoleCreationDto enrichedDto = RoleCreationDto.builder()
-                .name("Valid Role")
-                .description("Valid Description")
-                .parentAppId(null)
-                .ordinal(1)
-                .build();
-
-        when(roleCreationService.enrichRoleCreationDto(roleCreationDto)).thenReturn(enrichedDto);
-
-        // Act
-        String result = adminController.processRoleCreation(roleCreationDto, bindingResult, model, session);
-
-        // Assert
-        assertEquals("redirect:/admin/roles/create/check-your-answers", result);
-        assertThat(session.getAttribute("roleCreationDto")).isEqualTo(enrichedDto);
-    }
-
-    @Test
-    void testProcessRoleCreation_WithNullRoleName_SkipsValidation() {
-        // Arrange
-        MockHttpSession session = new MockHttpSession();
-        UUID appId = UUID.randomUUID();
-        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
-                .name(null)  // Null role name
-                .description("Valid Description")
-                .parentAppId(appId)
-                .build();
-
-        BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
-
-        RoleCreationDto enrichedDto = RoleCreationDto.builder()
-                .name(null)
-                .description("Valid Description")
-                .parentAppId(appId)
-                .ordinal(1)
-                .build();
-
-        when(roleCreationService.enrichRoleCreationDto(roleCreationDto)).thenReturn(enrichedDto);
-
-        // Act
-        String result = adminController.processRoleCreation(roleCreationDto, bindingResult, model, session);
-
-        // Assert
-        assertEquals("redirect:/admin/roles/create/check-your-answers", result);
-        assertThat(session.getAttribute("roleCreationDto")).isEqualTo(enrichedDto);
-    }
-
-    // Additional tests for showAdministration method variations
-    @Test
-    void testShowAdministration_WithAppFilter_FiltersRoles() {
-        // Arrange
-        List<AdminAppDto> adminApps = createMockAdminApps();
-        List<AppAdminDto> apps = createMockApps();
-        List<AppRoleAdminDto> filteredRoles = Arrays.asList(
-            AppRoleAdminDto.builder()
-                .name("Filtered Role")
-                .parentApp("Test App")
                 .build()
         );
-
-        when(adminService.getAllAdminApps()).thenReturn(adminApps);
-        when(adminService.getAllApps()).thenReturn(apps);
-        when(adminService.getAppRolesByApp("Test App")).thenReturn(filteredRoles);
-
-        // Act
-        String result = adminController.showAdministration("roles", "Test App", model);
-
-        // Assert
-        assertEquals("silas-administration/administration", result);
-        assertThat(model.getAttribute("roles")).isEqualTo(filteredRoles);
-        assertThat(model.getAttribute("appFilter")).isEqualTo("Test App");
-        verify(adminService).getAppRolesByApp("Test App");
-    }
-
-    @Test
-    void testShowAdministration_WithEmptyAppFilter_LoadsAllRolesAgain() {
-        // Arrange
-        List<AdminAppDto> adminApps = createMockAdminApps();
-        List<AppAdminDto> apps = createMockApps();
-        List<AppRoleAdminDto> allRoles = createMockRoles();
-
-        when(adminService.getAllAdminApps()).thenReturn(adminApps);
-        when(adminService.getAllApps()).thenReturn(apps);
-        when(adminService.getAllAppRoles()).thenReturn(allRoles);
-
-        // Act
-        String result = adminController.showAdministration("roles", "", model);
-
-        // Assert
-        assertEquals("silas-administration/administration", result);
-        assertThat(model.getAttribute("roles")).isEqualTo(allRoles);
-        assertThat(model.getAttribute("appFilter")).isEqualTo("");
-        verify(adminService).getAllAppRoles();
-    }
-
-    @Test
-    void testShowAdministration_WithDifferentTabs_SetsCorrectActiveTab() {
-        // Arrange
-        List<AdminAppDto> adminApps = createMockAdminApps();
-        List<AppAdminDto> apps = createMockApps();
-        List<AppRoleAdminDto> allRoles = createMockRoles();
-
-        when(adminService.getAllAdminApps()).thenReturn(adminApps);
-        when(adminService.getAllApps()).thenReturn(apps);
-        when(adminService.getAllAppRoles()).thenReturn(allRoles);
-
-        // Act & Assert for different tabs
-        String result1 = adminController.showAdministration("admin-apps", null, model);
-        assertEquals("silas-administration/administration", result1);
-        assertThat(model.getAttribute("activeTab")).isEqualTo("admin-apps");
-
-        String result2 = adminController.showAdministration("apps", null, model);
-        assertEquals("silas-administration/administration", result2);
-        assertThat(model.getAttribute("activeTab")).isEqualTo("apps");
-
-        String result3 = adminController.showAdministration("roles", null, model);
-        assertEquals("silas-administration/administration", result3);
-        assertThat(model.getAttribute("activeTab")).isEqualTo("roles");
     }
 }

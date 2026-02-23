@@ -39,7 +39,7 @@ public class RoleCreationAuditEvent extends AuditEvent {
 
     @Override
     public EventType getEventType() {
-        return EventType.CREATE_ROLE;
+        return EventType.CREATE_LAA_APP_ROLE;
     }
 
     @Override

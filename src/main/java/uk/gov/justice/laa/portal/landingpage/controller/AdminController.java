@@ -58,6 +58,7 @@ public class AdminController {
     private final LoginService loginService;
     private final EventService eventService;
     private final AdminService adminService;
+    private final AppService appService;
     private final AppRoleService appRoleService;
 
     /**

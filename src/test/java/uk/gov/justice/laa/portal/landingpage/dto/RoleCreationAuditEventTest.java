@@ -36,7 +36,7 @@ class RoleCreationAuditEventTest {
         // Assert
         assertThat(event.getUserId()).isEqualTo(userId);
         assertThat(event.getUserName()).isEqualTo(userName);
-        assertThat(event.getEventType()).isEqualTo(EventType.CREATE_ROLE);
+        assertThat(event.getEventType()).isEqualTo(EventType.CREATE_LAA_APP_ROLE);
 
         String auditDescription = event.getDescription();
         assertThat(auditDescription).contains("New app role created by user entra oid: " + entraOid);
@@ -108,7 +108,7 @@ class RoleCreationAuditEventTest {
         );
 
         // Assert
-        assertThat(event.getEventType()).isEqualTo(EventType.CREATE_ROLE);
+        assertThat(event.getEventType()).isEqualTo(EventType.CREATE_LAA_APP_ROLE);
         String auditDescription = event.getDescription();
         assertThat(auditDescription).contains("New app role created by user entra oid: " + entraOid);
         assertThat(auditDescription).contains("user profile id: " + userProfileId);
@@ -144,7 +144,7 @@ class RoleCreationAuditEventTest {
         // Assert
         assertThat(event.getUserId()).isEqualTo(userId);
         assertThat(event.getUserName()).isEqualTo(userName);
-        assertThat(event.getEventType()).isEqualTo(EventType.CREATE_ROLE);
+        assertThat(event.getEventType()).isEqualTo(EventType.CREATE_LAA_APP_ROLE);
         
         String auditDescription = event.getDescription();
         assertThat(auditDescription).contains(entraOid);
@@ -181,7 +181,7 @@ class RoleCreationAuditEventTest {
         );
 
         // Assert
-        assertThat(event.getEventType()).isEqualTo(EventType.CREATE_ROLE);
+        assertThat(event.getEventType()).isEqualTo(EventType.CREATE_LAA_APP_ROLE);
         String auditDescription = event.getDescription();
         assertThat(auditDescription).contains(roleName);
         assertThat(auditDescription).contains(parentAppName);
