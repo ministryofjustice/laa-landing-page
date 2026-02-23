@@ -112,6 +112,11 @@ public class AuditUserDetailDto implements Serializable {
     private boolean hasNoProfile;
 
     /**
+     * Whether the user's account is enabled.
+     */
+    private boolean enabled;
+
+    /**
      * Profile DTO for the audit detail view
      */
     @Data

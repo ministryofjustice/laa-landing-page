@@ -88,7 +88,7 @@ public class AdminPage {
         this.legalAidServicesTable = legalAidServicesPanel.locator("table.govuk-table");
         this.legalAidServicesHeaders = legalAidServicesTable.locator("thead th.govuk-table__header");
         this.legalAidServicesRows = legalAidServicesTable.locator("tbody.govuk-table__body tr.govuk-table__row");
-        this.reorderLegalAidServicesButton = legalAidServicesPanel.locator("button.govuk-button--secondary:has-text('Reorder legal aid services')");
+        this.reorderLegalAidServicesButton = legalAidServicesPanel.locator("button.govuk-button:has-text('Reorder legal aid services')");
 
         // Roles & Permissions
         this.createNewRoleButton = rolesAndPermissionsPanel.locator("a.govuk-button:has-text('Create a new role')");

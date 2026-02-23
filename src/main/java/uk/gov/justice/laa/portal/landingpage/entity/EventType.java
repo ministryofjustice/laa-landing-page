@@ -7,5 +7,6 @@ public enum EventType {
     USER_DELETE_EXECUTED,
     USER_DELETE_ATTEMPT,
     SWITCH_FIRM,
+    UPDATE_LAA_APP_METADATA,
     CREATE_ROLE,
 }

@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -9,6 +10,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doNothing;
@@ -17,17 +20,27 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.ObjectError;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AdminAppDto;
-import uk.gov.justice.laa.portal.landingpage.dto.AppAdminDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
+import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
+import uk.gov.justice.laa.portal.landingpage.forms.AppDetailsForm;
+import uk.gov.justice.laa.portal.landingpage.forms.AppsOrderForm;
 import uk.gov.justice.laa.portal.landingpage.dto.RoleCreationDto;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.service.AdminService;
+import uk.gov.justice.laa.portal.landingpage.service.AppService;
+import uk.gov.justice.laa.portal.landingpage.service.EventService;
+import uk.gov.justice.laa.portal.landingpage.service.LoginService;
+import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.service.RoleCreationService;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.BeanPropertyBindingResult;
@@ -39,16 +52,21 @@ class AdminControllerTest {
 
     @Mock
     private AdminService adminService;
-
     @Mock
-    private RoleCreationService roleCreationService;
+    private LoginService loginService;
+    @Mock
+    private EventService eventService;
+    @Mock
+    private AppService appService;
+    @Mock
+    private MockHttpSession mockHttpSession;
 
     private AdminController adminController;
     private Model model;
 
     @BeforeEach
     void setUp() {
-        adminController = new AdminController(adminService, roleCreationService);
+        adminController = new AdminController(loginService, eventService, adminService, appService);
         model = new ExtendedModelMap();
     }
 
@@ -56,15 +74,15 @@ class AdminControllerTest {
     void testShowAdministration_WithDefaultTab_LoadsAllData() {
         // Arrange
         List<AdminAppDto> adminApps = createMockAdminApps();
-        List<AppAdminDto> apps = createMockApps();
+        List<AppDto> apps = createMockApps();
         List<AppRoleAdminDto> roles = createMockRoles();
 
         when(adminService.getAllAdminApps()).thenReturn(adminApps);
-        when(adminService.getAllApps()).thenReturn(apps);
+        when(appService.getAllLaaApps()).thenReturn(apps);
         when(adminService.getAllAppRoles()).thenReturn(roles);
 
         // Act
-        String viewName = adminController.showAdministration("admin-apps", null, model);
+        String viewName = adminController.showAdministration("admin-apps", null, model, mockHttpSession);
 
         // Assert
         assertEquals("silas-administration/administration", viewName);
@@ -77,7 +95,7 @@ class AdminControllerTest {
 
         verify(adminService).getAllAdminApps();
         // getAllApps is called twice - once for apps data and once for app names filter
-        verify(adminService, org.mockito.Mockito.times(2)).getAllApps();
+        verify(appService, times(1)).getAllLaaApps();
         verify(adminService).getAllAppRoles();
     }
 
@@ -85,15 +103,15 @@ class AdminControllerTest {
     void testShowAdministration_WithRolesTab_LoadsAllData() {
         // Arrange
         List<AdminAppDto> adminApps = createMockAdminApps();
-        List<AppAdminDto> apps = createMockApps();
+        List<AppDto> apps = createMockApps();
         List<AppRoleAdminDto> roles = createMockRoles();
 
         when(adminService.getAllAdminApps()).thenReturn(adminApps);
-        when(adminService.getAllApps()).thenReturn(apps);
+        when(appService.getAllLaaApps()).thenReturn(apps);
         when(adminService.getAllAppRoles()).thenReturn(roles);
 
         // Act
-        String viewName = adminController.showAdministration("roles", null, model);
+        String viewName = adminController.showAdministration("roles", null, model, mockHttpSession);
 
         // Assert
         assertEquals("silas-administration/administration", viewName);
@@ -107,10 +125,8 @@ class AdminControllerTest {
     @Test
     void testShowAdministration_WithAppFilter_FiltersRolesByApp() {
         // Arrange
-        String appFilter = "CCMS case transfer requests";
-        List<AdminAppDto> adminApps = createMockAdminApps();
-        List<AppAdminDto> apps = createMockApps();
-        List<AppRoleAdminDto> filteredRoles = Arrays.asList(
+        List<AppRoleAdminDto> filteredRoles = new ArrayList<>();
+        filteredRoles.add(
             AppRoleAdminDto.builder()
                 .name("CCMS Viewer")
                 .description("View only role")
@@ -118,13 +134,16 @@ class AdminControllerTest {
                 .ordinal(0)
                 .build()
         );
+        List<AdminAppDto> adminApps = createMockAdminApps();
+        List<AppDto> apps = createMockApps();
+        String appFilter = "CCMS case transfer requests";
 
         when(adminService.getAllAdminApps()).thenReturn(adminApps);
-        when(adminService.getAllApps()).thenReturn(apps);
+        when(appService.getAllLaaApps()).thenReturn(apps);
         when(adminService.getAppRolesByApp(appFilter)).thenReturn(filteredRoles);
 
         // Act
-        String viewName = adminController.showAdministration("roles", appFilter, model);
+        String viewName = adminController.showAdministration("roles", appFilter, model, mockHttpSession);
 
         // Assert
         assertEquals("silas-administration/administration", viewName);
@@ -135,60 +154,263 @@ class AdminControllerTest {
     }
 
     @Test
-    void testShowAdministration_LoadsAppNamesForFilter() {
-        // Arrange
-        List<AppAdminDto> apps = Arrays.asList(
-            AppAdminDto.builder().name("App C").build(),
-            AppAdminDto.builder().name("App A").build(),
-            AppAdminDto.builder().name("App B").build()
+    void editAppDetailsGet_createsFormWhenNotInSession() {
+        MockHttpSession session = new MockHttpSession();
+        String appId = java.util.UUID.randomUUID().toString();
+        AppDto appDto = AppDto.builder().id(appId).name("Test App").description("Desc").enabled(true).build();
+
+        when(appService.findById(java.util.UUID.fromString(appId))).thenReturn(java.util.Optional.of(appDto));
+
+        String view = adminController.editAppDetailsGet(appId, model, session);
+
+        assertEquals("silas-administration/edit-app-details", view);
+        assertThat(model.getAttribute("app")).isEqualTo(appDto);
+        Object form = model.getAttribute("appDetailsForm");
+        assertThat(form).isInstanceOf(AppDetailsForm.class);
+        AppDetailsForm detailsForm = (AppDetailsForm) form;
+        assertThat(detailsForm).isNotNull();
+        assertThat(detailsForm.getAppId()).isEqualTo(appId);
+        assertThat(session.getAttribute("appDetailsForm")).isNotNull();
+    }
+
+    @Test
+    void editAppDetailsGet_usesExistingFormFromSession() {
+        MockHttpSession session = new MockHttpSession();
+        String appId = java.util.UUID.randomUUID().toString();
+        AppDto appDto = AppDto.builder().id(appId).name("Test App").description("Desc").enabled(false).build();
+        AppDetailsForm existing = AppDetailsForm.builder().appId(appId).description("Existing").enabled(true).build();
+        session.setAttribute("appDetailsForm", existing);
+
+        when(appService.findById(java.util.UUID.fromString(appId))).thenReturn(java.util.Optional.of(appDto));
+
+        String view = adminController.editAppDetailsGet(appId, model, session);
+
+        assertEquals("silas-administration/edit-app-details", view);
+        assertThat(model.getAttribute("appDetailsForm")).isEqualTo(existing);
+        assertThat(session.getAttribute("appDetailsForm")).isEqualTo(existing);
+    }
+
+    @Test
+    void editAppDetailsPost_withValidationErrors_returnsEditViewWithError() {
+        MockHttpSession session = new MockHttpSession();
+        String appId = java.util.UUID.randomUUID().toString();
+        AppDto appDto = AppDto.builder().id(appId).name("Test App").description("Desc").enabled(true).build();
+
+        BindingResult result = org.mockito.Mockito.mock(BindingResult.class);
+        when(result.hasErrors()).thenReturn(true);
+        when(result.getAllErrors()).thenReturn(List.of(new ObjectError("description", "Invalid description")));
+        when(appService.findById(java.util.UUID.fromString(appId))).thenReturn(java.util.Optional.of(appDto));
+
+        AppDetailsForm form = AppDetailsForm.builder().appId(appId).description("").enabled(true).build();
+
+        String view = adminController.editAppDetailsPost(appId, form, result, model, session);
+
+        assertEquals("silas-administration/edit-app-details", view);
+        assertThat(model.getAttribute("errorMessage")).isEqualTo("Invalid description");
+        assertThat(model.getAttribute("app")).isEqualTo(appDto);
+    }
+
+    @Test
+    void editAppDetailsPost_withoutErrors_storesInSessionAndRedirects() {
+        MockHttpSession session = new MockHttpSession();
+        String appId = java.util.UUID.randomUUID().toString();
+
+        BindingResult result = org.mockito.Mockito.mock(BindingResult.class);
+        when(result.hasErrors()).thenReturn(false);
+
+        AppDetailsForm form = AppDetailsForm.builder().appId(appId).description("Desc").enabled(true).build();
+
+        String view = adminController.editAppDetailsPost(appId, form, result, model, session);
+
+        assertEquals(String.format("redirect:/admin/silas-administration/app/%s/check-answers", appId), view);
+        assertThat(session.getAttribute("appDetailsForm")).isEqualTo(form);
+        assertThat(session.getAttribute("appId")).isEqualTo(appId);
+    }
+
+    @Test
+    void confirmAppDetailsGet_returnsCheckAnswersWhenSessionMatches() {
+        MockHttpSession session = new MockHttpSession();
+        String appId = java.util.UUID.randomUUID().toString();
+        AppDto appDto = AppDto.builder().id(appId).name("App").description("D").enabled(true).build();
+        AppDetailsForm form = AppDetailsForm.builder().appId(appId).description("D").enabled(true).build();
+
+        session.setAttribute("appId", appId);
+        session.setAttribute("appDetailsForm", form);
+
+        when(appService.findById(java.util.UUID.fromString(appId))).thenReturn(java.util.Optional.of(appDto));
+
+        String view = adminController.confirmAppDetailsGet(appId, model, session);
+
+        assertEquals("silas-administration/edit-app-details-check-answers", view);
+        assertThat(model.getAttribute("app")).isEqualTo(appDto);
+        assertThat(model.getAttribute("appDetailsForm")).isEqualTo(form);
+    }
+
+    @Test
+    void confirmAppDetailsGet_throwsWhenSessionAppIdMismatch() {
+        MockHttpSession session = new MockHttpSession();
+        String appId = java.util.UUID.randomUUID().toString();
+        session.setAttribute("appId", "different-id");
+        session.setAttribute("appDetailsForm", AppDetailsForm.builder().appId(appId).description("D").enabled(true).build());
+
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () ->
+            adminController.confirmAppDetailsGet(appId, model, session)
         );
+    }
+
+    @Test
+    void confirmAppDetailsPost_savesAppAndLogsEvent() {
+        MockHttpSession session = new MockHttpSession();
+        String appId = java.util.UUID.randomUUID().toString();
+
+        AppDetailsForm form = AppDetailsForm.builder().appId(appId).description("New Desc").enabled(false).build();
+        session.setAttribute("appId", appId);
+        session.setAttribute("appDetailsForm", form);
+
+        Authentication auth = org.mockito.Mockito.mock(Authentication.class);
+        CurrentUserDto currentUser = new CurrentUserDto();
+        currentUser.setUserId(java.util.UUID.randomUUID());
+        currentUser.setName("Admin User");
+
+        AppDto appDto = AppDto.builder().id(appId).name("App").description("Old").enabled(true).build();
+        App appEntity = App.builder().id(java.util.UUID.fromString(appId)).name("App").description("New Desc").enabled(false).build();
+
+        when(loginService.getCurrentUser(auth)).thenReturn(currentUser);
+        when(appService.findById(java.util.UUID.fromString(appId))).thenReturn(java.util.Optional.of(appDto));
+        when(appService.save(org.mockito.ArgumentMatchers.any())).thenReturn(appEntity);
+
+        String view = adminController.confirmAppDetailsPost(appId, auth, model, session);
+
+        assertEquals("silas-administration/edit-app-details-confirmation", view);
+        verify(eventService).logEvent(org.mockito.ArgumentMatchers.any());
+        assertThat(session.getAttribute("appDetailsForm")).isNull();
+        assertThat(session.getAttribute("appDetailsFormModel")).isNull();
+        assertThat(session.getAttribute("appId")).isNull();
+    }
+
+    @Test
+    void editAppOrderGet_buildsFormWhenNoSessionValue() {
+        MockHttpSession session = new MockHttpSession();
+        AppDto app1 = AppDto.builder().id(java.util.UUID.randomUUID().toString()).name("A").ordinal(1).build();
+        AppDto app2 = AppDto.builder().id(java.util.UUID.randomUUID().toString()).name("B").ordinal(2).build();
+        when(appService.getAllLaaApps()).thenReturn(List.of(app1, app2));
+
+        String view = adminController.editAppOrderGet(model, session);
+
+        assertEquals("silas-administration/edit-apps-order", view);
+        Object appsOrderForm = model.getAttribute("appsOrderForm");
+        assertThat(appsOrderForm).isNotNull();
+        assertThat(appsOrderForm).isInstanceOf(AppsOrderForm.class);
+        AppsOrderForm form = (AppsOrderForm) appsOrderForm;
+        assertThat(form.getApps()).hasSize(2);
+    }
+
+    @Test
+    void editAppOrderGet_usesExistingAppsOrderFormFromSession() {
+        MockHttpSession session = new MockHttpSession();
+        AppsOrderForm.AppOrderDetailsForm details = new AppsOrderForm.AppOrderDetailsForm("1", 5);
+        AppsOrderForm existing = AppsOrderForm.builder().apps(List.of(details)).build();
+        session.setAttribute("appsOrderForm", existing);
+
+        String view = adminController.editAppOrderGet(model, session);
+
+        assertEquals("silas-administration/edit-apps-order", view);
+        assertThat(model.getAttribute("appsOrderForm")).isEqualTo(existing);
+    }
+
+    @Test
+    void editAppOrderPost_withErrors_returnsEditViewWithErrorMessage() {
+        AppsOrderForm form = AppsOrderForm.builder().apps(List.of(new AppsOrderForm.AppOrderDetailsForm("1", 1))).build();
+        BindingResult result = org.mockito.Mockito.mock(BindingResult.class);
+        when(result.hasErrors()).thenReturn(true);
+        when(result.getAllErrors()).thenReturn(List.of(new ObjectError("apps", "Duplicate ordinal")));
+
+        String view = adminController.editAppOrderPost(form, result, model, new MockHttpSession());
+
+        assertEquals("silas-administration/edit-apps-order", view);
+        assertThat(model.getAttribute("errorMessage")).isEqualTo("Duplicate ordinal");
+    }
+
+    @Test
+    void editAppOrderPost_withoutErrors_sortsAndStoresInSession() {
+        AppsOrderForm.AppOrderDetailsForm a = new AppsOrderForm.AppOrderDetailsForm("1", 2);
+        AppsOrderForm.AppOrderDetailsForm b = new AppsOrderForm.AppOrderDetailsForm("2", 1);
+        AppsOrderForm form = AppsOrderForm.builder().apps(new ArrayList<>(Arrays.asList(a, b))).build();
+        BindingResult result = org.mockito.Mockito.mock(BindingResult.class);
+        when(result.hasErrors()).thenReturn(false);
+
+        MockHttpSession session = new MockHttpSession();
+        String view = adminController.editAppOrderPost(form, result, model, session);
+
+        assertEquals("silas-administration/edit-apps-order-check-answers", view);
+        @SuppressWarnings("unchecked")
+        List<AppsOrderForm.AppOrderDetailsForm> appsOrderList = (List<AppsOrderForm.AppOrderDetailsForm>) model.getAttribute("appsOrderList");
+        assertThat(appsOrderList).extracting(AppsOrderForm.AppOrderDetailsForm::getOrdinal).containsExactly(1, 2);
+        assertThat(session.getAttribute("appsOrderForm")).isNotNull();
+    }
+
+    @Test
+    void confirmEditAppOrderPost_updatesOrder_logsEvent_and_clearsSession() {
+        MockHttpSession session = new MockHttpSession();
+        AppsOrderForm.AppOrderDetailsForm a = new AppsOrderForm.AppOrderDetailsForm("1", 1);
+        AppsOrderForm form = AppsOrderForm.builder().apps(List.of(a)).build();
+        session.setAttribute("appsOrderForm", form);
+
+        Authentication auth = org.mockito.Mockito.mock(Authentication.class);
+        CurrentUserDto currentUser = new CurrentUserDto();
+        currentUser.setUserId(java.util.UUID.randomUUID());
+        currentUser.setName("Admin");
+
+        when(loginService.getCurrentUser(auth)).thenReturn(currentUser);
+
+        String view = adminController.confirmEditAppOrderPost(auth, model, session);
+
+        assertEquals("silas-administration/edit-apps-order-confirmation", view);
+        verify(appService).updateAppsOrder(form.getApps());
+        verify(eventService).logEvent(org.mockito.ArgumentMatchers.any());
+        assertThat(session.getAttribute("appsOrderForm")).isNull();
+    }
+
+    @Test
+    void confirmEditAppOrderPost_throwsWhenNoSessionValue() {
+        MockHttpSession session = new MockHttpSession();
+        Authentication auth = org.mockito.Mockito.mock(Authentication.class);
+
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () ->
+            adminController.confirmEditAppOrderPost(auth, model, session)
+        );
+    }
+
+    @Test
+    void showAdministration_clearsSessionAttributes() {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("appDetailsForm", new AppDetailsForm());
+        session.setAttribute("appDetailsFormModel", new ExtendedModelMap());
+        session.setAttribute("appId", "test-id");
+        session.setAttribute("appsOrderForm", new AppsOrderForm());
 
         when(adminService.getAllAdminApps()).thenReturn(createMockAdminApps());
-        when(adminService.getAllApps()).thenReturn(apps);
+        when(appService.getAllLaaApps()).thenReturn(createMockApps());
         when(adminService.getAllAppRoles()).thenReturn(createMockRoles());
 
-        // Act
-        adminController.showAdministration("roles", null, model);
+        adminController.showAdministration("admin-apps", null, model, session);
 
-        // Assert
-        @SuppressWarnings("unchecked")
-        List<String> appNames = (List<String>) model.getAttribute("appNames");
-        assertThat(appNames).containsExactly("App A", "App B", "App C");
+        assertThat(session.getAttribute("appDetailsForm")).isNull();
+        assertThat(session.getAttribute("appDetailsFormModel")).isNull();
+        assertThat(session.getAttribute("appId")).isNull();
+        assertThat(session.getAttribute("appsOrderForm")).isNull();
     }
 
     @Test
-    void testShowAdministration_WithAppsTab_LoadsAllData() {
-        // Arrange
-        List<AdminAppDto> adminApps = createMockAdminApps();
-        List<AppAdminDto> apps = createMockApps();
-        List<AppRoleAdminDto> roles = createMockRoles();
-
-        when(adminService.getAllAdminApps()).thenReturn(adminApps);
-        when(adminService.getAllApps()).thenReturn(apps);
-        when(adminService.getAllAppRoles()).thenReturn(roles);
-
-        // Act
-        String viewName = adminController.showAdministration("apps", null, model);
-
-        // Assert
-        assertEquals("silas-administration/administration", viewName);
-        assertEquals("apps", model.getAttribute("activeTab"));
-        assertThat(model.getAttribute("apps")).isEqualTo(apps);
-    }
-
-    @Test
-    void testShowAdministration_WithEmptyAppFilter_LoadsAllRoles() {
-        // Arrange
+    void showAdministration_withNullAppFilter_loadsAllRoles() {
         List<AppRoleAdminDto> allRoles = createMockRoles();
 
         when(adminService.getAllAdminApps()).thenReturn(createMockAdminApps());
-        when(adminService.getAllApps()).thenReturn(createMockApps());
+        when(appService.getAllLaaApps()).thenReturn(createMockApps());
         when(adminService.getAllAppRoles()).thenReturn(allRoles);
 
-        // Act
-        adminController.showAdministration("roles", "", model);
+        adminController.showAdministration("roles", null, model, mockHttpSession);
 
-        // Assert
         assertThat(model.getAttribute("roles")).isEqualTo(allRoles);
         verify(adminService).getAllAppRoles();
     }
@@ -256,6 +478,173 @@ class AdminControllerTest {
         verify(roleCreationService).createRole(roleCreationDto);
     }
 
+    @Test
+    void showAdministration_loadsAppNamesForFilter_sorted() {
+        java.util.List<uk.gov.justice.laa.portal.landingpage.dto.AppAdminDto> mockApps = Arrays.asList(
+            uk.gov.justice.laa.portal.landingpage.dto.AppAdminDto.builder().id("1").name("Zebra App").ordinal(0).build(),
+            uk.gov.justice.laa.portal.landingpage.dto.AppAdminDto.builder().id("2").name("Alpha App").ordinal(1).build(),
+            uk.gov.justice.laa.portal.landingpage.dto.AppAdminDto.builder().id("3").name("Beta App").ordinal(2).build()
+        );
+
+        when(adminService.getAllAdminApps()).thenReturn(createMockAdminApps());
+        when(appService.getAllLaaApps()).thenReturn(createMockApps());
+        when(adminService.getAllAppRoles()).thenReturn(createMockRoles());
+        when(adminService.getAllApps()).thenReturn(mockApps);
+
+        adminController.showAdministration("roles", null, model, mockHttpSession);
+
+        @SuppressWarnings("unchecked")
+        List<String> appNames = (List<String>) model.getAttribute("appNames");
+        assertThat(appNames).containsExactly("Alpha App", "Beta App", "Zebra App");
+    }
+
+    @Test
+    void editAppDetailsGet_throwsWhenAppNotFound() {
+        MockHttpSession session = new MockHttpSession();
+        String appId = java.util.UUID.randomUUID().toString();
+
+        when(appService.findById(java.util.UUID.fromString(appId))).thenReturn(java.util.Optional.empty());
+
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () ->
+            adminController.editAppDetailsGet(appId, model, session)
+        );
+    }
+
+    @Test
+    void editAppDetailsPost_withMultipleValidationErrors_buildsErrorMessage() {
+        MockHttpSession session = new MockHttpSession();
+        String appId = java.util.UUID.randomUUID().toString();
+        AppDto appDto = AppDto.builder().id(appId).name("Test App").description("Desc").enabled(true).build();
+
+        BindingResult result = org.mockito.Mockito.mock(BindingResult.class);
+        when(result.hasErrors()).thenReturn(true);
+        when(result.getAllErrors()).thenReturn(List.of(
+            new ObjectError("description", "Description is required"),
+            new ObjectError("name", "Name is required")
+        ));
+        when(appService.findById(java.util.UUID.fromString(appId))).thenReturn(java.util.Optional.of(appDto));
+
+        AppDetailsForm form = AppDetailsForm.builder().appId(appId).description("").enabled(true).build();
+
+        String view = adminController.editAppDetailsPost(appId, form, result, model, session);
+
+        assertEquals("silas-administration/edit-app-details", view);
+        String errorMessage = (String) model.getAttribute("errorMessage");
+        assertThat(errorMessage).contains("Description is required");
+        assertThat(errorMessage).contains("Name is required");
+        assertThat(errorMessage).contains("\n");
+    }
+
+    @Test
+    void confirmAppDetailsGet_throwsWhenAppIdNotInSession() {
+        MockHttpSession session = new MockHttpSession();
+        String appId = java.util.UUID.randomUUID().toString();
+        session.setAttribute("appDetailsForm", AppDetailsForm.builder().appId(appId).description("D").enabled(true).build());
+
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () ->
+            adminController.confirmAppDetailsGet(appId, model, session)
+        );
+    }
+
+    @Test
+    void confirmAppDetailsGet_throwsWhenFormNotInSession() {
+        MockHttpSession session = new MockHttpSession();
+        String appId = java.util.UUID.randomUUID().toString();
+        session.setAttribute("appId", appId);
+
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () ->
+            adminController.confirmAppDetailsGet(appId, model, session)
+        );
+    }
+
+    @Test
+    void confirmAppDetailsPost_throwsWhenAppIdNotInSession() {
+        MockHttpSession session = new MockHttpSession();
+        String appId = java.util.UUID.randomUUID().toString();
+
+        AppDetailsForm form = AppDetailsForm.builder().appId(appId).description("New Desc").enabled(false).build();
+        session.setAttribute("appDetailsForm", form);
+
+        Authentication auth = org.mockito.Mockito.mock(Authentication.class);
+
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () ->
+            adminController.confirmAppDetailsPost(appId, auth, model, session)
+        );
+    }
+
+    @Test
+    void confirmAppDetailsPost_throwsWhenFormNotInSession() {
+        MockHttpSession session = new MockHttpSession();
+        String appId = java.util.UUID.randomUUID().toString();
+        session.setAttribute("appId", appId);
+
+        Authentication auth = org.mockito.Mockito.mock(Authentication.class);
+
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () ->
+            adminController.confirmAppDetailsPost(appId, auth, model, session)
+        );
+    }
+
+    @Test
+    void confirmAppDetailsPost_throwsWhenAppNotFound() {
+        MockHttpSession session = new MockHttpSession();
+        String appId = java.util.UUID.randomUUID().toString();
+
+        AppDetailsForm form = AppDetailsForm.builder().appId(appId).description("New Desc").enabled(false).build();
+        session.setAttribute("appId", appId);
+        session.setAttribute("appDetailsForm", form);
+
+        Authentication auth = org.mockito.Mockito.mock(Authentication.class);
+
+        when(appService.findById(java.util.UUID.fromString(appId))).thenReturn(java.util.Optional.empty());
+
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () ->
+            adminController.confirmAppDetailsPost(appId, auth, model, session)
+        );
+    }
+
+    @Test
+    void editAppOrderPost_with_multipleErrorMessages_buildsErrorMessage() {
+        AppsOrderForm form = AppsOrderForm.builder().apps(List.of(new AppsOrderForm.AppOrderDetailsForm("1", 1))).build();
+        BindingResult result = org.mockito.Mockito.mock(BindingResult.class);
+        when(result.hasErrors()).thenReturn(true);
+        when(result.getAllErrors()).thenReturn(List.of(
+            new ObjectError("apps", "Error 1"),
+            new ObjectError("apps", "Error 2")
+        ));
+
+        String view = adminController.editAppOrderPost(form, result, model, new MockHttpSession());
+
+        assertEquals("silas-administration/edit-apps-order", view);
+        String errorMessage = (String) model.getAttribute("errorMessage");
+        assertThat(errorMessage).contains("Error 1");
+        assertThat(errorMessage).contains("Error 2");
+        assertThat(errorMessage).contains("\n");
+    }
+
+    @Test
+    void editAppOrderPost_withEmptyAppsList_storesInSession() {
+        AppsOrderForm form = AppsOrderForm.builder().apps(new ArrayList<>()).build();
+        BindingResult result = org.mockito.Mockito.mock(BindingResult.class);
+        when(result.hasErrors()).thenReturn(false);
+
+        MockHttpSession session = new MockHttpSession();
+        String view = adminController.editAppOrderPost(form, result, model, session);
+
+        assertEquals("silas-administration/edit-apps-order-check-answers", view);
+        assertThat(session.getAttribute("appsOrderForm")).isNotNull();
+    }
+
+    @Test
+    void confirmEditAppOrderPost_throwsWhenFormNotInSession() {
+        MockHttpSession session = new MockHttpSession();
+        Authentication auth = org.mockito.Mockito.mock(Authentication.class);
+
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () ->
+            adminController.confirmEditAppOrderPost(auth, model, session)
+        );
+    }
+
     // Helper methods to create mock data
     private List<AdminAppDto> createMockAdminApps() {
         return Arrays.asList(
@@ -272,14 +661,14 @@ class AdminControllerTest {
         );
     }
 
-    private List<AppAdminDto> createMockApps() {
+    private List<AppDto> createMockApps() {
         return Arrays.asList(
-            AppAdminDto.builder()
+            AppDto.builder()
                 .name("Apply for criminal legal aid")
                 .description("Make an application for criminal legal aid")
                 .ordinal(0)
                 .build(),
-            AppAdminDto.builder()
+            AppDto.builder()
                 .name("Submit a crime form")
                 .description("Submit crime forms")
                 .ordinal(1)
@@ -471,7 +860,7 @@ class AdminControllerTest {
                 .description("Existing Description")
                 .build();
         session.setAttribute("roleCreationDto", existingDto);
-        
+
         List<AppAdminDto> apps = createMockApps();
         when(adminService.getAllApps()).thenReturn(apps);
 
@@ -496,9 +885,9 @@ class AdminControllerTest {
                 .description("Valid Description")
                 .parentAppId(appId)
                 .build();
-        
+
         BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
-        
+
         RoleCreationDto enrichedDto = RoleCreationDto.builder()
                 .name("Valid Role")
                 .description("Valid Description")
@@ -529,7 +918,7 @@ class AdminControllerTest {
                 .description("Valid Description")
                 .parentAppId(appId)
                 .build();
-        
+
         BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
         List<AppAdminDto> apps = createMockApps();
 
@@ -556,7 +945,7 @@ class AdminControllerTest {
                 .name("")  // Invalid empty name
                 .description("Valid Description")
                 .build();
-        
+
         BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
         bindingResult.rejectValue("name", "required", "Name is required");
         List<AppAdminDto> apps = createMockApps();
@@ -583,9 +972,9 @@ class AdminControllerTest {
                 .description("Valid Description")
                 .parentAppId(null)  // Null app ID
                 .build();
-        
+
         BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
-        
+
         RoleCreationDto enrichedDto = RoleCreationDto.builder()
                 .name("Valid Role")
                 .description("Valid Description")
@@ -613,9 +1002,9 @@ class AdminControllerTest {
                 .description("Valid Description")
                 .parentAppId(appId)
                 .build();
-        
+
         BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
-        
+
         RoleCreationDto enrichedDto = RoleCreationDto.builder()
                 .name(null)
                 .description("Valid Description")
