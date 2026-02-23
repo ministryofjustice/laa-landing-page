@@ -60,7 +60,7 @@
         </div>
 
         <!--success user changes -->
-        <div  role="region" class="moj-alert moj-alert--success moj-alert--with-heading"
+        <div  th:if="${isEditUserSuccess}" role="region" class="moj-alert moj-alert--success moj-alert--with-heading"
              aria-label="success: User details have been updated " data-module="moj-alert">
             <div>
                 <svg class="moj-alert__icon" role="presentation" focusable="false" xmlns="http://www.w3.org/2000/svg"
@@ -74,8 +74,8 @@
                 <h2 class="moj-alert__heading">Success</h2>
 
                 <p th:text="${#strings.endsWith(user.fullName, 's')} ?
-            |${user.fullName}' user details have been updated| :
-            |${user.fullName}'s user details have been updated|">
+                    |${user.fullName}' user details have been updated| :
+                    |${user.fullName}'s user details have been updated|">
                 </p>
             </div>
         </div>

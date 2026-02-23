@@ -915,13 +915,12 @@ public class UserController {
         if (Objects.isNull(user)) {
             user = userService.getUserProfileById(id).orElseThrow();
         }
-        EditUserDetailsForm editUserDetailsForm = (EditUserDetailsForm) session.getAttribute("editUserDetailsForm");
-        if (Objects.isNull(editUserDetailsForm)) {
-            editUserDetailsForm = new EditUserDetailsForm();
-            editUserDetailsForm.setFirstName(user.getEntraUser().getFirstName());
-            editUserDetailsForm.setLastName(user.getEntraUser().getLastName());
-            editUserDetailsForm.setEmail(user.getEntraUser().getEmail());
-        }
+        EditUserDetailsForm editUserDetailsForm = new EditUserDetailsForm();
+        editUserDetailsForm = new EditUserDetailsForm();
+        editUserDetailsForm.setFirstName(user.getEntraUser().getFirstName());
+        editUserDetailsForm.setLastName(user.getEntraUser().getLastName());
+        editUserDetailsForm.setEmail(user.getEntraUser().getEmail());
+
         model.addAttribute("editUserDetailsForm", editUserDetailsForm);
         model.addAttribute("user", user);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user details - " + user.getFullName());
@@ -945,12 +944,13 @@ public class UserController {
                                     @Valid EditUserDetailsForm editUserDetailsForm,
                                     BindingResult result,
                                     HttpSession session,
-                                    Model model) throws IOException {
+                                    Model model,
+                                    RedirectAttributes redirectAttributes) throws IOException {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         model.addAttribute("user", user);
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user details - " + user.getFullName());
         session.setAttribute("user", user);
-        session.setAttribute("editUserDetailsForm", editUserDetailsForm);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user details - " + user.getFullName());
+
         if (Objects.nonNull(editUserDetailsForm.getEmail()) && !editUserDetailsForm.getEmail().isEmpty()) {
             boolean isSameEmail = Objects.equals(user.getEntraUser().getEmail(), editUserDetailsForm.getEmail());
             if (!isSameEmail && userService.userExistsByEmail(editUserDetailsForm.getEmail())) {
@@ -972,15 +972,20 @@ public class UserController {
             log.info("Validation errors occurred while updating user details: {}", result.getAllErrors());
             return "edit-user-details";
         }
-        // Update user details
-        // TODO audit log needed
 
         userService.updateUserDetails(user.getEntraUser().getId(),
                 editUserDetailsForm.getEmail(),
                 editUserDetailsForm.getFirstName(),
                 editUserDetailsForm.getLastName());
-        session.removeAttribute("editUserDetailsForm");
-        return "redirect:/admin/users/edit/" + id + "/details-check-answer";
+
+        model.addAttribute("isEditUserSuccess", true);
+
+        // Add success message
+        redirectAttributes.addFlashAttribute("isEditUserSuccess",
+                true);
+
+        // Redirect to manage user page
+        return "redirect:/admin/users/manage/" + id;
     }
 
     @GetMapping("/users/edit/{id}/details-check-answer")

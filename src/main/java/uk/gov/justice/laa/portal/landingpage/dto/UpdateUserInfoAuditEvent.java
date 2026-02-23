@@ -21,6 +21,7 @@ public class UpdateUserInfoAuditEvent extends AuditEvent implements Serializable
             """;
 
     public UpdateUserInfoAuditEvent(EntraUser user, EntraUser updatedUser) {
+        this.userId = user.getId();
         this.user = user;
         this.updatedUser = updatedUser;
     }
