@@ -8,29 +8,33 @@ public class RoleCreationAuditEvent extends AuditEvent {
     @Serial
     private static final long serialVersionUID = 1L;
     private final String roleName;
-    private final String roleId;
     private final String parentAppName;
     private final String description;
     private final String ccmsCode;
     private final String userTypeRestriction;
+    private final String userProfileId;
+    private final String entraOid;
 
     private static final String ROLE_CREATION_TEMPLATE = """
-            Role created: %s (ID: %s) for app %s
+            New app role created by user entra oid: %s user profile id: %s, for app %s with role details:
+            Name: %s
             Description: %s
             CCMS Code: %s
             User Type Restriction: %s
             """;
 
-    public RoleCreationAuditEvent(String roleName, String roleId, String parentAppName, 
-                                  String description, String ccmsCode, String userTypeRestriction, CurrentUserDto currentUserDto) {
+    public RoleCreationAuditEvent(String roleName, String parentAppName,
+                                  String description, String ccmsCode, String userTypeRestriction, 
+                                  CurrentUserDto currentUserDto, String userProfileId, String entraOid) {
         this.roleName = roleName;
-        this.roleId = roleId;
         this.parentAppName = parentAppName;
         this.description = description;
         this.ccmsCode = ccmsCode != null ? ccmsCode : "N/A";
         this.userTypeRestriction = userTypeRestriction;
         this.userId = currentUserDto.getUserId();
         this.userName = currentUserDto.getName();
+        this.userProfileId = userProfileId != null ? userProfileId : "N/A";
+        this.entraOid = entraOid != null ? entraOid : "N/A";
     }
 
     @Override
@@ -40,6 +44,6 @@ public class RoleCreationAuditEvent extends AuditEvent {
 
     @Override
     public String getDescription() {
-        return String.format(ROLE_CREATION_TEMPLATE, roleName, roleId, parentAppName, description, ccmsCode, userTypeRestriction);
+        return String.format(ROLE_CREATION_TEMPLATE, entraOid, userProfileId, parentAppName, roleName, description, ccmsCode, userTypeRestriction);
     }
 }

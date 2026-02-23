@@ -29,7 +29,7 @@
             <div class="govuk-grid-column-two-thirds">
                 <h1 class="govuk-heading-xl">Create New Role</h1>
 
-                <form th:action="@{/admin/roles/create}" method="post" th:object="${roleCreationDto}">
+                <form th:action="@{/admin/silas-administration/roles/create}" method="post" th:object="${roleCreationDto}">
                     
                     <!-- Parent App Selection -->
                     <div class="govuk-form-group" th:classappend="${#fields.hasErrors('parentAppId')} ? 'govuk-form-group--error'">

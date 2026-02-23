@@ -25,7 +25,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.RoleCreationDto;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.service.AdminService;
-import uk.gov.justice.laa.portal.landingpage.service.RoleCreationService;
+import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
 
 /**
  * Controller for SiLAS Administration section
@@ -39,7 +39,7 @@ import uk.gov.justice.laa.portal.landingpage.service.RoleCreationService;
 public class AdminController {
 
     private final AdminService adminService;
-    private final RoleCreationService roleCreationService;
+    private final AppRoleService appRoleService;
 
     /**
      * Display SiLAS Administration landing page with Admin Services tab by default
@@ -81,10 +81,7 @@ public class AdminController {
         return "silas-administration/administration";
     }
 
-    /**
-     * Display role creation form
-     */
-    @GetMapping("/roles/create")
+    @GetMapping("/silas-administration/roles/create")
     public String showRoleCreationForm(Model model, HttpSession session) {
         RoleCreationDto roleCreationDto = (RoleCreationDto) session.getAttribute("roleCreationDto");
         if (roleCreationDto == null) {
@@ -99,7 +96,7 @@ public class AdminController {
         return "silas-administration/create-role";
     }
 
-    @PostMapping("/roles/create")
+    @PostMapping("/silas-administration/roles/create")
     public String processRoleCreation(@Valid @ModelAttribute RoleCreationDto roleCreationDto,
                                       BindingResult bindingResult,
                                       Model model,
@@ -107,7 +104,7 @@ public class AdminController {
         
         // Validate role name uniqueness within app
         if (roleCreationDto.getParentAppId() != null && roleCreationDto.getName() != null) {
-            if (roleCreationService.isRoleNameExistsInApp(roleCreationDto.getName(), roleCreationDto.getParentAppId())) {
+            if (appRoleService.isRoleNameExistsInApp(roleCreationDto.getName(), roleCreationDto.getParentAppId())) {
                 bindingResult.rejectValue("name", "role.name.exists", 
                     "A role with this name already exists in the selected application");
             }
@@ -120,33 +117,33 @@ public class AdminController {
             return "silas-administration/create-role";
         }
 
-        roleCreationDto = roleCreationService.enrichRoleCreationDto(roleCreationDto);
+        roleCreationDto = appRoleService.enrichRoleCreationDto(roleCreationDto);
 
         session.setAttribute("roleCreationDto", roleCreationDto);
         
-        return "redirect:/admin/roles/create/check-your-answers";
+        return "redirect:/admin/silas-administration/roles/create/check-your-answers";
     }
 
-    @GetMapping("/roles/create/check-your-answers")
+    @GetMapping("/silas-administration/roles/create/check-your-answers")
     public String showCheckYourAnswers(Model model, HttpSession session) {
         RoleCreationDto roleCreationDto = (RoleCreationDto) session.getAttribute("roleCreationDto");
         if (roleCreationDto == null) {
-            return "redirect:/admin/roles/create";
+            return "redirect:/admin/silas-administration/roles/create";
         }
         
         model.addAttribute("roleCreationDto", roleCreationDto);
         return "silas-administration/create-role-check-answers";
     }
 
-    @PostMapping("/roles/create/confirm")
+    @PostMapping("/silas-administration/roles/create/confirm")
     public String confirmRoleCreation(HttpSession session, RedirectAttributes redirectAttributes) {
         RoleCreationDto roleCreationDto = (RoleCreationDto) session.getAttribute("roleCreationDto");
         if (roleCreationDto == null) {
-            return "redirect:/admin/roles/create";
+            return "redirect:/admin/silas-administration/roles/create";
         }
         
         try {
-            roleCreationService.createRole(roleCreationDto);
+            appRoleService.createRole(roleCreationDto);
             session.removeAttribute("roleCreationDto");
             redirectAttributes.addFlashAttribute("successMessage", 
                 "Role '" + roleCreationDto.getName() + "' has been created successfully.");
@@ -156,6 +153,6 @@ public class AdminController {
                 "Failed to create role: " + e.getMessage());
         }
         
-        return "redirect:/admin/silas-administration?tab=roles";
+        return "redirect:/admin/silas-administration?tab=roles#roles";
     }
 }
