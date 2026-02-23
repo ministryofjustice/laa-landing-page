@@ -134,6 +134,9 @@ public class UserController {
     @Value("${feature.flag.disable.user}")
     public boolean disableUserFeatureEnabled;
 
+    @Value("${feature.flag.edit.user.details}")
+    public boolean editUserDetailFeatureEnabled;
+
     @GetMapping("/users")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
             + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_INTERNAL_USER)")
@@ -410,7 +413,12 @@ public class UserController {
         Map<String, Object> filters = (Map<String, Object>) session.getAttribute("userListFilters");
         boolean hasFilters = hasActiveFilters(filters);
         model.addAttribute("hasFilters", hasFilters);
-        model.addAttribute("isMailOnly", user.getEntraUser().isMailOnly());
+
+        if (editUserDetailFeatureEnabled) {
+            model.addAttribute("isMailOnly", user.getEntraUser().isMailOnly());
+        } else {
+            model.addAttribute("isMailOnly", false);
+        }
 
         return "manage-user";
     }
