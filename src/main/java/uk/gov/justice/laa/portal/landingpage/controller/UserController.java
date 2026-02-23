@@ -92,7 +92,6 @@ import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
-import uk.gov.justice.laa.portal.landingpage.service.TechServicesClient;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
@@ -131,7 +130,6 @@ public class UserController {
     private final EmailValidationService emailValidationService;
     private final AppRoleService appRoleService;
     private final UserAccountStatusService disableUserService;
-    private final TechServicesClient techServicesClient;
 
     @Value("${feature.flag.disable.user}")
     public boolean disableUserFeatureEnabled;

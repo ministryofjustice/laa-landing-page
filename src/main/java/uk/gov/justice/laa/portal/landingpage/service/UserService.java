@@ -1035,9 +1035,9 @@ public class UserService {
 
             try {
                 //update user information
-                EntraUser updateEntraUser = entraUserRepository.saveAndFlush(entraUser);
+                EntraUser updatedEntraUser = entraUserRepository.saveAndFlush(entraUser);
                 UpdateUserInfoAuditEvent updateUserInfoAuditEvent = new UpdateUserInfoAuditEvent(
-                        entraUser, updateEntraUser);
+                        entraUser, updatedEntraUser);
                 eventService.logEvent(updateUserInfoAuditEvent);
                 logger.info("Successfully updated user details in database for user ID: {}",
                         userId);
