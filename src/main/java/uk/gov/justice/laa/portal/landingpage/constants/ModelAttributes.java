@@ -12,6 +12,11 @@ public final class ModelAttributes {
     public static final String PAGE_TITLE = "pageTitle";
 
     /**
+     * Model attribute name for page summary used in templates.
+     */
+    public static final String PAGE_SUMMARY = "pageSummary";
+
+    /**
      * Private constructor to prevent instantiation of utility class.
      */
     private ModelAttributes() {

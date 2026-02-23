@@ -61,13 +61,36 @@ public class GetUsersResponse implements Serializable {
         @JsonProperty("lastSignIn")
         private String lastSignIn;
         
-        @JsonProperty("CustomSecurityAttributeSet")
-        private Object customSecurityAttributeSet;
+        @JsonProperty("customSecurityAttributes")
+        private CustomSecurityAttributes customSecurityAttributes;
         
         @JsonProperty("isMailOnly")
         private boolean isMailOnly;
         
         @JsonProperty("deleted")
         private boolean deleted;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class CustomSecurityAttributes implements Serializable {
+        
+        @JsonProperty("GuestUserStatus")
+        private GuestUserStatus guestUserStatus;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class GuestUserStatus implements Serializable {
+        
+        @JsonProperty("@odata.type")
+        private String odataType;
+        
+        @JsonProperty("DisabledReason")
+        private String disabledReason;
     }
 }
