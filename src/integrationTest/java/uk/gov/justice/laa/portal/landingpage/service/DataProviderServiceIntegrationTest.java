@@ -56,21 +56,21 @@ import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 @TestPropertySource(properties = {
     "app.data.provider.use-local-file=true",
     "app.data.provider.local-file-path=/tmp/test-pda-data.json",
-        "spring.security.tech.services.credentials.client-id=test-client-id",
-        "spring.security.tech.services.credentials.client-secret=test-client-secret",
-        "spring.security.tech.services.credentials.tenant-id=test-tenant-id",
-        "spring.security.tech.services.credentials.scope=test-scope",
-        "spring.security.tech.services.credentials.base-url=https://test.example.com",
-  "ccms.user.api.sqs.arn=arn:aws:sqs:eu-west-2:123456789012:test-queue",
-  "ccms.user.data.api.base-url=https://test.ccms.example.com",
-  "ccms.uda.base-url=https://test.ccms-uda.example.com",
-  "ccms.uda.api.key=test-ccms-uda-api-key",
-        "notifications.govNotifyApiKey=test-api-key",
-        "notifications.portalUrl=http://localhost:8080",
-        "notifications.addNewUserEmailTemplate=test-template-1",
-        "notifications.delegateFirmAccessEmailTemplate=test-template-2",
-        "notifications.revokeFirmAccessEmailTemplate=test-template-3",
-        "app.enable.tech.services.call=false"
+    "spring.security.tech.services.credentials.client-id=test-client-id",
+    "spring.security.tech.services.credentials.client-secret=test-client-secret",
+    "spring.security.tech.services.credentials.tenant-id=test-tenant-id",
+    "spring.security.tech.services.credentials.scope=test-scope",
+    "spring.security.tech.services.credentials.base-url=https://test.example.com",
+    "ccms.user.api.sqs.arn=arn:aws:sqs:eu-west-2:123456789012:test-queue",
+    "ccms.user.data.api.base-url=https://test.ccms.example.com",
+    "ccms.uda.base-url=https://test.ccms-uda.example.com",
+    "ccms.uda.api.key=test-ccms-uda-api-key",
+    "notifications.govNotifyApiKey=test-api-key",
+    "notifications.portalUrl=http://localhost:8080",
+    "notifications.addNewUserEmailTemplate=test-template-1",
+    "notifications.delegateFirmAccessEmailTemplate=test-template-2",
+    "notifications.revokeFirmAccessEmailTemplate=test-template-3",
+    "app.enable.tech.services.call=false"
 })
 class DataProviderServiceIntegrationTest {
 
@@ -116,9 +116,9 @@ class DataProviderServiceIntegrationTest {
         // Clean database
         userProfileRepository.deleteAll();
         entraUserRepository.deleteAll();
-      List<Firm> firms = firmRepository.findAll();
-      firms.forEach(firm -> firm.setEnabled(false));
-      firmRepository.saveAll(firms);
+        List<Firm> firms = firmRepository.findAll();
+        firms.forEach(firm -> firm.setEnabled(false));
+        firmRepository.saveAll(firms);
         officeRepository.deleteAll();
         firmRepository.deleteAll();
     }
@@ -168,7 +168,7 @@ class DataProviderServiceIntegrationTest {
             .code("F001")
             .name("Old Firm Name")
             .type(FirmType.LEGAL_SERVICES_PROVIDER)
-          .enabled(false)
+            .enabled(false)
             .build();
         existingFirm = firmRepository.save(existingFirm);
 
@@ -182,8 +182,8 @@ class DataProviderServiceIntegrationTest {
                 .build())
             .build();
         officeRepository.save(existingOffice);
-          existingFirm.setEnabled(true);
-          existingFirm = firmRepository.save(existingFirm);
+        existingFirm.setEnabled(true);
+        existingFirm = firmRepository.save(existingFirm);
 
         String pdaJson = """
             {
@@ -225,19 +225,19 @@ class DataProviderServiceIntegrationTest {
             .code("F001")
             .name("To Be Deleted")
             .type(FirmType.LEGAL_SERVICES_PROVIDER)
-          .enabled(false)
+            .enabled(false)
             .build();
         existingFirm = firmRepository.save(existingFirm);
 
         Office existingOffice = Office.builder()
-          .code("O001")
-          .firm(existingFirm)
-          .address(Office.Address.builder()
-            .addressLine1("123 Main St")
-            .city("London")
-            .postcode("SW1A 1AA")
-            .build())
-          .build();
+            .code("O001")
+            .firm(existingFirm)
+            .address(Office.Address.builder()
+                .addressLine1("123 Main St")
+                .city("London")
+                .postcode("SW1A 1AA")
+                .build())
+            .build();
         officeRepository.save(existingOffice);
         existingFirm.setEnabled(true);
         firmRepository.save(existingFirm);
@@ -269,7 +269,7 @@ class DataProviderServiceIntegrationTest {
             .code("F001")
             .name("Test Firm")
             .type(FirmType.LEGAL_SERVICES_PROVIDER)
-          .enabled(false)
+            .enabled(false)
             .build();
         existingFirm = firmRepository.save(existingFirm);
 
@@ -283,8 +283,8 @@ class DataProviderServiceIntegrationTest {
                 .build())
             .build();
         officeRepository.save(existingOffice);
-          existingFirm.setEnabled(true);
-          existingFirm = firmRepository.save(existingFirm);
+        existingFirm.setEnabled(true);
+        existingFirm = firmRepository.save(existingFirm);
 
         String pdaJson = """
             {
@@ -326,7 +326,7 @@ class DataProviderServiceIntegrationTest {
             .code("F001")
             .name("Test Firm")
             .type(FirmType.LEGAL_SERVICES_PROVIDER)
-          .enabled(false)
+            .enabled(false)
             .build();
         existingFirm = firmRepository.save(existingFirm);
 
@@ -347,8 +347,8 @@ class DataProviderServiceIntegrationTest {
                 .build())
             .build();
         officeRepository.save(office2);
-          existingFirm.setEnabled(true);
-          existingFirm = firmRepository.save(existingFirm);
+        existingFirm.setEnabled(true);
+        existingFirm = firmRepository.save(existingFirm);
 
         String pdaJson = """
             {
@@ -437,7 +437,7 @@ class DataProviderServiceIntegrationTest {
             .code("F001")
             .name("Old Firm Name")
             .type(FirmType.LEGAL_SERVICES_PROVIDER)
-          .enabled(false)
+            .enabled(false)
             .build();
         existingFirm = firmRepository.save(existingFirm);
 
@@ -451,8 +451,8 @@ class DataProviderServiceIntegrationTest {
                 .build())
             .build();
         officeRepository.save(existingOffice);
-          existingFirm.setEnabled(true);
-          existingFirm = firmRepository.save(existingFirm);
+        existingFirm.setEnabled(true);
+        existingFirm = firmRepository.save(existingFirm);
 
         String pdaJson = """
             {
@@ -498,19 +498,19 @@ class DataProviderServiceIntegrationTest {
             .code("F001")
             .name("To Be Disabled")
             .type(FirmType.LEGAL_SERVICES_PROVIDER)
-          .enabled(false)
+            .enabled(false)
             .build();
         existingFirm = firmRepository.save(existingFirm);
 
         Office existingOffice = Office.builder()
-          .code("O001")
-          .firm(existingFirm)
-          .address(Office.Address.builder()
-            .addressLine1("123 Main St")
-            .city("London")
-            .postcode("SW1A 1AA")
-            .build())
-          .build();
+            .code("O001")
+            .firm(existingFirm)
+            .address(Office.Address.builder()
+                .addressLine1("123 Main St")
+                .city("London")
+                .postcode("SW1A 1AA")
+                .build())
+            .build();
         officeRepository.save(existingOffice);
         existingFirm.setEnabled(true);
         existingFirm = firmRepository.save(existingFirm);
@@ -546,7 +546,7 @@ class DataProviderServiceIntegrationTest {
             .code("F001")
             .name("Test Firm")
             .type(FirmType.LEGAL_SERVICES_PROVIDER)
-          .enabled(false)
+            .enabled(false)
             .build();
         existingFirm = firmRepository.save(existingFirm);
 
@@ -555,7 +555,7 @@ class DataProviderServiceIntegrationTest {
             .firm(existingFirm)
             .address(Office.Address.builder().addressLine1("To be deleted").build())
             .build();
-        UUID officeToDeleteId = officeRepository.save(toDelete).getId();
+        final UUID officeToDeleteId = officeRepository.save(toDelete).getId();
 
         Office toKeep = Office.builder()
             .code("O002")
@@ -567,8 +567,8 @@ class DataProviderServiceIntegrationTest {
                 .build())
             .build();
         officeRepository.save(toKeep);
-          existingFirm.setEnabled(true);
-          existingFirm = firmRepository.save(existingFirm);
+        existingFirm.setEnabled(true);
+        existingFirm = firmRepository.save(existingFirm);
 
         String pdaJson = """
             {
@@ -668,7 +668,7 @@ class DataProviderServiceIntegrationTest {
             .code("F001")
             .name("Test Firm")
             .type(FirmType.LEGAL_SERVICES_PROVIDER)
-          .enabled(false)
+            .enabled(false)
             .build();
         existingFirm = firmRepository.save(existingFirm);
 
