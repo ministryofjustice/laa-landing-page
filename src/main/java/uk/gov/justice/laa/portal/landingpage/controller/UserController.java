@@ -477,15 +477,16 @@ public class UserController {
     @GetMapping("/users/manage/{id}/disable")
     @PreAuthorize("@accessControlService.canDisableUser(#id)")
     public String disableUserReasonsGet(@PathVariable String id,
-                                        DisableUserReasonForm disableUserReasonForm,
-                                        Model model,
-                                        HttpSession session,
-                                        Authentication authentication) {
-        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
-
+                                     DisableUserReasonForm disableUserReasonForm,
+                                     Model model,
+                                     HttpSession session,
+                                     Authentication authentication,
+                                     String referer,
+                                     String profileId) {
         if (!disableUserFeatureEnabled) {
             throw new ResponseStatusException(HttpStatusCode.valueOf(404));
         }
+        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
         boolean isProvideAdmin = RolesUtils.isProvideAdmin(currentUserProfile.getAppRoles());
         List<DisableUserReasonViewModel> reasons = new ArrayList<>(userAccountStatusService.getDisableUserReasons(isProvideAdmin).stream()
@@ -494,10 +495,24 @@ public class UserController {
         model.addAttribute("user", user);
         model.addAttribute("reasons", reasons);
         model.addAttribute("disableUserReasonsForm", disableUserReasonForm);
+        model.addAttribute("referer", referer);
+        String cancelPath = getCancelPathFromReferer(referer, id, profileId);
+        model.addAttribute("cancelPath", cancelPath);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Disable User - " + user.getFullName());
         session.setAttribute("disableUserReasonModel", model);
         return "disable-user-reason";
     }
+
+    private String getCancelPathFromReferer(String referer, String entraUserId, String userProfileId) {
+        if ("manage".equals(referer) && userProfileId != null) {
+            return String.format("/admin/users/manage/%s", userProfileId);
+        } else if ("audit".equals(referer)) {
+            return String.format("/admin/users/audit/%s", entraUserId);
+        } else {
+            return "/home";
+        }
+    }
+
 
     @PostMapping("/users/manage/{id}/disable")
     @PreAuthorize("@accessControlService.canDisableUser(#id)")
@@ -506,7 +521,8 @@ public class UserController {
                                      BindingResult result,
                                      Authentication authentication,
                                      Model model,
-                                     HttpSession session) {
+                                     HttpSession session,
+                                     String referer) {
         if (!disableUserFeatureEnabled) {
             throw new ResponseStatusException(HttpStatusCode.valueOf(404));
         }
@@ -528,6 +544,7 @@ public class UserController {
 
         model.addAttribute("user", user);
         model.addAttribute("disableUserReasonsForm", disableUserReasonForm);
+        model.addAttribute("referer", referer);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Disable User Success - " + user.getFullName());
         return "disable-user-completed";
     }
@@ -535,10 +552,14 @@ public class UserController {
     @GetMapping("/users/manage/{id}/enable")
     @PreAuthorize("@accessControlService.canDisableUser(#id)")
     public String enableUserGet(@PathVariable String id,
-                                 Model model) {
+                                 Model model,
+                                 String referer,
+                                 String profileId) {
 
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
         model.addAttribute("user", user);
+        model.addAttribute("referer", referer);
+        model.addAttribute("cancelPath", getCancelPathFromReferer(referer, id, profileId));
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Enable User - " + user.getFullName());
         return "enable-user-confirmation";
     }
@@ -547,7 +568,8 @@ public class UserController {
     @PreAuthorize("@accessControlService.canDisableUser(#id)")
     public String enableUserPost(@PathVariable String id,
                                          Authentication authentication,
-                                         Model model) {
+                                         Model model,
+                                         String referer) {
 
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
         UUID enabledUserId = UUID.fromString(user.getId());
@@ -555,6 +577,7 @@ public class UserController {
         userAccountStatusService.enableUser(enabledUserId, enabledByUserId);
 
         model.addAttribute("user", user);
+        model.addAttribute("referer", referer);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Enable User Success - " + user.getFullName());
         return "enable-user-completed";
     }

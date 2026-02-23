@@ -999,11 +999,8 @@ class UserServiceTest {
         when(mockEntraUserRepository.findById(any(UUID.class))).thenReturn(Optional.of(entraUser));
 
         // When & Then
-        RuntimeException exception = Assertions.assertThrows(RuntimeException.class,
-                () -> userService.getActiveProfileByUserId(userId.toString()));
-        assertThat(exception.getMessage()).contains("User profile not found for the given user id:");
-        List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.ERROR);
-        assertThat(warningLogs.size()).isEqualTo(1);
+        Optional<UserProfileDto> result = userService.getActiveProfileByUserId(userId.toString());
+        assertThat(result).isEmpty();
     }
 
     @Nested
