@@ -183,10 +183,13 @@ class UserControllerTest {
         when(userService.getEntraUserById(enabledUserId.toString())).thenReturn(Optional.of(enabledUser));
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(enabledByUser);
 
-        String view = userController.enableUserPost(enabledUserId.toString(), authentication, model);
+        String referer = "manage";
+
+        String view = userController.enableUserPost(enabledUserId.toString(), authentication, model, referer);
 
         assertThat(view).isEqualTo("enable-user-completed");
         assertThat(model.getAttribute("user")).isEqualTo(enabledUser);
+        assertThat(model.getAttribute("referer")).isEqualTo(referer);
         assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Enable User Success - " + enabledUser.getFullName());
     }
 
@@ -195,7 +198,7 @@ class UserControllerTest {
         UUID noUserId = UUID.randomUUID();
         when(userService.getEntraUserById(noUserId.toString())).thenReturn(Optional.empty());
 
-        assertThrows(NoSuchElementException.class, () -> userController.enableUserPost(noUserId.toString(), authentication, model));
+        assertThrows(NoSuchElementException.class, () -> userController.enableUserPost(noUserId.toString(), authentication, model, null));
 
     }
 
@@ -5986,11 +5989,14 @@ class UserControllerTest {
         DisableUserReasonForm form = new DisableUserReasonForm();
         form.setReasonId(reason.getId().toString());
 
+        String referer = "manage";
+        String profileId = UUID.randomUUID().toString();
+
         when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(returnedUser));
         when(disableUserService.getDisableUserReasons()).thenReturn(List.of(reason));
 
 
-        String view = userController.disableUserReasonsGet(userId.toString(), form, model, session);
+        String view = userController.disableUserReasonsGet(userId.toString(), form, model, session, referer, profileId);
 
         Assertions.assertEquals("disable-user-reason", view);
         Assertions.assertEquals(returnedUser, model.getAttribute("user"));
@@ -6005,6 +6011,89 @@ class UserControllerTest {
         DisableUserReasonViewModel returnedReason = (DisableUserReasonViewModel) returnedReasonObject;
         Assertions.assertEquals(reason.getId(), returnedReason.getId());
         Assertions.assertEquals("Disable User - " + returnedUser.getFullName(), model.getAttribute(ModelAttributes.PAGE_TITLE));
+        Assertions.assertEquals(referer, model.getAttribute("referer"));
+    }
+
+    @Test
+    public void testDisableUserGetReturnsReasonAndUserWithAuditReferer() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        EntraUserDto returnedUser = EntraUserDto.builder()
+                .id(userId.toString())
+                .fullName("Test User")
+                .build();
+        DisableUserReasonDto reason = DisableUserReasonDto.builder()
+                .id(UUID.randomUUID())
+                .name("Test Reason")
+                .description("A test reason.")
+                .build();
+        DisableUserReasonForm form = new DisableUserReasonForm();
+        form.setReasonId(reason.getId().toString());
+
+        String referer = "audit";
+        String profileId = UUID.randomUUID().toString();
+
+        when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(returnedUser));
+        when(disableUserService.getDisableUserReasons()).thenReturn(List.of(reason));
+
+
+        String view = userController.disableUserReasonsGet(userId.toString(), form, model, session, referer, profileId);
+
+        Assertions.assertEquals("disable-user-reason", view);
+        Assertions.assertEquals(returnedUser, model.getAttribute("user"));
+
+        Object returnedReasonsObject = model.getAttribute("reasons");
+        Assertions.assertNotNull(returnedReasonsObject);
+        Assertions.assertInstanceOf(List.class, returnedReasonsObject);
+        List<?> returnedReasonList = (List<?>) returnedReasonsObject;
+        Object returnedReasonObject = returnedReasonList.getFirst();
+        Assertions.assertInstanceOf(DisableUserReasonViewModel.class, returnedReasonObject);
+
+        DisableUserReasonViewModel returnedReason = (DisableUserReasonViewModel) returnedReasonObject;
+        Assertions.assertEquals(reason.getId(), returnedReason.getId());
+        Assertions.assertEquals("Disable User - " + returnedUser.getFullName(), model.getAttribute(ModelAttributes.PAGE_TITLE));
+        Assertions.assertEquals(referer, model.getAttribute("referer"));
+    }
+
+    @Test
+    public void testDisableUserGetReturnsReasonAndUserWithNullReferer() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        EntraUserDto returnedUser = EntraUserDto.builder()
+                .id(userId.toString())
+                .fullName("Test User")
+                .build();
+        DisableUserReasonDto reason = DisableUserReasonDto.builder()
+                .id(UUID.randomUUID())
+                .name("Test Reason")
+                .description("A test reason.")
+                .build();
+        DisableUserReasonForm form = new DisableUserReasonForm();
+        form.setReasonId(reason.getId().toString());
+
+        String referer = null;
+        String profileId = UUID.randomUUID().toString();
+
+        when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(returnedUser));
+        when(disableUserService.getDisableUserReasons()).thenReturn(List.of(reason));
+
+
+        String view = userController.disableUserReasonsGet(userId.toString(), form, model, session, referer, profileId);
+
+        Assertions.assertEquals("disable-user-reason", view);
+        Assertions.assertEquals(returnedUser, model.getAttribute("user"));
+
+        Object returnedReasonsObject = model.getAttribute("reasons");
+        Assertions.assertNotNull(returnedReasonsObject);
+        Assertions.assertInstanceOf(List.class, returnedReasonsObject);
+        List<?> returnedReasonList = (List<?>) returnedReasonsObject;
+        Object returnedReasonObject = returnedReasonList.getFirst();
+        Assertions.assertInstanceOf(DisableUserReasonViewModel.class, returnedReasonObject);
+
+        DisableUserReasonViewModel returnedReason = (DisableUserReasonViewModel) returnedReasonObject;
+        Assertions.assertEquals(reason.getId(), returnedReason.getId());
+        Assertions.assertEquals("Disable User - " + returnedUser.getFullName(), model.getAttribute(ModelAttributes.PAGE_TITLE));
+        Assertions.assertEquals(referer, model.getAttribute("referer"));
     }
 
     @Test
@@ -6036,12 +6125,13 @@ class UserControllerTest {
         when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(returnedUser));
         when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
 
-
-        String view = userController.disableUserReasonsPost(userId.toString(), form, result, authentication, model, session);
+        String referer = "manage";
+        String view = userController.disableUserReasonsPost(userId.toString(), form, result, authentication, model, session, referer);
 
         Assertions.assertEquals("disable-user-completed", view);
         Assertions.assertEquals(returnedUser, model.getAttribute("user"));
         Assertions.assertEquals(form, model.getAttribute("disableUserReasonsForm"));
+        Assertions.assertEquals(model.getAttribute("referer"), referer);
         Assertions.assertEquals("Disable User Success - " + returnedUser.getFullName(), model.getAttribute(ModelAttributes.PAGE_TITLE));
     }
 
@@ -6068,7 +6158,8 @@ class UserControllerTest {
 
         when(session.getAttribute(eq("disableUserReasonModel"))).thenReturn(model);
 
-        String view = userController.disableUserReasonsPost(UUID.randomUUID().toString(), form, result, authentication, model, session);
+        String referer = "manage";
+        String view = userController.disableUserReasonsPost(UUID.randomUUID().toString(), form, result, authentication, model, session, referer);
 
         Assertions.assertEquals("disable-user-reason", view);
         Assertions.assertEquals("There was an error\nThere was another error", model.getAttribute("errorMessage"));

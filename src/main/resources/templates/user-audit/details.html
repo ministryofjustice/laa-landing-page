@@ -360,12 +360,12 @@
                     <!-- Disable Button - Only for users without profiles -->
                     <a class="govuk-button govuk-button--warning"
                        th:if="${canDisableUser && userIsEnabled}"
-                       th:href="@{/admin/users/manage/{id}/disable(id=${user.userId})}">
+                       th:href="@{/admin/users/manage/{id}/disable(id=${user.userId}, referer='audit')}">
                         Disable User
                     </a>
                     <a class="govuk-button govuk-button--warning"
                        th:if="${canDisableUser && !userIsEnabled}"
-                       th:href="@{/admin/users/manage/{id}/enable(id=${user.userId})}">
+                       th:href="@{/admin/users/manage/{id}/enable(id=${user.userId}, referer='audit')}">
                         Enable User
                     </a>
                 </div>
