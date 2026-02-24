@@ -922,7 +922,6 @@ public class UserController {
             user = userService.getUserProfileById(id).orElseThrow();
         }
         EditUserDetailsForm editUserDetailsForm = new EditUserDetailsForm();
-        editUserDetailsForm = new EditUserDetailsForm();
         editUserDetailsForm.setFirstName(user.getEntraUser().getFirstName());
         editUserDetailsForm.setLastName(user.getEntraUser().getLastName());
         editUserDetailsForm.setEmail(user.getEntraUser().getEmail());
@@ -963,7 +962,7 @@ public class UserController {
                 // Check if the existing user is a multi-firm user
                 if (userService.isMultiFirmUserByEmail(editUserDetailsForm.getEmail())) {
                     result.rejectValue("email", "error.email",
-                            "This email address is already registered as a multi-firm user");
+                            "This email address is already registered as a multi-firm user.");
                 } else {
                     result.rejectValue("email", "error.email", "This email address is already associated with another user.");
                 }
@@ -984,7 +983,7 @@ public class UserController {
                 editUserDetailsForm.getFirstName(),
                 editUserDetailsForm.getLastName());
 
-        model.addAttribute("isEditUserSuccess", true);
+        //model.addAttribute("isEditUserSuccess", true);
 
         // Add success message
         redirectAttributes.addFlashAttribute("isEditUserSuccess",
