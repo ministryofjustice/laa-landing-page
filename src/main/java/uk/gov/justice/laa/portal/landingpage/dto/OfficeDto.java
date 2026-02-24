@@ -20,6 +20,7 @@ public class OfficeDto implements Serializable {
     private UUID id;
     private String code;
     private AddressDto address;
+    private boolean status;
 
     @Data
     @Builder
