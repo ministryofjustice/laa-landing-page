@@ -1751,6 +1751,7 @@ public class UserService {
         // Build detail DTO
         return AuditUserDetailDto.builder().userId(entraUser.getId().toString())
                 .email(entraUser.getEmail()).firstName(entraUser.getFirstName())
+                .enabled(entraUser.isEnabled())
                 .lastName(entraUser.getLastName())
                 .fullName(entraUser.getFirstName() + " " + entraUser.getLastName())
                 .isMultiFirmUser(entraUser.isMultiFirmUser()).userType(userType)
@@ -1843,6 +1844,7 @@ public class UserService {
         // Build detail DTO with Entra data only
         return AuditUserDetailDto.builder().userId(entraUser.getId().toString())
                 .email(entraUser.getEmail()).firstName(entraUser.getFirstName())
+                .enabled(entraUser.isEnabled())
                 .lastName(entraUser.getLastName())
                 .fullName(entraUser.getFirstName() + " " + entraUser.getLastName())
                 .isMultiFirmUser(entraUser.isMultiFirmUser()).userType(userType)
