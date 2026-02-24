@@ -15,6 +15,8 @@ import uk.gov.justice.laa.portal.landingpage.dto.RoleCreationAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.RoleCreationDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
@@ -22,6 +24,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -186,6 +189,17 @@ class AppRoleServiceTest {
         when(appRoleRepository.save(any(AppRole.class))).thenReturn(savedRole);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUser);
+
+        EntraUser mockEntraUser = EntraUser.builder()
+                .entraOid("test-entra-oid")
+                .userProfiles(Set.of(
+                    UserProfile.builder()
+                        .id(UUID.randomUUID())
+                        .activeProfile(true)
+                        .build()
+                ))
+                .build();
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(mockEntraUser);
 
         RoleCreationDto dto = RoleCreationDto.builder()
                 .name("Test Role")
@@ -369,6 +383,17 @@ class AppRoleServiceTest {
         when(securityContext.getAuthentication()).thenReturn(authentication);
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUser);
 
+        EntraUser mockEntraUser = EntraUser.builder()
+                .entraOid("test-entra-oid")
+                .userProfiles(Set.of(
+                    UserProfile.builder()
+                        .id(UUID.randomUUID())
+                        .activeProfile(true)
+                        .build()
+                ))
+                .build();
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(mockEntraUser);
+
         // Act
         RoleCreationDto dto = RoleCreationDto.builder()
                 .name("Test Role")
@@ -412,6 +437,17 @@ class AppRoleServiceTest {
         when(appRoleRepository.save(any(AppRole.class))).thenReturn(savedRole);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUser);
+
+        EntraUser mockEntraUser = EntraUser.builder()
+                .entraOid("test-entra-oid")
+                .userProfiles(Set.of(
+                    UserProfile.builder()
+                        .id(UUID.randomUUID())
+                        .activeProfile(true)
+                        .build()
+                ))
+                .build();
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(mockEntraUser);
 
         // Act
         RoleCreationDto dto = RoleCreationDto.builder()
@@ -457,6 +493,17 @@ class AppRoleServiceTest {
         when(appRoleRepository.save(any(AppRole.class))).thenReturn(savedRole);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUser);
+
+        EntraUser mockEntraUser = EntraUser.builder()
+                .entraOid("test-entra-oid")
+                .userProfiles(Set.of(
+                    UserProfile.builder()
+                        .id(UUID.randomUUID())
+                        .activeProfile(true)
+                        .build()
+                ))
+                .build();
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(mockEntraUser);
 
         // Act
         RoleCreationDto dto = RoleCreationDto.builder()
