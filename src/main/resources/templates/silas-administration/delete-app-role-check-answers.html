@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'delete-app-role-check-answers'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>Check your answers</title>
+</head>
+
+<body>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <ol class="govuk-breadcrumbs__list">
+            <li class="govuk-breadcrumbs__list-item">
+                <a class="govuk-breadcrumbs__link"
+                    th:href="@{'/admin/silas-administration/delete-role/' + ${roleId} + '/reason'}">Back</a>
+            </li>
+        </ol>
+    </nav>
+
+    <main class="govuk-main-wrapper" id="main-content">
+        <div class="govuk-grid-row">
+            <div class="govuk-grid-column-two-thirds-from-desktop">
+
+                <div th:if="${errorMessage}" class="govuk-error-summary" role="alert"
+                    aria-labelledby="error-summary-title" tabindex="-1" data-module="govuk-error-summary">
+                    <h2 class="govuk-error-summary__title" id="error-summary-title">
+                        There is a problem
+                    </h2>
+                    <div class="govuk-error-summary__body">
+                        <ul class="govuk-list govuk-error-summary__list">
+                            <li>
+                                <span th:text="${errorMessage}"></span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h1 class="govuk-heading-l">Check your answers</h1>
+
+                <div class="govuk-warning-text">
+                    <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
+                    <strong class="govuk-warning-text__text">
+                        <span class="govuk-visually-hidden">Warning</span>
+                        You are about to remove the role, role assignments, and role permissions
+                    </strong>
+                </div>
+
+                <p class="govuk-body">This will revoke this role from ${noOfUserProfilesAffected} user(s) across ${noOfFirmsAffected} firm(s).</p>
+
+                <p class="govuk-body">This process is a permanent and destructive action. You cannot undo this action once it's completed.</p>
+
+                <ul class="govuk-list govuk-list--bullet">
+                    <li>
+                        Deleting a role is a permanent and destructive action that cannot be undone. Once confirmed, the
+                        role will be completely removed from SiLAS and revoked from all users who currently have it, which
+                        means any permissions or access tied to this role will be lost immediately.
+                    </li>
+                    <li>
+                        This change will impact user assignments across multiple firms, potentially disrupting workflows,
+                        access rights, and compliance requirements.
+                    </li>
+                    <li>
+                        Proceed only if you are certain this role is no longer needed, as recovery will require manual
+                        reconfiguration and reassignment of permissions.
+                    </li>
+                </ul>
+
+
+                <dl class="govuk-summary-list">
+                    <!-- Current Firm -->
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">
+                            App name
+                        </dt>
+                        <dd class="govuk-summary-list__value"
+                            th:text="${appName}">
+                            App name
+                        </dd>
+                        <dd class="govuk-summary-list__actions">
+                        </dd>
+                    </div>
+
+                    <!-- New Firm Name -->
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">
+                            Role name
+                        </dt>
+                        <dd class="govuk-summary-list__value" th:text="${roleName}">
+                            Role name
+                        </dd>
+                        <dd class="govuk-summary-list__actions">
+                            <a class="govuk-link"
+                                th:href="@{'/admin/silas-administration/delete-role'}">Change<span class="govuk-visually-hidden"></span>
+                            </a>
+                        </dd>
+                    </div>
+
+                    <!-- Reason for deletion -->
+                    <div class="govuk-summary-list__row">
+                        <dt class="govuk-summary-list__key">
+                            Reason for role deletion
+                        </dt>
+                        <dd class="govuk-summary-list__value" th:text="${reason}">
+                            Reason for role deletion
+                        </dd>
+                        <dd class="govuk-summary-list__actions">
+                            <a class="govuk-link"
+                               th:href="@{'/admin/silas-administration/delete-role/' + ${roleId} + '/reason'}">Change<span class="govuk-visually-hidden"></span>
+                            </a>
+                        </dd>
+                    </div>
+                </dl>
+
+                <form method="post" th:action="@{'/admin/silas-administration/delete-role/check-answers'}">
+                    <div class="govuk-button-group">
+                        <button type="submit" class="govuk-button govuk-button--warning" data-module="govuk-button">
+                            Confirm and delete role
+                        </button>
+                        <a class="govuk-link" th:href="@{'/admin/silas-administration#roles'}">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>

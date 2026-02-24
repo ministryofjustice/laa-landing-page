@@ -3,16 +3,20 @@ package uk.gov.justice.laa.portal.landingpage.service;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.DeleteAppRoleEvent;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRolesOrderForm;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.RoleAssignmentRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -23,9 +27,16 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AppRoleService {
 
     private final AppRoleRepository appRoleRepository;
+
+    private final RoleAssignmentRepository roleAssignmentRepository;
+
+    private final UserProfileRepository userProfileRepository;
+
+    private final EventService eventService;
 
     private final ModelMapper modelMapper;
 
@@ -44,6 +55,10 @@ public class AppRoleService {
 
     public Optional<AppRoleDto> findById(UUID id) {
         return appRoleRepository.findById(id).map(app -> modelMapper.map(app, AppRoleDto.class));
+    }
+
+    public Optional<AppRoleDto> findById(String id) {
+        return findById(UUID.fromString(id));
     }
 
     public Optional<AppRole> getById(UUID id) {
@@ -94,6 +109,49 @@ public class AppRoleService {
                 .ordinal(appRole.getOrdinal())
                 .authzRole(appRole.isAuthzRole())
                 .build();
+    }
+
+    @Transactional
+    public void deleteAppRole(UUID userProfileId, UUID entraOid, String appName, String roleId, String reason) {
+        UUID id = UUID.fromString(roleId);
+        AppRole appRole = getById(id).orElseThrow();
+
+        // Delete User profile role assignments
+        userProfileRepository.deleteAllByAppRoleId(id);
+
+        // Delete role assignments for groups
+        roleAssignmentRepository.deleteByRoleIdInEitherColumn(id);
+
+        // Delete role permissions
+        appRoleRepository.deleteRolePermissions(id);
+
+        // Delete role
+        appRoleRepository.delete(appRole);
+
+        DeleteAppRoleEvent deleteAppRoleEvent =
+                new DeleteAppRoleEvent(
+                        userProfileId,
+                        entraOid,
+                        appName,
+                        appRole.getName(),
+                        reason.trim()
+                );
+
+        eventService.logEvent(deleteAppRoleEvent);
+
+        log.info("User profile {} removed app role {} from app {} including role permissions and assignments (Reason: {})",
+                userProfileId, appRole.getName(), appName, reason);
+
+    }
+
+    public long countNoOfRoleAssignments(String roleId) {
+        UUID id = UUID.fromString(roleId);
+        return userProfileRepository.countUserProfilesByAppRoleId(id);
+    }
+
+    public long countNoOfFirmsWithRoleAssignments(String roleId) {
+        UUID id = UUID.fromString(roleId);
+        return userProfileRepository.countFirmsWithRole(id);
     }
 
     @Transactional

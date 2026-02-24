@@ -43,6 +43,7 @@ import uk.gov.justice.laa.portal.landingpage.forms.AppDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRoleDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRolesOrderForm;
 import uk.gov.justice.laa.portal.landingpage.forms.AppsOrderForm;
+import uk.gov.justice.laa.portal.landingpage.forms.DeleteAppRoleReasonForm;
 import uk.gov.justice.laa.portal.landingpage.service.AdminService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
 import uk.gov.justice.laa.portal.landingpage.service.AppService;
@@ -501,6 +502,243 @@ public class AdminController {
         session.removeAttribute(S_APP_ROLES_ORDER_FORM);
 
         return "silas-administration/edit-app-roles-order-confirmation";
+    }
+
+    @GetMapping("/silas-administration/delete-role")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).DELETE_LAA_APP_ROLE)")
+    public String deleteAppRoleGet(Model model,
+                                   RedirectAttributes redirectAttributes,
+                                   HttpSession session) {
+        Optional<String> appNameOptional = getObjectFromHttpSession(session, S_APP_FILTER, String.class);
+
+        if (appNameOptional.isEmpty() || !StringUtils.hasText(appNameOptional.get())) {
+            redirectAttributes.addFlashAttribute("appRolesErrorMessage", "Please select an application to reorder its roles");
+            return "redirect:/admin/silas-administration#roles";
+        }
+
+        String appName = appNameOptional.get();
+
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "SiLAS Administration");
+
+        List<AppRoleAdminDto> roles = appRoleService.getLaaAppRolesByAppName(appName);
+        model.addAttribute("appName", appName);
+        model.addAttribute("roles", roles);
+
+        session.setAttribute(S_APP_FILTER, appName);
+
+        return "silas-administration/delete-app-roles";
+    }
+
+    @PostMapping("/silas-administration/delete-role/{roleId}")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).DELETE_LAA_APP_ROLE)")
+    public String deleteAppRolePost(@PathVariable String roleId,
+                                    @RequestParam("roleName") String roleName,
+                                    @RequestParam("appName") String appName,
+                                    Model model,
+                                    HttpSession session) {
+        String appNameInSession = getObjectFromHttpSession(session, S_APP_FILTER, String.class)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "App not selected for role ordering"));
+        model.addAttribute("appName", appNameInSession);
+
+        if(!appName.equals(appNameInSession)) {
+            log.error("App name mismatch for role ID {}: expected '{}', got '{}'", roleId, appNameInSession, appName);
+            model.addAttribute("errorMessage", "Error while processing app role management");
+            return "errors/error-generic";
+        }
+
+        session.setAttribute("ROLE_ID_FOR_DELETION", roleId);
+        session.setAttribute("ROLE_NAME_FOR_DELETION", roleName);
+
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "SiLAS Administration");
+
+        return String.format("redirect:/admin/silas-administration/delete-role/%s/reason", roleId);
+    }
+
+    @GetMapping("/silas-administration/delete-role/{roleId}/reason")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_LAA_APP_METADATA)")
+    public String showDeleteAppRoleReasonPage(@PathVariable String roleId,
+                                             HttpSession session,
+                                             Model model) {
+        String appName = getObjectFromHttpSession(session, S_APP_FILTER, String.class)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "App name not found in session"));
+        String roleIdFromSession = getObjectFromHttpSession(session, "ROLE_ID_FOR_DELETION", String.class)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Role ID not found in session"));
+        String roleName = getObjectFromHttpSession(session, "ROLE_NAME_FOR_DELETION", String.class)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Role name not found in session"));
+
+        try {
+            if(!roleIdFromSession.equals(roleId)) {
+                log.error("Role ID mismatch for role ID {}: expected '{}', got '{}'", roleId, roleIdFromSession, roleId);
+                model.addAttribute("errorMessage", "Error while processing app role management");
+                return "errors/error-generic";
+            }
+
+            AppRoleDto appRole = appRoleService.findById(roleId). orElseThrow(() -> new RuntimeException("App Role not found"));
+
+            if(!appRole.getName().equals(roleName)) {
+                log.warn("Role name mismatch for role ID {}: expected '{}', got '{}'", roleId, appRole.getName(), roleName);
+                model.addAttribute("errorMessage", "Role name does not match the expected value for the selected role");
+                return "errors/error-generic";
+            }
+
+            if(!appName.equals(appRole.getApp().getName())) {
+                log.warn("App name mismatch for role ID {}: expected '{}', got '{}'", roleId, appRole.getApp().getName(), appName);
+                model.addAttribute("errorMessage", "App name does not match the expected value for the selected role");
+                return "errors/error-generic";
+            }
+
+            DeleteAppRoleReasonForm reasonForm = getObjectFromHttpSession(session, "deleteAppRoleReasonForm",
+                    DeleteAppRoleReasonForm.class).orElse(DeleteAppRoleReasonForm.builder().appRoleId(roleId).appName(appName).build());
+            model.addAttribute("deleteAppRoleReasonForm", reasonForm);
+            model.addAttribute("roleName", roleName);
+            model.addAttribute("appName", appName);
+            model.addAttribute("roleId", roleId);
+
+            model.addAttribute(ModelAttributes.PAGE_TITLE, "SiLAS Administration");
+
+            return "silas-administration/delete-app-role-reason";
+
+        } catch (Exception e) {
+            log.error("Error loading reason page for app role {}: {}", roleId, e.getMessage(), e);
+            model.addAttribute("errorMessage", "An error occurred while loading the page");
+            return "errors/error-generic";
+        }
+    }
+
+    @PostMapping("/silas-administration/delete-role/{roleId}/reason")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).DELETE_LAA_APP_ROLE)")
+    public String processDeleteAppRoleReasonSubmission(@PathVariable String roleId,
+                                                       @Valid DeleteAppRoleReasonForm reasonForm,
+                                          BindingResult bindingResult,
+                                          HttpSession session,
+                                          Model model) {
+
+        if (bindingResult.hasFieldErrors("reason")) {
+            return "silas-administration/delete-app-role-reason";
+        }
+
+        String appName = getObjectFromHttpSession(session, S_APP_FILTER, String.class)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "App name not found in session"));
+        String roleIdFromSession = getObjectFromHttpSession(session, "ROLE_ID_FOR_DELETION", String.class)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Role ID not found in session"));
+        String roleName = getObjectFromHttpSession(session, "ROLE_NAME_FOR_DELETION", String.class)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Role name not found in session"));
+
+        AppRoleDto appRole = appRoleService.findById(roleIdFromSession).orElseThrow(() -> new RuntimeException("App Role not found"));
+
+        if (!roleId.equals(roleIdFromSession)) {
+            log.error("Role ID mismatch for role ID {}: expected '{}', got '{}'", roleId, roleIdFromSession, roleId);
+            model.addAttribute("errorMessage", "Error while processing app role management");
+            return "errors/error-generic";
+        }
+
+        if (!appRole.getName().equals(roleName)) {
+            log.warn("Role name mismatch for role ID {}: expected '{}', got '{}'", roleIdFromSession, appRole.getName(), roleName);
+            model.addAttribute("errorMessage", "Role name does not match the expected value for the selected role");
+            return "errors/error-generic";
+        }
+
+        if (!appName.equals(appRole.getApp().getName())) {
+            log.warn("App name mismatch for role ID {}: expected '{}', got '{}'", roleIdFromSession, appRole.getApp().getName(), appName);
+            model.addAttribute("errorMessage", "App name does not match the expected value for the selected role");
+            return "errors/error-generic";
+        }
+
+        if (!roleIdFromSession.equals(reasonForm.getAppRoleId())) {
+            log.warn("Role ID mismatch for role ID {}: expected '{}', got '{}'", roleIdFromSession, appRole.getName(), roleName);
+            model.addAttribute("errorMessage", "Role ID does not match the expected value for the selected role");
+            return "errors/error-generic";
+        }
+
+        session.setAttribute("deleteAppRoleReasonForm", reasonForm);
+
+        return String.format("redirect:/admin/silas-administration/delete-role/%s/check-answers", appRole.getId());
+    }
+
+    @GetMapping("/silas-administration/delete-role/{roleId}/check-answers")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).DELETE_LAA_APP_ROLE)")
+    public String showDeleteAppRoleCheckAnswersPage(@PathVariable String roleId,
+                                              HttpSession session,
+                                              Model model) {
+        String appName = getObjectFromHttpSession(session, S_APP_FILTER, String.class)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "App name not found in session"));
+        String roleIdFromSession = getObjectFromHttpSession(session, "ROLE_ID_FOR_DELETION", String.class)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Role ID not found in session"));
+        String roleName = getObjectFromHttpSession(session, "ROLE_NAME_FOR_DELETION", String.class)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Role name not found in session"));
+
+        try {
+            DeleteAppRoleReasonForm reasonForm = getObjectFromHttpSession(session, "deleteAppRoleReasonForm",
+                    DeleteAppRoleReasonForm.class).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Delete Role form not found in session"));
+
+            if(!roleIdFromSession.equals(roleId) || !reasonForm.getAppRoleId().equals(roleId)) {
+                log.error("Role ID mismatch for role ID {}: expected '{}', got '{}'", roleId, roleIdFromSession, roleId);
+                model.addAttribute("errorMessage", "Error while processing app role management");
+                return "errors/error-generic";
+            }
+
+            model.addAttribute("reason", reasonForm.getReason());
+            model.addAttribute("roleName", roleName);
+            model.addAttribute("appName", appName);
+            model.addAttribute("roleId", roleId);
+            model.addAttribute("noOfUserProfilesAffected", appRoleService.countNoOfRoleAssignments(roleId));
+            model.addAttribute("noOfFirmsAffected", appRoleService.countNoOfFirmsWithRoleAssignments(roleId));
+
+            model.addAttribute(ModelAttributes.PAGE_TITLE, "SiLAS Administration");
+
+            return "silas-administration/delete-app-role-check-answers";
+
+        } catch (Exception e) {
+            log.error("Error loading role delete check answers page for app role {}: {}", roleId, e.getMessage(), e);
+            model.addAttribute("errorMessage", "An error occurred while loading the page");
+            return "errors/error-generic";
+        }
+    }
+
+    @PostMapping("/silas-administration/delete-role/{roleId}/check-answers")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).DELETE_LAA_APP_ROLE)")
+    public String submitDeleteAppRoleCheckAnswersPage(@PathVariable String roleId,
+                                                    HttpSession session,
+                                                    Model model,
+                                                    Authentication authentication) {
+        String appName = getObjectFromHttpSession(session, S_APP_FILTER, String.class)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "App name not found in session"));
+        String roleIdFromSession = getObjectFromHttpSession(session, "ROLE_ID_FOR_DELETION", String.class)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Role ID not found in session"));
+        String roleName = getObjectFromHttpSession(session, "ROLE_NAME_FOR_DELETION", String.class)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Role name not found in session"));
+
+        AppRoleDto appRole = appRoleService.findById(roleIdFromSession).orElseThrow(() -> new RuntimeException("App Role not found"));
+
+        if (!appRole.getName().equals(roleName)) {
+            log.warn("Role name mismatch for role ID {}: expected '{}', got '{}'", roleIdFromSession, appRole.getName(), roleName);
+            model.addAttribute("errorMessage", "Role name does not match the expected value for the selected role");
+            return "errors/error-generic";
+        }
+
+        if (!appName.equals(appRole.getApp().getName())) {
+            log.warn("App name mismatch for role ID {}: expected '{}', got '{}'", roleIdFromSession, appRole.getApp().getName(), appName);
+            model.addAttribute("errorMessage", "App name does not match the expected value for the selected role");
+            return "errors/error-generic";
+        }
+
+        DeleteAppRoleReasonForm reasonForm = getObjectFromHttpSession(session, "deleteAppRoleReasonForm",
+                DeleteAppRoleReasonForm.class).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                "Delete Role form not found in session"));
+
+        if(!roleIdFromSession.equals(roleId) || !reasonForm.getAppRoleId().equals(roleId)) {
+            log.error("Role ID mismatch for role ID {}: expected '{}', got '{}'", roleId, roleIdFromSession, roleId);
+            model.addAttribute("errorMessage", "Error while processing app role management");
+            return "errors/error-generic";
+        }
+
+        UUID entraOid = loginService.getCurrentUser(authentication).getUserId();
+        UUID userProfileId = loginService.getCurrentProfile(authentication).getId();
+        appRoleService.deleteAppRole(userProfileId, entraOid, appName, reasonForm.getReason(), roleIdFromSession);
+
+
+        return "redirect:/admin/silas-administration/delete-role-confirmation";
     }
 
     @GetMapping("/silas-administration/cancel/{tab}")
