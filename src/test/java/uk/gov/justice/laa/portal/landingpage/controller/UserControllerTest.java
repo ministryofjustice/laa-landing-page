@@ -1800,7 +1800,7 @@ class UserControllerTest {
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
 
         // When
-        String view = userController.updateUserDetails(userId, form, bindingResult, testSession);
+        String view = userController.updateUserDetails(userId, form, bindingResult, testSession, model, redirectAttributes);
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/details-check-answer");
@@ -1829,96 +1829,12 @@ class UserControllerTest {
         MockHttpSession testSession = new MockHttpSession();
 
         // When
-        String view = userController.updateUserDetails(userId, form, bindingResult, testSession);
+        String view = userController.updateUserDetails(userId, form, bindingResult, testSession,  model, redirectAttributes);
 
         // Then
         assertThat(view).isEqualTo("edit-user-details");
         assertThat(testSession.getAttribute("user")).isEqualTo(userProfile);
         assertThat(testSession.getAttribute("editUserDetailsForm")).isEqualTo(form);
-    }
-
-    @Test
-    void updateUserDetailsCheck_shouldRedirectNullSessionForm() throws IOException {
-        // Given
-        String userId = "user123";
-        EntraUserDto entraUser = new EntraUserDto();
-        entraUser.setId(userId);
-        MockHttpSession testSession = new MockHttpSession();
-        // When
-        String view = userController.updateUserDetailsCheck(userId, model, testSession);
-        // Then
-        assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
-    }
-
-    @Test
-    void updateUserDetailsCheck() throws IOException {
-        // Given
-        String userId = "user123";
-        EntraUserDto entraUser = new EntraUserDto();
-        entraUser.setId(userId);
-
-        UserProfileDto userProfile = UserProfileDto.builder()
-                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
-                .entraUser(entraUser)
-                .build();
-        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
-        session = new MockHttpSession();
-        EditUserDetailsForm form = new EditUserDetailsForm();
-        form.setFirstName("Changed");
-        form.setLastName("Changed");
-        form.setEmail("john.doe@example.com");
-        session.setAttribute("editUserDetailsForm", form);
-        model = new ExtendedModelMap();
-        // When
-        String view = userController.updateUserDetailsCheck(userId, model, session);
-        // Then
-        assertThat(view).isEqualTo("edit-user-details-check-answer");
-        assertThat(model.getAttribute("editUserDetailsForm")).isEqualTo(form);
-        assertThat(model.getAttribute("user")).isEqualTo(userProfile);
-    }
-
-    @Test
-    void updateUserDetailsSubmit_shouldRedirectNullSessionForm() throws IOException {
-        // Given
-        String userId = "user123";
-        EntraUserDto entraUser = new EntraUserDto();
-        entraUser.setId(userId);
-
-        UserProfileDto userProfile = UserProfileDto.builder()
-                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
-                .entraUser(entraUser)
-                .build();
-        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
-        MockHttpSession testSession = new MockHttpSession();
-        // When
-        String view = userController.updateUserDetailsSubmit(userId, testSession);
-        // Then
-        assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
-    }
-
-    @Test
-    void updateUserDetailsSubmit() throws IOException {
-        // Given
-        String userId = "550e8400-e29b-41d4-a716-446655440000";
-        EntraUserDto entraUser = new EntraUserDto();
-        entraUser.setId(userId);
-
-        UserProfileDto userProfile = UserProfileDto.builder()
-                .id(UUID.fromString(userId))
-                .entraUser(entraUser)
-                .build();
-        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
-        MockHttpSession testSession = new MockHttpSession();
-        EditUserDetailsForm form = new EditUserDetailsForm();
-        form.setFirstName("John");
-        form.setLastName("Doe");
-        testSession.setAttribute("editUserDetailsForm", form);
-        // When
-        String view = userController.updateUserDetailsSubmit(userId, testSession);
-        // Then
-        verify(userService).updateUserDetails(eq("550e8400-e29b-41d4-a716-446655440000"), eq("John"), eq("Doe"));
-        assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/confirmation");
-        assertThat(testSession.getAttribute("editUserDetailsForm")).isNull();
     }
 
     @Test

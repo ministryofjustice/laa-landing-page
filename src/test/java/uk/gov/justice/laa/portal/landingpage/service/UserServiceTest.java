@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.Assertions;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
@@ -1462,12 +1463,12 @@ class UserServiceTest {
                 .build();
         when(mockAppRoleRepository.findByUserTypeRestrictionContains(any())).thenReturn(List.of(testAppRole));
         List<AppDto> apps = userService.getAppsByUserType(UserType.INTERNAL);
-        Assertions.assertEquals(1, apps.size());
-        Assertions.assertEquals(testApp.getName(), apps.getFirst().getName());
+        assertEquals(1, apps.size());
+        assertEquals(testApp.getName(), apps.getFirst().getName());
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
         verify(mockAppRoleRepository).findByUserTypeRestrictionContains(captor.capture());
         String userTypeString = captor.getValue();
-        Assertions.assertEquals(UserType.INTERNAL.name(), userTypeString);
+        assertEquals(UserType.INTERNAL.name(), userTypeString);
     }
 
     @Test
@@ -1481,12 +1482,12 @@ class UserServiceTest {
                 .build();
         when(mockAppRoleRepository.findByUserTypeRestrictionContains(any())).thenReturn(List.of(testAppRole));
         List<AppDto> apps = userService.getAppsByUserType(UserType.EXTERNAL);
-        Assertions.assertEquals(1, apps.size());
-        Assertions.assertEquals(testApp.getName(), apps.getFirst().getName());
+        assertEquals(1, apps.size());
+        assertEquals(testApp.getName(), apps.getFirst().getName());
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
         verify(mockAppRoleRepository).findByUserTypeRestrictionContains(captor.capture());
         String userTypeString = captor.getValue();
-        Assertions.assertEquals(UserType.EXTERNAL.name(), userTypeString);
+        assertEquals(UserType.EXTERNAL.name(), userTypeString);
     }
 
     @Test
@@ -1518,13 +1519,13 @@ class UserServiceTest {
 
         List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppIdAndUserType(UUID.randomUUID().toString(),
                 UserType.INTERNAL, null);
-        Assertions.assertEquals(2, returnedAppRoles.size());
+        assertEquals(2, returnedAppRoles.size());
         // Check no external app roles in response
         Assertions
                 .assertTrue(returnedAppRoles.stream().flatMap(role -> Arrays.stream(role.getUserTypeRestriction()))
                         .anyMatch(userType -> userType == UserType.INTERNAL));
-        Assertions.assertEquals(returnedAppRoles.get(0).getName(), internalAndExternalRole.getName());
-        Assertions.assertEquals(returnedAppRoles.get(1).getName(), internalRole.getName());
+        assertEquals(returnedAppRoles.get(0).getName(), internalAndExternalRole.getName());
+        assertEquals(returnedAppRoles.get(1).getName(), internalRole.getName());
     }
 
     @Test
@@ -1556,13 +1557,13 @@ class UserServiceTest {
 
         List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppIdAndUserType(UUID.randomUUID().toString(),
                 UserType.EXTERNAL, null);
-        Assertions.assertEquals(2, returnedAppRoles.size());
+        assertEquals(2, returnedAppRoles.size());
         // Check no external app roles in response
         Assertions
                 .assertTrue(returnedAppRoles.stream().flatMap(role -> Arrays.stream(role.getUserTypeRestriction()))
                         .anyMatch(userType -> userType == UserType.EXTERNAL));
-        Assertions.assertEquals(returnedAppRoles.get(0).getName(), internalAndExternalRole.getName());
-        Assertions.assertEquals(returnedAppRoles.get(1).getName(), externalRole.getName());
+        assertEquals(returnedAppRoles.get(0).getName(), internalAndExternalRole.getName());
+        assertEquals(returnedAppRoles.get(1).getName(), externalRole.getName());
     }
 
     @Test
@@ -1570,7 +1571,7 @@ class UserServiceTest {
         when(mockAppRepository.findById(any())).thenReturn(Optional.empty());
         List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppIdAndUserType(UUID.randomUUID().toString(),
                 UserType.EXTERNAL, null);
-        Assertions.assertEquals(0, returnedAppRoles.size());
+        assertEquals(0, returnedAppRoles.size());
     }
 
     @Test
@@ -1609,7 +1610,7 @@ class UserServiceTest {
         List<AppRoleDto> chambersRoles = userService.getAppRolesByAppIdAndUserType(
                 UUID.randomUUID().toString(), UserType.EXTERNAL, FirmType.CHAMBERS);
 
-        Assertions.assertEquals(2, chambersRoles.size());
+        assertEquals(2, chambersRoles.size());
         Assertions.assertTrue(chambersRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
         Assertions
                 .assertTrue(chambersRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
@@ -1652,7 +1653,7 @@ class UserServiceTest {
         List<AppRoleDto> advocateRoles = userService.getAppRolesByAppIdAndUserType(
                 UUID.randomUUID().toString(), UserType.EXTERNAL, FirmType.ADVOCATE);
 
-        Assertions.assertEquals(2, advocateRoles.size());
+        assertEquals(2, advocateRoles.size());
         Assertions.assertTrue(advocateRoles.stream().anyMatch(role -> role.getName().equals("Advocate Only Role")));
         Assertions
                 .assertTrue(advocateRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
@@ -1695,7 +1696,7 @@ class UserServiceTest {
         List<AppRoleDto> unrestrictedRoles = userService.getAppRolesByAppIdAndUserType(
                 UUID.randomUUID().toString(), UserType.EXTERNAL, null);
 
-        Assertions.assertEquals(1, unrestrictedRoles.size());
+        assertEquals(1, unrestrictedRoles.size());
         Assertions.assertTrue(
                 unrestrictedRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
         Assertions
@@ -1740,7 +1741,7 @@ class UserServiceTest {
         List<AppRoleDto> lspRoles = userService.getAppRolesByAppIdAndUserType(
                 UUID.randomUUID().toString(), UserType.EXTERNAL, FirmType.LEGAL_SERVICES_PROVIDER);
 
-        Assertions.assertEquals(1, lspRoles.size());
+        assertEquals(1, lspRoles.size());
         Assertions.assertTrue(lspRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
         Assertions.assertFalse(lspRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
         Assertions.assertFalse(lspRoles.stream().anyMatch(role -> role.getName().equals("Advocate Only Role")));
@@ -1782,7 +1783,7 @@ class UserServiceTest {
         List<AppRoleDto> externalChambersRoles = userService.getAppRolesByAppIdAndUserType(
                 UUID.randomUUID().toString(), UserType.EXTERNAL, FirmType.CHAMBERS);
 
-        Assertions.assertEquals(1, externalChambersRoles.size());
+        assertEquals(1, externalChambersRoles.size());
         Assertions.assertTrue(
                 externalChambersRoles.stream().anyMatch(role -> role.getName().equals("External Chambers Role")));
         Assertions.assertFalse(
@@ -1804,7 +1805,7 @@ class UserServiceTest {
         when(mockEntraUserRepository.findById(any())).thenReturn(Optional.of(testUser));
         Optional<UserType> returnedUserType = userService.getUserTypeByUserId(UUID.randomUUID().toString());
         Assertions.assertTrue(returnedUserType.isPresent());
-        Assertions.assertEquals(UserType.INTERNAL, returnedUserType.get());
+        assertEquals(UserType.INTERNAL, returnedUserType.get());
     }
 
     @Test
@@ -1913,23 +1914,27 @@ class UserServiceTest {
             UUID userId = UUID.randomUUID();
             String firstName = "John";
             String lastName = "Doe";
+            String email = "email@example.com";
 
             EntraUser entraUser = EntraUser.builder()
                     .id(userId)
-                    .firstName("OldFirst")
-                    .lastName("OldLast")
-                    .email("old@example.com")
+                    .build();
+            EntraUser entraUserExpected = EntraUser.builder()
+                    .id(userId)
+                    .firstName(firstName)
+                    .lastName(lastName)
+                    .email(email)
                     .build();
             when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
-            when(mockEntraUserRepository.saveAndFlush(any())).thenReturn(entraUser);
 
             // Act
-            userService.updateUserDetails(userId.toString(), firstName, lastName);
+            userService.updateUserDetails(userId.toString(), email,firstName, lastName);
 
             // Assert
-            assertThat(entraUser.getFirstName()).isEqualTo(firstName);
-            assertThat(entraUser.getLastName()).isEqualTo(lastName);
-            verify(mockEntraUserRepository).saveAndFlush(entraUser);
+            ArgumentCaptor<EntraUser> captor = ArgumentCaptor.forClass(EntraUser.class);
+            verify(mockEntraUserRepository).saveAndFlush(captor.capture());
+            EntraUser saved = captor.getValue();
+            assertThat(entraUserExpected).usingRecursiveComparison().isEqualTo(saved);
         }
 
         @Test
@@ -1942,7 +1947,7 @@ class UserServiceTest {
 
             // Act & Assert
             IOException exception = Assertions.assertThrows(IOException.class,
-                    () -> userService.updateUserDetails(userId.toString(), "John", "Doe"));
+                    () -> userService.updateUserDetails(userId.toString(), "email@email.com", "Jonh", "Doe"));
             assertThat(exception.getMessage()).contains("Failed to update user details in database");
         }
 
@@ -1955,10 +1960,10 @@ class UserServiceTest {
             ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
 
             // Act
-            userService.updateUserDetails(userId.toString(), "John", "Doe");
+            userService.updateUserDetails(userId.toString(), "email@email.com", "John", "Doe");
 
             // Assert
-            List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
+            List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
             assertThat(warningLogs).isNotEmpty();
             assertThat(warningLogs.getFirst().getFormattedMessage())
                     .contains("User with id " + userId + " not found in database");
@@ -1973,7 +1978,7 @@ class UserServiceTest {
             when(mockEntraUserRepository.saveAndFlush(any())).thenReturn(entraUser);
 
             // Act - should not throw exception
-            userService.updateUserDetails(userId.toString(), "John", "Doe");
+            userService.updateUserDetails(userId.toString(), "email@email.com", "John", "Doe");
 
             // Assert - database update should occur
             verify(mockEntraUserRepository).saveAndFlush(entraUser);
