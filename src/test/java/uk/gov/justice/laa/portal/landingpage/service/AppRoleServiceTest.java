@@ -14,6 +14,8 @@ import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRolesOrderForm;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.RoleAssignmentRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
 import java.util.List;
 import java.util.Optional;
@@ -30,13 +32,20 @@ class AppRoleServiceTest {
     @Mock
     private AppRoleRepository appRoleRepository;
     @Mock
+    private RoleAssignmentRepository roleAssignmentRepository;
+    @Mock
+    private UserProfileRepository userProfileRepository;
+    @Mock
+    private EventService eventService;
+    @Mock
     private ModelMapper modelMapper;
 
     private AppRoleService appRoleService;
 
     @BeforeEach
     void setUp() {
-        appRoleService = new AppRoleService(appRoleRepository, modelMapper);
+        appRoleService = new AppRoleService(appRoleRepository, roleAssignmentRepository, userProfileRepository,
+                eventService, modelMapper);
     }
 
     @Test

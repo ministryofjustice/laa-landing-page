@@ -114,7 +114,8 @@ public class AppRoleService {
     @Transactional
     public void deleteAppRole(UUID userProfileId, UUID entraOid, String appName, String roleId, String reason) {
         UUID id = UUID.fromString(roleId);
-        AppRole appRole = getById(id).orElseThrow();
+        AppRole appRole = getById(id).orElseThrow(() -> new RuntimeException("App role not found for id: " + roleId));
+        final String appRoleName = appRole.getName();
 
         // Delete User profile role assignments
         userProfileRepository.deleteAllByAppRoleId(id);
@@ -133,7 +134,7 @@ public class AppRoleService {
                         userProfileId,
                         entraOid,
                         appName,
-                        appRole.getName(),
+                        appRoleName,
                         reason.trim()
                 );
 

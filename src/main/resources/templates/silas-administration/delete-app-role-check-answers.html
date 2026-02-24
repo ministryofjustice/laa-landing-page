@@ -14,7 +14,7 @@
         <ol class="govuk-breadcrumbs__list">
             <li class="govuk-breadcrumbs__list-item">
                 <a class="govuk-breadcrumbs__link"
-                    th:href="@{'/admin/silas-administration/delete-role/' + ${roleId} + '/reason'}">Back</a>
+                    th:href="@{'/admin/silas-administration/delete-role/' + ${roleId} + '/reason'}">< Back</a>
             </li>
         </ol>
     </nav>
@@ -47,7 +47,7 @@
                     </strong>
                 </div>
 
-                <p class="govuk-body">This will revoke this role from ${noOfUserProfilesAffected} user(s) across ${noOfFirmsAffected} firm(s).</p>
+                <p class="govuk-body">This will revoke this role from <span th:text="${noOfUserProfilesAffected}"/> user(s) across <span th:text="${noOfFirmsAffected}"/> firm(s).</p>
 
                 <p class="govuk-body">This process is a permanent and destructive action. You cannot undo this action once it's completed.</p>
 
@@ -113,7 +113,7 @@
                     </div>
                 </dl>
 
-                <form method="post" th:action="@{'/admin/silas-administration/delete-role/check-answers'}">
+                <form method="post" th:action="@{'/admin/silas-administration/delete-role/' + ${roleId} + '/check-answers'}">
                     <div class="govuk-button-group">
                         <button type="submit" class="govuk-button govuk-button--warning" data-module="govuk-button">
                             Confirm and delete role

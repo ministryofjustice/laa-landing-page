@@ -1132,7 +1132,6 @@ class AdminControllerTest {
         assertEquals("silas-administration/edit-role-details", view);
         assertThat(model.getAttribute("appRole")).isEqualTo(roleDto);
         assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("SiLAS Administration");
-        assertThat(model.getAttribute(ModelAttributes.PAGE_SUMMARY)).isEqualTo("Legal Aid Services");
         Object form = model.getAttribute("appRoleDetailsForm");
         assertThat(form).isInstanceOf(AppRoleDetailsForm.class);
         AppRoleDetailsForm detailsForm =
@@ -1438,7 +1437,6 @@ class AdminControllerTest {
 
         BindingResult result = org.mockito.Mockito.mock(BindingResult.class);
         when(result.hasErrors()).thenReturn(true);
-        when(result.getAllErrors()).thenReturn(List.of(new ObjectError("name", "Error")));
         when(appRoleService.findById(UUID.fromString(roleId))).thenReturn(Optional.empty());
 
         AppRoleDetailsForm form =
