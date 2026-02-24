@@ -36,6 +36,7 @@ public class UserAccountStatusService {
     public List<DisableUserReasonDto> getDisableUserReasons() {
         List<DisableUserReason> reasons = disableUserReasonRepository.findAll();
         return reasons.stream()
+                .filter(DisableUserReason::isUserSelectable)
                 .map(reason -> mapper.map(reason, DisableUserReasonDto.class))
                 .toList();
     }
@@ -95,6 +96,58 @@ public class UserAccountStatusService {
             userAccountStatusAuditRepository.saveAndFlush(userAccountStatusAudit);
         } else {
             throw new RuntimeException(String.format("Unable to disable the user %s by %s", disabledUserId, disabledById));
+        }
+    }
+
+    @SuppressWarnings("checkstyle:VariableDeclarationUsageDistance")
+    public void enableUser(UUID enabledUserId, UUID enabledById) {
+        if (enabledUserId.equals(enabledById)) {
+            throw new RuntimeException(String.format("User %s can not be enabled by themselves", enabledUserId));
+        }
+        // Fetch entities
+        EntraUser enabledUser = entraUserRepository.findById(enabledUserId)
+                .orElseThrow(() -> new RuntimeException(String.format("Could not find a user account to disable with id \"%s\"", enabledUserId)));
+        EntraUser enabledByUser = entraUserRepository.findById(enabledById)
+                .orElseThrow(() -> new RuntimeException(String.format("Could not find a user account with id \"%s\"", enabledById)));
+        if (!userService.isInternal(enabledById) && enabledUser.isMultiFirmUser()) {
+            throw new RuntimeException(String.format("Multi firm user %s can not be enabled", enabledUserId));
+        }
+
+        Firm enabledByUserFirm = enabledByUser.getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile)
+                .findFirst()
+                .map(UserProfile::getFirm)
+                .orElse(null);
+        Firm enabledUserFirm = enabledUser.getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile)
+                .findFirst()
+                .map(UserProfile::getFirm).orElse(null);
+
+        if (userService.isInternal(enabledById)
+                || (enabledUserFirm != null && enabledByUserFirm != null && enabledByUserFirm.getId().equals(enabledUserFirm.getId()))) {
+            // Enable user in Entra via tech services.
+            TechServicesApiResponse<ChangeAccountEnabledResponse> changeAccountEnabledResponse
+                    = techServicesClient.enableUser(mapper.map(enabledUser, EntraUserDto.class));
+            if (!changeAccountEnabledResponse.isSuccess()) {
+                throw new TechServicesClientException(changeAccountEnabledResponse.getError().getMessage(),
+                        changeAccountEnabledResponse.getError().getCode(),
+                        changeAccountEnabledResponse.getError().getErrors());
+            }
+
+            // Perform enable
+            enabledUser.setEnabled(true);
+            entraUserRepository.saveAndFlush(enabledUser);
+
+            // Add audit entry
+            UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
+                    .entraUser(enabledUser)
+                    .statusChange(UserAccountStatus.ENABLED)
+                    .disabledBy(enabledByUser.getFirstName() + " " + enabledByUser.getLastName())
+                    .disabledDate(LocalDateTime.now())
+                    .build();
+            userAccountStatusAuditRepository.saveAndFlush(userAccountStatusAudit);
+        } else {
+            throw new RuntimeException(String.format("Unable to enable the user %s by %s", enabledUserId, enabledById));
         }
     }
 }

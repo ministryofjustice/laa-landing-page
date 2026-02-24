@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'login'})}" xmlns:th="http://www.thymeleaf.org" xmlns="http://www.w3.org/1999/html">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User enabled - LAA Manage user access</title>
+    <link rel="stylesheet" href="/static/assets/css/govuk-frontend.css">
+    <link rel="stylesheet" href="/static/assets/css/custom.css">
+</head>
+
+<body>
+<main class="govuk-main-wrapper govuk-width-container" id="main-content">
+    <div class="govuk-!-width-two-thirds">
+        <div class="govuk-panel govuk-panel--confirmation">
+            <h1 class="govuk-panel__title">User enabled</h1>
+            <div class="govuk-panel__body">
+                <span th:text="${user.fullName}"></span>'s account has been enabled
+            </div>
+        </div>
+
+        <form class="govuk-!-padding-top-6" th:action="@{/admin/users}" method="get">
+            <button class="govuk-button govuk-button--primary" type="submit">Go back to manage your users</button>
+        </form>
+    </div>
+</main>
+<footer th:replace="~{partials/footer :: footer}"></footer>
+</body>
+
+</html>
