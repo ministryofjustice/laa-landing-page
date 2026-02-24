@@ -55,9 +55,6 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 
-import com.microsoft.graph.core.content.BatchRequestContent;
-import com.microsoft.graph.core.content.BatchResponseContent;
-import com.microsoft.graph.core.requests.BatchRequestBuilder;
 import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.models.DirectoryObjectCollectionResponse;
 import com.microsoft.graph.models.DirectoryRole;
@@ -67,13 +64,10 @@ import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.graph.users.UsersRequestBuilder;
 import com.microsoft.graph.users.item.UserItemRequestBuilder;
 import com.microsoft.graph.users.item.memberof.MemberOfRequestBuilder;
-import com.microsoft.kiota.RequestAdapter;
-import com.microsoft.kiota.RequestInformation;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
-import okhttp3.Request;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -82,6 +76,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserInfoAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserFirmReassignmentEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
@@ -90,6 +85,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.EventType;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
@@ -1918,16 +1914,20 @@ class UserServiceTest {
 
             EntraUser entraUser = EntraUser.builder()
                     .id(userId)
+                    .firstName(firstName)
+                    .lastName(lastName)
+                    .email(email)
                     .build();
 
             when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
-
+            when(mockEntraUserRepository.saveAndFlush(any())).thenReturn(entraUser);
             // Act
             userService.updateUserDetails(userId.toString(), email, firstName, lastName);
 
             // Assert
             ArgumentCaptor<EntraUser> captor = ArgumentCaptor.forClass(EntraUser.class);
             verify(mockEntraUserRepository).saveAndFlush(captor.capture());
+
             EntraUser saved = captor.getValue();
             assertThat(saved).usingRecursiveComparison().isEqualTo(EntraUser.builder()
                     .id(userId)
@@ -1935,6 +1935,13 @@ class UserServiceTest {
                     .lastName(lastName)
                     .email(email)
                     .build());
+            ArgumentCaptor<UpdateUserInfoAuditEvent> captorUpdateUserInfoAuditEvent = ArgumentCaptor.forClass(UpdateUserInfoAuditEvent.class);
+            verify(mockEventService).logEvent(captorUpdateUserInfoAuditEvent.capture());
+            UpdateUserInfoAuditEvent updateUserAuditEvent = captorUpdateUserInfoAuditEvent.getValue();
+            assertThat(updateUserAuditEvent.getDescription()).isEqualTo(String.format("""
+                    Existing user id %s updated, email: email@example.com, first name: John, last name: Doe, with email@example.com John Doe
+                    """, userId));
+            assertThat(updateUserAuditEvent.getEventType()).isEqualTo(EventType.UPDATE_USER);
         }
 
         @Test
