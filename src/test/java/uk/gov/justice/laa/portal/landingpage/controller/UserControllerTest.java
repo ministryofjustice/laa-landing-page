@@ -1929,7 +1929,7 @@ class UserControllerTest {
         MockHttpSession testSession = new MockHttpSession();
 
         // When
-        String view = userController.updateUserDetails(userId, form, bindingResult, testSession,  model, redirectAttributes);
+        String view = userController.updateUserDetails(userId, form, bindingResult, testSession, model, redirectAttributes);
 
         // Then
         assertThat(view).isEqualTo("edit-user-details");

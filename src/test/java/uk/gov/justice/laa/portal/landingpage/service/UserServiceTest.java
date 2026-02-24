@@ -1919,22 +1919,22 @@ class UserServiceTest {
             EntraUser entraUser = EntraUser.builder()
                     .id(userId)
                     .build();
-            EntraUser entraUserExpected = EntraUser.builder()
-                    .id(userId)
-                    .firstName(firstName)
-                    .lastName(lastName)
-                    .email(email)
-                    .build();
+
             when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
 
             // Act
-            userService.updateUserDetails(userId.toString(), email,firstName, lastName);
+            userService.updateUserDetails(userId.toString(), email, firstName, lastName);
 
             // Assert
             ArgumentCaptor<EntraUser> captor = ArgumentCaptor.forClass(EntraUser.class);
             verify(mockEntraUserRepository).saveAndFlush(captor.capture());
             EntraUser saved = captor.getValue();
-            assertThat(entraUserExpected).usingRecursiveComparison().isEqualTo(saved);
+            assertThat(saved).usingRecursiveComparison().isEqualTo(EntraUser.builder()
+                    .id(userId)
+                    .firstName(firstName)
+                    .lastName(lastName)
+                    .email(email)
+                    .build());
         }
 
         @Test
