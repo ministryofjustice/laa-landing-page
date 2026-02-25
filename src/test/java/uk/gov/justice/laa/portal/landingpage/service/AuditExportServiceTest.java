@@ -28,7 +28,7 @@ class AuditExportServiceTest {
                         .build()
         );
 
-        AuditCsvExport export = service.downloadAuditCsv(data, "123");
+        AuditCsvExport export = service.downloadAuditCsv(data, "123", "testName");
 
         assertNotNull(export);
         assertNotNull(export.filename());
@@ -44,12 +44,13 @@ class AuditExportServiceTest {
 
         List<AuditUserDto> data = List.of();
 
-        AuditCsvExport export = service.downloadAuditCsv(data, "123");
+        AuditCsvExport export = service.downloadAuditCsv(data, "123", "testName");
 
         assertNotNull(export);
 
         String csv = new String(export.bytes(), StandardCharsets.UTF_8);
-        assertEquals("Name,Email,\"Firm Name\",\"Firm Code\",Multi-firm\n", csv);
+        assertEquals("Name,Email,\"Firm Name\",\"Firm Code\",Multi-firm," +
+                "\"Provider Admin\"\n", csv);
     }
 
     @Test
@@ -61,15 +62,16 @@ class AuditExportServiceTest {
                 .firmAssociation("Firm\nName")
                 .firmCode("FC1")
                 .isMultiFirmUser(true)
+                .isProviderAdmin(true)
                 .build();
 
-        AuditCsvExport export = service.downloadAuditCsv(List.of(user), "123");
+        AuditCsvExport export = service.downloadAuditCsv(List.of(user), "FC1", "Firm Name");
 
         String csv = new String(export.bytes(), StandardCharsets.UTF_8);
 
         String expected =
-                "Name,Email,\"Firm Name\",\"Firm Code\",Multi-firm\n"
-                        + "\"Doe, John\",\"a\"\"b@example.com\",\"Firm\nName\",FC1,Yes\n";
+                "Name,Email,\"Firm Name\",\"Firm Code\",Multi-firm,\"Provider Admin\"\n"
+                        + "\"Doe, John\",\"a\"\"b@example.com\",\"Firm Name\",FC1,Yes,Yes\n";
 
         assertEquals(expected, csv);
     }
