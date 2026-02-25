@@ -20,7 +20,7 @@ class AuditExportServiceTest {
 
         List<AuditUserDto> data = List.of(
                 AuditUserDto.builder()
-                        .firmCode("FIRM123")
+                        .firmCode("123")
                         .name("Alice Example")
                         .email("alice@example.com")
                         .firmAssociation("Example Firm")
@@ -28,14 +28,14 @@ class AuditExportServiceTest {
                         .build()
         );
 
-        AuditCsvExport export = service.downloadAuditCsv(data);
+        AuditCsvExport export = service.downloadAuditCsv(data, "123");
 
         assertNotNull(export);
         assertNotNull(export.filename());
-        assertTrue(export.filename().startsWith("user-access-audit_FIRM123_"));
+        assertTrue(export.filename().startsWith("user-access-audit_123_"));
         assertTrue(export.filename().endsWith("_UTC.csv"));
 
-        assertTrue(export.filename().matches("^user-access-audit_FIRM123_\\d{4}-\\d{2}-\\d{2}_\\d{4}_UTC\\.csv$"),
+        assertTrue(export.filename().matches("^user-access-audit_123_\\d{4}-\\d{2}-\\d{2}_\\d{4}_UTC\\.csv$"),
                 "Filename did not match expected pattern: " + export.filename());
     }
 
@@ -44,7 +44,7 @@ class AuditExportServiceTest {
 
         List<AuditUserDto> data = List.of();
 
-        AuditCsvExport export = service.downloadAuditCsv(data);
+        AuditCsvExport export = service.downloadAuditCsv(data, "123");
 
         assertNotNull(export);
 
@@ -63,7 +63,7 @@ class AuditExportServiceTest {
                 .isMultiFirmUser(true)
                 .build();
 
-        AuditCsvExport export = service.downloadAuditCsv(List.of(user));
+        AuditCsvExport export = service.downloadAuditCsv(List.of(user), "123");
 
         String csv = new String(export.bytes(), StandardCharsets.UTF_8);
 
