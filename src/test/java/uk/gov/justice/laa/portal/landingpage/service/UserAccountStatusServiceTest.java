@@ -351,15 +351,15 @@ public class UserAccountStatusServiceTest {
     }
 
     @Test
-    public void testDisableUserThrowsExceptionDisableReasonNotFound() {
+    public void testEnableUserThrowsExceptionDisableReasonNotFound() {
         EntraUser disabledUser = EntraUser.builder()
                 .id(UUID.randomUUID())
-                .firstName("Disabled")
+                .firstName("Enabled")
                 .lastName("User")
                 .build();
         EntraUser disabledByUser = EntraUser.builder()
                 .id(UUID.randomUUID())
-                .firstName("DisabledBy")
+                .firstName("EnabledBy")
                 .lastName("User")
                 .build();
 
@@ -370,6 +370,241 @@ public class UserAccountStatusServiceTest {
         assertThat(disabledUser.isEnabled()).isTrue();
         verify(entraUserRepository, times(2)).findById(any());
         verify(disableUserReasonRepository, times(1)).findById(any());
+        verify(entraUserRepository, times(0)).saveAndFlush(any());
+        verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
+    }
+
+    @Test
+    public void testEnableUserEnabledUserWhenTechServicesRequestIsSuccess() {
+        Firm firm = Firm.builder().id(UUID.randomUUID()).name("Test Firm").build();
+        UserProfile enabledUserProfile = UserProfile.builder().id(UUID.randomUUID())
+                .activeProfile(true)
+                .firm(firm)
+                .build();
+        EntraUser enabledUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .firstName("Enabled")
+                .lastName("User")
+                .enabled(false)
+                .userProfiles(Set.of(enabledUserProfile))
+                .build();
+        UserProfile enabledByUserProfile = UserProfile.builder().id(UUID.randomUUID())
+                .activeProfile(true)
+                .firm(firm)
+                .build();
+        EntraUser enabledByUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .firstName("EnabledBy")
+                .lastName("User")
+                .userProfiles(Set.of(enabledByUserProfile))
+                .build();
+
+        TechServicesApiResponse<ChangeAccountEnabledResponse> techServicesResponse = TechServicesApiResponse.success(null);
+
+        when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
+        when(entraUserRepository.findById(eq(enabledByUser.getId()))).thenReturn(Optional.of(enabledByUser));
+        when(techServicesClient.enableUser(any())).thenReturn(techServicesResponse);
+
+        userAccountStatusService.enableUser(enabledUser.getId(), enabledByUser.getId());
+
+        assertThat(enabledUser.isEnabled()).isTrue();
+        verify(entraUserRepository, times(1)).saveAndFlush(any());
+        verify(userAccountStatusAuditRepository, times(1)).saveAndFlush(any());
+    }
+
+    @Test
+    public void testEnableUserEnablesUserWhenEnabledByInternalUser() {
+        Firm firm = Firm.builder().id(UUID.randomUUID()).name("Test Firm").build();
+        UserProfile enabledUserProfile = UserProfile.builder().id(UUID.randomUUID())
+                .activeProfile(true)
+                .firm(firm)
+                .build();
+        EntraUser enabledUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .firstName("Enabled")
+                .lastName("User")
+                .enabled(false)
+                .userProfiles(Set.of(enabledUserProfile))
+                .build();
+        UserProfile enabledByUserProfile = UserProfile.builder().id(UUID.randomUUID())
+                .activeProfile(true)
+                .userType(UserType.INTERNAL)
+                .build();
+        EntraUser enabledByUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .firstName("EnabledBy")
+                .lastName("User")
+                .userProfiles(Set.of(enabledByUserProfile))
+                .build();
+        TechServicesApiResponse<ChangeAccountEnabledResponse> techServicesResponse = TechServicesApiResponse.success(null);
+
+        when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
+        when(entraUserRepository.findById(eq(enabledByUser.getId()))).thenReturn(Optional.of(enabledByUser));
+        when(techServicesClient.enableUser(any())).thenReturn(techServicesResponse);
+        when(userService.isInternal(any(UUID.class))).thenReturn(true);
+
+        userAccountStatusService.enableUser(enabledUser.getId(), enabledByUser.getId());
+
+        assertThat(enabledUser.isEnabled()).isTrue();
+        verify(entraUserRepository, times(1)).saveAndFlush(any());
+        verify(userAccountStatusAuditRepository, times(1)).saveAndFlush(any());
+    }
+
+    @Test
+    public void testEnableUserThrowsExceptionWhenEnableMultiFirmUser() {
+        Firm firm = Firm.builder().id(UUID.randomUUID()).name("Test Firm").build();
+        UserProfile enabledUserProfile = UserProfile.builder().id(UUID.randomUUID())
+                .activeProfile(true)
+                .firm(firm)
+                .build();
+        EntraUser enabledUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .firstName("Enabled")
+                .lastName("User")
+                .multiFirmUser(true)
+                .enabled(false)
+                .userProfiles(Set.of(enabledUserProfile))
+                .build();
+        UserProfile disabledByUserProfile = UserProfile.builder().id(UUID.randomUUID())
+                .activeProfile(true)
+                .userType(UserType.INTERNAL)
+                .build();
+        EntraUser enabledByUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .firstName("EnabledBy")
+                .lastName("User")
+                .userProfiles(Set.of(disabledByUserProfile))
+                .build();
+
+        when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
+        when(entraUserRepository.findById(eq(enabledByUser.getId()))).thenReturn(Optional.of(enabledByUser));
+
+        assertThrows(RuntimeException.class,
+                () -> userAccountStatusService.enableUser(enabledUser.getId(), enabledByUser.getId()));
+        assertThat(enabledUser.isEnabled()).isFalse();
+        verify(entraUserRepository, times(0)).saveAndFlush(any());
+        verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
+    }
+
+    @Test
+    public void testEnableUserThrowsExceptionWhenSelfEnable() {
+        UserProfile enabledByUserProfile = UserProfile.builder().id(UUID.randomUUID())
+                .activeProfile(true)
+                .userType(UserType.EXTERNAL)
+                .build();
+        EntraUser enabledUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .firstName("EnabledBy")
+                .lastName("User")
+                .enabled(false)
+                .userProfiles(Set.of(enabledByUserProfile))
+                .build();
+
+        assertThrows(RuntimeException.class,
+                () -> userAccountStatusService.enableUser(enabledUser.getId(), enabledUser.getId()));
+        assertThat(enabledUser.isEnabled()).isFalse();
+        verify(entraUserRepository, times(0)).saveAndFlush(any());
+        verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
+    }
+
+    @Test
+    public void testEnableUserThrowsExceptionWhenTechServicesRequestIsError() {
+        Firm firm = Firm.builder().id(UUID.randomUUID()).name("Test Firm").build();
+        UserProfile enabledUserProfile = UserProfile.builder().id(UUID.randomUUID())
+                .activeProfile(true)
+                .firm(firm)
+                .build();
+        EntraUser enabledUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .firstName("Enabled")
+                .lastName("User")
+                .enabled(false)
+                .userProfiles(Set.of(enabledUserProfile))
+                .build();
+        UserProfile enabledByUserProfile = UserProfile.builder().id(UUID.randomUUID())
+                .activeProfile(true)
+                .firm(firm)
+                .build();
+        EntraUser enabledByUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .firstName("EnabledBy")
+                .lastName("User")
+                .userProfiles(Set.of(enabledByUserProfile))
+                .build();
+        TechServicesErrorResponse errorResponse = TechServicesErrorResponse.builder()
+                .code("TestCode")
+                .success(false)
+                .errors(new String[] {"Error"})
+                .message("An error occurred")
+                .build();
+        TechServicesApiResponse<ChangeAccountEnabledResponse> techServicesResponse = TechServicesApiResponse.error(errorResponse);
+
+        when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
+        when(entraUserRepository.findById(eq(enabledByUser.getId()))).thenReturn(Optional.of(enabledByUser));
+        when(techServicesClient.enableUser(any())).thenReturn(techServicesResponse);
+
+        assertThrows(TechServicesClientException.class, () -> userAccountStatusService.enableUser(enabledUser.getId(), enabledByUser.getId()));
+        assertThat(enabledUser.isEnabled()).isFalse();
+        verify(entraUserRepository, times(0)).saveAndFlush(any());
+        verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
+    }
+
+    @Test
+    public void testEnableUserThrowsExceptionWhenNotInSameFirm() {
+        Firm firm1 = Firm.builder().id(UUID.randomUUID()).name("Test Firm 1").build();
+        UserProfile enabledUserProfile = UserProfile.builder().id(UUID.randomUUID())
+                .activeProfile(true)
+                .firm(firm1)
+                .build();
+        EntraUser enabledUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .firstName("Enabled")
+                .lastName("User")
+                .enabled(false)
+                .userProfiles(Set.of(enabledUserProfile))
+                .build();
+        Firm firm2 = Firm.builder().id(UUID.randomUUID()).name("Test Firm 2").build();
+        UserProfile enabledByUserProfile = UserProfile.builder().id(UUID.randomUUID())
+                .activeProfile(true)
+                .firm(firm2)
+                .build();
+        EntraUser enabledByUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .firstName("EnabledBy")
+                .lastName("User")
+                .userProfiles(Set.of(enabledByUserProfile))
+                .build();
+
+        when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
+        when(entraUserRepository.findById(eq(enabledByUser.getId()))).thenReturn(Optional.of(enabledByUser));
+
+        assertThrows(RuntimeException.class, () -> userAccountStatusService.enableUser(enabledUser.getId(), enabledByUser.getId()));
+        assertThat(enabledUser.isEnabled()).isFalse();
+        verify(entraUserRepository, times(0)).saveAndFlush(any());
+        verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
+    }
+
+    @Test
+    public void testEnableUserThrowsExceptionWhenEnabledUserNotFound() {
+        assertThrows(RuntimeException.class, () -> userAccountStatusService.enableUser(UUID.randomUUID(), UUID.randomUUID()));
+        verify(entraUserRepository, times(1)).findById(any());
+        verify(entraUserRepository, times(0)).saveAndFlush(any());
+        verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
+    }
+
+    @Test
+    public void testEnableUserThrowsExceptionWhenDisabledByUserNotFound() {
+        EntraUser enabledUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .firstName("Enabled")
+                .lastName("User")
+                .build();
+
+        when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
+
+        assertThrows(RuntimeException.class, () -> userAccountStatusService.enableUser(enabledUser.getId(), UUID.randomUUID()));
+        assertThat(enabledUser.isEnabled()).isTrue();
+        verify(entraUserRepository, times(2)).findById(any());
         verify(entraUserRepository, times(0)).saveAndFlush(any());
         verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
     }

@@ -2,10 +2,12 @@ package uk.gov.justice.laa.portal.landingpage.repository;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 import org.assertj.core.api.Assertions;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -146,6 +148,52 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(lastNamePage.getContent().get(0).getLastName()).isEqualTo("aLast");
         Assertions.assertThat(lastNamePage.getContent().get(1).getLastName()).isEqualTo("bLast");
         Assertions.assertThat(lastNamePage.getContent().get(2).getLastName()).isEqualTo("cLast");
+    }
+
+    @Test
+    public void testFindUnlinkedMultifirmUserCount() {
+        EntraUser user1 = buildMultifirmEntraUser(generateEntraId(), "user1@example.com", "User", "One", true);
+        user1 = repository.saveAndFlush(user1);
+        EntraUser user2 = buildMultifirmEntraUser(generateEntraId(), "user2@example.com", "User", "Two", true);
+        user2 = repository.saveAndFlush(user2);
+        EntraUser user3 = buildMultifirmEntraUser(generateEntraId(), "user3@example.com", "User", "Three", true);
+        user3 = repository.saveAndFlush(user3);
+        EntraUser user4 = buildMultifirmEntraUser(generateEntraId(), "user4@example.com", "User", "Four", false);
+        user4 = repository.saveAndFlush(user4);
+
+        Firm firm1 = buildFirm("Firm Epsilon", "EPSILON");
+        firmRepository.saveAllAndFlush(List.of(firm1));
+
+        UserProfile user1P1 = buildLaaUserProfile(user1, UserType.EXTERNAL);
+        user1P1.setFirm(firm1);
+        userProfileRepository.saveAllAndFlush(List.of(user1P1));
+
+
+        List<Object[]> result = repository.findUnlinkedMultifirmUsersCount();
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0))
+                .containsExactly("Unlinked multi-firm users", null, 2L);
+    }
+
+    @Test
+    public void testFindTotalMultiFirmUsersCount() {
+
+        EntraUser user1 = buildMultifirmEntraUser(generateEntraId(), "user1@example.com", "User", "One", true);
+        user1 = repository.saveAndFlush(user1);
+        EntraUser user2 = buildMultifirmEntraUser(generateEntraId(), "user2@example.com", "User", "Two", true);
+        user2 = repository.saveAndFlush(user2);
+        EntraUser user3 = buildMultifirmEntraUser(generateEntraId(), "user3@example.com", "User", "Three", true);
+        user3 = repository.saveAndFlush(user3);
+        EntraUser user4 = buildMultifirmEntraUser(generateEntraId(), "user4@example.com", "User", "Four", false);
+        user4 = repository.saveAndFlush(user4);
+
+        List<Object[]> result = repository.findTotalMultiFirmUsersCount();
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0))
+                .containsExactly("Total multi-firm users", null, 3L);
+
     }
 
 }
