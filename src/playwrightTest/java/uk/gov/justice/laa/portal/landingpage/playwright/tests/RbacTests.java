@@ -224,25 +224,6 @@ public class RbacTests extends BaseFrontEndTest {
         );
     }
 
-//    @Test
-//    @DisplayName("Firm User Manager can delete single-firm users in same firm")
-//    void firmUserManagerCanDeleteSingleFirmUserInSameFirm() {
-//        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.FIRM_USER_MANAGER);
-//
-//        // Firm User Manager should be able to view and manage External User Viewer from same firm
-//        assertTrue(
-//                manageUsersPage.searchAndVerifyUser("playwright-externaluserviewer@playwrighttest.com"),
-//                "External User Viewer should be visible to Firm User Manager"
-//        );
-//        manageUsersPage.clickFirstUserLink();
-//        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-//
-//        // Verify the delete button is visible (Firm User Manager has DELETE_EXTERNAL_USER permission)
-//        assertTrue(
-//                manageUsersPage.isDeleteUserVisible(),
-//                "Delete user button should be visible for Firm User Manager when viewing single-firm user in same firm"
-//        );
-//    }
 
     @Test
     @DisplayName("A Firm User Manager can delete a user from the same firm")
