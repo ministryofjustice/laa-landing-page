@@ -69,11 +69,6 @@ public class OfficeService {
                 .stream().map(office -> mapper.map(office, OfficeDto.class)).toList();
     }
 
-//    public List<OfficeDto> getOfficesByFirmId(String firmId) {
-//        return getOfficesByFirms(List.of(UUID.fromString(firmId)))
-//                .stream().map(office -> mapper.map(office, OfficeDto.class)).toList();
-//    }
-
     public PaginatedOffices getOfficesPage(UUID id,
                                                int page, int pageSize, String sort, String direction) {
         Page<Office> officesPage = null;
@@ -86,7 +81,6 @@ public class OfficeService {
         // Map to DTOs
 
         List<OfficeDto> officeDtos =
-
                 officesPage.getContent().stream()
                         .map(office -> OfficeDto.builder()
                                 .code(office.getCode())
@@ -98,12 +92,8 @@ public class OfficeService {
                                                 .addressLine3(office.getAddress().getAddressLine3())
                                                 .city(office.getAddress().getCity())
                                                 .postcode(office.getAddress().getPostcode())
-                                                .build()
-                                )
-                                .build()
-                        )
-                        .toList();
-
+                                                .build())
+                                .build()).toList();
 
         return PaginatedOffices.builder()
                 .offices(officeDtos)
