@@ -8,14 +8,14 @@ import uk.gov.justice.laa.portal.landingpage.entity.EventType;
 @Getter
 public class ConvertToMultiFirmAuditEvent extends AuditEvent {
 
-    private final UUID convertedEntraOId;
+    private final UUID convertedEntraOid;
     private final String convertedUserId;
 
     public ConvertToMultiFirmAuditEvent(CurrentUserDto currentUserDto, EntraUserDto convertedUser, String id) {
         super();
         this.userId = currentUserDto.getUserId();
         this.convertedUserId = id;
-        this.convertedEntraOId = UUID.fromString(convertedUser.getEntraOid());
+        this.convertedEntraOid = UUID.fromString(convertedUser.getEntraOid());
     }
 
     @Override
@@ -26,6 +26,6 @@ public class ConvertToMultiFirmAuditEvent extends AuditEvent {
     @Override
     public String getDescription() {
         return String.format("User converted to multi-firm, converted user entra oid %s, user id %s",
-                convertedEntraOId, convertedUserId);
+                convertedEntraOid, convertedUserId);
     }
 }

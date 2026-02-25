@@ -30,6 +30,7 @@ public class DeleteUserSuccessAuditEvent extends AuditEvent implements Serializa
 
     @Override
     public String getDescription() {
-        return String.format(DELETE_USER_TEMPLATE, deletedUser.getDeletedUserId(), deletedUser.getDeletedUserEntraOid(), reason, deletedUser.getRemovedRolesCount(), deletedUser.getDetachedOfficesCount());
+        return String.format(DELETE_USER_TEMPLATE, deletedUser.getDeletedUserId(), deletedUser.getDeletedUserEntraOid(),
+                reason, deletedUser.getRemovedRolesCount(), deletedUser.getDetachedOfficesCount());
     }
 }

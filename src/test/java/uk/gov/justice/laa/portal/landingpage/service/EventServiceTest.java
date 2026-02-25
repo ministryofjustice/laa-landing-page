@@ -112,7 +112,7 @@ class EventServiceTest {
         String message = infoLogs.get(0).getFormattedMessage();
         assertThat(message).contains("Audit event USER_DELETE_EXECUTED, by User with entra oid " + adminUuid);
         assertThat(message).contains("User deleted successfully, deleted user with id " + deletedUserId
-                + ", entraOid "+ deletedUserEntraId +" for reason " + reason + ". 3 roles removed. 2 offices detached");
+                + ", entraOid " + deletedUserEntraId + " for reason " + reason + ". 3 roles removed. 2 offices detached");
     }
 
     @Test

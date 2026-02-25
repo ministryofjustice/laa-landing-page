@@ -2856,16 +2856,9 @@ public class UserController {
                 return ResponseEntity.badRequest()
                         .body(Map.of("success", false, "message", "New firm selection is required"));
             }
-            Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
-
-            String userEntraOid = new String();
-            if (!optionalUser.isEmpty()) {
-               userEntraOid = optionalUser.get().getEntraUser().getEntraOid();
-            }
 
             userService.reassignUserFirm(
                     id,
-                   // userEntraOid,
                     UUID.fromString(newFirmId),
                     reason.trim(),
                     UUID.fromString(currentEntraUser.getEntraOid()),

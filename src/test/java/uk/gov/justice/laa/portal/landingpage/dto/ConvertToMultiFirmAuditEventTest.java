@@ -14,7 +14,6 @@ class ConvertToMultiFirmAuditEventTest {
         // Given
         UUID adminUserId = UUID.randomUUID();
         UUID convertedUserId = UUID.randomUUID();
-        String entraOid = UUID.randomUUID().toString();
 
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("Admin User");
@@ -22,6 +21,7 @@ class ConvertToMultiFirmAuditEventTest {
 
         EntraUserDto convertedUser = new EntraUserDto();
         convertedUser.setId(convertedUserId.toString());
+        String entraOid = UUID.randomUUID().toString();
         convertedUser.setEntraOid(entraOid);
 
         // When
