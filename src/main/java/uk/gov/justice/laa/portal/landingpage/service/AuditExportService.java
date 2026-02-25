@@ -23,10 +23,9 @@ public class AuditExportService {
     private static final String HEADER = "Name,Email,\"Firm Name\",\"Firm Code\",Multi-firm\n";
     private final DateTimeFormatter fileTimestamp = DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmm");
 
-    public AuditCsvExport downloadAuditCsv(List<AuditUserDto> firmData) {
+    public AuditCsvExport downloadAuditCsv(List<AuditUserDto> firmData, String firmCode) {
 
         String timestamp = LocalDateTime.now().format(fileTimestamp);
-        String firmCode = firmData.stream().findFirst().map(AuditUserDto::getFirmCode).orElse("");
         String filename = "user-access-audit_" + firmCode + "_" + timestamp + "_UTC.csv";
 
         String csv = buildCsv(firmData);

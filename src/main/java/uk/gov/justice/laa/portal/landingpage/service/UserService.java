@@ -1428,7 +1428,7 @@ public class UserService {
      */
     public PaginatedAuditUsers getAuditUsers(
             String searchTerm, UUID firmId, String silasRole, UUID appId, UserTypeForm userTypeForm,
-            int page, int pageSize, String sort, String direction) {
+            int page, int pageSize, String sort, String direction, boolean csvExport) {
         Boolean multiFirm = userTypeForm == null ? null : userTypeForm.getMultiFirm();
         UserType userType = userTypeForm == null ? null : userTypeForm.getUserType();
         String userTypeStr = userType == null ? null : userType.name();
@@ -1518,7 +1518,8 @@ public class UserService {
         }
 
         // Map to DTOs
-        List<AuditUserDto> auditUsers = userPage.getContent().stream().map(this::mapToAuditUserDto).toList();
+        List<AuditUserDto> auditUsers =
+                userPage.getContent().stream().map(user -> mapToAuditUserDto(user, csvExport)).toList();
 
         return PaginatedAuditUsers.builder().users(auditUsers)
                 .totalUsers(userPage.getTotalElements()).totalPages(userPage.getTotalPages())
@@ -1528,7 +1529,7 @@ public class UserService {
     /**
      * Map EntraUser to AuditUserDto
      */
-    private AuditUserDto mapToAuditUserDto(EntraUser user) {
+    private AuditUserDto mapToAuditUserDto(EntraUser user, boolean csvExport) {
         // Get all user profiles
         List<UserProfile> profiles = user.getUserProfiles() != null ? new ArrayList<>(user.getUserProfiles())
                 : Collections.emptyList();
@@ -1540,7 +1541,7 @@ public class UserService {
         String firmAssociation = determineFirmAssociation(profiles);
 
         // Get firm code
-        String firmCode = determineFirmCode(profiles);
+        String firmCode = determineFirmCode(profiles, csvExport);
 
         // Get account status
         String accountStatus = determineAccountStatus(user, profiles);
@@ -1619,13 +1620,23 @@ public class UserService {
     /**
      * Determine firm codes for audit table Returns firm code(s) or "None"
      */
-    private String determineFirmCode(List<UserProfile> profiles) {
+    private String determineFirmCode(List<UserProfile> profiles, boolean csvExport) {
         if (profiles.isEmpty()) {
             return "Unknown";
         }
+        Set<String> firmCodes = new HashSet<>();
 
-        Set<String> firmCodes = profiles.stream().map(UserProfile::getFirm).filter(Objects::nonNull)
+        if (!csvExport) {
+            firmCodes = profiles.stream().map(UserProfile::getFirm).filter(Objects::nonNull)
                 .map(Firm::getCode).collect(Collectors.toCollection(TreeSet::new));
+        } else {
+            List<Firm> sortedFirms =
+                    profiles.stream().map(UserProfile::getFirm
+            ).filter(Objects::nonNull).distinct().sorted(Comparator.comparing(Firm::getName)).toList();
+            firmCodes =
+                    sortedFirms.stream().map(Firm::getCode).collect(Collectors.toCollection(LinkedHashSet::new));
+
+        }
 
         if (firmCodes.isEmpty()) {
             return "Unknown";
@@ -1729,6 +1740,7 @@ public class UserService {
         // Build detail DTO
         return AuditUserDetailDto.builder().userId(entraUser.getId().toString())
                 .email(entraUser.getEmail()).firstName(entraUser.getFirstName())
+                .enabled(entraUser.isEnabled())
                 .lastName(entraUser.getLastName())
                 .fullName(entraUser.getFirstName() + " " + entraUser.getLastName())
                 .isMultiFirmUser(entraUser.isMultiFirmUser()).userType(userType)
@@ -1821,6 +1833,7 @@ public class UserService {
         // Build detail DTO with Entra data only
         return AuditUserDetailDto.builder().userId(entraUser.getId().toString())
                 .email(entraUser.getEmail()).firstName(entraUser.getFirstName())
+                .enabled(entraUser.isEnabled())
                 .lastName(entraUser.getLastName())
                 .fullName(entraUser.getFirstName() + " " + entraUser.getLastName())
                 .isMultiFirmUser(entraUser.isMultiFirmUser()).userType(userType)

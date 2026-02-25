@@ -125,8 +125,12 @@
                                 <h2 class="govuk-summary-card__title">User details</h2>
                                 <ul class="govuk-summary-card__actions">
                                     <li th:if="${canDisableUser}" class="govuk-summary-card__action">
-                                        <a class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
+                                        <a th:if="${userIsEnabled}" class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
                                            th:href="@{/admin/users/manage/{id}/disable(id=${user.entraUser.id})}">Disable user</a>
+                                        <a th:unless="${userIsEnabled}" class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
+                                           th:href="@{/admin/users/manage/{id}/enable(id=${user.entraUser.id})}">
+                                            Enable user
+                                        </a>
                                     </li>
                                     <li th:if="${canDeleteUser}" class="govuk-summary-card__action">
                                         <a class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
