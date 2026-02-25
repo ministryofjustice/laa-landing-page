@@ -23,10 +23,6 @@ import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.actuate.autoconfigure.observation.ObservationProperties;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -371,7 +367,11 @@ public class UserController {
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
         final boolean canDeleteUser = accessControlService.canDeleteUser(id);
         model.addAttribute("canDeleteUser", canDeleteUser);
-        final boolean canDisableUser = disableUserFeatureEnabled && accessControlService.canDisableUser(user.getEntraUser().getId());
+        boolean isMultiFirmUser = user.getEntraUser() != null && user.getEntraUser().isMultiFirmUser();
+
+        final boolean canDisableUser = disableUserFeatureEnabled
+                && accessControlService.canDisableUser(user.getEntraUser().getId())
+                && !isMultiFirmUser;
         model.addAttribute("canDisableUser", canDisableUser);
         final boolean userIsEnabled = user.getEntraUser().isEnabled();
         model.addAttribute("userIsEnabled", userIsEnabled);
@@ -383,7 +383,6 @@ public class UserController {
 
 
         // Multi-firm user information
-        boolean isMultiFirmUser = user.getEntraUser() != null && user.getEntraUser().isMultiFirmUser();
         model.addAttribute("isMultiFirmUser", isMultiFirmUser);
         model.addAttribute("canViewAllFirmsOfMultiFirmUser", accessControlService.canViewAllFirmsOfMultiFirmUser());
 
@@ -480,14 +479,17 @@ public class UserController {
     public String disableUserReasonsGet(@PathVariable String id,
                                      DisableUserReasonForm disableUserReasonForm,
                                      Model model,
-                                     HttpSession session) {
+                                     HttpSession session,
+    Authentication authentication) {
+        EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
         if (!disableUserFeatureEnabled) {
             throw new ResponseStatusException(HttpStatusCode.valueOf(404));
         }
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
-        List<DisableUserReasonViewModel> reasons = userAccountStatusService.getDisableUserReasons().stream()
+        boolean isInternalUser = userService.isInternal(authenticatedUser.getId());
+        List<DisableUserReasonViewModel> reasons = new ArrayList<>(userAccountStatusService.getDisableUserReasons(isInternalUser).stream()
                 .map(reason -> mapper.map(reason, DisableUserReasonViewModel.class))
-                .toList();
+                .toList());
         model.addAttribute("user", user);
         model.addAttribute("reasons", reasons);
         model.addAttribute("disableUserReasonsForm", disableUserReasonForm);
