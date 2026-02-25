@@ -1,25 +1,13 @@
 databaseChangeLog:
   - changeSet:
-      id: 1740427200000-1
-      author: sankavi.mohanraj
-      dbms: postgresql
-      comment: Add CREATE_LAA_APP_ROLE permission to SILAS System Administration role
+      id: 1770975661634-1
+      author: yusuf-moj
+      comment: "Assign DELETE_EXTERNAL_USER permission to Firm User Manager"
       changes:
         - sql:
             dbms: postgresql
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'SILAS System Administration'),
-                     'CREATE_LAA_APP_ROLE'
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'SILAS System Administration')
-                  AND permission = 'CREATE_LAA_APP_ROLE'
-              );
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Firm User Manager'), 'DELETE_EXTERNAL_USER')"
       rollback:
         - sql:
             dbms: postgresql
-            sql: |
-              DELETE FROM role_permission
-              WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'SILAS System Administration')
-                AND permission = 'CREATE_LAA_APP_ROLE';
+            sql: "DELETE FROM role_permission WHERE permission = 'DELETE_EXTERNAL_USER' AND app_role_id = (SELECT id FROM app_role WHERE name = 'Firm User Manager')"
