@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -114,7 +115,8 @@ public class AppRoleService {
     @Transactional
     public void deleteAppRole(UUID userProfileId, UUID entraOid, String appName, String roleId, String reason) {
         UUID id = UUID.fromString(roleId);
-        AppRole appRole = getById(id).orElseThrow(() -> new RuntimeException("App role not found for id: " + roleId));
+        AppRole appRole = appRoleRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("App role not found for id: " + roleId));
         final String appRoleName = appRole.getName();
 
         // Delete User profile role assignments

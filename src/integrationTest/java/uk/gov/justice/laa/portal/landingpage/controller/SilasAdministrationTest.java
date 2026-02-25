@@ -262,6 +262,170 @@ public class SilasAdministrationTest extends RoleBasedAccessIntegrationTest {
                 .andExpect(status().is4xxClientError());
     }
 
+    @Test
+    public void testDeleteAppRoleGetRedirectsWhenNoAppSelected() throws Exception {
+        EntraUser loggedInUser = silasAdmins.getFirst();
+        loggedInUser = entraUserRepository.saveAndFlush(loggedInUser);
+
+        MvcResult result = this.mockMvc.perform(get("/admin/silas-administration/delete-role")
+                        .with(defaultOauth2Login(loggedInUser)))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+
+        assertNotNull(result.getResponse().getRedirectedUrl());
+        assertEquals("/admin/silas-administration#roles", result.getResponse().getRedirectedUrl());
+    }
+
+    @Test
+    public void testDeleteAppRoleGetLoadsRolesWhenAppSelected() throws Exception {
+        EntraUser loggedInUser = silasAdmins.getFirst();
+        loggedInUser = entraUserRepository.saveAndFlush(loggedInUser);
+
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("appFilter", testApp.getName());
+
+        this.mockMvc.perform(get("/admin/silas-administration/delete-role")
+                        .session(session)
+                        .with(defaultOauth2Login(loggedInUser)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("silas-administration/delete-app-roles"))
+                .andExpect(model().attributeExists("roles"))
+                .andExpect(model().attributeExists("appName"));
+    }
+
+    @Test
+    public void testDeleteAppRolePostSetsSessionAndRedirectsToReason() throws Exception {
+        EntraUser loggedInUser = silasAdmins.getFirst();
+        loggedInUser = entraUserRepository.saveAndFlush(loggedInUser);
+
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("appFilter", testApp.getName());
+
+        MvcResult result = this.mockMvc.perform(MockMvcRequestBuilders.post(String.format("/admin/silas-administration/delete-role/%s", testAppRole.getId()))
+                        .session(session)
+                        .with(defaultOauth2Login(loggedInUser))
+                        .with(csrf())
+                        .param("roleName", testAppRole.getName())
+                        .param("appName", testApp.getName()))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+
+        String redirect = result.getResponse().getRedirectedUrl();
+        assertNotNull(redirect);
+        assertEquals(String.format("/admin/silas-administration/delete-role/%s/reason", testAppRole.getId()), redirect);
+
+        MockHttpSession returnedSession = (MockHttpSession) result.getRequest().getSession();
+        assertNotNull(returnedSession.getAttribute("roleIdForDeletion"));
+        assertNotNull(returnedSession.getAttribute("roleNameForDeletion"));
+        assertEquals(testApp.getName(), returnedSession.getAttribute("appFilter"));
+    }
+
+    @Test
+    public void testShowDeleteAppRoleReasonPageLoads() throws Exception {
+        EntraUser loggedInUser = silasAdmins.getFirst();
+        loggedInUser = entraUserRepository.saveAndFlush(loggedInUser);
+
+        // prepare session via post
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("appFilter", testApp.getName());
+        session.setAttribute("roleIdForDeletion", testAppRole.getId().toString());
+        session.setAttribute("roleNameForDeletion", testAppRole.getName());
+
+        this.mockMvc.perform(get(String.format("/admin/silas-administration/delete-role/%s/reason", testAppRole.getId()))
+                        .session(session)
+                        .with(defaultOauth2Login(loggedInUser)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("silas-administration/delete-app-role-reason"))
+                .andExpect(model().attributeExists("deleteAppRoleReasonForm"))
+                .andExpect(model().attributeExists("roleName"))
+                .andExpect(model().attributeExists("appName"))
+                .andExpect(model().attributeExists("roleId"));
+    }
+
+    @Test
+    public void testProcessDeleteAppRoleReasonSubmissionRedirectsToCheckAnswers() throws Exception {
+        EntraUser loggedInUser = silasAdmins.getFirst();
+        loggedInUser = entraUserRepository.saveAndFlush(loggedInUser);
+
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("appFilter", testApp.getName());
+        session.setAttribute("roleIdForDeletion", testAppRole.getId().toString());
+        session.setAttribute("roleNameForDeletion", testAppRole.getName());
+
+        MvcResult result = this.mockMvc.perform(MockMvcRequestBuilders.post(String.format("/admin/silas-administration/delete-role/%s/reason", testAppRole.getId()))
+                        .session(session)
+                        .with(defaultOauth2Login(loggedInUser))
+                        .with(csrf())
+                        .param("reason", "Valid deletion reason for test")
+                        .param("appName", testApp.getName())
+                        .param("appRoleId", testAppRole.getId().toString()))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+
+        String redirect = result.getResponse().getRedirectedUrl();
+        assertNotNull(redirect);
+        assertEquals(String.format("/admin/silas-administration/delete-role/%s/check-answers", testAppRole.getId()), redirect);
+
+        MockHttpSession returnedSession = (MockHttpSession) result.getRequest().getSession();
+        assertNotNull(returnedSession.getAttribute("deleteAppRoleReasonForm"));
+    }
+
+    @Test
+    public void testShowDeleteAppRoleCheckAnswersPageLoads() throws Exception {
+        EntraUser loggedInUser = silasAdmins.getFirst();
+        loggedInUser = entraUserRepository.saveAndFlush(loggedInUser);
+
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("appFilter", testApp.getName());
+        session.setAttribute("roleIdForDeletion", testAppRole.getId().toString());
+        session.setAttribute("roleNameForDeletion", testAppRole.getName());
+        // put reason form in session as controller expects
+        uk.gov.justice.laa.portal.landingpage.forms.DeleteAppRoleReasonForm reasonForm =
+                uk.gov.justice.laa.portal.landingpage.forms.DeleteAppRoleReasonForm.builder()
+                        .appName(testApp.getName())
+                        .appRoleId(testAppRole.getId().toString())
+                        .reason("Valid deletion reason for test")
+                        .build();
+        session.setAttribute("deleteAppRoleReasonForm", reasonForm);
+
+        this.mockMvc.perform(get(String.format("/admin/silas-administration/delete-role/%s/check-answers", testAppRole.getId()))
+                        .session(session)
+                        .with(defaultOauth2Login(loggedInUser)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("silas-administration/delete-app-role-check-answers"))
+                .andExpect(model().attributeExists("reason"))
+                .andExpect(model().attributeExists("roleName"))
+                .andExpect(model().attributeExists("appName"))
+                .andExpect(model().attributeExists("roleId"))
+                .andExpect(model().attributeExists("noOfUserProfilesAffected"))
+                .andExpect(model().attributeExists("noOfFirmsAffected"));
+    }
+
+    @Test
+    public void testSubmitDeleteAppRoleCheckAnswersDeletesAndRedirects() throws Exception {
+        EntraUser loggedInUser = silasAdmins.getFirst();
+        loggedInUser = entraUserRepository.saveAndFlush(loggedInUser);
+
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("appFilter", testApp.getName());
+        session.setAttribute("roleIdForDeletion", testAppRole.getId().toString());
+        session.setAttribute("roleNameForDeletion", testAppRole.getName());
+        uk.gov.justice.laa.portal.landingpage.forms.DeleteAppRoleReasonForm reasonForm =
+                uk.gov.justice.laa.portal.landingpage.forms.DeleteAppRoleReasonForm.builder()
+                        .appName(testApp.getName())
+                        .appRoleId(testAppRole.getId().toString())
+                        .reason("Valid deletion reason for test")
+                        .build();
+        session.setAttribute("deleteAppRoleReasonForm", reasonForm);
+
+        this.mockMvc.perform(MockMvcRequestBuilders.post(String.format("/admin/silas-administration/delete-role/%s/check-answers", testAppRole.getId()))
+                        .session(session)
+                        .with(defaultOauth2Login(loggedInUser))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("silas-administration/delete-app-roles-confirmation"));
+    }
+
     private void buildTestAppRole() {
         App app = buildLaaApp("Test App " + distinctIndex++, UUID.randomUUID().toString(),
                 "Security Group Id" + distinctIndex++, "Security Group Name" + distinctIndex++,
@@ -272,5 +436,3 @@ public class SilasAdministrationTest extends RoleBasedAccessIntegrationTest {
         testAppRole = appRoleRepository.saveAndFlush(appRole);
     }
 }
-
-

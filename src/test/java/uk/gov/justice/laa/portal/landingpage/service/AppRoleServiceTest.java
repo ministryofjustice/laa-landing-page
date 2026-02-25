@@ -1,13 +1,20 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.DeleteAppRoleEvent;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
@@ -24,6 +31,10 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,6 +51,7 @@ class AppRoleServiceTest {
     @Mock
     private ModelMapper modelMapper;
 
+    @InjectMocks
     private AppRoleService appRoleService;
 
     @BeforeEach
@@ -229,4 +241,145 @@ class AppRoleServiceTest {
         assertThat(dtos).extracting(AppRoleAdminDto::getOrdinal).containsExactly(1, 5);
         assertThat(dtos).extracting(AppRoleAdminDto::getParentApp).containsOnly(appName);
     }
+
+    private AppRole mkRole(UUID id, String name) {
+        return AppRole.builder().id(id).name(name).build();
+    }
+
+    @Nested
+    class DeleteAppRoleTests {
+
+        @Test
+        @DisplayName("deleteAppRole: happy path deletes dependents in order, deletes role, logs event with trimmed reason")
+        void deleteAppRole_happyPath() {
+            // Arrange
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraOid = UUID.randomUUID();
+            String appName = "MyApp";
+            String reason = "  housekeeping  ";
+            UUID roleId = UUID.randomUUID();
+            String roleIdStr = roleId.toString();
+            AppRole role = mkRole(roleId, "ADMIN");
+
+            when(appRoleRepository.findById(roleId)).thenReturn(Optional.of(role));
+
+            // Act
+            appRoleService.deleteAppRole(userProfileId, entraOid, appName, roleIdStr, reason);
+
+            // Assert: verify delete order
+            InOrder inOrder = inOrder(
+                    userProfileRepository,
+                    roleAssignmentRepository,
+                    appRoleRepository,
+                    appRoleRepository // deleteRolePermissions + delete(appRole)
+            );
+
+            inOrder.verify(userProfileRepository).deleteAllByAppRoleId(roleId);
+            inOrder.verify(roleAssignmentRepository).deleteByRoleIdInEitherColumn(roleId);
+            inOrder.verify(appRoleRepository).deleteRolePermissions(roleId);
+            inOrder.verify(appRoleRepository).delete(role);
+
+            // Assert: verify event payload (trimmed reason)
+            ArgumentCaptor<DeleteAppRoleEvent> evtCap = ArgumentCaptor.forClass(DeleteAppRoleEvent.class);
+            verify(eventService).logEvent(evtCap.capture());
+
+            DeleteAppRoleEvent evt = evtCap.getValue();
+            assertThat(evt).isNotNull();
+            assertThat(evt.getUserId()).isEqualTo(userProfileId);
+            assertThat(evt.getEntraUserId()).isEqualTo(entraOid);
+            assertThat(evt.getAppName()).isEqualTo(appName);
+            assertThat(evt.getAppRoleName()).isEqualTo("ADMIN");
+            assertThat(evt.getReason()).isEqualTo("housekeeping");
+
+            // No more interactions beyond what we expect
+            verifyNoMoreInteractions(eventService);
+        }
+
+        @Test
+        @DisplayName("deleteAppRole: invalid UUID string -> IllegalArgumentException")
+        void deleteAppRole_invalidUuid() {
+            // Arrange
+            String badRoleId = "not-a-uuid";
+
+            // Act + Assert
+            assertThatThrownBy(() ->
+                    appRoleService.deleteAppRole(UUID.randomUUID(), UUID.randomUUID(), "App", badRoleId, "reason")
+            ).isInstanceOf(IllegalArgumentException.class);
+
+            verifyNoInteractions(userProfileRepository, roleAssignmentRepository, appRoleRepository, eventService);
+        }
+
+        @Test
+        @DisplayName("deleteAppRole: role not found -> EntityNotFoundException (and no side effects)")
+        void deleteAppRole_roleNotFound() {
+            // Arrange
+            UUID roleId = UUID.randomUUID();
+            when(appRoleRepository.findById(roleId)).thenReturn(Optional.empty());
+
+            // Act + Assert
+            assertThatThrownBy(() ->
+                    appRoleService.deleteAppRole(UUID.randomUUID(), UUID.randomUUID(), "App", roleId.toString(), "reason")
+            ).isInstanceOf(EntityNotFoundException.class);
+
+            verify(appRoleRepository).findById(roleId);
+            verifyNoMoreInteractions(appRoleRepository);
+            verifyNoInteractions(userProfileRepository, roleAssignmentRepository, eventService);
+        }
+
+    }
+
+    @Nested
+    class CountMethodsTests {
+
+        @Test
+        @DisplayName("countNoOfRoleAssignments: delegates to repository with parsed UUID")
+        void countNoOfRoleAssignments_ok() {
+            // Arrange
+            UUID roleId = UUID.randomUUID();
+            when(userProfileRepository.countUserProfilesByAppRoleId(roleId)).thenReturn(42L);
+
+            // Act
+            long count = appRoleService.countNoOfRoleAssignments(roleId.toString());
+
+            // Assert
+            assertThat(count).isEqualTo(42L);
+            verify(userProfileRepository).countUserProfilesByAppRoleId(roleId);
+            verifyNoMoreInteractions(userProfileRepository);
+        }
+
+        @Test
+        @DisplayName("countNoOfRoleAssignments: invalid UUID -> IllegalArgumentException")
+        void countNoOfRoleAssignments_invalidUuid() {
+            assertThatThrownBy(() ->
+                    appRoleService.countNoOfRoleAssignments("bad-uuid")
+            ).isInstanceOf(IllegalArgumentException.class);
+            verifyNoInteractions(userProfileRepository);
+        }
+
+        @Test
+        @DisplayName("countNoOfFirmsWithRoleAssignments: delegates to repository with parsed UUID")
+        void countNoOfFirmsWithRoleAssignments_ok() {
+            // Arrange
+            UUID roleId = UUID.randomUUID();
+            when(userProfileRepository.countFirmsWithRole(roleId)).thenReturn(7L);
+
+            // Act
+            long count = appRoleService.countNoOfFirmsWithRoleAssignments(roleId.toString());
+
+            // Assert
+            assertThat(count).isEqualTo(7L);
+            verify(userProfileRepository).countFirmsWithRole(roleId);
+            verifyNoMoreInteractions(userProfileRepository);
+        }
+
+        @Test
+        @DisplayName("countNoOfFirmsWithRoleAssignments: invalid UUID -> IllegalArgumentException")
+        void countNoOfFirmsWithRoleAssignments_invalidUuid() {
+            assertThatThrownBy(() ->
+                    appRoleService.countNoOfFirmsWithRoleAssignments("bad-uuid")
+            ).isInstanceOf(IllegalArgumentException.class);
+            verifyNoInteractions(userProfileRepository);
+        }
+    }
+
 }

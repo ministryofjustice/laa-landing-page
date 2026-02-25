@@ -63,7 +63,7 @@ import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFro
 @PreAuthorize("@accessControlService.userHasAuthzRole(authentication, T(uk.gov.justice.laa.portal.landingpage.entity.AuthzRole).SILAS_ADMINISTRATION.roleName)")
 public class AdminController {
 
-    private static final String SILAS_ADMINISTRATION_TITLE = "SiLAS Administration";
+    public static final String SILAS_ADMINISTRATION_TITLE = "SiLAS Administration";
     private static final Set<String> VALID_TABS = Set.of("admin-apps", "apps", "roles");
 
     private final LoginService loginService;
@@ -635,12 +635,11 @@ public class AdminController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Role ID not found in session"));
         String roleName = getObjectFromHttpSession(session, "roleNameForDeletion", String.class)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Role name not found in session"));
+        DeleteAppRoleReasonForm reasonForm = getObjectFromHttpSession(session, "deleteAppRoleReasonForm",
+                DeleteAppRoleReasonForm.class).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                "Delete Role form not found in session"));
 
         try {
-            DeleteAppRoleReasonForm reasonForm = getObjectFromHttpSession(session, "deleteAppRoleReasonForm",
-                    DeleteAppRoleReasonForm.class).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "Delete Role form not found in session"));
-
             if (!roleIdFromSession.equals(roleId) || !reasonForm.getAppRoleId().equals(roleId)) {
                 log.error("Role ID mismatch for role ID {}: expected '{}', got '{}'", roleId, roleIdFromSession, roleId);
                 model.addAttribute("errorMessage", "Error while processing app role management");
@@ -705,6 +704,8 @@ public class AdminController {
         UUID entraOid = loginService.getCurrentUser(authentication).getUserId();
         UUID userProfileId = loginService.getCurrentProfile(authentication).getId();
         appRoleService.deleteAppRole(userProfileId, entraOid, appName, roleIdFromSession, reasonForm.getReason());
+
+        clearSessionAttributes(session);
 
 
         return "silas-administration/delete-app-roles-confirmation";

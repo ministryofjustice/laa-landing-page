@@ -7,15 +7,24 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
@@ -28,6 +37,7 @@ import org.springframework.security.core.Authentication;
 
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AdminAppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -40,6 +50,7 @@ import uk.gov.justice.laa.portal.landingpage.forms.AppDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRoleDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRolesOrderForm;
 import uk.gov.justice.laa.portal.landingpage.forms.AppsOrderForm;
+import uk.gov.justice.laa.portal.landingpage.forms.DeleteAppRoleReasonForm;
 import uk.gov.justice.laa.portal.landingpage.service.AdminService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
 import uk.gov.justice.laa.portal.landingpage.service.AppService;
@@ -65,6 +76,8 @@ class AdminControllerTest {
 
     private AdminController adminController;
     private Model model;
+    @Mock
+    private BindingResult bindingResult;
 
     @BeforeEach
     void setUp() {
@@ -198,7 +211,7 @@ class AdminControllerTest {
         String appId = UUID.randomUUID().toString();
         AppDto appDto = AppDto.builder().id(appId).name("Test App").description("Desc").enabled(true).build();
 
-        BindingResult result = org.mockito.Mockito.mock(BindingResult.class);
+        BindingResult result = mock(BindingResult.class);
         when(result.hasErrors()).thenReturn(true);
         when(result.getAllErrors()).thenReturn(List.of(new ObjectError("description", "Invalid description")));
         when(appService.findById(UUID.fromString(appId))).thenReturn(Optional.of(appDto));
@@ -217,7 +230,7 @@ class AdminControllerTest {
         MockHttpSession session = new MockHttpSession();
         String appId = UUID.randomUUID().toString();
 
-        BindingResult result = org.mockito.Mockito.mock(BindingResult.class);
+        BindingResult result = mock(BindingResult.class);
         when(result.hasErrors()).thenReturn(false);
 
         AppDetailsForm form = AppDetailsForm.builder().appId(appId).description("Desc").enabled(true).build();
@@ -269,7 +282,7 @@ class AdminControllerTest {
         session.setAttribute("appId", appId);
         session.setAttribute("appDetailsForm", form);
 
-        Authentication auth = org.mockito.Mockito.mock(Authentication.class);
+        Authentication auth = mock(Authentication.class);
         CurrentUserDto currentUser = new CurrentUserDto();
         currentUser.setUserId(UUID.randomUUID());
         currentUser.setName("Admin User");
@@ -280,12 +293,12 @@ class AdminControllerTest {
         when(loginService.getCurrentUser(auth)).thenReturn(currentUser);
         when(loginService.getCurrentProfile(auth)).thenReturn(UserProfile.builder().id(UUID.randomUUID()).build());
         when(appService.findById(UUID.fromString(appId))).thenReturn(Optional.of(appDto));
-        when(appService.save(org.mockito.ArgumentMatchers.any())).thenReturn(appEntity);
+        when(appService.save(any())).thenReturn(appEntity);
 
         String view = adminController.confirmAppDetailsPost(appId, auth, model, session);
 
         assertEquals("silas-administration/edit-app-details-confirmation", view);
-        verify(eventService).logEvent(org.mockito.ArgumentMatchers.any());
+        verify(eventService).logEvent(any());
         assertThat(session.getAttribute("appDetailsForm")).isNull();
         assertThat(session.getAttribute("appDetailsFormModel")).isNull();
         assertThat(session.getAttribute("appId")).isNull();
@@ -324,7 +337,7 @@ class AdminControllerTest {
     @Test
     void editAppOrderPost_withErrors_returnsEditViewWithErrorMessage() {
         AppsOrderForm form = AppsOrderForm.builder().apps(List.of(new AppsOrderForm.AppOrderDetailsForm("1", 1))).build();
-        BindingResult result = org.mockito.Mockito.mock(BindingResult.class);
+        BindingResult result = mock(BindingResult.class);
         when(result.hasErrors()).thenReturn(true);
         when(result.getAllErrors()).thenReturn(List.of(new ObjectError("apps", "Duplicate ordinal")));
 
@@ -339,7 +352,7 @@ class AdminControllerTest {
         AppsOrderForm.AppOrderDetailsForm a = new AppsOrderForm.AppOrderDetailsForm("1", 2);
         AppsOrderForm.AppOrderDetailsForm b = new AppsOrderForm.AppOrderDetailsForm("2", 1);
         AppsOrderForm form = AppsOrderForm.builder().apps(new ArrayList<>(Arrays.asList(a, b))).build();
-        BindingResult result = org.mockito.Mockito.mock(BindingResult.class);
+        BindingResult result = mock(BindingResult.class);
         when(result.hasErrors()).thenReturn(false);
 
         MockHttpSession session = new MockHttpSession();
@@ -359,7 +372,7 @@ class AdminControllerTest {
         AppsOrderForm form = AppsOrderForm.builder().apps(List.of(a)).build();
         session.setAttribute("appsOrderForm", form);
 
-        Authentication auth = org.mockito.Mockito.mock(Authentication.class);
+        Authentication auth = mock(Authentication.class);
         CurrentUserDto currentUser = new CurrentUserDto();
         currentUser.setUserId(UUID.randomUUID());
         currentUser.setName("Admin");
@@ -371,14 +384,14 @@ class AdminControllerTest {
 
         assertEquals("silas-administration/edit-apps-order-confirmation", view);
         verify(appService).updateAppsOrder(form.getApps());
-        verify(eventService).logEvent(org.mockito.ArgumentMatchers.any());
+        verify(eventService).logEvent(any());
         assertThat(session.getAttribute("appsOrderForm")).isNull();
     }
 
     @Test
     void confirmEditAppOrderPost_throwsWhenNoSessionValue() {
         MockHttpSession session = new MockHttpSession();
-        Authentication auth = org.mockito.Mockito.mock(Authentication.class);
+        Authentication auth = mock(Authentication.class);
 
         assertThrows(RuntimeException.class, () ->
                 adminController.confirmEditAppOrderPost(auth, model, session)
@@ -450,7 +463,7 @@ class AdminControllerTest {
         String appId = UUID.randomUUID().toString();
         AppDto appDto = AppDto.builder().id(appId).name("Test App").description("Desc").enabled(true).build();
 
-        BindingResult result = org.mockito.Mockito.mock(BindingResult.class);
+        BindingResult result = mock(BindingResult.class);
         when(result.hasErrors()).thenReturn(true);
         when(result.getAllErrors()).thenReturn(List.of(
                 new ObjectError("description", "Description is required"),
@@ -499,7 +512,7 @@ class AdminControllerTest {
         AppDetailsForm form = AppDetailsForm.builder().appId(appId).description("New Desc").enabled(false).build();
         session.setAttribute("appDetailsForm", form);
 
-        Authentication auth = org.mockito.Mockito.mock(Authentication.class);
+        Authentication auth = mock(Authentication.class);
 
         assertThrows(RuntimeException.class, () ->
                 adminController.confirmAppDetailsPost(appId, auth, model, session)
@@ -515,7 +528,7 @@ class AdminControllerTest {
         AppDetailsForm form = AppDetailsForm.builder().appId(appId).description("New Desc").enabled(false).build();
         session.setAttribute("appDetailsForm", form);
 
-        Authentication auth = org.mockito.Mockito.mock(Authentication.class);
+        Authentication auth = mock(Authentication.class);
 
         assertThrows(RuntimeException.class, () ->
                 adminController.confirmAppDetailsPost(appId, auth, model, session)
@@ -528,7 +541,7 @@ class AdminControllerTest {
         String appId = UUID.randomUUID().toString();
         session.setAttribute("appId", appId);
 
-        Authentication auth = org.mockito.Mockito.mock(Authentication.class);
+        Authentication auth = mock(Authentication.class);
 
         assertThrows(RuntimeException.class, () ->
                 adminController.confirmAppDetailsPost(appId, auth, model, session)
@@ -544,7 +557,7 @@ class AdminControllerTest {
         session.setAttribute("appId", appId);
         session.setAttribute("appDetailsForm", form);
 
-        Authentication auth = org.mockito.Mockito.mock(Authentication.class);
+        Authentication auth = mock(Authentication.class);
 
         when(appService.findById(UUID.fromString(appId))).thenReturn(Optional.empty());
 
@@ -585,7 +598,7 @@ class AdminControllerTest {
         session.setAttribute("appFilter", appName);
         session.setAttribute("roleId", "some-role-id");
 
-        Authentication auth = org.mockito.Mockito.mock(Authentication.class);
+        Authentication auth = mock(Authentication.class);
         CurrentUserDto currentUser = new CurrentUserDto();
         currentUser.setUserId(UUID.randomUUID());
 
@@ -616,7 +629,7 @@ class AdminControllerTest {
         MockHttpSession session = new MockHttpSession();
         session.setAttribute("appFilter", "   ");
         RedirectAttributes redirectAttributes =
-                org.mockito.Mockito.mock(RedirectAttributes.class);
+                mock(RedirectAttributes.class);
 
         String view = adminController.editAppRolesOrderGet(model, redirectAttributes, session);
 
@@ -633,7 +646,7 @@ class AdminControllerTest {
         AppRoleDetailsForm form = AppRoleDetailsForm.builder().appRoleId(roleId).name("New Name").description("New Desc").build();
         session.setAttribute("appRoleDetailsForm", form);
 
-        Authentication auth = org.mockito.Mockito.mock(Authentication.class);
+        Authentication auth = mock(Authentication.class);
 
         assertThrows(RuntimeException.class, () ->
                 adminController.confirmAppRoleDetailsPost(roleId, auth, model, session)
@@ -654,7 +667,7 @@ class AdminControllerTest {
         session.setAttribute("roleId", roleId);
         session.setAttribute("appRoleDetailsForm", form);
 
-        Authentication auth = org.mockito.Mockito.mock(Authentication.class);
+        Authentication auth = mock(Authentication.class);
         CurrentUserDto currentUser = new CurrentUserDto();
         currentUser.setUserId(UUID.randomUUID());
         currentUser.setName("Admin");
@@ -673,12 +686,12 @@ class AdminControllerTest {
         when(loginService.getCurrentUser(auth)).thenReturn(currentUser);
         when(loginService.getCurrentProfile(auth)).thenReturn(UserProfile.builder().id(UUID.randomUUID()).build());
         when(appRoleService.findById(UUID.fromString(roleId))).thenReturn(Optional.of(roleDto));
-        when(appRoleService.save(org.mockito.ArgumentMatchers.any())).thenReturn(roleEntity);
+        when(appRoleService.save(any())).thenReturn(roleEntity);
 
         String view = adminController.confirmAppRoleDetailsPost(roleId, auth, model, session);
 
         assertEquals("silas-administration/edit-role-details-confirmation", view);
-        verify(eventService).logEvent(org.mockito.ArgumentMatchers.any());
+        verify(eventService).logEvent(any());
         assertThat(session.getAttribute("appRoleDetailsForm")).isNull();
         assertThat(session.getAttribute("appRoleDetailsFormModel")).isNull();
         assertThat(session.getAttribute("roleId")).isNull();
@@ -688,7 +701,7 @@ class AdminControllerTest {
     void editAppRolesOrderGet_withoutAppSelection_redirectsWithFlashAttribute() {
         MockHttpSession session = new MockHttpSession();
         RedirectAttributes redirectAttributes =
-                org.mockito.Mockito.mock(RedirectAttributes.class);
+                mock(RedirectAttributes.class);
 
         String view = adminController.editAppRolesOrderGet(model, redirectAttributes, session);
 
@@ -709,7 +722,7 @@ class AdminControllerTest {
 
         when(appRoleService.getLaaAppRolesByAppName(appName)).thenReturn(appRoles);
 
-        String view = adminController.editAppRolesOrderGet(model, org.mockito.Mockito.mock(RedirectAttributes.class), session);
+        String view = adminController.editAppRolesOrderGet(model, mock(RedirectAttributes.class), session);
 
         assertEquals("silas-administration/edit-app-roles-order", view);
         Object appRolesOrderForm = model.getAttribute("appRolesOrderForm");
@@ -738,7 +751,7 @@ class AdminControllerTest {
                 AppRolesOrderForm.builder()
                         .appRoles(new ArrayList<>(Arrays.asList(a, b)))
                         .build();
-        BindingResult result = org.mockito.Mockito.mock(BindingResult.class);
+        BindingResult result = mock(BindingResult.class);
         when(result.hasErrors()).thenReturn(false);
 
         String view = adminController.editAppRolesOrderPost(form, result, model, session);
@@ -769,7 +782,7 @@ class AdminControllerTest {
                 AppRolesOrderForm.builder()
                         .appRoles(new ArrayList<>(Arrays.asList(a, b)))
                         .build();
-        BindingResult result = org.mockito.Mockito.mock(BindingResult.class);
+        BindingResult result = mock(BindingResult.class);
         when(result.hasErrors()).thenReturn(true);
         when(result.getAllErrors()).thenReturn(List.of(new ObjectError("appRoles", "Duplicate ordinal")));
 
@@ -798,7 +811,7 @@ class AdminControllerTest {
         session.setAttribute("appRolesOrderForm", form);
         session.setAttribute("appFilter", appName);
 
-        Authentication auth = org.mockito.Mockito.mock(Authentication.class);
+        Authentication auth = mock(Authentication.class);
         CurrentUserDto currentUser = new CurrentUserDto();
         currentUser.setUserId(UUID.randomUUID());
         currentUser.setName("Admin");
@@ -810,7 +823,7 @@ class AdminControllerTest {
 
         assertEquals("silas-administration/edit-app-roles-order-confirmation", view);
         verify(appRoleService).updateAppRolesOrder(form.getAppRoles());
-        verify(eventService).logEvent(org.mockito.ArgumentMatchers.any());
+        verify(eventService).logEvent(any());
         assertThat(session.getAttribute("appRolesOrderForm")).isNull();
         assertThat(session.getAttribute("appFilter")).isNull();
     }
@@ -900,7 +913,7 @@ class AdminControllerTest {
                                 .ordinal(1)
                                 .build()))
                         .build();
-        BindingResult result = org.mockito.Mockito.mock(BindingResult.class);
+        BindingResult result = mock(BindingResult.class);
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class, () ->
@@ -915,7 +928,7 @@ class AdminControllerTest {
         MockHttpSession session = new MockHttpSession();
         session.setAttribute("appFilter", "Test App");
 
-        Authentication auth = org.mockito.Mockito.mock(Authentication.class);
+        Authentication auth = mock(Authentication.class);
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class, () ->
@@ -940,7 +953,7 @@ class AdminControllerTest {
                         .build();
         session.setAttribute("appRolesOrderForm", form);
 
-        Authentication auth = org.mockito.Mockito.mock(Authentication.class);
+        Authentication auth = mock(Authentication.class);
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class, () ->
@@ -1015,7 +1028,7 @@ class AdminControllerTest {
         session.setAttribute("appId", appId);
         session.setAttribute("appDetailsForm", form);
 
-        Authentication auth = org.mockito.Mockito.mock(Authentication.class);
+        Authentication auth = mock(Authentication.class);
         CurrentUserDto currentUser = new CurrentUserDto();
         currentUser.setUserId(UUID.randomUUID());
         currentUser.setName("Admin User");
@@ -1036,7 +1049,7 @@ class AdminControllerTest {
         when(loginService.getCurrentUser(auth)).thenReturn(currentUser);
         when(loginService.getCurrentProfile(auth)).thenReturn(UserProfile.builder().id(UUID.randomUUID()).build());
         when(appService.findById(UUID.fromString(appId))).thenReturn(Optional.of(appDto));
-        when(appService.save(org.mockito.ArgumentMatchers.any())).thenReturn(appEntity);
+        when(appService.save(any())).thenReturn(appEntity);
 
         adminController.confirmAppDetailsPost(appId, auth, model, session);
 
@@ -1059,7 +1072,7 @@ class AdminControllerTest {
         session.setAttribute("roleId", roleId);
         session.setAttribute("appRoleDetailsForm", form);
 
-        Authentication auth = org.mockito.Mockito.mock(Authentication.class);
+        Authentication auth = mock(Authentication.class);
         CurrentUserDto currentUser = new CurrentUserDto();
         currentUser.setUserId(UUID.randomUUID());
         currentUser.setName("Admin");
@@ -1078,7 +1091,7 @@ class AdminControllerTest {
         when(loginService.getCurrentUser(auth)).thenReturn(currentUser);
         when(loginService.getCurrentProfile(auth)).thenReturn(UserProfile.builder().id(UUID.randomUUID()).build());
         when(appRoleService.findById(UUID.fromString(roleId))).thenReturn(Optional.of(roleDto));
-        when(appRoleService.save(org.mockito.ArgumentMatchers.any())).thenReturn(roleEntity);
+        when(appRoleService.save(any())).thenReturn(roleEntity);
 
         adminController.confirmAppRoleDetailsPost(roleId, auth, model, session);
 
@@ -1103,7 +1116,7 @@ class AdminControllerTest {
                 AppRolesOrderForm.builder()
                         .appRoles(Arrays.asList(a))
                         .build();
-        BindingResult result = org.mockito.Mockito.mock(BindingResult.class);
+        BindingResult result = mock(BindingResult.class);
         when(result.hasErrors()).thenReturn(false);
 
         adminController.editAppRolesOrderPost(form, result, model, session);
@@ -1323,7 +1336,7 @@ class AdminControllerTest {
                 .description("Test Description")
                 .build();
 
-        BindingResult result = org.mockito.Mockito.mock(BindingResult.class);
+        BindingResult result = mock(BindingResult.class);
         when(result.hasErrors()).thenReturn(true);
         when(result.getAllErrors()).thenReturn(List.of(new ObjectError("name", "Role name is required")));
         when(appRoleService.findById(UUID.fromString(roleId))).thenReturn(Optional.of(roleDto));
@@ -1354,7 +1367,7 @@ class AdminControllerTest {
                 .description("Test Description")
                 .build();
 
-        BindingResult result = org.mockito.Mockito.mock(BindingResult.class);
+        BindingResult result = mock(BindingResult.class);
         when(result.hasErrors()).thenReturn(true);
         when(result.getAllErrors()).thenReturn(List.of(
                 new ObjectError("name", "Name is required"),
@@ -1383,7 +1396,7 @@ class AdminControllerTest {
         MockHttpSession session = new MockHttpSession();
         String roleId = UUID.randomUUID().toString();
 
-        BindingResult result = org.mockito.Mockito.mock(BindingResult.class);
+        BindingResult result = mock(BindingResult.class);
         when(result.hasErrors()).thenReturn(false);
 
         AppRoleDetailsForm form =
@@ -1411,7 +1424,7 @@ class AdminControllerTest {
                 .description("Test Description")
                 .build();
 
-        BindingResult result = org.mockito.Mockito.mock(BindingResult.class);
+        BindingResult result = mock(BindingResult.class);
         when(result.hasErrors()).thenReturn(true);
         when(result.getAllErrors()).thenReturn(List.of(new ObjectError("name", "Name required")));
         when(appRoleService.findById(UUID.fromString(roleId))).thenReturn(Optional.of(roleDto));
@@ -1435,7 +1448,7 @@ class AdminControllerTest {
         MockHttpSession session = new MockHttpSession();
         String roleId = UUID.randomUUID().toString();
 
-        BindingResult result = org.mockito.Mockito.mock(BindingResult.class);
+        BindingResult result = mock(BindingResult.class);
         when(result.hasErrors()).thenReturn(true);
         when(appRoleService.findById(UUID.fromString(roleId))).thenReturn(Optional.empty());
 
@@ -1452,5 +1465,1030 @@ class AdminControllerTest {
         );
 
         assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Nested
+    class DeleteAppRoleTests {
+
+        @Mock
+        private Authentication authentication;
+
+        @Test
+        @DisplayName("GET /silas-administration/delete-role: when no app selected -> redirects with flash error")
+        void deleteAppRoleGet_noAppInSession_redirectsWithError() {
+            // Arrange
+            Model model = new ExtendedModelMap();
+            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn(null); // or Optional.empty() logic in helper
+
+            // Act
+            String view = adminController.deleteAppRoleGet(model, redirectAttributes, mockHttpSession);
+
+            // Assert
+            assertThat(view).isEqualTo("redirect:/admin/silas-administration#roles");
+            assertThat(redirectAttributes.getFlashAttributes().get("appRolesErrorMessage"))
+                    .isEqualTo("Please select an application to delete its roles");
+
+            // No calls to service when app is missing
+            verifyNoInteractions(appRoleService);
+        }
+
+        @Test
+        @DisplayName("GET /silas-administration/delete-role: when app selected -> populates model, session, returns view")
+        void deleteAppRoleGet_appPresent_populatesModelAndReturnsView() {
+            // Arrange
+            Model model = new ExtendedModelMap();
+            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+            String appName = "MyApp";
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn(appName);
+            List<AppRoleAdminDto> roles = List.of(AppRoleAdminDto.builder().id(UUID.randomUUID().toString()).name("ADMIN").build());
+            when(appRoleService.getLaaAppRolesByAppName(appName)).thenReturn(roles);
+
+            // Act
+            String view = adminController.deleteAppRoleGet(model, redirectAttributes, mockHttpSession);
+
+            // Assert
+            assertThat(view).isEqualTo("silas-administration/delete-app-roles");
+            assertThat(model.getAttribute("appName")).isEqualTo(appName);
+            assertThat(model.getAttribute("roles")).isEqualTo(roles);
+
+            // Page title present
+            assertThat(model.containsAttribute(ModelAttributes.PAGE_TITLE)).isTrue();
+            assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE))
+                    .isEqualTo(AdminController.SILAS_ADMINISTRATION_TITLE);
+
+            // Session is updated (re-sets the appFilter)
+            verify(mockHttpSession).setAttribute("appFilter", appName);
+
+            // Service invoked with the app name
+            verify(appRoleService).getLaaAppRolesByAppName(appName);
+            verifyNoMoreInteractions(appRoleService);
+        }
+
+        @Test
+        @DisplayName("GET /silas-administration/delete-role: empty/blank app name -> redirects with flash error")
+        void deleteAppRoleGet_blankAppName_redirectsWithError() {
+            // Arrange
+            Model model = new ExtendedModelMap();
+            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn("  "); // blank but non-null
+
+            // Act
+            String view = adminController.deleteAppRoleGet(model, redirectAttributes, mockHttpSession);
+
+            // Assert
+            assertThat(view).isEqualTo("redirect:/admin/silas-administration#roles");
+            assertThat(redirectAttributes.getFlashAttributes().get("appRolesErrorMessage"))
+                    .isEqualTo("Please select an application to delete its roles");
+            verifyNoInteractions(appRoleService);
+        }
+
+        @Test
+        @DisplayName("POST /silas-administration/delete-role/{roleId}: when session app missing -> 404 ResponseStatusException")
+        void deleteAppRolePost_noAppInSession_throws404() {
+            // Arrange
+            Model model = new ExtendedModelMap();
+            String roleId = UUID.randomUUID().toString();
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn(null);
+
+            // Act + Assert
+            assertThatThrownBy(() ->
+                    adminController.deleteAppRolePost(roleId, "Admin", "SomeApp", model, mockHttpSession)
+            )
+                    .isInstanceOf(ResponseStatusException.class)
+                    .satisfies(ex -> {
+                        ResponseStatusException rse = (ResponseStatusException) ex;
+                        assertThat(rse.getStatusCode().value()).isEqualTo(HttpStatus.NOT_FOUND.value());
+                        assertThat(rse.getReason()).isEqualTo("App not selected for role ordering");
+                    });
+
+            // No further interactions
+            verifyNoInteractions(appRoleService);
+        }
+
+        @Test
+        @DisplayName("POST /silas-administration/delete-role/{roleId}: app name mismatch -> error page and errorMessage")
+        void deleteAppRolePost_appNameMismatch_returnsGenericError() {
+            // Arrange
+            Model model = new ExtendedModelMap();
+            String roleId = UUID.randomUUID().toString();
+            String sessionApp = "SessionApp";
+            String incomingApp = "IncomingApp"; // mismatch
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn(sessionApp);
+
+            // Act
+            String view = adminController.deleteAppRolePost(roleId, "Admin", incomingApp, model, mockHttpSession);
+
+            // Assert
+            assertThat(view).isEqualTo("errors/error-generic");
+            assertThat(model.getAttribute("appName")).isEqualTo(sessionApp);
+            assertThat(model.getAttribute("errorMessage")).isEqualTo("Error while processing app role management");
+
+            // No service calls in this branch
+            verifyNoInteractions(appRoleService);
+
+            // No session changes for roleId/roleName on mismatch
+            verify(mockHttpSession, never()).setAttribute(eq("roleIdForDeletion"), any());
+            verify(mockHttpSession, never()).setAttribute(eq("roleNameForDeletion"), any());
+        }
+
+        @Test
+        @DisplayName("POST /silas-administration/delete-role/{roleId}: app name matches -> sets session attributes and redirects to reason page")
+        void deleteAppRolePost_happyPath_setsSessionAndRedirects() {
+            // Arrange
+            Model model = new ExtendedModelMap();
+            String roleId = UUID.randomUUID().toString();
+            String roleName = "Admin";
+            String appName = "MyApp";
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn(appName);
+
+            // Act
+            String view = adminController.deleteAppRolePost(roleId, roleName, appName, model, mockHttpSession);
+
+            // Assert
+            // Model contains appName from session and page title
+            assertThat(model.getAttribute("appName")).isEqualTo(appName);
+            assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE))
+                    .isEqualTo(AdminController.SILAS_ADMINISTRATION_TITLE);
+
+            // Session stores role info for the next step
+            verify(mockHttpSession).setAttribute("roleIdForDeletion", roleId);
+            verify(mockHttpSession).setAttribute("roleNameForDeletion", roleName);
+
+            // Correct redirect URL
+            assertThat(view).isEqualTo("redirect:/admin/silas-administration/delete-role/" + roleId + "/reason");
+
+            verifyNoInteractions(appRoleService);
+        }
+
+        private AppRoleDto mockRoleDto(String id, String name, String appName) {
+            AppDto appDto = AppDto.builder().name(appName).build();
+            return AppRoleDto.builder().id(id).name(name).app(appDto).build();
+        }
+
+        @Test
+        @DisplayName("GET reason page: missing app name in session -> 404 ResponseStatusException")
+        void showReason_missingAppName_throws404() {
+            // Arrange
+            Model model = new ExtendedModelMap();
+            String pathRoleId = UUID.randomUUID().toString();
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn(null);
+
+            // Act + Assert
+            assertThatThrownBy(() ->
+                    adminController.showDeleteAppRoleReasonPage(pathRoleId, mockHttpSession, model)
+            )
+                    .isInstanceOf(ResponseStatusException.class)
+                    .satisfies(ex -> {
+                        ResponseStatusException rse = (ResponseStatusException) ex;
+                        assertThat(rse.getStatusCode().value()).isEqualTo(HttpStatus.NOT_FOUND.value());
+                        assertThat(rse.getReason()).isEqualTo("App name not found in session");
+                    });
+
+            verifyNoInteractions(appRoleService);
+        }
+
+        @Test
+        @DisplayName("GET reason page: missing roleIdForDeletion in session -> 404")
+        void showReason_missingRoleId_throws404() {
+            Model model = new ExtendedModelMap();
+            String pathRoleId = UUID.randomUUID().toString();
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn("MyApp");
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(null);
+
+            assertThatThrownBy(() ->
+                    adminController.showDeleteAppRoleReasonPage(pathRoleId, mockHttpSession, model)
+            )
+                    .isInstanceOf(ResponseStatusException.class)
+                    .satisfies(ex -> {
+                        ResponseStatusException rse = (ResponseStatusException) ex;
+                        assertThat(rse.getStatusCode().value()).isEqualTo(HttpStatus.NOT_FOUND.value());
+                        assertThat(rse.getReason()).isEqualTo("Role ID not found in session");
+                    });
+
+            verifyNoInteractions(appRoleService);
+        }
+
+        @Test
+        @DisplayName("GET reason page: missing roleNameForDeletion in session -> 404")
+        void showReason_missingRoleName_throws404() {
+            Model model = new ExtendedModelMap();
+            String pathRoleId = UUID.randomUUID().toString();
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn("MyApp");
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(pathRoleId);
+            when(mockHttpSession.getAttribute("roleNameForDeletion")).thenReturn(null);
+
+            assertThatThrownBy(() ->
+                    adminController.showDeleteAppRoleReasonPage(pathRoleId, mockHttpSession, model)
+            )
+                    .isInstanceOf(ResponseStatusException.class)
+                    .satisfies(ex -> {
+                        ResponseStatusException rse = (ResponseStatusException) ex;
+                        assertThat(rse.getStatusCode().value()).isEqualTo(HttpStatus.NOT_FOUND.value());
+                        assertThat(rse.getReason()).isEqualTo("Role name not found in session");
+                    });
+
+            verifyNoInteractions(appRoleService);
+        }
+
+        @Test
+        @DisplayName("GET reason page: roleId mismatch between path and session -> returns generic error view")
+        void showReason_roleIdMismatch_returnsGenericError() {
+            Model model = new ExtendedModelMap();
+            String pathRoleId = UUID.randomUUID().toString();
+            String sessionRoleId = UUID.randomUUID().toString();
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn("MyApp");
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(sessionRoleId);
+            when(mockHttpSession.getAttribute("roleNameForDeletion")).thenReturn("Admin");
+
+            String view = adminController.showDeleteAppRoleReasonPage(pathRoleId, mockHttpSession, model);
+
+            assertThat(view).isEqualTo("errors/error-generic");
+            assertThat(model.getAttribute("errorMessage"))
+                    .isEqualTo("Error while processing app role management");
+
+            verifyNoInteractions(appRoleService);
+        }
+
+        @Test
+        @DisplayName("GET reason page: appRole not found -> caught and returns generic error view")
+        void showReason_roleNotFound_returnsGenericError() {
+            Model model = new ExtendedModelMap();
+            String roleId = UUID.randomUUID().toString();
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn("MyApp");
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(roleId);
+            when(mockHttpSession.getAttribute("roleNameForDeletion")).thenReturn("Admin");
+
+            when(appRoleService.findById(roleId)).thenReturn(Optional.empty()); // will throw in try { ... }
+
+            String view = adminController.showDeleteAppRoleReasonPage(roleId, mockHttpSession, model);
+
+            assertThat(view).isEqualTo("errors/error-generic");
+            assertThat(model.getAttribute("errorMessage"))
+                    .isEqualTo("An error occurred while loading the page");
+
+            verify(appRoleService).findById(roleId);
+        }
+
+        @Test
+        @DisplayName("GET reason page: role name mismatch -> returns specific error view")
+        void showReason_roleNameMismatch_returnsError() {
+            Model model = new ExtendedModelMap();
+            String roleId = UUID.randomUUID().toString();
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn("MyApp");
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(roleId);
+            when(mockHttpSession.getAttribute("roleNameForDeletion")).thenReturn("Manager"); // session says Manager
+
+            AppRoleDto dto = mockRoleDto(roleId, "Admin", "MyApp"); // actual role name Admin
+            when(appRoleService.findById(roleId)).thenReturn(Optional.of(dto));
+
+            String view = adminController.showDeleteAppRoleReasonPage(roleId, mockHttpSession, model);
+
+            assertThat(view).isEqualTo("errors/error-generic");
+            assertThat(model.getAttribute("errorMessage"))
+                    .isEqualTo("Role name does not match the expected value for the selected role");
+        }
+
+        @Test
+        @DisplayName("GET reason page: app name mismatch -> returns specific error view")
+        void showReason_appNameMismatch_returnsError() {
+            Model model = new ExtendedModelMap();
+            String roleId = UUID.randomUUID().toString();
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn("SessionApp");
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(roleId);
+            when(mockHttpSession.getAttribute("roleNameForDeletion")).thenReturn("Admin");
+
+            AppRoleDto dto = mockRoleDto(roleId, "Admin", "DbApp"); // Db app != session app
+            when(appRoleService.findById(roleId)).thenReturn(Optional.of(dto));
+
+            String view = adminController.showDeleteAppRoleReasonPage(roleId, mockHttpSession, model);
+
+            assertThat(view).isEqualTo("errors/error-generic");
+            assertThat(model.getAttribute("errorMessage"))
+                    .isEqualTo("App name does not match the expected value for the selected role");
+        }
+
+        @Test
+        @DisplayName("GET reason page: happy path (no pre-existing form) -> populates model and returns reason view")
+        void showReason_happyPath_withoutExistingForm() {
+            Model model = new ExtendedModelMap();
+            String roleId = UUID.randomUUID().toString();
+            String appName = "MyApp";
+            String roleName = "Admin";
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn(appName);
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(roleId);
+            when(mockHttpSession.getAttribute("roleNameForDeletion")).thenReturn(roleName);
+            when(mockHttpSession.getAttribute("deleteAppRoleReasonForm")).thenReturn(null);
+
+            AppRoleDto dto = mockRoleDto(roleId, roleName, appName);
+            when(appRoleService.findById(roleId)).thenReturn(Optional.of(dto));
+
+            String view = adminController.showDeleteAppRoleReasonPage(roleId, mockHttpSession, model);
+
+            assertThat(view).isEqualTo("silas-administration/delete-app-role-reason");
+            assertThat(model.getAttribute("roleName")).isEqualTo(roleName);
+            assertThat(model.getAttribute("appName")).isEqualTo(appName);
+            assertThat(model.getAttribute("roleId")).isEqualTo(roleId);
+            assertThat(model.getAttribute("deleteAppRoleReasonForm")).isNotNull();
+
+            // Optional: assert page title if constant available
+            assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE))
+                    .isEqualTo(AdminController.SILAS_ADMINISTRATION_TITLE);
+        }
+
+        @Test
+        @DisplayName("GET reason page: happy path uses existing form from session")
+        void showReason_happyPath_withExistingForm() {
+            final Model model = new ExtendedModelMap();
+            final String roleId = UUID.randomUUID().toString();
+            final String appName = "MyApp";
+            final String roleName = "Admin";
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn(appName);
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(roleId);
+            when(mockHttpSession.getAttribute("roleNameForDeletion")).thenReturn(roleName);
+
+            DeleteAppRoleReasonForm existingForm = new DeleteAppRoleReasonForm();
+            existingForm.setAppRoleId(roleId);
+            existingForm.setAppName(appName);
+            existingForm.setReason("Cleanup");
+            when(mockHttpSession.getAttribute("deleteAppRoleReasonForm")).thenReturn(existingForm);
+
+            AppRoleDto dto = mockRoleDto(roleId, roleName, appName);
+            when(appRoleService.findById(roleId)).thenReturn(Optional.of(dto));
+
+            String view = adminController.showDeleteAppRoleReasonPage(roleId, mockHttpSession, model);
+
+            assertThat(view).isEqualTo("silas-administration/delete-app-role-reason");
+            assertThat(model.getAttribute("deleteAppRoleReasonForm")).isSameAs(existingForm);
+        }
+
+        @Test
+        @DisplayName("POST reason: field error on 'reason' -> redisplay reason view")
+        void postReason_fieldErrorRedisplaysPage() {
+            Model model = new ExtendedModelMap();
+            String roleId = UUID.randomUUID().toString();
+            DeleteAppRoleReasonForm form = new DeleteAppRoleReasonForm();
+
+            when(bindingResult.hasFieldErrors("reason")).thenReturn(true);
+
+            String view = adminController.processDeleteAppRoleReasonSubmission(
+                    roleId, form, bindingResult, mockHttpSession, model);
+
+            assertThat(view).isEqualTo("silas-administration/delete-app-role-reason");
+            verifyNoInteractions(appRoleService);
+        }
+
+        @Test
+        @DisplayName("POST reason: missing app name in session -> 404")
+        void postReason_missingAppName_throws404() {
+            Model model = new ExtendedModelMap();
+            String roleId = UUID.randomUUID().toString();
+            DeleteAppRoleReasonForm form = new DeleteAppRoleReasonForm();
+
+            when(bindingResult.hasFieldErrors("reason")).thenReturn(false);
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn(null);
+
+            assertThatThrownBy(() ->
+                    adminController.processDeleteAppRoleReasonSubmission(roleId, form, bindingResult, mockHttpSession, model)
+            )
+                    .isInstanceOf(ResponseStatusException.class)
+                    .satisfies(ex -> {
+                        ResponseStatusException rse = (ResponseStatusException) ex;
+                        assertThat(rse.getStatusCode().value()).isEqualTo(HttpStatus.NOT_FOUND.value());
+                        assertThat(rse.getReason()).isEqualTo("App name not found in session");
+                    });
+
+            verifyNoInteractions(appRoleService);
+        }
+
+        @Test
+        @DisplayName("POST reason: missing roleIdForDeletion -> 404")
+        void postReason_missingRoleId_throws404() {
+            Model model = new ExtendedModelMap();
+            String roleId = UUID.randomUUID().toString();
+            DeleteAppRoleReasonForm form = new DeleteAppRoleReasonForm();
+
+            when(bindingResult.hasFieldErrors("reason")).thenReturn(false);
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn("MyApp");
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(null);
+
+            assertThatThrownBy(() ->
+                    adminController.processDeleteAppRoleReasonSubmission(roleId, form, bindingResult, mockHttpSession, model)
+            )
+                    .isInstanceOf(ResponseStatusException.class)
+                    .satisfies(ex -> {
+                        ResponseStatusException rse = (ResponseStatusException) ex;
+                        assertThat(rse.getStatusCode().value()).isEqualTo(HttpStatus.NOT_FOUND.value());
+                        assertThat(rse.getReason()).isEqualTo("Role ID not found in session");
+                    });
+
+            verifyNoInteractions(appRoleService);
+        }
+
+        @Test
+        @DisplayName("POST reason: missing roleNameForDeletion -> 404")
+        void postReason_missingRoleName_throws404() {
+            Model model = new ExtendedModelMap();
+            String roleId = UUID.randomUUID().toString();
+            DeleteAppRoleReasonForm form = new DeleteAppRoleReasonForm();
+
+            when(bindingResult.hasFieldErrors("reason")).thenReturn(false);
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn("MyApp");
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(roleId);
+            when(mockHttpSession.getAttribute("roleNameForDeletion")).thenReturn(null);
+
+            assertThatThrownBy(() ->
+                    adminController.processDeleteAppRoleReasonSubmission(roleId, form, bindingResult, mockHttpSession, model)
+            )
+                    .isInstanceOf(ResponseStatusException.class)
+                    .satisfies(ex -> {
+                        ResponseStatusException rse = (ResponseStatusException) ex;
+                        assertThat(rse.getStatusCode().value()).isEqualTo(HttpStatus.NOT_FOUND.value());
+                        assertThat(rse.getReason()).isEqualTo("Role name not found in session");
+                    });
+
+            verifyNoInteractions(appRoleService);
+        }
+
+        @Test
+        @DisplayName("POST reason: role not found -> RuntimeException (propagates)")
+        void postReason_roleNotFound_runtimeException() {
+            final Model model = new ExtendedModelMap();
+            final String pathRoleId = UUID.randomUUID().toString();
+            final String sessionRoleId = pathRoleId;
+            final DeleteAppRoleReasonForm form = new DeleteAppRoleReasonForm();
+            form.setAppRoleId(sessionRoleId);
+
+            when(bindingResult.hasFieldErrors("reason")).thenReturn(false);
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn("MyApp");
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(sessionRoleId);
+            when(mockHttpSession.getAttribute("roleNameForDeletion")).thenReturn("Admin");
+            when(appRoleService.findById(sessionRoleId)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() ->
+                    adminController.processDeleteAppRoleReasonSubmission(pathRoleId, form, bindingResult, mockHttpSession, model)
+            ).isInstanceOf(RuntimeException.class)
+                    .hasMessage("App Role not found");
+        }
+
+        @Test
+        @DisplayName("POST reason: path roleId mismatch with session -> generic error view")
+        void postReason_roleIdMismatch_returnsGenericError() {
+            final Model model = new ExtendedModelMap();
+            final String pathRoleId = UUID.randomUUID().toString();
+            final String sessionRoleId = UUID.randomUUID().toString();
+
+            DeleteAppRoleReasonForm form = new DeleteAppRoleReasonForm();
+            form.setAppRoleId(sessionRoleId);
+
+            when(bindingResult.hasFieldErrors("reason")).thenReturn(false);
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn("MyApp");
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(sessionRoleId);
+            when(mockHttpSession.getAttribute("roleNameForDeletion")).thenReturn("Admin");
+
+            AppRoleDto dto = mockRoleDto(sessionRoleId, "Admin", "MyApp");
+            when(appRoleService.findById(sessionRoleId)).thenReturn(Optional.of(dto));
+
+            String view = adminController.processDeleteAppRoleReasonSubmission(pathRoleId, form, bindingResult, mockHttpSession, model);
+
+            assertThat(view).isEqualTo("errors/error-generic");
+            assertThat(model.getAttribute("errorMessage"))
+                    .isEqualTo("Error while processing app role management");
+        }
+
+        @Test
+        @DisplayName("POST reason: role name mismatch -> specific error view")
+        void postReason_roleNameMismatch_returnsError() {
+            final Model model = new ExtendedModelMap();
+            final String roleId = UUID.randomUUID().toString();
+
+            DeleteAppRoleReasonForm form = new DeleteAppRoleReasonForm();
+            form.setAppRoleId(roleId);
+
+            when(bindingResult.hasFieldErrors("reason")).thenReturn(false);
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn("MyApp");
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(roleId);
+            when(mockHttpSession.getAttribute("roleNameForDeletion")).thenReturn("Manager"); // mismatch
+
+            AppRoleDto dto = mockRoleDto(roleId, "Admin", "MyApp");
+            when(appRoleService.findById(roleId)).thenReturn(Optional.of(dto));
+
+            String view = adminController.processDeleteAppRoleReasonSubmission(roleId, form, bindingResult, mockHttpSession, model);
+
+            assertThat(view).isEqualTo("errors/error-generic");
+            assertThat(model.getAttribute("errorMessage"))
+                    .isEqualTo("Role name does not match the expected value for the selected role");
+        }
+
+        @Test
+        @DisplayName("POST reason: app name mismatch -> specific error view")
+        void postReason_appNameMismatch_returnsError() {
+            final Model model = new ExtendedModelMap();
+            final String roleId = UUID.randomUUID().toString();
+
+            DeleteAppRoleReasonForm form = new DeleteAppRoleReasonForm();
+            form.setAppRoleId(roleId);
+
+            when(bindingResult.hasFieldErrors("reason")).thenReturn(false);
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn("SessionApp");
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(roleId);
+            when(mockHttpSession.getAttribute("roleNameForDeletion")).thenReturn("Admin");
+
+            AppRoleDto dto = mockRoleDto(roleId, "Admin", "DbApp");
+            when(appRoleService.findById(roleId)).thenReturn(Optional.of(dto));
+
+            String view = adminController.processDeleteAppRoleReasonSubmission(roleId, form, bindingResult, mockHttpSession, model);
+
+            assertThat(view).isEqualTo("errors/error-generic");
+            assertThat(model.getAttribute("errorMessage"))
+                    .isEqualTo("App name does not match the expected value for the selected role");
+        }
+
+        @Test
+        @DisplayName("POST reason: form roleId mismatch -> specific error view")
+        void postReason_formRoleIdMismatch_returnsError() {
+            final Model model = new ExtendedModelMap();
+            final String roleId = UUID.randomUUID().toString();
+
+            DeleteAppRoleReasonForm form = new DeleteAppRoleReasonForm();
+            form.setAppRoleId(UUID.randomUUID().toString()); // mismatch with session id
+
+            when(bindingResult.hasFieldErrors("reason")).thenReturn(false);
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn("MyApp");
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(roleId);
+            when(mockHttpSession.getAttribute("roleNameForDeletion")).thenReturn("Admin");
+
+            AppRoleDto dto = mockRoleDto(roleId, "Admin", "MyApp");
+            when(appRoleService.findById(roleId)).thenReturn(Optional.of(dto));
+
+            String view = adminController.processDeleteAppRoleReasonSubmission(roleId, form, bindingResult, mockHttpSession, model);
+
+            assertThat(view).isEqualTo("errors/error-generic");
+            assertThat(model.getAttribute("errorMessage"))
+                    .isEqualTo("Role ID does not match the expected value for the selected role");
+        }
+
+        @Test
+        @DisplayName("POST reason: happy path -> form stored in session and redirect to check-answers with role id")
+        void postReason_happyPath_redirects() {
+            final Model model = new ExtendedModelMap();
+            final String roleId = UUID.randomUUID().toString();
+            final String appName = "MyApp";
+            final String roleName = "Admin";
+
+            DeleteAppRoleReasonForm form = new DeleteAppRoleReasonForm();
+            form.setAppRoleId(roleId);
+            form.setAppName(appName);
+            form.setReason("Housekeeping");
+
+            when(bindingResult.hasFieldErrors("reason")).thenReturn(false);
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn(appName);
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(roleId);
+            when(mockHttpSession.getAttribute("roleNameForDeletion")).thenReturn(roleName);
+
+            AppRoleDto dto = mockRoleDto(roleId, roleName, appName);
+            when(appRoleService.findById(roleId)).thenReturn(Optional.of(dto));
+
+            String view = adminController.processDeleteAppRoleReasonSubmission(roleId, form, bindingResult, mockHttpSession, model);
+
+            // Form saved to session
+            verify(mockHttpSession).setAttribute("deleteAppRoleReasonForm", form);
+
+            // Redirect contains the ID from the DTO
+            assertThat(view).isEqualTo("redirect:/admin/silas-administration/delete-role/" + roleId + "/check-answers");
+        }
+
+        @Test
+        @DisplayName("GET check-answers: missing app name -> 404")
+        void showCheckAnswers_missingApp_throws404() {
+            final Model model = new ExtendedModelMap();
+            final String roleId = UUID.randomUUID().toString();
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn(null);
+
+            assertThatThrownBy(() ->
+                    adminController.showDeleteAppRoleCheckAnswersPage(roleId, mockHttpSession, model)
+            )
+                    .isInstanceOf(ResponseStatusException.class)
+                    .satisfies(ex -> {
+                        ResponseStatusException rse = (ResponseStatusException) ex;
+                        assertThat(rse.getStatusCode().value()).isEqualTo(HttpStatus.NOT_FOUND.value());
+                        assertThat(rse.getReason()).isEqualTo("App name not found in session");
+                    });
+
+            verifyNoInteractions(appRoleService);
+        }
+
+        @Test
+        @DisplayName("GET check-answers: missing roleIdForDeletion -> 404")
+        void showCheckAnswers_missingRoleId_throws404() {
+            final Model model = new ExtendedModelMap();
+            final String roleId = UUID.randomUUID().toString();
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn("MyApp");
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(null);
+
+            assertThatThrownBy(() ->
+                    adminController.showDeleteAppRoleCheckAnswersPage(roleId, mockHttpSession, model)
+            )
+                    .isInstanceOf(ResponseStatusException.class)
+                    .satisfies(ex -> {
+                        ResponseStatusException rse = (ResponseStatusException) ex;
+                        assertThat(rse.getStatusCode().value()).isEqualTo(HttpStatus.NOT_FOUND.value());
+                        assertThat(rse.getReason()).isEqualTo("Role ID not found in session");
+                    });
+
+            verifyNoInteractions(appRoleService);
+        }
+
+        @Test
+        @DisplayName("GET check-answers: missing roleNameForDeletion -> 404")
+        void showCheckAnswers_missingRoleName_throws404() {
+            final Model model = new ExtendedModelMap();
+            final String roleId = UUID.randomUUID().toString();
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn("MyApp");
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(roleId);
+            when(mockHttpSession.getAttribute("roleNameForDeletion")).thenReturn(null);
+
+            assertThatThrownBy(() ->
+                    adminController.showDeleteAppRoleCheckAnswersPage(roleId, mockHttpSession, model)
+            )
+                    .isInstanceOf(ResponseStatusException.class)
+                    .satisfies(ex -> {
+                        ResponseStatusException rse = (ResponseStatusException) ex;
+                        assertThat(rse.getStatusCode().value()).isEqualTo(HttpStatus.NOT_FOUND.value());
+                        assertThat(rse.getReason()).isEqualTo("Role name not found in session");
+                    });
+
+            verifyNoInteractions(appRoleService);
+        }
+
+        @Test
+        @DisplayName("GET check-answers: missing deleteAppRoleReasonForm -> 404")
+        void showCheckAnswers_missingForm_throws404() {
+            Model model = new ExtendedModelMap();
+            String roleId = UUID.randomUUID().toString();
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn("MyApp");
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(roleId);
+            when(mockHttpSession.getAttribute("roleNameForDeletion")).thenReturn("Admin");
+            when(mockHttpSession.getAttribute("deleteAppRoleReasonForm")).thenReturn(null);
+
+            assertThatThrownBy(() ->
+                    adminController.showDeleteAppRoleCheckAnswersPage(roleId, mockHttpSession, model)
+            )
+                    .isInstanceOf(ResponseStatusException.class)
+                    .satisfies(ex -> {
+                        ResponseStatusException rse = (ResponseStatusException) ex;
+                        assertThat(rse.getStatusCode().value()).isEqualTo(HttpStatus.NOT_FOUND.value());
+                        assertThat(rse.getReason()).isEqualTo("Delete Role form not found in session");
+                    });
+
+            verifyNoInteractions(appRoleService);
+        }
+
+        @Test
+        @DisplayName("GET check-answers: roleId mismatch (path vs session) -> error view")
+        void showCheckAnswers_roleIdMismatch_returnsError() {
+            final Model model = new ExtendedModelMap();
+            final String pathRoleId = UUID.randomUUID().toString();
+            final String sessionRoleId = UUID.randomUUID().toString();
+
+            DeleteAppRoleReasonForm form = new DeleteAppRoleReasonForm();
+            form.setAppRoleId(pathRoleId); // even though session mismatches, we also need form in session
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn("MyApp");
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(sessionRoleId);
+            when(mockHttpSession.getAttribute("roleNameForDeletion")).thenReturn("Admin");
+            when(mockHttpSession.getAttribute("deleteAppRoleReasonForm")).thenReturn(form);
+
+            String view = adminController.showDeleteAppRoleCheckAnswersPage(pathRoleId, mockHttpSession, model);
+
+            assertThat(view).isEqualTo("errors/error-generic");
+            assertThat(model.getAttribute("errorMessage"))
+                    .isEqualTo("Error while processing app role management");
+
+            verifyNoInteractions(appRoleService);
+        }
+
+        @Test
+        @DisplayName("GET check-answers: form.appRoleId mismatch with path -> error view")
+        void showCheckAnswers_formRoleIdMismatch_returnsError() {
+            final Model model = new ExtendedModelMap();
+            final String pathRoleId = UUID.randomUUID().toString();
+            final String sessionRoleId = pathRoleId;
+
+            DeleteAppRoleReasonForm form = new DeleteAppRoleReasonForm();
+            form.setAppRoleId(UUID.randomUUID().toString()); // mismatch
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn("MyApp");
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(sessionRoleId);
+            when(mockHttpSession.getAttribute("roleNameForDeletion")).thenReturn("Admin");
+            when(mockHttpSession.getAttribute("deleteAppRoleReasonForm")).thenReturn(form);
+
+            String view = adminController.showDeleteAppRoleCheckAnswersPage(pathRoleId, mockHttpSession, model);
+
+            assertThat(view).isEqualTo("errors/error-generic");
+            assertThat(model.getAttribute("errorMessage"))
+                    .isEqualTo("Error while processing app role management");
+
+            verifyNoInteractions(appRoleService);
+        }
+
+        @Test
+        @DisplayName("GET check-answers: happy path -> model populated and counts added")
+        void showCheckAnswers_happyPath_populatesModel() {
+            final Model model = new ExtendedModelMap();
+            final String roleId = UUID.randomUUID().toString();
+            final String appName = "MyApp";
+            final String roleName = "Admin";
+
+            DeleteAppRoleReasonForm form = new DeleteAppRoleReasonForm();
+            form.setAppRoleId(roleId);
+            form.setAppName(appName);
+            form.setReason("Housekeeping");
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn(appName);
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(roleId);
+            when(mockHttpSession.getAttribute("roleNameForDeletion")).thenReturn(roleName);
+            when(mockHttpSession.getAttribute("deleteAppRoleReasonForm")).thenReturn(form);
+
+            when(appRoleService.countNoOfRoleAssignments(roleId)).thenReturn(12L);
+            when(appRoleService.countNoOfFirmsWithRoleAssignments(roleId)).thenReturn(3L);
+
+            String view = adminController.showDeleteAppRoleCheckAnswersPage(roleId, mockHttpSession, model);
+
+            assertThat(view).isEqualTo("silas-administration/delete-app-role-check-answers");
+            assertThat(model.getAttribute("reason")).isEqualTo("Housekeeping");
+            assertThat(model.getAttribute("roleName")).isEqualTo(roleName);
+            assertThat(model.getAttribute("appName")).isEqualTo(appName);
+            assertThat(model.getAttribute("roleId")).isEqualTo(roleId);
+            assertThat(model.getAttribute("noOfUserProfilesAffected")).isEqualTo(12L);
+            assertThat(model.getAttribute("noOfFirmsAffected")).isEqualTo(3L);
+            assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE))
+                    .isEqualTo(AdminController.SILAS_ADMINISTRATION_TITLE);
+
+            verify(appRoleService).countNoOfRoleAssignments(roleId);
+            verify(appRoleService).countNoOfFirmsWithRoleAssignments(roleId);
+            verifyNoMoreInteractions(appRoleService);
+        }
+
+        @Test
+        @DisplayName("GET check-answers: when counting throws -> caught and generic error view")
+        void showCheckAnswers_countsThrow_returnsGenericError() {
+            final Model model = new ExtendedModelMap();
+            final String roleId = UUID.randomUUID().toString();
+            final String appName = "MyApp";
+
+            DeleteAppRoleReasonForm form = new DeleteAppRoleReasonForm();
+            form.setAppRoleId(roleId);
+            form.setAppName(appName);
+            form.setReason("Cleanup");
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn(appName);
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(roleId);
+            when(mockHttpSession.getAttribute("roleNameForDeletion")).thenReturn("Admin");
+            when(mockHttpSession.getAttribute("deleteAppRoleReasonForm")).thenReturn(form);
+
+            when(appRoleService.countNoOfRoleAssignments(roleId)).thenThrow(new RuntimeException("boom"));
+
+            String view = adminController.showDeleteAppRoleCheckAnswersPage(roleId, mockHttpSession, model);
+
+            assertThat(view).isEqualTo("errors/error-generic");
+            assertThat(model.getAttribute("errorMessage"))
+                    .isEqualTo("An error occurred while loading the page");
+        }
+
+        @Test
+        @DisplayName("POST check-answers: missing app name -> 404")
+        void postCheckAnswers_missingApp_throws404() {
+            final Model model = new ExtendedModelMap();
+            final String roleId = UUID.randomUUID().toString();
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn(null);
+
+            assertThatThrownBy(() ->
+                    adminController.submitDeleteAppRoleCheckAnswersPage(roleId, mockHttpSession, model, authentication)
+            )
+                    .isInstanceOf(ResponseStatusException.class)
+                    .satisfies(ex -> {
+                        ResponseStatusException rse = (ResponseStatusException) ex;
+                        assertThat(rse.getStatusCode().value()).isEqualTo(HttpStatus.NOT_FOUND.value());
+                        assertThat(rse.getReason()).isEqualTo("App name not found in session");
+                    });
+
+            verifyNoInteractions(appRoleService, loginService);
+        }
+
+        @Test
+        @DisplayName("POST check-answers: missing roleIdForDeletion -> 404")
+        void postCheckAnswers_missingRoleId_throws404() {
+            final Model model = new ExtendedModelMap();
+            final String roleId = UUID.randomUUID().toString();
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn("MyApp");
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(null);
+
+            assertThatThrownBy(() ->
+                    adminController.submitDeleteAppRoleCheckAnswersPage(roleId, mockHttpSession, model, authentication)
+            )
+                    .isInstanceOf(ResponseStatusException.class)
+                    .satisfies(ex -> {
+                        ResponseStatusException rse = (ResponseStatusException) ex;
+                        assertThat(rse.getStatusCode().value()).isEqualTo(HttpStatus.NOT_FOUND.value());
+                        assertThat(rse.getReason()).isEqualTo("Role ID not found in session");
+                    });
+
+            verifyNoInteractions(appRoleService, loginService);
+        }
+
+        @Test
+        @DisplayName("POST check-answers: missing roleNameForDeletion -> 404")
+        void postCheckAnswers_missingRoleName_throws404() {
+            final Model model = new ExtendedModelMap();
+            final String roleId = UUID.randomUUID().toString();
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn("MyApp");
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(roleId);
+            when(mockHttpSession.getAttribute("roleNameForDeletion")).thenReturn(null);
+
+            assertThatThrownBy(() ->
+                    adminController.submitDeleteAppRoleCheckAnswersPage(roleId, mockHttpSession, model, authentication)
+            )
+                    .isInstanceOf(ResponseStatusException.class)
+                    .satisfies(ex -> {
+                        ResponseStatusException rse = (ResponseStatusException) ex;
+                        assertThat(rse.getStatusCode().value()).isEqualTo(HttpStatus.NOT_FOUND.value());
+                        assertThat(rse.getReason()).isEqualTo("Role name not found in session");
+                    });
+
+            verifyNoInteractions(appRoleService, loginService);
+        }
+
+        @Test
+        @DisplayName("POST check-answers: role not found -> RuntimeException (propagates)")
+        void postCheckAnswers_roleNotFound_runtimeException() {
+            final Model model = new ExtendedModelMap();
+            final String roleId = UUID.randomUUID().toString();
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn("MyApp");
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(roleId);
+            when(mockHttpSession.getAttribute("roleNameForDeletion")).thenReturn("Admin");
+            when(appRoleService.findById(roleId)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() ->
+                    adminController.submitDeleteAppRoleCheckAnswersPage(roleId, mockHttpSession, model, authentication)
+            )
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessage("App Role not found");
+        }
+
+        @Test
+        @DisplayName("POST check-answers: role name mismatch -> specific error view")
+        void postCheckAnswers_roleNameMismatch_returnsError() {
+            final Model model = new ExtendedModelMap();
+            final String roleId = UUID.randomUUID().toString();
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn("MyApp");
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(roleId);
+            when(mockHttpSession.getAttribute("roleNameForDeletion")).thenReturn("Manager"); // expected name in session
+
+            AppRoleDto dto = mockRoleDto(roleId, "Admin", "MyApp");
+            when(appRoleService.findById(roleId)).thenReturn(Optional.of(dto));
+
+            String view = adminController.submitDeleteAppRoleCheckAnswersPage(roleId, mockHttpSession, model, authentication);
+
+            assertThat(view).isEqualTo("errors/error-generic");
+            assertThat(model.getAttribute("errorMessage"))
+                    .isEqualTo("Role name does not match the expected value for the selected role");
+        }
+
+        @Test
+        @DisplayName("POST check-answers: app name mismatch -> specific error view")
+        void postCheckAnswers_appNameMismatch_returnsError() {
+            final Model model = new ExtendedModelMap();
+            final String roleId = UUID.randomUUID().toString();
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn("SessionApp");
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(roleId);
+            when(mockHttpSession.getAttribute("roleNameForDeletion")).thenReturn("Admin");
+
+            AppRoleDto dto = mockRoleDto(roleId, "Admin", "DbApp");
+            when(appRoleService.findById(roleId)).thenReturn(Optional.of(dto));
+
+            String view = adminController.submitDeleteAppRoleCheckAnswersPage(roleId, mockHttpSession, model, authentication);
+
+            assertThat(view).isEqualTo("errors/error-generic");
+            assertThat(model.getAttribute("errorMessage"))
+                    .isEqualTo("App name does not match the expected value for the selected role");
+        }
+
+        @Test
+        @DisplayName("POST check-answers: missing deleteAppRoleReasonForm -> 404")
+        void postCheckAnswers_missingForm_throws404() {
+            final Model model = new ExtendedModelMap();
+            final String roleId = UUID.randomUUID().toString();
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn("MyApp");
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(roleId);
+            when(mockHttpSession.getAttribute("roleNameForDeletion")).thenReturn("Admin");
+            when(mockHttpSession.getAttribute("deleteAppRoleReasonForm")).thenReturn(null);
+
+            AppRoleDto dto = mockRoleDto(roleId, "Admin", "MyApp");
+            when(appRoleService.findById(roleId)).thenReturn(Optional.of(dto));
+
+            assertThatThrownBy(() ->
+                    adminController.submitDeleteAppRoleCheckAnswersPage(roleId, mockHttpSession, model, authentication)
+            )
+                    .isInstanceOf(ResponseStatusException.class)
+                    .satisfies(ex -> {
+                        ResponseStatusException rse = (ResponseStatusException) ex;
+                        assertThat(rse.getStatusCode().value()).isEqualTo(HttpStatus.NOT_FOUND.value());
+                        assertThat(rse.getReason()).isEqualTo("Delete Role form not found in session");
+                    });
+        }
+
+        @Test
+        @DisplayName("POST check-answers: roleId mismatch with session or form -> generic error view")
+        void postCheckAnswers_roleIdMismatch_returnsError() {
+            final Model model = new ExtendedModelMap();
+            final String pathRoleId = UUID.randomUUID().toString();
+            final String sessionRoleId = UUID.randomUUID().toString();
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn("MyApp");
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(sessionRoleId);
+            when(mockHttpSession.getAttribute("roleNameForDeletion")).thenReturn("Admin");
+
+            AppRoleDto dto = mockRoleDto(sessionRoleId, "Admin", "MyApp");
+            when(appRoleService.findById(sessionRoleId)).thenReturn(Optional.of(dto));
+
+            DeleteAppRoleReasonForm form = new DeleteAppRoleReasonForm();
+            form.setAppRoleId(sessionRoleId); // ok for form, but path != session
+            when(mockHttpSession.getAttribute("deleteAppRoleReasonForm")).thenReturn(form);
+
+            String view = adminController.submitDeleteAppRoleCheckAnswersPage(pathRoleId, mockHttpSession, model, authentication);
+
+            assertThat(view).isEqualTo("errors/error-generic");
+            assertThat(model.getAttribute("errorMessage"))
+                    .isEqualTo("Error while processing app role management");
+        }
+
+        @Test
+        @DisplayName("POST check-answers: happy path -> calls delete and returns confirmation view")
+        void postCheckAnswers_happyPath_callsDeleteAndReturnsConfirmation() {
+            final Model model = new ExtendedModelMap();
+            final String roleId = UUID.randomUUID().toString();
+            final String appName = "MyApp";
+            final String roleName = "Admin";
+            final String reason = "Housekeeping";
+
+            when(mockHttpSession.getAttribute("appFilter")).thenReturn(appName);
+            when(mockHttpSession.getAttribute("roleIdForDeletion")).thenReturn(roleId);
+            when(mockHttpSession.getAttribute("roleNameForDeletion")).thenReturn(roleName);
+
+            AppRoleDto dto = mockRoleDto(roleId, roleName, appName);
+            when(appRoleService.findById(roleId)).thenReturn(Optional.of(dto));
+
+            DeleteAppRoleReasonForm form = new DeleteAppRoleReasonForm();
+            form.setAppRoleId(roleId);
+            form.setAppName(appName);
+            form.setReason(reason);
+            when(mockHttpSession.getAttribute("deleteAppRoleReasonForm")).thenReturn(form);
+
+            // login service stubbing
+            final UUID entraOid = UUID.randomUUID();
+            final UUID profileId = UUID.randomUUID();
+
+            CurrentUserDto currentUser = new CurrentUserDto();
+            currentUser.setUserId(entraOid);
+            currentUser.setName("Admin");
+
+            when(loginService.getCurrentUser(authentication)).thenReturn(currentUser);
+            when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().id(profileId).build());
+
+            String view = adminController.submitDeleteAppRoleCheckAnswersPage(roleId, mockHttpSession, model, authentication);
+
+            // Verify service delete invoked with correct args
+            verify(appRoleService).deleteAppRole(profileId, entraOid, appName, roleId, reason);
+
+            assertThat(view).isEqualTo("silas-administration/delete-app-roles-confirmation");
+        }
+
     }
 }
