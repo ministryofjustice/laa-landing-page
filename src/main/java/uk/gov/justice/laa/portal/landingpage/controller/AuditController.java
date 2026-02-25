@@ -239,13 +239,10 @@ public class AuditController {
         final int pageSize = 500;
         int page = 1;
 
-
-
         String userId = authenticatedUser.getCurrentUser()
                 .map(CurrentUserDto::getUserId)
                 .map(Object::toString)
                 .orElse("unknown");
-
 
         List<String> filterSummary = Stream.of(
                         criteria.getSilasRole(),
@@ -256,8 +253,6 @@ public class AuditController {
                 .collect(Collectors.toList());
 
         String firmCode = firmRepository.findById(criteria.getSelectedFirmId()).map(Firm::getCode).orElse("");
-        String firmName = selectedFirmName;
-
         List<AuditUserDto> firmData = new ArrayList<>(pageSize);
 
         PaginatedAuditUsers result;
@@ -284,7 +279,7 @@ public class AuditController {
             log.info("No audit users found for search criteria: {}", Arrays.toString(filterSummary.toArray()));
         }
 
-        AuditCsvExport export = auditExportService.downloadAuditCsv(firmData, firmCode, firmName);
+        AuditCsvExport export = auditExportService.downloadAuditCsv(firmData, firmCode, selectedFirmName);
         log.info("CSV Audit Export complete - actor= {}, timestamp= {}, Firm Code= {}, Filter Summary (Silas Role, "
                 + "UserType, App Id)= {}, "
                 + "row count= {}", userId, LocalDateTime.now(), firmCode, filterSummary, result.getUsers().size());

@@ -20,7 +20,8 @@ import java.util.List;
 @AllArgsConstructor
 public class AuditExportService {
 
-    private static final String HEADER = "Name,Email,\"Firm Name\",\"Firm Code\",Multi-firm,\"Provider Admin\"\n";
+    private static final String HEADER = "Name,Email,\"Firm Name\",\"Firm Code\",Multi-firm,\"Provider " +
+            "Admin\"\"App Access\"\n";
     private final DateTimeFormatter fileTimestamp = DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmm");
 
     public AuditCsvExport downloadAuditCsv(List<AuditUserDto> firmData, String firmCode, String firmName) {
@@ -45,6 +46,7 @@ public class AuditExportService {
                 .addColumn("Firm Code")
                 .addColumn("Multi-firm")
                 .addColumn("Provider Admin")
+                .addColumn("App Access")
                 .build();
 
         List<AuditUserCsvRow> rows = firmData.stream()
@@ -54,7 +56,8 @@ public class AuditExportService {
                         toStringSafe(firmName),
                         toStringSafe(firmCode),
                         u.isMultiFirmUser() ? "Yes" : "No",
-                        u.isProviderAdmin() ? "Yes" : "No"
+                        u.isProviderAdmin() ? "Yes" : "No",
+                        toStringSafe(u.getAppAccess())
                 ))
                 .toList();
 
@@ -78,15 +81,15 @@ public class AuditExportService {
         return value == null ? "" : value.toString();
     }
 
-    @JsonPropertyOrder({ "Name", "Email", "Firm Name", "Firm Code", "Multi-firm", "Provider Admin" })
+    @JsonPropertyOrder({ "Name", "Email", "Firm Name", "Firm Code", "Multi-firm", "Provider Admin", "App Access" })
     private record AuditUserCsvRow(
             @JsonProperty("Name") String name,
             @JsonProperty("Email") String email,
             @JsonProperty("Firm Name") String firmName,
             @JsonProperty("Firm Code") String firmCode,
             @JsonProperty("Multi-firm") String multiFirm,
-            @JsonProperty("Provider Admin") String providerAdmin
-    ) {}
+            @JsonProperty("Provider Admin") String providerAdmin,
+            @JsonProperty("App Access") String appAccess) {}
 
     public record AuditCsvExport(String filename, byte[] bytes) {}
 }
