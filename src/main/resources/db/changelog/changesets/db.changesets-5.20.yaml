@@ -1,0 +1,9 @@
+databaseChangeLog:
+  # Populate Provider Discretion disable_user_reason table.
+  - changeSet:
+      id: add Provider Discretion
+      author: leonardopalmeiro
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO disable_user_reason (id, name, description, entra_description) VALUES (gen_random_uuid(), 'Provider Discretion', 'Access disabled at provider’s discretion.', 'ProviderDiscretion')"
