@@ -20,6 +20,7 @@ import uk.gov.justice.laa.portal.landingpage.techservices.GetUsersResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -67,8 +68,8 @@ public class ExternalUserPollingService {
                 toTime = fromTime.plusMinutes(30);
             }
 
-            String fromDateTime = fromTime.truncatedTo(ChronoUnit.SECONDS) + ".00Z";
-            String toDateTime = toTime.truncatedTo(ChronoUnit.SECONDS) + ".00Z";
+            String fromDateTime = fromTime.truncatedTo(ChronoUnit.SECONDS).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + ".00Z";
+            String toDateTime = toTime.truncatedTo(ChronoUnit.SECONDS).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + ".00Z";
 
             log.info("Calling Tech Services API to get users from {} to {} (gap: {} minutes)",
                      fromDateTime, toDateTime, ChronoUnit.MINUTES.between(fromTime, toTime));
