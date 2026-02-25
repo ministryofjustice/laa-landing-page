@@ -2822,7 +2822,7 @@ class UserServiceTest {
                     () -> userService.createUser(entraUserDto, firm, true, "admin", false),
                     "Expected Runtime Exception");
             assertThat(rtEx.getMessage())
-                    .isEqualTo("User Test User is not a multi-firm user, firm selection can not be skipped");
+                    .isEqualTo("User with entra id: id is not a multi-firm user, firm selection can not be skipped");
             verify(mockEntraUserRepository, never()).saveAndFlush(any());
             verify(techServicesClient, times(1)).registerNewUser(any(EntraUserDto.class));
         }
@@ -4508,7 +4508,7 @@ class UserServiceTest {
             RuntimeException ex = assertThrows(RuntimeException.class,
                     () -> userService.addMultiFirmUserProfile(user, firmDto, null, null, "admin"));
 
-            assertThat(ex.getMessage()).contains("User not found for the given user user id");
+            assertThat(ex.getMessage()).contains("User not found for the given user entra oid:");
             verify(userProfileRepository, never()).save(any());
             verify(entraUserRepository, never()).save(any());
             verify(techServicesClient, never()).updateRoleAssignment(any(UUID.class));

@@ -12,13 +12,12 @@ public class UserFirmReassignmentEvent extends AuditEvent {
     private final UUID newFirmId;
     private final String reason;
 
-    public UserFirmReassignmentEvent(UUID modifierUserId, String modifierUserName,
+    public UserFirmReassignmentEvent(UUID modifierUserId,
                                      String targetUserId, String targetUserEntraOid, UUID oldFirmId, UUID newFirmId, String reason) {
         super();
         this.oldFirmId = oldFirmId;
         this.newFirmId = newFirmId;
         this.userId = modifierUserId;
-        this.userName = modifierUserName;
         this.targetUserId = targetUserId;
         this.targetUserEntraOid = targetUserEntraOid;
         this.reason = reason;

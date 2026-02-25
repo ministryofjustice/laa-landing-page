@@ -194,7 +194,7 @@ public class UserService {
                     .anyMatch(userType -> userType == userProfile.getUserType())).toList();
             int after = roles.size();
             if (after < before) {
-                logger.warn("Attempt to assign internal role user ID {}.",
+                logger.warn("Attempt to assign internal role user entra ID {}.",
                         userProfile.getEntraUser().getId());
             }
 
@@ -462,8 +462,8 @@ public class UserService {
         final String firmName = userProfile.getFirm() != null ? userProfile.getFirm().getName() : "Unknown";
 
         logger.info(
-                "Deleting firm profile for multi-firm user. actorId={}, userProfileId={}, entraUserId={}, email={}, firm={}",
-                actorId, userProfileId, entraUser.getId(), entraUser.getEmail(), firmName);
+                "Deleting firm profile for multi-firm user. actorId={}, userProfileId={}, entraUserId={},firm={}",
+                actorId, userProfileId, entraUser.getId(), firmName);
 
         // Handle PUI role changes notification (like in deleteExternalUser)
         Set<String> puiRoles = new HashSet<>();
@@ -508,7 +508,7 @@ public class UserService {
                 UserProfile newActiveProfile = remainingProfiles.get(0);
                 newActiveProfile.setActiveProfile(true);
                 userProfileRepository.save(newActiveProfile);
-                logger.info("Set new active profile for user {} to firm {}", entraUser.getEmail(),
+                logger.info("Set new active profile for entra user {} to firm {}", entraUser.getEntraOid(),
                         newActiveProfile.getFirm() != null ? newActiveProfile.getFirm().getName()
                                 : "Unknown");
             }
@@ -742,11 +742,11 @@ public class UserService {
         entraUser.setUserStatus(UserStatus.ACTIVE);
 
         if (!isMultiFirmUser && firmDto.isSkipFirmSelection()) {
-            logger.error("User {} {} is not a multi-firm user, firm selection can not be skipped",
-                    entraUser.getFirstName(), entraUser.getLastName());
+            logger.error("User with entra oid: {} is not a multi-firm user, firm selection can not be skipped",
+                    entraUser.getEntraOid());
             throw new RuntimeException(String.format(
-                    "User %s %s is not a multi-firm user, firm selection can not be skipped",
-                    entraUser.getFirstName(), entraUser.getLastName()));
+                    "User with entra id: %s is not a multi-firm user, firm selection can not be skipped",
+                    entraUser.getEntraOid()));
         }
 
         if (!isMultiFirmUser || !firmDto.isSkipFirmSelection()) {
@@ -771,14 +771,12 @@ public class UserService {
 
     public UserProfile addMultiFirmUserProfile(EntraUserDto entraUserDto, FirmDto firmDto,
             List<OfficeDto> userOfficeDtos, List<AppRoleDto> appRoleDtos, String createdBy) {
-        logger.info("Adding user profile for user: {} ({})", entraUserDto.getFullName(),
-                entraUserDto.getId());
+        logger.info("Adding user profile for entra user: {}", entraUserDto.getEntraOid());
 
         if (!entraUserDto.isMultiFirmUser()) {
-            logger.error("User {} {} is not a multi-firm user", entraUserDto.getFirstName(),
-                    entraUserDto.getLastName());
-            throw new RuntimeException(String.format("User %s %s is not a multi-firm user",
-                    entraUserDto.getFirstName(), entraUserDto.getLastName()));
+            logger.error("User with entra id: {} {} is not a multi-firm user", entraUserDto.getEntraOid());
+            throw new RuntimeException(String.format("User with entra id: %s is not a multi-firm user",
+                    entraUserDto.getEntraOid()));
         }
 
         Set<Office> offices = null;
@@ -794,9 +792,9 @@ public class UserService {
         if (!(firmDto == null || firmDto.getId() == null)) {
             firm = firmService.getById(firmDto.getId());
         } else {
-            logger.error("Invalid firm details provided for: {}", entraUserDto.getFullName());
-            throw new RuntimeException(String.format("Invalid firm details provided for: %s",
-                    entraUserDto.getFullName()));
+            logger.error("Invalid firm details provided for user with entra oid: {}", entraUserDto.getEntraOid());
+            throw new RuntimeException(String.format("Invalid firm details provided for user with entra oid: %s",
+                    entraUserDto.getEntraOid()));
         }
 
         Set<AppRole> appRoles = null;
@@ -810,10 +808,10 @@ public class UserService {
 
         EntraUser entraUser = entraUserRepository.findById(UUID.fromString(entraUserDto.getId()))
                 .orElseThrow(() -> {
-                    logger.error("User not found for the given user user id: {}",
-                            entraUserDto.getId());
+                    logger.error("User not found for the given user entra oid: {}",
+                            entraUserDto.getEntraOid());
                     return new RuntimeException(String.format(
-                            "User not found for the given user user id: %s", entraUserDto.getId()));
+                            "User not found for the given user entra oid: %s", entraUserDto.getEntraOid()));
                 });
 
         if (entraUser.getUserProfiles() != null) {
@@ -858,8 +856,7 @@ public class UserService {
         notificationService.notifyDeleteFirmAccess(userProfile.getId(), entraUserDto.getFirstName(),
                 entraUserDto.getEmail(), firmDto.getName());
 
-        logger.info("User profile added successfully for user: {} ({})", entraUserDto.getFullName(),
-                entraUserDto.getId());
+        logger.info("User profile added successfully for user with entra oid: {} ({})", entraUserDto.getEntraOid());
 
         return userProfile;
     }
@@ -1162,7 +1159,7 @@ public class UserService {
                 userProfile.setUnrestrictedOfficeAccess(false);
             }
             userProfileRepository.saveAndFlush(userProfile);
-            logger.debug("Successfully updated user offices for user ID: {}", userId);
+            logger.info("Successfully updated user offices for user ID: {}", userId);
         } else {
             logger.warn("User profile with id {} not found. Could not update offices.", userId);
             throw new IOException("User profile not found for user ID: " + userId);
@@ -1311,15 +1308,13 @@ public class UserService {
         int usersPersisted = 0;
         for (EntraUser newUser : newUsers) {
             try {
-                logger.info("Adding new internal user id: {} name: {} {}", newUser.getEntraOid(),
-                        newUser.getFirstName(), newUser.getLastName());
+                logger.info("Adding new internal user entra oid: {}", newUser.getEntraOid());
                 entraUserRepository.saveAndFlush(newUser);
                 usersPersisted++;
                 logger.info("User {} added", newUser.getEntraOid());
             } catch (Exception e) {
-                logger.error("Unexpected error when adding user id: {} name: {} {} {}",
-                        newUser.getEntraOid(), newUser.getFirstName(), newUser.getLastName(),
-                        e.getMessage());
+                logger.error("Unexpected error when adding user entra oid: {} message: {}",
+                        newUser.getEntraOid(), e.getMessage());
             }
         }
         return usersPersisted;
@@ -1386,7 +1381,7 @@ public class UserService {
      * @param entraUserId The Entra user ID
      * @return List of user profiles for the Entra user
      */
-    public List<UserProfile> getUserProfilesByEntraUserId(UUID entraUserId) { //here
+    public List<UserProfile> getUserProfilesByEntraUserId(UUID entraUserId) {
         Optional<EntraUser> optionalEntraUser = entraUserRepository.findById(entraUserId);
         if (optionalEntraUser.isPresent()) {
             EntraUser entraUser = optionalEntraUser.get();
@@ -1958,7 +1953,6 @@ public class UserService {
         UserFirmReassignmentEvent reassignmentEvent =
             new UserFirmReassignmentEvent(
                 performedByEntraUserId,
-                performedByName,
                 userProfile.getId().toString(),
                 userProfile.getEntraUser().getEntraOid(),
                 oldFirm.getId(),
@@ -1968,7 +1962,7 @@ public class UserService {
 
         eventService.logEvent(reassignmentEvent);
 
-        logger.info("User profile {} reassigned from firm {} to firm {} and legacyId from {} to {} by {} (Reason: {})",
-                userProfileId, oldFirm.getName(), newFirm.getName(), oldLegacyId, userProfile.getLegacyUserId(), performedByName, reason);
+        logger.info("User profile {} reassigned from firm {} to firm {} and legacyId from {} to {} by user with entra oid: {} (Reason: {})",
+                userProfileId, oldFirm.getName(), newFirm.getName(), oldLegacyId, userProfile.getLegacyUserId(), performedByEntraUserId, reason);
     }
 }

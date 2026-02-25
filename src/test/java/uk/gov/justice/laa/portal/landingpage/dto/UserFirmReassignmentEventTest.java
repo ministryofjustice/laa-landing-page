@@ -14,7 +14,6 @@ class UserFirmReassignmentEventTest {
     void testConstructorSetsAllFields() {
         // Given
         UUID modifierUserId = UUID.randomUUID();
-        String modifierUserName = "Admin User";
         String targetUserId = UUID.randomUUID().toString();
         String targetUserName = "Test User";
         UUID previousFirmId = UUID.randomUUID();
@@ -24,8 +23,7 @@ class UserFirmReassignmentEventTest {
         // When
         UserFirmReassignmentEvent event = new UserFirmReassignmentEvent(
                 modifierUserId, 
-                modifierUserName, 
-                targetUserId, 
+                targetUserId,
                 targetUserName,
                 previousFirmId,
                 newFirmId,
@@ -34,14 +32,12 @@ class UserFirmReassignmentEventTest {
 
         // Then
         assertThat(event.userId).isEqualTo(modifierUserId);
-        assertThat(event.userName).isEqualTo(modifierUserName);
     }
 
     @Test
     void testGetEventType() {
         // Given
         UUID modifierUserId = UUID.randomUUID();
-        String modifierUserName = "Admin User";
         String targetUserId = UUID.randomUUID().toString();
         String targetUserName = "Test User";
         UUID previousFirmId = UUID.randomUUID();
@@ -50,8 +46,7 @@ class UserFirmReassignmentEventTest {
 
         UserFirmReassignmentEvent event = new UserFirmReassignmentEvent(
                 modifierUserId, 
-                modifierUserName, 
-                targetUserId, 
+                targetUserId,
                 targetUserName,
                 previousFirmId,
                 newFirmId,
@@ -69,7 +64,6 @@ class UserFirmReassignmentEventTest {
     void testGetDescription() {
         // Given
         UUID modifierUserId = UUID.randomUUID();
-        String modifierUserName = "Admin User";
         String targetUserId = UUID.randomUUID().toString();
         String entraOid = UUID.randomUUID().toString();
         UUID previousFirmId = UUID.randomUUID();
@@ -78,7 +72,6 @@ class UserFirmReassignmentEventTest {
 
         UserFirmReassignmentEvent event = new UserFirmReassignmentEvent(
                 modifierUserId, 
-                modifierUserName, 
                 targetUserId,
                 entraOid,
                 previousFirmId,
@@ -104,7 +97,6 @@ class UserFirmReassignmentEventTest {
     void testGetDescriptionWithSpecialCharacters() {
         // Given
         UUID modifierUserId = UUID.randomUUID();
-        String modifierUserName = "Admin User";
         String targetUserId = UUID.randomUUID().toString();
         String targetUserName = "O'Brien, Mary";
         UUID previousFirmId = UUID.randomUUID();
@@ -113,8 +105,7 @@ class UserFirmReassignmentEventTest {
 
         UserFirmReassignmentEvent event = new UserFirmReassignmentEvent(
                 modifierUserId, 
-                modifierUserName, 
-                targetUserId, 
+                targetUserId,
                 targetUserName,
                 previousFirmId,
                 newFirmId,
@@ -133,7 +124,6 @@ class UserFirmReassignmentEventTest {
     void testGetDescriptionFormat() {
         // Given
         UUID modifierUserId = UUID.randomUUID();
-        String modifierUserName = "System Admin";
         String targetUserId = "12345";
         String targetUserName = "Test User";
         UUID previousFirmId = UUID.randomUUID();
@@ -142,8 +132,7 @@ class UserFirmReassignmentEventTest {
 
         UserFirmReassignmentEvent event = new UserFirmReassignmentEvent(
                 modifierUserId, 
-                modifierUserName, 
-                targetUserId, 
+                targetUserId,
                 targetUserName,
                 previousFirmId,
                 newFirmId,
