@@ -62,6 +62,11 @@ public class AuditUserDto implements Serializable {
     private boolean isMultiFirmUser;
 
     /**
+     * Flag indicating if user is a Firm User Manager
+     */
+    private boolean isProviderAdmin;
+
+    /**
      * Number of firm profiles the user has
      */
     private int profileCount;

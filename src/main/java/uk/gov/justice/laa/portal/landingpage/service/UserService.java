@@ -1544,6 +1544,9 @@ public class UserService {
         // Get firm associations
         String firmAssociation = determineFirmAssociation(profiles);
 
+        // Get user role
+        boolean userRole = determineIsProviderAdmin(profiles);
+
         // Get firm code
         String firmCode = determineFirmCode(profiles, csvExport);
 
@@ -1561,7 +1564,7 @@ public class UserService {
         return AuditUserDto.builder().name(user.getFirstName() + " " + user.getLastName())
                 .email(user.getEmail()).userId(userId).entraUserId(user.getId().toString())
                 .userType(userType).firmAssociation(firmAssociation).firmCode(firmCode).accountStatus(accountStatus)
-                .isMultiFirmUser(user.isMultiFirmUser()).profileCount(profileCount)
+                .isMultiFirmUser(user.isMultiFirmUser()).isProviderAdmin(userRole).profileCount(profileCount)
                 .createdDate(user.getCreatedDate()).createdBy(user.getCreatedBy())
                 // TODO: Fetch lastLoginDate from Microsoft Graph or Silas API
                 .lastLoginDate(null)
@@ -1679,6 +1682,10 @@ public class UserService {
     public List<AppRoleDto> getAllSilasRoles() {
         return appRoleRepository.findAllAuthzRoles().stream()
                 .map(role -> mapper.map(role, AppRoleDto.class)).toList();
+    }
+
+    public boolean determineIsProviderAdmin (List<UserProfile> profiles) {
+        return profiles.stream().anyMatch(profile -> profile.getAppRoles().stream().anyMatch(role -> role.getName().equals("Firm User Manager")));
     }
 
     /**

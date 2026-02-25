@@ -233,7 +233,8 @@ public class AuditController {
 
     @GetMapping(value = "/users/audit/download", produces = "text/csv")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission('EXPORT_AUDIT_DATA')")
-    public ResponseEntity<byte[]> downloadAuditCsv(@ModelAttribute AuditTableSearchCriteria criteria) {
+    public ResponseEntity<byte[]> downloadAuditCsv(@ModelAttribute AuditTableSearchCriteria criteria,
+                                                   @RequestParam String selectedFirmName) {
 
         final int pageSize = 500;
         int page = 1;
@@ -255,6 +256,7 @@ public class AuditController {
                 .collect(Collectors.toList());
 
         String firmCode = firmRepository.findById(criteria.getSelectedFirmId()).map(Firm::getCode).orElse("");
+        String firmName = selectedFirmName;
 
         List<AuditUserDto> firmData = new ArrayList<>(pageSize);
 
@@ -282,7 +284,7 @@ public class AuditController {
             log.info("No audit users found for search criteria: {}", Arrays.toString(filterSummary.toArray()));
         }
 
-        AuditCsvExport export = auditExportService.downloadAuditCsv(firmData, firmCode);
+        AuditCsvExport export = auditExportService.downloadAuditCsv(firmData, firmCode, firmName);
         log.info("CSV Audit Export complete - actor= {}, timestamp= {}, Firm Code= {}, Filter Summary (Silas Role, "
                 + "UserType, App Id)= {}, "
                 + "row count= {}", userId, LocalDateTime.now(), firmCode, filterSummary, result.getUsers().size());
