@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'edit-app-details-check-answers'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>Check your answers</title>
+</head>
+
+<body>
+<nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+    <ol class="govuk-breadcrumbs__list">
+        <li class="govuk-breadcrumbs__list-item">
+            <a class="govuk-breadcrumbs__link"
+               th:href="@{'/admin/silas-administration/app/' + ${app.id}}">< Back</a>
+        </li>
+    </ol>
+</nav>
+
+<main class="govuk-main-wrapper" id="main-content">
+    <div class="govuk-grid-row">
+        <div class="govuk-grid-column-two-thirds-from-desktop">
+
+            <div th:if="${errorMessage}" class="govuk-error-summary" role="alert"
+                 aria-labelledby="error-summary-title" tabindex="-1" data-module="govuk-error-summary">
+                <h2 class="govuk-error-summary__title" id="error-summary-title">
+                    There is a problem
+                </h2>
+                <div class="govuk-error-summary__body">
+                    <ul class="govuk-list govuk-error-summary__list">
+                        <li>
+                            <span th:text="${errorMessage}"></span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <h1 class="govuk-heading-l">Check your answers</h1>
+
+            <div class="govuk-warning-text">
+                <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
+                <strong class="govuk-warning-text__text">
+                    <span class="govuk-visually-hidden">Warning</span>
+                    You are about to update app details
+                </strong>
+            </div>
+
+            <dl class="govuk-summary-list">
+                <!-- Current App Status -->
+                <div class="govuk-summary-list__row">
+                    <dt class="govuk-summary-list__key">
+                        Current App Status
+                    </dt>
+                    <dd class="govuk-summary-list__value"
+                        th:text="${app.enabled}?'Enabled':'Disabled'">
+                        Current App Status
+                    </dd>
+                    <dd class="govuk-summary-list__actions">
+                    </dd>
+                </div>
+
+                <!-- New App Status -->
+                <div class="govuk-summary-list__row">
+                    <dt class="govuk-summary-list__key">
+                        New App Status
+                    </dt>
+                    <dd class="govuk-summary-list__value" th:text="${appDetailsForm.enabled}?'Enabled':'Disabled'">
+                        New App Status
+                    </dd>
+                    <dd class="govuk-summary-list__actions">
+                        <a class="govuk-link"
+                           th:href="@{'/admin/silas-administration/app/' + ${app.id}}">
+                            Change<span class="govuk-visually-hidden"></span>
+                        </a>
+                    </dd>
+                </div>
+
+                <!-- Current App Description -->
+                <div class="govuk-summary-list__row">
+                    <dt class="govuk-summary-list__key">
+                        Current App Description
+                    </dt>
+                    <dd class="govuk-summary-list__value"
+                        th:text="${app.description}">
+                        Current App Description
+                    </dd>
+                    <dd class="govuk-summary-list__actions">
+                    </dd>
+                </div>
+
+                <!-- New App Description -->
+                <div class="govuk-summary-list__row">
+                    <dt class="govuk-summary-list__key">
+                        New App Description
+                    </dt>
+                    <dd class="govuk-summary-list__value" th:text="${appDetailsForm.description}">
+                        New App Description
+                    </dd>
+                    <dd class="govuk-summary-list__actions">
+                        <a class="govuk-link"
+                           th:href="@{'/admin/silas-administration/app/' + ${app.id}}">
+                            Change<span class="govuk-visually-hidden"></span>
+                        </a>
+                    </dd>
+                </div>
+
+
+            </dl>
+
+            <form method="post" th:action="@{'/admin/silas-administration/app/' + ${app.id} + '/check-answers'}">
+                <div class="govuk-button-group">
+                    <button type="submit" class="govuk-button" data-module="govuk-button">
+                        Confirm
+                    </button>
+                    <a class="govuk-link" th:href="@{'/admin/silas-administration#apps'}">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</main>
+</body>
+
+</html>

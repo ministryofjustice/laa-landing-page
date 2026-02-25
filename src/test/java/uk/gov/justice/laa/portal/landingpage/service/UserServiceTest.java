@@ -76,6 +76,7 @@ import okhttp3.Request;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
@@ -5729,7 +5730,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null, 1, 10, "name", "asc");
+                    null, null, null, 1, 10, "name", "asc", false);
 
             // Then
             assertThat(result).isNotNull();
@@ -5789,7 +5790,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(searchTerm,
-                    null, null, null, null, 1, 10, "name", "asc");
+                    null, null, null, null, 1, 10, "name", "asc", false);
 
             // Then
             assertThat(result).isNotNull();
@@ -5846,7 +5847,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null,
-                    firmId, null, null, null,  1, 10, "name", "asc");
+                    firmId, null, null, null,  1, 10, "name", "asc", false);
 
             // Then
             assertThat(result).isNotNull();
@@ -5902,7 +5903,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    silasRole, null, null,  1, 10, "name", "asc");
+                    silasRole, null, null,  1, 10, "name", "asc", false);
 
             // Then
             assertThat(result).isNotNull();
@@ -5973,7 +5974,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null, 1, 10, "name", "asc");
+                    null, null, null, 1, 10, "name", "asc", false);
 
             // Then
             assertThat(result).isNotNull();
@@ -5996,7 +5997,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "name", "asc");
+                    null, null, null,  1, 10, "name", "asc", false);
 
             // Then
             assertThat(result).isNotNull();
@@ -6047,7 +6048,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "name", "asc");
+                    null, null, null,  1, 10, "name", "asc", false);
 
             // Then
             assertThat(result).isNotNull();
@@ -6098,7 +6099,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  2, 10, "name", "asc");
+                    null, null, null,  2, 10, "name", "asc", false);
 
             // Then
             assertThat(result).isNotNull();
@@ -6136,7 +6137,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "name", "asc");
+                    null, null, null,  1, 10, "name", "asc", false);
 
             // Then
             assertThat(result).isNotNull();
@@ -6190,7 +6191,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "name", "asc");
+                    null, null, null,  1, 10, "name", "asc", false);
 
             // Then
             assertThat(result).isNotNull();
@@ -6242,7 +6243,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "name", "asc");
+                    null, null, null,  1, 10, "name", "asc", false);
 
             // Then
             assertThat(result).isNotNull();
@@ -6334,7 +6335,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "name", "desc");
+                    null, null, null,  1, 10, "name", "desc", false);
 
             // Then
             assertThat(result).isNotNull();
@@ -6371,7 +6372,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "name", "asc");
+                    null, null, null,  1, 10, "name", "asc", false);
 
             // Then
             assertThat(result).isNotNull();
@@ -6406,7 +6407,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "email", "desc");
+                    null, null, null,  1, 10, "email", "desc", false);
 
             // Then
             assertThat(result).isNotNull();
@@ -6462,7 +6463,7 @@ class UserServiceTest {
 
             // When - using "accountstatus" as the sort field
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "accountstatus", "asc");
+                    null, null, null,  1, 10, "accountstatus", "asc", false);
 
             // Then
             assertThat(result).isNotNull();
@@ -6504,7 +6505,7 @@ class UserServiceTest {
 
             // When - using "usertype" as sort field which maps to "multiFirmUser"
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "usertype", "desc");
+                    null, null, null,  1, 10, "usertype", "desc", false);
 
             // Then
             assertThat(result).isNotNull();
@@ -6545,7 +6546,7 @@ class UserServiceTest {
 
             // When - using "usertype" as sort field which maps to "multiFirmUser"
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, UserTypeForm.MULTI_FIRM,  1, 10, "usertype", "desc");
+                    null, null, UserTypeForm.MULTI_FIRM,  1, 10, "usertype", "desc", false);
 
             // Then
             assertThat(result).isNotNull();
@@ -6589,7 +6590,7 @@ class UserServiceTest {
 
             // When - using "usertype" as sort field which maps to "multiFirmUser"
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, UserTypeForm.EXTERNAL,  1, 10, "usertype", "desc");
+                    null, null, UserTypeForm.EXTERNAL,  1, 10, "usertype", "desc", false);
 
             // Then
             assertThat(result).isNotNull();
@@ -6644,7 +6645,7 @@ class UserServiceTest {
 
             // When - using "usertype" as sort field which maps to "multiFirmUser"
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, UserTypeForm.INTERNAL,  1, 10, "usertype", "desc");
+                    null, null, UserTypeForm.INTERNAL,  1, 10, "usertype", "desc", false);
 
             // Then
             assertThat(result).isNotNull();
@@ -6688,7 +6689,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "name", null);
+                    null, null, null,  1, 10, "name", null, false);
 
             // Then
             assertThat(result).isNotNull();
@@ -6729,7 +6730,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "email", "");
+                    null, null, null,  1, 10, "email", "", false);
 
             // Then
             assertThat(result).isNotNull();
@@ -7208,7 +7209,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null, 1, 10, "accountStatus", "asc");
+                    null, null, null, 1, 10, "accountStatus", "asc", false);
 
             // Then
             assertThat(result).isNotNull();
@@ -7258,7 +7259,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "accountStatus", "desc");
+                    null, null, null,  1, 10, "accountStatus", "desc", false);
 
             // Then
             assertThat(result).isNotNull();
@@ -7288,7 +7289,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "accountStatus", "asc");
+                    null, null, null,  1, 10, "accountStatus", "asc", false);
 
             // Then
             assertThat(result).isNotNull();
@@ -7326,7 +7327,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "accountStatus", "asc");
+                    null, null, null,  1, 10, "accountStatus", "asc", false);
 
             // Then
             assertThat(result.getUsers()).hasSize(3);
@@ -7362,7 +7363,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers("John",
-                    firmId, "PUI_CASE_WORKER", appId, null,  1, 10, "accountStatus", "asc");
+                    firmId, "PUI_CASE_WORKER", appId, null,  1, 10, "accountStatus", "asc", false);
 
             // Then
             assertThat(result).isNotNull();
@@ -7876,6 +7877,117 @@ class UserServiceTest {
                 userService.reassignUserFirm(userProfileId.toString(), newFirmId, "reason", performedById, "AdminUser")
         ).isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("All app assignment must be removed");
+    }
+
+
+    @Test
+    void getAuditUsersForExport_pairsFirmCodesToFirmNames_sortedByFirmNames() {
+        // Given
+        UUID userId = UUID.randomUUID();
+
+        Firm alpha = Firm.builder()
+                .id(UUID.randomUUID())
+                .name("Alpha")
+                .code("Z9")
+                .build();
+
+        Firm beta = Firm.builder()
+                .id(UUID.randomUUID())
+                .name("Beta")
+                .code("A1")
+                .build();
+
+        Firm gamma = Firm.builder()
+                .id(UUID.randomUUID())
+                .name("Gamma")
+                .code("D4")
+                .build();
+
+        Firm delta = Firm.builder()
+                .id(UUID.randomUUID())
+                .name("Delta")
+                .code("B2")
+                .build();
+
+        EntraUser user = EntraUser.builder()
+                .id(userId)
+                .firstName("Jane")
+                .lastName("Smith")
+                .email("jane.smith@example.com")
+                .userStatus(UserStatus.ACTIVE)
+                .multiFirmUser(true)
+                .build();
+
+        // Intentionally scrambled firm order (Gamma, Alpha, Delta, Beta)
+        UserProfile profile1 = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(user)
+                .firm(gamma)
+                .userType(UserType.EXTERNAL)
+                .activeProfile(true)
+                .appRoles(new HashSet<>())
+                .userProfileStatus(UserProfileStatus.COMPLETE)
+                .build();
+
+        UserProfile profile2 = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(user)
+                .firm(alpha)
+                .userType(UserType.EXTERNAL)
+                .activeProfile(false)
+                .appRoles(new HashSet<>())
+                .userProfileStatus(UserProfileStatus.COMPLETE)
+                .build();
+
+        UserProfile profile3 = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(user)
+                .firm(delta)
+                .userType(UserType.EXTERNAL)
+                .activeProfile(false)
+                .appRoles(new HashSet<>())
+                .userProfileStatus(UserProfileStatus.COMPLETE)
+                .build();
+
+        UserProfile profile4 = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(user)
+                .firm(beta)
+                .userType(UserType.EXTERNAL)
+                .activeProfile(false)
+                .appRoles(new HashSet<>())
+                .userProfileStatus(UserProfileStatus.COMPLETE)
+                .build();
+
+        user.setUserProfiles(Set.of(profile1, profile2, profile3, profile4));
+
+        Page<EntraUser> userPage = new PageImpl<>(List.of(user),
+                PageRequest.of(0, 10), 1);
+
+        when(mockEntraUserRepository.findAllUsersForAudit(
+                eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                .thenReturn(userPage);
+
+        when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                .thenReturn(List.of(user));
+
+        // When
+        uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(
+                null, null, null, null, null, 1, 10, "name", "asc", true);
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.getTotalUsers()).isEqualTo(1);
+        assertThat(result.getUsers()).hasSize(1);
+
+        AuditUserDto dto = result.getUsers().get(0);
+
+        // Sorted by firm name:
+        assertThat(dto.getFirmAssociation()).isEqualTo("Alpha, Beta, Delta, Gamma");
+
+        // Codes must align to those firms (NOT independently sorted by code):
+        // Alpha -> Z9, Beta -> A1, Delta -> B2, Gamma -> D4
+        assertThat(dto.getFirmCode()).isEqualTo("Z9, A1, B2, D4");
     }
 
 }

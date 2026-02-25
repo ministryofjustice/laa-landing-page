@@ -1879,4 +1879,278 @@ public class AccessControlServiceTest {
         Assertions.assertThat(result).isTrue();
     }
 
+    @Test
+    public void canConvertUserToMultiFirmReturnsTrueWhenAllConditionsMet() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID userId = UUID.randomUUID();
+        UUID accessedUserId = UUID.randomUUID();
+
+        EntraUserDto accessedUser = EntraUserDto.builder()
+                .id(accessedUserId.toString())
+                .multiFirmUser(false)
+                .build();
+
+        Permission editExternalUserPermission = Permission.EDIT_EXTERNAL_USER;
+        Permission convertToMultiFirmPermission = Permission.CONVERT_USER_TO_MULTI_FIRM;
+        AppRole appRole = AppRole.builder()
+                .authzRole(true)
+                .permissions(Set.of(editExternalUserPermission, convertToMultiFirmPermission))
+                .build();
+        EntraUser authenticatedUser = EntraUser.builder()
+                .id(userId)
+                .email("internal@email.com")
+                .userProfiles(HashSet.newHashSet(1))
+                .build();
+        UserProfile authenticatedUserProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(authenticatedUser)
+                .appRoles(Set.of(appRole))
+                .userType(UserType.INTERNAL)
+                .build();
+        authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
+
+        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        Mockito.when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedUser));
+        Mockito.when(userService.isInternal(userId)).thenReturn(true);
+
+        boolean result = accessControlService.canConvertUserToMultiFirm(accessedUserId.toString());
+        Assertions.assertThat(result).isTrue();
+    }
+
+    @Test
+    public void canConvertUserToMultiFirmReturnsFalseWhenUserIsAlreadyMultiFirm() {
+        UUID accessedUserId = UUID.randomUUID();
+
+        EntraUserDto accessedUser = EntraUserDto.builder()
+                .id(accessedUserId.toString())
+                .multiFirmUser(true)
+                .build();
+
+        Mockito.when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedUser));
+
+        boolean result = accessControlService.canConvertUserToMultiFirm(accessedUserId.toString());
+        Assertions.assertThat(result).isFalse();
+    }
+
+    @Test
+    public void canConvertUserToMultiFirmReturnsFalseWhenAuthenticatedUserIsNotInternal() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID userId = UUID.randomUUID();
+        UUID accessedUserId = UUID.randomUUID();
+
+        EntraUserDto accessedUser = EntraUserDto.builder()
+                .id(accessedUserId.toString())
+                .multiFirmUser(false)
+                .build();
+
+        Permission editExternalUserPermission = Permission.EDIT_EXTERNAL_USER;
+        Permission convertToMultiFirmPermission = Permission.CONVERT_USER_TO_MULTI_FIRM;
+        AppRole appRole = AppRole.builder()
+                .authzRole(true)
+                .permissions(Set.of(editExternalUserPermission, convertToMultiFirmPermission))
+                .build();
+        EntraUser authenticatedUser = EntraUser.builder()
+                .id(userId)
+                .email("external@email.com")
+                .userProfiles(HashSet.newHashSet(1))
+                .build();
+        UserProfile authenticatedUserProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(authenticatedUser)
+                .appRoles(Set.of(appRole))
+                .userType(UserType.EXTERNAL)
+                .build();
+        authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
+
+        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        Mockito.when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedUser));
+        Mockito.when(userService.isInternal(userId)).thenReturn(false);
+
+        boolean result = accessControlService.canConvertUserToMultiFirm(accessedUserId.toString());
+        Assertions.assertThat(result).isFalse();
+    }
+
+    @Test
+    public void canConvertUserToMultiFirmReturnsFalseWhenMissingEditExternalUserPermission() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID userId = UUID.randomUUID();
+        UUID accessedUserId = UUID.randomUUID();
+
+        EntraUserDto accessedUser = EntraUserDto.builder()
+                .id(accessedUserId.toString())
+                .multiFirmUser(false)
+                .build();
+
+        Permission convertToMultiFirmPermission = Permission.CONVERT_USER_TO_MULTI_FIRM;
+        AppRole appRole = AppRole.builder()
+                .authzRole(true)
+                .permissions(Set.of(convertToMultiFirmPermission))
+                .build();
+        EntraUser authenticatedUser = EntraUser.builder()
+                .id(userId)
+                .email("internal@email.com")
+                .userProfiles(HashSet.newHashSet(1))
+                .build();
+        UserProfile authenticatedUserProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(authenticatedUser)
+                .appRoles(Set.of(appRole))
+                .userType(UserType.INTERNAL)
+                .build();
+        authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
+
+        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        Mockito.when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedUser));
+        Mockito.when(userService.isInternal(userId)).thenReturn(true);
+
+        boolean result = accessControlService.canConvertUserToMultiFirm(accessedUserId.toString());
+        Assertions.assertThat(result).isFalse();
+    }
+
+    @Test
+    public void canConvertUserToMultiFirmReturnsFalseWhenMissingConvertUserToMultiFirmPermission() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID userId = UUID.randomUUID();
+        UUID accessedUserId = UUID.randomUUID();
+
+        EntraUserDto accessedUser = EntraUserDto.builder()
+                .id(accessedUserId.toString())
+                .multiFirmUser(false)
+                .build();
+
+        Permission editExternalUserPermission = Permission.EDIT_EXTERNAL_USER;
+        AppRole appRole = AppRole.builder()
+                .authzRole(true)
+                .permissions(Set.of(editExternalUserPermission))
+                .build();
+        EntraUser authenticatedUser = EntraUser.builder()
+                .id(userId)
+                .email("internal@email.com")
+                .userProfiles(HashSet.newHashSet(1))
+                .build();
+        UserProfile authenticatedUserProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(authenticatedUser)
+                .appRoles(Set.of(appRole))
+                .userType(UserType.INTERNAL)
+                .build();
+        authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
+
+        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        Mockito.when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedUser));
+        Mockito.when(userService.isInternal(userId)).thenReturn(true);
+
+        boolean result = accessControlService.canConvertUserToMultiFirm(accessedUserId.toString());
+        Assertions.assertThat(result).isFalse();
+    }
+
+    @Test
+    public void canConvertUserToMultiFirmThrowsUserNotFoundExceptionWhenUserDoesNotExist() {
+        UUID accessedUserId = UUID.randomUUID();
+
+        Mockito.when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.empty());
+
+        Assertions.assertThatThrownBy(() -> accessControlService.canConvertUserToMultiFirm(accessedUserId.toString()))
+                .isInstanceOf(uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException.class)
+                .hasMessageContaining(String.format("User with id '%s' not found", accessedUserId));
+    }
+
+    @Test
+    public void canConvertUserToMultiFirmReturnsFalseWhenAuthenticatedUserHasNoPermissions() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID userId = UUID.randomUUID();
+        UUID accessedUserId = UUID.randomUUID();
+
+        EntraUserDto accessedUser = EntraUserDto.builder()
+                .id(accessedUserId.toString())
+                .multiFirmUser(false)
+                .build();
+
+        AppRole appRole = AppRole.builder()
+                .authzRole(true)
+                .permissions(Set.of())
+                .build();
+        EntraUser authenticatedUser = EntraUser.builder()
+                .id(userId)
+                .email("internal@email.com")
+                .userProfiles(HashSet.newHashSet(1))
+                .build();
+        UserProfile authenticatedUserProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(authenticatedUser)
+                .appRoles(Set.of(appRole))
+                .userType(UserType.INTERNAL)
+                .build();
+        authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
+
+        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        Mockito.when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedUser));
+        Mockito.when(userService.isInternal(userId)).thenReturn(true);
+
+        boolean result = accessControlService.canConvertUserToMultiFirm(accessedUserId.toString());
+        Assertions.assertThat(result).isFalse();
+    }
+
+    @Test
+    public void canConvertUserToMultiFirmReturnsFalseWhenAuthenticatedUserHasNoActiveProfile() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID userId = UUID.randomUUID();
+        UUID accessedUserId = UUID.randomUUID();
+
+        EntraUserDto accessedUser = EntraUserDto.builder()
+                .id(accessedUserId.toString())
+                .multiFirmUser(false)
+                .build();
+
+        Permission editExternalUserPermission = Permission.EDIT_EXTERNAL_USER;
+        Permission convertToMultiFirmPermission = Permission.CONVERT_USER_TO_MULTI_FIRM;
+        AppRole appRole = AppRole.builder()
+                .authzRole(true)
+                .permissions(Set.of(editExternalUserPermission, convertToMultiFirmPermission))
+                .build();
+        EntraUser authenticatedUser = EntraUser.builder()
+                .id(userId)
+                .email("internal@email.com")
+                .userProfiles(HashSet.newHashSet(1))
+                .build();
+        UserProfile inactiveUserProfile = UserProfile.builder()
+                .activeProfile(false)
+                .entraUser(authenticatedUser)
+                .appRoles(Set.of(appRole))
+                .userType(UserType.INTERNAL)
+                .build();
+        authenticatedUser.getUserProfiles().add(inactiveUserProfile);
+
+        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        Mockito.when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedUser));
+        Mockito.when(userService.isInternal(userId)).thenReturn(true);
+
+        boolean result = accessControlService.canConvertUserToMultiFirm(accessedUserId.toString());
+        Assertions.assertThat(result).isFalse();
+    }
+
 }

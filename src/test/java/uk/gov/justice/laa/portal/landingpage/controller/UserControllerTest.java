@@ -169,6 +169,37 @@ class UserControllerTest {
     }
 
     @Test
+    public void testEnableUserPostReturnsCorrectViewAndModelWhenIdIsValid() {
+        UUID enabledUserId = UUID.randomUUID();
+        UUID enabledByUserId = UUID.randomUUID();
+        EntraUserDto enabledUser = EntraUserDto.builder()
+                .id(enabledUserId.toString())
+                .fullName("Test User")
+                .build();
+        EntraUser enabledByUser = EntraUser.builder()
+                .id(enabledByUserId)
+                .build();
+
+        when(userService.getEntraUserById(enabledUserId.toString())).thenReturn(Optional.of(enabledUser));
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(enabledByUser);
+
+        String view = userController.enableUserPost(enabledUserId.toString(), authentication, model);
+
+        assertThat(view).isEqualTo("enable-user-completed");
+        assertThat(model.getAttribute("user")).isEqualTo(enabledUser);
+        assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Enable User Success - " + enabledUser.getFullName());
+    }
+
+    @Test
+    public void testEnableUserPostThrowsNoValuePresentWhenUserNotFound() {
+        UUID noUserId = UUID.randomUUID();
+        when(userService.getEntraUserById(noUserId.toString())).thenReturn(Optional.empty());
+
+        assertThrows(NoSuchElementException.class, () -> userController.enableUserPost(noUserId.toString(), authentication, model));
+
+    }
+
+    @Test
     void editUserRoles_shouldSetBackUrlToPreviousIndex() {
         // Arrange
         String id = UUID.randomUUID().toString();
@@ -671,6 +702,7 @@ class UserControllerTest {
         assertThat(model.getAttribute("canManageOffices")).isNotNull();
         assertThat(model.getAttribute("canEditUser")).isNotNull();
         assertThat(model.getAttribute("showResendVerificationLink")).isNotNull();
+        assertThat(model.getAttribute("canConvertUserToMultiFirm")).isNotNull();
         verify(userService).getUserProfileById(mockUser.getId().toString());
     }
 
@@ -3265,6 +3297,7 @@ class UserControllerTest {
         when(accessControlService.canEditUser(viewedProfileId.toString())).thenReturn(true);
         when(accessControlService.canDeleteFirmProfile(viewedProfileId.toString())).thenReturn(true);
         when(accessControlService.canViewAllFirmsOfMultiFirmUser()).thenReturn(true);
+        when(accessControlService.canConvertUserToMultiFirm(entraUserId.toString())).thenReturn(false);
 
         // When
         String view = userController.manageUser(viewedProfileId.toString(), false, model, session, authentication);

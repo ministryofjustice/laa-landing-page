@@ -417,9 +417,82 @@ databaseChangeLog:
                  WHERE name = 'Firm User Manager')
               );
 
+  - changeSet:
+      id: 1770936555-13
+      author: suresh kavali
+      context: playwright
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              -- Insert apps
+              INSERT INTO public.app (
+              id, entra_app_id, name, security_group_name, security_group_oid,
+              ordinal, enabled, title, description, oid_group_name, url, app_type
+              )
+              VALUES (
+              '88888888-8888-8888-8888-888888888888',
+              'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+              'Test LAA App One',
+              'Test LAA App One',
+              'Test LAA App One',
+              1, TRUE,
+              'Test LAA App One',
+              'Test LAA App One',
+              'Test LAA App One',
+              '#',
+              'LAA'
+              );
+              
+              INSERT INTO public.app (
+              id, entra_app_id, name, security_group_name, security_group_oid,
+              ordinal, enabled, title, description, oid_group_name, url, app_type
+              )
+              VALUES (
+              '99999999-9999-9999-9999-999999999999',
+              'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+              'Test LAA App Two',
+              'Test LAA App Two',
+              'Test LAA App Two',
+              2, TRUE,
+              'Test LAA App Two',
+              'Test LAA App Two',
+              'Test LAA App Two',
+              '#',
+              'LAA'
+              );
+
+              -- Insert app roles
+              INSERT INTO public.app_role (
+              authz_role, app_id, id, description, name, user_type_restriction, ordinal
+              )
+              VALUES (
+              FALSE,
+              '88888888-8888-8888-8888-888888888888',  -- fixed
+              'dddddddd-dddd-dddd-dddd-aaaaaaaaaaaa',
+              'Test LAA App One Access',
+              'Test LAA App One Access',
+              '{EXTERNAL}',
+              0
+              );
+              
+              INSERT INTO public.app_role (
+              authz_role, app_id, id, description, name, user_type_restriction, ordinal
+              )
+              VALUES (
+              FALSE,
+              '99999999-9999-9999-9999-999999999999',
+              'ffffffff-ffff-ffff-ffff-aaaaaaaaaaaa',
+              'Test LAA App Two Access',
+              'Test LAA App Two Access',
+              '{EXTERNAL}',
+              0
+              );
+
+
   # External User in Different Firm - testing cross-firm access restrictions
   - changeSet:
-      id: 1761063088678-13
+      id: 1772009711855-14
       author: yusuf.shah
       context: playwright
       changes:
@@ -441,7 +514,7 @@ databaseChangeLog:
 
   # Fix External User Admin and External User Viewer to be EXTERNAL users in Firm One
   - changeSet:
-      id: 1761063088678-14
+      id: 1772009711855-15
       author: yusuf.shah
       context: playwright
       comment: "Update External User Admin and External User Viewer to be EXTERNAL type with firm assignments for Firm User Manager testing"

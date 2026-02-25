@@ -327,7 +327,11 @@ public class ManageUsersPage {
         }
     }
 
-
+    public Locator firstIncompleteUserRowLocator() {
+        return page.locator(
+                "tr.govuk-table__row:has(span.moj-badge.moj-badge--blue:has-text('INCOMPLETE'))"
+        ).first();
+    }
 
     public Locator externalUserRowLocator() {
         return page.locator(

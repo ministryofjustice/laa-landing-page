@@ -105,8 +105,8 @@ public class UserService {
     private final AppService appService;
     private final TechServicesClient techServicesClient;
     private final UserProfileRepository userProfileRepository;
-    private final RoleChangeNotificationService roleChangeNotificationService;
     private final UserAccountStatusAuditRepository userAccountStatusAuditRepository;
+    private final RoleChangeNotificationService roleChangeNotificationService;
     private final FirmService firmService;
     private final FirmRepository firmRepository;
     private final EventService eventService;
@@ -1432,7 +1432,7 @@ public class UserService {
      */
     public PaginatedAuditUsers getAuditUsers(
             String searchTerm, UUID firmId, String silasRole, UUID appId, UserTypeForm userTypeForm,
-            int page, int pageSize, String sort, String direction) {
+            int page, int pageSize, String sort, String direction, boolean csvExport) {
         Boolean multiFirm = userTypeForm == null ? null : userTypeForm.getMultiFirm();
         UserType userType = userTypeForm == null ? null : userTypeForm.getUserType();
         String userTypeStr = userType == null ? null : userType.name();
@@ -1522,7 +1522,8 @@ public class UserService {
         }
 
         // Map to DTOs
-        List<AuditUserDto> auditUsers = userPage.getContent().stream().map(this::mapToAuditUserDto).toList();
+        List<AuditUserDto> auditUsers =
+                userPage.getContent().stream().map(user -> mapToAuditUserDto(user, csvExport)).toList();
 
         return PaginatedAuditUsers.builder().users(auditUsers)
                 .totalUsers(userPage.getTotalElements()).totalPages(userPage.getTotalPages())
@@ -1532,7 +1533,7 @@ public class UserService {
     /**
      * Map EntraUser to AuditUserDto
      */
-    private AuditUserDto mapToAuditUserDto(EntraUser user) {
+    private AuditUserDto mapToAuditUserDto(EntraUser user, boolean csvExport) {
         // Get all user profiles
         List<UserProfile> profiles = user.getUserProfiles() != null ? new ArrayList<>(user.getUserProfiles())
                 : Collections.emptyList();
@@ -1542,6 +1543,9 @@ public class UserService {
 
         // Get firm associations
         String firmAssociation = determineFirmAssociation(profiles);
+
+        // Get firm code
+        String firmCode = determineFirmCode(profiles, csvExport);
 
         // Get account status
         String accountStatus = determineAccountStatus(user, profiles);
@@ -1556,7 +1560,7 @@ public class UserService {
 
         return AuditUserDto.builder().name(user.getFirstName() + " " + user.getLastName())
                 .email(user.getEmail()).userId(userId).entraUserId(user.getId().toString())
-                .userType(userType).firmAssociation(firmAssociation).accountStatus(accountStatus)
+                .userType(userType).firmAssociation(firmAssociation).firmCode(firmCode).accountStatus(accountStatus)
                 .isMultiFirmUser(user.isMultiFirmUser()).profileCount(profileCount)
                 .createdDate(user.getCreatedDate()).createdBy(user.getCreatedBy())
                 // TODO: Fetch lastLoginDate from Microsoft Graph or Silas API
@@ -1615,6 +1619,34 @@ public class UserService {
         }
 
         return String.join(", ", firmNames);
+    }
+
+    /**
+     * Determine firm codes for audit table Returns firm code(s) or "None"
+     */
+    private String determineFirmCode(List<UserProfile> profiles, boolean csvExport) {
+        if (profiles.isEmpty()) {
+            return "Unknown";
+        }
+        Set<String> firmCodes = new HashSet<>();
+
+        if (!csvExport) {
+            firmCodes = profiles.stream().map(UserProfile::getFirm).filter(Objects::nonNull)
+                .map(Firm::getCode).collect(Collectors.toCollection(TreeSet::new));
+        } else {
+            List<Firm> sortedFirms =
+                    profiles.stream().map(UserProfile::getFirm
+            ).filter(Objects::nonNull).distinct().sorted(Comparator.comparing(Firm::getName)).toList();
+            firmCodes =
+                    sortedFirms.stream().map(Firm::getCode).collect(Collectors.toCollection(LinkedHashSet::new));
+
+        }
+
+        if (firmCodes.isEmpty()) {
+            return "Unknown";
+        }
+
+        return String.join(", ", firmCodes);
     }
 
     /**
@@ -1712,6 +1744,7 @@ public class UserService {
         // Build detail DTO
         return AuditUserDetailDto.builder().userId(entraUser.getId().toString())
                 .email(entraUser.getEmail()).firstName(entraUser.getFirstName())
+                .enabled(entraUser.isEnabled())
                 .lastName(entraUser.getLastName())
                 .fullName(entraUser.getFirstName() + " " + entraUser.getLastName())
                 .isMultiFirmUser(entraUser.isMultiFirmUser()).userType(userType)
@@ -1804,6 +1837,7 @@ public class UserService {
         // Build detail DTO with Entra data only
         return AuditUserDetailDto.builder().userId(entraUser.getId().toString())
                 .email(entraUser.getEmail()).firstName(entraUser.getFirstName())
+                .enabled(entraUser.isEnabled())
                 .lastName(entraUser.getLastName())
                 .fullName(entraUser.getFirstName() + " " + entraUser.getLastName())
                 .isMultiFirmUser(entraUser.isMultiFirmUser()).userType(userType)
