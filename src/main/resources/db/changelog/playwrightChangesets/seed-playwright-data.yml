@@ -439,3 +439,29 @@ databaseChangeLog:
                            WHERE u.email = 'playwright-firmtwouserviewer@playwrighttest.com'),
                           (SELECT id FROM app_role WHERE name = 'External User Viewer'))"
 
+  # Fix External User Admin and External User Viewer to be EXTERNAL users in Firm One
+  - changeSet:
+      id: 1761063088678-14
+      author: yusuf.shah
+      context: playwright
+      comment: "Update External User Admin and External User Viewer to be EXTERNAL type with firm assignments for Firm User Manager testing"
+      changes:
+        # Update External User Admin to be EXTERNAL type and assign to Firm One
+        - sql:
+            dbms: postgresql
+            sql: |
+              UPDATE user_profile
+              SET user_type = 'EXTERNAL',
+                  firm_id = '11111111-1111-1111-1111-111111111111',
+                  unrestricted_office_access = true
+              WHERE entra_user_id = (SELECT id FROM entra_user WHERE email = 'playwright-externaluseradmin@playwrighttest.com');
+
+        # Update External User Viewer to be EXTERNAL type and assign to Firm One
+        - sql:
+            dbms: postgresql
+            sql: |
+              UPDATE user_profile
+              SET user_type = 'EXTERNAL',
+                  firm_id = '11111111-1111-1111-1111-111111111111',
+                  unrestricted_office_access = true
+              WHERE entra_user_id = (SELECT id FROM entra_user WHERE email = 'playwright-externaluserviewer@playwrighttest.com');
