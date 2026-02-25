@@ -48,9 +48,11 @@
                         </div>
                         <div class="govuk-summary-list__row">
                             <dt class="govuk-summary-list__key">Firm Status</dt>
-                            <dd class="govuk-summary-list__value" th:text="${firm.type}"></dd>
-                            <dt class="govuk-summary-list__key">Firm Status</dt>
-                            <dd class="govuk-summary-list__value" >Coming Soon</dd>
+                            <dd class="govuk-summary-list__value">
+                            <!-- Change the condition when firm.status implemented -->
+                            <span th:if="${firm.id != null}" class="moj-badge moj-badge--green">WIP</span>
+                            <span th:if="${firm.id == null}" class="moj-badge moj-badge--red">WIP</span>
+                            </dd>
                         </div>
                     </dl>
                 </div>
@@ -82,12 +84,17 @@
                 <td class="govuk-table__cell" th:text="${office.code}"></td>
                 <td class="govuk-table__cell"
                     th:text="${office.address?.formattedAddress} ?: 'Unknown'"></td>
-                <td class="govuk-table__cell"
-                    th:text="${office.status} ? 'Active' : 'Inactive'"></td>
+
                 <td class="govuk-table__cell">
+                    <span th:if="${office.status}" class="moj-badge moj-badge--green">Active</span>
+                    <span th:if="${!office.status}" class="moj-badge moj-badge--red">Inactive</span>
+                </td>
+
+                <td class="govuk-table__cell">
+                    <!-- Change below when user-office page is available -->
                     <a class="govuk-link"
-                       th:href="@{/admin/users(firmSearch=${firm.name},selectedFirmId=${firm.id})}">
-                        View all users with access to this office - coming soon
+                       th:href="@{{id}(id=${firm.id})}">
+                        View all users with access to this office
                     </a>
                 </td>
             </tr>

@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDirectorySearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmOfficesCriteria;
-import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedOffices;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
@@ -21,8 +20,6 @@ import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 
-import java.util.Collections;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -87,28 +84,8 @@ public class FirmDirectoryController {
         model.addAttribute("criteria", criteria);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Firm Details");
 
-        return "firm-directory/firm-details";
+        return "firm-directory/firm-offices";
     }
-
-//    @GetMapping("/{id}")
-//    public String displayFirmDetails(@PathVariable String id,
-//                                     Model model, @ModelAttribute FirmOfficesCriteria criteria ) {
-//        model.addAttribute("firm", firmService.getFirm(id));
-//        model.addAttribute(ModelAttributes.PAGE_TITLE, "Firm Details");
-//
-//
-//        List<OfficeDto> firmOffices = officeService.getOfficesByFirmId(id);
-//        if (firmOffices == null) {
-//            firmOffices = Collections.emptyList();
-//        }
-//
-//
-//        model.addAttribute("firmOffices", firmOffices);
-//
-//
-//        return "firm-directory/firm-details";
-//    }
-
 
     private void buildDisplayAuditTableModel(FirmDirectorySearchCriteria criteria, Model model,
                                              PaginatedFirmDirectory paginatedFirmDirectory, FirmSearchForm firmSearchForm) {
