@@ -22,9 +22,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
-public class FirmOfficesTest extends BaseIntegrationTest {
+public class FirmDirectoryOfficesTest extends BaseIntegrationTest {
 
-    private static final String FIRM_OFFICES_PATH = "/admin/firmDirectory/firmOffices/";
+    private static final String FIRM_OFFICES_PATH = "/admin/firmDirectory/";
 
     @Resource
     MockMvc mockMvc;
