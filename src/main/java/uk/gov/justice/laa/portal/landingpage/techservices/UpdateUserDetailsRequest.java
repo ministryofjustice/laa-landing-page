@@ -13,10 +13,9 @@ import java.io.Serializable;
 public class UpdateUserDetailsRequest implements Serializable {
     UpdateUserDetailsBody userDetails;
 
-    public UpdateUserDetailsRequest(String givenName, String surname, String mail ) {
+    public UpdateUserDetailsRequest(String givenName, String surname, String mail) {
         this.userDetails = new UpdateUserDetailsBody(givenName, surname, mail);
     }
-
 
     @Getter
     @Setter

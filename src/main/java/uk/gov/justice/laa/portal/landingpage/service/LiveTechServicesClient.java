@@ -547,7 +547,7 @@ public class LiveTechServicesClient implements TechServicesClient {
 
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 logger.info("Successfully update users details from Tech Services for business unit: {}", laaBusinessUnit);
-                 return TechServicesApiResponse.success(response.getBody());
+                return TechServicesApiResponse.success(response.getBody());
 
             } else {
                 logger.warn("Unexpected response from Tech Services Patch users details endpoint: status={}, body={}",

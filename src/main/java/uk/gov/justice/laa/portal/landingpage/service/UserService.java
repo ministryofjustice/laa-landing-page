@@ -1011,9 +1011,10 @@ public class UserService {
     }
 
     /**
-     * Update user details in Microsoft Graph and local database
+     * Update user details in entra and database
      *
      * @param userId    The user ID
+     * @param email The user's email
      * @param firstName The user's first name
      * @param lastName  The user's last name
      * @throws IOException If an error occurs during the update
@@ -1030,7 +1031,7 @@ public class UserService {
             try {
                 // update on tech services
                 TechServicesApiResponse<ChangeAccountEnabledResponse> response = techServicesClient.updateUserDetails(entraUser.getEntraOid(), firstName, lastName, email);
-                if(response.isSuccess()){
+                if (response.isSuccess()) {
                     //update user information on database
                     EntraUser updatedEntraUser = entraUserRepository.saveAndFlush(entraUser);
                     UpdateUserInfoAuditEvent updateUserInfoAuditEvent = new UpdateUserInfoAuditEvent(
