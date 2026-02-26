@@ -90,8 +90,8 @@ public class UserAccountStatusService {
                     .entraUser(disabledUser)
                     .disableUserReason(reason)
                     .statusChange(UserAccountStatus.DISABLED)
-                    .disabledBy(disabledByUser.getFirstName() + " " + disabledByUser.getLastName())
-                    .disabledDate(LocalDateTime.now())
+                    .statusChangedBy(disabledByUser.getFirstName() + " " + disabledByUser.getLastName())
+                    .statusChangedDate(LocalDateTime.now())
                     .build();
             userAccountStatusAuditRepository.saveAndFlush(userAccountStatusAudit);
         } else {
@@ -142,8 +142,8 @@ public class UserAccountStatusService {
             UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
                     .entraUser(enabledUser)
                     .statusChange(UserAccountStatus.ENABLED)
-                    .disabledBy(enabledByUser.getFirstName() + " " + enabledByUser.getLastName())
-                    .disabledDate(LocalDateTime.now())
+                    .statusChangedBy(enabledByUser.getFirstName() + " " + enabledByUser.getLastName())
+                    .statusChangedDate(LocalDateTime.now())
                     .build();
             userAccountStatusAuditRepository.saveAndFlush(userAccountStatusAudit);
         } else {
