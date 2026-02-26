@@ -81,6 +81,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditProjection;
+import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
@@ -1027,13 +1028,19 @@ public class UserService {
             entraUser.setLastName(lastName);
 
             try {
-                //update user information
-                EntraUser updatedEntraUser = entraUserRepository.saveAndFlush(entraUser);
-                UpdateUserInfoAuditEvent updateUserInfoAuditEvent = new UpdateUserInfoAuditEvent(
-                        entraUser, updatedEntraUser);
-                eventService.logEvent(updateUserInfoAuditEvent);
-                logger.info("Successfully updated user details in database for user ID: {}",
-                        userId);
+                // update on tech services
+                TechServicesApiResponse<ChangeAccountEnabledResponse> response = techServicesClient.updateUserDetails(entraUser.getEntraOid(), firstName, lastName, email);
+                if(response.isSuccess()){
+                    //update user information on database
+                    EntraUser updatedEntraUser = entraUserRepository.saveAndFlush(entraUser);
+                    UpdateUserInfoAuditEvent updateUserInfoAuditEvent = new UpdateUserInfoAuditEvent(
+                            entraUser, updatedEntraUser);
+                    eventService.logEvent(updateUserInfoAuditEvent);
+                    logger.info("Successfully updated user details in database for user ID: {}",
+                            userId);
+                } else {
+                    throw new RuntimeException("Tech Services API call failed: " + response.getError());
+                }
             } catch (Exception e) {
                 logger.error("Failed to update user details in database for user ID: {}", userId,
                         e);

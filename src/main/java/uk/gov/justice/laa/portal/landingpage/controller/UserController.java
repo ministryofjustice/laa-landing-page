@@ -23,10 +23,6 @@ import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.actuate.autoconfigure.observation.ObservationProperties;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -951,10 +947,7 @@ public class UserController {
     @GetMapping("/users/edit/{id}/details")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String editUserDetails(@PathVariable String id, Model model, HttpSession session) {
-        UserProfileDto user = (UserProfileDto) session.getAttribute("user");
-        if (Objects.isNull(user)) {
-            user = userService.getUserProfileById(id).orElseThrow();
-        }
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();;
         EditUserDetailsForm editUserDetailsForm = new EditUserDetailsForm();
         editUserDetailsForm.setFirstName(user.getEntraUser().getFirstName());
         editUserDetailsForm.setLastName(user.getEntraUser().getLastName());
