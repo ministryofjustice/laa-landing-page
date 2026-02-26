@@ -25,6 +25,8 @@ class AuditExportServiceTest {
                         .email("alice@example.com")
                         .firmAssociation("Example Firm")
                         .isMultiFirmUser(false)
+                        .isProviderAdmin(true)
+                        .appAccess("App 1, App 2")
                         .build()
         );
 
@@ -50,7 +52,7 @@ class AuditExportServiceTest {
 
         String csv = new String(export.bytes(), StandardCharsets.UTF_8);
         assertEquals("Name,Email,\"Firm Name\",\"Firm Code\",Multi-firm," +
-                "\"Provider Admin\"\n", csv);
+                "\"Provider Admin\",\"App Access\"\n", csv);
     }
 
     @Test
@@ -63,6 +65,7 @@ class AuditExportServiceTest {
                 .firmCode("FC1")
                 .isMultiFirmUser(true)
                 .isProviderAdmin(true)
+                .appAccess("App 1, App 2")
                 .build();
 
         AuditCsvExport export = service.downloadAuditCsv(List.of(user), "FC1", "Firm Name");
@@ -70,8 +73,8 @@ class AuditExportServiceTest {
         String csv = new String(export.bytes(), StandardCharsets.UTF_8);
 
         String expected =
-                "Name,Email,\"Firm Name\",\"Firm Code\",Multi-firm,\"Provider Admin\"\n"
-                        + "\"Doe, John\",\"a\"\"b@example.com\",\"Firm Name\",FC1,Yes,Yes\n";
+                "Name,Email,\"Firm Name\",\"Firm Code\",Multi-firm,\"Provider Admin\",\"App Access\"\n"
+                        + "\"Doe, John\",\"a\"\"b@example.com\",\"Firm Name\",FC1,Yes,Yes,\"App 1, App 2\"\n";
 
         assertEquals(expected, csv);
     }
