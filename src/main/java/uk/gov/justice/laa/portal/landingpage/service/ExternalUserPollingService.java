@@ -126,8 +126,11 @@ public class ExternalUserPollingService {
                         continue;
                     }
 
+                    boolean isEnabledInSilas = entraUser.isEnabled();
+
                     // Update user fields if not deleted
-                    if (shouldDisableUser(user, entraUser)) {
+                    if (shouldDisableUser(user, isEnabledInSilas)) {
+                        //user account has disabled reason in entra, disabling in silas
                         disableUserWithReason(user, entraUser);
                     }
 
@@ -139,8 +142,9 @@ public class ExternalUserPollingService {
                         entraUser.setLastName(user.getSurname());
                     }
 
-                    if (user.isAccountEnabled() != entraUser.isEnabled()) {
-                        entraUser.setEnabled(user.isAccountEnabled());
+                    if (user.isAccountEnabled() && !isEnabledInSilas) {
+                        // user account enabled in entra, re-enabling in silas
+                        enableUserWithReason(user, entraUser);
                     }
 
                     if (user.isMailOnly() != entraUser.isMailOnly()) {
@@ -222,14 +226,11 @@ public class ExternalUserPollingService {
         }
     }
 
-    private boolean shouldDisableUser(GetUsersResponse.TechServicesUser user, EntraUser entraUser) {
-        if (user.getCustomSecurityAttributes() != null
+    private boolean shouldDisableUser(GetUsersResponse.TechServicesUser user, boolean isEnabledInSilas) {
+        // Only disable if user is currently enabled in silas and has a disabled reason from Entra
+        return isEnabledInSilas && user.getCustomSecurityAttributes() != null
                 && user.getCustomSecurityAttributes().getGuestUserStatus() != null
-                && user.getCustomSecurityAttributes().getGuestUserStatus().getDisabledReason() != null) {
-
-            return entraUser.isEnabled();
-        }
-        return false;
+                && user.getCustomSecurityAttributes().getGuestUserStatus().getDisabledReason() != null;
     }
 
     private void disableUserWithReason(GetUsersResponse.TechServicesUser user, EntraUser entraUser) {
@@ -257,6 +258,29 @@ public class ExternalUserPollingService {
                     
         } catch (Exception e) {
             log.error("Error disabling user {} ({}): {}", 
+                    entraUser.getEmail(), entraUser.getEntraOid(), e.getMessage(), e);
+        }
+    }
+
+    private void enableUserWithReason(GetUsersResponse.TechServicesUser user, EntraUser entraUser) {
+        try {
+            entraUser.setEnabled(true);
+            entraUserRepository.save(entraUser);
+
+            UserAccountStatusAudit audit = UserAccountStatusAudit.builder()
+                    .entraUser(entraUser)
+                    .statusChange(UserAccountStatus.ENABLED)
+                    .disabledBy("External user sync") // Automated enable from API sync
+                    .disabledDate(LocalDateTime.now())
+                    .build();
+
+            userAccountStatusAuditRepository.save(audit);
+
+            log.info("Enabled user: {} ({}) from external user API sync", 
+                    entraUser.getEmail(), entraUser.getEntraOid());
+
+        } catch (Exception e) {
+            log.error("Error enabling user {} ({}): {}", 
                     entraUser.getEmail(), entraUser.getEntraOid(), e.getMessage(), e);
         }
     }
