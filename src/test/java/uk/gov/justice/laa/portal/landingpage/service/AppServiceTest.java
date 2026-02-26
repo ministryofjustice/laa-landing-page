@@ -18,6 +18,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -178,7 +179,7 @@ class AppServiceTest {
 
         when(appRepository.findById(appId)).thenReturn(Optional.empty());
 
-        RuntimeException exception = org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () -> appService.save(appDto));
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> appService.save(appDto));
 
         assertThat(exception.getMessage()).isEqualTo(String.format("App not found for the give app id: %s", appId));
 
@@ -360,7 +361,7 @@ class AppServiceTest {
 
         when(appRepository.findById(appId)).thenReturn(Optional.empty());
 
-        RuntimeException exception = org.junit.jupiter.api.Assertions.assertThrows(
+        RuntimeException exception = assertThrows(
                 RuntimeException.class,
                 () -> appService.save(appDto)
         );

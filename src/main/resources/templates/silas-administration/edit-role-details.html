@@ -13,7 +13,7 @@
 <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
     <ol class="govuk-breadcrumbs__list">
         <li class="govuk-breadcrumbs__list-item">
-            <a class="govuk-breadcrumbs__link" th:href="@{'/admin/silas-administration#apps'}">Home</a>
+            <a class="govuk-breadcrumbs__link" th:href="@{'/admin/silas-administration#roles'}">Home</a>
         </li>
         <li class="govuk-breadcrumbs__list-item">
             SiLAS Administration
@@ -32,7 +32,7 @@
                 <div class="govuk-error-summary__body">
                     <ul class="govuk-list govuk-error-summary__list">
                         <li>
-                            <a href="#app-description-error" th:utext="${errorMessage}"></a>
+                            <a href="#role-name-error" th:utext="${errorMessage}"></a>
                         </li>
                     </ul>
                 </div>
@@ -40,36 +40,25 @@
 
             <h1 class="govuk-heading-xl">SiLAS Administration</h1>
 
-            <h2 class="govuk-heading-m govuk-!-padding-top-3">Legal Aid Services: <span th:text="${app.name}"></span></h2>
+            <h2 class="govuk-heading-m govuk-!-padding-top-3">Legal Aid Services: <span th:text="${appRole.name}"></span></h2>
 
-            <form method="post" th:action="@{'/admin/silas-administration/app/' + ${app.id}}" th:object="${appDetailsForm}">
+            <form method="post" th:action="@{'/admin/silas-administration/role/' + ${appRole.id}}" th:object="${appRoleDetailsForm}">
 
-                <input type="hidden" name="appId" th:value="${appId}" />
+                <input type="hidden" name="appRoleId" th:value="${appRoleId}" />
 
-                <div class="govuk-form-group">
-                    <fieldset class="govuk-fieldset">
-                        <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
-                            <h2 class="govuk-fieldset__heading">
-                                Is the app enabled?
-                            </h2>
-                        </legend>
-                        <div class="govuk-radios" data-module="govuk-radios">
-                            <div class="govuk-radios__item">
-                                <input class="govuk-radios__input" id="appEnabledYes" type="radio"
-                                       th:field="*{enabled}" th:value="true">
-                                <label class="govuk-label govuk-radios__label" for="appEnabledYes">
-                                    Yes
-                                </label>
-                            </div>
-                            <div class="govuk-radios__item">
-                                <input class="govuk-radios__input" id="appEnabledNo" type="radio"
-                                       th:field="*{enabled}" th:value="false">
-                                <label class="govuk-label govuk-radios__label" for="appEnabledNo">
-                                    No
-                                </label>
-                            </div>
-                        </div>
-                    </fieldset>
+                <div class="govuk-form-group" th:classappend="${#fields.hasErrors('name')} ? 'govuk-form-group--error' : ''" id="app-name-group">
+                    <label class="govuk-label govuk-label--m" for="role-name">
+                        Name
+                    </label>
+                    <div th:if="${#fields.hasErrors('name')}" class="govuk-error-message" id="role-name-error">
+                        <span class="govuk-visually-hidden">Error:</span>
+                        <span th:errors="*{name}"></span>
+                    </div>
+
+                    <input class="govuk-input" name="name" type="text"
+                           th:field="*{name}" id="role-name"
+                           th:aria-describedby="${#fields.hasErrors('name')} ? 'name-error' : null" />
+
                 </div>
 
 
@@ -94,7 +83,7 @@
                     <button type="submit" class="govuk-button" data-module="govuk-button">
                         Continue
                     </button>
-                    <a class="govuk-link" th:href="@{'/admin/silas-administration/cancel/apps'}">Cancel</a>
+                    <a class="govuk-link" th:href="@{'/admin/silas-administration/cancel/roles'}">Cancel</a>
                 </div>
             </form>
 

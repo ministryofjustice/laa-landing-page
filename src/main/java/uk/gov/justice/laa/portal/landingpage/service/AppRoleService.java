@@ -1,5 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -7,23 +9,28 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.RoleCreationAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.RoleCreationDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.forms.AppRolesOrderForm;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static java.util.Arrays.stream;
 
@@ -51,9 +58,82 @@ public class AppRoleService {
         return appRoles.stream().map((element) -> modelMapper.map(element, AppRoleDto.class)).toList();
     }
 
+    public Optional<AppRoleDto> findById(UUID id) {
+        return appRoleRepository.findById(id).map(app -> modelMapper.map(app, AppRoleDto.class));
+    }
+
+    public Optional<AppRole> getById(UUID id) {
+        return appRoleRepository.findById(id);
+    }
+
+
+    /**
+     * Get all app roles for administration display
+     */
+    public List<AppRoleAdminDto> getAllLaaAppRoles() {
+        return appRoleRepository.findByApp_AppType(AppType.LAA).stream()
+                .map(this::mapToAppRoleAdminDto)
+                .sorted()
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get app roles filtered by app
+     */
+    public List<AppRoleAdminDto> getLaaAppRolesByAppName(String appName) {
+        return appRoleRepository.findByApp_NameAndApp_AppType(appName, AppType.LAA).stream()
+                .map(this::mapToAppRoleAdminDto)
+                .sorted()
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Map AppRole entity to AppRoleAdminDto
+     */
+    private AppRoleAdminDto mapToAppRoleAdminDto(AppRole appRole) {
+        String userTypeRestriction = "";
+        if (appRole.getUserTypeRestriction() != null && appRole.getUserTypeRestriction().length > 0) {
+            userTypeRestriction = Arrays.stream(appRole.getUserTypeRestriction())
+                    .map(UserType::name)
+                    .collect(Collectors.joining(", "));
+        }
+
+        return AppRoleAdminDto.builder()
+                .id(appRole.getId().toString())
+                .name(appRole.getName())
+                .description(appRole.getDescription())
+                .userTypeRestriction(userTypeRestriction)
+                .parentApp(appRole.getApp() != null ? appRole.getApp().getName() : "")
+                .parentAppId(appRole.getApp() != null ? appRole.getApp().getId().toString() : "")
+                .ccmsCode(appRole.getCcmsCode() == null ? "" : appRole.getCcmsCode())
+                .legacySync(appRole.isLegacySync() ? "Yes" : "No")
+                .ordinal(appRole.getOrdinal())
+                .authzRole(appRole.isAuthzRole())
+                .build();
+    }
+
+    @Transactional
+    public AppRole save(AppRoleDto roleDto) {
+
+        AppRole appRole = getById(UUID.fromString(roleDto.getId()))
+                .orElseThrow(() -> new RuntimeException(String.format("App not found for the give app id: %s", roleDto.getId())));
+        appRole.setName(roleDto.getName());
+        appRole.setDescription(roleDto.getDescription());
+        return appRoleRepository.save(appRole);
+
+    }
+
+    @Transactional
+    public void updateAppRolesOrder(@Valid @NotNull List<AppRolesOrderForm.AppRolesOrderDetailsForm> appRoles) {
+        for (AppRolesOrderForm.AppRolesOrderDetailsForm appRole : appRoles) {
+            AppRole appRoleEntity = getById(UUID.fromString(appRole.getAppRoleId())).orElseThrow();
+            appRoleEntity.setOrdinal(appRole.getOrdinal());
+        }
+    }
+
     public boolean isRoleNameExistsInApp(String roleName, UUID appId) {
         return appRoleRepository.findAll().stream()
-                .anyMatch(role -> role.getName().equalsIgnoreCase(roleName) 
+                .anyMatch(role -> role.getName().equalsIgnoreCase(roleName)
                     && role.getApp().getId().equals(appId));
     }
 
@@ -67,7 +147,7 @@ public class AppRoleService {
         dto.setOrdinal(generateNextOrdinal());
 
         app.ifPresent(value -> dto.setParentAppName(value.getName()));
-        
+
         return dto;
     }
 
@@ -75,17 +155,17 @@ public class AppRoleService {
     public void createRole(RoleCreationDto dto) {
         // Validate unique role name within app
         validateUniqueRoleName(dto.getName(), dto.getParentAppId());
-        
+
         // Get parent app
         App parentApp = appRepository.findById(dto.getParentAppId())
                 .orElseThrow(() -> new IllegalArgumentException("Parent app not found with ID: " + dto.getParentAppId()));
 
-        UserType[] userTypeArray = dto.getUserTypeRestriction() != null 
-            ? dto.getUserTypeRestriction().toArray(new UserType[0]) 
+        UserType[] userTypeArray = dto.getUserTypeRestriction() != null
+            ? dto.getUserTypeRestriction().toArray(new UserType[0])
             : null;
-            
-        FirmType[] firmTypeArray = dto.getFirmTypeRestriction() != null 
-            ? dto.getFirmTypeRestriction().toArray(new FirmType[0]) 
+
+        FirmType[] firmTypeArray = dto.getFirmTypeRestriction() != null
+            ? dto.getFirmTypeRestriction().toArray(new FirmType[0])
             : null;
 
         // Convert empty CCMS code to null to avoid unique constraint violations
@@ -108,7 +188,7 @@ public class AppRoleService {
 
         AppRole savedRole = appRoleRepository.save(appRole);
 
-        String userTypeRestrictionStr = String.join(", ", 
+        String userTypeRestrictionStr = String.join(", ",
             stream(savedRole.getUserTypeRestriction())
                 .map(Enum::name)
                 .toArray(String[]::new));
@@ -122,7 +202,7 @@ public class AppRoleService {
             .findFirst()
             .map(profile -> profile.getId().toString())
             .orElse("N/A");
-            
+
         RoleCreationAuditEvent auditEvent = new RoleCreationAuditEvent(
             savedRole.getName(),
             parentApp.getName(),
@@ -134,7 +214,7 @@ public class AppRoleService {
             currentEntraUser.getEntraOid()
         );
         eventService.logEvent(auditEvent);
-        
+
         log.info("Created new role: {} in app: {}", savedRole.getName(), parentApp.getName());
     }
 
