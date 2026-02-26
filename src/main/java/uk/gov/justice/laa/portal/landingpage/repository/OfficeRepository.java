@@ -22,11 +22,11 @@ public interface OfficeRepository extends JpaRepository<Office, UUID> {
             value = """
         SELECT * FROM office 
         WHERE firm_id = :id
-    """,
+        """,
             countQuery = """
         SELECT count(*) FROM office 
         WHERE firm_id = :id
-    """,
+        """,
             nativeQuery = true
     )
     Page<Office> findAllByFirmId(UUID id, Pageable pageable);
