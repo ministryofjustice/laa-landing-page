@@ -108,6 +108,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditAccountStatusProjection;
+import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
@@ -1921,6 +1922,11 @@ class UserServiceTest {
 
             when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
             when(mockEntraUserRepository.saveAndFlush(any())).thenReturn(entraUser);
+            TechServicesApiResponse<ChangeAccountEnabledResponse> response = TechServicesApiResponse
+                    .success(ChangeAccountEnabledResponse.builder().success(true).build());
+            when(techServicesClient.updateUserDetails(any(), any(), any(), any()))
+                    .thenReturn(TechServicesApiResponse
+                            .success(ChangeAccountEnabledResponse.builder().success(true).build()));
             // Act
             userService.updateUserDetails(userId.toString(), email, firstName, lastName);
 
@@ -1951,7 +1957,9 @@ class UserServiceTest {
             EntraUser entraUser = EntraUser.builder().id(userId).build();
             when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
             when(mockEntraUserRepository.saveAndFlush(any())).thenThrow(new RuntimeException("DB error"));
-
+            when(techServicesClient.updateUserDetails(any(), any(), any(), any()))
+                    .thenReturn(TechServicesApiResponse
+                            .success(ChangeAccountEnabledResponse.builder().success(true).build()));
             // Act & Assert
             IOException exception = Assertions.assertThrows(IOException.class,
                     () -> userService.updateUserDetails(userId.toString(), "email@email.com", "Jonh", "Doe"));
@@ -1980,12 +1988,25 @@ class UserServiceTest {
         void updateUserDetails_handlesRepositoryException_gracefully() throws IOException {
             // Arrange
             UUID userId = UUID.randomUUID();
-            EntraUser entraUser = EntraUser.builder().id(userId).build();
+            String mail = "email@email.com";
+            String firstName = "John";
+            String lastName = "Doe";
+            EntraUser entraUser = EntraUser.builder()
+                    .id(userId)
+                    .entraOid(String.valueOf(userId))
+                    .email(mail)
+                    .firstName(firstName)
+                    .lastName(lastName)
+                    .build();
             when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
             when(mockEntraUserRepository.saveAndFlush(any())).thenReturn(entraUser);
+            TechServicesApiResponse<ChangeAccountEnabledResponse> response = TechServicesApiResponse
+                    .success(ChangeAccountEnabledResponse.builder().success(true).build());
+            when(techServicesClient.updateUserDetails(anyString(), anyString(), anyString(), anyString()))
+                    .thenReturn(response);
 
             // Act - should not throw exception
-            userService.updateUserDetails(userId.toString(), "email@email.com", "John", "Doe");
+            userService.updateUserDetails(userId.toString(), mail, firstName, lastName);
 
             // Assert - database update should occur
             verify(mockEntraUserRepository).saveAndFlush(entraUser);
