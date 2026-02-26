@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'create-role-confirmation'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>Role created</title>
+</head>
+
+<body>
+<nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+    <ol class="govuk-breadcrumbs__list">
+        <li class="govuk-breadcrumbs__list-item">
+            <a class="govuk-breadcrumbs__link" th:href="@{'/admin/silas-administration?tab=roles#roles'}">< Back</a>
+        </li>
+    </ol>
+</nav>
+
+<main class="govuk-main-wrapper" id="main-content">
+    <div class="govuk-grid-row">
+        <div class="govuk-grid-column-two-thirds">
+
+            <div class="govuk-panel govuk-panel--confirmation">
+                <h1 class="govuk-panel__title">Role created</h1>
+                <div class="govuk-panel__body">
+                    <span th:text="${createdRole.name}">Role Name</span>
+                    has been added
+                </div>
+            </div>
+
+            <h2 class="govuk-heading-m">What happens next</h2>
+            
+            <p class="govuk-body">The role has been created and is now available for assignment to users.</p>
+            
+            <p class="govuk-body">You can:</p>
+            
+            <ul class="govuk-list govuk-list--bullet">
+                <li><a class="govuk-link" th:href="@{'/admin/silas-administration/roles/create'}">create another role</a></li>
+            </ul>
+
+            <a class="govuk-button" data-module="govuk-button" th:href="@{'/admin/silas-administration?tab=roles#roles'}">
+                Go back to manage your roles
+            </a>
+
+        </div>
+    </div>
+</main>
+</body>
+
+</html>
