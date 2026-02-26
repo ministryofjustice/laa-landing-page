@@ -26,4 +26,5 @@ public class FirmDirectoryDto implements Serializable {
     private String firmName;
     private String firmCode;
     private String firmType;
+    private boolean enabled;
 }

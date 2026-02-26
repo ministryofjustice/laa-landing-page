@@ -1,16 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -20,12 +9,21 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import org.slf4j.LoggerFactory;
@@ -258,7 +256,7 @@ public class MultiFirmUserControllerTest {
                 "error.firm",
                 "User profile already exists for this firm.");
     }
-    
+
     @Test
     public void addUserProfile() {
         when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder()
@@ -1374,7 +1372,10 @@ public class MultiFirmUserControllerTest {
         String view = controller.checkAnswerAndAddProfile(model, authentication, session);
 
         assertThat(view).isEqualTo("multi-firm-user/add-profile-check-answers");
-        assertThat(model.getAttribute("firm")).isEqualTo(profileDto.getFirm());
+        FirmDto expectedFirm = new FirmDto(profileDto.getFirm().getId(), profileDto.getFirm().getName(),
+                profileDto.getFirm().getCode(), profileDto.getFirm().getType(), true,
+                profileDto.getFirm().isSkipFirmSelection(), profileDto.getFirm().isCanChange());
+        assertThat(model.getAttribute("firm")).isEqualTo(expectedFirm);
         assertThat(model.getAttribute("userOffices")).isInstanceOf(List.class);
         assertThat(model.getAttribute("selectedAppRole")).isInstanceOf(List.class);
         assertThat(model.getAttribute("externalUser")).isEqualTo(true);
