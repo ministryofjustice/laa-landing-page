@@ -13,12 +13,12 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -28,11 +28,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.cache.Cache;
 import org.springframework.cache.Cache.ValueWrapper;
 import org.springframework.cache.CacheManager;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDirectoryDto;
@@ -71,10 +71,10 @@ class FirmServiceTest {
 
     @Test
     void getFirms() {
-        Firm firm1 = Firm.builder().build();
-        Firm firm2 = Firm.builder().build();
+        Firm firm1 = Firm.builder().enabled(true).build();
+        Firm firm2 = Firm.builder().enabled(true).build();
         List<Firm> dbFirms = List.of(firm1, firm2);
-        when(firmRepository.findAll()).thenReturn(dbFirms);
+        when(firmRepository.findAllByEnabledTrue()).thenReturn(dbFirms);
         List<FirmDto> firms = firmService.getFirms();
         assertThat(firms).hasSize(2);
     }
@@ -101,9 +101,10 @@ class FirmServiceTest {
                 .firmDirectories(List.of(FirmDirectoryDto.builder()
                                 .firmName("firm1")
                                 .firmType(FirmType.LEGAL_SERVICES_PROVIDER.getValue())
+                                .enabled(true)
                         .build()))
                 .build();
-        when(firmRepository.getFirmsPage(any(), any(), any())).thenReturn(firmPage);
+        when(firmRepository.getFirmsPage(any(), any(), anyBoolean(), any())).thenReturn(firmPage);
         PaginatedFirmDirectory firmPaginator = firmService.getFirmsPage("", FirmType.LEGAL_SERVICES_PROVIDER.name(), 1, 10, "sort", Sort.Direction.DESC.name());
         assertThat(firmPaginator.getFirmDirectories())
                 .isEqualTo(paginatorExpected.getFirmDirectories());
@@ -122,9 +123,10 @@ class FirmServiceTest {
                 .firmDirectories(List.of(FirmDirectoryDto.builder()
                         .firmName("firm1")
                         .firmType(FirmType.LEGAL_SERVICES_PROVIDER.getValue())
+                        .enabled(true)
                         .build()))
                 .build();
-        when(firmRepository.getFirmsPage(any(), any(), any())).thenReturn(firmPage);
+        when(firmRepository.getFirmsPage(any(), any(), anyBoolean(), any())).thenReturn(firmPage);
         PaginatedFirmDirectory firmPaginator = firmService.getFirmsPage("", null, 1, 10, "sort", Sort.Direction.DESC.name());
         assertThat(firmPaginator.getFirmDirectories())
                 .isEqualTo(paginatorExpected.getFirmDirectories());
@@ -229,12 +231,14 @@ class FirmServiceTest {
                 .name("Smith & Associates Law Firm")
                 .code("SMITH001")
                 .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .enabled(true)
                 .build();
         Firm firm2 = Firm.builder()
                 .id(UUID.randomUUID())
                 .name("John Smith Legal Services")
                 .code("JSMITH002")
                 .type(FirmType.ADVOCATE)
+                .enabled(true)
                 .build();
         List<Firm> searchResults = List.of(firm1, firm2);
 
@@ -250,7 +254,7 @@ class FirmServiceTest {
         assertThat(result.get(1).getName()).isEqualTo("John Smith Legal Services");
         assertThat(result.get(1).getCode()).isEqualTo("JSMITH002");
         verify(firmRepository).findByNameOrCodeContaining(searchTerm.trim());
-        verify(firmRepository, never()).findAll();
+        verify(firmRepository, never()).findAllByEnabledTrue();
     }
 
     @Nested
@@ -291,9 +295,9 @@ class FirmServiceTest {
                     .build();
 
             allFirms = List.of(
-                    new FirmDto(UUID.randomUUID(), "Test Firm 1", "TF1", null, false, false),
-                    new FirmDto(UUID.randomUUID(), "Test Firm 2", "TF2", null, false, false),
-                    new FirmDto(UUID.randomUUID(), "Another Firm", "AF1", null, false, false)
+                new FirmDto(UUID.randomUUID(), "Test Firm 1", "TF1", null, false, false, false),
+                new FirmDto(UUID.randomUUID(), "Test Firm 2", "TF2", null, false, false, false),
+                new FirmDto(UUID.randomUUID(), "Another Firm", "AF1", null, false, false, false)
             );
 
             // Setup cache mock
@@ -320,8 +324,8 @@ class FirmServiceTest {
         void whenInternalUser_withSearchTerm_filtersFirms() {
             // Given
             List<Firm> searchResults = List.of(
-                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 1").code("TF1").build(),
-                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 2").code("TF2").build()
+                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 1").code("TF1").enabled(true).build(),
+                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 2").code("TF2").enabled(true).build()
             );
             when(firmRepository.findByNameOrCodeContaining("Test")).thenReturn(searchResults);
 
@@ -339,8 +343,8 @@ class FirmServiceTest {
         void whenInternalUser_withSearchTerm_filtersFirms_should_return_in_ranking_order() {
             // Given
             List<Firm> searchResults = List.of(
-                    Firm.builder().id(UUID.randomUUID()).name("A Test Firm 1").code("TF1").build(),
-                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 2").code("TF2").build()
+                    Firm.builder().id(UUID.randomUUID()).name("A Test Firm 1").code("TF1").enabled(true).build(),
+                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 2").code("TF2").enabled(true).build()
             );
             when(firmRepository.findByNameOrCodeContaining("Test")).thenReturn(searchResults);
 
@@ -358,8 +362,8 @@ class FirmServiceTest {
         void whenInternalUser_withSearchTerm_code_filtersFirms_should_return_in_ranking_order() {
             // Given
             List<Firm> searchResults = List.of(
-                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 1").code("12345").build(),
-                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 2").code("1234").build()
+                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 1").code("12345").enabled(true).build(),
+                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 2").code("1234").enabled(true).build()
             );
             when(firmRepository.findByNameOrCodeContaining("1234")).thenReturn(searchResults);
 
@@ -377,8 +381,8 @@ class FirmServiceTest {
         void whenInternalUser_withCodeSearch_filtersFirmsByCode() {
             // Given
             List<Firm> codeMatchingFirms = List.of(
-                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 1").code("TF1").type(FirmType.ADVOCATE).build(),
-                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 2").code("TF2").type(FirmType.ADVOCATE).build()
+                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 1").code("TF1").type(FirmType.ADVOCATE).enabled(true).build(),
+                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 2").code("TF2").type(FirmType.ADVOCATE).enabled(true).build()
             );
             when(firmRepository.findByNameOrCodeContaining("TF")).thenReturn(codeMatchingFirms);
 
@@ -455,9 +459,9 @@ class FirmServiceTest {
         void whenSearchIsCaseInsensitive_returnsMatchingFirms() {
             // Given
             List<Firm> caseInsensitiveMatchingFirms = List.of(
-                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 1").code("TF1").type(FirmType.ADVOCATE).build(),
-                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 2").code("TF2").type(FirmType.ADVOCATE).build(),
-                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 3").code("TF3").type(FirmType.ADVOCATE).build()
+                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 1").code("TF1").type(FirmType.ADVOCATE).enabled(true).build(),
+                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 2").code("TF2").type(FirmType.ADVOCATE).enabled(true).build(),
+                    Firm.builder().id(UUID.randomUUID()).name("Test Firm 3").code("TF3").type(FirmType.ADVOCATE).enabled(true).build()
             );
             when(firmRepository.findByNameOrCodeContaining("fIrM")).thenReturn(caseInsensitiveMatchingFirms);
 
@@ -474,8 +478,8 @@ class FirmServiceTest {
             // Given
             when(cacheManager.getCache(CACHE_NAME)).thenReturn(cache);
             when(cache.get(ALL_FIRMS_KEY)).thenReturn(null);
-            when(firmRepository.findAll()).thenReturn(List.of(
-                    Firm.builder().id(UUID.randomUUID()).name("Test Firm").build()
+            when(firmRepository.findAllByEnabledTrue()).thenReturn(List.of(
+                    Firm.builder().id(UUID.randomUUID()).name("Test Firm").enabled(true).build()
             ));
 
             // When
@@ -483,7 +487,7 @@ class FirmServiceTest {
 
             // Then
             assertThat(result).hasSize(1);
-            verify(firmRepository).findAll();
+            verify(firmRepository).findAllByEnabledTrue();
             verify(cache).put(ALL_FIRMS_KEY, result);
         }
     }
@@ -498,6 +502,7 @@ class FirmServiceTest {
                 .name("ABC Legal Services")
                 .code("ABC001")
                 .type(FirmType.ADVOCATE)
+                .enabled(true)
                 .build();
         List<Firm> searchResults = List.of(firm);
 
@@ -510,61 +515,61 @@ class FirmServiceTest {
         assertThat(result).hasSize(1);
         assertThat(result.getFirst().getName()).isEqualTo("ABC Legal Services");
         verify(firmRepository).findByNameOrCodeContaining(trimmedSearchTerm);
-        verify(firmRepository, never()).findAll();
+        verify(firmRepository, never()).findAllByEnabledTrue();
     }
 
     @Test
     void searchFirms_withEmptySearchTerm() {
         // Given
         String searchTerm = "";
-        Firm firm1 = Firm.builder().id(UUID.randomUUID()).name("Firm 1").build();
-        Firm firm2 = Firm.builder().id(UUID.randomUUID()).name("Firm 2").build();
+        Firm firm1 = Firm.builder().id(UUID.randomUUID()).name("Firm 1").enabled(true).build();
+        Firm firm2 = Firm.builder().id(UUID.randomUUID()).name("Firm 2").enabled(true).build();
         List<Firm> allFirms = List.of(firm1, firm2);
 
-        when(firmRepository.findAll()).thenReturn(allFirms);
+        when(firmRepository.findAllByEnabledTrue()).thenReturn(allFirms);
 
         // When
         List<FirmDto> result = firmService.searchFirms(searchTerm);
 
         // Then
         assertThat(result).hasSize(2);
-        verify(firmRepository).findAll();
+        verify(firmRepository).findAllByEnabledTrue();
     }
 
     @Test
     void searchFirms_withNullSearchTerm() {
         // Given
         String searchTerm = null;
-        Firm firm1 = Firm.builder().id(UUID.randomUUID()).name("Firm 1").build();
-        Firm firm2 = Firm.builder().id(UUID.randomUUID()).name("Firm 2").build();
+        Firm firm1 = Firm.builder().id(UUID.randomUUID()).name("Firm 1").enabled(true).build();
+        Firm firm2 = Firm.builder().id(UUID.randomUUID()).name("Firm 2").enabled(true).build();
         List<Firm> allFirms = List.of(firm1, firm2);
 
-        when(firmRepository.findAll()).thenReturn(allFirms);
+        when(firmRepository.findAllByEnabledTrue()).thenReturn(allFirms);
 
         // When
         List<FirmDto> result = firmService.searchFirms(searchTerm);
 
         // Then
         assertThat(result).hasSize(2);
-        verify(firmRepository).findAll();
+        verify(firmRepository).findAllByEnabledTrue();
     }
 
     @Test
     void searchFirms_withWhitespaceOnlySearchTerm() {
         // Given
         String searchTerm = "   ";
-        Firm firm1 = Firm.builder().id(UUID.randomUUID()).name("Firm 1").build();
-        Firm firm2 = Firm.builder().id(UUID.randomUUID()).name("Firm 2").build();
+        Firm firm1 = Firm.builder().id(UUID.randomUUID()).name("Firm 1").enabled(true).build();
+        Firm firm2 = Firm.builder().id(UUID.randomUUID()).name("Firm 2").enabled(true).build();
         List<Firm> allFirms = List.of(firm1, firm2);
 
-        when(firmRepository.findAll()).thenReturn(allFirms);
+        when(firmRepository.findAllByEnabledTrue()).thenReturn(allFirms);
 
         // When
         List<FirmDto> result = firmService.searchFirms(searchTerm);
 
         // Then
         assertThat(result).hasSize(2);
-        verify(firmRepository).findAll();
+        verify(firmRepository).findAllByEnabledTrue();
     }
 
     @Test
@@ -590,6 +595,7 @@ class FirmServiceTest {
                 .name("ABC Legal Services")
                 .code("ABC001")
                 .type(FirmType.ADVOCATE)
+                .enabled(true)
                 .build();
         List<Firm> searchResults = List.of(firm);
 
@@ -655,8 +661,8 @@ class FirmServiceTest {
     public void shouldReturnSortedFirmsByRelevance_whenSearchTermIsValid() {
         String searchTerm = "Alpha";
 
-        Firm firm1 = Firm.builder().name("Alpha").code("A001").build();
-        Firm firm2 = Firm.builder().name("AlphaTech").code("A002").build();
+        Firm firm1 = Firm.builder().name("Alpha").code("A001").enabled(true).build();
+        Firm firm2 = Firm.builder().name("AlphaTech").code("A002").enabled(true).build();
 
         when(firmRepository.findByNameOrCodeContaining(searchTerm)).thenReturn(Arrays.asList(firm1, firm2));
 
@@ -696,12 +702,12 @@ class FirmServiceTest {
         @Test
         void getAllFirmsFromCache_WhenCacheMiss_ShouldFetchFromRepository() {
             // Arrange
-            Firm firm1 = Firm.builder().id(UUID.randomUUID()).name("Firm 1").build();
-            Firm firm2 = Firm.builder().id(UUID.randomUUID()).name("Firm 2").build();
+            Firm firm1 = Firm.builder().id(UUID.randomUUID()).name("Firm 1").enabled(true).build();
+            Firm firm2 = Firm.builder().id(UUID.randomUUID()).name("Firm 2").enabled(true).build();
             List<Firm> dbFirms = List.of(firm1, firm2);
 
             when(cache.get("all_firms", List.class)).thenReturn(null);
-            when(firmRepository.findAll()).thenReturn(dbFirms);
+            when(firmRepository.findAllByEnabledTrue()).thenReturn(dbFirms);
 
             // Act
             List<FirmDto> result = firmService.getAllFirmsFromCache();
@@ -709,7 +715,7 @@ class FirmServiceTest {
             // Assert
             assertThat(result).hasSize(2);
             assertThat(result).extracting(FirmDto::getName).containsExactly("Firm 1", "Firm 2");
-            verify(firmRepository).findAll();
+            verify(firmRepository).findAllByEnabledTrue();
             verify(cache).put(eq("all_firms"), anyList());
         }
 
@@ -731,7 +737,7 @@ class FirmServiceTest {
             // Assert
             assertThat(result).hasSize(1);
             assertThat(result.getFirst().getName()).isEqualTo("Cached Firm 1");
-            verify(firmRepository, never()).findAll();
+            verify(firmRepository, never()).findAllByEnabledTrue();
             verify(cache, never()).put(anyString(), any());
         }
 
@@ -739,8 +745,8 @@ class FirmServiceTest {
         void getAllFirmsFromCache_WhenCacheIsNull_ShouldFetchFromRepository() {
             // Arrange
             when(cacheManager.getCache(CachingConfig.LIST_OF_FIRMS_CACHE)).thenReturn(null);
-            Firm firm = Firm.builder().id(UUID.randomUUID()).name("Test Firm").build();
-            when(firmRepository.findAll()).thenReturn(List.of(firm));
+            Firm firm = Firm.builder().id(UUID.randomUUID()).name("Test Firm").enabled(true).build();
+            when(firmRepository.findAllByEnabledTrue()).thenReturn(List.of(firm));
 
             // Act
             List<FirmDto> result = firmService.getAllFirmsFromCache();
@@ -754,24 +760,24 @@ class FirmServiceTest {
         void getAllFirmsFromCache_WhenCacheThrowsException_ShouldLogAndReturnEmptyList() {
             // Arrange
             when(cache.get("all_firms", List.class)).thenThrow(new RuntimeException("Cache error"));
-            when(firmRepository.findAll()).thenReturn(List.of());
+            when(firmRepository.findAllByEnabledTrue()).thenReturn(List.of());
 
             // Act
             List<FirmDto> result = firmService.getAllFirmsFromCache();
 
             // Assert
             assertThat(result).isEmpty();
-            verify(firmRepository).findAll();
+            verify(firmRepository).findAllByEnabledTrue();
         }
 
         @Test
         public void shouldReturnAllFirms_whenSearchTermIsNull() {
             List<Firm> cachedFirms = Arrays.asList(
-                    Firm.builder().name("Alpha").code("A001").build(),
-                    Firm.builder().name("Beta").code("B002").build()
+                    Firm.builder().name("Alpha").code("A001").enabled(true).build(),
+                    Firm.builder().name("Beta").code("B002").enabled(true).build()
             );
             when(cache.get("all_firms", List.class)).thenReturn(null);
-            when(firmRepository.findAll()).thenReturn(cachedFirms);
+            when(firmRepository.findAllByEnabledTrue()).thenReturn(cachedFirms);
 
             List<FirmDto> result = firmService.searchFirms(null);
 
@@ -784,10 +790,10 @@ class FirmServiceTest {
         @Test
         public void shouldReturnAllFirms_whenSearchTermIsEmpty() {
             List<Firm> cachedFirms = Collections.singletonList(
-                    Firm.builder().name("Alpha").code("A001").build()
+                    Firm.builder().name("Alpha").code("A001").enabled(true).build()
             );
             when(cache.get("all_firms", List.class)).thenReturn(null);
-            when(firmRepository.findAll()).thenReturn(cachedFirms);
+            when(firmRepository.findAllByEnabledTrue()).thenReturn(cachedFirms);
 
             List<FirmDto> result = firmService.searchFirms("   ");
 
