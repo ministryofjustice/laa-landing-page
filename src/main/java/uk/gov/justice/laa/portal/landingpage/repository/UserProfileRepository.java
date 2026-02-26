@@ -115,13 +115,19 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             """)
     Page<UserProfile> findInternalUserByAuthzRole(@Param("role") String role, Pageable pageable);
 
-    List<UserProfile> findAllByEntraUser(EntraUser entraUser);
+    @Query("""
+            SELECT up FROM UserProfile up
+            LEFT JOIN FETCH up.firm
+            WHERE up.entraUser = :entraUser
+            """)
+    List<UserProfile> findAllByEntraUser(@Param("entraUser") EntraUser entraUser);
 
     @Query("""
             SELECT ups FROM UserProfile ups
                         JOIN FETCH ups.entraUser u
                         JOIN FETCH ups.firm f
             WHERE ups.entraUser.id = :entraUserId
+            AND f.enabled = true
             AND (
                 :search IS NULL OR :search = '' OR
                 LOWER(f.name) LIKE LOWER(CONCAT('%', :search, '%')) OR
@@ -146,4 +152,24 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                 AND ars.legacySync = true
             """)
     List<UserProfile> findUserProfilesForCcmsSync();
+
+    @Query("""
+            SELECT DISTINCT ups FROM UserProfile ups
+                        JOIN FETCH ups.offices o
+            WHERE o.id = :officeId
+            """)
+    List<UserProfile> findByOfficeId(@Param("officeId") UUID officeId);
+
+    @Query("""
+            SELECT DISTINCT ups FROM UserProfile ups
+                        JOIN ups.offices o
+            WHERE o.id IN :officeIds
+            """)
+    List<UserProfile> findByOfficeIdIn(@Param("officeIds") List<UUID> officeIds);
+
+    @Query("""
+            SELECT ups FROM UserProfile ups
+            WHERE ups.firm.id = :firmId
+            """)
+    List<UserProfile> findByFirmId(@Param("firmId") UUID firmId);
 }
