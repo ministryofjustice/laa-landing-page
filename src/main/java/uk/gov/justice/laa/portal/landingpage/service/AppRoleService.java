@@ -130,6 +130,7 @@ public class AppRoleService {
             appRoleEntity.setOrdinal(appRole.getOrdinal());
         }
     }
+
     public boolean isRoleNameExistsInApp(String roleName, UUID appId) {
         return appRoleRepository.findAll().stream()
                 .anyMatch(role -> role.getName().equalsIgnoreCase(roleName)
