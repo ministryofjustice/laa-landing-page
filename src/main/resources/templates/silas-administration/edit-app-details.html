@@ -32,7 +32,7 @@
                 <div class="govuk-error-summary__body">
                     <ul class="govuk-list govuk-error-summary__list">
                         <li>
-                            <a href="#name-error" th:text="${errorMessage}"></a>
+                            <a href="#app-description-error" th:utext="${errorMessage}"></a>
                         </li>
                     </ul>
                 </div>
@@ -94,7 +94,7 @@
                     <button type="submit" class="govuk-button" data-module="govuk-button">
                         Continue
                     </button>
-                    <a class="govuk-link" th:href="@{'/admin/silas-administration'}">Cancel</a>
+                    <a class="govuk-link" th:href="@{'/admin/silas-administration/cancel/apps'}">Cancel</a>
                 </div>
             </form>
 

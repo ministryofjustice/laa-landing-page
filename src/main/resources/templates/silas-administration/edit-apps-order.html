@@ -2,7 +2,7 @@
 <html lang="en" th:replace="~{layout :: layout(
       title=~{::title},
       mainContent=~{::#main-content},
-      pageCategory=${'edit-app-details'},
+      pageCategory=${'edit-app-order'},
       breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
 
 <head>
@@ -32,7 +32,7 @@
                 <div class="govuk-error-summary__body">
                     <ul class="govuk-list govuk-error-summary__list">
                         <li>
-                            <a href="#name-error" th:text="${errorMessage}"></a>
+                            <a href="#" th:utext="${errorMessage}"></a>
                         </li>
                     </ul>
                 </div>
@@ -90,7 +90,7 @@
                         <button class="govuk-button" data-module="govuk-button" type="submit">
                             Continue
                         </button>
-                        <a class="govuk-link" th:href="@{'/admin/silas-administration'}">Cancel</a>
+                        <a class="govuk-link" th:href="@{'/admin/silas-administration/cancel/apps'}">Cancel</a>
                     </div>
                 </div>
 

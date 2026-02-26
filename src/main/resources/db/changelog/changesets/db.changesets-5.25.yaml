@@ -1,0 +1,42 @@
+databaseChangeLog:
+  - changeSet:
+      id: modify-check-firms-function-skip-flag-20260219-1
+      author: paul.snowdon
+      comment: Modify check_firms_have_office function to check for session variable that bypasses validation during PDA sync
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            comment: Add session variable check to allow PDA sync to bypass constraint
+            sql: |
+              CREATE OR REPLACE FUNCTION check_firms_have_office() 
+              RETURNS trigger LANGUAGE plpgsql AS $$ 
+              BEGIN 
+                /* Skip check if session variable is set (for PDA sync) */
+                IF current_setting('app.internal.pda_sync_bypass_constraint_check', true) = 'true' THEN
+                  IF TG_OP = 'DELETE' THEN 
+                    RETURN OLD; 
+                  ELSE 
+                    RETURN NEW; 
+                  END IF; 
+                END IF;
+                
+                /* Normal validation */
+                IF EXISTS ( 
+                  SELECT 1 
+                  FROM firm f 
+                  WHERE f.enabled = true 
+                  AND NOT EXISTS ( 
+                    SELECT 1 FROM office o 
+                    WHERE o.firm_id = f.id 
+                  ) 
+                ) THEN 
+                  RAISE EXCEPTION 'Enabled firm must have at least one office'; 
+                END IF; 
+                IF TG_OP = 'DELETE' THEN 
+                  RETURN OLD; 
+                ELSE 
+                  RETURN NEW; 
+                END IF; 
+              END; 
+              $$
