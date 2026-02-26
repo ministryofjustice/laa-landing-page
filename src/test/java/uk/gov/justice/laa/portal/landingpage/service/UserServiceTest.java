@@ -1967,6 +1967,27 @@ class UserServiceTest {
         }
 
         @Test
+        void updateUserDetails_throwsIoException_whenTechServiceFails() {
+            // Arrange
+            UUID userId = UUID.randomUUID();
+            EntraUser entraUser = EntraUser.builder().id(userId).build();
+            when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
+            when(techServicesClient.updateUserDetails(any(), any(), any(), any()))
+                    .thenReturn(TechServicesApiResponse
+                            .error(TechServicesErrorResponse.builder()
+                                    .success(false)
+                                    .message("tech Service error")
+                                    .code("400")
+                                    .build()));
+            // Act & Assert
+            IOException exception = Assertions.assertThrows(IOException.class,
+                    () -> userService.updateUserDetails(userId.toString(), "email@email.com", "Jonh", "Doe"));
+            assertThat(exception.getMessage()).contains("Failed to update user details in database");
+            assertThat(exception.getCause().getMessage()).contains("Tech Services API call failed: TechServicesErrorResponse(success=false, code=400, message=tech Service error, errors=null)");
+
+        }
+
+        @Test
         void updateUserDetails_logsWarning_whenUserNotFoundInDatabase() throws IOException {
             // Arrange
             UUID userId = UUID.randomUUID();
