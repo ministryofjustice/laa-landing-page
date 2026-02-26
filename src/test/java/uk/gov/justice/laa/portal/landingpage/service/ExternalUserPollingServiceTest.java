@@ -26,14 +26,17 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.matches;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.mockito.ArgumentCaptor;
 
 @ExtendWith(MockitoExtension.class)
 class ExternalUserPollingServiceTest {
@@ -1016,6 +1019,69 @@ class ExternalUserPollingServiceTest {
 
         verify(techServicesClient).getUsers(anyString(), anyString());
         verify(entraUserRepository, never()).save(any(EntraUser.class));
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldFormatDatesAsValid_whenSecondsAreNonZero() {
+        LocalDateTime lastSuccessfulTo = LocalDateTime.of(2026, 2, 25, 10, 29, 3);
+        EntraLastSyncMetadata existingMetadata = EntraLastSyncMetadata.builder()
+                .id("ENTRA_USER_SYNC")
+                .lastSuccessfulTo(lastSuccessfulTo)
+                .updatedAt(LocalDateTime.now().minusMinutes(10))
+                .build();
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.of(existingMetadata));
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(Collections.emptyList())
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        String formattedDatePattern = "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.00Z";
+        verify(techServicesClient).getUsers(
+                matches(formattedDatePattern),
+                matches(formattedDatePattern)
+        );
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldFormatDatesConsistently_whenTimeHasExactlyZeroSeconds() {
+        LocalDateTime lastSuccessfulTo = LocalDateTime.of(2026, 2, 25, 10, 29, 0);
+        EntraLastSyncMetadata existingMetadata = EntraLastSyncMetadata.builder()
+                .id("ENTRA_USER_SYNC")
+                .lastSuccessfulTo(lastSuccessfulTo)
+                .updatedAt(LocalDateTime.now().minusMinutes(10))
+                .build();
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.of(existingMetadata));
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(Collections.emptyList())
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        
+        // Capture the actual date strings being passed
+        ArgumentCaptor<String> fromDateCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> toDateCaptor = ArgumentCaptor.forClass(String.class);
+        when(techServicesClient.getUsers(fromDateCaptor.capture(), toDateCaptor.capture())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        String fromDate = fromDateCaptor.getValue();
+        String toDate = toDateCaptor.getValue();
+
+        assertThat(fromDate).doesNotContain("T10:29.00Z");
+        assertThat(toDate).doesNotContain("T10:29.00Z");
+
+        String formattedDatePattern = "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.00Z";
+        assertThat(fromDate).matches(formattedDatePattern);
+        assertThat(toDate).matches(formattedDatePattern);
+        
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
 }

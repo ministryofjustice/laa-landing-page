@@ -9,4 +9,5 @@ public enum EventType {
     SWITCH_FIRM,
     UPDATE_LAA_APP_METADATA,
     DELETE_LAA_APP_ROLE,
+    CREATE_LAA_APP_ROLE,
 }

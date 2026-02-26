@@ -15,6 +15,7 @@ import jakarta.persistence.Table;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -57,6 +58,7 @@ public class Office extends BaseEntity {
     @NoArgsConstructor
     @SuperBuilder
     @Getter
+    @Setter
     public static class Address {
 
         @Column(name = "address_line_1", nullable = true, length = 255)
