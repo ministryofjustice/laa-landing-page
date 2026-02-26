@@ -129,7 +129,11 @@ public class ExternalUserPollingService {
                     boolean isEnabledInSilas = entraUser.isEnabled();
 
                     // Update user fields if not deleted
-                    if (shouldDisableUser(user, isEnabledInSilas)) {
+
+                    if (user.isAccountEnabled() && !isEnabledInSilas) {
+                        // user account enabled in entra, re-enabling in silas
+                        enableUserWithReason(user, entraUser);
+                    } else if (shouldDisableUser(user, isEnabledInSilas)) {
                         //user account has disabled reason in entra, disabling in silas
                         disableUserWithReason(user, entraUser);
                     }
@@ -140,11 +144,6 @@ public class ExternalUserPollingService {
 
                     if (user.getSurname() != null && !user.getSurname().equals(entraUser.getLastName())) {
                         entraUser.setLastName(user.getSurname());
-                    }
-
-                    if (user.isAccountEnabled() && !isEnabledInSilas) {
-                        // user account enabled in entra, re-enabling in silas
-                        enableUserWithReason(user, entraUser);
                     }
 
                     if (user.isMailOnly() != entraUser.isMailOnly()) {
