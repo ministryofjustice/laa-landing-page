@@ -46,14 +46,14 @@
                             <dt class="govuk-summary-list__key">Firm Code</dt>
                             <dd class="govuk-summary-list__value" th:text="${firm.code}"></dd>
                         </div>
+                        <!-- Uncomment when firm status available
                         <div class="govuk-summary-list__row">
                             <dt class="govuk-summary-list__key">Firm Status</dt>
                             <dd class="govuk-summary-list__value">
-                            <!-- Change the condition when firm.status implemented -->
-                            <span th:if="${firm.id != null}" class="moj-badge moj-badge--green">WIP</span>
-                            <span th:if="${firm.id == null}" class="moj-badge moj-badge--red">WIP</span>
+                            <span th:if="${firm.status}" class="moj-badge moj-badge--green">Active</span>
+                            <span th:if="${!firm.id}" class="moj-badge moj-badge--red">Inactive</span>
                             </dd>
-                        </div>
+                        </div>-->
                     </dl>
                 </div>
             </div>
@@ -73,8 +73,8 @@
                 <th scope="col" class="govuk-table__header">Name</th>
                 <th scope="col" class="govuk-table__header">Code</th>
                 <th scope="col" class="govuk-table__header">Address</th>
-                <th scope="col" class="govuk-table__header">Status</th>
-                <th scope="col" class="govuk-table__header"></th>
+                <!-- Uncomment when office status available
+                <th scope="col" class="govuk-table__header">Status</th> -->
             </tr>
             </thead>
 
@@ -84,19 +84,19 @@
                 <td class="govuk-table__cell" th:text="${office.code}"></td>
                 <td class="govuk-table__cell"
                     th:text="${office.address?.formattedAddress} ?: 'Unknown'"></td>
-
+                <!-- Uncomment when office Status Available
                 <td class="govuk-table__cell">
                     <span th:if="${office.status}" class="moj-badge moj-badge--green">Active</span>
                     <span th:if="${!office.status}" class="moj-badge moj-badge--red">Inactive</span>
                 </td>
-
+                -->
+                <!-- Uncomment when user/office view available
                 <td class="govuk-table__cell">
-                    <!-- Change below when user-office page is available -->
                     <a class="govuk-link"
                        th:href="@{{id}(id=${firm.id})}">
                         View all users with access to this office
                     </a>
-                </td>
+                </td> -->
             </tr>
 
             <tr class="govuk-table__row" th:if="${#lists.isEmpty(firmOffices.offices)}">
