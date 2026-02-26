@@ -246,8 +246,8 @@ public class ExternalUserPollingService {
                     .entraUser(entraUser)
                     .disableUserReason(disableReason)
                     .statusChange(UserAccountStatus.DISABLED)
-                    .disabledBy("External user sync") // Automated disable from API sync
-                    .disabledDate(LocalDateTime.now())
+                    .statusChangedBy("External user sync") // Automated disable from API sync
+                    .statusChangedDate(LocalDateTime.now())
                     .build();
             
             userAccountStatusAuditRepository.save(audit);
@@ -269,8 +269,8 @@ public class ExternalUserPollingService {
             UserAccountStatusAudit audit = UserAccountStatusAudit.builder()
                     .entraUser(entraUser)
                     .statusChange(UserAccountStatus.ENABLED)
-                    .disabledBy("External user sync") // Automated enable from API sync
-                    .disabledDate(LocalDateTime.now())
+                    .statusChangedBy("External user sync") // Automated enable from API sync
+                    .statusChangedDate(LocalDateTime.now())
                     .build();
 
             userAccountStatusAuditRepository.save(audit);
