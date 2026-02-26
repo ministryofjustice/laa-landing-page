@@ -66,7 +66,7 @@ class DeleteAppRoleReasonFormTest {
         Set<ConstraintViolation<DeleteAppRoleReasonForm>> violations = validator.validate(form);
 
         assertThat(violations).hasSize(2);
-        assertThat(messagesOf(violations)).containsExactly("Please provide a reason for the role deletion",
+        assertThat(messagesOf(violations)).containsExactlyInAnyOrder("Please provide a reason for the role deletion",
                 "Reason must be between 10 and 1000 characters");
     }
 

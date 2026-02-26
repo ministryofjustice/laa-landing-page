@@ -32,8 +32,8 @@
                 </h2>
                 <div class="govuk-error-summary__body">
                     <ul class="govuk-list govuk-error-summary__list">
-                        <li>
-                            <a href="#" th:utext="${errorMessage}"></a>
+                        <li th:each="message : ${errorMessage}">
+                            <span th:text="${message}"></span>
                         </li>
                     </ul>
                 </div>
@@ -57,7 +57,7 @@
                     App name
                 </label>
                 <input class="govuk-input govuk-!-width-one-half" name="appName"
-                       th:value="*{appName}" id="appName"
+                       th:value="${appName}" id="appName"
                        readonly style="background-color: #f3f2f1; color: #505a5f; cursor: not-allowed;"/>
             </div>
 
@@ -71,7 +71,7 @@
                         <div class="govuk-grid-row">
                             <div class="govuk-grid-column-one-half">
                                 <input class="govuk-input govuk-!-width-full" name="roleName"
-                                       th:value="*{role.name}" id="roleName"
+                                       th:value="${role.name}" id="'roleName-' + ${role.id}"
                                        readonly
                                        style="background-color: #f3f2f1; color: #505a5f; cursor: not-allowed;"/>
                                 <input type="hidden" name="appName" th:value="${role.parentApp}"/>

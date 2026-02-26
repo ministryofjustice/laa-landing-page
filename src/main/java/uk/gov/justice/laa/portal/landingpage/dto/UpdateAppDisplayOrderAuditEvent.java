@@ -22,7 +22,7 @@ public class UpdateAppDisplayOrderAuditEvent extends AuditEvent {
 
     @Override
     public String getDescription() {
-        return String.format("User (Profile ID: '%s; Entra OID: %s) has updated App display order",
+        return String.format("User (Profile ID: '%s' Entra OID: '%s') has updated App display order",
                 userProfileId, userId);
     }
 }

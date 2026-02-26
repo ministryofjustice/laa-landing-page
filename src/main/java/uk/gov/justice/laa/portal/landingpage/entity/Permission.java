@@ -28,8 +28,9 @@ public enum Permission {
     CONVERT_USER_TO_MULTI_FIRM,
     VIEW_LAA_APP_METADATA,
     EDIT_LAA_APP_METADATA,
-    CREATE_LAA_APP_ROLE,
-    DELETE_LAA_APP_ROLE;
+    DELETE_LAA_APP_ROLE,
+    TRIGGER_LAA_APP_SYNC,
+    CREATE_LAA_APP_ROLE;
 
     public static final String[] ADMIN_PERMISSIONS = {
             VIEW_INTERNAL_USER.name(),

@@ -173,7 +173,7 @@ public class AppRoleService {
     public AppRole save(AppRoleDto roleDto) {
 
         AppRole appRole = getById(UUID.fromString(roleDto.getId()))
-                .orElseThrow(() -> new RuntimeException(String.format("App not found for the give app id: %s", roleDto.getId())));
+                .orElseThrow(() -> new RuntimeException(String.format("App role not found for the give app id: %s", roleDto.getId())));
         appRole.setName(roleDto.getName());
         appRole.setDescription(roleDto.getDescription());
         return appRoleRepository.save(appRole);

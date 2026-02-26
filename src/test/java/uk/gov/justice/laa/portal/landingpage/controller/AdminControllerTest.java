@@ -227,7 +227,9 @@ class AdminControllerTest {
         String view = adminController.editAppDetailsPost(appId, form, result, model, session);
 
         assertEquals("silas-administration/edit-app-details", view);
-        assertThat(model.getAttribute("errorMessage")).isEqualTo("Invalid description");
+        assertThat(model.getAttribute("errorMessage")).isNotNull();
+        assertThat((List<String>) model.getAttribute("errorMessage"))
+                .containsExactly("Invalid description");
         assertThat(model.getAttribute("app")).isEqualTo(appDto);
     }
 
@@ -350,7 +352,9 @@ class AdminControllerTest {
         String view = adminController.editAppOrderPost(form, result, model, new MockHttpSession());
 
         assertEquals("silas-administration/edit-apps-order", view);
-        assertThat(model.getAttribute("errorMessage")).isEqualTo("Duplicate ordinal");
+        assertThat(model.getAttribute("errorMessage")).isNotNull();
+        assertThat((List<String>) model.getAttribute("errorMessage"))
+                .containsExactly("Duplicate ordinal");
     }
 
     @Test
@@ -546,10 +550,9 @@ class AdminControllerTest {
         String view = adminController.editAppDetailsPost(appId, form, result, model, session);
 
         assertEquals("silas-administration/edit-app-details", view);
-        String errorMessage = (String) model.getAttribute("errorMessage");
-        assertThat(errorMessage).contains("Description is required");
-        assertThat(errorMessage).contains("Name is required");
-        assertThat(errorMessage).contains("<br/>");
+        assertThat(model.getAttribute("errorMessage")).isNotNull();
+        assertThat((List<String>) model.getAttribute("errorMessage"))
+                .containsExactly("Description is required", "Name is required");
     }
 
     @Test
@@ -860,7 +863,8 @@ class AdminControllerTest {
 
         assertEquals("silas-administration/edit-app-roles-order", view);
         assertThat(model.getAttribute("errorMessage")).isNotNull();
-        assertThat(model.getAttribute("errorMessage")).isEqualTo("Duplicate ordinal");
+        assertThat((List<String>) model.getAttribute("errorMessage"))
+                .containsExactly("Duplicate ordinal");
     }
 
     @Test
@@ -1747,7 +1751,9 @@ class AdminControllerTest {
         String view = adminController.editAppRoleDetailsPost(roleId, form, result, model, session);
 
         assertEquals("silas-administration/edit-role-details", view);
-        assertThat(model.getAttribute("errorMessage")).isEqualTo("Role name is required");
+        assertThat(model.getAttribute("errorMessage")).isNotNull();
+        assertThat((List<String>) model.getAttribute("errorMessage"))
+                .containsExactly("Role name is required");
         assertThat(model.getAttribute("appRole")).isEqualTo(roleDto);
         assertThat(session.getAttribute("appRoleDetailsForm")).isNull();
         assertThat(session.getAttribute("roleId")).isNull();
@@ -1781,10 +1787,9 @@ class AdminControllerTest {
         String view = adminController.editAppRoleDetailsPost(roleId, form, result, model, session);
 
         assertEquals("silas-administration/edit-role-details", view);
-        String errorMessage = (String) model.getAttribute("errorMessage");
-        assertThat(errorMessage).contains("Name is required");
-        assertThat(errorMessage).contains("Description is required");
-        assertThat(errorMessage).contains("<br/>");
+        assertThat(model.getAttribute("errorMessage")).isNotNull();
+        assertThat((List<String>) model.getAttribute("errorMessage"))
+                .containsExactly("Name is required", "Description is required");
     }
 
     @Test

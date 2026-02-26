@@ -150,7 +150,7 @@ public class AdminController {
                                      BindingResult result, Model model, HttpSession session) {
         if (result.hasErrors()) {
             model.addAttribute("app", findAppDtoOrThrow(appId));
-            model.addAttribute("errorMessage", buildErrorString(result));
+            model.addAttribute("errorMessage", buildErrorMessages(result));
             return "silas-administration/edit-app-details";
         }
 
@@ -251,8 +251,7 @@ public class AdminController {
                                    Model model,
                                    HttpSession session) {
         if (result.hasErrors()) {
-            String errorMessage = buildErrorString(result);
-            model.addAttribute("errorMessage", errorMessage);
+            model.addAttribute("errorMessage", buildErrorMessages(result));
             return "silas-administration/edit-apps-order";
         }
 
@@ -320,7 +319,7 @@ public class AdminController {
                                          HttpSession session) {
         if (result.hasErrors()) {
             model.addAttribute("appRole", findAppRoleDtoOrThrow(roleId));
-            model.addAttribute("errorMessage", buildErrorString(result));
+            model.addAttribute("errorMessage", buildErrorMessages(result));
             return "silas-administration/edit-role-details";
         }
 
@@ -437,8 +436,7 @@ public class AdminController {
         model.addAttribute("appName", appName);
 
         if (result.hasErrors()) {
-            String errorMessage = buildErrorString(result);
-            model.addAttribute("errorMessage", errorMessage);
+            model.addAttribute("errorMessage", buildErrorMessages(result));
             return "silas-administration/edit-app-roles-order";
         }
 
@@ -528,7 +526,7 @@ public class AdminController {
     }
 
     @GetMapping("/silas-administration/delete-role/{roleId}/reason")
-    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_LAA_APP_METADATA)")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).DELETE_LAA_APP_ROLE)")
     public String showDeleteAppRoleReasonPage(@PathVariable String roleId,
                                               HttpSession session,
                                               Model model) {
@@ -733,10 +731,10 @@ public class AdminController {
                 .forEach(session::removeAttribute);
     }
 
-    private String buildErrorString(BindingResult result) {
+    private List<String> buildErrorMessages(BindingResult result) {
         return result.getAllErrors().stream()
                 .map(ObjectError::getDefaultMessage)
-                .collect(Collectors.joining("<br/>"));
+                .toList();
     }
 
     private AppDto findAppDtoOrThrow(String appId) {
