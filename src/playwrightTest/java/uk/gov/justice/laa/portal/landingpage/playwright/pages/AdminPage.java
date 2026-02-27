@@ -92,7 +92,7 @@ public class AdminPage {
 
         // Roles & Permissions
         this.createNewRoleButton = rolesAndPermissionsPanel.locator("a.govuk-button:has-text('Create a new role')");
-        this.deleteRoleButton = rolesAndPermissionsPanel.locator("button.govuk-button--warning:has-text('Delete a role')");
+        this.deleteRoleButton = rolesAndPermissionsPanel.locator("a.govuk-button--warning:has-text('Delete a role')");
 
         this.appFilterSelect = rolesAndPermissionsPanel.locator("#appFilter");
 

@@ -31,8 +31,8 @@
                 </h2>
                 <div class="govuk-error-summary__body">
                     <ul class="govuk-list govuk-error-summary__list">
-                        <li>
-                            <a href="#role-name-error" th:utext="${errorMessage}"></a>
+                        <li th:each="message : ${errorMessage}">
+                            <span th:text="${message}"></span>
                         </li>
                     </ul>
                 </div>
