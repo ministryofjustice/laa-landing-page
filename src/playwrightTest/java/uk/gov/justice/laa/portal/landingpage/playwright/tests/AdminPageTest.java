@@ -223,7 +223,7 @@ public class AdminPageTest extends BaseFrontEndTest {
 
         int before = adminPage.getRolesRowCount();
 
-        adminPage.filterRolesByApplication("Manage Your Users");
+        adminPage.filterRolesByApplication("Test LAA App One");
 
         int after = adminPage.getRolesRowCount();
 

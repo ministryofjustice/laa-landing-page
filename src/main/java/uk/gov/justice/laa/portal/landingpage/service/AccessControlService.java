@@ -205,7 +205,7 @@ public class AccessControlService {
 
         // FUM can only delete own firm user
         boolean isFirmUserManager = isFirmUserManager(authenticatedUser);
-        UserProfile activeProfile = entraUserRepository.findById(UUID.fromString(entraUserId))
+        UserProfile activeProfile = entraUserRepository.findByIdWithAssociations(UUID.fromString(entraUserId))
                         .map(EntraUser::getUserProfiles)
                         .orElseGet(HashSet::new)
                         .stream()

@@ -16,6 +16,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -52,6 +53,11 @@ public class Firm extends BaseEntity {
     @Column(name = "code", nullable = true, length = 255, unique = true)
     @Size(max = 255, message = "Firm code must be less than 255 characters")
     private String code;
+
+    @Column(name = "enabled", nullable = false)
+    @NotNull(message = "Firm enabled status must be provided")
+    @Builder.Default
+    private Boolean enabled = true;
 
     @OneToMany(mappedBy = "firm", fetch = FetchType.LAZY)
     @ToString.Exclude

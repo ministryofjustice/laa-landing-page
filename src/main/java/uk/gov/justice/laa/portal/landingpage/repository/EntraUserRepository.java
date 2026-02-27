@@ -29,6 +29,20 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             """)
     Optional<EntraUser> findByEntraOid(String entraOid);
 
+    /**
+     * Find user by ID with eagerly loaded associations to avoid LazyInitializationException.
+     * Useful in contexts where the Hibernate session is not available (e.g., security checks, tests).
+     */
+    @Query("""
+            SELECT u FROM EntraUser u
+            LEFT JOIN FETCH u.userProfiles up
+            LEFT JOIN FETCH up.appRoles ar
+            LEFT JOIN FETCH ar.permissions
+            LEFT JOIN FETCH up.firm
+            WHERE u.id = :id
+            """)
+    Optional<EntraUser> findByIdWithAssociations(@Param("id") UUID id);
+
     Optional<EntraUser> findByEmailIgnoreCase(String email);
 
     /**

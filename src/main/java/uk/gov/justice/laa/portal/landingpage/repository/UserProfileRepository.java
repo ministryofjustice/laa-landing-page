@@ -6,10 +6,12 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import org.springframework.transaction.annotation.Transactional;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -115,13 +117,19 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             """)
     Page<UserProfile> findInternalUserByAuthzRole(@Param("role") String role, Pageable pageable);
 
-    List<UserProfile> findAllByEntraUser(EntraUser entraUser);
+    @Query("""
+            SELECT up FROM UserProfile up
+            LEFT JOIN FETCH up.firm
+            WHERE up.entraUser = :entraUser
+            """)
+    List<UserProfile> findAllByEntraUser(@Param("entraUser") EntraUser entraUser);
 
     @Query("""
             SELECT ups FROM UserProfile ups
                         JOIN FETCH ups.entraUser u
                         JOIN FETCH ups.firm f
             WHERE ups.entraUser.id = :entraUserId
+            AND f.enabled = true
             AND (
                 :search IS NULL OR :search = '' OR
                 LOWER(f.name) LIKE LOWER(CONCAT('%', :search, '%')) OR
@@ -146,4 +154,47 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                 AND ars.legacySync = true
             """)
     List<UserProfile> findUserProfilesForCcmsSync();
+
+    @Modifying
+    @Transactional
+    @Query(value = "DELETE FROM user_profile_app_role WHERE app_role_id = :roleId", nativeQuery = true)
+    void deleteAllByAppRoleId(@Param("roleId") UUID roleId);
+
+    @Query(value = """
+                SELECT COUNT(*)
+                FROM user_profile_app_role
+                WHERE app_role_id = :roleId
+            """, nativeQuery = true)
+    long countUserProfilesByAppRoleId(@Param("roleId") UUID roleId);
+
+    @Query(value = """
+                SELECT COUNT(DISTINCT up.firm_id)
+                FROM user_profile up
+                JOIN user_profile_app_role upar
+                    ON up.id = upar.user_profile_id
+                WHERE upar.app_role_id = :roleId
+                  AND up.firm_id IS NOT NULL
+            """, nativeQuery = true)
+    long countFirmsWithRole(@Param("roleId") UUID roleId);
+
+
+    @Query("""
+            SELECT DISTINCT ups FROM UserProfile ups
+                        JOIN FETCH ups.offices o
+            WHERE o.id = :officeId
+            """)
+    List<UserProfile> findByOfficeId(@Param("officeId") UUID officeId);
+
+    @Query("""
+            SELECT DISTINCT ups FROM UserProfile ups
+                        JOIN ups.offices o
+            WHERE o.id IN :officeIds
+            """)
+    List<UserProfile> findByOfficeIdIn(@Param("officeIds") List<UUID> officeIds);
+
+    @Query("""
+            SELECT ups FROM UserProfile ups
+            WHERE ups.firm.id = :firmId
+            """)
+    List<UserProfile> findByFirmId(@Param("firmId") UUID firmId);
 }

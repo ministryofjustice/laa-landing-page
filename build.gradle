@@ -125,6 +125,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'io.micrometer:micrometer-registry-prometheus'
 
+    // Tablesaw for data processing
+    implementation 'tech.tablesaw:tablesaw-core:0.43.1'
+    implementation 'tech.tablesaw:tablesaw-json:0.43.1'
+
     // Model mapper (used for mapping between Entities, DTOs and ViewModels
     implementation 'org.modelmapper:modelmapper:3.2.3'
 

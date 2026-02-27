@@ -2,7 +2,7 @@
 <html lang="en" th:replace="~{layout :: layout(
       title=~{::title},
       mainContent=~{::#main-content},
-      pageCategory=${'edit-app-details'},
+      pageCategory=${'edit-apps-order-check-answers'},
       breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
 
 <head>
@@ -61,7 +61,7 @@
                         <button type="submit" class="govuk-button" data-module="govuk-button">
                             Confirm
                         </button>
-                        <a class="govuk-link" th:href="@{'/admin/silas-administration#apps'}">Cancel</a>
+                        <a class="govuk-link" th:href="@{'/admin/silas-administration/cancel/apps'}">Cancel</a>
                     </div>
                 </form>
             </div>
