@@ -26,14 +26,13 @@ import org.springframework.security.oauth2.client.web.OAuth2LoginAuthenticationF
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.IpAddressMatcher;
-
 import org.springframework.session.config.SessionRepositoryCustomizer;
 import org.springframework.session.jdbc.JdbcIndexedSessionRepository;
+
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService;
 import uk.gov.justice.laa.portal.landingpage.service.CustomLogoutHandler;
@@ -51,13 +50,15 @@ public class SecurityConfig {
     private final CustomLogoutHandler logoutHandler;
     private final Environment environment;
     private final UserDisabledFilter userDisabledFilter;
+    private final FirmDisabledFilter firmDisabledFilter;
 
     public SecurityConfig(AuthzOidcUserDetailsService authzOidcUserDetailsService, CustomLogoutHandler logoutHandler, Environment environment,
-                          UserDisabledFilter userDisabledFilter) {
+                          UserDisabledFilter userDisabledFilter, FirmDisabledFilter firmDisabledFilter) {
         this.authzOidcUserDetailsService = authzOidcUserDetailsService;
         this.logoutHandler = logoutHandler;
         this.environment = environment;
         this.userDisabledFilter = userDisabledFilter;
+        this.firmDisabledFilter = firmDisabledFilter;
     }
 
     @Bean
@@ -74,13 +75,13 @@ public class SecurityConfig {
             ClientRegistrationRepository clientRegistrationRepository) {
         DefaultOAuth2AuthorizationRequestResolver authorizationRequestResolver =
                 new DefaultOAuth2AuthorizationRequestResolver(clientRegistrationRepository, "/oauth2/authorization");
-        
+
         authorizationRequestResolver.setAuthorizationRequestCustomizer(customizer -> {
             Map<String, Object> additionalParameters = new HashMap<>();
             additionalParameters.put("prompt", "select_account");
             customizer.additionalParameters(additionalParameters);
         });
-        
+
         return authorizationRequestResolver;
     }
 
@@ -129,10 +130,14 @@ public class SecurityConfig {
      */
     @Bean
     @Order(2)
-    public SecurityFilterChain webSecurityFilterChain(HttpSecurity http, 
+    public SecurityFilterChain webSecurityFilterChain(HttpSecurity http,
             ClientRegistrationRepository clientRegistrationRepository) throws Exception {
-        http.addFilterAfter(userDisabledFilter, OAuth2LoginAuthenticationFilter.class)
+        http.csrf(csrf -> csrf
+                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+        ).addFilterAfter(userDisabledFilter, OAuth2LoginAuthenticationFilter.class)
+                .addFilterAfter(firmDisabledFilter, UserDisabledFilter.class)
                 .authorizeHttpRequests((authorize) -> authorize
+                .requestMatchers("/api/pda/**").hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
                 .requestMatchers("/admin/users/**", "/pda/**")
                 .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
                 .requestMatchers("/admin/user/**")
@@ -189,14 +194,14 @@ public class SecurityConfig {
                                 + " script-src * 'self' 'unsafe-eval' 'unsafe-inline' blob: data: gap:; object-src * 'self' blob: data: gap:;"
                                 + " img-src * self 'unsafe-inline' blob: data: gap:; connect-src self * 'unsafe-inline' blob: data: gap:;"
                                 + " frame-src * self blob: data: gap:;"))
-            );
+        );
         return http.build();
     }
 
     @Bean
     // CHECKSTYLE.OFF: AbbreviationAsWordInName|MethodName
     public OAuth2AuthorizedClientService oAuth2AuthorizedClientService(JdbcOperations jdbcOperations,
-                                                                       ClientRegistrationRepository clientRegistrationRepository) {
+            ClientRegistrationRepository clientRegistrationRepository) {
         // CHECKSTYLE.ON: AbbreviationAsWordInName|MethodName
         String enabled = environment.getProperty("SPRING_SESSION_JDBC_ENABLED", "false");
         OAuth2AuthorizedClientService service;

@@ -26,14 +26,17 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.matches;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.mockito.ArgumentCaptor;
 
 @ExtendWith(MockitoExtension.class)
 class ExternalUserPollingServiceTest {
@@ -129,7 +132,7 @@ class ExternalUserPollingServiceTest {
     }
 
     @Test
-    void shouldCapTimeGapToOneHour_whenGapExceedsSixtyMinutes() {
+    void shouldCapTimeGapTo30Minutes_whenGapExceeds30Minutes() {
         LocalDateTime lastSuccessfulTo = LocalDateTime.now().minusHours(3); // 3 hours ago
         EntraLastSyncMetadata existingMetadata = EntraLastSyncMetadata.builder()
                 .id("ENTRA_USER_SYNC")
@@ -302,7 +305,7 @@ class ExternalUserPollingServiceTest {
                 .id("user456")
                 .givenName("Jane")
                 .surname("Doe")
-                .accountEnabled(true)
+                .accountEnabled(false) // Changed to false to match disable logic
                 .isMailOnly(false)
                 .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
                         .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
@@ -447,7 +450,8 @@ class ExternalUserPollingServiceTest {
         externalUserPollingService.updateSyncMetadata();
 
         verify(entraUserRepository).save(user1);
-        verify(entraUserRepository).save(user2);
+        verify(entraUserRepository, times(2)).save(user2);
+        verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
 
@@ -740,7 +744,7 @@ class ExternalUserPollingServiceTest {
     }
 
     @Test
-    void shouldCapTimeGapTo30Minutes_whenGapExceeds30Minutes() {
+    void shouldCapTimeGapTo30Minutes_whenGapExceeds30Minutes_secondScenario() {
         LocalDateTime lastSuccessfulTo = LocalDateTime.now().minusHours(2);
         EntraLastSyncMetadata existingMetadata = EntraLastSyncMetadata.builder()
                 .id("ENTRA_USER_SYNC")
@@ -822,7 +826,8 @@ class ExternalUserPollingServiceTest {
 
         externalUserPollingService.updateSyncMetadata();
 
-        verify(entraUserRepository).save(existingUser);
+        verify(entraUserRepository, times(2)).save(existingUser); // Called twice: once in enableUserWithReason, once in main sync
+        verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class)); // Enable audit is created
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
 
@@ -978,8 +983,8 @@ class ExternalUserPollingServiceTest {
 
         externalUserPollingService.updateSyncMetadata();
 
-        verify(entraUserRepository).save(existingUser);
-        verify(userAccountStatusAuditRepository, never()).save(any(UserAccountStatusAudit.class));
+        verify(entraUserRepository, times(2)).save(existingUser); // Called twice: once in enableUserWithReason, once in main sync
+        verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class)); // Enable audit is created
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
 
@@ -1016,6 +1021,201 @@ class ExternalUserPollingServiceTest {
 
         verify(techServicesClient).getUsers(anyString(), anyString());
         verify(entraUserRepository, never()).save(any(EntraUser.class));
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldFormatDatesAsValid_whenSecondsAreNonZero() {
+        LocalDateTime lastSuccessfulTo = LocalDateTime.of(2026, 2, 25, 10, 29, 3);
+        EntraLastSyncMetadata existingMetadata = EntraLastSyncMetadata.builder()
+                .id("ENTRA_USER_SYNC")
+                .lastSuccessfulTo(lastSuccessfulTo)
+                .updatedAt(LocalDateTime.now().minusMinutes(10))
+                .build();
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.of(existingMetadata));
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(Collections.emptyList())
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        String formattedDatePattern = "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.00Z";
+        verify(techServicesClient).getUsers(
+                matches(formattedDatePattern),
+                matches(formattedDatePattern)
+        );
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldFormatDatesConsistently_whenTimeHasExactlyZeroSeconds() {
+        LocalDateTime lastSuccessfulTo = LocalDateTime.of(2026, 2, 25, 10, 29, 0);
+        EntraLastSyncMetadata existingMetadata = EntraLastSyncMetadata.builder()
+                .id("ENTRA_USER_SYNC")
+                .lastSuccessfulTo(lastSuccessfulTo)
+                .updatedAt(LocalDateTime.now().minusMinutes(10))
+                .build();
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.of(existingMetadata));
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(Collections.emptyList())
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        
+        // Capture the actual date strings being passed
+        ArgumentCaptor<String> fromDateCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> toDateCaptor = ArgumentCaptor.forClass(String.class);
+        when(techServicesClient.getUsers(fromDateCaptor.capture(), toDateCaptor.capture())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        String fromDate = fromDateCaptor.getValue();
+        String toDate = toDateCaptor.getValue();
+
+        assertThat(fromDate).doesNotContain("T10:29.00Z");
+        assertThat(toDate).doesNotContain("T10:29.00Z");
+
+        String formattedDatePattern = "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.00Z";
+        assertThat(fromDate).matches(formattedDatePattern);
+        assertThat(toDate).matches(formattedDatePattern);
+        
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldEnableUser_whenUserIsDisabledInSilasButEnabledInEntra() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        EntraUser disabledUser = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user123")
+                .firstName("John")
+                .lastName("Doe")
+                .email("user@example.com")
+                .enabled(false) // Disabled in SILAS
+                .mailOnly(false)
+                .build();
+        when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(disabledUser));
+
+        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+                .id("user123")
+                .givenName("John")
+                .surname("Doe")
+                .accountEnabled(true) // Enabled in Entra
+                .isMailOnly(false)
+                .build();
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        verify(entraUserRepository, times(2)).save(disabledUser); // Once for enable, once for main sync
+        verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldDisableUser_whenUserHasDisabledReasonAndIsEnabledInSilas() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        EntraUser enabledUser = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user123")
+                .firstName("John")
+                .lastName("Doe")
+                .email("user@example.com")
+                .enabled(true) // Enabled in SILAS
+                .mailOnly(false)
+                .build();
+        when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(enabledUser));
+
+        DisableUserReason inactivityReason = DisableUserReason.builder()
+                .id(java.util.UUID.randomUUID())
+                .name("Inactivity")
+                .description("Disabled due to inactivity")
+                .entraDescription("Inactivity")
+                .userSelectable(false)
+                .build();
+        when(disableUserReasonRepository.findAll()).thenReturn(List.of(inactivityReason));
+
+        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+                .id("user123")
+                .givenName("John")
+                .surname("Doe")
+                .accountEnabled(false) // Disabled in Entra
+                .isMailOnly(false)
+                .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
+                        .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
+                                .odataType("#microsoft.graph.customSecurityAttributeValue")
+                                .disabledReason("NoGroupsDisable")
+                                .build())
+                        .build())
+                .build();
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        verify(entraUserRepository, times(2)).save(enabledUser);
+        verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldNotDisableUser_whenUserIsAlreadyDisabledInSilas() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        EntraUser alreadyDisabledUser = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user123")
+                .firstName("John")
+                .lastName("Doe")
+                .email("user@example.com")
+                .enabled(false) // Already disabled in SILAS
+                .mailOnly(false)
+                .build();
+        when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(alreadyDisabledUser));
+
+        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+                .id("user123")
+                .givenName("John")
+                .surname("Doe")
+                .accountEnabled(false)
+                .isMailOnly(false)
+                .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
+                        .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
+                                .odataType("#microsoft.graph.customSecurityAttributeValue")
+                                .disabledReason("NoGroupsDisable")
+                                .build())
+                        .build())
+                .build();
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        verify(entraUserRepository).save(alreadyDisabledUser);
+        verify(userAccountStatusAuditRepository, never()).save(any(UserAccountStatusAudit.class));
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
 }
