@@ -859,7 +859,7 @@ class AuditControllerTest {
         AuditExportService.AuditCsvExport export = new AuditExportService.AuditCsvExport("audit.csv", csvBytes);
         when(auditExportService.downloadAuditCsv(any(), any(), any())).thenReturn(export);
 
-        ResponseEntity<byte[]> response = auditController.downloadAuditCsv(criteria, "TestFirm");
+        ResponseEntity<byte[]> response = auditController.downloadAuditCsv(criteria);
 
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
         assertThat(response.getBody()).isEqualTo(csvBytes);

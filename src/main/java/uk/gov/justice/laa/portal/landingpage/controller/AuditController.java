@@ -114,6 +114,7 @@ public class AuditController {
                 criteria.getSelectedAppId() != null ? criteria.getSelectedAppId().toString() : "");
         model.addAttribute("selectedUserType",
                 criteria.getSelectedUserType() != null ? criteria.getSelectedUserType().toString() : "");
+        model.addAttribute("selectedFirmName", criteria.getSelectedFirmName());
         model.addAttribute("sort", criteria.getSort());
         model.addAttribute("direction", criteria.getDirection());
         model.addAttribute("exportCsv",
@@ -233,8 +234,7 @@ public class AuditController {
 
     @GetMapping(value = "/users/audit/download", produces = "text/csv")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission('EXPORT_AUDIT_DATA')")
-    public ResponseEntity<byte[]> downloadAuditCsv(@ModelAttribute AuditTableSearchCriteria criteria,
-                                                   @RequestParam String selectedFirmName) {
+    public ResponseEntity<byte[]> downloadAuditCsv(@ModelAttribute AuditTableSearchCriteria criteria) {
 
         final int pageSize = 500;
         int page = 1;
@@ -279,7 +279,7 @@ public class AuditController {
             log.info("No audit users found for search criteria: {}", Arrays.toString(filterSummary.toArray()));
         }
 
-        AuditCsvExport export = auditExportService.downloadAuditCsv(firmData, firmCode, selectedFirmName);
+        AuditCsvExport export = auditExportService.downloadAuditCsv(firmData, firmCode, criteria.getSelectedFirmName());
         log.info("CSV Audit Export complete - actor= {}, timestamp= {}, Firm Code= {}, Filter Summary (Silas Role, "
                 + "UserType, App Id)= {}, "
                 + "row count= {}", userId, LocalDateTime.now(), firmCode, filterSummary, result.getUsers().size());
