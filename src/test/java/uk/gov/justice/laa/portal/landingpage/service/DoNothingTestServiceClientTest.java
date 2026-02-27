@@ -104,6 +104,24 @@ public class DoNothingTestServiceClientTest {
     }
 
     @Test
+    public void testUpdateUserDetailsReturnsSuccessResponse() {
+        EntraUserDto user = EntraUserDto.builder()
+                .entraOid("entraOid")
+                .firstName("firstName")
+                .lastName("lastName")
+                .build();
+        TechServicesApiResponse<ChangeAccountEnabledResponse> response = techServicesClient
+                .updateUserDetails(
+                        user.getEntraOid(),
+                        user.getFirstName(),
+                        user.getLastName(),
+                        user.getEmail()
+                );
+        Assertions.assertThat(response.isSuccess()).isTrue();
+        Assertions.assertThat(response.getData().getMessage()).isEqualTo("Successfully Update user details.");
+    }
+
+    @Test
     void testGetUsers() {
         String fromDateTime = "2024-01-01T00:00:00Z";
         String toDateTime = "2024-01-15T23:59:59Z";
