@@ -44,7 +44,7 @@ public class AppDto implements Comparable<AppDto>, Serializable {
         int cmp = ordinal - o.ordinal;
 
         if (cmp == 0) {
-            return o.name.compareToIgnoreCase(name);
+            return name.compareToIgnoreCase(o.name);
         }
 
         return cmp;

@@ -92,14 +92,14 @@ public class AdminPage {
 
         // Roles & Permissions
         this.createNewRoleButton = rolesAndPermissionsPanel.locator("a.govuk-button:has-text('Create a new role')");
-        this.deleteRoleButton = rolesAndPermissionsPanel.locator("button.govuk-button--warning:has-text('Delete a role')");
+        this.deleteRoleButton = rolesAndPermissionsPanel.locator("a.govuk-button--warning:has-text('Delete a role')");
 
         this.appFilterSelect = rolesAndPermissionsPanel.locator("#appFilter");
 
         this.rolesTable = rolesAndPermissionsPanel.locator("table.govuk-table");
         this.rolesHeaders = rolesTable.locator("thead th.govuk-table__header");
         this.rolesRows = rolesTable.locator("tbody.govuk-table__body tr.govuk-table__row");
-        this.reorderRolesButton = rolesAndPermissionsPanel.locator("button.govuk-button--secondary:has-text('Reorder roles and permissions')");
+        this.reorderRolesButton = rolesAndPermissionsPanel.locator("button.govuk-button:has-text('Reorder application roles')");
 
         //Forbidden Access Page
         this.accessForbiddenHeading = page.locator("h1.govuk-heading-l:has-text('Access forbidden')");
@@ -214,7 +214,7 @@ public class AdminPage {
 
         assertHeadersContainExactly(
                 rolesHeaders,
-                List.of("Role name", "Description", "Code", "Order", "Grouping", "")
+                List.of("Role name", "Description", "CCMS Code", "Legacy Sync", "Order", "")
         );
         return this;
     }

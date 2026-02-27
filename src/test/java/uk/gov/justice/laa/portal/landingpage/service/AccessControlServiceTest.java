@@ -1752,7 +1752,7 @@ public class AccessControlServiceTest {
 
         EntraUserDto entraUserDto = EntraUserDto.builder().id("accessedUser").build();
 
-        Mockito.when(entraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
+        Mockito.when(entraUserRepository.findByIdWithAssociations(userId)).thenReturn(Optional.of(entraUser));
         Mockito.when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(entraUserDto));
         Mockito.when(userService.isInternal(userId.toString())).thenReturn(false);
 
@@ -1784,7 +1784,7 @@ public class AccessControlServiceTest {
         EntraUser accessedEntraUser = EntraUser.builder().id(accessedUserId).multiFirmUser(true).build();
         EntraUserDto accessedEntraUserDto = EntraUserDto.builder().id(accessedUserId.toString()).multiFirmUser(true).build();
 
-        Mockito.when(entraUserRepository.findById(accessedUserId)).thenReturn(Optional.of(accessedEntraUser));
+        Mockito.when(entraUserRepository.findByIdWithAssociations(accessedUserId)).thenReturn(Optional.of(accessedEntraUser));
         Mockito.when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedEntraUserDto));
         Mockito.when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
         Mockito.when(userService.isInternal(userId)).thenReturn(true);
@@ -1824,7 +1824,7 @@ public class AccessControlServiceTest {
         accessedEntraUser.setUserProfiles(Set.of(accessedUserProfile));
         EntraUserDto accessedEntraUserDto = EntraUserDto.builder().id(accessedUserId.toString()).build();
 
-        Mockito.when(entraUserRepository.findById(accessedUserId)).thenReturn(Optional.of(accessedEntraUser));
+        Mockito.when(entraUserRepository.findByIdWithAssociations(accessedUserId)).thenReturn(Optional.of(accessedEntraUser));
         Mockito.when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedEntraUserDto));
         Mockito.when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
         Mockito.when(userService.isInternal(userId)).thenReturn(false);
@@ -1864,7 +1864,7 @@ public class AccessControlServiceTest {
         accessedEntraUser.setUserProfiles(Set.of(accessedUserProfile));
         EntraUserDto accessedEntraUserDto = EntraUserDto.builder().id(accessedUserId.toString()).build();
 
-        Mockito.when(entraUserRepository.findById(accessedUserId)).thenReturn(Optional.of(accessedEntraUser));
+        Mockito.when(entraUserRepository.findByIdWithAssociations(accessedUserId)).thenReturn(Optional.of(accessedEntraUser));
         Mockito.when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedEntraUserDto));
         Mockito.when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
         Mockito.when(userService.isInternal(userId)).thenReturn(false);
