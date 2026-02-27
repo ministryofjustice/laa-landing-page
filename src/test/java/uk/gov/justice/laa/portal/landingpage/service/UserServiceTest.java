@@ -7886,7 +7886,7 @@ class UserServiceTest {
     @Test
     void getAuditUsers_csvExportTrueAndFalse() {
         // Arrange – firms
-        Firm alpha = Firm.builder().id(UUID.randomUUID()).name("Alpha").code("Z9").build();   // selected firm
+        Firm alpha = Firm.builder().id(UUID.randomUUID()).name("Alpha").code("Z9").build();
         Firm beta  = Firm.builder().id(UUID.randomUUID()).name("Beta").code("A1").build();
         Firm gamma = Firm.builder().id(UUID.randomUUID()).name("Gamma").code("D4").build();
         Firm delta = Firm.builder().id(UUID.randomUUID()).name("Delta").code("B2").build();
@@ -7941,7 +7941,7 @@ class UserServiceTest {
                 .thenReturn(List.of(user));
 
         String expectedFirmNames = "Alpha, Beta, Delta, Gamma";
-        String expectedCodes     = "Z9, A1, B2, D4";
+        String expectedCodes     = "A1, B2, D4, Z9";
 
 
         // --- CSV path ---
@@ -7950,10 +7950,19 @@ class UserServiceTest {
                 1, 10, "name", "asc", true);
 
         AuditUserDto csvDto = csvResult.getUsers().get(0);
-
         assertThat(csvDto.getAppAccess()).isEqualTo("Portal");
-
         assertThat(csvDto.isProviderAdmin()).isTrue();
+
+
+        // --- CSV path where user is NOT provider admin for selected firm ---
+        PaginatedAuditUsers csvResultNotAdmin = userService.getAuditUsers(
+                null, beta.getId(), null, null, null,
+                1, 10, "name", "asc", true);
+
+        AuditUserDto csvDtoNotAdmin = csvResultNotAdmin.getUsers().get(0);
+        assertThat(csvDtoNotAdmin.getAppAccess()).isEqualTo("");
+        assertThat(csvDtoNotAdmin.isProviderAdmin()).isFalse();
+
 
 
         // ---NON-CSV path ---
@@ -7963,11 +7972,8 @@ class UserServiceTest {
 
         AuditUserDto normalDto = normalResult.getUsers().get(0);
 
-
-        // --- ASSERTIONS non-CSV ---
         assertThat(normalDto.getFirmAssociation()).isEqualTo(expectedFirmNames);
         assertThat(normalDto.getFirmCode()).isEqualTo(expectedCodes);
 
-        // non‑CSV intentionally does NOT include appAccess or providerAdmin
         }
     }
