@@ -7885,13 +7885,12 @@ class UserServiceTest {
 
     @Test
     void getAuditUsers_csvExportTrueAndFalse() {
-        // Arrange – firms
+
         Firm alpha = Firm.builder().id(UUID.randomUUID()).name("Alpha").code("Z9").build();
         Firm beta  = Firm.builder().id(UUID.randomUUID()).name("Beta").code("A1").build();
         Firm gamma = Firm.builder().id(UUID.randomUUID()).name("Gamma").code("D4").build();
         Firm delta = Firm.builder().id(UUID.randomUUID()).name("Delta").code("B2").build();
 
-        // Roles + apps
         App appPortal = App.builder().id(UUID.randomUUID()).name("Portal").build();
         AppRole fumRole = AppRole.builder().id(UUID.randomUUID()).name("Firm User Manager").app(appPortal).build();
         AppRole viewerRole = AppRole.builder().id(UUID.randomUUID()).name("Viewer").app(appPortal).build();

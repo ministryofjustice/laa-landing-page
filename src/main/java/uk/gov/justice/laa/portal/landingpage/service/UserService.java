@@ -1730,19 +1730,11 @@ public class UserService {
                 .map(AppRole::getApp)
                 .filter(Objects::nonNull)
                 .distinct()
-                .map(App::getName)        // << only app names
+                .map(App::getName)
                 .distinct()
                 .sorted()
                 .collect(Collectors.joining(", "));
     }
-
-
-    private AppDto toAppDto(App app) {
-        return AppDto.builder()
-                .name(app.getName())
-                .build();
-    }
-
 
     /**
      * Map audit table sort field to entity field
