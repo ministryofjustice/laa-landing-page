@@ -48,6 +48,7 @@ import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEm
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.UpdateUserDetailsRequest;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -58,6 +59,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -70,6 +72,13 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 public class LiveTechServicesClientTest {
 
+    public static final String USER_DETAILS_UPDATED_SUCCESSFULLY = "User details updated successfully";
+    public static final EntraUserDto ENTRA_USER_DTO = EntraUserDto.builder()
+            .entraOid(UUID.randomUUID().toString())
+            .email("email@email.com")
+            .firstName("FirstName")
+            .lastName("LastName")
+            .build();
     private ListAppender<ILoggingEvent> logAppender;
     @Mock
     private ClientSecretCredential clientSecretCredential;
@@ -828,6 +837,212 @@ public class LiveTechServicesClientTest {
     }
 
     @Test
+    public void testUpdateUserDetailsReturnsSuccessResponseWhenNoErrors() {
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+        when(restClient.patch()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(UpdateUserDetailsRequest.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toEntity(ChangeAccountEnabledResponse.class))
+                .thenReturn(ResponseEntity.ok(ChangeAccountEnabledResponse.builder()
+                        .success(true)
+                        .message(USER_DETAILS_UPDATED_SUCCESSFULLY)
+                        .build()));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+        TechServicesApiResponse<ChangeAccountEnabledResponse> response = liveTechServicesClient
+                .updateUserDetails(ENTRA_USER_DTO.getEntraOid(),
+                        ENTRA_USER_DTO.getFirstName(),
+                        ENTRA_USER_DTO.getLastName(),
+                        ENTRA_USER_DTO.getEmail());
+        Assertions.assertThat(response.isSuccess()).isTrue();
+        Assertions.assertThat(response.getData().getMessage()).isEqualTo(USER_DETAILS_UPDATED_SUCCESSFULLY);
+        Assertions.assertThat(response.getData().isSuccess()).isTrue();
+    }
+
+    @Test
+    public void testUpdateUserDetailsReturnsFailResponseWhenBodyIsNull() {
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+        when(restClient.patch()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(UpdateUserDetailsRequest.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toEntity(ChangeAccountEnabledResponse.class))
+                .thenReturn(new ResponseEntity<>(HttpStatusCode.valueOf(200)));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+        TechServicesApiResponse<ChangeAccountEnabledResponse> response = liveTechServicesClient
+                .updateUserDetails(ENTRA_USER_DTO.getEntraOid(),
+                        ENTRA_USER_DTO.getFirstName(),
+                        ENTRA_USER_DTO.getLastName(),
+                        ENTRA_USER_DTO.getEmail());
+        Assertions.assertThat(response.isSuccess()).isFalse();
+        Assertions.assertThat(response.getError().isSuccess()).isFalse();
+        Assertions.assertThat(response.getError().getCode()).isEqualTo("UNEXPECTED_RESPONSE");
+        Assertions.assertThat(response.getError().getMessage()).isEqualTo("Unexpected response from Tech Services");
+    }
+
+    @Test
+    public void testUpdateUserDetailsReturnsErrorResponseWhenBodyIsNull() {
+        EntraUserDto user = EntraUserDto.builder()
+                .entraOid(UUID.randomUUID().toString())
+                .email("email@email.com")
+                .firstName("FirstName")
+                .lastName("LastName")
+                .build();
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+        when(restClient.patch()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(UpdateUserDetailsRequest.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.toEntity(ChangeAccountEnabledResponse.class))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.NOT_FOUND,
+                        "Not Found", null, null, null));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+        TechServicesApiResponse<ChangeAccountEnabledResponse> response = liveTechServicesClient
+                .updateUserDetails(user.getEntraOid(),
+                        user.getFirstName(),
+                        user.getLastName(),
+                        user.getEmail());
+        Assertions.assertThat(response.isSuccess()).isFalse();
+        Assertions.assertThat(response.getError().isSuccess()).isFalse();
+        Assertions.assertThat(response.getError().getCode()).isEqualTo("404 NOT_FOUND");
+        Assertions.assertThat(response.getError().getMessage()).isEqualTo("Not Found");
+    }
+
+    @Test
+    public void testUpdateUserDetailsReturnsHttp400() {
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+        when(restClient.patch()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(UpdateUserDetailsRequest.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+
+        when(responseSpec.toEntity(ChangeAccountEnabledResponse.class))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.BAD_REQUEST,
+                        HttpStatus.BAD_REQUEST.getReasonPhrase(), null,
+                        buildErrorBody(
+                                String.valueOf(HttpStatus.BAD_REQUEST),
+                                HttpStatus.BAD_REQUEST.getReasonPhrase())
+                                .getBytes(), null));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+        TechServicesApiResponse<ChangeAccountEnabledResponse> response = liveTechServicesClient
+                .updateUserDetails(ENTRA_USER_DTO.getEntraOid(),
+                        ENTRA_USER_DTO.getFirstName(),
+                        ENTRA_USER_DTO.getLastName(),
+                        ENTRA_USER_DTO.getEmail());
+        Assertions.assertThat(response.isSuccess()).isFalse();
+        Assertions.assertThat(response.getError().isSuccess()).isFalse();
+        Assertions.assertThat(response.getError().getCode()).isEqualTo("400 BAD_REQUEST");
+        Assertions.assertThat(response.getError().getMessage()).isEqualTo("Bad Request");
+    }
+
+    @Test
+    public void testUpdateUserDetailsReturnsHttp500() {
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+        when(restClient.patch()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(UpdateUserDetailsRequest.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+
+        when(responseSpec.toEntity(ChangeAccountEnabledResponse.class))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.INTERNAL_SERVER_ERROR,
+                        HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), null,
+                        buildErrorBody(
+                                String.valueOf(HttpStatus.INTERNAL_SERVER_ERROR),
+                                HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase())
+                                .getBytes(), null));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+        TechServicesApiResponse<ChangeAccountEnabledResponse> response = liveTechServicesClient
+                .updateUserDetails(ENTRA_USER_DTO.getEntraOid(),
+                        ENTRA_USER_DTO.getFirstName(),
+                        ENTRA_USER_DTO.getLastName(),
+                        ENTRA_USER_DTO.getEmail());
+        Assertions.assertThat(response.isSuccess()).isFalse();
+        Assertions.assertThat(response.getError().isSuccess()).isFalse();
+        Assertions.assertThat(response.getError().getCode()).isEqualTo("500 INTERNAL_SERVER_ERROR");
+        Assertions.assertThat(response.getError().getMessage()).isEqualTo("Internal Server Error");
+    }
+
+    @Test
+    public void testUpdateUserDetailsReturnsAnotherHttpError() {
+        EntraUserDto user = EntraUserDto.builder()
+                .entraOid(UUID.randomUUID().toString())
+                .email("email@email.com")
+                .firstName("FirstName")
+                .lastName("LastName")
+                .build();
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+        when(restClient.patch()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(UpdateUserDetailsRequest.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+
+        when(responseSpec.toEntity(ChangeAccountEnabledResponse.class))
+                .thenThrow(HttpClientErrorException.create(HttpStatus.MOVED_PERMANENTLY,
+                        HttpStatus.MOVED_PERMANENTLY.getReasonPhrase(), null,
+                        buildErrorBody(
+                                String.valueOf(HttpStatus.MOVED_PERMANENTLY),
+                                HttpStatus.MOVED_PERMANENTLY.getReasonPhrase())
+                                .getBytes(), null));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () ->
+                liveTechServicesClient.updateUserDetails(
+                        user.getEntraOid(),
+                        user.getFirstName(),
+                        user.getLastName(),
+                        user.getEmail())
+        );
+
+        assertEquals("Error while getting users from Tech Services.", ex.getMessage());
+
+    }
+
+    @Test
+    public void testUpdateUserDetailsThrowAnError() {
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+        RuntimeException ex = assertThrows(RuntimeException.class, () ->
+                liveTechServicesClient.updateUserDetails(
+                        ENTRA_USER_DTO.getEntraOid(),
+                        ENTRA_USER_DTO.getFirstName(),
+                        ENTRA_USER_DTO.getLastName(),
+                        ENTRA_USER_DTO.getEmail())
+        );
+        assertEquals("Unexpected error while updating users details from Tech Services.", ex.getMessage());
+
+    }
+
+    @Test
     public void testEnableUserReturnsErrorResponseWhenErrors() {
         EntraUserDto user = EntraUserDto.builder()
                 .entraOid(UUID.randomUUID().toString())
@@ -1053,6 +1268,16 @@ public class LiveTechServicesClientTest {
     public void tearDown() {
         logAppender.stop();
         logAppender.list.clear();
+    }
+
+
+    public static String buildErrorBody(String code, String message) {
+        return String.format("""
+                {
+                  "success": false,
+                  "code": "%s",
+                  "message": "%s"
+                }""", code, message);
     }
 
 }

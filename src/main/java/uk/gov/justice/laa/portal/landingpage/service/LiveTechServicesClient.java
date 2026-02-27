@@ -596,7 +596,7 @@ public class LiveTechServicesClient implements TechServicesClient {
             String responseBody = response != null && response.getBody() != null ? response.getBody().toString() : "Unknown";
             logger.error("Unexpected error while Update users details from Tech Services. Response body: {}",
                     responseBody, ex);
-            throw new RuntimeException("Unexpected error while updating users deatils from Tech Services.", ex);
+            throw new RuntimeException("Unexpected error while updating users details from Tech Services.", ex);
         }
     }
 
