@@ -14,15 +14,15 @@ import java.io.Serializable;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AppDetailsForm implements Serializable {
+public class AppRoleDetailsForm implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
-    private String appId;
-    private boolean enabled;
+    private String appRoleId;
+    @NotBlank(message = "Application role name cannot be empty")
+    @Size(max = 255, message = "Application name cannot exceed 255 characters")
     private String name;
     @NotBlank(message = "Application description cannot be empty")
     @Size(max = 1000, message = "Application description cannot exceed 1000 characters")
     private String description;
-    private String code;
     private int ordinal;
 }
