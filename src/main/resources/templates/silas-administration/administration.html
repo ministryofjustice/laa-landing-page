@@ -11,24 +11,6 @@
 <head>
     <title>SiLAS Administration</title>
 
-    <!-- 1) PREVENT INITIAL ANCHOR JUMP -->
-    <script>
-        (function () {
-            try {
-                // Stop history-based scroll restoration
-                if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
-
-                if (location.hash) {
-                    // Remember requested tab (without '#') to use after render
-                    window.__initialTabHash = location.hash.slice(1);
-                    // Strip the hash immediately so the browser cannot jump
-                    history.replaceState(null, '', location.pathname + location.search);
-                    // Ensure we are at top
-                    window.scrollTo(0, 0);
-                }
-            } catch (e) { /* ignore */ }
-        })();
-    </script>
 </head>
 
 <body>
@@ -54,8 +36,6 @@
             function activateTabWithoutScroll(container, tabId) {
                 if (!container || !tabId) return;
 
-                var x = window.scrollX, y = window.scrollY;
-
                 var link = container.querySelector('.govuk-tabs__tab[href="#' + esc(tabId) + '"]');
                 var panel = container.querySelector('#' + esc(tabId));
                 if (!link || !panel) return;
@@ -76,11 +56,12 @@
                 panel.classList.remove('govuk-tabs__panel--hidden');
                 panel.removeAttribute('hidden');
 
-                // Update URL hash WITHOUT scrolling
-                try { history.replaceState(null, '', '#' + tabId); } catch (e) {}
-
-                // Restore scroll position
-                window.scrollTo(x, y);
+                // Update URL query parameter WITHOUT scrolling or reloading
+                try {
+                    var url = new URL(window.location);
+                    url.searchParams.set('tab', tabId);
+                    history.replaceState(null, '', url.pathname + url.search);
+                } catch (e) {}
             }
 
             function wireClicksWithoutScroll(container) {
@@ -107,7 +88,7 @@
                 if (!container) return;
 
                 var serverActive = /*[[${activeTab}]]*/ null; // 'admin-apps' | 'apps' | 'roles'
-                var desired = window.__initialTabHash || serverActive || 'admin-apps';
+                var desired = serverActive || 'admin-apps';
 
                 // First paint: activate desired tab WITHOUT scroll
                 activateTabWithoutScroll(container, desired);
@@ -126,21 +107,24 @@
             <li class="govuk-tabs__list-item"
                 th:classappend="${activeTab == 'admin-apps'} ? ' govuk-tabs__list-item--selected' : null">
                 <a class="govuk-tabs__tab" href="#admin-apps" id="tab-admin-apps" role="tab"
-                   aria-controls="admin-apps" aria-selected="false" tabindex="-1">
+                   aria-controls="admin-apps"
+                   th:attr="aria-selected=${activeTab == 'admin-apps'} ? 'true' : 'false', tabindex=${activeTab == 'admin-apps'} ? null : '-1'">
                     Admin Services
                 </a>
             </li>
             <li class="govuk-tabs__list-item"
                 th:classappend="${activeTab == 'apps'} ? ' govuk-tabs__list-item--selected' : null">
                 <a class="govuk-tabs__tab" href="#apps" id="tab-apps" role="tab"
-                   aria-controls="apps" aria-selected="false" tabindex="-1">
+                   aria-controls="apps"
+                   th:attr="aria-selected=${activeTab == 'apps'} ? 'true' : 'false', tabindex=${activeTab == 'apps'} ? null : '-1'">
                     Legal Aid Services
                 </a>
             </li>
             <li class="govuk-tabs__list-item"
                 th:classappend="${activeTab == 'roles'} ? ' govuk-tabs__list-item--selected' : null">
                 <a class="govuk-tabs__tab" href="#roles" id="tab-roles" role="tab"
-                   aria-controls="roles" aria-selected="false" tabindex="-1">
+                   aria-controls="roles"
+                   th:attr="aria-selected=${activeTab == 'roles'} ? 'true' : 'false', tabindex=${activeTab == 'roles'} ? null : '-1'">
                     Roles and Permissions
                 </a>
             </li>
