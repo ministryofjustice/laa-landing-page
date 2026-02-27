@@ -51,8 +51,8 @@ class AuditExportServiceTest {
         assertNotNull(export);
 
         String csv = new String(export.bytes(), StandardCharsets.UTF_8);
-        assertEquals("Name,Email,\"Firm Name\",\"Firm Code\",Multi-firm," +
-                "\"Provider Admin\",\"App Access\"\n", csv);
+        assertEquals("Name,Email,\"Firm Name\",\"Firm Code\",Multi-firm,"
+                + "\"Provider Admin\",\"App Access\"\n", csv);
     }
 
     @Test

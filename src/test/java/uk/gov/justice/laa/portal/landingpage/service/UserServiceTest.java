@@ -7891,8 +7891,6 @@ class UserServiceTest {
         Firm gamma = Firm.builder().id(UUID.randomUUID()).name("Gamma").code("D4").build();
         Firm delta = Firm.builder().id(UUID.randomUUID()).name("Delta").code("B2").build();
 
-        UUID selectedFirmId = alpha.getId();
-
         // Roles + apps
         App appPortal = App.builder().id(UUID.randomUUID()).name("Portal").build();
         AppRole fumRole = AppRole.builder().id(UUID.randomUUID()).name("Firm User Manager").app(appPortal).build();
@@ -7943,6 +7941,7 @@ class UserServiceTest {
         String expectedFirmNames = "Alpha, Beta, Delta, Gamma";
         String expectedCodes     = "A1, B2, D4, Z9";
 
+        UUID selectedFirmId = alpha.getId();
 
         // --- CSV path ---
         PaginatedAuditUsers csvResult = userService.getAuditUsers(
@@ -7975,5 +7974,5 @@ class UserServiceTest {
         assertThat(normalDto.getFirmAssociation()).isEqualTo(expectedFirmNames);
         assertThat(normalDto.getFirmCode()).isEqualTo(expectedCodes);
 
-        }
     }
+}

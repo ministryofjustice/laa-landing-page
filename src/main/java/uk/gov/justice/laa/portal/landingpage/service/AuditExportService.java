@@ -20,8 +20,8 @@ import java.util.List;
 @AllArgsConstructor
 public class AuditExportService {
 
-    private static final String HEADER = "Name,Email,\"Firm Name\",\"Firm Code\",Multi-firm,\"Provider " +
-            "Admin\",\"App Access\"\n";
+    private static final String HEADER = "Name,Email,\"Firm Name\",\"Firm Code\",Multi-firm,\"Provider "
+            + "Admin\",\"App Access\"\n";
     private final DateTimeFormatter fileTimestamp = DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmm");
 
     public AuditCsvExport downloadAuditCsv(List<AuditUserDto> firmData, String firmCode, String firmName) {
