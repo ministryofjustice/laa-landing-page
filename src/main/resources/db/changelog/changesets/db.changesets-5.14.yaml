@@ -1,5 +1,4 @@
 databaseChangeLog:
-
   - changeSet:
       id: 20260126-1-rename-information-assurance
       author: suresh.kavali
@@ -79,7 +78,6 @@ databaseChangeLog:
       runOnChange: false
       runAlways: false
       changes:
-
         - sql:
             dbms: postgresql
             sql: |

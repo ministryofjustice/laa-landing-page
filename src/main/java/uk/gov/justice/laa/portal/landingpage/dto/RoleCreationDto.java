@@ -11,6 +11,8 @@ import lombok.NoArgsConstructor;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,7 +20,10 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class RoleCreationDto {
+public class RoleCreationDto implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     @NotBlank(message = "Role name is required")
     @Size(min = 1, max = 255, message = "Role name must be between 1 and 255 characters")

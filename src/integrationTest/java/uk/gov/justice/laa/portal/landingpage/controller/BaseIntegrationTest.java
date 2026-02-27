@@ -1,9 +1,10 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
@@ -17,13 +18,23 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oauth2Login;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 import org.springframework.util.LinkedMultiValueMap;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
@@ -31,16 +42,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.BaseRepositoryTest;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
-
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oauth2Login;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 /**
  * base integration test
@@ -141,7 +142,11 @@ public abstract class BaseIntegrationTest extends BaseRepositoryTest {
     }
 
     protected SecurityMockMvcRequestPostProcessors.OAuth2LoginRequestPostProcessor userOauth2Login(EntraUser user) {
-        Set<Permission> userPermissions = user.getUserProfiles().stream()
+        // Reload the user from the repository before resolving permissions
+        EntraUser freshUser = entraUserRepository.findByIdWithAssociations(user.getId())
+                .orElseThrow(() -> new RuntimeException("User not found: " + user.getId()));
+
+        Set<Permission> userPermissions = freshUser.getUserProfiles().stream()
                 .findFirst()
                 .orElseThrow()
                 .getAppRoles().stream()
@@ -154,7 +159,7 @@ public abstract class BaseIntegrationTest extends BaseRepositoryTest {
 
         OAuth2User realPrincipal = new DefaultOAuth2User(
                 authorities,
-                Map.of("name", user.getFirstName(), "oid", user.getEntraOid()),
+                Map.of("name", freshUser.getFirstName(), "oid", freshUser.getEntraOid()),
                 "name");
         return oauth2Login().oauth2User(realPrincipal);
     }

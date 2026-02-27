@@ -35,13 +35,13 @@ public class UserAccountStatusAudit extends BaseEntity {
     @Column(name = "status_changed_date", nullable = false)
     @CreatedDate
     @NotNull(message = "Status changed date must be provided")
-    private LocalDateTime disabledDate;
+    private LocalDateTime statusChangedDate;
 
     @Column(name = "status_changed_by", nullable = false, length = 255)
     @NotBlank(message = "Status changed by must be provided")
     @Size(min = 1, max = 255, message = "Disabled by must be between 1 and 255 characters")
     @CreatedBy
-    private String disabledBy;
+    private String statusChangedBy;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status_change", nullable = false, length = 255)

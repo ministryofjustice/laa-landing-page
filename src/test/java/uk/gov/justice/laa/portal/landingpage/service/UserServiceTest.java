@@ -3443,7 +3443,7 @@ class UserServiceTest {
         // Then
         assertThat(result).hasSize(2);
         assertThat(result.stream().map(AppDto::getName))
-                .containsExactly("Internal App", "Common App");
+                .containsExactly("Common App", "Internal App");
         verify(mockAppRoleRepository).findByUserTypeRestrictionContains(UserType.INTERNAL.name());
     }
 
