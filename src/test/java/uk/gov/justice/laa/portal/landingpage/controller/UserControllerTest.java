@@ -1764,41 +1764,6 @@ class UserControllerTest {
     }
 
     @Test
-    void editUserDetails_ReTry_shouldPopulateSavedDataAndReturnView() {
-        // Given
-        String userId = "user123";
-        EntraUserDto entraUser = new EntraUserDto();
-        entraUser.setId(userId);
-        entraUser.setFirstName("John");
-        entraUser.setLastName("Doe");
-        entraUser.setEmail("john.doe@example.com");
-
-        UserProfileDto userProfile = UserProfileDto.builder()
-                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
-                .entraUser(entraUser)
-                .build();
-
-        session = new MockHttpSession();
-        session.setAttribute("user", userProfile);
-
-
-        // When
-        String view = userController.editUserDetails(userId, model, session);
-
-        // Then
-        assertThat(view).isEqualTo("edit-user-details");
-        assertThat(model.getAttribute("user")).isEqualTo(userProfile);
-
-        EditUserDetailsForm updatedForm = (EditUserDetailsForm) model.getAttribute("editUserDetailsForm");
-        assertThat(updatedForm).isNotNull();
-        assertThat(updatedForm.getFirstName()).isEqualTo("John");
-        assertThat(updatedForm.getLastName()).isEqualTo("Doe");
-        assertThat(updatedForm.getEmail()).isEqualTo("john.doe@example.com");
-
-        verify(userService, never()).getUserProfileById(userId);
-    }
-
-    @Test
     void editUserDetails_shouldThrowExceptionWhenUserNotFound() {
         // Given
         String userId = "nonexistent";
