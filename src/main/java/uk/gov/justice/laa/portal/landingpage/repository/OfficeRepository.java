@@ -3,12 +3,17 @@ package uk.gov.justice.laa.portal.landingpage.repository;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
+
+import java.util.List;
+import java.util.UUID;
 
 @Repository
 public interface OfficeRepository extends JpaRepository<Office, UUID> {
@@ -27,4 +32,21 @@ public interface OfficeRepository extends JpaRepository<Office, UUID> {
      */
     @Query("SELECT DISTINCT o FROM Office o JOIN FETCH o.firm f LEFT JOIN FETCH f.parentFirm")
     List<Office> findAllWithFirm();
+
+
+
+    @Query(
+            value = """
+        SELECT * FROM office 
+        WHERE firm_id = :id
+        """,
+            countQuery = """
+        SELECT count(*) FROM office 
+        WHERE firm_id = :id
+        """,
+            nativeQuery = true
+    )
+    Page<Office> findAllByFirmId(UUID id, Pageable pageable);
+
+
 }
