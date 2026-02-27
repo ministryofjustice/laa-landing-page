@@ -7,7 +7,7 @@ import java.util.UUID;
 public class AppSynchronizationAuditEvent extends AuditEvent {
 
     private final UUID userProfileId;
-    private String message;
+    private final String message;
 
     public AppSynchronizationAuditEvent(CurrentUserDto currentUserDto, UUID userProfileId, String message) {
         super();

@@ -124,8 +124,8 @@ public class AdminController {
     }
 
     @PostMapping("/silas-administration/sync/apps")
-    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_LAA_APP_METADATA)")
-    public String syncLaaApps(Authentication authentication, Model model, HttpSession session, RedirectAttributes redirectAttributes) {
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).TRIGGER_LAA_APP_SYNC)")
+    public String syncLaaApps(Authentication authentication, Model model, HttpSession session) {
 
         model.addAttribute(ModelAttributes.PAGE_TITLE, SILAS_ADMINISTRATION_TITLE);
         model.addAttribute("activeTab", "apps");

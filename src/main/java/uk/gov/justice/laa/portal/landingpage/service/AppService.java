@@ -13,7 +13,6 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppSynchronizationAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.forms.AppsOrderForm;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
@@ -205,7 +204,7 @@ public class AppService {
             UserProfile userProfile = loginService.getCurrentProfile(authentication);
             AppSynchronizationAuditEvent appSynchronizationAuditEvent =
                     new AppSynchronizationAuditEvent(currentUserDto, userProfile.getId(),
-                            String.format("Total apps processed: {}, No changes: {}, New apps: {}, Updated apps: {}, Deleted apps: {}",
+                            String.format("Total apps processed: %s, No changes: %s, New apps: %s, Updated apps: %s, Deleted apps: %s",
                                     counter, noChangesCounter, newAppsCounter, updatedAppsCounter, deletedAppsCounter));
             eventService.logEvent(appSynchronizationAuditEvent);
 
