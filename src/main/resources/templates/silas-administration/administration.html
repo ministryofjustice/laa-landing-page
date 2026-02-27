@@ -138,16 +138,16 @@
                     <a href="/admin/silas-administration/roles/create" class="govuk-button" data-module="govuk-button" style="margin-right: 10px;">
                         Create a new role
                     </a>
-                    <button class="govuk-button govuk-button--warning" data-module="govuk-button" type="button">
+                    <a href="/admin/silas-administration/delete-role" class="govuk-button govuk-button--warning" data-module="govuk-button" style="margin-right: 10px;">
                         Delete a role
-                    </button>
+                    </a>
                 </div>
 
                 <div th:if="${appRolesErrorMessage}" class="govuk-error-summary" data-module="govuk-error-summary">
                     <div class="govuk-error-summary__body">
                         <ul class="govuk-list govuk-error-summary__list">
                             <li>
-                                <a href="#roles" th:text="${appRolesErrorMessage}">Please select an application to reorder its roles</a>
+                                <a href="#roles" th:text="${appRolesErrorMessage}">Please select an application for managing roles</a>
                             </li>
                         </ul>
                     </div>
