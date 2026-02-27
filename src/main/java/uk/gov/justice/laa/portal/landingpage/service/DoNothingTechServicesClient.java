@@ -3,12 +3,17 @@ package uk.gov.justice.laa.portal.landingpage.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.entity.App;
+import uk.gov.justice.laa.portal.landingpage.entity.AppType;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.GetAllApplicationsResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUsersResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 
+import java.util.List;
 import java.util.UUID;
 
 import static java.util.Collections.emptyList;
@@ -16,6 +21,12 @@ import static java.util.Collections.emptyList;
 public class DoNothingTechServicesClient implements TechServicesClient {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
+
+    private final AppRepository appRepository;
+
+    public DoNothingTechServicesClient(AppRepository appRepository) {
+        this.appRepository = appRepository;
+    }
 
     @Override
     public void updateRoleAssignment(UUID userId) {
@@ -71,5 +82,27 @@ public class DoNothingTechServicesClient implements TechServicesClient {
         return TechServicesApiResponse.success(ChangeAccountEnabledResponse.builder().success(true)
                 .message("Successfully enabled user.")
                 .build());
+    }
+
+    @Override
+    public TechServicesApiResponse<GetAllApplicationsResponse> getAllApplications() {
+        List<GetAllApplicationsResponse.TechServicesApplication> existingApps = appRepository.findAppsByAppType(AppType.LAA)
+                .stream()
+                .map(this::mapAppToTechServicesApp)
+                .toList();
+        return TechServicesApiResponse.success(GetAllApplicationsResponse.builder()
+                .success(true)
+                .apps(existingApps)
+                .build());
+    }
+
+    private GetAllApplicationsResponse.TechServicesApplication mapAppToTechServicesApp(App app) {
+        return GetAllApplicationsResponse.TechServicesApplication.builder()
+                .id(app.getEntraAppId())
+                .name(app.getName())
+                .url(app.getUrl())
+                .securityGroups(List.of(GetAllApplicationsResponse.TechServicesApplication.AppSecurityGroup.builder()
+                        .id(app.getSecurityGroupOid()).name(app.getSecurityGroupName()).build()))
+                .build();
     }
 }

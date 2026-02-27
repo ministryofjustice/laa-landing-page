@@ -25,6 +25,7 @@ public class AppDto implements Comparable<AppDto>, Serializable {
     private AppType appType;
     private boolean enabled;
     private AlternativeAppDescriptionDto alternativeAppDescription;
+    private ChangeType changeType;
 
     @Override
     public boolean equals(Object obj) {
@@ -41,13 +42,19 @@ public class AppDto implements Comparable<AppDto>, Serializable {
 
     @Override
     public int compareTo(@NotNull AppDto o) {
-        int cmp = ordinal - o.ordinal;
+        int cmp = Boolean.compare(o.enabled, enabled);
 
-        if (cmp == 0) {
-            return name.compareToIgnoreCase(o.name);
+        if (cmp != 0) {
+            return cmp;
         }
 
-        return cmp;
+        cmp = ordinal - o.ordinal;
+
+        if (cmp != 0) {
+            return cmp;
+        }
+
+        return name.compareToIgnoreCase(o.name);
     }
 
     @Data
@@ -57,5 +64,13 @@ public class AppDto implements Comparable<AppDto>, Serializable {
     public static class AlternativeAppDescriptionDto implements Serializable {
         private String assignedAppId;
         private String alternativeDescription;
+    }
+
+    public enum ChangeType {
+        NONE,
+        ADDED,
+        UPDATED,
+        DELETED,
+        REVIEW,
     }
 }

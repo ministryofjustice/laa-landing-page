@@ -25,6 +25,7 @@ import uk.gov.justice.laa.portal.landingpage.exception.BadRequestException;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.GetAllApplicationsResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUsersResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
@@ -53,6 +54,7 @@ public class LiveTechServicesClient implements TechServicesClient {
     private static final String TECH_SERVICES_REGISTER_USER_ENDPOINT = "%s/users";
     private static final String TECH_SERVICES_RESEND_VERIFICATION_EMAIL_ENDPOINT = "%s/users/%s/verify";
     private static final String TECH_SERVICES_GET_USERS_ENDPOINT = "%s/%s/users";
+    private static final String TECH_SERVICES_GET_APPLICATIONS_ENDPOINT = "%s/applications";
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final ClientSecretCredential clientSecretCredential;
     private final RestClient restClient;
@@ -469,7 +471,7 @@ public class LiveTechServicesClient implements TechServicesClient {
 
         try {
             logger.info("Calling Tech Services GET users endpoint for business unit: {} with date range: {} to {}",
-                       laaBusinessUnit, fromDateTime, toDateTime);
+                    laaBusinessUnit, fromDateTime, toDateTime);
 
             String uri = String.format(TECH_SERVICES_GET_USERS_ENDPOINT, "", laaBusinessUnit)
                     + "?fromDateTime=" + fromDateTime + "&toDateTime=" + toDateTime;
@@ -486,7 +488,7 @@ public class LiveTechServicesClient implements TechServicesClient {
                 return TechServicesApiResponse.success(response.getBody());
             } else {
                 logger.warn("Unexpected response from Tech Services GET users endpoint: status={}, body={}",
-                           response.getStatusCode(), response.getBody());
+                        response.getStatusCode(), response.getBody());
                 return TechServicesApiResponse.error(TechServicesErrorResponse.builder()
                         .success(false)
                         .code("UNEXPECTED_RESPONSE")
@@ -523,6 +525,68 @@ public class LiveTechServicesClient implements TechServicesClient {
             logger.error("Unexpected error while getting users from Tech Services. Response body: {}",
                     responseBody, ex);
             throw new RuntimeException("Unexpected error while getting users from Tech Services.", ex);
+        }
+    }
+
+    @Override
+    public TechServicesApiResponse<GetAllApplicationsResponse> getAllApplications() {
+        String accessToken = getAccessToken();
+        ResponseEntity<GetAllApplicationsResponse> response = null;
+
+        try {
+            logger.info("Calling Tech Services GET applications endpoint for business unit: {}", laaBusinessUnit);
+
+            String uri = String.format(TECH_SERVICES_GET_APPLICATIONS_ENDPOINT, laaBusinessUnit);
+
+            response = restClient.get()
+                    .uri(uri)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                    .retrieve()
+                    .toEntity(GetAllApplicationsResponse.class);
+
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                logger.info("Successfully retrieved applications from Tech Services for business unit: {}", laaBusinessUnit);
+                return TechServicesApiResponse.success(response.getBody());
+            } else {
+                logger.warn("Unexpected response from Tech Services GET applications endpoint: status={}, body={}",
+                        response.getStatusCode(), response.getBody());
+                return TechServicesApiResponse.error(TechServicesErrorResponse.builder()
+                        .success(false)
+                        .code("UNEXPECTED_RESPONSE")
+                        .message("Unexpected response from Tech Services")
+                        .build());
+            }
+
+        } catch (HttpClientErrorException | HttpServerErrorException httpEx) {
+            String errorJson = httpEx.getResponseBodyAsString();
+            logger.info("The get applications error response from TS: {}", errorJson);
+            try {
+                TechServicesErrorResponse errorResponse = objectMapper.readValue(errorJson, TechServicesErrorResponse.class);
+                if (httpEx.getStatusCode().is4xxClientError()) {
+                    logger.info("Error while getting applications from Tech Services, the root cause is {} ({})",
+                            errorResponse.getMessage(), errorResponse.getCode());
+                    return TechServicesApiResponse.error(errorResponse);
+                }
+                if (httpEx.getStatusCode().is5xxServerError()) {
+                    logger.warn("Error while getting applications from Tech Services, the root cause is {} ({})",
+                            errorResponse.getMessage(), errorResponse.getCode());
+                    return TechServicesApiResponse.error(errorResponse);
+                }
+                logger.warn("Error while getting applications from Tech Services, the root cause is {} ({})",
+                        errorResponse.getMessage(), errorResponse.getCode(), httpEx);
+                throw httpEx;
+            } catch (Exception ex) {
+                String responseBody = response != null && response.getBody() != null ? response.getBody().toString() : "Unknown";
+                logger.warn("Error while getting applications from Tech Services. The response body is {}",
+                        responseBody, ex);
+                throw new RuntimeException("Error while getting applications from Tech Services.", ex);
+            }
+        } catch (Exception ex) {
+            String responseBody = response != null && response.getBody() != null ? response.getBody().toString() : "Unknown";
+            logger.error("Unexpected error while getting applications from Tech Services. Response body: {}",
+                    responseBody, ex);
+            throw new RuntimeException("Unexpected error while getting applications from Tech Services.", ex);
         }
     }
 

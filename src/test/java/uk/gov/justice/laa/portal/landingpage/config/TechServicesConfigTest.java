@@ -13,7 +13,9 @@ import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClient;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.DoNothingTechServicesClient;
 import uk.gov.justice.laa.portal.landingpage.service.TechServicesClient;
 
@@ -30,6 +32,8 @@ public class TechServicesConfigTest {
     private CacheManager cacheManager;
     @Mock
     private JwtDecoder jwtDecoder;
+    @Mock
+    private AppRepository appRepository;
     @Mock
     private ObjectMapper objectMapper;
 
@@ -73,7 +77,7 @@ public class TechServicesConfigTest {
 
     @Test
     void techServicesConfig_shouldCreateDoNothingTechServicesNotifierInstance() {
-        TechServicesClient techServicesClient = techServicesConfig.doNothingTechServicesClient();
+        TechServicesClient techServicesClient = techServicesConfig.doNothingTechServicesClient(appRepository);
         assertThat(techServicesClient).isNotNull();
         assertThat(techServicesClient).isInstanceOf(DoNothingTechServicesClient.class);
     }

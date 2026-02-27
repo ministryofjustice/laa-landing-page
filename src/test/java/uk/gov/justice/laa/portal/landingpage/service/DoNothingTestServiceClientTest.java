@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUsersResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
@@ -24,6 +25,8 @@ public class DoNothingTestServiceClientTest {
 
     private ListAppender<ILoggingEvent> logAppender;
 
+    private AppRepository appRepository;
+
     private TechServicesClient techServicesClient;
 
     @BeforeEach
@@ -33,7 +36,7 @@ public class DoNothingTestServiceClientTest {
         logAppender.start();
         logger.addAppender(logAppender);
         logger.setLevel(ch.qos.logback.classic.Level.DEBUG);
-        techServicesClient = new DoNothingTechServicesClient();
+        techServicesClient = new DoNothingTechServicesClient(appRepository);
 
     }
 

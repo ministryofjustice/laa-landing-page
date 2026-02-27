@@ -1,219 +1,368 @@
 <!DOCTYPE html>
-<html lang="en" th:replace="~{layout :: layout(
-      title=~{::title},
-      mainContent=~{::#main-content},
-      breadcrumbs=~{::#breadcrumbs},
-      pageCategory=${'admin'})}" xmlns:th="http://www.thymeleaf.org">
+<html lang="en"
+      th:replace="~{layout :: layout(
+        title=~{::title},
+        mainContent=~{::#main-content},
+        breadcrumbs=~{::#breadcrumbs},
+        pageCategory=${'admin'}
+      )}"
+      xmlns:th="http://www.thymeleaf.org">
 
 <head>
     <title>SiLAS Administration</title>
+
+    <!-- 1) PREVENT INITIAL ANCHOR JUMP -->
+    <script>
+        (function () {
+            try {
+                // Stop history-based scroll restoration
+                if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+
+                if (location.hash) {
+                    // Remember requested tab (without '#') to use after render
+                    window.__initialTabHash = location.hash.slice(1);
+                    // Strip the hash immediately so the browser cannot jump
+                    history.replaceState(null, '', location.pathname + location.search);
+                    // Ensure we are at top
+                    window.scrollTo(0, 0);
+                }
+            } catch (e) { /* ignore */ }
+        })();
+    </script>
 </head>
 
 <body>
-    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-        <ol class="govuk-breadcrumbs__list">
-            <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" href="/">Home</a>
+<nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+    <ol class="govuk-breadcrumbs__list">
+        <li class="govuk-breadcrumbs__list-item">
+            <a class="govuk-breadcrumbs__link" href="/">Home</a>
+        </li>
+        <li class="govuk-breadcrumbs__list-item">SiLAS Administration</li>
+    </ol>
+</nav>
+
+<main class="govuk-main-wrapper" id="main-content">
+    <h1 class="govuk-heading-xl">SiLAS Administration</h1>
+
+    <!-- 2) NO-SCROLL TAB SWITCHING -->
+    <script th:inline="javascript">
+        (function () {
+            var esc = (window.CSS && CSS.escape) ? CSS.escape : function (s) {
+                return String(s).replace(/[^a-zA-Z0-9\-_]/g, '');
+            };
+
+            function activateTabWithoutScroll(container, tabId) {
+                if (!container || !tabId) return;
+
+                var x = window.scrollX, y = window.scrollY;
+
+                var link = container.querySelector('.govuk-tabs__tab[href="#' + esc(tabId) + '"]');
+                var panel = container.querySelector('#' + esc(tabId));
+                if (!link || !panel) return;
+
+                // Deselect all tabs & hide all panels
+                container.querySelectorAll('.govuk-tabs__list-item')
+                    .forEach(function (li) { li.classList.remove('govuk-tabs__list-item--selected'); });
+                container.querySelectorAll('.govuk-tabs__tab')
+                    .forEach(function (a) { a.setAttribute('aria-selected', 'false'); a.setAttribute('tabindex', '-1'); });
+                container.querySelectorAll('.govuk-tabs__panel')
+                    .forEach(function (p) { p.classList.add('govuk-tabs__panel--hidden'); p.setAttribute('hidden', 'hidden'); });
+
+                // Select tab & show panel
+                var li = link.closest('.govuk-tabs__list-item');
+                if (li) li.classList.add('govuk-tabs__list-item--selected');
+                link.setAttribute('aria-selected', 'true');
+                link.removeAttribute('tabindex');
+                panel.classList.remove('govuk-tabs__panel--hidden');
+                panel.removeAttribute('hidden');
+
+                // Update URL hash WITHOUT scrolling
+                try { history.replaceState(null, '', '#' + tabId); } catch (e) {}
+
+                // Restore scroll position
+                window.scrollTo(x, y);
+            }
+
+            function wireClicksWithoutScroll(container) {
+                if (!container) return;
+                container.querySelectorAll('.govuk-tabs__tab').forEach(function (link) {
+                    link.addEventListener('click', function (e) {
+                        var href = link.getAttribute('href'); // e.g. "#apps"
+                        if (href && href.startsWith('#')) {
+                            // Prevent jump-to-anchor and block other handlers that might scroll
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.stopImmediatePropagation();
+
+                            var tabId = href.slice(1);
+                            activateTabWithoutScroll(container, tabId);
+                            try { link.blur(); } catch (err) {}
+                        }
+                    }, { capture: true }); // run before other handlers
+                });
+            }
+
+            document.addEventListener('DOMContentLoaded', function () {
+                var container = document.querySelector('.govuk-tabs');
+                if (!container) return;
+
+                var serverActive = /*[[${activeTab}]]*/ null; // 'admin-apps' | 'apps' | 'roles'
+                var desired = window.__initialTabHash || serverActive || 'admin-apps';
+
+                // First paint: activate desired tab WITHOUT scroll
+                activateTabWithoutScroll(container, desired);
+
+                // Future clicks: no scroll
+                wireClicksWithoutScroll(container);
+            });
+        })();
+    </script>
+
+    <!-- 3) DO NOT auto-enhance GOV.UK Tabs here (no data-module), we manage it ourselves -->
+    <div class="govuk-tabs">
+        <h2 class="govuk-tabs__title">Contents</h2>
+
+        <ul class="govuk-tabs__list" role="tablist">
+            <li class="govuk-tabs__list-item"
+                th:classappend="${activeTab == 'admin-apps'} ? ' govuk-tabs__list-item--selected' : null">
+                <a class="govuk-tabs__tab" href="#admin-apps" id="tab-admin-apps" role="tab"
+                   aria-controls="admin-apps" aria-selected="false" tabindex="-1">
+                    Admin Services
+                </a>
             </li>
-            <li class="govuk-breadcrumbs__list-item">
-                SiLAS Administration
+            <li class="govuk-tabs__list-item"
+                th:classappend="${activeTab == 'apps'} ? ' govuk-tabs__list-item--selected' : null">
+                <a class="govuk-tabs__tab" href="#apps" id="tab-apps" role="tab"
+                   aria-controls="apps" aria-selected="false" tabindex="-1">
+                    Legal Aid Services
+                </a>
             </li>
-        </ol>
-    </nav>
+            <li class="govuk-tabs__list-item"
+                th:classappend="${activeTab == 'roles'} ? ' govuk-tabs__list-item--selected' : null">
+                <a class="govuk-tabs__tab" href="#roles" id="tab-roles" role="tab"
+                   aria-controls="roles" aria-selected="false" tabindex="-1">
+                    Roles and Permissions
+                </a>
+            </li>
+        </ul>
 
-    <main class="govuk-main-wrapper" id="main-content">
-        <h1 class="govuk-heading-xl">SiLAS Administration</h1>
+        <!-- ===================== Admin Services Tab Content ===================== -->
+        <div class="govuk-tabs__panel"
+             id="admin-apps"
+             role="tabpanel" aria-labelledby="tab-admin-apps"
+             th:classappend="${activeTab != 'admin-apps'} ? ' govuk-tabs__panel--hidden' : null">
 
-        <div class="govuk-tabs" data-module="govuk-tabs">
-            <h2 class="govuk-tabs__title">
-                Contents
-            </h2>
-            <ul class="govuk-tabs__list">
-                <li class="govuk-tabs__list-item"
-                    th:classappend="${activeTab == 'admin-apps'} ? 'govuk-tabs__list-item--selected'">
-                    <a class="govuk-tabs__tab" href="#admin-apps">
-                        Admin Services
-                    </a>
-                </li>
-                <li class="govuk-tabs__list-item"
-                    th:classappend="${activeTab == 'apps'} ? 'govuk-tabs__list-item--selected'">
-                    <a class="govuk-tabs__tab" href="#apps">
-                        Legal Aid Services
-                    </a>
-                </li>
-                <li class="govuk-tabs__list-item"
-                    th:classappend="${activeTab == 'roles'} ? 'govuk-tabs__list-item--selected'">
-                    <a class="govuk-tabs__tab" href="#roles">
-                        Roles and Permissions
-                    </a>
-                </li>
-            </ul>
+            <div th:if="${adminApps != null and !adminApps.isEmpty()}">
+                <table class="govuk-table">
+                    <thead class="govuk-table__head">
+                    <tr class="govuk-table__row">
+                        <th scope="col" class="govuk-table__header" style="width: 20%;">Service name</th>
+                        <th scope="col" class="govuk-table__header" style="width: 38%;">Description</th>
+                        <th scope="col" class="govuk-table__header" style="width: 20%;">Code</th>
+                        <th scope="col" class="govuk-table__header" style="width: 12%;">Order</th>
+                        <th scope="col" class="govuk-table__header" style="width: 10%;"></th>
+                    </tr>
+                    </thead>
+                    <tbody class="govuk-table__body">
+                    <tr class="govuk-table__row" th:each="app : ${adminApps}">
+                        <td class="govuk-table__cell" th:text="${app.name}">Manage your users</td>
+                        <td class="govuk-table__cell" th:text="${app.description}">Manage user access and permissions</td>
+                        <td class="govuk-table__cell"></td>
+                        <td class="govuk-table__cell" th:text="${app.ordinal}">0</td>
+                        <td class="govuk-table__cell">
+                            <a th:href="@{'/admin/silas-administration/app/' + ${app.id}}" class="govuk-link">Change</a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
 
-            <!-- Admin Services Tab Content -->
-            <div class="govuk-tabs__panel" th:classappend="${activeTab != 'admin-apps'} ? 'govuk-tabs__panel--hidden'"
-                id="admin-apps">
-
-                <div th:if="${adminApps != null and !adminApps.isEmpty()}">
-                    <table class="govuk-table">
-                        <thead class="govuk-table__head">
-                            <tr class="govuk-table__row">
-                                <th scope="col" class="govuk-table__header" style="width: 20%;">Service name</th>
-                                <th scope="col" class="govuk-table__header" style="width: 38%;">Description</th>
-                                <th scope="col" class="govuk-table__header" style="width: 20%;">Code</th>
-                                <th scope="col" class="govuk-table__header" style="width: 12%;">Order</th>
-                                <th scope="col" class="govuk-table__header" style="width: 10%;"></th>
-                            </tr>
-                        </thead>
-                        <tbody class="govuk-table__body">
-                            <tr class="govuk-table__row" th:each="app : ${adminApps}">
-                                <td class="govuk-table__cell" th:text="${app.name}">Manage your users</td>
-                                <td class="govuk-table__cell" th:text="${app.description}">Manage user access and permissions</td>
-                                <td class="govuk-table__cell"></td>
-                                <td class="govuk-table__cell" th:text="${app.ordinal}">0</td>
-                                <td class="govuk-table__cell">
-                                    <a href="#" class="govuk-link">Change</a>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <button class="govuk-button govuk-button--secondary" data-module="govuk-button" type="button">
-                        Reorder admin services
-                    </button>
-                </div>
-
-                <div th:if="${adminApps == null or adminApps.isEmpty()}" class="govuk-inset-text">
-                    No admin services configured.
-                </div>
+                <button class="govuk-button govuk-button--secondary" data-module="govuk-button" type="button">
+                    Reorder admin services
+                </button>
             </div>
 
-            <!-- Legal Aid Services Tab Content -->
-            <div class="govuk-tabs__panel" th:classappend="${activeTab != 'apps'} ? 'govuk-tabs__panel--hidden'"
-                id="apps">
-
-                <div th:if="${apps != null and !apps.isEmpty()}">
-                    <table class="govuk-table">
-                        <thead class="govuk-table__head">
-                            <tr class="govuk-table__row">
-                                <th scope="col" class="govuk-table__header" style="width: 20%;">Service name</th>
-                                <th scope="col" class="govuk-table__header" style="width: 38%;">Description</th>
-                                <th scope="col" class="govuk-table__header" style="width: 20%;">Code</th>
-                                <th scope="col" class="govuk-table__header" style="width: 12%;">Order</th>
-                                <th scope="col" class="govuk-table__header" style="width: 10%;"></th>
-                            </tr>
-                        </thead>
-                        <tbody class="govuk-table__body">
-                            <tr class="govuk-table__row" th:each="app : ${apps}">
-                                <td class="govuk-table__cell" th:text="${app.name}">Apply for criminal legal aid</td>
-                                <td class="govuk-table__cell" th:text="${app.description}">Make an application to represent clients charged with a criminal offence</td>
-                                <td class="govuk-table__cell"></td>
-                                <td class="govuk-table__cell" th:text="${app.ordinal}">0</td>
-                                <td class="govuk-table__cell">
-                                    <a th:href="@{'/admin/silas-administration/app/' + ${app.id}}" class="govuk-link">Change</a>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <form class="govuk-!-padding-top-6" th:action="@{/admin/silas-administration/apps/reorder}" method="get">
-                        <button type="submit" class="govuk-button" data-module="govuk-button">
-                            Reorder legal aid services
-                        </button>
-                    </form>
-
-                </div>
-
-                <div th:if="${apps == null or apps.isEmpty()}" class="govuk-inset-text">
-                    No legal aid services configured.
-                </div>
-            </div>
-
-
-            <!-- Roles and Permissions Tab Content -->
-            <div class="govuk-tabs__panel" th:classappend="${activeTab != 'roles'} ? 'govuk-tabs__panel--hidden'"
-                id="roles">
-
-                <!-- Action buttons at top right -->
-                <div style="text-align: right; margin-bottom: 30px;">
-                    <button class="govuk-button" data-module="govuk-button" type="button" style="margin-right: 10px;">
-                        Create a new role
-                    </button>
-                    <a href="/admin/silas-administration/delete-role" class="govuk-button govuk-button--warning" data-module="govuk-button" style="margin-right: 10px;">
-                        Delete a role
-                    </a>
-                </div>
-
-                <div th:if="${appRolesErrorMessage}" class="govuk-error-summary" data-module="govuk-error-summary">
-                    <div class="govuk-error-summary__body">
-                        <ul class="govuk-list govuk-error-summary__list">
-                            <li>
-                                <a href="#roles" th:text="${appRolesErrorMessage}">Please select an application for managing roles</a>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-
-
-                <!-- Filter by App -->
-                <div class="govuk-form-group">
-                    <label class="govuk-label" for="appFilter">
-                        Select application
-                    </label>
-                    <div class="govuk-hint" id="appFilter-hint">
-                        You can select roles for all Admin and Legal Aid Services on this page.
-                    </div>
-                    <form method="get" action="/admin/silas-administration#roles">
-                        <input type="hidden" name="tab" value="roles" />
-                        <select class="govuk-select" id="appFilter" name="appFilter"
-                            aria-describedby="appFilter-hint" onchange="this.form.submit()" style="max-width: 350px;">
-                            <option value="">All applications</option>
-                            <option th:each="appName : ${appNames}" th:value="${appName}" th:text="${appName}"
-                                th:selected="${appFilter != null and appFilter == appName}">App Name</option>
-                        </select>
-                    </form>
-                </div>
-
-                <div th:if="${roles != null and !roles.isEmpty()}">
-
-                    <table class="govuk-table">
-                        <thead class="govuk-table__head">
-                            <tr class="govuk-table__row">
-                                <th scope="col" class="govuk-table__header" style="width: 25%;">Role name</th>
-                                <th scope="col" class="govuk-table__header" style="width: 25%;">Description</th>
-                                <th scope="col" class="govuk-table__header" style="width: 20%;">CCMS Code</th>
-                                <th scope="col" class="govuk-table__header" style="width: 10%;">Legacy Sync</th>
-                                <th scope="col" class="govuk-table__header" style="width: 10%;">Order</th>
-                                <th scope="col" class="govuk-table__header" style="width: 10%;"></th>
-                            </tr>
-                        </thead>
-                        <tbody class="govuk-table__body">
-                            <tr class="govuk-table__row" th:each="role : ${roles}">
-                                <td class="govuk-table__cell" th:text="${role.name}" style="word-break: break-word;">Default Role Name</td>
-                                <td class="govuk-table__cell" th:text="${role.description}"  style="word-break: break-word;">Default Role Description</td>
-                                <td class="govuk-table__cell" th:text="${role.ccmsCode}" style="word-break: break-word;"></td>
-                                <td class="govuk-table__cell" th:text="${role.legacySync}">No</td>
-                                <td class="govuk-table__cell" th:text="${role.ordinal}">0</td>
-                                <td class="govuk-table__cell">
-                                    <a th:href="@{'/admin/silas-administration/role/' + ${role.id}}" class="govuk-link">Change</a>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <form class="govuk-!-padding-top-6" th:action="@{/admin/silas-administration/roles/reorder}" method="get">
-                        <button type="submit" class="govuk-button" data-module="govuk-button">
-                            Reorder application roles
-                        </button>
-                    </form>
-
-                </div>
-
-                <div th:if="${roles == null or roles.isEmpty()}" class="govuk-inset-text">
-                    No roles configured for the selected application.
-                </div>
+            <div th:if="${adminApps == null or adminApps.isEmpty()}" class="govuk-inset-text">
+                No admin services configured.
             </div>
         </div>
-    </main>
-</body>
 
+        <!-- ===================== Legal Aid Services Tab Content ===================== -->
+        <div class="govuk-tabs__panel"
+             id="apps"
+             role="tabpanel" aria-labelledby="tab-apps"
+             th:classappend="${activeTab != 'apps'} ? ' govuk-tabs__panel--hidden' : null">
+
+            <!-- Action buttons at top right -->
+            <div style="text-align: right; margin-bottom: 30px;">
+                <form class="form" method="post" th:action="@{/admin/silas-administration/sync/apps}">
+                    <button th:if="${canTriggerAppSync}" class="govuk-button" data-module="govuk-button"
+                            type="submit" style="margin-right: 10px;">
+                        Sync Apps
+                    </button>
+                </form>
+            </div>
+
+            <!-- Success banner (disable auto focus to avoid scroll) -->
+            <div th:if="${successMessage}" class="govuk-notification-banner govuk-notification-banner--success"
+                 role="region" aria-labelledby="govuk-notification-banner-title"
+                 data-module="govuk-notification-banner" data-disable-auto-focus="true">
+                <div class="govuk-notification-banner__header">
+                    <h2 class="govuk-notification-banner__title" id="govuk-notification-banner-title">Success</h2>
+                </div>
+                <div class="govuk-notification-banner__content"
+                     style="display: flex; justify-content: space-between; align-items: center;">
+                    <p class="govuk-notification-banner__heading" style="margin: 0;">
+                        <span th:text="${successMessage}"></span>
+                    </p>
+                    <!-- IMPORTANT: no #apps here; use query param to keep page at top -->
+                    <a th:href="@{/admin/silas-administration(tab=${'apps'})}" class="govuk-link"
+                       style="text-decoration: underline; color: #1d70b8; font-size: 19px; line-height: 1.31579; margin-left: 20px; white-space: nowrap;"
+                       aria-label="Dismiss success message">
+                        Dismiss
+                    </a>
+                </div>
+            </div>
+
+            <div th:if="${apps != null and !apps.isEmpty()}">
+                <table class="govuk-table">
+                    <thead class="govuk-table__head">
+                    <tr class="govuk-table__row">
+                        <th scope="col" class="govuk-table__header" style="width: 20%;">Service name</th>
+                        <th scope="col" class="govuk-table__header" style="width: 35%;">Description</th>
+                        <th scope="col" class="govuk-table__header" style="width: 15%;">Status</th>
+                        <th scope="col" class="govuk-table__header" style="width: 10%;">Order</th>
+                        <th scope="col" class="govuk-table__header" style="width: 10%;" th:if="${appSyncSuccessful}">App Sync Status</th>
+                        <th scope="col" class="govuk-table__header" style="width: 10%;"></th>
+                    </tr>
+                    </thead>
+                    <tbody class="govuk-table__body">
+                    <tr class="govuk-table__row" th:each="app : ${apps}">
+                        <td class="govuk-table__cell" th:text="${app.name}">Apply for criminal legal aid</td>
+                        <td class="govuk-table__cell" th:text="${app.description}">
+                            Make an application to represent clients charged with a criminal offence
+                        </td>
+                        <td class="govuk-table__cell"><span th:text="${app.isEnabled() ? 'Enabled' : 'Disabled'}">[Status]</span> </td>
+                        <td class="govuk-table__cell" th:text="${app.ordinal}">0</td>
+                        <td class="govuk-table__cell" th:if="${appSyncSuccessful}">
+                            <strong th:if="${app.changeType.name() == 'NONE'}"
+                                    class="govuk-tag govuk-tag--blue govuk-!-font-weight-bold govuk-!-margin-top-1">NO CHANGES</strong>
+                            <strong th:if="${app.changeType.name() == 'ADDED'}"
+                                    class="govuk-tag govuk-tag--green govuk-!-font-weight-bold govuk-!-margin-top-1">NEW</strong>
+                            <strong th:if="${app.changeType.name() == 'UPDATED'}"
+                                    class="govuk-tag govuk-tag--yellow govuk-!-font-weight-bold govuk-!-margin-top-1">UPDATED</strong>
+                            <strong th:if="${app.changeType.name() == 'DELETED'}"
+                                    class="govuk-tag govuk-tag--red govuk-!-font-weight-bold govuk-!-margin-top-1">DISABLED</strong>
+                            <strong th:if="${app.changeType.name() == 'REVIEW'}"
+                                    class="govuk-tag govuk-tag--yellow govuk-!-font-weight-bold govuk-!-margin-top-1">REVIEW</strong>
+                        </td>
+                        <td class="govuk-table__cell">
+                            <a th:href="@{'/admin/silas-administration/app/' + ${app.id}}" class="govuk-link">Change</a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+
+                <form class="govuk-!-padding-top-6" th:action="@{/admin/silas-administration/apps/reorder}" method="get">
+                    <button type="submit" class="govuk-button" data-module="govuk-button">
+                        Reorder legal aid services
+                    </button>
+                </form>
+            </div>
+
+            <div th:if="${apps == null or apps.isEmpty()}" class="govuk-inset-text">
+                No legal aid services configured.
+            </div>
+        </div>
+
+        <!-- ===================== Roles and Permissions Tab Content ===================== -->
+        <div class="govuk-tabs__panel"
+             id="roles"
+             role="tabpanel" aria-labelledby="tab-roles"
+             th:classappend="${activeTab != 'roles'} ? ' govuk-tabs__panel--hidden' : null">
+
+            <!-- Action buttons at top right -->
+            <div style="text-align: right; margin-bottom: 30px;">
+                <button class="govuk-button" data-module="govuk-button" type="button" style="margin-right: 10px;">
+                    Create a new role
+                </button>
+                <a href="/admin/silas-administration/delete-role" class="govuk-button govuk-button--warning"
+                   data-module="govuk-button" style="margin-right: 10px;">
+                    Delete a role
+                </a>
+            </div>
+
+            <!-- Error summary (disable auto focus to avoid scroll) -->
+            <div th:if="${appRolesErrorMessage}" class="govuk-error-summary"
+                 data-module="govuk-error-summary" data-disable-auto-focus="true">
+                <div class="govuk-error-summary__body">
+                    <ul class="govuk-list govuk-error-summary__list">
+                        <li>
+                            <a href="#roles" th:text="${appRolesErrorMessage}">Please select an application for managing roles</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Filter by App -->
+            <div class="govuk-form-group">
+                <label class="govuk-label" for="appFilter">Select application</label>
+                <div class="govuk-hint" id="appFilter-hint">
+                    You can select roles for all Admin and Legal Aid Services on this page.
+                </div>
+                <!-- IMPORTANT: no '#roles' fragment in action; use query param instead -->
+                <form method="get" th:action="@{/admin/silas-administration}">
+                    <input type="hidden" name="tab" value="roles" />
+                    <select class="govuk-select" id="appFilter" name="appFilter"
+                            aria-describedby="appFilter-hint" onchange="this.form.submit()" style="max-width: 350px;">
+                        <option value="">All applications</option>
+                        <option th:each="appName : ${appNames}"
+                                th:value="${appName}"
+                                th:text="${appName}"
+                                th:selected="${appFilter != null and appFilter == appName}">
+                            App Name
+                        </option>
+                    </select>
+                </form>
+            </div>
+
+            <div th:if="${roles != null and !roles.isEmpty()}">
+                <table class="govuk-table">
+                    <thead class="govuk-table__head">
+                    <tr class="govuk-table__row">
+                        <th scope="col" class="govuk-table__header" style="width: 25%;">Role name</th>
+                        <th scope="col" class="govuk-table__header" style="width: 25%;">Description</th>
+                        <th scope="col" class="govuk-table__header" style="width: 20%;">CCMS Code</th>
+                        <th scope="col" class="govuk-table__header" style="width: 10%;">Legacy Sync</th>
+                        <th scope="col" class="govuk-table__header" style="width: 10%;">Order</th>
+                        <th scope="col" class="govuk-table__header" style="width: 10%;"></th>
+                    </tr>
+                    </thead>
+                    <tbody class="govuk-table__body">
+                    <tr class="govuk-table__row" th:each="role : ${roles}">
+                        <td class="govuk-table__cell" th:text="${role.name}" style="word-break: break-word;">Default Role Name</td>
+                        <td class="govuk-table__cell" th:text="${role.description}" style="word-break: break-word;">Default Role Description</td>
+                        <td class="govuk-table__cell" th:text="${role.ccmsCode}" style="word-break: break-word;"></td>
+                        <td class="govuk-table__cell" th:text="${role.legacySync}">No</td>
+                        <td class="govuk-table__cell" th:text="${role.ordinal}">0</td>
+                        <td class="govuk-table__cell">
+                            <a th:href="@{'/admin/silas-administration/role/' + ${role.id}}" class="govuk-link">Change</a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+
+                <form class="govuk-!-padding-top-6" th:action="@{/admin/silas-administration/roles/reorder}" method="get">
+                    <button type="submit" class="govuk-button" data-module="govuk-button">
+                        Reorder application roles
+                    </button>
+                </form>
+            </div>
+
+            <div th:if="${roles == null or roles.isEmpty()}" class="govuk-inset-text">
+                No roles configured for the selected application.
+            </div>
+        </div>
+    </div>
+</main>
+</body>
 </html>
