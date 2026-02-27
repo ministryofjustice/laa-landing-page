@@ -51,6 +51,7 @@ import uk.gov.justice.laa.portal.landingpage.forms.AppRoleDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRolesOrderForm;
 import uk.gov.justice.laa.portal.landingpage.forms.AppsOrderForm;
 import uk.gov.justice.laa.portal.landingpage.forms.DeleteAppRoleReasonForm;
+import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AdminService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
 import uk.gov.justice.laa.portal.landingpage.service.AppService;
@@ -72,6 +73,8 @@ class AdminControllerTest {
     @Mock
     private AppRoleService appRoleService;
     @Mock
+    private AccessControlService accessControlService;
+    @Mock
     private MockHttpSession mockHttpSession;
 
     private AdminController adminController;
@@ -81,7 +84,7 @@ class AdminControllerTest {
 
     @BeforeEach
     void setUp() {
-        adminController = new AdminController(loginService, eventService, adminService, appService, appRoleService);
+        adminController = new AdminController(loginService, eventService, adminService, appService, appRoleService, accessControlService);
         model = new ExtendedModelMap();
     }
 

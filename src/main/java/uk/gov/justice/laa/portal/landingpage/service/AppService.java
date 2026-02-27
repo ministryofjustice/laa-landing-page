@@ -105,7 +105,7 @@ public class AppService {
     }
 
     @Transactional
-    public List<AppDto> synchronizeAndGetApplicaitonsFromTechServices(Authentication authentication) {
+    public List<AppDto> synchronizeAndGetApplicationsFromTechServices(Authentication authentication) {
         log.info("Synchronizing applications from Tech Services...");
         int counter = 0;
         int noChangesCounter = 0;

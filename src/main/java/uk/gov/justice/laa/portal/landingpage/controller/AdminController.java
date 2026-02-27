@@ -136,7 +136,7 @@ public class AdminController {
         // Load all admin apps data for admin-apps tab
         model.addAttribute("adminApps", adminService.getAllAdminApps());
 
-        List<AppDto> apps = appService.synchronizeAndGetApplicaitonsFromTechServices(authentication);
+        List<AppDto> apps = appService.synchronizeAndGetApplicationsFromTechServices(authentication);
         model.addAttribute("apps", apps);
 
 
