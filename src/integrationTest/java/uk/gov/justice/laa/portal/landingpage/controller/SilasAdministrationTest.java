@@ -73,7 +73,6 @@ public class SilasAdministrationTest extends RoleBasedAccessIntegrationTest {
                 .andExpect(status().is3xxRedirection())
                 .andReturn();
 
-        assertNotNull(result.getResponse().getRedirectedUrl());
         assertEquals(String.format("/admin/silas-administration/app/%s/check-answers", testApp.getId()),
                 result.getResponse().getRedirectedUrl());
 
@@ -166,7 +165,6 @@ public class SilasAdministrationTest extends RoleBasedAccessIntegrationTest {
                 .andExpect(status().is3xxRedirection())
                 .andReturn();
 
-        assertNotNull(result.getResponse().getRedirectedUrl());
         assertEquals(String.format("/admin/silas-administration/role/%s/check-answers", testAppRole.getId()),
                 result.getResponse().getRedirectedUrl());
 
@@ -224,7 +222,6 @@ public class SilasAdministrationTest extends RoleBasedAccessIntegrationTest {
                 .andExpect(status().is3xxRedirection())
                 .andReturn();
 
-        assertNotNull(result.getResponse().getRedirectedUrl());
         assertEquals("/admin/silas-administration#roles", result.getResponse().getRedirectedUrl());
     }
 
@@ -238,7 +235,6 @@ public class SilasAdministrationTest extends RoleBasedAccessIntegrationTest {
                 .andExpect(status().is3xxRedirection())
                 .andReturn();
 
-        assertNotNull(result.getResponse().getRedirectedUrl());
         assertEquals("/admin/silas-administration#admin-apps", result.getResponse().getRedirectedUrl());
     }
 
@@ -272,7 +268,6 @@ public class SilasAdministrationTest extends RoleBasedAccessIntegrationTest {
                 .andExpect(status().is3xxRedirection())
                 .andReturn();
 
-        assertNotNull(result.getResponse().getRedirectedUrl());
         assertEquals("/admin/silas-administration#roles", result.getResponse().getRedirectedUrl());
     }
 

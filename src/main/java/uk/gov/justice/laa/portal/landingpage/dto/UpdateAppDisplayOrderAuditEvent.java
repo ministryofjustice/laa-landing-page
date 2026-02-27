@@ -1,9 +1,11 @@
 package uk.gov.justice.laa.portal.landingpage.dto;
 
+import lombok.Getter;
 import uk.gov.justice.laa.portal.landingpage.entity.EventType;
 
 import java.util.UUID;
 
+@Getter
 public class UpdateAppDisplayOrderAuditEvent extends AuditEvent {
 
     private final UUID userProfileId;
