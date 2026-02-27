@@ -18,6 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -26,7 +27,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.ui.ExtendedModelMap;
@@ -44,7 +47,9 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.forms.AppDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRoleDetailsForm;
@@ -76,6 +81,7 @@ class AdminControllerTest {
     private AccessControlService accessControlService;
     @Mock
     private MockHttpSession mockHttpSession;
+    private ModelMapper mapper;
 
     private AdminController adminController;
     private Model model;
@@ -84,7 +90,8 @@ class AdminControllerTest {
 
     @BeforeEach
     void setUp() {
-        adminController = new AdminController(loginService, eventService, adminService, appService, appRoleService, accessControlService);
+        mapper = new ModelMapper();
+        adminController = new AdminController(mapper, loginService, eventService, adminService, appService, appRoleService, accessControlService);
         model = new ExtendedModelMap();
     }
 
@@ -2493,5 +2500,185 @@ class AdminControllerTest {
             assertThat(view).isEqualTo("silas-administration/delete-app-roles-confirmation");
         }
 
+    }
+
+    @Nested
+    class AdministrationControllerSyncLaaAppsTest {
+
+        @Mock
+        private Authentication authentication;
+
+        // Keep these aliases aligned to your controller/constants.
+        private static final String VIEW = "silas-administration/administration";
+        private static final String PAGE_TITLE_KEY = ModelAttributes.PAGE_TITLE;
+        private static final String PAGE_TITLE_VALUE = AdminController.SILAS_ADMINISTRATION_TITLE;
+
+        @BeforeEach
+        void setUp() {
+            model = new ExtendedModelMap();
+
+            // default permission TRUE
+            when(accessControlService.authenticatedUserHasPermission(Permission.TRIGGER_LAA_APP_SYNC)).thenReturn(true);
+        }
+
+        @Test
+        @DisplayName("Happy path: populates model, uses current user + mapped profile, invokes services, returns view")
+        void syncLaaApps_happyPath() {
+            // Given: admin apps
+            List<AdminAppDto> adminApps = createMockAdminApps();
+            when(adminService.getAllAdminApps()).thenReturn(adminApps);
+
+            // Given: current user and profile
+            final UUID entraOid = UUID.randomUUID();
+            final UUID profileId = UUID.randomUUID();
+
+            CurrentUserDto currentUser = new CurrentUserDto();
+            currentUser.setUserId(entraOid);
+            currentUser.setName("Admin");
+            UserProfile userProfile = UserProfile.builder().id(profileId).build();
+
+            when(loginService.getCurrentUser(authentication)).thenReturn(currentUser);
+            when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
+
+            UserProfileDto userProfileDto = mapper.map(userProfile, UserProfileDto.class);
+
+
+            // Given: apps from sync (ensure duplicates/case mix to test distinct+sorted)
+            List<AppDto> apps = new ArrayList<>();
+            apps.add(app("2", "Beta"));
+            apps.add(app("1", "Alpha"));
+            when(appService.synchronizeAndGetApplicationsFromTechServices(eq(currentUser), eq(userProfileDto)))
+                    .thenReturn(apps);
+
+            // Given: roles
+            List<AppRoleAdminDto> mockRoles = createMockRoles();
+            when(appRoleService.getAllLaaAppRoles()).thenReturn(mockRoles);
+
+            // When
+            String view = adminController.syncLaaApps(authentication, model, mockHttpSession);
+
+            // Then: view name
+            assertThat(view).isEqualTo(VIEW);
+
+            // Then: verify session clear method called
+            verify(mockHttpSession, times(12)).removeAttribute(anyString());
+
+            // Then: verify model attributes
+            assertThat(model.getAttribute(PAGE_TITLE_KEY)).isEqualTo(PAGE_TITLE_VALUE);
+            assertThat(model.getAttribute("activeTab")).isEqualTo("apps");
+
+            assertThat(model.getAttribute("adminApps")).isEqualTo(adminApps);
+            assertThat(model.getAttribute("apps")).isEqualTo(apps);
+            assertThat(model.getAttribute("roles")).isEqualTo(mockRoles);
+
+            assertThat(model.getAttribute("canTriggerAppSync")).isEqualTo(true);
+            assertThat(model.getAttribute("appSyncSuccessful")).isEqualTo(true);
+
+            @SuppressWarnings("unchecked")
+            List<String> appNames = (List<String>) model.getAttribute("appNames");
+            assertThat(appNames).containsExactly("Alpha", "Beta"); // distinct + sorted
+
+            assertThat(model.getAttribute("successMessage")).isEqualTo("App Syncing successful");
+
+            // Then: verify interactions
+            verify(adminService, times(1)).getAllAdminApps();
+            verify(loginService, times(1)).getCurrentUser(authentication);
+            verify(loginService, times(1)).getCurrentProfile(authentication);
+            verify(appService, times(1)).synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
+            verify(appRoleService, times(1)).getAllLaaAppRoles();
+            verify(accessControlService, times(1)).authenticatedUserHasPermission(Permission.TRIGGER_LAA_APP_SYNC);
+            verifyNoMoreInteractions(adminService, appService, appRoleService, accessControlService, loginService);
+        }
+
+        @Test
+        @DisplayName("Permission false: canTriggerAppSync=false; rest of model is still populated; returns view")
+        void syncLaaApps_permissionFalse() {
+            when(accessControlService.authenticatedUserHasPermission(Permission.TRIGGER_LAA_APP_SYNC)).thenReturn(false);
+
+            when(adminService.getAllAdminApps()).thenReturn(List.of());
+
+            // Given: current user and profile
+            final UUID entraOid = UUID.randomUUID();
+            final UUID profileId = UUID.randomUUID();
+
+            CurrentUserDto currentUser = new CurrentUserDto();
+            currentUser.setUserId(entraOid);
+            currentUser.setName("Admin");
+            UserProfile userProfile = UserProfile.builder().id(profileId).build();
+
+            when(loginService.getCurrentUser(authentication)).thenReturn(currentUser);
+            when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
+
+            UserProfileDto userProfileDto = mapper.map(userProfile, UserProfileDto.class);
+
+            when(appService.synchronizeAndGetApplicationsFromTechServices(eq(currentUser), eq(userProfileDto))).thenReturn(List.of());
+            when(appRoleService.getAllLaaAppRoles()).thenReturn(List.of());
+
+            String view = adminController.syncLaaApps(authentication, model, mockHttpSession);
+
+            // Session cleared
+            verify(mockHttpSession, times(12)).removeAttribute(anyString());
+
+            // View OK
+            assertThat(view).isEqualTo(VIEW);
+
+            // Model populated
+            assertThat(model.getAttribute(PAGE_TITLE_KEY)).isEqualTo(PAGE_TITLE_VALUE);
+            assertThat(model.getAttribute("activeTab")).isEqualTo("apps");
+            assertThat(model.getAttribute("adminApps")).isEqualTo(List.of());
+            assertThat(model.getAttribute("apps")).isEqualTo(List.of());
+            assertThat(model.getAttribute("roles")).isEqualTo(List.of());
+            assertThat(model.getAttribute("canTriggerAppSync")).isEqualTo(false);
+            assertThat(model.getAttribute("appSyncSuccessful")).isEqualTo(true);
+            assertThat(model.getAttribute("successMessage")).isEqualTo("App Syncing successful");
+
+            @SuppressWarnings("unchecked")
+            List<String> appNames = (List<String>) model.getAttribute("appNames");
+            assertThat(appNames).isEmpty();
+        }
+
+        @Test
+        @DisplayName("appNames: ensures distinct + sorted behavior")
+        void syncLaaApps_appNamesDistinctSorted() {
+            when(accessControlService.authenticatedUserHasPermission(Permission.TRIGGER_LAA_APP_SYNC)).thenReturn(true);
+
+            List<AdminAppDto> adminApps = createMockAdminApps();
+            when(adminService.getAllAdminApps()).thenReturn(adminApps);
+
+            final UUID entraOid = UUID.randomUUID();
+            final UUID profileId = UUID.randomUUID();
+
+            CurrentUserDto currentUser = new CurrentUserDto();
+            currentUser.setUserId(entraOid);
+            currentUser.setName("Admin");
+            UserProfile userProfile = UserProfile.builder().id(profileId).build();
+
+            when(loginService.getCurrentUser(authentication)).thenReturn(currentUser);
+            when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
+
+            UserProfileDto userProfileDto = mapper.map(userProfile, UserProfileDto.class);
+
+            var apps = List.of(
+                    app("A1", "delta"),
+                    app("A2", "Alpha"),
+                    app("A3", "beta"),
+                    app("A4", "Alpha") // duplicate name
+            );
+            when(appService.synchronizeAndGetApplicationsFromTechServices(eq(currentUser), eq(userProfileDto)))
+                    .thenReturn(apps);
+
+            when(appRoleService.getAllLaaAppRoles()).thenReturn(List.of());
+
+            String view = adminController.syncLaaApps(authentication, model, mockHttpSession);
+            assertThat(view).isEqualTo(VIEW);
+
+            @SuppressWarnings("unchecked")
+            List<String> appNames = (List<String>) model.getAttribute("appNames");
+            assertThat(appNames).containsExactly("Alpha", "beta", "delta");
+        }
+
+        private AppDto app(String id, String name) {
+            return AppDto.builder().name(name).build();
+        }
     }
 }

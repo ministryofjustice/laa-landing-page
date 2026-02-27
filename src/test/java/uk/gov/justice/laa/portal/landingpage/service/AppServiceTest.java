@@ -5,25 +5,22 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
-import org.springframework.security.core.Authentication;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppSynchronizationAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.forms.AppsOrderForm;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetAllApplicationsResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesErrorResponse;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -31,13 +28,11 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.tuple;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -51,17 +46,13 @@ class AppServiceTest {
     @Mock
     private AppRepository appRepository;
     @Mock
-    private LoginService loginService;
-    @Mock
     private ModelMapper mapper;
-    @Mock
-    private Authentication authentication;
     @Mock
     private EventService eventService;
 
     private AppService appService;
     private CurrentUserDto currentUser;
-    private UserProfile userProfile;
+    private UserProfileDto userProfileDto;
     private App app;
     private AppDto appDto;
 
@@ -70,13 +61,10 @@ class AppServiceTest {
         currentUser = new CurrentUserDto();
         currentUser.setUserId(UUID.randomUUID());
         currentUser.setName("user-1");
-        userProfile = UserProfile.builder().id(UUID.randomUUID()).build();
-
-        when(loginService.getCurrentUser(authentication)).thenReturn(currentUser);
-        when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
+        userProfileDto = UserProfileDto.builder().id(UUID.randomUUID()).build();
 
         mapper = new ModelMapper();
-        appService = new AppService(appRepository, new DoNothingTechServicesClient(appRepository), mapper, eventService, loginService);
+        appService = new AppService(appRepository, techServicesClient, mapper, eventService);
         UUID id = UUID.randomUUID();
         app = App.builder()
                 .id(id)
@@ -447,340 +435,245 @@ class AppServiceTest {
     }
 
 
-        private TechServicesApiResponse<GetAllApplicationsResponse> successResponseWithApps(List<GetAllApplicationsResponse.TechServicesApplication> apps) {
-            @SuppressWarnings("unchecked")
-            TechServicesApiResponse<GetAllApplicationsResponse> resp = mock(TechServicesApiResponse.class);
-            GetAllApplicationsResponse data = mock(GetAllApplicationsResponse.class);
-            when(resp.isSuccess()).thenReturn(true);
-            when(resp.getData()).thenReturn(data);
-            when(data.getApps()).thenReturn(apps);
-            return resp;
+    private TechServicesApiResponse<GetAllApplicationsResponse> successResponseWithApps(List<GetAllApplicationsResponse.TechServicesApplication> apps) {
+        GetAllApplicationsResponse data = GetAllApplicationsResponse.builder()
+                .success(true).apps(apps).build();
+        return TechServicesApiResponse.success(data);
+    }
+
+    private TechServicesApiResponse<GetAllApplicationsResponse> failureResponse(String message) {
+        TechServicesErrorResponse techServicesErrorResponse = TechServicesErrorResponse.builder().message(message).build();
+        return TechServicesApiResponse.error(techServicesErrorResponse);
+    }
+
+    private GetAllApplicationsResponse.TechServicesApplication remoteApp(
+            String id, String name, String url, String sgId, String sgName
+    ) {
+        GetAllApplicationsResponse.TechServicesApplication app = mock(GetAllApplicationsResponse.TechServicesApplication.class);
+        when(app.getId()).thenReturn(id);
+        when(app.getName()).thenReturn(name);
+        when(app.getUrl()).thenReturn(url);
+        if (sgId == null && sgName == null) {
+            when(app.getSecurityGroups()).thenReturn(null); // exercise null path
+        } else {
+            GetAllApplicationsResponse.TechServicesApplication.AppSecurityGroup sg = mock(GetAllApplicationsResponse.TechServicesApplication.AppSecurityGroup.class);
+            when(sg.getId()).thenReturn(sgId);
+            when(sg.getName()).thenReturn(sgName);
+            when(app.getSecurityGroups()).thenReturn(List.of(sg));
         }
+        return app;
+    }
 
-        private TechServicesApiResponse<GetAllApplicationsResponse> failureResponse(String message) {
-            @SuppressWarnings("unchecked")
-            TechServicesApiResponse<GetAllApplicationsResponse> resp = mock(TechServicesApiResponse.class);
-            TechServicesErrorResponse err = mock(TechServicesErrorResponse.class);
-            when(resp.isSuccess()).thenReturn(false);
-            when(resp.getError()).thenReturn(err);
-            when(err.getMessage()).thenReturn(message);
-            return resp;
-        }
+    private App localApp(
+            String id, String name, String url, String sgId, String sgName, boolean enabled
+    ) {
+        return App.builder()
+                .entraAppId(id)
+                .name(name)
+                .url(url)
+                .securityGroupOid(sgId)
+                .securityGroupName(sgName)
+                .appType(AppType.LAA)
+                .enabled(enabled)
+                .build();
+    }
 
-        private GetAllApplicationsResponse.TechServicesApplication remoteApp(
-                String id, String name, String url, String sgId, String sgName
-        ) {
-            GetAllApplicationsResponse.TechServicesApplication app = mock(GetAllApplicationsResponse.TechServicesApplication.class);
-            when(app.getId()).thenReturn(id);
-            when(app.getName()).thenReturn(name);
-            when(app.getUrl()).thenReturn(url);
-            if (sgId == null && sgName == null) {
-                when(app.getSecurityGroups()).thenReturn(null); // exercise null path
-            } else {
-                GetAllApplicationsResponse.TechServicesApplication.AppSecurityGroup sg = mock(GetAllApplicationsResponse.TechServicesApplication.AppSecurityGroup.class);
-                when(sg.getId()).thenReturn(sgId);
-                when(sg.getName()).thenReturn(sgName);
-                when(app.getSecurityGroups()).thenReturn(List.of(sg));
-            }
-            return app;
-        }
+    // simulate your existing "getAllLaaAppEntities" called by service
+    // We'll spy the service to stub that method without hitting DB
+    private void stubLocalApps(List<App> locals) throws Exception {
+        AppService spyService = Mockito.spy(appService);
+        doReturn(locals).when(spyService).getAllLaaAppEntities();
+        // swap the spy into field (since @InjectMocks created original)
+        this.appService = spyService;
+    }
 
-        private App localApp(
-                String id, String name, String url, String sgId, String sgName, boolean enabled
-        ) {
-            return App.builder()
-                    .entraAppId(id)
-                    .name(name)
-                    .url(url)
-                    .securityGroupOid(sgId)
-                    .securityGroupName(sgName)
-                    .appType(AppType.LAA)
-                    .enabled(enabled)
-                    .build();
-        }
+    @Test
+    @DisplayName("ADDED: present only in remote → new local app (disabled), saved and returned with changeType=ADDED")
+    void added_whenOnlyRemote() throws Exception {
+        GetAllApplicationsResponse.TechServicesApplication r1 = remoteApp("R1", "Remote One", "https://r1", "SG1", "Group 1");
+        when(techServicesClient.getAllApplications())
+                .thenReturn(successResponseWithApps(List.of(r1)));
 
-        // simulate your existing "getAllLaaAppEntities" called by service
-        // We'll spy the service to stub that method without hitting DB
-        private void stubLocalApps(List<App> locals) throws Exception {
-            AppService spyService = Mockito.spy(appService);
-            doReturn(locals).when(spyService).getAllLaaAppEntities();
-            // swap the spy into field (since @InjectMocks created original)
-            this.appService = spyService;
-        }
+        stubLocalApps(List.of());
 
-        // ---------- Tests ----------
+        List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
 
-        @Test
-        @DisplayName("ADDED: present only in remote → new local app (disabled), saved and returned with changeType=ADDED")
-        void added_whenOnlyRemote() throws Exception {
-            GetAllApplicationsResponse.TechServicesApplication r1 = remoteApp("R1", "Remote One", "https://r1", "SG1", "Group 1");
-            when(techServicesClient.getAllApplications())
-                    .thenReturn(successResponseWithApps(List.of(r1)));
+        assertThat(out).hasSize(1);
+        assertThat(out.get(0).getId()).isEqualTo("R1");
+        assertThat(out.get(0).getName()).isEqualTo("Remote One");
+        assertThat(out.get(0).getChangeType()).isEqualTo(AppDto.ChangeType.ADDED);
 
-            stubLocalApps(List.of());
+        // saveAll called once with new entity enabled=false
+        ArgumentCaptor<App> captor = ArgumentCaptor.forClass(App.class);
+        verify(appRepository, times(1)).save(captor.capture());
+        App saved = captor.getValue();
+        assertThat(saved.isEnabled()).isFalse();
 
-            List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(authentication);
+        verify(eventService).logEvent(any(AppSynchronizationAuditEvent.class));
+    }
 
-            assertThat(out).hasSize(1);
-            assertThat(out.get(0).getId()).isEqualTo("R1");
-            assertThat(out.get(0).getName()).isEqualTo("Remote One");
-            assertThat(out.get(0).getChangeType()).isEqualTo(AppDto.ChangeType.ADDED);
+    @Test
+    @DisplayName("DELETED: present only in local (enabled) → disabled and returned with changeType=DELETED")
+    void deleted_whenOnlyLocal_enabledGetsDisabledAndSaved() throws Exception {
+        App l1 = localApp("L1", "Local One", "https://l1", "SG1", "Group 1", true);
+        when(techServicesClient.getAllApplications())
+                .thenReturn(successResponseWithApps(List.of()));
 
-            // saveAll called once with new entity enabled=false
-            ArgumentCaptor<Iterable<App>> captor = ArgumentCaptor.forClass(Iterable.class);
-            verify(appRepository, times(1)).saveAll(captor.capture());
-            List<App> saved = new ArrayList<>();
-            captor.getValue().forEach(saved::add);
-            assertThat(saved).hasSize(1);
-            assertThat(saved.get(0).isEnabled()).isFalse();
+        stubLocalApps(List.of(l1));
 
-            verify(eventService).logEvent(any(AppSynchronizationAuditEvent.class));
-        }
+        List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
+        assertThat(out).hasSize(1);
+        assertThat(out.getFirst().getId()).isEqualTo("L1");
+        assertThat(out.getFirst().getChangeType()).isEqualTo(AppDto.ChangeType.DELETED);
 
-        @Test
-        @DisplayName("DELETED: present only in local (enabled) → disabled and returned with changeType=DELETED")
-        void deleted_whenOnlyLocal_enabledGetsDisabledAndSaved() throws Exception {
-            App l1 = localApp("L1", "Local One", "https://l1", "SG1", "Group 1", true);
-            when(techServicesClient.getAllApplications())
-                    .thenReturn(successResponseWithApps(List.of()));
+        ArgumentCaptor<App> captor = ArgumentCaptor.forClass(App.class);
+        verify(appRepository).save(captor.capture());
+        App saved = captor.getValue();
+        assertThat(saved.isEnabled()).isFalse();
 
-            stubLocalApps(List.of(l1));
+        verify(eventService).logEvent(any(AppSynchronizationAuditEvent.class));
+    }
 
-            List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(authentication);
-            assertThat(out).hasSize(1);
-            assertThat(out.get(0).getId()).isEqualTo("L1");
-            assertThat(out.get(0).getChangeType()).isEqualTo(AppDto.ChangeType.DELETED);
+    @Test
+    @DisplayName("DELETED: present only in local (already disabled) → no DB write, still returned as DELETED")
+    void deleted_whenOnlyLocal_alreadyDisabled_noSave() throws Exception {
 
-            ArgumentCaptor<Iterable<App>> captor = ArgumentCaptor.forClass(Iterable.class);
-            verify(appRepository).saveAll(captor.capture());
-            List<App> saved = new ArrayList<>();
-            captor.getValue().forEach(saved::add);
-            assertThat(saved).hasSize(1);
-            assertThat(saved.get(0).isEnabled()).isFalse(); // was true; now false
+        App l1 = localApp("L1", "Local One", "https://l1", "SG1", "Group 1", false);
+        when(techServicesClient.getAllApplications())
+                .thenReturn(successResponseWithApps(List.of()));
 
-            verify(eventService).logEvent(any(AppSynchronizationAuditEvent.class));
-        }
+        stubLocalApps(List.of(l1));
 
-        @Test
-        @DisplayName("DELETED: present only in local (already disabled) → no DB write, still returned as DELETED")
-        void deleted_whenOnlyLocal_alreadyDisabled_noSave() throws Exception {
-            App l1 = localApp("L1", "Local One", "https://l1", "SG1", "Group 1", false);
-            when(techServicesClient.getAllApplications())
-                    .thenReturn(successResponseWithApps(List.of()));
+        List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
+        assertThat(out).hasSize(1);
+        assertThat(out.get(0).getChangeType()).isEqualTo(AppDto.ChangeType.DELETED);
 
-            stubLocalApps(List.of(l1));
+        verify(appRepository, never()).saveAll(any());
+        verify(eventService).logEvent(any(AppSynchronizationAuditEvent.class));
+    }
 
-            List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(authentication);
-            assertThat(out).hasSize(1);
-            assertThat(out.get(0).getChangeType()).isEqualTo(AppDto.ChangeType.DELETED);
+    @Test
+    @DisplayName("NONE: present in both, enabled, and identical fields (including null/empty SG) → no save")
+    void none_whenNoDifferences() throws Exception {
 
-            verify(appRepository, never()).saveAll(any());
-            verify(eventService).logEvent(any(AppSynchronizationAuditEvent.class));
-        }
+        GetAllApplicationsResponse.TechServicesApplication r1 = remoteApp("ID", "Same", "https://same", null, null); // SG list null
+        App l1 = localApp("ID", "Same", "https://same", null, null, true);
 
-        @Test
-        @DisplayName("NONE: present in both, enabled, and identical fields (including null/empty SG) → no save")
-        void none_whenNoDifferences() throws Exception {
-            GetAllApplicationsResponse.TechServicesApplication r1 = remoteApp("ID", "Same", "https://same", null, null); // SG list null
-            App l1 = localApp("ID", "Same", "https://same", null, null, true);
+        when(techServicesClient.getAllApplications())
+                .thenReturn(successResponseWithApps(List.of(r1)));
+        stubLocalApps(List.of(l1));
 
-            when(techServicesClient.getAllApplications())
-                    .thenReturn(successResponseWithApps(List.of(r1)));
-            stubLocalApps(List.of(l1));
+        List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
 
-            List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(authentication);
+        assertThat(out).hasSize(1);
+        AppDto dto = out.get(0);
+        assertThat(dto.getChangeType()).isEqualTo(AppDto.ChangeType.NONE);
 
-            assertThat(out).hasSize(1);
-            AppDto dto = out.get(0);
-            assertThat(dto.getChangeType()).isEqualTo(AppDto.ChangeType.NONE);
+        verify(appRepository, never()).saveAll(any());
+        verify(eventService).logEvent(any(AppSynchronizationAuditEvent.class));
+    }
 
-            verify(appRepository, never()).saveAll(any());
-            verify(eventService).logEvent(any(AppSynchronizationAuditEvent.class));
-        }
+    @Test
+    @DisplayName("REVIEW: present in both but local is disabled → metadata updated, saved; changeType=REVIEW")
+    void review_whenLocalDisabled() throws Exception {
 
-        @Test
-        @DisplayName("REVIEW: present in both but local is disabled → metadata updated, saved; changeType=REVIEW")
-        void review_whenLocalDisabled() throws Exception {
-            GetAllApplicationsResponse.TechServicesApplication r1 = remoteApp("ID", "RemoteName", "https://remote", "SGX", "RemoteSG");
-            App l1 = localApp("ID", "OldName", "https://old", "SG0", "OldSG", false);
+        GetAllApplicationsResponse.TechServicesApplication r1 = remoteApp("ID", "RemoteName", "https://remote", "SGX", "RemoteSG");
+        App l1 = localApp("ID", "OldName", "https://old", "SG0", "OldSG", false);
 
-            when(techServicesClient.getAllApplications())
-                    .thenReturn(successResponseWithApps(List.of(r1)));
-            stubLocalApps(List.of(l1));
+        when(techServicesClient.getAllApplications())
+                .thenReturn(successResponseWithApps(List.of(r1)));
+        stubLocalApps(List.of(l1));
 
-            List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(authentication);
+        List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
 
-            assertThat(out).hasSize(1);
-            AppDto dto = out.get(0);
-            assertThat(dto.getChangeType()).isEqualTo(AppDto.ChangeType.REVIEW);
-            // updatedCount increments but that's internal—indirectly verified via event summary (below)
-            ArgumentCaptor<Iterable<App>> captor = ArgumentCaptor.forClass(Iterable.class);
-            verify(appRepository).saveAll(captor.capture());
-            List<App> saved = new ArrayList<>();
-            captor.getValue().forEach(saved::add);
-            assertThat(saved).hasSize(1);
-            App savedApp = saved.get(0);
-            assertThat(savedApp.getName()).isEqualTo("RemoteName");
-            assertThat(savedApp.getUrl()).isEqualTo("https://remote");
-            assertThat(savedApp.getSecurityGroupOid()).isEqualTo("SGX");
-            assertThat(savedApp.getSecurityGroupName()).isEqualTo("RemoteSG");
+        assertThat(out).hasSize(1);
+        AppDto dto = out.get(0);
+        assertThat(dto.getChangeType()).isEqualTo(AppDto.ChangeType.REVIEW);
+        // updatedCount increments but that's internal—indirectly verified via event summary (below)
+        ArgumentCaptor<App> captor = ArgumentCaptor.forClass(App.class);
+        verify(appRepository).save(captor.capture());
+        App savedApp = captor.getValue();
+        assertThat(savedApp.getName()).isEqualTo("RemoteName");
+        assertThat(savedApp.getUrl()).isEqualTo("https://remote");
+        assertThat(savedApp.getSecurityGroupOid()).isEqualTo("SGX");
+        assertThat(savedApp.getSecurityGroupName()).isEqualTo("RemoteSG");
 
-            // Verify event summary mentions Updated=1
-            ArgumentCaptor<AppSynchronizationAuditEvent> eventCaptor = ArgumentCaptor.forClass(AppSynchronizationAuditEvent.class);
-            verify(eventService).logEvent(eventCaptor.capture());
-            assertThat(eventCaptor.getValue().getDescription())
-                    .contains("Updated apps: 1");
-        }
+        // Verify event summary mentions Updated=1
+        ArgumentCaptor<AppSynchronizationAuditEvent> eventCaptor = ArgumentCaptor.forClass(AppSynchronizationAuditEvent.class);
+        verify(eventService).logEvent(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().getDescription())
+                .contains("Updated apps: 1");
+    }
 
-        @Test
-        @DisplayName("UPDATED: present in both, enabled, field differences → saved and returned as UPDATED")
-        void updated_whenDifferencesAndEnabled() throws Exception {
-            GetAllApplicationsResponse.TechServicesApplication r1 = remoteApp("ID", "NewName", "https://new", "SG2", "SG Two");
-            App l1 = localApp("ID", "OldName", "https://old", "SG1", "SG One", true);
+    @Test
+    @DisplayName("UPDATED: present in both, enabled, field differences → saved and returned as UPDATED")
+    void updated_whenDifferencesAndEnabled() throws Exception {
 
-            when(techServicesClient.getAllApplications())
-                    .thenReturn(successResponseWithApps(List.of(r1)));
-            stubLocalApps(List.of(l1));
+        GetAllApplicationsResponse.TechServicesApplication r1 = remoteApp("ID", "NewName", "https://new", "SG2", "SG Two");
+        App l1 = localApp("ID", "OldName", "https://old", "SG1", "SG One", true);
+        when(techServicesClient.getAllApplications())
+                .thenReturn(successResponseWithApps(List.of(r1)));
+        stubLocalApps(List.of(l1));
 
-            List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(authentication);
+        List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
 
-            assertThat(out).hasSize(1);
-            assertThat(out.get(0).getChangeType()).isEqualTo(AppDto.ChangeType.UPDATED);
+        assertThat(out).hasSize(1);
+        assertThat(out.get(0).getChangeType()).isEqualTo(AppDto.ChangeType.UPDATED);
 
-            // Must save updated local
-            verify(appRepository).saveAll(any());
-            verify(eventService).logEvent(any(AppSynchronizationAuditEvent.class));
-        }
+        // Must save updated local
+        verify(appRepository).save(any());
+        verify(eventService).logEvent(any(AppSynchronizationAuditEvent.class));
+    }
 
-        @Test
-        @DisplayName("Sorting: result sorted by name (case-insensitive) then ID")
-        void sortingByNameThenId() throws Exception {
-            GetAllApplicationsResponse.TechServicesApplication r1 = remoteApp("X2", "alpha", "u1", null, null);
-            GetAllApplicationsResponse.TechServicesApplication r2 = remoteApp("X1", "Alpha", "u2", null, null);
-            GetAllApplicationsResponse.TechServicesApplication r3 = remoteApp("X3", "beta", "u3", null, null);
+    @Test
+    @DisplayName("Defensive nulls: apps list is null → treat as empty")
+    void appsNull_treatedAsEmpty() throws Exception {
+        GetAllApplicationsResponse data = GetAllApplicationsResponse.builder().success(true).build();
+        TechServicesApiResponse<GetAllApplicationsResponse> resp = TechServicesApiResponse.success(data);
+        when(techServicesClient.getAllApplications()).thenReturn(resp);
 
-            when(techServicesClient.getAllApplications())
-                    .thenReturn(successResponseWithApps(List.of(r1, r2, r3)));
 
-            stubLocalApps(List.of()); // all ADDED
+        App l1 = localApp("L1", "Local One", "https://l1", null, null, true);
+        stubLocalApps(List.of(l1));
 
-            List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(authentication);
+        List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
+        assertThat(out).hasSize(1);
+        assertThat(out.getFirst().getChangeType()).isEqualTo(AppDto.ChangeType.DELETED);
+    }
 
-            // Names equal ignoring case: then compare by ID (X1 before X2)
-            assertThat(out).extracting(AppDto::getName, AppDto::getId)
-                    .containsExactly(
-                            tuple("Alpha", "X1"),
-                            tuple("alpha", "X2"),
-                            tuple("beta", "X3")
-                    );
-        }
+    @Test
+    @DisplayName("Error path: failure with message → throws RuntimeException with that message")
+    void errorFromRemote_withMessage() throws Exception {
+        when(techServicesClient.getAllApplications())
+                .thenReturn(failureResponse("Bad Gateway"));
 
-        @Test
-        @DisplayName("Duplicate remote IDs: first occurrence wins (merge keeps left)")
-        void duplicateRemoteIds_firstWins() throws Exception {
-            GetAllApplicationsResponse.TechServicesApplication first = remoteApp("DUP", "First", "u1", null, null);
-            GetAllApplicationsResponse.TechServicesApplication second = remoteApp("DUP", "Second", "u2", null, null);
+        assertThatThrownBy(() ->
+                appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto)
+        )
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Bad Gateway");
 
-            when(techServicesClient.getAllApplications())
-                    .thenReturn(successResponseWithApps(List.of(first, second)));
+        verifyNoInteractions(appRepository);
+        verify(eventService, never()).logEvent(any());
+    }
 
-            stubLocalApps(List.of());
+    @Test
+    @DisplayName("Security group comparison: empty list on remote equals null local fields → NONE")
+    void sgEmptyEqualsNullLocal() throws Exception {
+        GetAllApplicationsResponse.TechServicesApplication r = mock(GetAllApplicationsResponse.TechServicesApplication.class);
+        when(r.getId()).thenReturn("ID");
+        when(r.getName()).thenReturn("Same");
+        when(r.getUrl()).thenReturn("https://same");
+        when(r.getSecurityGroups()).thenReturn(Collections.emptyList()); // empty
 
-            List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(authentication);
+        App l = localApp("ID", "Same", "https://same", null, null, true);
 
-            assertThat(out).hasSize(1);
-            assertThat(out.get(0).getName()).isEqualTo("First"); // confirms "left" kept
-        }
+        when(techServicesClient.getAllApplications())
+                .thenReturn(successResponseWithApps(List.of(r)));
+        stubLocalApps(List.of(l));
 
-        @Test
-        @DisplayName("Defensive nulls: payload is null → treat as no remote apps")
-        void payloadNull_treatedAsEmpty() throws Exception {
-            @SuppressWarnings("unchecked")
-            TechServicesApiResponse<GetAllApplicationsResponse> resp = mock(TechServicesApiResponse.class);
-            when(resp.isSuccess()).thenReturn(true);
-            when(resp.getData()).thenReturn(null); // payload null
-            when(techServicesClient.getAllApplications()).thenReturn(resp);
-
-            App l1 = localApp("L1", "Local One", "https://l1", null, null, true);
-            stubLocalApps(List.of(l1));
-
-            List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(authentication);
-            assertThat(out).hasSize(1);
-            assertThat(out.get(0).getChangeType()).isEqualTo(AppDto.ChangeType.DELETED);
-        }
-
-        @Test
-        @DisplayName("Defensive nulls: apps list is null → treat as empty")
-        void appsNull_treatedAsEmpty() throws Exception {
-            @SuppressWarnings("unchecked")
-            TechServicesApiResponse<GetAllApplicationsResponse> resp = mock(TechServicesApiResponse.class);
-            GetAllApplicationsResponse data = mock(GetAllApplicationsResponse.class);
-            when(resp.isSuccess()).thenReturn(true);
-            when(resp.getData()).thenReturn(data);
-            when(data.getApps()).thenReturn(null); // apps null
-            when(techServicesClient.getAllApplications()).thenReturn(resp);
-
-            App l1 = localApp("L1", "Local One", "https://l1", null, null, true);
-            stubLocalApps(List.of(l1));
-
-            List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(authentication);
-            assertThat(out).hasSize(1);
-            assertThat(out.get(0).getChangeType()).isEqualTo(AppDto.ChangeType.DELETED);
-        }
-
-        @Test
-        @DisplayName("Error path: failure with message → throws RuntimeException with that message")
-        void errorFromRemote_withMessage() throws Exception {
-            when(techServicesClient.getAllApplications())
-                    .thenReturn(failureResponse("Bad Gateway"));
-
-            stubLocalApps(List.of());
-
-            assertThatThrownBy(() ->
-                    appService.synchronizeAndGetApplicationsFromTechServices(authentication)
-            )
-                    .isInstanceOf(RuntimeException.class)
-                    .hasMessage("Bad Gateway");
-
-            verifyNoInteractions(appRepository);
-            verify(eventService, never()).logEvent(any());
-        }
-
-        @Test
-        @DisplayName("Error path: failure without message → throws RuntimeException with 'Unknown error from Tech Services'")
-        void errorFromRemote_withoutMessage() throws Exception {
-            when(techServicesClient.getAllApplications())
-                    .thenReturn(failureResponse(null));
-
-            stubLocalApps(List.of());
-
-            assertThatThrownBy(() ->
-                    appService.synchronizeAndGetApplicationsFromTechServices(authentication)
-            )
-                    .isInstanceOf(RuntimeException.class)
-                    .hasMessage("Unknown error from Tech Services");
-
-            verifyNoInteractions(appRepository);
-            verify(eventService, never()).logEvent(any());
-        }
-
-        @Test
-        @DisplayName("Security group comparison: empty list on remote equals null local fields → NONE")
-        void sgEmptyEqualsNullLocal() throws Exception {
-            GetAllApplicationsResponse.TechServicesApplication r = mock(GetAllApplicationsResponse.TechServicesApplication.class);
-            when(r.getId()).thenReturn("ID");
-            when(r.getName()).thenReturn("Same");
-            when(r.getUrl()).thenReturn("https://same");
-            when(r.getSecurityGroups()).thenReturn(Collections.emptyList()); // empty
-
-            App l = localApp("ID", "Same", "https://same", null, null, true);
-
-            when(techServicesClient.getAllApplications())
-                    .thenReturn(successResponseWithApps(List.of(r)));
-            stubLocalApps(List.of(l));
-
-            List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(authentication);
-            assertThat(out).hasSize(1);
-            assertThat(out.get(0).getChangeType()).isEqualTo(AppDto.ChangeType.NONE);
-        }
+        List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
+        assertThat(out).hasSize(1);
+        assertThat(out.getFirst().getChangeType()).isEqualTo(AppDto.ChangeType.NONE);
+    }
 }

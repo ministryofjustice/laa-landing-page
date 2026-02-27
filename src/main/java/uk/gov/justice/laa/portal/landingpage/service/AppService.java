@@ -5,15 +5,14 @@ import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppSynchronizationAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.forms.AppsOrderForm;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetAllApplicationsResponse;
@@ -40,7 +39,6 @@ public class AppService {
 
     private final ModelMapper mapper;
     private final EventService eventService;
-    private final LoginService loginService;
 
     public Optional<App> getById(UUID id) {
         return appRepository.findById(id);
@@ -105,7 +103,7 @@ public class AppService {
     }
 
     @Transactional
-    public List<AppDto> synchronizeAndGetApplicationsFromTechServices(Authentication authentication) {
+    public List<AppDto> synchronizeAndGetApplicationsFromTechServices(CurrentUserDto currentUserDto, UserProfileDto userProfile) {
         log.info("Synchronizing applications from Tech Services...");
         int counter = 0;
         int noChangesCounter = 0;
@@ -117,8 +115,7 @@ public class AppService {
             List<GetAllApplicationsResponse.TechServicesApplication> remoteApps = getAllApplicationsResponse.getData().getApps();
             List<App> localApps = getAllLaaAppEntities();
 
-
-            Map<String, GetAllApplicationsResponse.TechServicesApplication> remoteMap = remoteApps.stream()
+            Map<String, GetAllApplicationsResponse.TechServicesApplication> remoteMap = remoteApps == null ? Map.of() : remoteApps.stream()
                     .collect(Collectors.toMap(GetAllApplicationsResponse.TechServicesApplication::getId, a -> a));
 
             Map<String, App> localMap = localApps.stream()
@@ -133,18 +130,12 @@ public class AppService {
             for (String id : allIds) {
                 GetAllApplicationsResponse.TechServicesApplication remote = remoteMap.get(id);
                 App local = localMap.get(id);
-                AppDto syncedApp = null;
+                AppDto syncedApp;
 
                 if (remote != null && local != null) {
                     AppDto.ChangeType changeType = getChangeType(remote, local);
                     counter++;
                     switch (changeType) {
-                        case NONE -> {
-                            log.info("No changes for app with id: {}", id);
-                            syncedApp = mapper.map(local, AppDto.class);
-                            syncedApp.setChangeType(changeType);
-                            noChangesCounter++;
-                        }
                         case REVIEW -> {
                             log.info("App disabled locally for app with id: {}", id);
                             local.setName(remote.getName());
@@ -166,6 +157,13 @@ public class AppService {
                             syncedApp = mapper.map(local, AppDto.class);
                             syncedApp.setChangeType(changeType);
                             updatedAppsCounter++;
+                        }
+                        default -> {
+                            // NONE
+                            log.info("No changes for app with id: {}", id);
+                            syncedApp = mapper.map(local, AppDto.class);
+                            syncedApp.setChangeType(changeType);
+                            noChangesCounter++;
                         }
                     }
                 } else if (remote != null) {
@@ -200,8 +198,6 @@ public class AppService {
             log.info("Finished synchronizing applications from Tech Services. Total apps processed: {}, No changes: {}, New apps: {}, Updated apps: {}, Deleted apps: {}",
                     counter, noChangesCounter, newAppsCounter, updatedAppsCounter, deletedAppsCounter);
 
-            CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            UserProfile userProfile = loginService.getCurrentProfile(authentication);
             AppSynchronizationAuditEvent appSynchronizationAuditEvent =
                     new AppSynchronizationAuditEvent(currentUserDto, userProfile.getId(),
                             String.format("Total apps processed: %s, No changes: %s, New apps: %s, Updated apps: %s, Deleted apps: %s",

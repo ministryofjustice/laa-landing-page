@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -36,6 +37,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UpdateAppDetailsAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateAppDisplayOrderAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateAppRoleDetailsAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateAppRoleDisplayOrderAuditEvent;
+import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
@@ -64,6 +66,7 @@ import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFro
 @RequestMapping("/admin")
 @PreAuthorize("@accessControlService.userHasAuthzRole(authentication, T(uk.gov.justice.laa.portal.landingpage.entity.AuthzRole).SILAS_ADMINISTRATION.roleName)")
 public class AdminController {
+    private final ModelMapper modelMapper;
 
     public static final String SILAS_ADMINISTRATION_TITLE = "SiLAS Administration";
     private static final Set<String> VALID_TABS = Set.of("admin-apps", "apps", "roles");
@@ -136,7 +139,9 @@ public class AdminController {
         // Load all admin apps data for admin-apps tab
         model.addAttribute("adminApps", adminService.getAllAdminApps());
 
-        List<AppDto> apps = appService.synchronizeAndGetApplicationsFromTechServices(authentication);
+        CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+        UserProfileDto userProfile = modelMapper.map(loginService.getCurrentProfile(authentication), UserProfileDto.class);
+        List<AppDto> apps = appService.synchronizeAndGetApplicationsFromTechServices(currentUserDto, userProfile);
         model.addAttribute("apps", apps);
 
 
