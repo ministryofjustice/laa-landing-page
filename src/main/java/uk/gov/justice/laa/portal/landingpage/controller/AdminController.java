@@ -18,6 +18,7 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -33,6 +34,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.RoleCreationDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateAppDetailsAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateAppDisplayOrderAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateAppRoleDetailsAuditEvent;
@@ -41,7 +43,9 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.AppDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRoleDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRolesOrderForm;
@@ -190,7 +194,7 @@ public class AdminController {
                                      BindingResult result, Model model, HttpSession session) {
         if (result.hasErrors()) {
             model.addAttribute("app", findAppDtoOrThrow(appId));
-            model.addAttribute("errorMessage", buildErrorString(result));
+            model.addAttribute("errorMessage", buildErrorMessages(result));
             return "silas-administration/edit-app-details";
         }
 
@@ -291,8 +295,7 @@ public class AdminController {
                                    Model model,
                                    HttpSession session) {
         if (result.hasErrors()) {
-            String errorMessage = buildErrorString(result);
-            model.addAttribute("errorMessage", errorMessage);
+            model.addAttribute("errorMessage", buildErrorMessages(result));
             return "silas-administration/edit-apps-order";
         }
 
@@ -360,7 +363,7 @@ public class AdminController {
                                          HttpSession session) {
         if (result.hasErrors()) {
             model.addAttribute("appRole", findAppRoleDtoOrThrow(roleId));
-            model.addAttribute("errorMessage", buildErrorString(result));
+            model.addAttribute("errorMessage", buildErrorMessages(result));
             return "silas-administration/edit-role-details";
         }
 
@@ -477,8 +480,7 @@ public class AdminController {
         model.addAttribute("appName", appName);
 
         if (result.hasErrors()) {
-            String errorMessage = buildErrorString(result);
-            model.addAttribute("errorMessage", errorMessage);
+            model.addAttribute("errorMessage", buildErrorMessages(result));
             return "silas-administration/edit-app-roles-order";
         }
 
@@ -568,7 +570,7 @@ public class AdminController {
     }
 
     @GetMapping("/silas-administration/delete-role/{roleId}/reason")
-    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_LAA_APP_METADATA)")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).DELETE_LAA_APP_ROLE)")
     public String showDeleteAppRoleReasonPage(@PathVariable String roleId,
                                               HttpSession session,
                                               Model model) {
@@ -773,10 +775,10 @@ public class AdminController {
                 .forEach(session::removeAttribute);
     }
 
-    private String buildErrorString(BindingResult result) {
+    private List<String> buildErrorMessages(BindingResult result) {
         return result.getAllErrors().stream()
                 .map(ObjectError::getDefaultMessage)
-                .collect(Collectors.joining("<br/>"));
+                .toList();
     }
 
     private AppDto findAppDtoOrThrow(String appId) {
@@ -799,4 +801,95 @@ public class AdminController {
         }
     }
 
+    @GetMapping("/silas-administration/roles/create")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_LAA_APP_ROLE)")
+    public String showRoleCreationForm(Model model, HttpSession session) {
+        RoleCreationDto roleCreationDto = (RoleCreationDto) session.getAttribute("roleCreationDto");
+        if (roleCreationDto == null) {
+            roleCreationDto = new RoleCreationDto();
+        }
+
+        model.addAttribute("roleCreationDto", roleCreationDto);
+        model.addAttribute("apps", appService.getAllLaaApps());
+        model.addAttribute("userTypes", UserType.values());
+        model.addAttribute("firmTypes", FirmType.values());
+
+        return "silas-administration/create-role";
+    }
+
+    @PostMapping("/silas-administration/roles/create")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_LAA_APP_ROLE)")
+    public String processRoleCreation(@Valid @ModelAttribute RoleCreationDto roleCreationDto,
+                                      BindingResult bindingResult,
+                                      Model model,
+                                      HttpSession session) {
+
+        // Validate role name uniqueness within app
+        if (roleCreationDto.getParentAppId() != null && roleCreationDto.getName() != null) {
+            if (appRoleService.isRoleNameExistsInApp(roleCreationDto.getName(), roleCreationDto.getParentAppId())) {
+                bindingResult.rejectValue("name", "role.name.exists",
+                    "A role with this name already exists in the selected application");
+            }
+        }
+
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("apps", appService.getAllLaaApps());
+            model.addAttribute("userTypes", UserType.values());
+            model.addAttribute("firmTypes", FirmType.values());
+            return "silas-administration/create-role";
+        }
+
+        roleCreationDto = appRoleService.enrichRoleCreationDto(roleCreationDto);
+
+        session.setAttribute("roleCreationDto", roleCreationDto);
+
+        return "redirect:/admin/silas-administration/roles/create/check-your-answers";
+    }
+
+    @GetMapping("/silas-administration/roles/create/check-your-answers")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_LAA_APP_ROLE)")
+    public String showCheckYourAnswers(Model model, HttpSession session) {
+        RoleCreationDto roleCreationDto = getObjectFromHttpSession(session, "roleCreationDto", RoleCreationDto.class)
+                .orElseThrow(() -> new RuntimeException("App role details not found in session"));
+
+        model.addAttribute("roleCreationDto", roleCreationDto);
+        return "silas-administration/create-role-check-answers";
+    }
+
+    @PostMapping("/silas-administration/roles/create/check-your-answers")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_LAA_APP_ROLE)")
+    public String confirmCheckYourAnswers(HttpSession session, RedirectAttributes redirectAttributes) {
+        RoleCreationDto roleCreationDto = getObjectFromHttpSession(session, "roleCreationDto", RoleCreationDto.class)
+                .orElseThrow(() -> new RuntimeException("App role details not found in session"));
+
+        try {
+            appRoleService.createRole(roleCreationDto);
+            session.setAttribute("createdRole", roleCreationDto);
+            session.removeAttribute("roleCreationDto");
+        } catch (Exception e) {
+            log.error("Error creating role: {}", e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("errorMessage",
+                "Failed to create role: " + e.getMessage());
+            return "redirect:/admin/silas-administration?tab=roles#roles";
+        }
+
+        return "redirect:/admin/silas-administration/roles/create/confirmation";
+    }
+
+    @GetMapping("/silas-administration/roles/create/confirmation")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_LAA_APP_ROLE)")
+    public String showRoleCreated(Model model, HttpSession session) {
+        Optional<RoleCreationDto> createdRoleOptional = getObjectFromHttpSession(session, "createdRole", RoleCreationDto.class);
+
+        if (createdRoleOptional.isPresent()) {
+            RoleCreationDto createdRole = createdRoleOptional.get();
+            model.addAttribute("createdRole", createdRole);
+        } else {
+            log.error("No createdRole attribute was present in request.");
+        }
+
+        session.removeAttribute("createdRole");
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Role created");
+        return "silas-administration/create-role-confirmation";
+    }
 }

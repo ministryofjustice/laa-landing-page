@@ -232,6 +232,16 @@ spec:
               value: "${TECH_SERVICES_REQ_READ_TIMEOUT}"
             - name: TECH_SERVICES_REQ_CONNECT_TIMEOUT
               value: "${TECH_SERVICES_REQ_CONNECT_TIMEOUT}"
+            - name: PDA_SYNC_SCHEDULER_ENABLED
+              value: "${PDA_SYNC_SCHEDULER_ENABLED}"
+            - name: PDA_SYNC_SCHEDULER_CRON
+              value: "${PDA_SYNC_SCHEDULER_CRON}"
+            - name: PDA_SYNC_SCHEDULER_RUN_ON_STARTUP
+              value: "${PDA_SYNC_SCHEDULER_RUN_ON_STARTUP}"
+            - name: APP_DATA_PROVIDER_BASE_URL
+              value: "${APP_DATA_PROVIDER_BASE_URL}"
+            - name: APP_DATA_PROVIDER_API_KEY
+              value: "${APP_DATA_PROVIDER_API_KEY}"
             - name: SENTRY_ENVIRONMENT
               value: "${SENTRY_ENVIRONMENT}"
             - name: SENTRY_ENABLED

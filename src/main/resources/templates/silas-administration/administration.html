@@ -264,16 +264,15 @@
              role="tabpanel" aria-labelledby="tab-roles"
              th:classappend="${activeTab != 'roles'} ? ' govuk-tabs__panel--hidden' : null">
 
-            <!-- Action buttons at top right -->
-            <div style="text-align: right; margin-bottom: 30px;">
-                <button class="govuk-button" data-module="govuk-button" type="button" style="margin-right: 10px;">
-                    Create a new role
-                </button>
-                <a href="/admin/silas-administration/delete-role" class="govuk-button govuk-button--warning"
-                   data-module="govuk-button" style="margin-right: 10px;">
-                    Delete a role
-                </a>
-            </div>
+        <!-- Action buttons at top right -->
+        <div style="text-align: right; margin-bottom: 30px;">
+            <a href="/admin/silas-administration/roles/create" class="govuk-button" data-module="govuk-button" style="margin-right: 10px;">
+                Create a new role
+            </a>
+            <a href="/admin/silas-administration/delete-role" class="govuk-button govuk-button--warning" data-module="govuk-button" style="margin-right: 10px;">
+                Delete a role
+            </a>
+        </div>
 
             <!-- Error summary (disable auto focus to avoid scroll) -->
             <div th:if="${appRolesErrorMessage}" class="govuk-error-summary"
