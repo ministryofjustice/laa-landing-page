@@ -329,9 +329,7 @@ public class UserService {
         });
 
         if (user.getUserProfiles() == null || user.getUserProfiles().isEmpty()) {
-            logger.error("User profile not found for the given user id: {}", userId);
-            throw new RuntimeException(
-                    String.format("User profile not found for the given user id: %s", userId));
+            return Optional.empty();
         }
 
         return user.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
@@ -1658,8 +1656,8 @@ public class UserService {
         Set<String> firmCodes = new HashSet<>();
 
         if (!csvExport) {
-            firmCodes = profiles.stream().map(UserProfile::getFirm).filter(Objects::nonNull)
-                .map(Firm::getCode).collect(Collectors.toCollection(TreeSet::new));
+            firmCodes = profiles.stream().map(profile -> profile.getFirm()).filter(Objects::nonNull)
+                .map(Firm::getCode).collect(Collectors.toCollection(HashSet::new));
         } else {
             List<Firm> sortedFirms =
                     profiles.stream().map(UserProfile::getFirm
@@ -1855,6 +1853,7 @@ public class UserService {
         // Build detail DTO
         return AuditUserDetailDto.builder().userId(entraUser.getId().toString())
                 .email(entraUser.getEmail()).firstName(entraUser.getFirstName())
+                .enabled(entraUser.isEnabled())
                 .lastName(entraUser.getLastName())
                 .fullName(entraUser.getFirstName() + " " + entraUser.getLastName())
                 .isMultiFirmUser(entraUser.isMultiFirmUser()).userType(userType)

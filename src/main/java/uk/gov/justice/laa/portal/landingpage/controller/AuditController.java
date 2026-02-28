@@ -144,7 +144,6 @@ public class AuditController {
         if (isEntraId) {
             // Load user by EntraUser ID (for users without profiles)
             userDetail = userService.getAuditUserDetailByEntraId(userId);
-            canDisableUser = accessControlService.canDisableUser(userId.toString());
         } else {
             // Try to load by UserProfile ID first (existing behavior)
             try {
@@ -156,6 +155,7 @@ public class AuditController {
                 userDetail = userService.getAuditUserDetailByEntraId(userId);
             }
         }
+        canDisableUser = accessControlService.canDisableUser(userDetail.getUserId());
 
         // Add attributes to model
         model.addAttribute("user", userDetail);
