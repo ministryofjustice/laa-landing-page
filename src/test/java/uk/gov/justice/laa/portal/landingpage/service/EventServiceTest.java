@@ -38,16 +38,17 @@ class EventServiceTest {
         UUID adminUuid = UUID.randomUUID();
         currentUserDto.setUserId(adminUuid);
         UUID userId = UUID.randomUUID();
-        EntraUser entraUser = EntraUser.builder().firstName("new").lastName("User").id(userId).build();
+        String entraOid = UUID.randomUUID().toString();
+        EntraUser entraUser = EntraUser.builder().firstName("new").lastName("User").id(userId).entraOid(entraOid).build();
         ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(EventService.class);
-        String selectedFirm = "Firm";
+        String selectedFirmId = "Firm";
         boolean isUserManager = true;
-        CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser, selectedFirm, isUserManager);
+        CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser, selectedFirmId, isUserManager);
         eventService.logEvent(createUserAuditEvent);
         List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
         assertEquals(1, infoLogs.size());
-        assertThat(infoLogs.get(0).getFormattedMessage()).contains("Audit event CREATE_USER, by User with user id " + adminUuid
-                + ", New user created, user id " + userId + ", with firm Firm and user type External User Manager");
+        assertThat(infoLogs.get(0).getFormattedMessage()).contains("Audit event CREATE_USER, by User with entra oid " + adminUuid
+                + ", New user created, entra oid " + entraOid + ", with firm Firm and user type External User Manager");
     }
 
     @Test
@@ -74,7 +75,7 @@ class EventServiceTest {
         List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
         assertEquals(1, infoLogs.size());
         String message = infoLogs.get(0).getFormattedMessage();
-        assertThat(message).contains("Audit event USER_DELETE_ATTEMPT, by User with user id " + adminUuid);
+        assertThat(message).contains("Audit event USER_DELETE_ATTEMPT, by User with entra oid " + adminUuid);
         assertThat(message).contains("User delete attempted, user id " + deletedUserId + " for reason " + reason + ", error: " + error);
     }
 
@@ -83,6 +84,7 @@ class EventServiceTest {
         // Given
         UUID adminUuid = UUID.randomUUID();
         UUID deletedUserId = UUID.randomUUID();
+        String deletedUserEntraId = UUID.randomUUID().toString();
         String reason = "left organisation";
 
         CurrentUserDto currentUserDto = new CurrentUserDto();
@@ -91,6 +93,7 @@ class EventServiceTest {
 
         DeletedUser deletedUser = DeletedUser.builder()
                 .deletedUserId(deletedUserId)
+                .deletedUserEntraOid(deletedUserEntraId)
                 .removedRolesCount(3)
                 .detachedOfficesCount(2)
                 .build();
@@ -107,9 +110,9 @@ class EventServiceTest {
         List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
         assertEquals(1, infoLogs.size());
         String message = infoLogs.get(0).getFormattedMessage();
-        assertThat(message).contains("Audit event USER_DELETE_EXECUTED, by User with user id " + adminUuid);
-        assertThat(message).contains("User deleted successfully, deleted user id " + deletedUserId
-                + " for reason " + reason + ". 3 roles removed. 2 offices detached");
+        assertThat(message).contains("Audit event USER_DELETE_EXECUTED, by User with entra oid " + adminUuid);
+        assertThat(message).contains("User deleted successfully, deleted user with id " + deletedUserId
+                + ", entraOid " + deletedUserEntraId + " for reason " + reason + ". 3 roles removed. 2 offices detached");
     }
 
     @Test
@@ -129,8 +132,8 @@ class EventServiceTest {
         eventService.logEvent(updateUserAuditEvent);
         List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
         assertEquals(1, infoLogs.size());
-        assertThat(infoLogs.get(0).getFormattedMessage()).contains("Audit event UPDATE_USER, by User with user id " + adminUuid
-                + ", Existing user id " + entraUser.getId() + " updated, profile id " + profileId + ", with role Removed: Old Role, Added: New Role\n"
+        assertThat(infoLogs.get(0).getFormattedMessage()).contains("Audit event UPDATE_USER, by User with entra oid " + adminUuid
+                + ", Existing entra oid " + entraUser.getEntraOid() + ", user profile id " + profileId + " updated, with role Removed: Old Role, Added: New Role\n"
                 + "\n");
     }
 
@@ -151,8 +154,8 @@ class EventServiceTest {
         eventService.logEvent(updateUserAuditEvent);
         List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
         assertEquals(1, infoLogs.size());
-        assertThat(infoLogs.get(0).getFormattedMessage()).contains("Audit event UPDATE_USER, by User with user id " + adminUuid
-                + ", Existing user id " + entraUser.getId() + " updated, profile id " + profileId + ", with office Removed : Office1, Added : Office2");
+        assertThat(infoLogs.get(0).getFormattedMessage()).contains("Audit event UPDATE_USER, by User with entra oid " + adminUuid
+                + ", Existing entra oid " + entraUser.getEntraOid() + ", user profile id " + profileId + " updated, with office Removed : Office1, Added : Office2");
     }
 
     @Test
@@ -165,7 +168,7 @@ class EventServiceTest {
         eventService.logEvent(switchProfileAuditEvent);
         List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
         assertEquals(1, infoLogs.size());
-        assertThat(infoLogs.get(0).getFormattedMessage()).contains("Audit event SWITCH_FIRM, by User with user id "
-                + userId + ", User firm switched, user id " + userId + ", from firm Old Firm to firm New Firm");
+        assertThat(infoLogs.get(0).getFormattedMessage()).contains("Audit event SWITCH_FIRM, by User with entra oid "
+                + userId + ", User firm switched, user id " + userId + ", from firm id Old Firm to firm id New Firm");
     }
 }

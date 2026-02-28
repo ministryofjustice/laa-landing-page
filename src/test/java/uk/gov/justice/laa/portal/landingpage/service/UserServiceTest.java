@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.Assertions;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
@@ -284,7 +285,7 @@ class UserServiceTest {
                 .thenReturn(true);
 
         // Act
-        userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID());
+        userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID(), anyString());
 
         // Assert
         verify(techServicesClient).deleteRoleAssignment(entraId);
@@ -325,7 +326,7 @@ class UserServiceTest {
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
 
         // Act
-        userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID());
+        userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID(), anyString());
 
         // Assert
         verify(techServicesClient).deleteRoleAssignment(entraId);
@@ -345,6 +346,7 @@ class UserServiceTest {
         EntraUser entraUser = EntraUser.builder()
                 .id(entraId)
                 .email("user@example.com")
+                .entraOid(entraId.toString())
                 .build();
 
         AppRole role1 = AppRole.builder().name("Role1").build();
@@ -363,7 +365,7 @@ class UserServiceTest {
         when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
 
         // Act
-        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID());
+        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID(), entraId.toString());
 
         // Assert
         verify(techServicesClient).deleteRoleAssignment(entraId);
@@ -371,7 +373,7 @@ class UserServiceTest {
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
         verify(mockEntraUserRepository, times(1)).delete(entraUser);
         assertThat(result).isNotNull();
-        assertThat(result.getDeletedUserId()).isEqualTo(entraId);
+        assertEquals(result.getDeletedUserEntraOid(), entraId.toString());
     }
 
     @Test
@@ -394,7 +396,7 @@ class UserServiceTest {
 
         // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID()));
+                () -> userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID(), anyString()));
         assertThat(ex.getMessage()).contains("tech services down");
         verify(mockUserProfileRepository, never()).deleteAll(any());
         verify(mockEntraUserRepository, never()).delete(any());
@@ -416,7 +418,7 @@ class UserServiceTest {
 
         // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> userService.deleteExternalUser(profileId.toString(), "reason", UUID.randomUUID()));
+                () -> userService.deleteExternalUser(profileId.toString(), "reason", UUID.randomUUID(), anyString()));
         assertThat(ex.getMessage()).contains("Deletion is only permitted for external users");
         verify(techServicesClient, never()).deleteRoleAssignment(any());
     }
@@ -2822,7 +2824,7 @@ class UserServiceTest {
                     () -> userService.createUser(entraUserDto, firm, true, "admin", false),
                     "Expected Runtime Exception");
             assertThat(rtEx.getMessage())
-                    .isEqualTo("User Test User is not a multi-firm user, firm selection can not be skipped");
+                    .isEqualTo("User with entra id: id is not a multi-firm user, firm selection can not be skipped");
             verify(mockEntraUserRepository, never()).saveAndFlush(any());
             verify(techServicesClient, times(1)).registerNewUser(any(EntraUserDto.class));
         }
@@ -4508,7 +4510,7 @@ class UserServiceTest {
             RuntimeException ex = assertThrows(RuntimeException.class,
                     () -> userService.addMultiFirmUserProfile(user, firmDto, null, null, "admin"));
 
-            assertThat(ex.getMessage()).contains("User not found for the given user user id");
+            assertThat(ex.getMessage()).contains("User not found for the given user entra oid:");
             verify(userProfileRepository, never()).save(any());
             verify(entraUserRepository, never()).save(any());
             verify(techServicesClient, never()).updateRoleAssignment(any(UUID.class));

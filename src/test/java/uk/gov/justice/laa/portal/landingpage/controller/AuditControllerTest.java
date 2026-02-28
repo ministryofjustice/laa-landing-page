@@ -686,6 +686,7 @@ class AuditControllerTest {
         uk.gov.justice.laa.portal.landingpage.entity.EntraUser currentUser = uk.gov.justice.laa.portal.landingpage.entity.EntraUser
                 .builder()
                 .id(currentUserId)
+                .entraOid(entraUserId)
                 .firstName("Admin")
                 .lastName("User")
                 .email("admin@example.com")
@@ -694,6 +695,7 @@ class AuditControllerTest {
         uk.gov.justice.laa.portal.landingpage.model.DeletedUser deletedUser = uk.gov.justice.laa.portal.landingpage.model.DeletedUser
                 .builder()
                 .deletedUserId(UUID.fromString(entraUserId))
+                .deletedUserEntraOid(entraUserId)
                 .removedRolesCount(0)
                 .detachedOfficesCount(0)
                 .build();
@@ -701,7 +703,7 @@ class AuditControllerTest {
         when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId)))
                 .thenReturn(userDetail);
         when(loginService.getCurrentEntraUser(any())).thenReturn(currentUser);
-        when(userService.deleteEntraUserWithoutProfile(entraUserId, reason, currentUserId))
+        when(userService.deleteEntraUserWithoutProfile(entraUserId, reason, UUID.fromString(entraUserId)))
                 .thenReturn(deletedUser);
 
         // When
@@ -712,7 +714,7 @@ class AuditControllerTest {
         assertThat(viewName).isEqualTo("user-audit/delete-user-success");
         assertThat(model.getAttribute("deletedUserFullName")).isEqualTo("Jane Smith");
         assertThat(model.getAttribute("pageTitle")).isEqualTo("User deleted");
-        verify(userService).deleteEntraUserWithoutProfile(entraUserId, reason, currentUserId);
+        verify(userService).deleteEntraUserWithoutProfile(entraUserId, reason, UUID.fromString(entraUserId));
         verify(eventService).logEvent(any(uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent.class));
     }
 
@@ -797,6 +799,7 @@ class AuditControllerTest {
         uk.gov.justice.laa.portal.landingpage.entity.EntraUser currentUser = uk.gov.justice.laa.portal.landingpage.entity.EntraUser
                 .builder()
                 .id(currentUserId)
+                .entraOid(entraUserId)
                 .firstName("Admin")
                 .lastName("User")
                 .email("admin@example.com")

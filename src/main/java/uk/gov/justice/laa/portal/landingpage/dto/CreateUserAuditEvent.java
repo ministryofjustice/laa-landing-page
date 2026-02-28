@@ -10,19 +10,18 @@ public class CreateUserAuditEvent extends AuditEvent implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
     private final EntraUser user;
-    private final String selectedFirm;
+    private final String selectedFirmId;
     private final boolean isUserManager;
 
     private static final String CREATE_USER_TEMPLATE = """
-            New user created, user id %s, with firm %s and user type %s
+            New user created, entra oid %s, with firm %s and user type %s
             """;
 
     public CreateUserAuditEvent(CurrentUserDto currentUserDto, EntraUser user,
-                                String selectedFirm, boolean isUserManager) {
+                                String selectedFirmId, boolean isUserManager) {
         this.userId = currentUserDto.getUserId();
-        this.userName = currentUserDto.getName();
         this.user = user;
-        this.selectedFirm = selectedFirm;
+        this.selectedFirmId = selectedFirmId;
         this.isUserManager = isUserManager;
     }
 
@@ -33,6 +32,6 @@ public class CreateUserAuditEvent extends AuditEvent implements Serializable {
 
     @Override
     public String getDescription() {
-        return String.format(CREATE_USER_TEMPLATE, user.getId(), selectedFirm, isUserManager ? "External User Manager" : "Provider User");
+        return String.format(CREATE_USER_TEMPLATE, user.getEntraOid(), selectedFirmId, isUserManager ? "External User Manager" : "Provider User");
     }
 }

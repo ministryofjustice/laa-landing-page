@@ -14,34 +14,25 @@ class DeleteFirmProfileAuditEventTest {
         // Arrange
         UUID userId = UUID.randomUUID();
         UUID userProfileId = UUID.randomUUID();
-        String userEmail = "test.user@example.com";
-        String firmName = "Test Law Firm";
-        String firmCode = "ABC123";
+        UUID firmId = UUID.randomUUID();
+        String entraOid = UUID.randomUUID().toString();
         int removedRolesCount = 3;
         int detachedOfficesCount = 2;
 
         // Act
         DeleteFirmProfileAuditEvent event = new DeleteFirmProfileAuditEvent(
-                userId, userProfileId, userEmail, firmName, firmCode,
+                userId, userProfileId, entraOid, firmId,
                 removedRolesCount, detachedOfficesCount);
 
         // Assert
-        assertThat(event.getUserProfileId()).isEqualTo(userProfileId);
-        assertThat(event.getFirmName()).isEqualTo(firmName);
-        assertThat(event.getFirmCode()).isEqualTo(firmCode);
-        assertThat(event.getUserEmail()).isEqualTo(userEmail);
-        assertThat(event.getRemovedRolesCount()).isEqualTo(removedRolesCount);
-        assertThat(event.getDetachedOfficesCount()).isEqualTo(detachedOfficesCount);
         assertThat(event.getEventType()).isEqualTo(EventType.USER_DELETE_ATTEMPT);
 
         String description = event.getDescription();
         assertThat(description).contains("Firm profile deleted for multi-firm user");
-        assertThat(description).contains("User: " + userEmail);
         assertThat(description).contains("User Profile ID: " + userProfileId);
-        assertThat(description).contains("Firm: " + firmName + " (" + firmCode + ")");
         assertThat(description).contains(removedRolesCount + " roles removed");
         assertThat(description).contains(detachedOfficesCount + " offices detached");
-        assertThat(description).contains("Deleted by user ID: " + userId);
+        assertThat(description).contains("EntraOid: " + entraOid);
     }
 
     @Test
@@ -51,21 +42,20 @@ class DeleteFirmProfileAuditEventTest {
         UUID userProfileId = UUID.randomUUID();
         String userEmail = "test.user@example.com";
         String firmName = "Test Law Firm";
-        String firmCode = null;
+        UUID firmId = UUID.randomUUID();
+        String entraOid = UUID.randomUUID().toString();
         int removedRolesCount = 5;
         int detachedOfficesCount = 1;
 
         // Act
         DeleteFirmProfileAuditEvent event = new DeleteFirmProfileAuditEvent(
-                userId, userProfileId, userEmail, firmName, firmCode,
+                userId, userProfileId, entraOid, firmId,
                 removedRolesCount, detachedOfficesCount);
 
         // Assert
-        assertThat(event.getFirmCode()).isNull();
         String description = event.getDescription();
         assertThat(description).contains("Firm profile deleted for multi-firm user");
-        assertThat(description).contains("User: " + userEmail);
-        assertThat(description).contains("Firm: " + firmName + " (N/A)");
+        assertThat(description).contains("FirmId: " + firmId);
         assertThat(description).contains(removedRolesCount + " roles removed");
         assertThat(description).contains(detachedOfficesCount + " offices detached");
     }
@@ -75,20 +65,17 @@ class DeleteFirmProfileAuditEventTest {
         // Arrange
         UUID userId = UUID.randomUUID();
         UUID userProfileId = UUID.randomUUID();
-        String userEmail = "another.user@example.com";
-        String firmName = "Another Firm";
-        String firmCode = "XYZ789";
+        UUID firmId = UUID.randomUUID();
+        String entraOid = UUID.randomUUID().toString();
         int removedRolesCount = 0;
         int detachedOfficesCount = 0;
 
         // Act
         DeleteFirmProfileAuditEvent event = new DeleteFirmProfileAuditEvent(
-                userId, userProfileId, userEmail, firmName, firmCode,
+                userId, userProfileId, entraOid, firmId,
                 removedRolesCount, detachedOfficesCount);
 
         // Assert
-        assertThat(event.getRemovedRolesCount()).isZero();
-        assertThat(event.getDetachedOfficesCount()).isZero();
         String description = event.getDescription();
         assertThat(description).contains("0 roles removed");
         assertThat(description).contains("0 offices detached");
