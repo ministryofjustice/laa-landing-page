@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -38,8 +39,10 @@ import uk.gov.justice.laa.portal.landingpage.dto.UpdateAppDetailsAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateAppDisplayOrderAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateAppRoleDetailsAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateAppRoleDisplayOrderAuditEvent;
+import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -48,6 +51,7 @@ import uk.gov.justice.laa.portal.landingpage.forms.AppRoleDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRolesOrderForm;
 import uk.gov.justice.laa.portal.landingpage.forms.AppsOrderForm;
 import uk.gov.justice.laa.portal.landingpage.forms.DeleteAppRoleReasonForm;
+import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AdminService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
 import uk.gov.justice.laa.portal.landingpage.service.AppService;
@@ -66,6 +70,7 @@ import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFro
 @RequestMapping("/admin")
 @PreAuthorize("@accessControlService.userHasAuthzRole(authentication, T(uk.gov.justice.laa.portal.landingpage.entity.AuthzRole).SILAS_ADMINISTRATION.roleName)")
 public class AdminController {
+    private final ModelMapper modelMapper;
 
     public static final String SILAS_ADMINISTRATION_TITLE = "SiLAS Administration";
     private static final Set<String> VALID_TABS = Set.of("admin-apps", "apps", "roles");
@@ -75,6 +80,7 @@ public class AdminController {
     private final AdminService adminService;
     private final AppService appService;
     private final AppRoleService appRoleService;
+    private final AccessControlService accessControlService;
 
     /**
      * Display SiLAS Administration landing page with Admin Services tab by default
@@ -110,6 +116,8 @@ public class AdminController {
 
         model.addAttribute("roles", roles);
         model.addAttribute("appFilter", appFilter);
+        model.addAttribute("canTriggerAppSync",
+                accessControlService.authenticatedUserHasPermission(Permission.EDIT_LAA_APP_METADATA));
         session.setAttribute("appFilter", appFilter);
 
         // Get distinct app names for filter dropdown
@@ -119,6 +127,42 @@ public class AdminController {
                 .sorted()
                 .collect(Collectors.toList()));
 
+        return "silas-administration/administration";
+    }
+
+    @PostMapping("/silas-administration/sync/apps")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).TRIGGER_LAA_APP_SYNC)")
+    public String syncLaaApps(Authentication authentication, Model model, HttpSession session) {
+
+        model.addAttribute(ModelAttributes.PAGE_TITLE, SILAS_ADMINISTRATION_TITLE);
+        model.addAttribute("activeTab", "apps");
+
+        // Clear any session details from older operations (do not store Model in session)
+        clearSessionAttributes(session);
+
+        // Load all admin apps data for admin-apps tab
+        model.addAttribute("adminApps", adminService.getAllAdminApps());
+
+        CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+        UserProfileDto userProfile = modelMapper.map(loginService.getCurrentProfile(authentication), UserProfileDto.class);
+        List<AppDto> apps = appService.synchronizeAndGetApplicationsFromTechServices(currentUserDto, userProfile);
+        model.addAttribute("apps", apps);
+
+
+        List<AppRoleAdminDto> roles = appRoleService.getAllLaaAppRoles();
+
+        model.addAttribute("roles", roles);
+        model.addAttribute("canTriggerAppSync",
+                accessControlService.authenticatedUserHasPermission(Permission.TRIGGER_LAA_APP_SYNC));
+        model.addAttribute("appSyncSuccessful", true);
+
+        model.addAttribute("appNames", apps.stream()
+                .map(AppDto::getName)
+                .distinct()
+                .sorted()
+                .collect(Collectors.toList()));
+
+        model.addAttribute("successMessage", "App Syncing successful");
         return "silas-administration/administration";
     }
 

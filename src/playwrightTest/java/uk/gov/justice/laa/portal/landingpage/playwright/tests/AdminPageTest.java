@@ -14,6 +14,7 @@ import uk.gov.justice.laa.portal.landingpage.playwright.common.BaseFrontEndTest;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.TestUser;
 import uk.gov.justice.laa.portal.landingpage.playwright.pages.AdminPage;
 
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 public class AdminPageTest extends BaseFrontEndTest {
@@ -126,6 +127,81 @@ public class AdminPageTest extends BaseFrontEndTest {
         PlaywrightAssertions.assertThat(
                 page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("Apps order updated"))
         ).isVisible();
+
+    }
+
+    @Test
+    @DisplayName("Delete Legal Aid Service App Roles End to End")
+    void legalAidServicesTab_delete_app_role_end_to_end() {
+        AdminPage adminPage = loginAndGetAdminPage(TestUser.SILAS_ADMINISTRATION);
+        adminPage.assertRolesTableColumns()
+                .assertRolesActionButtonsVisible()
+                .assertReorderRolesButtonVisible();
+
+        Assertions.assertTrue(
+                adminPage.getRolesRowCount() == 3,
+                "Expected Roles table to contain 3 rows"
+        );
+
+        page.locator("select#appFilter").selectOption("Test LAA App Two");
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Delete a role")).click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Delete")).last().click();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        page.getByRole(AriaRole.TEXTBOX, new Page.GetByRoleOptions().setName("Reason"))
+                .fill("Test automation - deleting role for Test LAA App Two");
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Confirm and Continue")).click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Confirm and Delete role")).click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        PlaywrightAssertions.assertThat(
+                page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions()
+                        .setName("App role has been deleted successfully!"))
+        ).isVisible();
+
+        adminPage = loginAndGetAdminPage(TestUser.SILAS_ADMINISTRATION);
+        adminPage.assertRolesTableColumns()
+                .assertRolesActionButtonsVisible()
+                .assertReorderRolesButtonVisible();
+
+        Assertions.assertTrue(
+                adminPage.getRolesRowCount() == 2,
+                "Expected Roles table to contain 2 rows"
+        );
+
+    }
+
+    @Test
+    @DisplayName("Sync Legal Aid Service Apps End to End")
+    void legalAidServicesTab_sync_apps_end_to_end() {
+        AdminPage adminPage = loginAndGetAdminPage(TestUser.SILAS_ADMINISTRATION);
+
+        adminPage.assertLegalAidServicesTableColumns()
+                .assertSyncRolesLegalAidServicesButtonVisible();
+
+        Assertions.assertTrue(
+                adminPage.getLegalAidServicesRowCount() > 0,
+                "Expected Legal Aid Services table to contain at least 1 row"
+        );
+
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Sync Apps")).click();
+
+        adminPage = loginAndGetAdminPage(TestUser.SILAS_ADMINISTRATION);
+        adminPage.assertLegalAidServicesTableColumns()
+                .assertSyncRolesLegalAidServicesButtonVisible();
+
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Sync Apps")).click();
+
+        assertSuccessBanner(page, "App Syncing successful");
 
     }
 
@@ -255,5 +331,26 @@ public class AdminPageTest extends BaseFrontEndTest {
                 page.url().contains(expectedUrlFragment),
                 "Expected URL to contain '" + expectedUrlFragment + "' after clicking Edit link for Legal Aid Service"
         );
+    }
+
+    private static void assertSuccessBanner(Page page, String message) {
+        Locator banner = page.getByRole(AriaRole.REGION,
+                new Page.GetByRoleOptions().setName("Success"));
+
+        PlaywrightAssertions.assertThat(banner).isVisible();
+
+        // 2) Header explicitly reads "Success"
+        Locator header = banner.locator(".govuk-notification-banner__title");
+        PlaywrightAssertions.assertThat(header).hasText("Success");
+
+        // 3) Body contains the success message (case-insensitive)
+        PlaywrightAssertions.assertThat(banner)
+                .containsText(Pattern.compile(message, Pattern.CASE_INSENSITIVE));
+
+        // 4) Optional: Dismiss link presence and href
+        Locator dismiss = banner.getByRole(AriaRole.LINK,
+                new Locator.GetByRoleOptions().setName("Dismiss success message"));
+        PlaywrightAssertions.assertThat(dismiss).isVisible();
+        PlaywrightAssertions.assertThat(dismiss).hasAttribute("href", "/admin/silas-administration?tab=apps");
     }
 }

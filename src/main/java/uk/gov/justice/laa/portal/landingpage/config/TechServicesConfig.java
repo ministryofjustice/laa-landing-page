@@ -18,6 +18,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.web.client.RestClient;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.service.DoNothingTechServicesClient;
 import uk.gov.justice.laa.portal.landingpage.service.LiveTechServicesClient;
@@ -85,8 +86,8 @@ public class TechServicesConfig {
             havingValue = "false",
             matchIfMissing = false
     )
-    public TechServicesClient doNothingTechServicesClient() {
-        return new DoNothingTechServicesClient();
+    public TechServicesClient doNothingTechServicesClient(AppRepository appRepository) {
+        return new DoNothingTechServicesClient(appRepository);
     }
 
     @Bean("tokenExpiryJwtDecoder")

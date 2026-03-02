@@ -22,77 +22,77 @@ public class RoleBasedAccessAppMetadataTest extends RoleBasedAccessIntegrationTe
     }
 
     @Test
-    public void testSecurityResponseCannotAccessAuditTableAndSeeLink() throws Exception {
+    public void testSecurityResponseCannotAccessSilasAdminAndSeeLink() throws Exception {
         EntraUser securityResponseUser = securityResponseUsers.getFirst();
         testCanSeeSilasAdminLink(securityResponseUser, false);
         testCanAccessSilasAdminPage(securityResponseUser, status().is4xxClientError());
     }
 
     @Test
-    public void testGlobalAdminCannotAccessAuditTableAndSeeLink() throws Exception {
+    public void testGlobalAdminCannotAccessSilasAdminAndSeeLink() throws Exception {
         EntraUser globalAdmin = globalAdmins.getFirst();
         testCanSeeSilasAdminLink(globalAdmin, false);
         testCanAccessSilasAdminPage(globalAdmin, status().is4xxClientError());
     }
 
     @Test
-    public void testInternalUserManagerCannotAccessAuditTableAndSeeLink() throws Exception {
+    public void testInternalUserManagerCannotAccessSilasAdminAndSeeLink() throws Exception {
         EntraUser internalUserManager = internalUserManagers.getFirst();
         testCanSeeSilasAdminLink(internalUserManager, false);
         testCanAccessSilasAdminPage(internalUserManager, status().is4xxClientError());
     }
 
     @Test
-    public void testInternalUserWithExternalUserManagerCannotAccessAuditTableAndSeeLink() throws Exception {
+    public void testInternalUserWithExternalUserManagerCannotAccessSilasAdminAndSeeLink() throws Exception {
         EntraUser internalUserWithExternalUserManager = internalWithExternalOnlyUserManagers.getFirst();
         testCanSeeSilasAdminLink(internalUserWithExternalUserManager, false);
         testCanAccessSilasAdminPage(internalUserWithExternalUserManager, status().is4xxClientError());
     }
 
     @Test
-    public void testInternalUserWithInternalAndExternalUserManagerCannotAccessAuditTableAndSeeLink() throws Exception {
+    public void testInternalUserWithInternalAndExternalUserManagerCannotAccessSilasAdminAndSeeLink() throws Exception {
         EntraUser internalUserWithInternalAndExternalUserManager = internalAndExternalUserManagers.getFirst();
         testCanSeeSilasAdminLink(internalUserWithInternalAndExternalUserManager, false);
         testCanAccessSilasAdminPage(internalUserWithInternalAndExternalUserManager, status().is4xxClientError());
     }
 
     @Test
-    public void testInternalUserViewerCannotAccessAuditTableAndSeeLink() throws Exception {
+    public void testInternalUserViewerCannotAccessSilasAdminAndSeeLink() throws Exception {
         EntraUser internalUserViewer = internalUserViewers.getFirst();
         testCanSeeSilasAdminLink(internalUserViewer, false);
         testCanAccessSilasAdminPage(internalUserViewer, status().is4xxClientError());
     }
 
     @Test
-    public void testExternalUserViewerCannotAccessAuditTableAndSeeLink() throws Exception {
+    public void testExternalUserViewerCannotAccessSilasAdminAndSeeLink() throws Exception {
         EntraUser externalUserViewer = externalUserViewers.getFirst();
         testCanSeeSilasAdminLink(externalUserViewer, false);
         testCanAccessSilasAdminPage(externalUserViewer, status().is4xxClientError());
     }
 
     @Test
-    public void testExternalUserAdminCannotAccessAuditTableAndSeeLink() throws Exception {
+    public void testExternalUserAdminCannotAccessSilasAdminAndSeeLink() throws Exception {
         EntraUser externalUserAdmin = externalUserAdmins.getFirst();
         testCanSeeSilasAdminLink(externalUserAdmin, false);
         testCanAccessSilasAdminPage(externalUserAdmin, status().is4xxClientError());
     }
 
     @Test
-    public void testInternalUserNoRolesCannotAccessAuditTableAndSeeLink() throws Exception {
+    public void testInternalUserNoRolesCannotAccessSilasAdminAndSeeLink() throws Exception {
         EntraUser internalUserNoRoles = internalUsersNoRoles.getFirst();
         testCanSeeSilasAdminLink(internalUserNoRoles, false);
         testCanAccessSilasAdminPage(internalUserNoRoles, status().is4xxClientError());
     }
 
     @Test
-    public void testExternalUserNoRolesCannotAccessAuditTableAndSeeLink() throws Exception {
+    public void testExternalUserNoRolesCannotAccessSilasAdminAndSeeLink() throws Exception {
         EntraUser externalUserNoRoles = externalUsersNoRoles.getFirst();
         testCanSeeSilasAdminLink(externalUserNoRoles, false);
         testCanAccessSilasAdminPage(externalUserNoRoles, status().is4xxClientError());
     }
 
     @Test
-    public void testFirmUserManagerCannotAccessAuditTableAndSeeLink() throws Exception {
+    public void testFirmUserManagerCannotAccessSilasAdminAndSeeLink() throws Exception {
         EntraUser firmUserManager = externalOnlyUserManagers.getFirst();
         testCanSeeSilasAdminLink(firmUserManager, false);
         testCanAccessSilasAdminPage(firmUserManager, status().is4xxClientError());
