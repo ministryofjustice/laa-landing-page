@@ -487,7 +487,7 @@ public class UserController {
             throw new ResponseStatusException(HttpStatusCode.valueOf(404));
         }
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
-        boolean isProvideAdmin = RolesUtils.isProvideAdminBySet(currentUserProfile.getAppRoles());
+        boolean isProvideAdmin = RolesUtils.isProvideAdmin(currentUserProfile.getAppRoles());
         List<DisableUserReasonViewModel> reasons = new ArrayList<>(userAccountStatusService.getDisableUserReasons(isProvideAdmin).stream()
                 .map(reason -> mapper.map(reason, DisableUserReasonViewModel.class))
                 .toList());

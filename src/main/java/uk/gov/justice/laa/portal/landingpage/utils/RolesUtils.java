@@ -30,7 +30,7 @@ public class RolesUtils {
                 .anyMatch(role -> FIRM_USER_MANAGER.getDescription().equals(role.getName()));
     }
 
-    public static boolean isProvideAdminBySet(Set<AppRole> userAppRoles) {
+    public static boolean isProvideAdmin(Set<AppRole> userAppRoles) {
         return userAppRoles.stream()
                 .anyMatch(role -> FIRM_USER_MANAGER.getDescription().equals(role.getName()));
     }
