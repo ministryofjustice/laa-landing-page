@@ -477,10 +477,10 @@ public class UserController {
     @GetMapping("/users/manage/{id}/disable")
     @PreAuthorize("@accessControlService.canDisableUser(#id)")
     public String disableUserReasonsGet(@PathVariable String id,
-                                     DisableUserReasonForm disableUserReasonForm,
-                                     Model model,
-                                     HttpSession session,
-    Authentication authentication) {
+                                        DisableUserReasonForm disableUserReasonForm,
+                                        Model model,
+                                        HttpSession session,
+                                        Authentication authentication) {
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
 
         if (!disableUserFeatureEnabled) {
