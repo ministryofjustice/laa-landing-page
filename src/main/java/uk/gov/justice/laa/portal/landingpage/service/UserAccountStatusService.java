@@ -20,6 +20,7 @@ import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiRespons
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -33,12 +34,17 @@ public class UserAccountStatusService {
     private final TechServicesClient techServicesClient;
     private final UserService userService;
 
-    public List<DisableUserReasonDto> getDisableUserReasons() {
+    public List<DisableUserReasonDto> getDisableUserReasons(boolean isFirmAdmin) {
         List<DisableUserReason> reasons = disableUserReasonRepository.findAll();
-        return reasons.stream()
+        List<DisableUserReasonDto> disableUserReasonDtos = new java.util.ArrayList<>(reasons.stream()
                 .filter(DisableUserReason::isUserSelectable)
                 .map(reason -> mapper.map(reason, DisableUserReasonDto.class))
-                .toList();
+                .toList());
+        if (isFirmAdmin) {
+            Set<String> keepReasons = Set.of("Absence", "Provider Discretion");
+            disableUserReasonDtos.removeIf(u -> !keepReasons.contains(u.getName()));
+        }
+        return disableUserReasonDtos;
     }
 
     @SuppressWarnings("checkstyle:VariableDeclarationUsageDistance")
