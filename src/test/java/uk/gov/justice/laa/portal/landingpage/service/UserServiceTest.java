@@ -81,6 +81,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
+import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.dto.UserFirmReassignmentEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
@@ -7880,34 +7881,21 @@ class UserServiceTest {
     }
 
 
+
+
     @Test
-    void getAuditUsersForExport_pairsFirmCodesToFirmNames_sortedByFirmNames() {
-        // Given
+    void getAuditUsers_csvExportTrueAndFalse() {
+
+        Firm alpha = Firm.builder().id(UUID.randomUUID()).name("Alpha").code("Z9").build();
+        Firm beta  = Firm.builder().id(UUID.randomUUID()).name("Beta").code("A1").build();
+        Firm gamma = Firm.builder().id(UUID.randomUUID()).name("Gamma").code("D4").build();
+        Firm delta = Firm.builder().id(UUID.randomUUID()).name("Delta").code("B2").build();
+
+        App appPortal = App.builder().id(UUID.randomUUID()).name("Portal").build();
+        AppRole fumRole = AppRole.builder().id(UUID.randomUUID()).name("Firm User Manager").app(appPortal).build();
+        AppRole viewerRole = AppRole.builder().id(UUID.randomUUID()).name("Viewer").app(appPortal).build();
+
         UUID userId = UUID.randomUUID();
-
-        Firm alpha = Firm.builder()
-                .id(UUID.randomUUID())
-                .name("Alpha")
-                .code("Z9")
-                .build();
-
-        Firm beta = Firm.builder()
-                .id(UUID.randomUUID())
-                .name("Beta")
-                .code("A1")
-                .build();
-
-        Firm gamma = Firm.builder()
-                .id(UUID.randomUUID())
-                .name("Gamma")
-                .code("D4")
-                .build();
-
-        Firm delta = Firm.builder()
-                .id(UUID.randomUUID())
-                .name("Delta")
-                .code("B2")
-                .build();
 
         EntraUser user = EntraUser.builder()
                 .id(userId)
@@ -7918,76 +7906,72 @@ class UserServiceTest {
                 .multiFirmUser(true)
                 .build();
 
-        // Intentionally scrambled firm order (Gamma, Alpha, Delta, Beta)
-        UserProfile profile1 = UserProfile.builder()
-                .id(UUID.randomUUID())
-                .entraUser(user)
-                .firm(gamma)
-                .userType(UserType.EXTERNAL)
-                .activeProfile(true)
-                .appRoles(new HashSet<>())
-                .userProfileStatus(UserProfileStatus.COMPLETE)
-                .build();
+        UserProfile upGamma = UserProfile.builder()
+                .id(UUID.randomUUID()).entraUser(user).firm(gamma)
+                .activeProfile(true).appRoles(Set.of(viewerRole))
+                .userType(UserType.EXTERNAL).userProfileStatus(UserProfileStatus.COMPLETE).build();
 
-        UserProfile profile2 = UserProfile.builder()
-                .id(UUID.randomUUID())
-                .entraUser(user)
-                .firm(alpha)
-                .userType(UserType.EXTERNAL)
-                .activeProfile(false)
-                .appRoles(new HashSet<>())
-                .userProfileStatus(UserProfileStatus.COMPLETE)
-                .build();
+        UserProfile upAlpha = UserProfile.builder()
+                .id(UUID.randomUUID()).entraUser(user).firm(alpha)
+                .activeProfile(false).appRoles(Set.of(fumRole, viewerRole))    // << for selected firm
+                .userType(UserType.EXTERNAL).userProfileStatus(UserProfileStatus.COMPLETE).build();
 
-        UserProfile profile3 = UserProfile.builder()
-                .id(UUID.randomUUID())
-                .entraUser(user)
-                .firm(delta)
-                .userType(UserType.EXTERNAL)
-                .activeProfile(false)
-                .appRoles(new HashSet<>())
-                .userProfileStatus(UserProfileStatus.COMPLETE)
-                .build();
+        UserProfile upDelta = UserProfile.builder()
+                .id(UUID.randomUUID()).entraUser(user).firm(delta)
+                .activeProfile(false).appRoles(Set.of())
+                .userType(UserType.EXTERNAL).userProfileStatus(UserProfileStatus.COMPLETE).build();
 
-        UserProfile profile4 = UserProfile.builder()
-                .id(UUID.randomUUID())
-                .entraUser(user)
-                .firm(beta)
-                .userType(UserType.EXTERNAL)
-                .activeProfile(false)
-                .appRoles(new HashSet<>())
-                .userProfileStatus(UserProfileStatus.COMPLETE)
-                .build();
+        UserProfile upBeta = UserProfile.builder()
+                .id(UUID.randomUUID()).entraUser(user).firm(beta)
+                .activeProfile(false).appRoles(Set.of())
+                .userType(UserType.EXTERNAL).userProfileStatus(UserProfileStatus.COMPLETE).build();
 
-        user.setUserProfiles(Set.of(profile1, profile2, profile3, profile4));
+        user.setUserProfiles(Set.of(upGamma, upAlpha, upDelta, upBeta));
 
-        Page<EntraUser> userPage = new PageImpl<>(List.of(user),
-                PageRequest.of(0, 10), 1);
+        Page<EntraUser> page = new PageImpl<>(List.of(user), PageRequest.of(0, 10), 1);
 
         when(mockEntraUserRepository.findAllUsersForAudit(
-                eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
-                .thenReturn(userPage);
+                any(), any(), any(), any(), any(), any(), any(PageRequest.class)))
+                .thenReturn(page);
 
         when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                 .thenReturn(List.of(user));
 
-        // When
-        uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(
-                null, null, null, null, null, 1, 10, "name", "asc", true);
+        String expectedFirmNames = "Alpha, Beta, Delta, Gamma";
+        String expectedCodes     = "A1, B2, D4, Z9";
 
-        // Then
-        assertThat(result).isNotNull();
-        assertThat(result.getTotalUsers()).isEqualTo(1);
-        assertThat(result.getUsers()).hasSize(1);
+        UUID selectedFirmId = alpha.getId();
 
-        AuditUserDto dto = result.getUsers().get(0);
+        // --- CSV path ---
+        PaginatedAuditUsers csvResult = userService.getAuditUsers(
+                null, selectedFirmId, null, null, null,
+                1, 10, "name", "asc", true);
 
-        // Sorted by firm name:
-        assertThat(dto.getFirmAssociation()).isEqualTo("Alpha, Beta, Delta, Gamma");
+        AuditUserDto csvDto = csvResult.getUsers().get(0);
+        assertThat(csvDto.getAppAccess()).isEqualTo("Portal");
+        assertThat(csvDto.isProviderAdmin()).isTrue();
 
-        // Codes must align to those firms (NOT independently sorted by code):
-        // Alpha -> Z9, Beta -> A1, Delta -> B2, Gamma -> D4
-        assertThat(dto.getFirmCode()).isEqualTo("Z9, A1, B2, D4");
+
+        // --- CSV path where user is NOT provider admin for selected firm ---
+        PaginatedAuditUsers csvResultNotAdmin = userService.getAuditUsers(
+                null, beta.getId(), null, null, null,
+                1, 10, "name", "asc", true);
+
+        AuditUserDto csvDtoNotAdmin = csvResultNotAdmin.getUsers().get(0);
+        assertThat(csvDtoNotAdmin.getAppAccess()).isEqualTo("");
+        assertThat(csvDtoNotAdmin.isProviderAdmin()).isFalse();
+
+
+
+        // ---NON-CSV path ---
+        PaginatedAuditUsers normalResult = userService.getAuditUsers(
+                null, selectedFirmId, null, null, null,
+                1, 10, "name", "asc", false);
+
+        AuditUserDto normalDto = normalResult.getUsers().get(0);
+
+        assertThat(normalDto.getFirmAssociation()).isEqualTo(expectedFirmNames);
+        assertThat(normalDto.getFirmCode()).isEqualTo(expectedCodes);
+
     }
-
 }

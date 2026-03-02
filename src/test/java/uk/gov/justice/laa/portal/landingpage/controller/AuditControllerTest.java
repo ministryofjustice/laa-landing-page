@@ -857,7 +857,7 @@ class AuditControllerTest {
 
         byte[] csvBytes = "Name,Email\nP1,p1@example.com\n".getBytes(java.nio.charset.StandardCharsets.UTF_8);
         AuditExportService.AuditCsvExport export = new AuditExportService.AuditCsvExport("audit.csv", csvBytes);
-        when(auditExportService.downloadAuditCsv(any(), any())).thenReturn(export);
+        when(auditExportService.downloadAuditCsv(any(), any(), any())).thenReturn(export);
 
         ResponseEntity<byte[]> response = auditController.downloadAuditCsv(criteria);
 
@@ -871,6 +871,6 @@ class AuditControllerTest {
 
         verify(userService, times(1)).getAuditUsers("TestSearch", null, null, null, null, 1, 500, "name", "asc", true);
         verify(userService, times(1)).getAuditUsers("TestSearch", null, null, null, null, 2, 500, "name", "asc", true);
-        verify(auditExportService, times(1)).downloadAuditCsv(any(), any());
+        verify(auditExportService, times(1)).downloadAuditCsv(any(), any(), any());
     }
 }

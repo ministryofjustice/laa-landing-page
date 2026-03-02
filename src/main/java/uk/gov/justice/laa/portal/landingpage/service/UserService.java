@@ -1522,8 +1522,14 @@ public class UserService {
         }
 
         // Map to DTOs
-        List<AuditUserDto> auditUsers =
-                userPage.getContent().stream().map(user -> mapToAuditUserDto(user, csvExport)).toList();
+        List<AuditUserDto> auditUsers;
+        if (csvExport) {
+            auditUsers =
+                userPage.getContent().stream().map(user -> mapToAuditUserDtoForCsv(user, csvExport, firmId)).toList();
+        } else {
+            auditUsers =
+                    userPage.getContent().stream().map(user -> mapToAuditUserDto(user, csvExport)).toList();
+        }
 
         return PaginatedAuditUsers.builder().users(auditUsers)
                 .totalUsers(userPage.getTotalElements()).totalPages(userPage.getTotalPages())
@@ -1568,6 +1574,27 @@ public class UserService {
                 .entraStatus(user.getUserStatus() != null ? user.getUserStatus().name() : "UNKNOWN")
                 // TODO: Fetch activationStatus from TechServices API
                 .activationStatus(null).build();
+    }
+
+    private AuditUserDto mapToAuditUserDtoForCsv(EntraUser user, boolean csvExport, UUID firmId) {
+        // Get all user profiles
+        List<UserProfile> profiles = user.getUserProfiles() != null ? new ArrayList<>(user.getUserProfiles())
+                : Collections.emptyList();
+
+        // Get firm associations
+        String firmAssociation = determineFirmAssociation(profiles);
+
+        // Get selected firm user roles
+        boolean userRole = determineIsProviderAdminForSelectedFirm(profiles, firmId);
+
+        String getAppAccess = determineAppAccess(profiles, firmId);
+
+        // Get firm code
+        String firmCode = determineFirmCode(profiles, csvExport);
+
+        return AuditUserDto.builder().name(user.getFirstName() + " " + user.getLastName())
+                .email(user.getEmail()).firmAssociation(firmAssociation).firmCode(firmCode).appAccess(getAppAccess)
+                .isMultiFirmUser(user.isMultiFirmUser()).isProviderAdmin(userRole).build();
     }
 
     /**
@@ -1679,6 +1706,34 @@ public class UserService {
     public List<AppRoleDto> getAllSilasRoles() {
         return appRoleRepository.findAllAuthzRoles().stream()
                 .map(role -> mapper.map(role, AppRoleDto.class)).toList();
+    }
+
+    /**
+     * Determine if the user is a Firm User Manager for the filtered firm
+     */
+    public boolean determineIsProviderAdminForSelectedFirm(List<UserProfile> profiles, UUID firmId) {
+        return profiles.stream()
+                .filter(p -> firmId.equals(p.getFirm().getId()))
+                .anyMatch(profile ->
+                        profile.getAppRoles().stream()
+                                .anyMatch(role -> role.getName().equals("Firm User Manager"))
+                );
+    }
+
+    /**
+     * Determine what app access a user has for the filtered firm
+     */
+    public String determineAppAccess(List<UserProfile> profiles, UUID firmId) {
+        return profiles.stream()
+                .filter(p -> firmId.equals(p.getFirm().getId()))
+                .flatMap(profile -> profile.getAppRoles().stream())
+                .map(AppRole::getApp)
+                .filter(Objects::nonNull)
+                .distinct()
+                .map(App::getName)
+                .distinct()
+                .sorted()
+                .collect(Collectors.joining(", "));
     }
 
     /**
