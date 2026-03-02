@@ -35,10 +35,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AppService {
 
-    @Value("${feature.flag.enable.app.sync.from.entra:false}")
+    @Value("${feature.flag.enable.app.sync.from.entra}")
     public boolean syncAppsFromEntra;
 
-    @Value("${feature.flag.enable.app.updates.sync.from.entra:false}")
+    @Value("${feature.flag.enable.app.updates.sync.from.entra}")
     public boolean syncAppUpdatesFromEntra;
 
     private final AppRepository appRepository;
