@@ -18,4 +18,9 @@ public class StaticPagesController {
         return "footer/cookies";
     }
 
+    @GetMapping("/accessibility")
+    public String accessibility(Model model) {
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Accessibility");
+        return "footer/accessibility";
+    }
 }

@@ -3,6 +3,8 @@ package uk.gov.justice.laa.portal.landingpage.dto;
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -60,6 +62,16 @@ public class AuditUserDto implements Serializable {
      * Flag indicating if user has multi-firm access
      */
     private boolean isMultiFirmUser;
+
+    /**
+     * Flag indicating if user is a Firm User Manager
+     */
+    private boolean isProviderAdmin;
+
+    /**
+     * App access for a user of a selected firm
+     */
+    private String appAccess;
 
     /**
      * Number of firm profiles the user has

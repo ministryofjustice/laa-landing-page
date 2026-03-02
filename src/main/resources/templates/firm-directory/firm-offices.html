@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'login'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns="http://www.w3.org/1999/html">
+
+<head>
+    <title>Firm Details</title>
+</head>
+
+<body class="govuk-template__body js-enabled govuk-frontend-supported">
+<nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+    <ol class="govuk-breadcrumbs__list">
+        <li class="govuk-breadcrumbs__list-item">
+            <a class="govuk-breadcrumbs__link" href="/firm-directory/search-page">
+                < Back</a>
+        </li>
+    </ol>
+</nav>
+<main class="govuk-main-wrapper" id="main-content">
+    <fieldset class="govuk-fieldset">
+        <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
+            <h1 class="govuk-fieldset__heading" th:text="${firm.name}">
+            </h1>
+        </legend>
+    </fieldset>
+    <div class="govuk-inset-text"><a class="govuk-link"
+            th:href="@{/admin/users(firmSearch=${firm.name},selectedFirmId=${firm.id})}">
+        View all users with access to this firm</a>
+    </div>
+    <div class="govuk-grid-row">
+        <!-- Firm Details Card -->
+        <div class="govuk-grid-column-one-half">
+            <div class="govuk-summary-card">
+                <div class="govuk-summary-card__title-wrapper">
+                    <h3 class="govuk-summary-card__title">Firm Details</h3>
+                </div>
+                <div class="govuk-summary-card__content">
+                    <dl class="govuk-summary-list">
+                        <div class="govuk-summary-list__row">
+                            <dt class="govuk-summary-list__key">Firm Name</dt>
+                            <dd class="govuk-summary-list__value" th:text="${firm.name}"></dd>
+                        </div>
+                        <div class="govuk-summary-list__row">
+                            <dt class="govuk-summary-list__key">Firm Code</dt>
+                            <dd class="govuk-summary-list__value" th:text="${firm.code}"></dd>
+                        </div>
+                        <!-- Uncomment when firm status available
+                        <div class="govuk-summary-list__row">
+                            <dt class="govuk-summary-list__key">Firm Status</dt>
+                            <dd class="govuk-summary-list__value">
+                            <span th:if="${firm.status}" class="moj-badge moj-badge--green">Active</span>
+                            <span th:if="${!firm.id}" class="moj-badge moj-badge--red">Inactive</span>
+                            </dd>
+                        </div>-->
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Firm offices: Nested table showing all offices of a firm -->
+    <div th:if="${firm.id}">
+        <table class="govuk-table">
+            <caption class="govuk-table__caption">
+                Offices
+                <span class="govuk-visually-hidden">
+                (column headers with buttons are sortable)
+            </span>
+            </caption>
+            <thead class="govuk-table__head">
+            <tr class="govuk-table__row">
+                <th scope="col" class="govuk-table__header">Name</th>
+                <th scope="col" class="govuk-table__header">Code</th>
+                <th scope="col" class="govuk-table__header">Address</th>
+                <!-- Uncomment when office status available
+                <th scope="col" class="govuk-table__header">Status</th> -->
+            </tr>
+            </thead>
+
+            <tbody class="govuk-table__body">
+            <tr class="govuk-table__row" th:each="office : ${firmOffices.offices}">
+                <td class="govuk-table__cell" th:text="${office.address.getCity().toUpperCase()}"></td>
+                <td class="govuk-table__cell" th:text="${office.code}"></td>
+                <td class="govuk-table__cell"
+                    th:text="${office.address?.formattedAddress} ?: 'Unknown'"></td>
+                <!-- Uncomment when office Status Available
+                <td class="govuk-table__cell">
+                    <span th:if="${office.status}" class="moj-badge moj-badge--green">Active</span>
+                    <span th:if="${!office.status}" class="moj-badge moj-badge--red">Inactive</span>
+                </td>
+                -->
+                <!-- Uncomment when user/office view available
+                <td class="govuk-table__cell">
+                    <a class="govuk-link"
+                       th:href="@{{id}(id=${firm.id})}">
+                        View all users with access to this office
+                    </a>
+                </td> -->
+            </tr>
+
+            <tr class="govuk-table__row" th:if="${#lists.isEmpty(firmOffices.offices)}">
+                <td class="govuk-table__cell" colspan="5">No offices found for this firm.</td>
+            </tr>
+            </tbody>
+        </table>
+
+        <!-- ░░ PAGINATION  -->
+        <nav class="govuk-pagination" th:if="${firmOffices.totalPages > 1}">
+            <ul class="govuk-pagination__list">
+
+                <!-- Previous -->
+                <li class="govuk-pagination__item govuk-pagination__prev"
+                    th:if="${firmOffices.currentPage > 1}">
+                    <a class="govuk-link"
+                       th:href="@{/admin/firmDirectory/{id}(id=${firm.id},
+                          page=${firmOffices.currentPage - 1},
+                          size=${criteria.size},
+                          sort=${criteria.sort},
+                          direction=${criteria.direction})}">
+                        Previous
+                    </a>
+
+                </li>
+
+                <!-- Page numbers -->
+                <li class="govuk-pagination__item"
+                    th:each="i : ${#numbers.sequence(1, firmOffices.totalPages)}">
+                    <a class="govuk-link"
+                       th:classappend="${i == firmOffices.currentPage} ? ' govuk-!-font-weight-bold'"
+                       th:href="@{/admin/firmDirectory/{id}(id=${firm.id},
+                       page=${i},
+                       size=${criteria.size},
+                       sort=${criteria.sort},
+                       direction=${criteria.direction})}"
+
+                       th:text="${i}">
+                    </a>
+                </li>
+
+                <!-- Next -->
+                <li class="govuk-pagination__item govuk-pagination__next"
+                    th:if="${firmOffices.currentPage < firmOffices.totalPages}">
+
+                    <a class="govuk-link"
+                       th:href="@{/admin/firmDirectory/{id}(id=${firm.id},
+                          page=${firmOffices.currentPage + 1},
+                          size=${criteria.size},
+                          sort=${criteria.sort},
+                          direction=${criteria.direction})}">
+                        Next
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    </main>
+</body>
+
+</html>
