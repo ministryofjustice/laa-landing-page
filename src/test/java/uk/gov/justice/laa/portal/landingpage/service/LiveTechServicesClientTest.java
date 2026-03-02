@@ -11,17 +11,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.ArgumentCaptor;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCache;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -30,6 +31,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 import reactor.core.publisher.Mono;
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
@@ -40,6 +42,7 @@ import uk.gov.justice.laa.portal.landingpage.exception.BadRequestException;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.GetAllApplicationsResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUsersResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
@@ -49,6 +52,7 @@ import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiRespons
 import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsResponse;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -58,6 +62,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -93,17 +98,18 @@ public class LiveTechServicesClientTest {
     private RestClient.ResponseSpec responseSpec;
     @Mock
     private JwtDecoder jwtDecoder;
-    @Spy
     private ObjectMapper objectMapper;
 
     @BeforeEach
     public void setup() {
+        objectMapper = new ObjectMapper();
         Logger logger = (Logger) LoggerFactory.getLogger(LiveTechServicesClient.class);
         logAppender = new ListAppender<>();
         logAppender.start();
         logger.addAppender(logAppender);
         logger.setLevel(ch.qos.logback.classic.Level.DEBUG);
         ReflectionTestUtils.setField(liveTechServicesClient, "accessTokenRequestScope", "scope");
+        ReflectionTestUtils.setField(liveTechServicesClient, "objectMapper", objectMapper);
     }
 
     @Test
@@ -1039,6 +1045,155 @@ public class LiveTechServicesClientTest {
         assertThat(ex.getMessage()).contains("Unexpected error while getting users from Tech Services");
         assertLogMessage(Level.ERROR, "Unexpected error while getting users from Tech Services. Response body: Unknown");
     }
+
+    @Test
+    @DisplayName("200 OK with non-null body → success response with payload")
+    void success200WithBody() {
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+        when(restClient.get()).thenReturn(requestHeadersUriSpec);
+        when(requestHeadersUriSpec.uri(anyString())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+
+        GetAllApplicationsResponse body = GetAllApplicationsResponse.builder()
+                .success(true)
+                .apps(List.of()) // empty is fine
+                .build();
+
+        when(responseSpec.toEntity(GetAllApplicationsResponse.class))
+                .thenReturn(ResponseEntity.ok(body));
+
+        TechServicesApiResponse<GetAllApplicationsResponse> out = liveTechServicesClient.getAllApplications();
+
+        // wrapper success flag
+        assertThat(out.isSuccess()).isTrue();
+        assertThat(out.getData()).isEqualTo(body);
+    }
+
+    @Test
+    @DisplayName("Non-200 status → error with code UNEXPECTED_RESPONSE")
+    void non200Status_returnsUnexpectedResponseError() {
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+        when(restClient.get()).thenReturn(requestHeadersUriSpec);
+        when(requestHeadersUriSpec.uri(anyString())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+
+        GetAllApplicationsResponse body = GetAllApplicationsResponse.builder()
+                .success(true)
+                .apps(List.of())
+                .build();
+
+        when(responseSpec.toEntity(GetAllApplicationsResponse.class))
+                .thenReturn(ResponseEntity.status(HttpStatus.ACCEPTED).body(body)); // 202
+
+        TechServicesApiResponse<GetAllApplicationsResponse> out = liveTechServicesClient.getAllApplications();
+
+        assertThat(out.isSuccess()).isFalse();
+        assertThat(out.getError()).isNotNull();
+        assertThat(out.getError().getCode()).isEqualTo("UNEXPECTED_RESPONSE");
+        assertThat(out.getError().getMessage()).isEqualTo("Unexpected response from Tech Services");
+    }
+
+    @Test
+    @DisplayName("200 OK with null body → error with code UNEXPECTED_RESPONSE")
+    void ok200WithNullBody_returnsUnexpectedResponseError() {
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+        when(restClient.get()).thenReturn(requestHeadersUriSpec);
+        when(requestHeadersUriSpec.uri(anyString())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+
+        when(responseSpec.toEntity(GetAllApplicationsResponse.class))
+                .thenReturn(ResponseEntity.ok(null));
+
+        TechServicesApiResponse<GetAllApplicationsResponse> out = liveTechServicesClient.getAllApplications();
+
+        assertThat(out.isSuccess()).isFalse();
+        assertThat(out.getError()).isNotNull();
+        assertThat(out.getError().getCode()).isEqualTo("UNEXPECTED_RESPONSE");
+    }
+
+    @Test
+    @DisplayName("HttpClientErrorException (4xx) with JSON body → parsed, returns error response")
+    void http4xxParsed_returnsError() throws Exception {
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+        when(restClient.get()).thenReturn(requestHeadersUriSpec);
+        when(requestHeadersUriSpec.uri(anyString())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+
+        String json = "{\"success\":false,\"code\":\"INVALID_REQUEST\",\"message\":\"Bad input\"}";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpClientErrorException ex = HttpClientErrorException.create(
+                HttpStatus.BAD_REQUEST, "Bad Request", headers, json.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8
+        );
+
+        when(responseSpec.toEntity(GetAllApplicationsResponse.class)).thenThrow(ex);
+
+        TechServicesApiResponse<GetAllApplicationsResponse> out = liveTechServicesClient.getAllApplications();
+
+        assertThat(out.isSuccess()).isFalse();
+        assertThat(out.getError().getCode()).isEqualTo("INVALID_REQUEST");
+        assertThat(out.getError().getMessage()).isEqualTo("Bad input");
+    }
+
+    @Test
+    @DisplayName("HttpServerErrorException (5xx) with JSON body → parsed, returns error response")
+    void http5xxParsed_returnsError() throws Exception {
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+        when(restClient.get()).thenReturn(requestHeadersUriSpec);
+        when(requestHeadersUriSpec.uri(anyString())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+
+        String json = "{\"success\":false,\"code\":\"TS_DOWN\",\"message\":\"Service unavailable\"}";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpServerErrorException ex = HttpServerErrorException.create(
+                HttpStatus.SERVICE_UNAVAILABLE, "Service Unavailable", headers, json.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8
+        );
+
+        when(responseSpec.toEntity(GetAllApplicationsResponse.class)).thenThrow(ex);
+
+        TechServicesApiResponse<GetAllApplicationsResponse> out = liveTechServicesClient.getAllApplications();
+
+        assertThat(out.isSuccess()).isFalse();
+        assertThat(out.getError().getCode()).isEqualTo("TS_DOWN");
+        assertThat(out.getError().getMessage()).isEqualTo("Service unavailable");
+    }
+
+    @Test
+    @DisplayName("Unexpected exception → throws RuntimeException with 'Unexpected error while getting applications...'")
+    void unexpectedException_throwsRuntime() {
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+        when(restClient.get()).thenReturn(requestHeadersUriSpec);
+        when(requestHeadersUriSpec.uri(anyString())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+
+        when(responseSpec.toEntity(GetAllApplicationsResponse.class))
+                .thenThrow(new IllegalStateException("boom"));
+
+        assertThatThrownBy(() -> liveTechServicesClient.getAllApplications())
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Unexpected error while getting applications from Tech Services.");
+    }
+
 
     private void assertLogMessage(ch.qos.logback.classic.Level logLevel, String message) {
         assertTrue(logAppender.list.stream()

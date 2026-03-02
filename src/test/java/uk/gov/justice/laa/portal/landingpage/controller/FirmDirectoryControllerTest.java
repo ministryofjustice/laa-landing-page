@@ -12,10 +12,15 @@ import org.springframework.ui.Model;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDirectoryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDirectorySearchCriteria;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmOfficesCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
+import uk.gov.justice.laa.portal.landingpage.dto.PaginatedOffices;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
+import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 
 import java.util.List;
 import java.util.UUID;
@@ -30,6 +35,9 @@ class FirmDirectoryControllerTest {
 
     @Mock
     private FirmService firmService;
+
+    @Mock
+    private OfficeService officeService;
 
     private Model model;
 
@@ -130,4 +138,30 @@ class FirmDirectoryControllerTest {
         assertThat(model.getAttribute("selectedFirmType")).isEqualTo(String.valueOf(FirmType.ADVOCATE));
     }
 
+    @Test
+    void displayFirmDetails() {
+
+        FirmOfficesCriteria criteria = new FirmOfficesCriteria();
+        UUID id = UUID.randomUUID();
+
+        PaginatedOffices paginatedOffices = new PaginatedOffices();
+        FirmDto firm = FirmDto.builder().id(id).code("A123").name("TestName").build();
+
+        when(officeService.getOfficesPage(
+                id,
+                criteria.getPage(),
+                criteria.getSize(),
+                criteria.getSort(),
+                criteria.getDirection()
+        )).thenReturn(paginatedOffices);
+
+        when(firmService.getFirm(id)).thenReturn(firm);
+
+        String result = firmDirectoryController.displayFirmDetails(id, model, criteria);
+
+        assertThat(result).isEqualTo("firm-directory/firm-offices");
+        assertThat(model.getAttribute("firmOffices")).isEqualTo(paginatedOffices);
+        assertThat(model.getAttribute("criteria")).isEqualTo(criteria);
+        assertThat(model.getAttribute("firm")).isEqualTo(firm);
+    }
 }
