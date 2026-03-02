@@ -5,11 +5,10 @@ import jakarta.annotation.Resource;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
 
-import org.mockito.Mock;
 import org.springframework.test.web.servlet.MockMvc;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 
-import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
+import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import java.util.UUID;
 
@@ -35,12 +34,13 @@ public class FirmDirectoryTest extends BaseIntegrationTest {
                 .andReturn();
     }
 
-    @Transactional
     @Test
+    @Transactional
     public void accessFirmDrilldownView() throws Exception {
-
         Firm firm1 = buildFirm("Test Firm", "A123");
+        Office office1 = buildOffice(firm1, "Test Office", "123 Test Street", "BT12 3AB", "O123");
         firmRepository.saveAndFlush(firm1);
+        officeRepository.saveAndFlush(office1);
 
         UUID firmId = firm1.getId();
 

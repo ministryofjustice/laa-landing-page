@@ -42,6 +42,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.BaseRepositoryTest;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
 /**
@@ -70,12 +71,18 @@ public abstract class BaseIntegrationTest extends BaseRepositoryTest {
     @Autowired
     protected FirmRepository firmRepository;
 
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    protected OfficeRepository officeRepository;
+
     protected EntraUser defaultLoggedInUser;
 
     @AfterAll
     protected void baseAfterAll() {
         userProfileRepository.deleteAll();
         entraUserRepository.deleteAll();
+        firmRepository.deleteAll();
+        officeRepository.deleteAll();
     }
 
     @BeforeAll

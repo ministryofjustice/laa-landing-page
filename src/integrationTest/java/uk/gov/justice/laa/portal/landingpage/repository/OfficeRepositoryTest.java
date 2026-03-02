@@ -5,6 +5,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
@@ -12,6 +15,9 @@ import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DataJpaTest
 public class OfficeRepositoryTest extends BaseRepositoryTest {
@@ -71,5 +77,31 @@ public class OfficeRepositoryTest extends BaseRepositoryTest {
         Assertions.assertThat(firm.getOffices()).containsExactlyInAnyOrder(office2, office3);
 
     }
+
+    @Test
+    void testFindAllByFirmId() {
+
+        Firm firm1 = buildFirm("Firm1", "Firm Code 1");
+        firm1 = firmRepository.saveAndFlush(firm1);
+
+        Office office = buildOffice(firm1,"Test Name", "Test Phone", "Test phone", "A123");
+        Office office2 = buildOffice(firm1,"Test Name 2", "Test Phone 2", "Test phone 2", "B123");
+        repository.saveAllAndFlush(Arrays.asList(office, office2));
+
+        Pageable pageable = PageRequest.of(0, 10);
+
+        Page<Office> offices = repository.findAllByFirmId(firm1.getId(), pageable);
+
+        assertEquals(2, offices.getTotalElements());
+        assertEquals(2, offices.getContent().size());
+
+        List<String> names = offices.getContent().stream()
+                .map(Office::getCode)
+                .toList();
+
+        assertTrue(names.contains("A123"));
+        assertTrue(names.contains("B123"));
+    }
+
 
 }
