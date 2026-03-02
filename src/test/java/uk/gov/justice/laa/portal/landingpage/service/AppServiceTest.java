@@ -21,6 +21,7 @@ import uk.gov.justice.laa.portal.landingpage.techservices.GetAllApplicationsResp
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesErrorResponse;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -504,10 +505,12 @@ class AppServiceTest {
         assertThat(out.get(0).getChangeType()).isEqualTo(AppDto.ChangeType.ADDED);
 
         // saveAll called once with new entity enabled=false
-        ArgumentCaptor<App> captor = ArgumentCaptor.forClass(App.class);
-        verify(appRepository, times(1)).save(captor.capture());
-        App saved = captor.getValue();
-        assertThat(saved.isEnabled()).isFalse();
+        ArgumentCaptor<Iterable<App>> captor = ArgumentCaptor.forClass(Iterable.class);
+        verify(appRepository, times(1)).saveAll(captor.capture());
+        List<App> saved = new ArrayList<>();
+        captor.getValue().forEach(saved::add);
+        assertThat(saved).hasSize(1);
+        assertThat(saved.getFirst().isEnabled()).isFalse();
 
         verify(eventService).logEvent(any(AppSynchronizationAuditEvent.class));
     }
@@ -526,10 +529,12 @@ class AppServiceTest {
         assertThat(out.getFirst().getId()).isEqualTo("L1");
         assertThat(out.getFirst().getChangeType()).isEqualTo(AppDto.ChangeType.DELETED);
 
-        ArgumentCaptor<App> captor = ArgumentCaptor.forClass(App.class);
-        verify(appRepository).save(captor.capture());
-        App saved = captor.getValue();
-        assertThat(saved.isEnabled()).isFalse();
+        ArgumentCaptor<Iterable<App>> captor = ArgumentCaptor.forClass(Iterable.class);
+        verify(appRepository).saveAll(captor.capture());
+        List<App> saved = new ArrayList<>();
+        captor.getValue().forEach(saved::add);
+        assertThat(saved).hasSize(1);
+        assertThat(saved.get(0).isEnabled()).isFalse();
 
         verify(eventService).logEvent(any(AppSynchronizationAuditEvent.class));
     }
@@ -548,7 +553,7 @@ class AppServiceTest {
         assertThat(out).hasSize(1);
         assertThat(out.get(0).getChangeType()).isEqualTo(AppDto.ChangeType.DELETED);
 
-        verify(appRepository, never()).saveAll(any());
+        verify(appRepository, times(1)).saveAll(any());
         verify(eventService).logEvent(any(AppSynchronizationAuditEvent.class));
     }
 
@@ -569,7 +574,7 @@ class AppServiceTest {
         AppDto dto = out.get(0);
         assertThat(dto.getChangeType()).isEqualTo(AppDto.ChangeType.NONE);
 
-        verify(appRepository, never()).saveAll(any());
+        verify(appRepository, times(1)).saveAll(any());
         verify(eventService).logEvent(any(AppSynchronizationAuditEvent.class));
     }
 
@@ -589,10 +594,12 @@ class AppServiceTest {
         assertThat(out).hasSize(1);
         AppDto dto = out.get(0);
         assertThat(dto.getChangeType()).isEqualTo(AppDto.ChangeType.REVIEW);
-        // updatedCount increments but that's internal—indirectly verified via event summary (below)
-        ArgumentCaptor<App> captor = ArgumentCaptor.forClass(App.class);
-        verify(appRepository).save(captor.capture());
-        App savedApp = captor.getValue();
+        ArgumentCaptor<Iterable<App>> captor = ArgumentCaptor.forClass(Iterable.class);
+        verify(appRepository).saveAll(captor.capture());
+        List<App> saved = new ArrayList<>();
+        captor.getValue().forEach(saved::add);
+        assertThat(saved).hasSize(1);
+        App savedApp = saved.get(0);
         assertThat(savedApp.getName()).isEqualTo("RemoteName");
         assertThat(savedApp.getUrl()).isEqualTo("https://remote");
         assertThat(savedApp.getSecurityGroupOid()).isEqualTo("SGX");
@@ -621,7 +628,7 @@ class AppServiceTest {
         assertThat(out.get(0).getChangeType()).isEqualTo(AppDto.ChangeType.UPDATED);
 
         // Must save updated local
-        verify(appRepository).save(any());
+        verify(appRepository).saveAll(any());
         verify(eventService).logEvent(any(AppSynchronizationAuditEvent.class));
     }
 

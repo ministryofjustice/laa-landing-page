@@ -105,110 +105,165 @@ public class AppService {
     @Transactional
     public List<AppDto> synchronizeAndGetApplicationsFromTechServices(CurrentUserDto currentUserDto, UserProfileDto userProfile) {
         log.info("Synchronizing applications from Tech Services...");
-        int counter = 0;
-        int noChangesCounter = 0;
-        int newAppsCounter = 0;
-        int updatedAppsCounter = 0;
-        int deletedAppsCounter = 0;
-        TechServicesApiResponse<GetAllApplicationsResponse> getAllApplicationsResponse = techServicesClient.getAllApplications();
-        if (getAllApplicationsResponse.isSuccess()) {
-            List<GetAllApplicationsResponse.TechServicesApplication> remoteApps = getAllApplicationsResponse.getData().getApps();
-            List<App> localApps = getAllLaaAppEntities();
 
-            Map<String, GetAllApplicationsResponse.TechServicesApplication> remoteMap = remoteApps == null ? Map.of() : remoteApps.stream()
-                    .collect(Collectors.toMap(GetAllApplicationsResponse.TechServicesApplication::getId, a -> a));
+        TechServicesApiResponse<GetAllApplicationsResponse> apiResponse = techServicesClient.getAllApplications();
+        if (!apiResponse.isSuccess()) {
+            String err = apiResponse.getError() != null ? apiResponse.getError().getMessage() : "Unknown error";
+            log.error("Error synchronizing applications from Tech Services: {}", err);
+            throw new RuntimeException(err);
+        }
 
-            Map<String, App> localMap = localApps.stream()
-                    .collect(Collectors.toMap(App::getEntraAppId, a -> a));
+        List<GetAllApplicationsResponse.TechServicesApplication> remoteApps =
+                Optional.ofNullable(apiResponse.getData())
+                        .map(GetAllApplicationsResponse::getApps)
+                        .orElseGet(List::of);
 
-            Set<String> allIds = new HashSet<>();
-            allIds.addAll(remoteMap.keySet());
-            allIds.addAll(localMap.keySet());
+        List<App> localApps = Optional.ofNullable(getAllLaaAppEntities()).orElseGet(List::of);
 
-            List<AppDto> result = new ArrayList<>();
+        Map<String, GetAllApplicationsResponse.TechServicesApplication> remoteById = remoteApps.stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(GetAllApplicationsResponse.TechServicesApplication::getId,
+                        a -> a, (a, b) -> a));
 
-            for (String id : allIds) {
-                GetAllApplicationsResponse.TechServicesApplication remote = remoteMap.get(id);
-                App local = localMap.get(id);
-                AppDto syncedApp;
+        Map<String, App> localById = localApps.stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(App::getEntraAppId, a -> a, (a, b) -> a));
 
-                if (remote != null && local != null) {
-                    AppDto.ChangeType changeType = getChangeType(remote, local);
-                    counter++;
-                    switch (changeType) {
-                        case REVIEW -> {
-                            log.info("App disabled locally for app with id: {}", id);
-                            local.setName(remote.getName());
-                            local.setUrl(remote.getUrl());
-                            local.setSecurityGroupOid(remote.getSecurityGroups().getFirst().getId());
-                            local.setSecurityGroupName(remote.getSecurityGroups().getFirst().getName());
-                            appRepository.save(local);
-                            syncedApp = mapper.map(local, AppDto.class);
-                            syncedApp.setChangeType(changeType);
-                            updatedAppsCounter++;
-                        }
-                        case UPDATED -> {
-                            log.info("App updated remotely with id: {}", id);
-                            local.setName(remote.getName());
-                            local.setUrl(remote.getUrl());
-                            local.setSecurityGroupOid(remote.getSecurityGroups().getFirst().getId());
-                            local.setSecurityGroupName(remote.getSecurityGroups().getFirst().getName());
-                            appRepository.save(local);
-                            syncedApp = mapper.map(local, AppDto.class);
-                            syncedApp.setChangeType(changeType);
-                            updatedAppsCounter++;
-                        }
-                        default -> {
-                            // NONE
-                            log.info("No changes for app with id: {}", id);
-                            syncedApp = mapper.map(local, AppDto.class);
-                            syncedApp.setChangeType(changeType);
-                            noChangesCounter++;
-                        }
-                    }
-                } else if (remote != null) {
-                    // New app from remote → ADDED
-                    log.info("New app {} with id {} added to SiLAS DB", remote.getName(), remote.getId());
-                    App newApp = App.builder()
-                            .entraAppId(remote.getId())
-                            .name(remote.getName())
-                            .url(remote.getUrl())
-                            .securityGroupOid(remote.getSecurityGroups().getFirst().getId())
-                            .securityGroupName(remote.getSecurityGroups().getFirst().getName())
-                            .appType(AppType.LAA)
-                            .enabled(false)
-                            .build();
-                    appRepository.save(newApp);
-                    syncedApp = mapper.map(newApp, AppDto.class);
-                    syncedApp.setChangeType(AppDto.ChangeType.ADDED);
-                    newAppsCounter++;
-                } else {
-                    // App deleted remotely → DELETED
-                    log.info("App with id {} deleted from Tech Services, so disabling locally", id);
-                    local.setEnabled(false);
-                    appRepository.save(local);
-                    syncedApp = mapper.map(local, AppDto.class);
-                    syncedApp.setChangeType(AppDto.ChangeType.DELETED);
-                    deletedAppsCounter++;
+        Set<String> allIds = new HashSet<>();
+        allIds.addAll(remoteById.keySet());
+        allIds.addAll(localById.keySet());
+
+        int totalProcessed = 0;
+        int noChanges = 0;
+        int newApps = 0;
+        int updatedApps = 0;
+        int deletedApps = 0;
+
+        List<AppDto> result = new ArrayList<>(allIds.size());
+        List<App> modifiedApps = new ArrayList<>();
+
+        for (String id : allIds) {
+            GetAllApplicationsResponse.TechServicesApplication remote = remoteById.get(id);
+            App local = localById.get(id);
+            AppDto syncedApp;
+
+            if (remote != null && local != null) {
+                AppDto.ChangeType changeType = getChangeType(remote, local);
+                switch (changeType) {
+                    case REVIEW:
+                        applyRemoteFieldsToLocal(remote, local);
+                        modifiedApps.add(local);
+                        syncedApp = toDtoWithChangeType(local, changeType);
+                        updatedApps++;
+                        log.info("REVIEW: Updated local metadata (id={}, name={})", id, safe(remote.getName()));
+                        break;
+
+                    case UPDATED:
+                        applyRemoteFieldsToLocal(remote, local);
+                        modifiedApps.add(local);
+                        syncedApp = toDtoWithChangeType(local, changeType);
+                        updatedApps++;
+                        log.info("UPDATED: Applied remote updates (id={}, name={})", id, safe(remote.getName()));
+                        break;
+
+                    default:
+                        syncedApp = toDtoWithChangeType(local, changeType);
+                        noChanges++;
+                        log.info("NONE: No changes for app (id={}, name={})", id, safe(local.getName()));
+                        break;
                 }
+                totalProcessed++;
 
-                result.add(syncedApp);
+            } else if (remote != null) {
+                App newApp = createLocalFromRemote(remote);
+                modifiedApps.add(newApp);
+                syncedApp = toDtoWithChangeType(newApp, AppDto.ChangeType.ADDED);
+                newApps++;
+                totalProcessed++;
+                log.info("ADDED: New app added to DB (id={}, name={})", remote.getId(), safe(remote.getName()));
+
+            } else {
+                local.setEnabled(false);
+                modifiedApps.add(local);
+                syncedApp = toDtoWithChangeType(local, AppDto.ChangeType.DELETED);
+                deletedApps++;
+                totalProcessed++;
+                log.info("DELETED: App missing from remote; disabled locally (id={}, name={})", id, safe(local.getName()));
             }
 
-            log.info("Finished synchronizing applications from Tech Services. Total apps processed: {}, No changes: {}, New apps: {}, Updated apps: {}, Deleted apps: {}",
-                    counter, noChangesCounter, newAppsCounter, updatedAppsCounter, deletedAppsCounter);
-
-            AppSynchronizationAuditEvent appSynchronizationAuditEvent =
-                    new AppSynchronizationAuditEvent(currentUserDto, userProfile.getId(),
-                            String.format("Total apps processed: %s, No changes: %s, New apps: %s, Updated apps: %s, Deleted apps: %s",
-                                    counter, noChangesCounter, newAppsCounter, updatedAppsCounter, deletedAppsCounter));
-            eventService.logEvent(appSynchronizationAuditEvent);
-
-            return result.stream().sorted().toList();
-        } else {
-            log.error("Error synchronizing applications from Tech Services: {}", getAllApplicationsResponse.getError().getMessage());
-            throw new RuntimeException(getAllApplicationsResponse.getError().getMessage());
+            result.add(syncedApp);
         }
+
+        appRepository.saveAll(modifiedApps);
+
+        log.info("Finished synchronization. Total: {}, No changes: {}, New: {}, Updated: {}, Deleted: {}",
+                totalProcessed, noChanges, newApps, updatedApps, deletedApps);
+
+        String auditMessage = String.format(
+                "Total apps processed: %s, No changes: %s, New apps: %s, Updated apps: %s, Deleted apps: %s",
+                totalProcessed, noChanges, newApps, updatedApps, deletedApps
+        );
+        AppSynchronizationAuditEvent auditEvent =
+                new AppSynchronizationAuditEvent(currentUserDto, userProfile.getId(), auditMessage);
+        eventService.logEvent(auditEvent);
+
+        return result.stream().sorted().toList();
+    }
+
+    /**
+     * Copies fields from remote to local with null safety for security group fields.
+     */
+    private void applyRemoteFieldsToLocal(GetAllApplicationsResponse.TechServicesApplication remote, App local) {
+        local.setName(remote.getName());
+        local.setUrl(remote.getUrl());
+
+        // Null-safe extraction of first security group
+        Optional.ofNullable(remote.getSecurityGroups())
+                .filter(list -> !list.isEmpty())
+                .map(list -> list.get(0))
+                .ifPresentOrElse(
+                        sg -> {
+                            local.setSecurityGroupOid(sg.getId());
+                            local.setSecurityGroupName(sg.getName());
+                        },
+                        () -> {
+                            local.setSecurityGroupOid(null);
+                            local.setSecurityGroupName(null);
+                        });
+    }
+
+    /**
+     * Creates a new local App from a remote application; new entries start disabled.
+     */
+    private App createLocalFromRemote(GetAllApplicationsResponse.TechServicesApplication remote) {
+        String sgId = null;
+        String sgName = null;
+
+        if (remote.getSecurityGroups() != null && !remote.getSecurityGroups().isEmpty()) {
+            var sg = remote.getSecurityGroups().get(0);
+            sgId = sg.getId();
+            sgName = sg.getName();
+        }
+
+        return App.builder()
+                .entraAppId(remote.getId())
+                .name(remote.getName())
+                .url(remote.getUrl())
+                .securityGroupOid(sgId)
+                .securityGroupName(sgName)
+                .appType(AppType.LAA)
+                .enabled(false)
+                .build();
+    }
+
+    private AppDto toDtoWithChangeType(App entity, AppDto.ChangeType changeType) {
+        AppDto dto = mapper.map(entity, AppDto.class);
+        dto.setChangeType(changeType);
+        return dto;
+    }
+
+    private String safe(String s) {
+        return s == null ? "(null)" : s;
     }
 
     private AppDto.ChangeType getChangeType(GetAllApplicationsResponse.TechServicesApplication remote, App local) {

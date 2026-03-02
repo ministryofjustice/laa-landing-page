@@ -17,7 +17,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.ArgumentCaptor;
 import org.slf4j.LoggerFactory;
@@ -50,7 +49,6 @@ import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
-import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesErrorResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsResponse;
 
@@ -100,17 +98,18 @@ public class LiveTechServicesClientTest {
     private RestClient.ResponseSpec responseSpec;
     @Mock
     private JwtDecoder jwtDecoder;
-    @Spy
     private ObjectMapper objectMapper;
 
     @BeforeEach
     public void setup() {
+        objectMapper = new ObjectMapper();
         Logger logger = (Logger) LoggerFactory.getLogger(LiveTechServicesClient.class);
         logAppender = new ListAppender<>();
         logAppender.start();
         logger.addAppender(logAppender);
         logger.setLevel(ch.qos.logback.classic.Level.DEBUG);
         ReflectionTestUtils.setField(liveTechServicesClient, "accessTokenRequestScope", "scope");
+        ReflectionTestUtils.setField(liveTechServicesClient, "objectMapper", objectMapper);
     }
 
     @Test
@@ -1141,10 +1140,6 @@ public class LiveTechServicesClientTest {
 
         when(responseSpec.toEntity(GetAllApplicationsResponse.class)).thenThrow(ex);
 
-        TechServicesErrorResponse parsed = TechServicesErrorResponse.builder()
-                .success(false).code("INVALID_REQUEST").message("Bad input").build();
-        when(objectMapper.readValue(json, TechServicesErrorResponse.class)).thenReturn(parsed);
-
         TechServicesApiResponse<GetAllApplicationsResponse> out = liveTechServicesClient.getAllApplications();
 
         assertThat(out.isSuccess()).isFalse();
@@ -1172,10 +1167,6 @@ public class LiveTechServicesClientTest {
         );
 
         when(responseSpec.toEntity(GetAllApplicationsResponse.class)).thenThrow(ex);
-
-        TechServicesErrorResponse parsed = TechServicesErrorResponse.builder()
-                .success(false).code("TS_DOWN").message("Service unavailable").build();
-        when(objectMapper.readValue(json, TechServicesErrorResponse.class)).thenReturn(parsed);
 
         TechServicesApiResponse<GetAllApplicationsResponse> out = liveTechServicesClient.getAllApplications();
 

@@ -41,6 +41,7 @@ public class AdminPage {
     private final Locator legalAidServicesHeaders;
     private final Locator legalAidServicesRows;
     private final Locator reorderLegalAidServicesButton;
+    private final Locator syncLegalAidServicesAppsButton;
 
     // --- Roles and Permissions tab content ---
     private final Locator createNewRoleButton;
@@ -69,9 +70,9 @@ public class AdminPage {
         this.pageHeader = page.locator("h1.govuk-heading-xl");
 
         // Tabs
-        this.adminServicesTab = page.locator("#tab_admin-apps");
-        this.legalAidServicesTab = page.locator("#tab_apps");
-        this.rolesAndPermissionsTab = page.locator("#tab_roles");
+        this.adminServicesTab = page.locator("#tab-admin-apps");
+        this.legalAidServicesTab = page.locator("#tab-apps");
+        this.rolesAndPermissionsTab = page.locator("#tab-roles");
 
         // Panels
         this.adminServicesPanel = page.locator("#admin-apps");
@@ -89,6 +90,7 @@ public class AdminPage {
         this.legalAidServicesHeaders = legalAidServicesTable.locator("thead th.govuk-table__header");
         this.legalAidServicesRows = legalAidServicesTable.locator("tbody.govuk-table__body tr.govuk-table__row");
         this.reorderLegalAidServicesButton = legalAidServicesPanel.locator("button.govuk-button:has-text('Reorder legal aid services')");
+        this.syncLegalAidServicesAppsButton = legalAidServicesPanel.locator("button.govuk-button:has-text('Sync Apps')");
 
         // Roles & Permissions
         this.createNewRoleButton = rolesAndPermissionsPanel.locator("a.govuk-button:has-text('Create a new role')");
@@ -188,7 +190,7 @@ public class AdminPage {
 
         assertHeadersContainExactly(
                 legalAidServicesHeaders,
-                List.of("Service name", "Description", "Code", "Order", "")
+                List.of("Service name", "Description", "Status", "Order", "")
         );
         return this;
     }
@@ -201,6 +203,12 @@ public class AdminPage {
     public AdminPage assertReorderLegalAidServicesButtonVisible() {
         goToLegalAidServicesTab();
         assertThat(reorderLegalAidServicesButton).isVisible();
+        return this;
+    }
+
+    public AdminPage assertSyncRolesLegalAidServicesButtonVisible() {
+        goToLegalAidServicesTab();
+        assertThat(syncLegalAidServicesAppsButton).isVisible();
         return this;
     }
 
