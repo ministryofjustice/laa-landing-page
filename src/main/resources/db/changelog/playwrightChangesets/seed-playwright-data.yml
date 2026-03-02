@@ -488,6 +488,19 @@ databaseChangeLog:
               '{EXTERNAL}',
               0
               );
+              
+              INSERT INTO public.app_role (
+              authz_role, app_id, id, description, name, user_type_restriction, ordinal
+              )
+              VALUES (
+              FALSE,
+              '99999999-9999-9999-9999-999999999999',
+              'ffffffff-ffff-ffff-ffff-bbbbbbbbbbbb',
+              'Test LAA App Three Access',
+              'Test LAA App Three Access',
+              '{EXTERNAL}',
+              0
+              );
 
 
   # External User in Different Firm - testing cross-firm access restrictions
