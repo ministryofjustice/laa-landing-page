@@ -8,13 +8,19 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDirectorySearchCriteria;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmOfficesCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
+import uk.gov.justice.laa.portal.landingpage.dto.PaginatedOffices;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
+import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
+
+import java.util.UUID;
 
 /**
  * Controller for handling firm-directory requests
@@ -28,6 +34,7 @@ import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 public class FirmDirectoryController {
 
     private final FirmService firmService;
+    private final OfficeService officeService;
     public static final String SEARCH_PAGE = "firm-directory/search-page";
 
     @Value("${feature.flag.firm.directory.enabled}")
@@ -58,6 +65,27 @@ public class FirmDirectoryController {
         return SEARCH_PAGE;
     }
 
+    @GetMapping("/{id}")
+    public String displayFirmDetails(
+            @PathVariable UUID id,
+            Model model,
+            @ModelAttribute FirmOfficesCriteria criteria) {
+
+        PaginatedOffices paginatedOffices = officeService.getOfficesPage(
+                id,
+                criteria.getPage(),
+                criteria.getSize(),
+                criteria.getSort(),
+                criteria.getDirection()
+        );
+
+        model.addAttribute("firm", firmService.getFirm(id));
+        model.addAttribute("firmOffices", paginatedOffices);
+        model.addAttribute("criteria", criteria);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Firm Details");
+
+        return "firm-directory/firm-offices";
+    }
 
     private void buildDisplayAuditTableModel(FirmDirectorySearchCriteria criteria, Model model,
                                              PaginatedFirmDirectory paginatedFirmDirectory, FirmSearchForm firmSearchForm) {
