@@ -9,6 +9,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
+import org.springframework.test.util.ReflectionTestUtils;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppSynchronizationAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
@@ -77,6 +78,8 @@ class AppServiceTest {
                 .name("Test App")
                 .description("Sample description")
                 .build();
+        ReflectionTestUtils.setField(appService, "syncAppsFromEntra", true);
+        ReflectionTestUtils.setField(appService, "syncAppUpdatesFromEntra", true);
     }
 
 

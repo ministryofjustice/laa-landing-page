@@ -4,7 +4,9 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -32,6 +34,12 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class AppService {
+
+    @Value("${feature.flag.enable.app.sync.from.entra:false}")
+    public boolean syncAppsFromEntra;
+
+    @Value("${feature.flag.enable.app.updates.sync.from.entra:false}")
+    public boolean syncAppUpdatesFromEntra;
 
     private final AppRepository appRepository;
 
@@ -106,6 +114,11 @@ public class AppService {
     public List<AppDto> synchronizeAndGetApplicationsFromTechServices(CurrentUserDto currentUserDto, UserProfileDto userProfile) {
         log.info("Synchronizing applications from Tech Services...");
 
+        if (!syncAppsFromEntra) {
+            log.info("Synchronizing applications has been disabled. App syncing not performed.");
+            return getAllLaaApps();
+        }
+
         TechServicesApiResponse<GetAllApplicationsResponse> apiResponse = techServicesClient.getAllApplications();
         if (!apiResponse.isSuccess()) {
             String err = apiResponse.getError() != null ? apiResponse.getError().getMessage() : "Unknown error";
@@ -147,6 +160,15 @@ public class AppService {
             App local = localById.get(id);
             AppDto syncedApp;
 
+            if (!syncAppUpdatesFromEntra && local != null) {
+                log.info("Synchronizing app updates has been disabled. Entra app updates not synchronized with local.");
+                syncedApp = toDtoWithChangeType(local, AppDto.ChangeType.NONE);
+                totalProcessed++;
+                noChanges++;
+                result.add(syncedApp);
+                continue;
+            }
+
             if (remote != null && local != null) {
                 AppDto.ChangeType changeType = getChangeType(remote, local);
                 switch (changeType) {
@@ -166,11 +188,13 @@ public class AppService {
                         log.info("UPDATED: Applied remote updates (id={}, name={})", id, safe(remote.getName()));
                         break;
 
-                    default:
+                    case NONE:
                         syncedApp = toDtoWithChangeType(local, changeType);
                         noChanges++;
                         log.info("NONE: No changes for app (id={}, name={})", id, safe(local.getName()));
                         break;
+                    default:
+                        throw new RuntimeException("Unknown change type: " + changeType);
                 }
                 totalProcessed++;
 
@@ -183,6 +207,7 @@ public class AppService {
                 log.info("ADDED: New app added to DB (id={}, name={})", remote.getId(), safe(remote.getName()));
 
             } else {
+                assert local != null;
                 local.setEnabled(false);
                 modifiedApps.add(local);
                 syncedApp = toDtoWithChangeType(local, AppDto.ChangeType.DELETED);
@@ -210,37 +235,57 @@ public class AppService {
         return result.stream().sorted().toList();
     }
 
-    /**
-     * Copies fields from remote to local with null safety for security group fields.
-     */
     private void applyRemoteFieldsToLocal(GetAllApplicationsResponse.TechServicesApplication remote, App local) {
         local.setName(remote.getName());
-        local.setUrl(remote.getUrl());
+        if (StringUtils.isEmpty(remote.getUrl())) {
+            local.setUrl("#");
+            local.setEnabled(false);
+        } else {
+            local.setUrl(remote.getUrl());
+        }
 
-        // Null-safe extraction of first security group
-        Optional.ofNullable(remote.getSecurityGroups())
-                .filter(list -> !list.isEmpty())
-                .map(list -> list.get(0))
-                .ifPresentOrElse(
-                        sg -> {
-                            local.setSecurityGroupOid(sg.getId());
-                            local.setSecurityGroupName(sg.getName());
-                        },
-                        () -> {
-                            local.setSecurityGroupOid(null);
-                            local.setSecurityGroupName(null);
-                        });
+        var securityGroups = remote.getSecurityGroups();
+
+        var appSecurityGroup = (securityGroups != null && !securityGroups.isEmpty())
+                ? securityGroups.getFirst()
+                : null;
+
+        if (appSecurityGroup == null) {
+            applyDefaultSecurityGroup(local);
+            return;
+        }
+
+        if (appSecurityGroup.getId() == null) {
+            local.setSecurityGroupOid(local.getName());
+            local.setEnabled(false);
+        } else {
+            local.setSecurityGroupOid(appSecurityGroup.getId());
+        }
+
+        if (appSecurityGroup.getName() == null) {
+            local.setSecurityGroupName(local.getName());
+            local.setEnabled(false);
+        } else {
+            local.setSecurityGroupName(appSecurityGroup.getName());
+        }
+    }
+
+    private void applyDefaultSecurityGroup(App local) {
+        local.setSecurityGroupOid(local.getName());
+        local.setSecurityGroupName(local.getName());
+        local.setEnabled(false);
     }
 
     /**
      * Creates a new local App from a remote application; new entries start disabled.
      */
     private App createLocalFromRemote(GetAllApplicationsResponse.TechServicesApplication remote) {
-        String sgId = null;
-        String sgName = null;
+        String sgId = remote.getName();
+        String sgName = remote.getName();
+        String url = StringUtils.isEmpty(remote.getUrl()) ? "#" : remote.getUrl();
 
         if (remote.getSecurityGroups() != null && !remote.getSecurityGroups().isEmpty()) {
-            var sg = remote.getSecurityGroups().get(0);
+            var sg = remote.getSecurityGroups().getFirst();
             sgId = sg.getId();
             sgName = sg.getName();
         }
@@ -248,7 +293,7 @@ public class AppService {
         return App.builder()
                 .entraAppId(remote.getId())
                 .name(remote.getName())
-                .url(remote.getUrl())
+                .url(url)
                 .securityGroupOid(sgId)
                 .securityGroupName(sgName)
                 .appType(AppType.LAA)
@@ -274,8 +319,8 @@ public class AppService {
         } else if (remote != null && !local.isEnabled()) {
             return AppDto.ChangeType.REVIEW;
         } else if (remote != null
-                && (!remote.getName().equals(local.getName())
-                || !remote.getUrl().equals(local.getUrl())
+                && (!StringUtils.equals(remote.getName(), local.getName())
+                || !StringUtils.equals(remote.getUrl(), local.getUrl())
                 || !areSecurityGroupsEqual(remote.getSecurityGroups(), local))) {
             return AppDto.ChangeType.UPDATED;
         }
