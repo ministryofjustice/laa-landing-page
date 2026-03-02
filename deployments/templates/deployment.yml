@@ -80,6 +80,8 @@ spec:
               value: "${TEST_DATA_NON_ADMIN_PRINCIPALS}"
             - name: TEST_DATA_INTERNAL_PRINCIPALS
               value: "${TEST_DATA_INTERNAL_PRINCIPALS}"
+            - name: APP_PUI_URL
+              value: "${APP_PUI_URL}"
             - name: TECH_SERVICES_LAA_BUSINESS_UNIT
               value: "${TECH_SERVICES_LAA_BUSINESS_UNIT}"
             - name: TECH_SERVICES_AZURE_SCOPE
