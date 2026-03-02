@@ -32,6 +32,10 @@ public class AppService {
         return appRepository.findById(id);
     }
 
+    public Optional<AppDto> findById(String id) {
+        return findById(UUID.fromString(id));
+    }
+
     public Optional<AppDto> findById(UUID id) {
         return appRepository.findById(id).map(app -> mapper.map(app, AppDto.class));
     }

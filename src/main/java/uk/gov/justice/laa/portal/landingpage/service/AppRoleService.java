@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.DeleteAppRoleEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.RoleCreationAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.RoleCreationDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
@@ -24,6 +26,8 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRolesOrderForm;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.RoleAssignmentRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -44,6 +48,10 @@ public class AppRoleService {
     private final EventService eventService;
     private final LoginService loginService;
     private final ModelMapper modelMapper;
+    private final RoleAssignmentRepository roleAssignmentRepository;
+    private final UserProfileRepository userProfileRepository;
+
+
 
     public List<AppRoleDto> getByIds(Collection<String> ids) {
 
@@ -60,6 +68,10 @@ public class AppRoleService {
 
     public Optional<AppRoleDto> findById(UUID id) {
         return appRoleRepository.findById(id).map(app -> modelMapper.map(app, AppRoleDto.class));
+    }
+
+    public Optional<AppRoleDto> findById(String id) {
+        return findById(UUID.fromString(id));
     }
 
     public Optional<AppRole> getById(UUID id) {
@@ -113,10 +125,55 @@ public class AppRoleService {
     }
 
     @Transactional
+    public void deleteAppRole(UUID userProfileId, UUID entraOid, String appName, String roleId, String reason) {
+        UUID id = UUID.fromString(roleId);
+        AppRole appRole = appRoleRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("App role not found for id: " + roleId));
+        final String appRoleName = appRole.getName();
+
+        // Delete User profile role assignments
+        userProfileRepository.deleteAllByAppRoleId(id);
+
+        // Delete role assignments for groups
+        roleAssignmentRepository.deleteByRoleIdInEitherColumn(id);
+
+        // Delete role permissions
+        appRoleRepository.deleteRolePermissions(id);
+
+        // Delete role
+        appRoleRepository.delete(appRole);
+
+        DeleteAppRoleEvent deleteAppRoleEvent =
+                new DeleteAppRoleEvent(
+                        userProfileId,
+                        entraOid,
+                        appName,
+                        appRoleName,
+                        reason.trim()
+                );
+
+        eventService.logEvent(deleteAppRoleEvent);
+
+        log.info("User profile {} removed app role {} from app {} including role permissions and assignments (Reason: {})",
+                userProfileId, appRole.getName(), appName, reason);
+
+    }
+
+    public long countNoOfRoleAssignments(String roleId) {
+        UUID id = UUID.fromString(roleId);
+        return userProfileRepository.countUserProfilesByAppRoleId(id);
+    }
+
+    public long countNoOfFirmsWithRoleAssignments(String roleId) {
+        UUID id = UUID.fromString(roleId);
+        return userProfileRepository.countFirmsWithRole(id);
+    }
+
+    @Transactional
     public AppRole save(AppRoleDto roleDto) {
 
         AppRole appRole = getById(UUID.fromString(roleDto.getId()))
-                .orElseThrow(() -> new RuntimeException(String.format("App not found for the give app id: %s", roleDto.getId())));
+                .orElseThrow(() -> new RuntimeException(String.format("App role not found for the give app id: %s", roleDto.getId())));
         appRole.setName(roleDto.getName());
         appRole.setDescription(roleDto.getDescription());
         return appRoleRepository.save(appRole);

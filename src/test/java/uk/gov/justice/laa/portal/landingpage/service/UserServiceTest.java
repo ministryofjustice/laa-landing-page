@@ -76,6 +76,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
+import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserInfoAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserFirmReassignmentEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
@@ -1460,12 +1461,12 @@ class UserServiceTest {
                 .build();
         when(mockAppRoleRepository.findByUserTypeRestrictionContains(any())).thenReturn(List.of(testAppRole));
         List<AppDto> apps = userService.getAppsByUserType(UserType.INTERNAL);
-        assertEquals(1, apps.size());
-        assertEquals(testApp.getName(), apps.getFirst().getName());
+        Assertions.assertEquals(1, apps.size());
+        Assertions.assertEquals(testApp.getName(), apps.getFirst().getName());
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
         verify(mockAppRoleRepository).findByUserTypeRestrictionContains(captor.capture());
         String userTypeString = captor.getValue();
-        assertEquals(UserType.INTERNAL.name(), userTypeString);
+        Assertions.assertEquals(UserType.INTERNAL.name(), userTypeString);
     }
 
     @Test
@@ -1479,12 +1480,12 @@ class UserServiceTest {
                 .build();
         when(mockAppRoleRepository.findByUserTypeRestrictionContains(any())).thenReturn(List.of(testAppRole));
         List<AppDto> apps = userService.getAppsByUserType(UserType.EXTERNAL);
-        assertEquals(1, apps.size());
-        assertEquals(testApp.getName(), apps.getFirst().getName());
+        Assertions.assertEquals(1, apps.size());
+        Assertions.assertEquals(testApp.getName(), apps.getFirst().getName());
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
         verify(mockAppRoleRepository).findByUserTypeRestrictionContains(captor.capture());
         String userTypeString = captor.getValue();
-        assertEquals(UserType.EXTERNAL.name(), userTypeString);
+        Assertions.assertEquals(UserType.EXTERNAL.name(), userTypeString);
     }
 
     @Test
@@ -1516,13 +1517,13 @@ class UserServiceTest {
 
         List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppIdAndUserType(UUID.randomUUID().toString(),
                 UserType.INTERNAL, null);
-        assertEquals(2, returnedAppRoles.size());
+        Assertions.assertEquals(2, returnedAppRoles.size());
         // Check no external app roles in response
         Assertions
                 .assertTrue(returnedAppRoles.stream().flatMap(role -> Arrays.stream(role.getUserTypeRestriction()))
                         .anyMatch(userType -> userType == UserType.INTERNAL));
-        assertEquals(returnedAppRoles.get(0).getName(), internalAndExternalRole.getName());
-        assertEquals(returnedAppRoles.get(1).getName(), internalRole.getName());
+        Assertions.assertEquals(returnedAppRoles.get(0).getName(), internalAndExternalRole.getName());
+        Assertions.assertEquals(returnedAppRoles.get(1).getName(), internalRole.getName());
     }
 
     @Test
@@ -1554,13 +1555,13 @@ class UserServiceTest {
 
         List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppIdAndUserType(UUID.randomUUID().toString(),
                 UserType.EXTERNAL, null);
-        assertEquals(2, returnedAppRoles.size());
+        Assertions.assertEquals(2, returnedAppRoles.size());
         // Check no external app roles in response
         Assertions
                 .assertTrue(returnedAppRoles.stream().flatMap(role -> Arrays.stream(role.getUserTypeRestriction()))
                         .anyMatch(userType -> userType == UserType.EXTERNAL));
-        assertEquals(returnedAppRoles.get(0).getName(), internalAndExternalRole.getName());
-        assertEquals(returnedAppRoles.get(1).getName(), externalRole.getName());
+        Assertions.assertEquals(returnedAppRoles.get(0).getName(), internalAndExternalRole.getName());
+        Assertions.assertEquals(returnedAppRoles.get(1).getName(), externalRole.getName());
     }
 
     @Test
@@ -1568,7 +1569,7 @@ class UserServiceTest {
         when(mockAppRepository.findById(any())).thenReturn(Optional.empty());
         List<AppRoleDto> returnedAppRoles = userService.getAppRolesByAppIdAndUserType(UUID.randomUUID().toString(),
                 UserType.EXTERNAL, null);
-        assertEquals(0, returnedAppRoles.size());
+        Assertions.assertEquals(0, returnedAppRoles.size());
     }
 
     @Test
@@ -1607,7 +1608,7 @@ class UserServiceTest {
         List<AppRoleDto> chambersRoles = userService.getAppRolesByAppIdAndUserType(
                 UUID.randomUUID().toString(), UserType.EXTERNAL, FirmType.CHAMBERS);
 
-        assertEquals(2, chambersRoles.size());
+        Assertions.assertEquals(2, chambersRoles.size());
         Assertions.assertTrue(chambersRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
         Assertions
                 .assertTrue(chambersRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
@@ -1650,7 +1651,7 @@ class UserServiceTest {
         List<AppRoleDto> advocateRoles = userService.getAppRolesByAppIdAndUserType(
                 UUID.randomUUID().toString(), UserType.EXTERNAL, FirmType.ADVOCATE);
 
-        assertEquals(2, advocateRoles.size());
+        Assertions.assertEquals(2, advocateRoles.size());
         Assertions.assertTrue(advocateRoles.stream().anyMatch(role -> role.getName().equals("Advocate Only Role")));
         Assertions
                 .assertTrue(advocateRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
@@ -1693,7 +1694,7 @@ class UserServiceTest {
         List<AppRoleDto> unrestrictedRoles = userService.getAppRolesByAppIdAndUserType(
                 UUID.randomUUID().toString(), UserType.EXTERNAL, null);
 
-        assertEquals(1, unrestrictedRoles.size());
+        Assertions.assertEquals(1, unrestrictedRoles.size());
         Assertions.assertTrue(
                 unrestrictedRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
         Assertions
@@ -1738,7 +1739,7 @@ class UserServiceTest {
         List<AppRoleDto> lspRoles = userService.getAppRolesByAppIdAndUserType(
                 UUID.randomUUID().toString(), UserType.EXTERNAL, FirmType.LEGAL_SERVICES_PROVIDER);
 
-        assertEquals(1, lspRoles.size());
+        Assertions.assertEquals(1, lspRoles.size());
         Assertions.assertTrue(lspRoles.stream().anyMatch(role -> role.getName().equals("No Firm Restriction Role")));
         Assertions.assertFalse(lspRoles.stream().anyMatch(role -> role.getName().equals("Chambers Only Role")));
         Assertions.assertFalse(lspRoles.stream().anyMatch(role -> role.getName().equals("Advocate Only Role")));
@@ -1780,7 +1781,7 @@ class UserServiceTest {
         List<AppRoleDto> externalChambersRoles = userService.getAppRolesByAppIdAndUserType(
                 UUID.randomUUID().toString(), UserType.EXTERNAL, FirmType.CHAMBERS);
 
-        assertEquals(1, externalChambersRoles.size());
+        Assertions.assertEquals(1, externalChambersRoles.size());
         Assertions.assertTrue(
                 externalChambersRoles.stream().anyMatch(role -> role.getName().equals("External Chambers Role")));
         Assertions.assertFalse(
@@ -1802,7 +1803,7 @@ class UserServiceTest {
         when(mockEntraUserRepository.findById(any())).thenReturn(Optional.of(testUser));
         Optional<UserType> returnedUserType = userService.getUserTypeByUserId(UUID.randomUUID().toString());
         Assertions.assertTrue(returnedUserType.isPresent());
-        assertEquals(UserType.INTERNAL, returnedUserType.get());
+        Assertions.assertEquals(UserType.INTERNAL, returnedUserType.get());
     }
 
     @Test
@@ -7934,34 +7935,21 @@ class UserServiceTest {
     }
 
 
+
+
     @Test
-    void getAuditUsersForExport_pairsFirmCodesToFirmNames_sortedByFirmNames() {
-        // Given
+    void getAuditUsers_csvExportTrueAndFalse() {
+
+        Firm alpha = Firm.builder().id(UUID.randomUUID()).name("Alpha").code("Z9").build();
+        Firm beta  = Firm.builder().id(UUID.randomUUID()).name("Beta").code("A1").build();
+        Firm gamma = Firm.builder().id(UUID.randomUUID()).name("Gamma").code("D4").build();
+        Firm delta = Firm.builder().id(UUID.randomUUID()).name("Delta").code("B2").build();
+
+        App appPortal = App.builder().id(UUID.randomUUID()).name("Portal").build();
+        AppRole fumRole = AppRole.builder().id(UUID.randomUUID()).name("Firm User Manager").app(appPortal).build();
+        AppRole viewerRole = AppRole.builder().id(UUID.randomUUID()).name("Viewer").app(appPortal).build();
+
         UUID userId = UUID.randomUUID();
-
-        Firm alpha = Firm.builder()
-                .id(UUID.randomUUID())
-                .name("Alpha")
-                .code("Z9")
-                .build();
-
-        Firm beta = Firm.builder()
-                .id(UUID.randomUUID())
-                .name("Beta")
-                .code("A1")
-                .build();
-
-        Firm gamma = Firm.builder()
-                .id(UUID.randomUUID())
-                .name("Gamma")
-                .code("D4")
-                .build();
-
-        Firm delta = Firm.builder()
-                .id(UUID.randomUUID())
-                .name("Delta")
-                .code("B2")
-                .build();
 
         EntraUser user = EntraUser.builder()
                 .id(userId)
@@ -7972,76 +7960,72 @@ class UserServiceTest {
                 .multiFirmUser(true)
                 .build();
 
-        // Intentionally scrambled firm order (Gamma, Alpha, Delta, Beta)
-        UserProfile profile1 = UserProfile.builder()
-                .id(UUID.randomUUID())
-                .entraUser(user)
-                .firm(gamma)
-                .userType(UserType.EXTERNAL)
-                .activeProfile(true)
-                .appRoles(new HashSet<>())
-                .userProfileStatus(UserProfileStatus.COMPLETE)
-                .build();
+        UserProfile upGamma = UserProfile.builder()
+                .id(UUID.randomUUID()).entraUser(user).firm(gamma)
+                .activeProfile(true).appRoles(Set.of(viewerRole))
+                .userType(UserType.EXTERNAL).userProfileStatus(UserProfileStatus.COMPLETE).build();
 
-        UserProfile profile2 = UserProfile.builder()
-                .id(UUID.randomUUID())
-                .entraUser(user)
-                .firm(alpha)
-                .userType(UserType.EXTERNAL)
-                .activeProfile(false)
-                .appRoles(new HashSet<>())
-                .userProfileStatus(UserProfileStatus.COMPLETE)
-                .build();
+        UserProfile upAlpha = UserProfile.builder()
+                .id(UUID.randomUUID()).entraUser(user).firm(alpha)
+                .activeProfile(false).appRoles(Set.of(fumRole, viewerRole))    // << for selected firm
+                .userType(UserType.EXTERNAL).userProfileStatus(UserProfileStatus.COMPLETE).build();
 
-        UserProfile profile3 = UserProfile.builder()
-                .id(UUID.randomUUID())
-                .entraUser(user)
-                .firm(delta)
-                .userType(UserType.EXTERNAL)
-                .activeProfile(false)
-                .appRoles(new HashSet<>())
-                .userProfileStatus(UserProfileStatus.COMPLETE)
-                .build();
+        UserProfile upDelta = UserProfile.builder()
+                .id(UUID.randomUUID()).entraUser(user).firm(delta)
+                .activeProfile(false).appRoles(Set.of())
+                .userType(UserType.EXTERNAL).userProfileStatus(UserProfileStatus.COMPLETE).build();
 
-        UserProfile profile4 = UserProfile.builder()
-                .id(UUID.randomUUID())
-                .entraUser(user)
-                .firm(beta)
-                .userType(UserType.EXTERNAL)
-                .activeProfile(false)
-                .appRoles(new HashSet<>())
-                .userProfileStatus(UserProfileStatus.COMPLETE)
-                .build();
+        UserProfile upBeta = UserProfile.builder()
+                .id(UUID.randomUUID()).entraUser(user).firm(beta)
+                .activeProfile(false).appRoles(Set.of())
+                .userType(UserType.EXTERNAL).userProfileStatus(UserProfileStatus.COMPLETE).build();
 
-        user.setUserProfiles(Set.of(profile1, profile2, profile3, profile4));
+        user.setUserProfiles(Set.of(upGamma, upAlpha, upDelta, upBeta));
 
-        Page<EntraUser> userPage = new PageImpl<>(List.of(user),
-                PageRequest.of(0, 10), 1);
+        Page<EntraUser> page = new PageImpl<>(List.of(user), PageRequest.of(0, 10), 1);
 
         when(mockEntraUserRepository.findAllUsersForAudit(
-                eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
-                .thenReturn(userPage);
+                any(), any(), any(), any(), any(), any(), any(PageRequest.class)))
+                .thenReturn(page);
 
         when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                 .thenReturn(List.of(user));
 
-        // When
-        uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(
-                null, null, null, null, null, 1, 10, "name", "asc", true);
+        String expectedFirmNames = "Alpha, Beta, Delta, Gamma";
+        String expectedCodes     = "A1, B2, D4, Z9";
 
-        // Then
-        assertThat(result).isNotNull();
-        assertThat(result.getTotalUsers()).isEqualTo(1);
-        assertThat(result.getUsers()).hasSize(1);
+        UUID selectedFirmId = alpha.getId();
 
-        AuditUserDto dto = result.getUsers().get(0);
+        // --- CSV path ---
+        PaginatedAuditUsers csvResult = userService.getAuditUsers(
+                null, selectedFirmId, null, null, null,
+                1, 10, "name", "asc", true);
 
-        // Sorted by firm name:
-        assertThat(dto.getFirmAssociation()).isEqualTo("Alpha, Beta, Delta, Gamma");
+        AuditUserDto csvDto = csvResult.getUsers().get(0);
+        assertThat(csvDto.getAppAccess()).isEqualTo("Portal");
+        assertThat(csvDto.isProviderAdmin()).isTrue();
 
-        // Codes must align to those firms (NOT independently sorted by code):
-        // Alpha -> Z9, Beta -> A1, Delta -> B2, Gamma -> D4
-        assertThat(dto.getFirmCode()).isEqualTo("Z9, A1, B2, D4");
+
+        // --- CSV path where user is NOT provider admin for selected firm ---
+        PaginatedAuditUsers csvResultNotAdmin = userService.getAuditUsers(
+                null, beta.getId(), null, null, null,
+                1, 10, "name", "asc", true);
+
+        AuditUserDto csvDtoNotAdmin = csvResultNotAdmin.getUsers().get(0);
+        assertThat(csvDtoNotAdmin.getAppAccess()).isEqualTo("");
+        assertThat(csvDtoNotAdmin.isProviderAdmin()).isFalse();
+
+
+
+        // ---NON-CSV path ---
+        PaginatedAuditUsers normalResult = userService.getAuditUsers(
+                null, selectedFirmId, null, null, null,
+                1, 10, "name", "asc", false);
+
+        AuditUserDto normalDto = normalResult.getUsers().get(0);
+
+        assertThat(normalDto.getFirmAssociation()).isEqualTo(expectedFirmNames);
+        assertThat(normalDto.getFirmCode()).isEqualTo(expectedCodes);
+
     }
-
 }

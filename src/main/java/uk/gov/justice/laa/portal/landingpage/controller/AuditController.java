@@ -114,6 +114,7 @@ public class AuditController {
                 criteria.getSelectedAppId() != null ? criteria.getSelectedAppId().toString() : "");
         model.addAttribute("selectedUserType",
                 criteria.getSelectedUserType() != null ? criteria.getSelectedUserType().toString() : "");
+        model.addAttribute("selectedFirmName", criteria.getSelectedFirmName());
         model.addAttribute("sort", criteria.getSort());
         model.addAttribute("direction", criteria.getDirection());
         model.addAttribute("exportCsv",
@@ -238,13 +239,10 @@ public class AuditController {
         final int pageSize = 500;
         int page = 1;
 
-
-
         String userId = authenticatedUser.getCurrentUser()
                 .map(CurrentUserDto::getUserId)
                 .map(Object::toString)
                 .orElse("unknown");
-
 
         List<String> filterSummary = Stream.of(
                         criteria.getSilasRole(),
@@ -255,7 +253,6 @@ public class AuditController {
                 .collect(Collectors.toList());
 
         String firmCode = firmRepository.findById(criteria.getSelectedFirmId()).map(Firm::getCode).orElse("");
-
         List<AuditUserDto> firmData = new ArrayList<>(pageSize);
 
         PaginatedAuditUsers result;
@@ -282,7 +279,7 @@ public class AuditController {
             log.info("No audit users found for search criteria: {}", Arrays.toString(filterSummary.toArray()));
         }
 
-        AuditCsvExport export = auditExportService.downloadAuditCsv(firmData, firmCode);
+        AuditCsvExport export = auditExportService.downloadAuditCsv(firmData, firmCode, criteria.getSelectedFirmName());
         log.info("CSV Audit Export complete - actor= {}, timestamp= {}, Firm Code= {}, Filter Summary (Silas Role, "
                 + "UserType, App Id)= {}, "
                 + "row count= {}", userId, LocalDateTime.now(), firmCode, filterSummary, result.getUsers().size());
