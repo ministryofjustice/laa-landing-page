@@ -65,4 +65,45 @@ class StaticPagesControllerTest {
         assertThat(model.getAttribute("existingAttribute")).isEqualTo("existingValue");
         assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Cookies");
     }
+
+    @Test
+    void accessibility_shouldReturnAccessibilityTemplate() {
+        // When
+        String viewName = staticPagesController.accessibility(model);
+
+        // Then
+        assertThat(viewName).isEqualTo("footer/accessibility");
+    }
+
+    @Test
+    void accessibility_shouldSetPageTitleAttribute() {
+        // When
+        staticPagesController.accessibility(model);
+
+        // Then
+        assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Accessibility");
+    }
+
+    @Test
+    void accessibility_shouldReturnCorrectTemplateAndSetModel() {
+        // When
+        String viewName = staticPagesController.accessibility(model);
+
+        // Then
+        assertThat(viewName).isEqualTo("footer/accessibility");
+        assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Accessibility");
+    }
+
+    @Test
+    void accessibility_shouldNotModifyExistingModelAttributes() {
+        // Given
+        model.addAttribute("existingAttribute", "existingValue");
+
+        // When
+        staticPagesController.accessibility(model);
+
+        // Then
+        assertThat(model.getAttribute("existingAttribute")).isEqualTo("existingValue");
+        assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Accessibility");
+    }
 }
