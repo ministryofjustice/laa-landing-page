@@ -32,15 +32,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.models.DirectoryRole;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
-import com.microsoft.kiota.RequestInformation;
 
 import jakarta.transaction.Transactional;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -49,11 +46,10 @@ import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto.AuditProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
-import uk.gov.justice.laa.portal.landingpage.dto.FirmDirectoryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
-import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
+import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserInfoAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserFirmReassignmentEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
@@ -85,6 +81,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditProjection;
+import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
@@ -1014,33 +1011,44 @@ public class UserService {
     }
 
     /**
-     * Update user details in Microsoft Graph and local database
+     * Update user details in entra and database
      *
      * @param userId    The user ID
+     * @param email The user's email
      * @param firstName The user's first name
      * @param lastName  The user's last name
      * @throws IOException If an error occurs during the update
      */
-    public void updateUserDetails(String userId, String firstName, String lastName)
+    public void updateUserDetails(String userId, String email, String firstName, String lastName)
             throws IOException {
-        // Update local database
         Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
         if (optionalUser.isPresent()) {
             EntraUser entraUser = optionalUser.get();
+            entraUser.setEmail(email);
             entraUser.setFirstName(firstName);
             entraUser.setLastName(lastName);
 
             try {
-                entraUserRepository.saveAndFlush(entraUser);
-                logger.info("Successfully updated user details in database for user ID: {}",
-                        userId);
+                // update on tech services
+                TechServicesApiResponse<ChangeAccountEnabledResponse> response = techServicesClient.updateUserDetails(entraUser.getEntraOid(), firstName, lastName, email);
+                if (response.isSuccess()) {
+                    //update user information on database
+                    EntraUser updatedEntraUser = entraUserRepository.saveAndFlush(entraUser);
+                    UpdateUserInfoAuditEvent updateUserInfoAuditEvent = new UpdateUserInfoAuditEvent(
+                            entraUser, updatedEntraUser);
+                    eventService.logEvent(updateUserInfoAuditEvent);
+                    logger.info("Successfully updated user details in database for user ID: {}",
+                            userId);
+                } else {
+                    throw new RuntimeException("Tech Services API call failed: " + response.getError());
+                }
             } catch (Exception e) {
                 logger.error("Failed to update user details in database for user ID: {}", userId,
                         e);
                 throw new IOException("Failed to update user details in database", e);
             }
         } else {
-            logger.warn(
+            logger.info(
                     "User with id {} not found in database. Could not update local user details.",
                     userId);
         }

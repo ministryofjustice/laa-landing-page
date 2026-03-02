@@ -1764,45 +1764,6 @@ class UserControllerTest {
     }
 
     @Test
-    void editUserDetails_ReTry_shouldPopulateSavedDataAndReturnView() {
-        // Given
-        String userId = "user123";
-        EntraUserDto entraUser = new EntraUserDto();
-        entraUser.setId(userId);
-        entraUser.setFirstName("John");
-        entraUser.setLastName("Doe");
-        entraUser.setEmail("john.doe@example.com");
-
-        UserProfileDto userProfile = UserProfileDto.builder()
-                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
-                .entraUser(entraUser)
-                .build();
-
-        session = new MockHttpSession();
-        session.setAttribute("user", userProfile);
-        EditUserDetailsForm form = new EditUserDetailsForm();
-        form.setFirstName("Changed");
-        form.setLastName("Changed");
-        form.setEmail("john.doe@example.com");
-        session.setAttribute("editUserDetailsForm", form);
-
-        // When
-        String view = userController.editUserDetails(userId, model, session);
-
-        // Then
-        assertThat(view).isEqualTo("edit-user-details");
-        assertThat(model.getAttribute("user")).isEqualTo(userProfile);
-
-        EditUserDetailsForm updatedForm = (EditUserDetailsForm) model.getAttribute("editUserDetailsForm");
-        assertThat(updatedForm).isNotNull();
-        assertThat(updatedForm.getFirstName()).isEqualTo("Changed");
-        assertThat(updatedForm.getLastName()).isEqualTo("Changed");
-        assertThat(updatedForm.getEmail()).isEqualTo("john.doe@example.com");
-
-        verify(userService, never()).getUserProfileById(userId);
-    }
-
-    @Test
     void editUserDetails_shouldThrowExceptionWhenUserNotFound() {
         // Given
         String userId = "nonexistent";
@@ -1814,7 +1775,7 @@ class UserControllerTest {
     }
 
     @Test
-    void updateUserDetails_shouldUpdateUserAndRedirect() throws IOException {
+    void updateUserDetails_shouldUpdateUserAndRedirectWithSameEmail() throws IOException {
         // Given
         final String userId = "user123";
         EditUserDetailsForm form = new EditUserDetailsForm();
@@ -1827,26 +1788,64 @@ class UserControllerTest {
         MockHttpSession testSession = new MockHttpSession();
         UserProfileDto userProfile = UserProfileDto.builder()
                 .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .entraUser(EntraUserDto.builder()
+                        .email("jane.smith@example.com").build())
                 .build();
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
 
         // When
-        String view = userController.updateUserDetails(userId, form, bindingResult, testSession);
+        String view = userController.updateUserDetails(userId, form, bindingResult, testSession, model, redirectAttributes);
 
         // Then
-        assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/details-check-answer");
+        assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
         assertThat(testSession.getAttribute("user")).isNotNull();
-        assertThat(testSession.getAttribute("editUserDetailsForm")).isNotNull();
+        assertThat(testSession.getAttribute("editUserDetailsForm")).isNull();
+        assertThat(redirectAttributes.getFlashAttributes().get("isEditUserSuccess"))
+                .isEqualTo(true);
     }
 
     @Test
-    void updateUserDetails_shouldReturnToFormOnValidationErrors() throws IOException {
+    void updateUserDetails_ShouldUpdateUserAndRedirectWithDifferentEmail() throws IOException {
         // Given
         final String userId = "user123";
         EditUserDetailsForm form = new EditUserDetailsForm();
         form.setFirstName("Jane");
         form.setLastName("Smith");
-        form.setEmail("jane.smith@example.com");
+        form.setEmail("jane.test@example.com");
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+        MockHttpSession testSession = new MockHttpSession();
+        UserProfileDto userProfile = UserProfileDto.builder()
+                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .entraUser(EntraUserDto.builder()
+                        .email("jane.smith@example.com").build())
+                .build();
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
+
+        // When
+        String view = userController.updateUserDetails(userId, form, bindingResult, testSession, model, redirectAttributes);
+
+        // Then
+        assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
+        assertThat(testSession.getAttribute("user")).isNotNull();
+        assertThat(testSession.getAttribute("editUserDetailsForm")).isNull();
+        assertThat(redirectAttributes.getFlashAttributes().get("isEditUserSuccess"))
+                .isEqualTo(true);
+    }
+
+    @Test
+    void updateUserDetails_shouldReturnToFormOnValidationErrors_InvalidDomain() throws IOException {
+        // Given
+        final String userId = "user123";
+        EditUserDetailsForm form = new EditUserDetailsForm();
+        form.setFirstName("Jane");
+        form.setLastName("Smith");
+        form.setEmail("invalidDomain");
 
         EntraUserDto entraUser = new EntraUserDto();
         UserProfileDto userProfile = UserProfileDto.builder()
@@ -1860,96 +1859,79 @@ class UserControllerTest {
         MockHttpSession testSession = new MockHttpSession();
 
         // When
-        String view = userController.updateUserDetails(userId, form, bindingResult, testSession);
+        String view = userController.updateUserDetails(userId, form, bindingResult, testSession,  model, redirectAttributes);
 
         // Then
         assertThat(view).isEqualTo("edit-user-details");
+        verify(bindingResult).rejectValue("email", "email.invalidDomain",
+                "The email address domain is not valid or cannot receive emails.");
         assertThat(testSession.getAttribute("user")).isEqualTo(userProfile);
-        assertThat(testSession.getAttribute("editUserDetailsForm")).isEqualTo(form);
     }
 
     @Test
-    void updateUserDetailsCheck_shouldRedirectNullSessionForm() throws IOException {
+    void updateUserDetails_shouldReturnToFormOnValidationErrors_emailAddressIsAlreadyAssociatedWithAnotherUser() throws IOException {
         // Given
-        String userId = "user123";
-        EntraUserDto entraUser = new EntraUserDto();
-        entraUser.setId(userId);
-        MockHttpSession testSession = new MockHttpSession();
-        // When
-        String view = userController.updateUserDetailsCheck(userId, model, testSession);
-        // Then
-        assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
-    }
+        final String userId = "user123";
+        EditUserDetailsForm form = new EditUserDetailsForm();
+        form.setFirstName("Jane");
+        form.setLastName("Smith");
+        form.setEmail("jane.smith@example.com");
 
-    @Test
-    void updateUserDetailsCheck() throws IOException {
-        // Given
-        String userId = "user123";
         EntraUserDto entraUser = new EntraUserDto();
-        entraUser.setId(userId);
-
         UserProfileDto userProfile = UserProfileDto.builder()
                 .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
                 .entraUser(entraUser)
                 .build();
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
-        session = new MockHttpSession();
-        EditUserDetailsForm form = new EditUserDetailsForm();
-        form.setFirstName("Changed");
-        form.setLastName("Changed");
-        form.setEmail("john.doe@example.com");
-        session.setAttribute("editUserDetailsForm", form);
-        model = new ExtendedModelMap();
+        when(userService.userExistsByEmail(anyString())).thenReturn(true);
+        when(emailValidationService.isValidEmailDomain(anyString())).thenReturn(true);
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(true);
+        MockHttpSession testSession = new MockHttpSession();
+
         // When
-        String view = userController.updateUserDetailsCheck(userId, model, session);
+        String view = userController.updateUserDetails(userId, form, bindingResult, testSession,  model, redirectAttributes);
+
         // Then
-        assertThat(view).isEqualTo("edit-user-details-check-answer");
-        assertThat(model.getAttribute("editUserDetailsForm")).isEqualTo(form);
-        assertThat(model.getAttribute("user")).isEqualTo(userProfile);
+        assertThat(view).isEqualTo("edit-user-details");
+        verify(bindingResult).rejectValue("email", "error.email",
+                "This email address is already associated with another user.");
+        assertThat(testSession.getAttribute("user")).isEqualTo(userProfile);
     }
 
     @Test
-    void updateUserDetailsSubmit_shouldRedirectNullSessionForm() throws IOException {
+    void updateUserDetails_shouldReturnToFormOnValidationErrors_emailAddressIsAlreadyRegisteredMultiFirmUser() throws IOException {
         // Given
-        String userId = "user123";
-        EntraUserDto entraUser = new EntraUserDto();
-        entraUser.setId(userId);
+        final String userId = "user123";
+        EditUserDetailsForm form = new EditUserDetailsForm();
+        form.setFirstName("Jane");
+        form.setLastName("Smith");
+        form.setEmail("jane.smith@example.com");
 
+        EntraUserDto entraUser = new EntraUserDto();
         UserProfileDto userProfile = UserProfileDto.builder()
                 .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
                 .entraUser(entraUser)
                 .build();
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
-        MockHttpSession testSession = new MockHttpSession();
-        // When
-        String view = userController.updateUserDetailsSubmit(userId, testSession);
-        // Then
-        assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
-    }
+        when(userService.userExistsByEmail(anyString())).thenReturn(true);
+        when(userService.isMultiFirmUserByEmail(anyString())).thenReturn(true);
+        when(emailValidationService.isValidEmailDomain(anyString())).thenReturn(true);
 
-    @Test
-    void updateUserDetailsSubmit() throws IOException {
-        // Given
-        String userId = "550e8400-e29b-41d4-a716-446655440000";
-        EntraUserDto entraUser = new EntraUserDto();
-        entraUser.setId(userId);
 
-        UserProfileDto userProfile = UserProfileDto.builder()
-                .id(UUID.fromString(userId))
-                .entraUser(entraUser)
-                .build();
-        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(true);
         MockHttpSession testSession = new MockHttpSession();
-        EditUserDetailsForm form = new EditUserDetailsForm();
-        form.setFirstName("John");
-        form.setLastName("Doe");
-        testSession.setAttribute("editUserDetailsForm", form);
+
         // When
-        String view = userController.updateUserDetailsSubmit(userId, testSession);
+        String view = userController.updateUserDetails(userId, form, bindingResult, testSession, model, redirectAttributes);
+
         // Then
-        verify(userService).updateUserDetails(eq("550e8400-e29b-41d4-a716-446655440000"), eq("John"), eq("Doe"));
-        assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/confirmation");
-        assertThat(testSession.getAttribute("editUserDetailsForm")).isNull();
+        assertThat(view).isEqualTo("edit-user-details");
+        verify(bindingResult).rejectValue("email", "error.email",
+                "This email address is already registered as a multi-firm user.");
+        assertThat(testSession.getAttribute("user")).isEqualTo(userProfile);
     }
 
     @Test

@@ -266,6 +266,8 @@ spec:
               value: "${FEATURE_FLAG_FIRM_DIRECTORY_ENABLED}"
             - name: FEATURE_FLAG_DISABLE_USER
               value: "${FEATURE_FLAG_DISABLE_USER}"
+            - name: FEATURE_FLAG_EDIT_USER_DETAILS
+              value: "${FEATURE_FLAG_EDIT_USER_DETAILS}"
             - name: SPRING_SESSION_JDBC_ENABLED
               value: "${SPRING_SESSION_JDBC_ENABLED}"
             - name: APP_MEANS_AND_MATCH_UI1_NAME

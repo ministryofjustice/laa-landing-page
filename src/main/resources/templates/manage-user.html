@@ -59,6 +59,27 @@
             </div>
         </div>
 
+        <!--success user changes -->
+        <div  th:if="${isEditUserSuccess}" role="region" class="moj-alert moj-alert--success moj-alert--with-heading"
+             aria-label="success: User details have been updated " data-module="moj-alert">
+            <div>
+                <svg class="moj-alert__icon" role="presentation" focusable="false" xmlns="http://www.w3.org/2000/svg"
+                     viewBox="0 0 30 30" height="30" width="30">
+                    <path
+                            d="M11.2869 24.6726L2.00415 15.3899L4.62189 12.7722L11.2869 19.4186L25.3781 5.32739L27.9958 7.96369L11.2869 24.6726Z"
+                            fill="currentColor" />
+                </svg>
+            </div>
+            <div class="moj-alert__content">
+                <h2 class="moj-alert__heading">Success</h2>
+
+                <p th:text="${#strings.endsWith(user.fullName, 's')} ?
+                    |${user.fullName}' user details have been updated| :
+                    |${user.fullName}'s user details have been updated|">
+                </p>
+            </div>
+        </div>
+
         <div class="govuk-grid-row">
             <div class="govuk-grid-column-full">
                 <div class="moj-page-header-actions">
@@ -124,6 +145,10 @@
                             <div class="govuk-summary-card__title-wrapper" style="align-items: center;">
                                 <h2 class="govuk-summary-card__title">User details</h2>
                                 <ul class="govuk-summary-card__actions">
+                                    <li th:if="${isMailOnly}" class="govuk-summary-card__action">
+                                        <a class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
+                                           th:href="@{/admin/users/edit/{id}/details(id=${user.id})}">Edit user</a>
+                                    </li>
                                     <li th:if="${canDisableUser}" class="govuk-summary-card__action">
                                         <a th:if="${userIsEnabled}" class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
                                            th:href="@{/admin/users/manage/{id}/disable(id=${user.entraUser.id})}">Disable user</a>

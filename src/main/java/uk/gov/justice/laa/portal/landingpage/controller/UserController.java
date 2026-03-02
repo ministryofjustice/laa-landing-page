@@ -23,10 +23,6 @@ import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.actuate.autoconfigure.observation.ObservationProperties;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -138,6 +134,9 @@ public class UserController {
 
     @Value("${feature.flag.disable.user}")
     public boolean disableUserFeatureEnabled;
+
+    @Value("${feature.flag.edit.user.details}")
+    public boolean editUserDetailFeatureEnabled;
 
     @GetMapping("/users")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
@@ -417,6 +416,12 @@ public class UserController {
         Map<String, Object> filters = (Map<String, Object>) session.getAttribute("userListFilters");
         boolean hasFilters = hasActiveFilters(filters);
         model.addAttribute("hasFilters", hasFilters);
+
+        if (editUserDetailFeatureEnabled) {
+            model.addAttribute("isMailOnly", user.getEntraUser().isMailOnly());
+        } else {
+            model.addAttribute("isMailOnly", false);
+        }
 
         return "manage-user";
     }
@@ -942,17 +947,12 @@ public class UserController {
     @GetMapping("/users/edit/{id}/details")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String editUserDetails(@PathVariable String id, Model model, HttpSession session) {
-        UserProfileDto user = (UserProfileDto) session.getAttribute("user");
-        if (Objects.isNull(user)) {
-            user = userService.getUserProfileById(id).orElseThrow();
-        }
-        EditUserDetailsForm editUserDetailsForm = (EditUserDetailsForm) session.getAttribute("editUserDetailsForm");
-        if (Objects.isNull(editUserDetailsForm)) {
-            editUserDetailsForm = new EditUserDetailsForm();
-            editUserDetailsForm.setFirstName(user.getEntraUser().getFirstName());
-            editUserDetailsForm.setLastName(user.getEntraUser().getLastName());
-            editUserDetailsForm.setEmail(user.getEntraUser().getEmail());
-        }
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();;
+        EditUserDetailsForm editUserDetailsForm = new EditUserDetailsForm();
+        editUserDetailsForm.setFirstName(user.getEntraUser().getFirstName());
+        editUserDetailsForm.setLastName(user.getEntraUser().getLastName());
+        editUserDetailsForm.setEmail(user.getEntraUser().getEmail());
+
         model.addAttribute("editUserDetailsForm", editUserDetailsForm);
         model.addAttribute("user", user);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user details - " + user.getFullName());
@@ -973,60 +973,51 @@ public class UserController {
     @PostMapping("/users/edit/{id}/details")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String updateUserDetails(@PathVariable String id,
-            @Valid EditUserDetailsForm editUserDetailsForm, BindingResult result,
-            HttpSession session) throws IOException {
+                                    @Valid EditUserDetailsForm editUserDetailsForm,
+                                    BindingResult result,
+                                    HttpSession session,
+                                    Model model,
+                                    RedirectAttributes redirectAttributes) throws IOException {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        model.addAttribute("user", user);
         session.setAttribute("user", user);
-        session.setAttribute("editUserDetailsForm", editUserDetailsForm);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user details - " + user.getFullName());
+
+        if (Objects.nonNull(editUserDetailsForm.getEmail()) && !editUserDetailsForm.getEmail().isEmpty()) {
+            boolean isSameEmail = Objects.equals(user.getEntraUser().getEmail(), editUserDetailsForm.getEmail());
+            if (!isSameEmail && userService.userExistsByEmail(editUserDetailsForm.getEmail())) {
+                // Check if the existing user is a multi-firm user
+                if (userService.isMultiFirmUserByEmail(editUserDetailsForm.getEmail())) {
+                    result.rejectValue("email", "error.email",
+                            "This email address is already registered as a multi-firm user.");
+                } else {
+                    result.rejectValue("email", "error.email", "This email address is already associated with another user.");
+                }
+            }
+
+            if (!emailValidationService.isValidEmailDomain(editUserDetailsForm.getEmail())) {
+                result.rejectValue("email", "email.invalidDomain",
+                        "The email address domain is not valid or cannot receive emails.");
+            }
+        }
         if (result.hasErrors()) {
-            log.debug("Validation errors occurred while updating user details: {}", result.getAllErrors());
-            // If there are validation errors, return to the edit user details page with
-            // errors
+            log.info("Validation errors occurred while updating user details: {}", result.getAllErrors());
             return "edit-user-details";
         }
-        return "redirect:/admin/users/edit/" + id + "/details-check-answer";
-    }
 
-    @GetMapping("/users/edit/{id}/details-check-answer")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
-    public String updateUserDetailsCheck(@PathVariable String id, Model model,
-            HttpSession session) throws IOException {
-        EditUserDetailsForm editUserDetailsForm = (EditUserDetailsForm) session.getAttribute("editUserDetailsForm");
-        if (Objects.isNull(editUserDetailsForm)) {
-            return "redirect:/admin/users/manage/" + id;
-        }
-        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-        model.addAttribute("editUserDetailsForm", editUserDetailsForm);
-        model.addAttribute("user", user);
-        model.addAttribute(ModelAttributes.PAGE_TITLE,
-                "Edit user details - Check your answers - " + user.getFullName());
-        return "edit-user-details-check-answer";
-    }
-
-    /**
-     * Update user details
-     *
-     * @param id      User ID
-     * @param session HttpSession to store user details
-     * @return Redirect to user management page
-     * @throws IOException              If an error occurs during user update
-     * @throws IllegalArgumentException If the user ID is invalid or not found
-     */
-    @PostMapping("/users/edit/{id}/details-check-answer")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
-    public String updateUserDetailsSubmit(@PathVariable String id,
-            HttpSession session) throws IOException {
-        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-        EditUserDetailsForm editUserDetailsForm = (EditUserDetailsForm) session.getAttribute("editUserDetailsForm");
-        if (Objects.isNull(editUserDetailsForm)) {
-            return "redirect:/admin/users/manage/" + id;
-        }
-        // Update user details
-        // TODO audit log needed
-        userService.updateUserDetails(user.getEntraUser().getId(), editUserDetailsForm.getFirstName(),
+        userService.updateUserDetails(user.getEntraUser().getId(),
+                editUserDetailsForm.getEmail(),
+                editUserDetailsForm.getFirstName(),
                 editUserDetailsForm.getLastName());
-        session.removeAttribute("editUserDetailsForm");
-        return "redirect:/admin/users/edit/" + id + "/confirmation";
+
+        //model.addAttribute("isEditUserSuccess", true);
+
+        // Add success message
+        redirectAttributes.addFlashAttribute("isEditUserSuccess",
+                true);
+
+        // Redirect to manage user page
+        return "redirect:/admin/users/manage/" + id;
     }
 
     /**

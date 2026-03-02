@@ -25,4 +25,6 @@ public interface TechServicesClient {
 
     TechServicesApiResponse<GetUsersResponse> getUsers(String fromDateTime, String toDateTime);
 
+    TechServicesApiResponse<ChangeAccountEnabledResponse> updateUserDetails(String entraOid, String firstName, String lastName, String email);
+
 }
