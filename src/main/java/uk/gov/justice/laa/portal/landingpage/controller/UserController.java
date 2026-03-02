@@ -481,13 +481,14 @@ public class UserController {
                                      Model model,
                                      HttpSession session,
     Authentication authentication) {
-        EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
+        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
+
         if (!disableUserFeatureEnabled) {
             throw new ResponseStatusException(HttpStatusCode.valueOf(404));
         }
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
-        boolean isInternalUser = userService.isInternal(authenticatedUser.getId());
-        List<DisableUserReasonViewModel> reasons = new ArrayList<>(userAccountStatusService.getDisableUserReasons(isInternalUser).stream()
+        boolean isProvideAdmin = RolesUtils.isProvideAdminBySet(currentUserProfile.getAppRoles());
+        List<DisableUserReasonViewModel> reasons = new ArrayList<>(userAccountStatusService.getDisableUserReasons(isProvideAdmin).stream()
                 .map(reason -> mapper.map(reason, DisableUserReasonViewModel.class))
                 .toList());
         model.addAttribute("user", user);

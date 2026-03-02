@@ -34,13 +34,13 @@ public class UserAccountStatusService {
     private final TechServicesClient techServicesClient;
     private final UserService userService;
 
-    public List<DisableUserReasonDto> getDisableUserReasons(boolean isInternal) {
+    public List<DisableUserReasonDto> getDisableUserReasons(boolean isFirmAdmin) {
         List<DisableUserReason> reasons = disableUserReasonRepository.findAll();
         List<DisableUserReasonDto> disableUserReasonDtos = new java.util.ArrayList<>(reasons.stream()
                 .filter(DisableUserReason::isUserSelectable)
                 .map(reason -> mapper.map(reason, DisableUserReasonDto.class))
                 .toList());
-        if (!isInternal) {
+        if (isFirmAdmin) {
             Set<String> keepReasons = Set.of("Absence", "Provider Discretion");
             disableUserReasonDtos.removeIf(u -> !keepReasons.contains(u.getName()));
         }
