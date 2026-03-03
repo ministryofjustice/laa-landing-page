@@ -78,8 +78,8 @@ class AppServiceTest {
                 .name("Test App")
                 .description("Sample description")
                 .build();
-        ReflectionTestUtils.setField(appService, "syncAppsFromEntra", true);
-        ReflectionTestUtils.setField(appService, "syncAppUpdatesFromEntra", true);
+        ReflectionTestUtils.setField(appService, "syncAppsFromEntra", "true");
+        ReflectionTestUtils.setField(appService, "syncAppUpdatesFromEntra", "true");
     }
 
 
