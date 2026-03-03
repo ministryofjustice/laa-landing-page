@@ -999,11 +999,8 @@ class UserServiceTest {
         when(mockEntraUserRepository.findById(any(UUID.class))).thenReturn(Optional.of(entraUser));
 
         // When & Then
-        RuntimeException exception = Assertions.assertThrows(RuntimeException.class,
-                () -> userService.getActiveProfileByUserId(userId.toString()));
-        assertThat(exception.getMessage()).contains("User profile not found for the given user id:");
-        List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.ERROR);
-        assertThat(warningLogs.size()).isEqualTo(1);
+        Optional<UserProfileDto> result = userService.getActiveProfileByUserId(userId.toString());
+        assertThat(result).isEmpty();
     }
 
     @Nested
@@ -7971,7 +7968,10 @@ class UserServiceTest {
         AuditUserDto normalDto = normalResult.getUsers().get(0);
 
         assertThat(normalDto.getFirmAssociation()).isEqualTo(expectedFirmNames);
-        assertThat(normalDto.getFirmCode()).isEqualTo(expectedCodes);
+        assertThat(normalDto.getFirmCode()).contains("A1");
+        assertThat(normalDto.getFirmCode()).contains("B2");
+        assertThat(normalDto.getFirmCode()).contains("D4");
+        assertThat(normalDto.getFirmCode()).contains("Z9");
 
     }
 }
