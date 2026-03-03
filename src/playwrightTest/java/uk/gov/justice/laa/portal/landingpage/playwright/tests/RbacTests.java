@@ -246,7 +246,7 @@ public class RbacTests extends BaseFrontEndTest {
         );
 
         assertTrue(
-                page.locator("a.govuk-link[href*='/admin/users/manage/'][href$='disable']").isVisible(),
+                page.locator("a.govuk-link[href*='/admin/users/manage/'][href*='/disable'][href*='referer=manage'][href*='profileId=']").isVisible(),
                 "Disable user button should also be visible for Firm User Manager"
         );
     }
