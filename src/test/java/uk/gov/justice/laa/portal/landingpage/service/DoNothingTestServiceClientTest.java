@@ -135,8 +135,8 @@ public class DoNothingTestServiceClientTest {
                         user.getLastName(),
                         user.getEmail()
                 );
-        Assertions.assertThat(response.isSuccess()).isTrue();
-        Assertions.assertThat(response.getData().getMessage()).isEqualTo("Successfully Update user details.");
+        assertThat(response.isSuccess()).isTrue();
+        assertThat(response.getData().getMessage()).isEqualTo("Successfully Update user details.");
     }
 
     @Test
