@@ -44,6 +44,7 @@ import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledRe
 import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetAllApplicationsResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUsersResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailRequest;
@@ -915,12 +916,12 @@ public class LiveTechServicesClientTest {
                 .thenReturn(ResponseEntity.ok(GetUsersResponse.builder()
                         .message("Users retrieved successfully")
                         .users(List.of(
-                                GetUsersResponse.TechServicesUser.builder()
+                                TechServicesUser.builder()
                                         .id("user1")
                                         .displayName("John Doe")
                                         .mail("john@example.com")
                                         .build(),
-                                GetUsersResponse.TechServicesUser.builder()
+                                TechServicesUser.builder()
                                         .id("user2")
                                         .displayName("Jane Smith")
                                         .mail("jane@example.com")

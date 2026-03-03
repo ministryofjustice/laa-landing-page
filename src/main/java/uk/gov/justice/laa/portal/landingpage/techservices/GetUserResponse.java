@@ -6,22 +6,18 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.io.Serializable;
-import java.time.LocalDateTime;
-import java.util.List;
-
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class GetUsersResponse implements Serializable {
-    
+public class GetUserResponse {
+
     @JsonProperty("success")
     private boolean success;
-    
+
     @JsonProperty("message")
     private String message;
-    
-    @JsonProperty("users")
-    private List<TechServicesUser> users;
+
+    @JsonProperty("user")
+    private TechServicesUser user;
 }

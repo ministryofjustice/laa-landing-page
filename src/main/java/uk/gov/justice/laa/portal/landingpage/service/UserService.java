@@ -1659,7 +1659,7 @@ public class UserService {
 
         if (!csvExport) {
             firmCodes = profiles.stream().map(UserProfile::getFirm).filter(Objects::nonNull)
-                .map(Firm::getCode).collect(Collectors.toCollection(TreeSet::new));
+                .map(Firm::getCode).collect(Collectors.toCollection(HashSet::new));
         } else {
             List<Firm> sortedFirms =
                     profiles.stream().map(UserProfile::getFirm
