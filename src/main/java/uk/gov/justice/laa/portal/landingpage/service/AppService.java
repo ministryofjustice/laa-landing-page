@@ -116,7 +116,9 @@ public class AppService {
 
         if (!Boolean.parseBoolean(syncAppsFromEntra)) {
             log.info("Synchronizing applications has been disabled. App syncing not performed.");
-            return getAllLaaApps();
+            List<AppDto> result = getAllLaaApps();
+            result.forEach(app -> app.setChangeType(AppDto.ChangeType.NONE));
+            return result;
         }
 
         TechServicesApiResponse<GetAllApplicationsResponse> apiResponse = techServicesClient.getAllApplications();
