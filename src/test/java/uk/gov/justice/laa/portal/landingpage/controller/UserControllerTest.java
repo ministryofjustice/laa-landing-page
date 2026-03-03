@@ -5987,10 +5987,53 @@ class UserControllerTest {
         form.setReasonId(reason.getId().toString());
 
         when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(returnedUser));
-        when(disableUserService.getDisableUserReasons()).thenReturn(List.of(reason));
+        when(loginService.getCurrentProfile(authentication))
+                .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(disableUserService.getDisableUserReasons(false)).thenReturn(List.of(reason));
 
 
-        String view = userController.disableUserReasonsGet(userId.toString(), form, model, session);
+        String view = userController.disableUserReasonsGet(userId.toString(), form, model, session, authentication);
+
+        Assertions.assertEquals("disable-user-reason", view);
+        Assertions.assertEquals(returnedUser, model.getAttribute("user"));
+
+        Object returnedReasonsObject = model.getAttribute("reasons");
+        Assertions.assertNotNull(returnedReasonsObject);
+        Assertions.assertInstanceOf(List.class, returnedReasonsObject);
+        List<?> returnedReasonList = (List<?>) returnedReasonsObject;
+        Object returnedReasonObject = returnedReasonList.getFirst();
+        Assertions.assertInstanceOf(DisableUserReasonViewModel.class, returnedReasonObject);
+
+        DisableUserReasonViewModel returnedReason = (DisableUserReasonViewModel) returnedReasonObject;
+        Assertions.assertEquals(reason.getId(), returnedReason.getId());
+        Assertions.assertEquals("Disable User - " + returnedUser.getFullName(), model.getAttribute(ModelAttributes.PAGE_TITLE));
+    }
+
+    @Test
+    public void testDisableUserGetReturnsReasonForProvideAdmin() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        EntraUserDto returnedUser = EntraUserDto.builder()
+                .id(userId.toString())
+                .fullName("Test User")
+                .build();
+        DisableUserReasonDto reason = DisableUserReasonDto.builder()
+                .id(UUID.randomUUID())
+                .name("Test Reason")
+                .description("A test reason.")
+                .build();
+        DisableUserReasonForm form = new DisableUserReasonForm();
+        form.setReasonId(reason.getId().toString());
+
+        when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(returnedUser));
+        when(disableUserService.getDisableUserReasons(true)).thenReturn(List.of(reason));
+
+        Set<AppRole> editorRoles = Set.of(AppRole.builder()
+                .name(FIRM_USER_MANAGER.getDescription())
+                .build());
+        when(loginService.getCurrentProfile(authentication))
+                .thenReturn(UserProfile.builder().appRoles(editorRoles).build());
+        String view = userController.disableUserReasonsGet(userId.toString(), form, model, session, authentication);
 
         Assertions.assertEquals("disable-user-reason", view);
         Assertions.assertEquals(returnedUser, model.getAttribute("user"));

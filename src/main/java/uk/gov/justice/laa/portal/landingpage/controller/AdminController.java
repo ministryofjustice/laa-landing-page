@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -74,6 +75,8 @@ public class AdminController {
 
     public static final String SILAS_ADMINISTRATION_TITLE = "SiLAS Administration";
     private static final Set<String> VALID_TABS = Set.of("admin-apps", "apps", "roles");
+    @Value("${feature.flag.enable.app.sync.from.entra}")
+    private String syncAppsFromEntra;
 
     private final LoginService loginService;
     private final EventService eventService;
@@ -116,8 +119,8 @@ public class AdminController {
 
         model.addAttribute("roles", roles);
         model.addAttribute("appFilter", appFilter);
-        model.addAttribute("canTriggerAppSync",
-                accessControlService.authenticatedUserHasPermission(Permission.EDIT_LAA_APP_METADATA));
+        model.addAttribute("canTriggerAppSync", Boolean.parseBoolean(syncAppsFromEntra)
+                && accessControlService.authenticatedUserHasPermission(Permission.EDIT_LAA_APP_METADATA));
         session.setAttribute("appFilter", appFilter);
 
         // Get distinct app names for filter dropdown
@@ -152,8 +155,8 @@ public class AdminController {
         List<AppRoleAdminDto> roles = appRoleService.getAllLaaAppRoles();
 
         model.addAttribute("roles", roles);
-        model.addAttribute("canTriggerAppSync",
-                accessControlService.authenticatedUserHasPermission(Permission.TRIGGER_LAA_APP_SYNC));
+        model.addAttribute("canTriggerAppSync", Boolean.parseBoolean(syncAppsFromEntra)
+                && accessControlService.authenticatedUserHasPermission(Permission.TRIGGER_LAA_APP_SYNC));
         model.addAttribute("appSyncSuccessful", true);
 
         model.addAttribute("appNames", apps.stream()

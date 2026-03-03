@@ -1629,9 +1629,7 @@ public class AccessControlServiceTest {
 
     @Test
     void canDisableUser_returnsFalse_whenUserIsMultiFirm() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).email("test@email.com")
@@ -1650,7 +1648,7 @@ public class AccessControlServiceTest {
                 .build();
         Mockito.when(userService.getEntraUserById(userId)).thenReturn(Optional.of(userDto));
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         boolean result = accessControlService.canDisableUser(userId);
@@ -1765,10 +1763,8 @@ public class AccessControlServiceTest {
     }
 
     @Test
-    void canDisableUser_internalUser_disableMultiFirmUser() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+    void cannotDisableUser_internalUser_disableMultiFirmUser() {
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -1784,17 +1780,14 @@ public class AccessControlServiceTest {
         EntraUser accessedEntraUser = EntraUser.builder().id(accessedUserId).multiFirmUser(true).build();
         EntraUserDto accessedEntraUserDto = EntraUserDto.builder().id(accessedUserId.toString()).multiFirmUser(true).build();
 
-        Mockito.when(entraUserRepository.findByIdWithAssociations(accessedUserId)).thenReturn(Optional.of(accessedEntraUser));
         Mockito.when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedEntraUserDto));
         Mockito.when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
-        Mockito.when(userService.isInternal(userId)).thenReturn(true);
-
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         boolean result = accessControlService.canDisableUser(accessedUserId.toString());
 
-        Assertions.assertThat(result).isTrue();
+        Assertions.assertThat(result).isFalse();
     }
 
     @Test
