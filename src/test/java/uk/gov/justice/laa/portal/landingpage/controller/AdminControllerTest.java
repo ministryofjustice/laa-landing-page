@@ -34,6 +34,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.validation.BeanPropertyBindingResult;
@@ -2920,6 +2921,7 @@ class AdminControllerTest {
 
             // default permission TRUE
             when(accessControlService.authenticatedUserHasPermission(Permission.TRIGGER_LAA_APP_SYNC)).thenReturn(true);
+            ReflectionTestUtils.setField(adminController, "syncAppsFromEntra", "true");
         }
 
         @Test
