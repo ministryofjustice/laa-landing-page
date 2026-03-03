@@ -192,6 +192,8 @@ public class AccessControlService {
         boolean isAccessedUserInternal = userService.isInternal(entraUserId);
         if (isAccessedUserInternal) {
             return false;
+        } else if (accessedUser.isMultiFirmUser()) {
+            return false;
         }
 
 
