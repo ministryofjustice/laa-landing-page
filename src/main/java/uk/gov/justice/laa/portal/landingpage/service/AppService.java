@@ -36,10 +36,10 @@ import java.util.stream.Collectors;
 public class AppService {
 
     @Value("${feature.flag.enable.app.sync.from.entra}")
-    public boolean syncAppsFromEntra;
+    private String syncAppsFromEntra;
 
     @Value("${feature.flag.enable.app.updates.sync.from.entra}")
-    public boolean syncAppUpdatesFromEntra;
+    private String syncAppUpdatesFromEntra;
 
     private final AppRepository appRepository;
 
@@ -114,7 +114,7 @@ public class AppService {
     public List<AppDto> synchronizeAndGetApplicationsFromTechServices(CurrentUserDto currentUserDto, UserProfileDto userProfile) {
         log.info("Synchronizing applications from Tech Services...");
 
-        if (!syncAppsFromEntra) {
+        if (!Boolean.parseBoolean(syncAppsFromEntra)) {
             log.info("Synchronizing applications has been disabled. App syncing not performed.");
             return getAllLaaApps();
         }
@@ -160,7 +160,7 @@ public class AppService {
             App local = localById.get(id);
             AppDto syncedApp;
 
-            if (!syncAppUpdatesFromEntra && local != null) {
+            if (!Boolean.parseBoolean(syncAppUpdatesFromEntra) && local != null) {
                 log.info("Synchronizing app updates has been disabled. Entra app updates not synchronized with local.");
                 syncedApp = toDtoWithChangeType(local, AppDto.ChangeType.NONE);
                 totalProcessed++;
