@@ -9,6 +9,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.DisableUserReasonDto;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -71,7 +72,7 @@ public class UserAccountStatusServiceTest {
         when(disableUserReasonRepository.findAll()).thenReturn(List.of(reason));
 
         // When
-        List<DisableUserReasonDto> returnedReasons = userAccountStatusService.getDisableUserReasons();
+        List<DisableUserReasonDto> returnedReasons = userAccountStatusService.getDisableUserReasons(false);
 
         // Then
         assertThat(returnedReasons).isNotEmpty();
@@ -79,6 +80,41 @@ public class UserAccountStatusServiceTest {
         assertThat(returnedReason.getId()).isEqualTo(reason.getId());
         assertThat(returnedReason.getName()).isEqualTo(reason.getName());
         assertThat(returnedReason.getDescription()).isEqualTo(reason.getDescription());
+    }
+
+    @Test
+    public void testGetDisableUserReasonsMapsReasonsCorrectlyForProvideAdmin() {
+        // Given
+
+        DisableUserReason reason = DisableUserReason.builder()
+                .id(UUID.randomUUID())
+                .name("Test Reason")
+                .description("A test reason.")
+                .build();
+        DisableUserReason absence = DisableUserReason.builder()
+                .id(UUID.randomUUID())
+                .name("Absence")
+                .description("A Absence reason.")
+                .build();
+        DisableUserReason providerDiscretion = DisableUserReason.builder()
+                .id(UUID.randomUUID())
+                .name("Provider Discretion")
+                .description("A Provider Discretion reason.")
+                .build();
+
+        when(disableUserReasonRepository.findAll()).thenReturn(List.of(reason, absence, providerDiscretion));
+
+        // When
+        List<DisableUserReasonDto> returnedReasons = userAccountStatusService.getDisableUserReasons(true);
+
+        // Then
+        assertThat(returnedReasons).isNotEmpty();
+        assertThat(returnedReasons.size()).isEqualTo(2);
+        ModelMapper mapper = new ModelMapper();
+        assertThat(returnedReasons)
+                .isEqualTo(List.of(mapper.map(absence, DisableUserReasonDto.class),
+                        mapper.map(providerDiscretion, DisableUserReasonDto.class)));
+
     }
 
     @Test
