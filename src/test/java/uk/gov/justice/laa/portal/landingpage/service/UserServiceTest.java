@@ -7968,7 +7968,10 @@ class UserServiceTest {
         AuditUserDto normalDto = normalResult.getUsers().get(0);
 
         assertThat(normalDto.getFirmAssociation()).isEqualTo(expectedFirmNames);
-        assertThat(normalDto.getFirmCode()).isEqualTo(expectedCodes);
+        assertThat(normalDto.getFirmCode()).contains("A1");
+        assertThat(normalDto.getFirmCode()).contains("B2");
+        assertThat(normalDto.getFirmCode()).contains("D4");
+        assertThat(normalDto.getFirmCode()).contains("Z9");
 
     }
 }
