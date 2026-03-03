@@ -492,13 +492,9 @@
                     <tr class="govuk-table__row" th:each="firmDirectory : ${firmDirectories}">
                         <td class="govuk-table__cell">
                             <a class="govuk-link" th:if="${firmDirectory.firmId != null}"
-                               th:href="@{firmDirectory}"
-                               th:text="${firmDirectory.firmName}"></a>
-                            <!-- Delete the line above and uncomment the line below when the firm details page is ready
-                            <a class="govuk-link" th:if="${firmDirectory.firmId != null}"
                                th:href="@{firmDirectory/{id}(id=${firmDirectory.firmId})}"
                                th:text="${firmDirectory.firmName}"></a>
-                               -->
+
                         </td>
                         <td class="govuk-table__cell" th:text="${firmDirectory.firmCode}"></td>
                         <td class="govuk-table__cell"
