@@ -420,11 +420,10 @@ public class UserController {
         boolean hasFilters = hasActiveFilters(filters);
         model.addAttribute("hasFilters", hasFilters);
 
-        if (editUserDetailFeatureEnabled) {
-            model.addAttribute("isMailOnly", user.getEntraUser().isMailOnly());
-        } else {
-            model.addAttribute("isMailOnly", false);
-        }
+        model.addAttribute(
+                "isMailOnly",
+                editUserDetailFeatureEnabled && user.getEntraUser().isMailOnly()
+        );
 
         return "manage-user";
     }
