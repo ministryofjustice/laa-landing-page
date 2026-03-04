@@ -12,7 +12,7 @@
 <body>
 <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
     <a class="govuk-back-link govuk-!-margin-bottom-3"
-       th:href="@{/admin/firmDirectory/{id}(id=${firm.id})}">
+       th:href="@{/admin/firmDirectory/{id}/reasonForDisable(id=${firm.id})}">
         Back </a>
 </nav>
 <main class="govuk-main-wrapper" id="main-content">
@@ -22,11 +22,11 @@
             <fieldset class="govuk-fieldset" aria-describedby="reasons-hint">
                 <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
                     <h1 class="govuk-fieldset__heading">
-                        Remove access for all <span th:text="${firm.name}" />
+                        Remove access for all <span th:text="${firm.name}" /> users
                     </h1>
                 </legend>
                 <div id="reasons-hint" class="govuk-hint">
-                    You are about to remove for  <span th:text="${firm.name}" /> user in SiLAS. This will remove their access to all Legal Aid Agency(LAA) services.
+                    You are about to remove access for all <span th:text="${firm.name}" /> users in SiLAS. This will remove their access to all Legal Aid Agency(LAA) services.
                 </div>
                 <div class="govuk-warning-text">
                     <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
@@ -43,8 +43,25 @@
                     </div>
                     <div>
                         <ul class="govuk-list govuk-list--bullet">
-                            <li><a href="/admin/users/audit?firmSearch=KHAN%27S%20LAW%20FIRM%20LTD%20TA%20KK%20%26%20CO&selectedFirmId=b038e8c8-772f-47bc-8970-3292dbca562b">users liked to </a> </li>
-                            <li><a href="/admin/users/audit?firmSearch=KHAN%27S%20LAW%20FIRM%20LTD%20TA%20KK%20%26%20CO&selectedFirmId=b038e8c8-772f-47bc-8970-3292dbca562b&selectedUserType=MULTI_FIRM">, who will lose access to all of their firms (open in a new window)</a> </li>
+                            <li>
+                                <a th:href="@{/admin/users/audit(firmSearch=${firm.name}, selectedFirmId=${firm.id})}">
+                                    <span th:text="${totalOfSingleFirm}"/>
+                                    <span th:text="${totalOfSingleFirm > 1 ? 'users' : 'user'}"/> linked to
+                                    <span th:text="${firm.name}"/> (open in a new window)
+                                </a>
+                            </li>
+                            <li>
+
+                                <a th:href="@{/admin/users/audit(
+                                                    firmSearch=${firm.name},
+                                                    selectedFirmId=${firm.id},
+                                                    selectedUserType='MULTI_FIRM'
+                                   )}">
+                                    <span th:text="${totalOfMultiFirm}" />
+                                    multi-firm <span th:text="${totalOfMultiFirm > 1 ? 'users' : 'user'}"/>, who will lose access to all of their
+                                    firms (open in a new window)
+                                </a>
+
                         </ul>
                     </div>
                 </div>

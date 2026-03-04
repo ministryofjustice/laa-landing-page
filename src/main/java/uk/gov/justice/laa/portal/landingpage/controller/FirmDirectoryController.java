@@ -154,11 +154,13 @@ public class FirmDirectoryController {
             return "firm-directory/bulk-disable-user-reason";
         }
         // add all the variables of confirmation
+        model.addAttribute("totalOfSingleFirm", 10);
+        model.addAttribute("totalOfMultiFirm", 10);
         return "firm-directory/bulk-confirmation";
     }
 
-    @GetMapping("/{id}/confirmation")
-    public String confirmationDisableGet(@PathVariable String id,
+    @PostMapping("/{id}/confirmation")
+    public String confirmationBulkDisablePost(@PathVariable String id,
                                          DisableUserReasonForm disableUserReasonForm,
                                          Model model,
                                          HttpSession session,
