@@ -1362,7 +1362,7 @@ class DataProviderServiceTest {
 
             when(firmRepository.findAllWithParentFirm()).thenReturn(Arrays.asList(existingFirm));
             when(officeRepository.findAllWithFirm()).thenReturn(Arrays.asList(existingOffice1, existingOffice2));
-            when(userProfileRepository.findByOfficeId(existingOffice1.getId())).thenReturn(Collections.emptyList());
+            when(userProfileRepository.findByOfficeIdIn(any())).thenReturn(Collections.emptyList());
 
             // When
             var result = dataProviderService.compareWithDatabase();
