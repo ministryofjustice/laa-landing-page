@@ -2540,7 +2540,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "pda_sync_last_status{namespace='${cpnamespace}'}",
+              "expr": "max(pda_sync_last_status{namespace='${cpnamespace}',source='scheduler'}) by (namespace)",
               "legendFormat": "Last Sync Status",
               "range": true,
               "refId": "A"
@@ -2633,7 +2633,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "pda_sync_last_duration_seconds{namespace='${cpnamespace}'}",
+              "expr": "max(pda_sync_last_duration_seconds{namespace='${cpnamespace}',source='scheduler'}) by (namespace)",
               "legendFormat": "Duration (seconds)",
               "range": true,
               "refId": "A"
@@ -2726,7 +2726,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "pda_sync_last_errors{namespace='${cpnamespace}'}",
+              "expr": "max(pda_sync_last_errors{namespace='${cpnamespace}',source='scheduler'}) by (namespace)",
               "legendFormat": "Errors",
               "range": true,
               "refId": "A"
@@ -2819,7 +2819,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "pda_sync_last_firms_created{namespace='${cpnamespace}'}",
+              "expr": "max(pda_sync_last_firms_created{namespace='${cpnamespace}',source='scheduler'}) by (namespace)",
               "legendFormat": "Created",
               "range": true,
               "refId": "A"
@@ -2830,7 +2830,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "pda_sync_last_firms_updated{namespace='${cpnamespace}'}",
+              "expr": "max(pda_sync_last_firms_updated{namespace='${cpnamespace}',source='scheduler'}) by (namespace)",
               "legendFormat": "Updated",
               "range": true,
               "refId": "B"
@@ -2841,7 +2841,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "pda_sync_last_firms_disabled{namespace='${cpnamespace}'}",
+              "expr": "max(pda_sync_last_firms_disabled{namespace='${cpnamespace}',source='scheduler'}) by (namespace)",
               "legendFormat": "Disabled",
               "range": true,
               "refId": "C"
@@ -2934,7 +2934,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "pda_sync_last_offices_created{namespace='${cpnamespace}'}",
+              "expr": "max(pda_sync_last_offices_created{namespace='${cpnamespace}',source='scheduler'}) by (namespace)",
               "legendFormat": "Created",
               "range": true,
               "refId": "A"
@@ -2945,7 +2945,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "pda_sync_last_offices_updated{namespace='${cpnamespace}'}",
+              "expr": "max(pda_sync_last_offices_updated{namespace='${cpnamespace}',source='scheduler'}) by (namespace)",
               "legendFormat": "Updated",
               "range": true,
               "refId": "B"
@@ -2956,7 +2956,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "pda_sync_last_offices_deleted{namespace='${cpnamespace}'}",
+              "expr": "max(pda_sync_last_offices_deleted{namespace='${cpnamespace}',source='scheduler'}) by (namespace)",
               "legendFormat": "Deleted",
               "range": true,
               "refId": "C"
@@ -3049,7 +3049,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "rate(pda_sync_success_total{namespace='${cpnamespace}'}[5m])",
+              "expr": "sum(rate(pda_sync_success_total{namespace='${cpnamespace}',source='scheduler'}[5m]))",
               "legendFormat": "Success Rate",
               "range": true,
               "refId": "A"
@@ -3060,7 +3060,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "rate(pda_sync_failure_total{namespace='${cpnamespace}'}[5m])",
+              "expr": "sum(rate(pda_sync_failure_total{namespace='${cpnamespace}',source='scheduler'}[5m]))",
               "legendFormat": "Failure Rate",
               "range": true,
               "refId": "B"
@@ -3153,7 +3153,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "increase(pda_sync_firms_created_total{namespace='${cpnamespace}'}[1h])",
+              "expr": "increase(pda_sync_firms_created_total{namespace='${cpnamespace}',source='scheduler'}[1h])",
               "legendFormat": "Firms Created",
               "range": true,
               "refId": "A"
@@ -3164,7 +3164,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "increase(pda_sync_firms_updated_total{namespace='${cpnamespace}'}[1h])",
+              "expr": "increase(pda_sync_firms_updated_total{namespace='${cpnamespace}',source='scheduler'}[1h])",
               "legendFormat": "Firms Updated",
               "range": true,
               "refId": "B"
@@ -3175,7 +3175,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "increase(pda_sync_firms_disabled_total{namespace='${cpnamespace}'}[1h])",
+              "expr": "increase(pda_sync_firms_disabled_total{namespace='${cpnamespace}',source='scheduler'}[1h])",
               "legendFormat": "Firms Disabled",
               "range": true,
               "refId": "C"
@@ -3186,7 +3186,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "increase(pda_sync_offices_created_total{namespace='${cpnamespace}'}[1h])",
+              "expr": "increase(pda_sync_offices_created_total{namespace='${cpnamespace}',source='scheduler'}[1h])",
               "legendFormat": "Offices Created",
               "range": true,
               "refId": "D"
@@ -3197,7 +3197,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "increase(pda_sync_offices_updated_total{namespace='${cpnamespace}'}[1h])",
+              "expr": "increase(pda_sync_offices_updated_total{namespace='${cpnamespace}',source='scheduler'}[1h])",
               "legendFormat": "Offices Updated",
               "range": true,
               "refId": "E"
@@ -3208,7 +3208,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "increase(pda_sync_offices_deleted_total{namespace='${cpnamespace}'}[1h])",
+              "expr": "increase(pda_sync_offices_deleted_total{namespace='${cpnamespace}',source='scheduler'}[1h])",
               "legendFormat": "Offices Deleted",
               "range": true,
               "refId": "F"
