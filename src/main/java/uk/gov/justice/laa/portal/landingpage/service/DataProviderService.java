@@ -331,10 +331,22 @@ public class DataProviderService {
                         // SYNC RULE: ADVOCATE firms cannot be parents -> cleared to null
                         effectiveNewParentCode = null;
                         log.debug("Firm {} raw parent {} is ADVOCATE type - sync will clear parent to null", firmCode, rawNewParentCode);
-                    } else if (parentFirm.getParentFirm() != null) {
+                    } else if (parentFirm != null && parentFirm.getParentFirm() != null) {
                         // SYNC RULE: Multi-level hierarchy not allowed -> cleared to null
                         effectiveNewParentCode = null;
                         log.debug("Firm {} raw parent {} has a parent - sync will clear parent to null (multi-level not allowed)", firmCode, rawNewParentCode);
+                    } else if (parentFirm == null && parentWillBeCreatedFromPda) {
+                        // Parent will be created from PDA - check if that PDA parent itself has a parent
+                        PdaFirmData pdaParent = pdaFirms.get(rawNewParentCode);
+                        if (pdaParent != null
+                            && pdaParent.getParentFirmNumber() != null
+                            && !pdaParent.getParentFirmNumber().trim().isEmpty()
+                            && !pdaParent.getParentFirmNumber().trim().equalsIgnoreCase("null")) {
+                            // SYNC RULE: Multi-level hierarchy not allowed (parent-to-be-created has a parent)
+                            effectiveNewParentCode = null;
+                            log.debug("Firm {} raw parent {} will be created with a parent ({}) - sync will clear parent to null (multi-level not allowed)",
+                                firmCode, rawNewParentCode, pdaParent.getParentFirmNumber());
+                        }
                     }
                 }
 
