@@ -492,6 +492,7 @@ public class DataProviderService {
 
                         // Track specific address field changes
                         if (dbOffice.getAddress() != null) {
+                            // Compare each field with DB
                             if (!equals(dbOffice.getAddress().getAddressLine1(), emptyToNull(pdaOffice.getAddressLine1()))) {
                                 officeUpdatesAddressLine1++;
                             }
@@ -499,6 +500,17 @@ public class DataProviderService {
                                 officeUpdatesCity++;
                             }
                             if (!equals(dbOffice.getAddress().getPostcode(), emptyToNull(pdaOffice.getPostcode()))) {
+                                officeUpdatesPostcode++;
+                            }
+                        } else {
+                            // DB address is null - count all non-null PDA fields as changes
+                            if (emptyToNull(pdaOffice.getAddressLine1()) != null) {
+                                officeUpdatesAddressLine1++;
+                            }
+                            if (emptyToNull(pdaOffice.getCity()) != null) {
+                                officeUpdatesCity++;
+                            }
+                            if (emptyToNull(pdaOffice.getPostcode()) != null) {
                                 officeUpdatesPostcode++;
                             }
                         }
