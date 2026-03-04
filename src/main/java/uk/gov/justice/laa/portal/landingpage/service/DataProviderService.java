@@ -341,7 +341,7 @@ public class DataProviderService {
                     if (existingFirmWithName != null && !existingFirmWithName.getId().equals(dbFirm.getId())) {
                         log.debug("Firm {} name change would be skipped - duplicate name exists", firmCode);
                         nameUpdateSkipped = true;
-                        // Sync would skip this update due to duplicate name, so don't count it
+                        firmUpdatesNameSkipped++;  // Track all name conflicts detected
                     } else {
                         log.debug("COMPARE: Firm {} needs name update: '{}' -> '{}'", firmCode, dbFirm.getName(), pdaFirm.getFirmName());
                         needsUpdate = true;
@@ -381,8 +381,7 @@ public class DataProviderService {
                         firmUpdatesParentOnly++;
                     }
                 } else if (nameUpdateSkipped && !parentChanged) {
-                    // Name change was detected but skipped due to duplicate
-                    firmUpdatesNameSkipped++;
+                    // Firm with ONLY a skipped name change (no other changes)
                 } else {
                     result.getExists().add(ComparisonResultDto.ItemInfo.builder()
                         .type("firm")
