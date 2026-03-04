@@ -316,12 +316,18 @@ public class DataProviderService {
                 // This mirrors what synchronizeWithPda() will actually do
                 String effectiveNewParentCode = rawNewParentCode;
                 if (rawNewParentCode != null) {
+                    // In the real sync, PASS 1 can create a parent firm from PDA data
+                    // if it exists in pdaFirms and passes the "has offices" rule.
+                    // If such a firm will be created, treat the parent as valid here
+                    boolean parentWillBeCreatedFromPda = pdaFirms.containsKey(rawNewParentCode)
+                        && firmsWithOffices.contains(rawNewParentCode);
+
                     Firm parentFirm = firmsByCode.get(rawNewParentCode);
-                    if (parentFirm == null) {
-                        // SYNC RULE: Parent firm not found -> cleared to null
+                    if (parentFirm == null && !parentWillBeCreatedFromPda) {
+                        // SYNC RULE: Parent firm not found (and not due to be created) -> cleared to null
                         effectiveNewParentCode = null;
-                        log.debug("Firm {} raw parent {} not found - sync will clear parent to null", firmCode, rawNewParentCode);
-                    } else if (parentFirm.getType() == FirmType.ADVOCATE) {
+                        log.debug("Firm {} raw parent {} not found in DB or PDA-creatable firms - sync will clear parent to null", firmCode, rawNewParentCode);
+                    } else if (parentFirm != null && parentFirm.getType() == FirmType.ADVOCATE) {
                         // SYNC RULE: ADVOCATE firms cannot be parents -> cleared to null
                         effectiveNewParentCode = null;
                         log.debug("Firm {} raw parent {} is ADVOCATE type - sync will clear parent to null", firmCode, rawNewParentCode);
@@ -332,8 +338,11 @@ public class DataProviderService {
                     }
                 }
 
-                if ((currentParentCode == null && effectiveNewParentCode != null)
-                    || (currentParentCode != null && !currentParentCode.equals(effectiveNewParentCode))) {
+                // Only treat parent as changed when PDA actually supplies a parentFirmNumber,
+                // mirroring PASS 2 sync behavior which does not clear parents on omission.
+                if (rawNewParentCode != null
+                    && ((currentParentCode == null && effectiveNewParentCode != null)
+                        || (currentParentCode != null && !currentParentCode.equals(effectiveNewParentCode)))) {
                     parentChanged = true;
                 }
 
@@ -384,6 +393,14 @@ public class DataProviderService {
                     }
                 } else if (nameUpdateSkipped && !parentChanged) {
                     // Firm with ONLY a skipped name change (no other changes)
+                    // Treat as an existing firm, since sync will not update/modify it
+                    result.getExists().add(ComparisonResultDto.ItemInfo.builder()
+                        .type("firm")
+                        .code(firmCode)
+                        .name(pdaFirm.getFirmName())
+                        .dbId(dbFirm.getId())
+                        .build());
+                    firmExists++;
                 } else {
                     result.getExists().add(ComparisonResultDto.ItemInfo.builder()
                         .type("firm")

@@ -243,6 +243,7 @@ public class PdaSyncScheduler {
         lastSyncOfficesUpdated = 0;
         lastSyncOfficesDeleted = 0;
         lastSyncErrorCount = 0;
+        lastSyncStatus = 0; // Unknown / running
 
         try {
             CompletableFuture<PdaSyncResultDto> future = dataProviderService.synchronizeWithPdaAsync();
