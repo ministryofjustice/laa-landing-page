@@ -350,11 +350,10 @@ public class DataProviderService {
                     }
                 }
 
-                // Only treat parent as changed when PDA actually supplies a parentFirmNumber,
-                // mirroring PASS 2 sync behavior which does not clear parents on omission.
-                if (rawNewParentCode != null
-                    && ((currentParentCode == null && effectiveNewParentCode != null)
-                        || (currentParentCode != null && !currentParentCode.equals(effectiveNewParentCode)))) {
+                // Treat parent as changed whenever the effective new parent code (after PASS 2 rules)
+                // differs from the current parent, even if PDA omitted/blanked the parent value.
+                if ((currentParentCode == null && effectiveNewParentCode != null)
+                    || (currentParentCode != null && !currentParentCode.equals(effectiveNewParentCode))) {
                     parentChanged = true;
                 }
 
