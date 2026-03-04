@@ -283,12 +283,12 @@ spec:
             dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
           expr: |
             (
-              (pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler"} == -1)
+              (min by (namespace) (pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler"}) == -1)
               and on() is_alert_hours
             )
             OR
             (
-              pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler",environment="prod"} == -1
+              min by (namespace) (pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler",environment="prod"}) == -1
             )
           for: 2m
           labels:
@@ -300,12 +300,12 @@ spec:
             dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
           expr: |
             (
-              (increase(pda_sync_errors_total{namespace="${NAMESPACE}",source="scheduler"}[15m]) > 10)
+              (sum by (namespace) (increase(pda_sync_errors_total{namespace="${NAMESPACE}",source="scheduler"}[15m])) > 10)
               and on() is_alert_hours
             )
             OR
             (
-              increase(pda_sync_errors_total{namespace="${NAMESPACE}",source="scheduler",environment="prod"}[15m]) > 10
+              sum by (namespace) (increase(pda_sync_errors_total{namespace="${NAMESPACE}",source="scheduler",environment="prod"}[15m])) > 10
             )
           for: 1m
           labels:
@@ -317,12 +317,12 @@ spec:
             dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
           expr: |
             (
-              (max_over_time(pda_sync_last_duration_seconds{namespace="${NAMESPACE}",source="scheduler"}[10m]) > 300)
+              (max by (namespace) (max_over_time(pda_sync_last_duration_seconds{namespace="${NAMESPACE}",source="scheduler"}[10m])) > 300)
               and on() is_alert_hours
             )
             OR
             (
-              max_over_time(pda_sync_last_duration_seconds{namespace="${NAMESPACE}",source="scheduler",environment="prod"}[10m]) > 300
+              max by (namespace) (max_over_time(pda_sync_last_duration_seconds{namespace="${NAMESPACE}",source="scheduler",environment="prod"}[10m])) > 300
             )
           for: 5m
           labels:
@@ -335,15 +335,14 @@ spec:
           expr: |
             (
               (
-                (time() - pda_sync_last_success_timestamp{namespace="${NAMESPACE}",source="scheduler"} > 26 * 60 * 60)
+                (time() - max by (namespace) (pda_sync_last_success_timestamp{namespace="${NAMESPACE}",source="scheduler"} > 0) > 26 * 60 * 60)
                 and on() is_alert_hours
               )
               OR
               (
-                time() - pda_sync_last_success_timestamp{namespace="${NAMESPACE}",source="scheduler",environment="prod"} > 26 * 60 * 60
+                time() - max by (namespace) (pda_sync_last_success_timestamp{namespace="${NAMESPACE}",source="scheduler",environment="prod"} > 0) > 26 * 60 * 60
               )
             )
-            unless absent(pda_sync_last_success_timestamp{namespace="${NAMESPACE}",source="scheduler"})
           for: 1h
           labels:
             severity: ${ALERT_SEVERITY}
