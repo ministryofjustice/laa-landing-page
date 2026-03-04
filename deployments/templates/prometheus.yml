@@ -283,9 +283,8 @@ spec:
             dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
           expr: |
             (
-              is_alert_hours
-              AND
-              pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler"} == -1
+              (pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler"} == -1)
+              and on() is_alert_hours
             )
             OR
             (
@@ -301,9 +300,8 @@ spec:
             dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
           expr: |
             (
-              is_alert_hours
-              AND
-              increase(pda_sync_errors_total{namespace="${NAMESPACE}",source="scheduler"}[15m]) > 10
+              (increase(pda_sync_errors_total{namespace="${NAMESPACE}",source="scheduler"}[15m]) > 10)
+              and on() is_alert_hours
             )
             OR
             (
@@ -319,9 +317,8 @@ spec:
             dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
           expr: |
             (
-              is_alert_hours
-              AND
-              max_over_time(pda_sync_last_duration_seconds{namespace="${NAMESPACE}",source="scheduler"}[10m]) > 300
+              (max_over_time(pda_sync_last_duration_seconds{namespace="${NAMESPACE}",source="scheduler"}[10m]) > 300)
+              and on() is_alert_hours
             )
             OR
             (
@@ -338,9 +335,8 @@ spec:
           expr: |
             (
               (
-                is_alert_hours
-                AND
-                increase(pda_sync_success_total{namespace="${NAMESPACE}",source="scheduler"}[26h]) == 0
+                (increase(pda_sync_success_total{namespace="${NAMESPACE}",source="scheduler"}[26h]) == 0)
+                and on() is_alert_hours
               )
               OR
               (
@@ -358,11 +354,12 @@ spec:
             dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
           expr: |
             (
-              is_alert_hours
-              AND
-              max(pda_sync_last_firms_disabled{namespace="${NAMESPACE}",source="scheduler"}) by (namespace) > 100
-              AND
-              max(pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler"}) by (namespace) == 1
+              (
+                max(pda_sync_last_firms_disabled{namespace="${NAMESPACE}",source="scheduler"}) by (namespace) > 100
+                AND
+                max(pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler"}) by (namespace) == 1
+              )
+              and on() is_alert_hours
             )
             OR
             (
@@ -380,11 +377,12 @@ spec:
             dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
           expr: |
             (
-              is_alert_hours
-              AND
-              max(pda_sync_last_offices_deleted{namespace="${NAMESPACE}",source="scheduler"}) by (namespace) > 200
-              AND
-              max(pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler"}) by (namespace) == 1
+              (
+                max(pda_sync_last_offices_deleted{namespace="${NAMESPACE}",source="scheduler"}) by (namespace) > 200
+                AND
+                max(pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler"}) by (namespace) == 1
+              )
+              and on() is_alert_hours
             )
             OR
             (
@@ -402,15 +400,16 @@ spec:
             dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
           expr: |
             (
-              is_alert_hours
-              AND
               (
-                max(pda_sync_last_firms_created{namespace="${NAMESPACE}",source="scheduler"}) by (namespace)
-                +
-                max(pda_sync_last_offices_created{namespace="${NAMESPACE}",source="scheduler"}) by (namespace)
-              ) > 300
-              AND
-              max(pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler"}) by (namespace) == 1
+                (
+                  max(pda_sync_last_firms_created{namespace="${NAMESPACE}",source="scheduler"}) by (namespace)
+                  +
+                  max(pda_sync_last_offices_created{namespace="${NAMESPACE}",source="scheduler"}) by (namespace)
+                ) > 300
+                AND
+                max(pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler"}) by (namespace) == 1
+              )
+              and on() is_alert_hours
             )
             OR
             (
