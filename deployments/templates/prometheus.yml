@@ -335,12 +335,12 @@ spec:
           expr: |
             (
               (
-                (time() - max by (namespace) (pda_sync_last_success_timestamp{namespace="${NAMESPACE}",source="scheduler"} > 0) > 26 * 60 * 60)
+                (time() - max by (namespace) (pda_sync_last_success_timestamp{namespace="${NAMESPACE}",source="scheduler"} and pda_sync_last_success_timestamp > 0) > 26 * 60 * 60)
                 and on() is_alert_hours
               )
               OR
               (
-                time() - max by (namespace) (pda_sync_last_success_timestamp{namespace="${NAMESPACE}",source="scheduler",environment="prod"} > 0) > 26 * 60 * 60
+                time() - max by (namespace) (pda_sync_last_success_timestamp{namespace="${NAMESPACE}",source="scheduler",environment="prod"} and pda_sync_last_success_timestamp > 0) > 26 * 60 * 60
               )
             )
           for: 1h
