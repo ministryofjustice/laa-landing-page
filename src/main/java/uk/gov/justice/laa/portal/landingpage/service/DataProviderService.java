@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.service;
 import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -268,7 +269,7 @@ public class DataProviderService {
         int officeCreatesWithParentFirm = 0;  // Offices that can be created immediately (parent firm exists)
         int officeUpdatesSkippedNoParentFirm = 0;  // Existing offices with updates but parent firm doesn't exist
         int officesSwitchedFirm = 0;
-        int userAssociationsDeletedFirmSwitch = 0;
+        Set<UUID> officeIdsWithFirmSwitch = new HashSet<>();
 
         ComparisonResultDto result = ComparisonResultDto.builder().build();
 
@@ -495,9 +496,7 @@ public class DataProviderService {
 
                 if (firmChanged) {
                     officesSwitchedFirm++;
-                    // Count user associations that would be deleted
-                    int associationCount = userProfileRepository.findByOfficeId(dbOffice.getId()).size();
-                    userAssociationsDeletedFirmSwitch += associationCount;
+                    officeIdsWithFirmSwitch.add(dbOffice.getId());
                 }
 
                 // Check if office needs updating
@@ -571,17 +570,29 @@ public class DataProviderService {
             }
         }
 
+        // Batch query for user associations affected by firm switches
+        int userAssociationsDeletedFirmSwitch = 0;
+        if (!officeIdsWithFirmSwitch.isEmpty()) {
+            log.debug("Batch querying user associations for {} offices that switched firms", officeIdsWithFirmSwitch.size());
+            List<UserProfile> profilesWithSwitchedOffices = userProfileRepository.findByOfficeIdIn(new ArrayList<>(officeIdsWithFirmSwitch));
+            for (UUID officeId : officeIdsWithFirmSwitch) {
+                int associationCount = (int) profilesWithSwitchedOffices.stream()
+                    .filter(p -> p.getOffices().stream().anyMatch(o -> o.getId().equals(officeId)))
+                    .count();
+                userAssociationsDeletedFirmSwitch += associationCount;
+            }
+            log.debug("Found {} user associations that would be deleted due to firm switches", userAssociationsDeletedFirmSwitch);
+        }
+
         // Find deleted offices
         int officeDeletes = 0;
         int userAssociationsDeletedOfficeDeleted = 0;
+        Set<UUID> officeIdsToDelete = new HashSet<>();
         for (Map.Entry<String, Office> entry : officesByCode.entrySet()) {
             String officeCode = entry.getKey();
             if (!processedOfficeCodes.contains(officeCode)) {
                 Office office = entry.getValue();
-
-                // Count user associations that would be deleted
-                int associationCount = userProfileRepository.findByOfficeId(office.getId()).size();
-                userAssociationsDeletedOfficeDeleted += associationCount;
+                officeIdsToDelete.add(office.getId());
 
                 String officeName = office.getAddress() != null && office.getAddress().getAddressLine1() != null
                     ? office.getAddress().getAddressLine1() : officeCode;
@@ -595,6 +606,19 @@ public class DataProviderService {
                     .build());
                 officeDeletes++;
             }
+        }
+
+        // Batch query for user associations affected by office deletions
+        if (!officeIdsToDelete.isEmpty()) {
+            log.debug("Batch querying user associations for {} offices to be deleted", officeIdsToDelete.size());
+            List<UserProfile> profilesWithDeletedOffices = userProfileRepository.findByOfficeIdIn(new ArrayList<>(officeIdsToDelete));
+            for (UUID officeId : officeIdsToDelete) {
+                int associationCount = (int) profilesWithDeletedOffices.stream()
+                    .filter(p -> p.getOffices().stream().anyMatch(o -> o.getId().equals(officeId)))
+                    .count();
+                userAssociationsDeletedOfficeDeleted += associationCount;
+            }
+            log.debug("Found {} user associations that would be deleted due to office deletions", userAssociationsDeletedOfficeDeleted);
         }
 
         StringBuilder summary = new StringBuilder();
@@ -817,6 +841,7 @@ public class DataProviderService {
         int officesSwitchedFirm = 0;
         int userAssociationsDeletedFirmSwitch = 0;
         int userAssociationsDeletedOfficeDeleted = 0;
+        Set<UUID> officeIdsWithFirmSwitch = new HashSet<>();
 
         try {
             // Defer constraint checking to allow firms to be created before their offices
@@ -1190,9 +1215,7 @@ public class DataProviderService {
 
                     if (firmWillChange) {
                         officesSwitchedFirm++;
-                        // Count user associations that will be deleted
-                        int associationCount = userProfileRepository.findByOfficeId(dbOffice.getId()).size();
-                        userAssociationsDeletedFirmSwitch += associationCount;
+                        officeIdsWithFirmSwitch.add(dbOffice.getId());
                     }
 
                     // Track what will be updated before calling updateOffice
@@ -1217,6 +1240,19 @@ public class DataProviderService {
                     log.error("Stopping synchronization due to {} errors during office processing", result.getErrors().size());
                     return result;
                 }
+            }
+
+            // Batch query for user associations affected by firm switches
+            if (!officeIdsWithFirmSwitch.isEmpty()) {
+                log.debug("Batch querying user associations for {} offices that switched firms", officeIdsWithFirmSwitch.size());
+                List<UserProfile> profilesWithSwitchedOffices = userProfileRepository.findByOfficeIdIn(new ArrayList<>(officeIdsWithFirmSwitch));
+                for (UUID officeId : officeIdsWithFirmSwitch) {
+                    int associationCount = (int) profilesWithSwitchedOffices.stream()
+                        .filter(p -> p.getOffices().stream().anyMatch(o -> o.getId().equals(officeId)))
+                        .count();
+                    userAssociationsDeletedFirmSwitch += associationCount;
+                }
+                log.debug("Deleted {} user associations due to firm switches", userAssociationsDeletedFirmSwitch);
             }
 
             // Check for errors before deactivating offices
@@ -1252,15 +1288,16 @@ public class DataProviderService {
                     // Remove all office associations in memory
                     if (!affectedProfiles.isEmpty()) {
                         log.debug("Removing office associations from {} user profiles", affectedProfiles.size());
-                        for (UserProfile profile : affectedProfiles) {
-                            profile.getOffices().removeAll(officesToDelete);
-                        }
-                        // Count total user associations deleted
+                        // Count total user associations deleted BEFORE removing them
                         for (Office office : officesToDelete) {
                             int associationCount = (int) affectedProfiles.stream()
                                 .filter(p -> p.getOffices().stream().anyMatch(o -> o.getId().equals(office.getId())))
                                 .count();
                             userAssociationsDeletedOfficeDeleted += associationCount;
+                        }
+                        // Now remove the associations
+                        for (UserProfile profile : affectedProfiles) {
+                            profile.getOffices().removeAll(officesToDelete);
                         }
                         // Batch save all modified profiles
                         log.debug("Batch saving {} user profiles", affectedProfiles.size());
