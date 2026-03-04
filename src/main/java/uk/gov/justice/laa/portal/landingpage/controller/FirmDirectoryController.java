@@ -183,7 +183,7 @@ public class FirmDirectoryController {
         session.removeAttribute("officeData");
         session.removeAttribute("firmSearchForm");
         session.removeAttribute("firmSearchTerm");
-        return "redirect:/admin/users";
+        return "redirect:/admin/firmDirectory";
     }
 
     private void buildDisplayAuditTableModel(FirmDirectorySearchCriteria criteria, Model model,
