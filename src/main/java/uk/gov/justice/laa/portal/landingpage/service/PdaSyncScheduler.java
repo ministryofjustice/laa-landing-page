@@ -58,9 +58,10 @@ public class PdaSyncScheduler {
     private final Counter officeUpdatesCounter;
     private final Counter officeDeletesCounter;
     private final Counter officeReactivatesCounter;
-    
+
     // State tracking for gauges
-    private volatile long lastSyncTimestamp = 0;
+    private volatile long lastSyncTimestamp = 0; // Timestamp of last sync attempt (start)
+    private volatile long lastSuccessTimestamp = 0; // Timestamp of last successful sync (completion)
     private volatile long lastSyncStatus = 0; // 0 = unknown, 1 = success, -1 = failure
     private volatile long lastSyncDurationSeconds = 0;
     private volatile long lastSyncFirmsCreated = 0;
@@ -142,53 +143,58 @@ public class PdaSyncScheduler {
                 .description("Number of offices reactivated during sync")
                 .tag("source", "scheduler")
                 .register(meterRegistry);
-        
+
         // Gauge metrics for current state
         Gauge.builder("pda.sync.last.timestamp", this, s -> s.lastSyncTimestamp)
-                .description("Unix timestamp of last PDA sync attempt")
+                .description("Unix timestamp of last PDA sync attempt (start)")
                 .tag("source", "scheduler")
                 .register(meterRegistry);
-        
+
+        Gauge.builder("pda.sync.last.success.timestamp", this, s -> s.lastSuccessTimestamp)
+                .description("Unix timestamp of last successful PDA sync (completion)")
+                .tag("source", "scheduler")
+                .register(meterRegistry);
+
         Gauge.builder("pda.sync.last.status", this, s -> s.lastSyncStatus)
                 .description("Status of last PDA sync (1=success, -1=failure, 0=unknown)")
                 .tag("source", "scheduler")
                 .register(meterRegistry);
-        
+
         Gauge.builder("pda.sync.last.duration.seconds", this, s -> s.lastSyncDurationSeconds)
                 .description("Duration of last PDA sync in seconds")
                 .tag("source", "scheduler")
                 .register(meterRegistry);
-        
+
         Gauge.builder("pda.sync.last.firms.created", this, s -> s.lastSyncFirmsCreated)
                 .description("Number of firms created in last sync")
                 .tag("source", "scheduler")
                 .register(meterRegistry);
-        
+
         Gauge.builder("pda.sync.last.firms.updated", this, s -> s.lastSyncFirmsUpdated)
                 .description("Number of firms updated in last sync")
                 .tag("source", "scheduler")
                 .register(meterRegistry);
-        
+
         Gauge.builder("pda.sync.last.firms.disabled", this, s -> s.lastSyncFirmsDisabled)
                 .description("Number of firms disabled in last sync")
                 .tag("source", "scheduler")
                 .register(meterRegistry);
-        
+
         Gauge.builder("pda.sync.last.offices.created", this, s -> s.lastSyncOfficesCreated)
                 .description("Number of offices created in last sync")
                 .tag("source", "scheduler")
                 .register(meterRegistry);
-        
+
         Gauge.builder("pda.sync.last.offices.updated", this, s -> s.lastSyncOfficesUpdated)
                 .description("Number of offices updated in last sync")
                 .tag("source", "scheduler")
                 .register(meterRegistry);
-        
+
         Gauge.builder("pda.sync.last.offices.deleted", this, s -> s.lastSyncOfficesDeleted)
                 .description("Number of offices deleted in last sync")
                 .tag("source", "scheduler")
                 .register(meterRegistry);
-        
+
         Gauge.builder("pda.sync.last.errors", this, s -> s.lastSyncErrorCount)
                 .description("Number of errors in last sync")
                 .tag("source", "scheduler")
@@ -241,7 +247,7 @@ public class PdaSyncScheduler {
 
             // Record entity operation metrics
             recordSyncMetrics(result);
-            
+
             // Update gauge state
             lastSyncDurationSeconds = Duration.ofNanos(duration).toSeconds();
             lastSyncFirmsCreated = result.getFirmsCreated();
@@ -255,6 +261,7 @@ public class PdaSyncScheduler {
             if (result.getErrors().isEmpty()) {
                 syncSuccessCounter.increment();
                 lastSyncStatus = 1; // Success
+                lastSuccessTimestamp = System.currentTimeMillis() / 1000; // Unix timestamp of successful completion
                 log.debug("Scheduled PDA sync completed successfully in {} seconds. Firms: {} created, {} updated, {} disabled, {} reactivated | Offices: {} created, {} updated, {} deleted",
                     Duration.ofNanos(duration).toSeconds(),
                     result.getFirmsCreated(), result.getFirmsUpdated(), result.getFirmsDisabled(), result.getFirmsReactivated(),
