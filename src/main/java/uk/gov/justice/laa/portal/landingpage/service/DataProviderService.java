@@ -259,6 +259,8 @@ public class DataProviderService {
 
         // Address field change details
         int officeUpdatesAddressLine1 = 0;
+        int officeUpdatesAddressLine2 = 0;
+        int officeUpdatesAddressLine3 = 0;
         int officeUpdatesCity = 0;
         int officeUpdatesPostcode = 0;
 
@@ -496,6 +498,12 @@ public class DataProviderService {
                             if (!equals(dbOffice.getAddress().getAddressLine1(), emptyToNull(pdaOffice.getAddressLine1()))) {
                                 officeUpdatesAddressLine1++;
                             }
+                            if (!equals(dbOffice.getAddress().getAddressLine2(), emptyToNull(pdaOffice.getAddressLine2()))) {
+                                officeUpdatesAddressLine2++;
+                            }
+                            if (!equals(dbOffice.getAddress().getAddressLine3(), emptyToNull(pdaOffice.getAddressLine3()))) {
+                                officeUpdatesAddressLine3++;
+                            }
                             if (!equals(dbOffice.getAddress().getCity(), emptyToNull(pdaOffice.getCity()))) {
                                 officeUpdatesCity++;
                             }
@@ -506,6 +514,12 @@ public class DataProviderService {
                             // DB address is null - count all non-null PDA fields as changes
                             if (emptyToNull(pdaOffice.getAddressLine1()) != null) {
                                 officeUpdatesAddressLine1++;
+                            }
+                            if (emptyToNull(pdaOffice.getAddressLine2()) != null) {
+                                officeUpdatesAddressLine2++;
+                            }
+                            if (emptyToNull(pdaOffice.getAddressLine3()) != null) {
+                                officeUpdatesAddressLine3++;
                             }
                             if (emptyToNull(pdaOffice.getCity()) != null) {
                                 officeUpdatesCity++;
@@ -611,6 +625,8 @@ public class DataProviderService {
             log.info("    -> {} with address changes only", officeUpdatesAddressOnly);
             if (officeUpdatesAddressOnly > 0) {
                 log.info("        * {} address line 1 changes", officeUpdatesAddressLine1);
+                log.info("        * {} address line 2 changes", officeUpdatesAddressLine2);
+                log.info("        * {} address line 3 changes", officeUpdatesAddressLine3);
                 log.info("        * {} city changes", officeUpdatesCity);
                 log.info("        * {} postcode changes", officeUpdatesPostcode);
             }
