@@ -321,11 +321,11 @@ spec:
             (
               is_alert_hours
               AND
-              histogram_quantile(0.95, rate(pda_sync_duration_seconds_bucket{namespace="${NAMESPACE}",source="scheduler"}[10m])) > 300
+              max_over_time(pda_sync_last_duration_seconds{namespace="${NAMESPACE}",source="scheduler"}[10m]) > 300
             )
             OR
             (
-              histogram_quantile(0.95, rate(pda_sync_duration_seconds_bucket{namespace="${NAMESPACE}",source="scheduler",environment="prod"}[10m])) > 300
+              max_over_time(pda_sync_last_duration_seconds{namespace="${NAMESPACE}",source="scheduler",environment="prod"}[10m]) > 300
             )
           for: 5m
           labels:
