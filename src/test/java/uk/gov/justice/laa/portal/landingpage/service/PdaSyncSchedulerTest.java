@@ -343,12 +343,10 @@ class PdaSyncSchedulerTest {
         CompletableFuture<PdaSyncResultDto> future = CompletableFuture.completedFuture(result);
         when(dataProviderService.synchronizeWithPdaAsync()).thenReturn(future);
 
-        long beforeSyncTimestamp = System.currentTimeMillis() / 1000;
-
         // When
+        final long beforeSyncTimestamp = System.currentTimeMillis() / 1000;
         scheduler.scheduledSync();
-
-        long afterSyncTimestamp = System.currentTimeMillis() / 1000;
+        final long afterSyncTimestamp = System.currentTimeMillis() / 1000;
 
         // Then - verify all gauge values
         assertThat(meterRegistry.find("pda.sync.last.status").gauge().value()).isEqualTo(1.0); // Success
@@ -391,12 +389,10 @@ class PdaSyncSchedulerTest {
         CompletableFuture<PdaSyncResultDto> future = CompletableFuture.completedFuture(result);
         when(dataProviderService.synchronizeWithPdaAsync()).thenReturn(future);
 
-        long beforeSyncTimestamp = System.currentTimeMillis() / 1000;
-
         // When
+        final long beforeSyncTimestamp = System.currentTimeMillis() / 1000;
         scheduler.scheduledSync();
-
-        long afterSyncTimestamp = System.currentTimeMillis() / 1000;
+        final long afterSyncTimestamp = System.currentTimeMillis() / 1000;
 
         // Then - verify gauge values reflect failure state
         assertThat(meterRegistry.find("pda.sync.last.status").gauge().value()).isEqualTo(-1.0); // Failure
@@ -426,12 +422,10 @@ class PdaSyncSchedulerTest {
         when(dataProviderService.synchronizeWithPdaAsync())
                 .thenReturn(CompletableFuture.failedFuture(new RuntimeException("Test error")));
 
-        long beforeSyncTimestamp = System.currentTimeMillis() / 1000;
-
         // When
+        final long beforeSyncTimestamp = System.currentTimeMillis() / 1000;
         scheduler.scheduledSync();
-
-        long afterSyncTimestamp = System.currentTimeMillis() / 1000;
+        final long afterSyncTimestamp = System.currentTimeMillis() / 1000;
 
         // Then - verify gauge values reflect failure state
         assertThat(meterRegistry.find("pda.sync.last.status").gauge().value()).isEqualTo(-1.0); // Failure
@@ -458,12 +452,10 @@ class PdaSyncSchedulerTest {
         CompletableFuture<PdaSyncResultDto> future = new CompletableFuture<>();
         when(dataProviderService.synchronizeWithPdaAsync()).thenReturn(future);
 
-        long beforeSyncTimestamp = System.currentTimeMillis() / 1000;
-
         // When
+        final long beforeSyncTimestamp = System.currentTimeMillis() / 1000;
         scheduler.scheduledSync();
-
-        long afterSyncTimestamp = System.currentTimeMillis() / 1000;
+        final long afterSyncTimestamp = System.currentTimeMillis() / 1000;
 
         // Then - verify gauge values reflect failure state
         assertThat(meterRegistry.find("pda.sync.last.status").gauge().value()).isEqualTo(-1.0); // Failure
