@@ -239,10 +239,29 @@ public class DataProviderService {
         // Track separate counts
         int firmCreates = 0;
         int firmUpdates = 0;
+        int firmUpdatesNameOnly = 0;
+        int firmUpdatesParentOnly = 0;
+        int firmUpdatesNameAndParent = 0;
+        int firmUpdatesNameSkipped = 0;  // Name changes skipped due to duplicates
+
+        // Parent firm change breakdowns
+        int firmUpdatesParentSet = 0;      // null -> parent
+        int firmUpdatesParentCleared = 0;  // parent -> null
+        int firmUpdatesParentChanged = 0;  // parent A -> parent B
+
         int firmDisables = 0;
         int firmExists = 0;
         int officeCreates = 0;
         int officeUpdates = 0;
+        int officeUpdatesAddressOnly = 0;
+        int officeUpdatesFirmOnly = 0;
+        int officeUpdatesBoth = 0;
+
+        // Address field change details
+        int officeUpdatesAddressLine1 = 0;
+        int officeUpdatesCity = 0;
+        int officeUpdatesPostcode = 0;
+
         int officeExists = 0;
         int officeCreatesWithParentFirm = 0;  // Offices that can be created immediately (parent firm exists)
         int officeUpdatesSkippedNoParentFirm = 0;  // Existing offices with updates but parent firm doesn't exist
@@ -282,6 +301,7 @@ public class DataProviderService {
                 boolean nameChanged = !pdaFirm.getFirmName().equals(dbFirm.getName());
                 boolean parentChanged = false;
                 boolean needsUpdate = false;
+                boolean nameUpdateSkipped = false;
 
                 // Check parent firm changes
                 String currentParentCode = dbFirm.getParentFirm() != null ? dbFirm.getParentFirm().getCode() : null;
@@ -300,6 +320,7 @@ public class DataProviderService {
                     Firm existingFirmWithName = firmsByName.get(pdaFirm.getFirmName());
                     if (existingFirmWithName != null && !existingFirmWithName.getId().equals(dbFirm.getId())) {
                         log.debug("Firm {} name change would be skipped - duplicate name exists", firmCode);
+                        nameUpdateSkipped = true;
                         // Sync would skip this update due to duplicate name, so don't count it
                     } else {
                         log.debug("COMPARE: Firm {} needs name update: '{}' -> '{}'", firmCode, dbFirm.getName(), pdaFirm.getFirmName());
@@ -310,6 +331,15 @@ public class DataProviderService {
                 if (parentChanged) {
                     log.debug("COMPARE: Firm {} needs parent firm update: '{}' -> '{}'", firmCode, currentParentCode, newParentCode);
                     needsUpdate = true;
+
+                    // Track granular parent change types
+                    if (currentParentCode == null && newParentCode != null) {
+                        firmUpdatesParentSet++;  // Setting parent
+                    } else if (currentParentCode != null && newParentCode == null) {
+                        firmUpdatesParentCleared++;  // Clearing parent
+                    } else if (currentParentCode != null && newParentCode != null) {
+                        firmUpdatesParentChanged++;  // Changing parent
+                    }
                 }
 
                 if (needsUpdate) {
@@ -320,6 +350,19 @@ public class DataProviderService {
                         .dbId(dbFirm.getId())
                         .build());
                     firmUpdates++;
+
+                    // Track granular update types
+                    boolean nameWillUpdate = nameChanged && !nameUpdateSkipped;
+                    if (nameWillUpdate && parentChanged) {
+                        firmUpdatesNameAndParent++;
+                    } else if (nameWillUpdate) {
+                        firmUpdatesNameOnly++;
+                    } else if (parentChanged) {
+                        firmUpdatesParentOnly++;
+                    }
+                } else if (nameUpdateSkipped && !parentChanged) {
+                    // Name change was detected but skipped due to duplicate
+                    firmUpdatesNameSkipped++;
                 } else {
                     result.getExists().add(ComparisonResultDto.ItemInfo.builder()
                         .type("firm")
@@ -421,6 +464,28 @@ public class DataProviderService {
                     officeUpdates++;
                     log.debug("Office {} marked for update - firmChanged: {}, addressChanged: {}",
                         officeCode, firmChanged, addressChanged);
+
+                    // Track granular office update types
+                    if (addressChanged && firmChanged) {
+                        officeUpdatesBoth++;
+                    } else if (addressChanged) {
+                        officeUpdatesAddressOnly++;
+
+                        // Track specific address field changes
+                        if (dbOffice.getAddress() != null) {
+                            if (!equals(dbOffice.getAddress().getAddressLine1(), emptyToNull(pdaOffice.getAddressLine1()))) {
+                                officeUpdatesAddressLine1++;
+                            }
+                            if (!equals(dbOffice.getAddress().getCity(), emptyToNull(pdaOffice.getCity()))) {
+                                officeUpdatesCity++;
+                            }
+                            if (!equals(dbOffice.getAddress().getPostcode(), emptyToNull(pdaOffice.getPostcode()))) {
+                                officeUpdatesPostcode++;
+                            }
+                        }
+                    } else if (firmChanged) {
+                        officeUpdatesFirmOnly++;
+                    }
                 } else {
                     result.getExists().add(ComparisonResultDto.ItemInfo.builder()
                         .type("office")
@@ -462,6 +527,19 @@ public class DataProviderService {
         log.info("\n--------------------------------------");
         log.info("Delta Analysis -----------------------\n");
         log.info("No. of firms updated: {}", firmUpdates);
+        if (firmUpdates > 0) {
+            log.info("    -> {} with name changes only", firmUpdatesNameOnly);
+            log.info("    -> {} with parent firm changes only", firmUpdatesParentOnly);
+            if (firmUpdatesParentOnly > 0) {
+                log.info("        * {} setting parent (null -> parent)", firmUpdatesParentSet);
+                log.info("        * {} clearing parent (parent -> null)", firmUpdatesParentCleared);
+                log.info("        * {} changing parent (parent A -> parent B)", firmUpdatesParentChanged);
+            }
+            log.info("    -> {} with both name and parent changes", firmUpdatesNameAndParent);
+            if (firmUpdatesNameSkipped > 0) {
+                log.info("    -> {} with name changes skipped (duplicate name exists)", firmUpdatesNameSkipped);
+            }
+        }
         log.info("No. of new firms: {}", firmCreates);
         log.info("No. of removed firms: {}", firmDisables);
         if (firmsWithNullCode > 0) {
@@ -498,6 +576,16 @@ public class DataProviderService {
         }
 
         log.info("No. of offices updated, with no change to firm: {}", officeUpdates - officesSwitchedFirm);
+        if (officeUpdates > 0) {
+            log.info("    -> {} with address changes only", officeUpdatesAddressOnly);
+            if (officeUpdatesAddressOnly > 0) {
+                log.info("        * {} address line 1 changes", officeUpdatesAddressLine1);
+                log.info("        * {} city changes", officeUpdatesCity);
+                log.info("        * {} postcode changes", officeUpdatesPostcode);
+            }
+            log.info("    -> {} with firm changes only", officeUpdatesFirmOnly);
+            log.info("    -> {} with both address and firm changes", officeUpdatesBoth);
+        }
         log.info("No. of offices that switched firm: {}", officesSwitchedFirm);
         log.info("    -> No of user_profile/office associations deleted due to firm switch: {}", userAssociationsDeletedFirmSwitch);
         log.info("No. of removed offices: {}", officeDeletes);
