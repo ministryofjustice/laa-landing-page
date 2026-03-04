@@ -19,6 +19,22 @@
     </ol>
 </nav>
 <main class="govuk-main-wrapper" id="main-content">
+
+    <div th:if="${successMessage}" class="govuk-notification-banner govuk-notification-banner--success" role="alert"
+         aria-labelledby="govuk-notification-banner-title" data-module="govuk-notification-banner">
+        <div class="govuk-notification-banner__header">
+            <h2 class="govuk-notification-banner__title" id="govuk-notification-banner-title">
+                Success
+            </h2>
+        </div>
+        <div class="govuk-notification-banner__content"
+             style="display: flex; justify-content: space-between; align-items: center;">
+            <p class="govuk-notification-banner__heading" style="margin: 0;">
+                <span th:text="${successMessage}"></span>
+            </p>
+        </div>
+    </div>
+
     <fieldset class="govuk-fieldset">
         <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
             <h1 class="govuk-fieldset__heading" th:text="${firm.name}">

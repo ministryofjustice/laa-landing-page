@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDirectorySearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
@@ -154,6 +155,7 @@ public class FirmDirectoryController {
             return "firm-directory/bulk-disable-user-reason";
         }
         // add all the variables of confirmation
+        modelFromSession.addAttribute("reasonIdSelected", disableUserReasonForm.getReasonId());
         model.addAttribute("totalOfSingleFirm", 10);
         model.addAttribute("totalOfMultiFirm", 10);
         return "firm-directory/bulk-confirmation";
@@ -161,28 +163,30 @@ public class FirmDirectoryController {
 
     @PostMapping("/{id}/confirmation")
     public String confirmationBulkDisablePost(@PathVariable String id,
-                                         DisableUserReasonForm disableUserReasonForm,
                                          Model model,
+                                         RedirectAttributes redirectAttributes,
                                          HttpSession session,
                                          Authentication authentication)  {
         Model modelFromSession = getObjectFromHttpSession(session, "disableUserReasonModel", Model.class).orElseThrow();
+        //save the user information
+        UUID disabledByUserId = loginService.getCurrentEntraUser(authentication).getId();
+        UUID disabledReasonId = UUID.fromString((String) modelFromSession.getAttribute("reasonIdSelected"));
+        try {
+            userAccountStatusService.disableUserAllUserByFirmId(id, disabledReasonId, disabledByUserId);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        // Add success banner
+        redirectAttributes.addFlashAttribute("successMessage", "All user accounts has been disabled");
 
-        return "firm-directory/firm-offices";
+        return "redirect:/admin/firmDirectory/" + id;
+
     }
 
     @GetMapping("/cancel")
     public String cancelBulkUserDisable(HttpSession session) {
-        session.removeAttribute("user");
-        session.removeAttribute("firm");
-        session.removeAttribute("selectedUserType");
-        session.removeAttribute("isFirmAdmin");
-        session.removeAttribute("isMultiFirmUser");
-        session.removeAttribute("multiFirmForm");
-        session.removeAttribute("apps");
-        session.removeAttribute("roles");
-        session.removeAttribute("officeData");
-        session.removeAttribute("firmSearchForm");
-        session.removeAttribute("firmSearchTerm");
+        //TODO remove all the fields
+        session.removeAttribute("disableUserReasonModel");
         return "redirect:/admin/firmDirectory";
     }
 
