@@ -11,6 +11,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.file.Files;
@@ -27,6 +28,8 @@ public class MultifirmUserReportService {
 
     private final FirmRepository firmRepository;
     private final EntraUserRepository entraUserRepository;
+    private final ReportUploadService reportUploadService;
+    private final String folderPath = "multifirm_user_reports";
     private final DateTimeFormatter fileTimestamp = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmm");
 
     public void getMultifirmUsers() {
@@ -37,7 +40,11 @@ public class MultifirmUserReportService {
         reportRows.addAll(entraUserRepository.findUnlinkedMultifirmUsersCount());
         reportRows.addAll(entraUserRepository.findTotalMultiFirmUsersCount());
         File multifirmUserCsv = writeToCsv(reportRows);
-        // Upload code goes here
+        try {
+            reportUploadService.uploadCsvToSharePoint(multifirmUserCsv, folderPath);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private File writeToCsv(List<Object[]> rows) {
