@@ -13,6 +13,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
@@ -57,6 +58,18 @@ public class PdaSyncScheduler {
     private final Counter officeUpdatesCounter;
     private final Counter officeDeletesCounter;
     private final Counter officeReactivatesCounter;
+    
+    // State tracking for gauges
+    private volatile long lastSyncTimestamp = 0;
+    private volatile long lastSyncStatus = 0; // 0 = unknown, 1 = success, -1 = failure
+    private volatile long lastSyncDurationSeconds = 0;
+    private volatile long lastSyncFirmsCreated = 0;
+    private volatile long lastSyncFirmsUpdated = 0;
+    private volatile long lastSyncFirmsDisabled = 0;
+    private volatile long lastSyncOfficesCreated = 0;
+    private volatile long lastSyncOfficesUpdated = 0;
+    private volatile long lastSyncOfficesDeleted = 0;
+    private volatile long lastSyncErrorCount = 0;
 
     public PdaSyncScheduler(
             DataProviderService dataProviderService,
@@ -129,6 +142,57 @@ public class PdaSyncScheduler {
                 .description("Number of offices reactivated during sync")
                 .tag("source", "scheduler")
                 .register(meterRegistry);
+        
+        // Gauge metrics for current state
+        Gauge.builder("pda.sync.last.timestamp", this, s -> s.lastSyncTimestamp)
+                .description("Unix timestamp of last PDA sync attempt")
+                .tag("source", "scheduler")
+                .register(meterRegistry);
+        
+        Gauge.builder("pda.sync.last.status", this, s -> s.lastSyncStatus)
+                .description("Status of last PDA sync (1=success, -1=failure, 0=unknown)")
+                .tag("source", "scheduler")
+                .register(meterRegistry);
+        
+        Gauge.builder("pda.sync.last.duration.seconds", this, s -> s.lastSyncDurationSeconds)
+                .description("Duration of last PDA sync in seconds")
+                .tag("source", "scheduler")
+                .register(meterRegistry);
+        
+        Gauge.builder("pda.sync.last.firms.created", this, s -> s.lastSyncFirmsCreated)
+                .description("Number of firms created in last sync")
+                .tag("source", "scheduler")
+                .register(meterRegistry);
+        
+        Gauge.builder("pda.sync.last.firms.updated", this, s -> s.lastSyncFirmsUpdated)
+                .description("Number of firms updated in last sync")
+                .tag("source", "scheduler")
+                .register(meterRegistry);
+        
+        Gauge.builder("pda.sync.last.firms.disabled", this, s -> s.lastSyncFirmsDisabled)
+                .description("Number of firms disabled in last sync")
+                .tag("source", "scheduler")
+                .register(meterRegistry);
+        
+        Gauge.builder("pda.sync.last.offices.created", this, s -> s.lastSyncOfficesCreated)
+                .description("Number of offices created in last sync")
+                .tag("source", "scheduler")
+                .register(meterRegistry);
+        
+        Gauge.builder("pda.sync.last.offices.updated", this, s -> s.lastSyncOfficesUpdated)
+                .description("Number of offices updated in last sync")
+                .tag("source", "scheduler")
+                .register(meterRegistry);
+        
+        Gauge.builder("pda.sync.last.offices.deleted", this, s -> s.lastSyncOfficesDeleted)
+                .description("Number of offices deleted in last sync")
+                .tag("source", "scheduler")
+                .register(meterRegistry);
+        
+        Gauge.builder("pda.sync.last.errors", this, s -> s.lastSyncErrorCount)
+                .description("Number of errors in last sync")
+                .tag("source", "scheduler")
+                .register(meterRegistry);
     }
 
     /**
@@ -163,6 +227,7 @@ public class PdaSyncScheduler {
         syncRequestsCounter.increment();
 
         long startTime = System.nanoTime();
+        lastSyncTimestamp = System.currentTimeMillis() / 1000; // Unix timestamp in seconds
 
         try {
             CompletableFuture<PdaSyncResultDto> future = dataProviderService.synchronizeWithPdaAsync();
@@ -176,9 +241,20 @@ public class PdaSyncScheduler {
 
             // Record entity operation metrics
             recordSyncMetrics(result);
+            
+            // Update gauge state
+            lastSyncDurationSeconds = Duration.ofNanos(duration).toSeconds();
+            lastSyncFirmsCreated = result.getFirmsCreated();
+            lastSyncFirmsUpdated = result.getFirmsUpdated();
+            lastSyncFirmsDisabled = result.getFirmsDisabled();
+            lastSyncOfficesCreated = result.getOfficesCreated();
+            lastSyncOfficesUpdated = result.getOfficesUpdated();
+            lastSyncOfficesDeleted = result.getOfficesDeleted();
+            lastSyncErrorCount = result.getErrors().size();
 
             if (result.getErrors().isEmpty()) {
                 syncSuccessCounter.increment();
+                lastSyncStatus = 1; // Success
                 log.debug("Scheduled PDA sync completed successfully in {} seconds. Firms: {} created, {} updated, {} disabled, {} reactivated | Offices: {} created, {} updated, {} deleted",
                     Duration.ofNanos(duration).toSeconds(),
                     result.getFirmsCreated(), result.getFirmsUpdated(), result.getFirmsDisabled(), result.getFirmsReactivated(),
@@ -186,6 +262,7 @@ public class PdaSyncScheduler {
             } else {
                 syncFailureCounter.increment();
                 syncErrorsCounter.increment(result.getErrors().size());
+                lastSyncStatus = -1; // Failure
                 log.error("Scheduled PDA sync completed with {} errors in {} seconds",
                     result.getErrors().size(), Duration.ofNanos(duration).toSeconds());
                 result.getErrors().forEach(error -> log.error("Sync error: {}", error));
@@ -201,12 +278,18 @@ public class PdaSyncScheduler {
             syncTimer.record(duration, TimeUnit.NANOSECONDS);
             syncFailureCounter.increment();
             syncErrorsCounter.increment();
+            lastSyncStatus = -1; // Failure
+            lastSyncDurationSeconds = Duration.ofNanos(duration).toSeconds();
+            lastSyncErrorCount = 1;
             log.error("Scheduled PDA sync timed out after {} minutes", timeoutMinutes, e);
         } catch (Exception e) {
             long duration = System.nanoTime() - startTime;
             syncTimer.record(duration, TimeUnit.NANOSECONDS);
             syncFailureCounter.increment();
             syncErrorsCounter.increment();
+            lastSyncStatus = -1; // Failure
+            lastSyncDurationSeconds = Duration.ofNanos(duration).toSeconds();
+            lastSyncErrorCount = 1;
             log.error("Scheduled PDA sync failed after {} seconds", Duration.ofNanos(duration).toSeconds(), e);
         }
     }
