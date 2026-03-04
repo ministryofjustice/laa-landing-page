@@ -339,15 +339,11 @@ spec:
             (
               is_alert_hours
               AND
-              (time() - pda_sync_last_timestamp{namespace="${NAMESPACE}",source="scheduler"} > 93600)
-              AND
-              pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler"} != 1
+              increase(pda_sync_success_total{namespace="${NAMESPACE}",source="scheduler"}[26h]) == 0
             )
             OR
             (
-              (time() - pda_sync_last_timestamp{namespace="${NAMESPACE}",source="scheduler",environment="prod"} > 93600)
-              AND
-              pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler",environment="prod"} != 1
+              increase(pda_sync_success_total{namespace="${NAMESPACE}",source="scheduler",environment="prod"}[26h]) == 0
             )
           for: 1h
           labels:
