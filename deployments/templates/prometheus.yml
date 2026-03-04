@@ -335,15 +335,15 @@ spec:
           expr: |
             (
               (
-                (increase(pda_sync_success_total{namespace="${NAMESPACE}",source="scheduler"}[26h]) == 0)
+                (time() - pda_sync_last_success_timestamp{namespace="${NAMESPACE}",source="scheduler"} > 26 * 60 * 60)
                 and on() is_alert_hours
               )
               OR
               (
-                increase(pda_sync_success_total{namespace="${NAMESPACE}",source="scheduler",environment="prod"}[26h]) == 0
+                time() - pda_sync_last_success_timestamp{namespace="${NAMESPACE}",source="scheduler",environment="prod"} > 26 * 60 * 60
               )
             )
-            unless absent(pda_sync_success_total{namespace="${NAMESPACE}",source="scheduler"})
+            unless absent(pda_sync_last_success_timestamp{namespace="${NAMESPACE}",source="scheduler"})
           for: 1h
           labels:
             severity: ${ALERT_SEVERITY}
