@@ -11,6 +11,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserTypeReasonDisable;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.DisableUserReasonRepository;
@@ -34,16 +35,30 @@ public class UserAccountStatusService {
     private final TechServicesClient techServicesClient;
     private final UserService userService;
 
-    public List<DisableUserReasonDto> getDisableUserReasons(boolean isProvideAdmin) {
+    public List<DisableUserReasonDto> getDisableUserReasons(UserTypeReasonDisable userTypeReasonDisable) {
         List<DisableUserReason> reasons = disableUserReasonRepository.findAll();
         List<DisableUserReasonDto> disableUserReasonDtos = new java.util.ArrayList<>(reasons.stream()
                 .filter(DisableUserReason::isUserSelectable)
                 .map(reason -> mapper.map(reason, DisableUserReasonDto.class))
                 .toList());
-        if (isProvideAdmin) {
-            Set<String> keepReasons = Set.of("Absence", "Provider Discretion");
-            disableUserReasonDtos.removeIf(u -> !keepReasons.contains(u.getName()));
+
+
+        switch (userTypeReasonDisable) {
+            case IS_USER_DISABLE:
+                Set<String> keepReasons = Set.of("Absence", "Provider Discretion");
+                disableUserReasonDtos.removeIf(u -> !keepReasons.contains(u.getName()));
+                break;
+            case BULK_DISABLE:
+                Set<String> keepReasonsBulk = Set.of("Compliance Breach"
+                        , "Contract Ended"
+                        , "Cyber Risk"
+                        , "Firm Closure / Merger"
+                        , "Investigation Pending"
+                        , "User Request");
+                disableUserReasonDtos.removeIf(u -> !keepReasonsBulk.contains(u.getName()));
+                break;
         }
+
         return disableUserReasonDtos;
     }
 
@@ -103,6 +118,59 @@ public class UserAccountStatusService {
         } else {
             throw new RuntimeException(String.format("Unable to disable the user %s by %s", disabledUserId, disabledById));
         }
+    }
+
+    public void disableUserAllUserByFirmId(String firmId, UUID disableReasonId, UUID disabledById) {
+
+        // Fetch entities
+
+        /*EntraUser disabledByUser = entraUserRepository.findById(disabledById)
+                .orElseThrow(() -> new RuntimeException(String.format("Could not find a user account with id \"%s\"", disabledById)));
+        DisableUserReason reason = disableUserReasonRepository.findById(disableReasonId)
+                .orElseThrow(() -> new RuntimeException(String.format("Could not find a disable user reason with id \"%s\"", disableReasonId)));
+
+        boolean isDisabledByAnInternalUser = userService.isInternal(disabledById);
+        if (!isDisabledByAnInternalUser && disabledUser.isMultiFirmUser()) {
+            throw new RuntimeException(String.format("Multi firm user %s can not be disabled", disabledUserId));
+        }
+
+        Firm disabledByUserFirm = disabledByUser.getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile)
+                .findFirst()
+                .map(UserProfile::getFirm)
+                .orElse(null);
+        Firm disabledUserFirm = disabledUser.getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile)
+                .findFirst()
+                .map(UserProfile::getFirm).orElse(null);
+
+        if (userService.isInternal(disabledById)
+                || (disabledUserFirm != null && disabledByUserFirm != null && disabledByUserFirm.getId().equals(disabledUserFirm.getId()))) {
+            // Disable user in Entra via tech services.
+            TechServicesApiResponse<ChangeAccountEnabledResponse> changeAccountEnabledResponse
+                    = techServicesClient.disableUser(mapper.map(disabledUser, EntraUserDto.class), reason.getEntraDescription());
+            if (!changeAccountEnabledResponse.isSuccess()) {
+                throw new TechServicesClientException(changeAccountEnabledResponse.getError().getMessage(),
+                        changeAccountEnabledResponse.getError().getCode(),
+                        changeAccountEnabledResponse.getError().getErrors());
+            }
+
+            // Perform disable
+            disabledUser.setEnabled(false);
+            entraUserRepository.saveAndFlush(disabledUser);
+
+            // Add audit entry
+            UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
+                    .entraUser(disabledUser)
+                    .disableUserReason(reason)
+                    .statusChange(UserAccountStatus.DISABLED)
+                    .statusChangedBy(disabledByUser.getFirstName() + " " + disabledByUser.getLastName())
+                    .statusChangedDate(LocalDateTime.now())
+                    .build();
+            userAccountStatusAuditRepository.saveAndFlush(userAccountStatusAudit);
+        } else {
+            throw new RuntimeException(String.format("Unable to disable the user %s by %s", disabledUserId, disabledById));
+        }*/
     }
 
     @SuppressWarnings("checkstyle:VariableDeclarationUsageDistance")

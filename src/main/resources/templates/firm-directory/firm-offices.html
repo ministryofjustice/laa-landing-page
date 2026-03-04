@@ -154,6 +154,19 @@
             </ul>
         </nav>
     </div>
+    <!-- Action Buttons -->
+    <div class="govuk-button-group govuk-!-margin-top-4">
+        <!-- Back Button -->
+        <a class="govuk-button" th:href="@{/admin/firmDirectory}">
+            Back to Firm Directory
+        </a>
+
+        <a class="govuk-button govuk-button--warning"
+           th:href="@{/admin/firmDirectory/{id}/reasonForDisable(id=${firm.id})}"
+            >
+            Disable All Users
+        </a>
+    </div>
     </main>
 </body>
 

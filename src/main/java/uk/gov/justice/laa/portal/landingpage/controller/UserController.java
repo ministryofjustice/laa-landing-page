@@ -72,6 +72,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserTypeReasonDisable;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
@@ -487,8 +488,10 @@ public class UserController {
             throw new ResponseStatusException(HttpStatusCode.valueOf(404));
         }
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
-        boolean isProvideAdmin = RolesUtils.isProvideAdmin(currentUserProfile.getAppRoles());
-        List<DisableUserReasonViewModel> reasons = new ArrayList<>(userAccountStatusService.getDisableUserReasons(isProvideAdmin).stream()
+        UserTypeReasonDisable userTypeReasonDisable = RolesUtils.isProvideAdmin(currentUserProfile.getAppRoles())
+                ? UserTypeReasonDisable.IS_USER_DISABLE
+                : UserTypeReasonDisable.DEFAULT;
+        List<DisableUserReasonViewModel> reasons = new ArrayList<>(userAccountStatusService.getDisableUserReasons(userTypeReasonDisable).stream()
                 .map(reason -> mapper.map(reason, DisableUserReasonViewModel.class))
                 .toList());
         model.addAttribute("user", user);

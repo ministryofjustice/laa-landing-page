@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'bulk-disable-user-reason'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+
+<head>
+    <title>Disable User</title>
+</head>
+
+<body>
+<nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+    <a class="govuk-back-link govuk-!-margin-bottom-3"
+       th:href="@{/admin/firmDirectory/{id}(id=${firm.id})}">
+        Back </a>
+</nav>
+<main class="govuk-main-wrapper" id="main-content">
+    <form method="post" th:action="@{/admin/firmDirectory/{id}/confirmation(id=${firm.id})}">
+
+        <div class="govuk-form-group">
+            <fieldset class="govuk-fieldset" aria-describedby="reasons-hint">
+                <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
+                    <h1 class="govuk-fieldset__heading">
+                        Remove access for all <span th:text="${firm.name}" />
+                    </h1>
+                </legend>
+                <div id="reasons-hint" class="govuk-hint">
+                    You are about to remove for  <span th:text="${firm.name}" /> user in SiLAS. This will remove their access to all Legal Aid Agency(LAA) services.
+                </div>
+                <div class="govuk-warning-text">
+                    <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
+                    <strong class="govuk-warning-text__text">
+                        <span class="govuk-visually-hidden">Warning</span>
+                        This action cannot be undone and should only be used in a suspected or confirmed cyber breach.
+                    </strong>
+                </div>
+
+                <div class="govuk-form-group govuk-!-padding-top-3">
+                    <div id="remove-hint" class="govuk-hint">
+                        You will remove access for:
+
+                    </div>
+                    <div>
+                        <ul class="govuk-list govuk-list--bullet">
+                            <li><a href="/admin/users/audit?firmSearch=KHAN%27S%20LAW%20FIRM%20LTD%20TA%20KK%20%26%20CO&selectedFirmId=b038e8c8-772f-47bc-8970-3292dbca562b">users liked to </a> </li>
+                            <li><a href="/admin/users/audit?firmSearch=KHAN%27S%20LAW%20FIRM%20LTD%20TA%20KK%20%26%20CO&selectedFirmId=b038e8c8-772f-47bc-8970-3292dbca562b&selectedUserType=MULTI_FIRM">, who will lose access to all of their firms (open in a new window)</a> </li>
+                        </ul>
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+        <div class="govuk-button-group">
+            <button type="submit" class="govuk-button govuk-button--warning">Confirm and disable all users</button>
+            <a th:href="@{/admin/firmDirectory/cancel}" class="govuk-link">Cancel</a>
+        </div>
+    </form>
+</main>
+</body>
+
+</html>
