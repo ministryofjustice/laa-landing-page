@@ -633,22 +633,6 @@ public class DataProviderService {
             log.info("    -> {} skipped (parent firm doesn't exist in DB)", officeUpdatesSkippedNoParentFirm);
         }
 
-        // Export updated office codes for comparison with Python
-        try {
-            List<String> updatedOfficeCodes = result.getUpdated().stream()
-                .filter(i -> "office".equals(i.getType()))
-                .map(ComparisonResultDto.ItemInfo::getCode)
-                .sorted()
-                .collect(Collectors.toList());
-            java.nio.file.Files.write(
-                java.nio.file.Paths.get("java_updated_offices.txt"),
-                updatedOfficeCodes,
-                java.nio.charset.StandardCharsets.UTF_8
-            );
-        } catch (Exception e) {
-            log.warn("Failed to export updated office codes: {}", e.getMessage());
-        }
-
         log.info("No. of offices updated, with no change to firm: {}", officeUpdates - officesSwitchedFirm);
         if (officeUpdates > 0) {
             log.info("    -> {} with address changes only", officeUpdatesAddressOnly);
