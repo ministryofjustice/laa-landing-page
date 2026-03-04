@@ -354,17 +354,21 @@ spec:
 
         - alert: PdaSyncHighFirmDeletions
           annotations:
-            message: PDA sync in ${ENV_NAME} disabled {{ $value }} firms in the last sync - possible data quality issue
+            message: PDA sync in ${ENV_NAME} disabled {{ $value }} firms in the last successful sync - possible data quality issue
             dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
           expr: |
             (
               is_alert_hours
               AND
-              pda_sync_last_firms_disabled{namespace="${NAMESPACE}",source="scheduler"} > 100
+              max(pda_sync_last_firms_disabled{namespace="${NAMESPACE}",source="scheduler"}) by (namespace) > 100
+              AND
+              max(pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler"}) by (namespace) == 1
             )
             OR
             (
-              pda_sync_last_firms_disabled{namespace="${NAMESPACE}",source="scheduler",environment="prod"} > 100
+              max(pda_sync_last_firms_disabled{namespace="${NAMESPACE}",source="scheduler",environment="prod"}) by (namespace) > 100
+              AND
+              max(pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler",environment="prod"}) by (namespace) == 1
             )
           for: 1m
           labels:
@@ -372,17 +376,21 @@ spec:
 
         - alert: PdaSyncHighOfficeDeletions
           annotations:
-            message: PDA sync in ${ENV_NAME} deleted {{ $value }} offices in the last sync - possible data quality issue
+            message: PDA sync in ${ENV_NAME} deleted {{ $value }} offices in the last successful sync - possible data quality issue
             dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
           expr: |
             (
               is_alert_hours
               AND
-              pda_sync_last_offices_deleted{namespace="${NAMESPACE}",source="scheduler"} > 200
+              max(pda_sync_last_offices_deleted{namespace="${NAMESPACE}",source="scheduler"}) by (namespace) > 200
+              AND
+              max(pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler"}) by (namespace) == 1
             )
             OR
             (
-              pda_sync_last_offices_deleted{namespace="${NAMESPACE}",source="scheduler",environment="prod"} > 200
+              max(pda_sync_last_offices_deleted{namespace="${NAMESPACE}",source="scheduler",environment="prod"}) by (namespace) > 200
+              AND
+              max(pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler",environment="prod"}) by (namespace) == 1
             )
           for: 1m
           labels:
@@ -390,25 +398,29 @@ spec:
 
         - alert: PdaSyncHighCreationRate
           annotations:
-            message: PDA sync in ${ENV_NAME} created {{ $value }} new firms/offices - possible data anomaly or bulk import
+            message: PDA sync in ${ENV_NAME} created {{ $value }} new firms/offices in the last successful sync - possible data anomaly or bulk import
             dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
           expr: |
             (
               is_alert_hours
               AND
               (
-                pda_sync_last_firms_created{namespace="${NAMESPACE}",source="scheduler"}
+                max(pda_sync_last_firms_created{namespace="${NAMESPACE}",source="scheduler"}) by (namespace)
                 +
-                pda_sync_last_offices_created{namespace="${NAMESPACE}",source="scheduler"}
+                max(pda_sync_last_offices_created{namespace="${NAMESPACE}",source="scheduler"}) by (namespace)
               ) > 300
+              AND
+              max(pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler"}) by (namespace) == 1
             )
             OR
             (
               (
-                pda_sync_last_firms_created{namespace="${NAMESPACE}",source="scheduler",environment="prod"}
+                max(pda_sync_last_firms_created{namespace="${NAMESPACE}",source="scheduler",environment="prod"}) by (namespace)
                 +
-                pda_sync_last_offices_created{namespace="${NAMESPACE}",source="scheduler",environment="prod"}
+                max(pda_sync_last_offices_created{namespace="${NAMESPACE}",source="scheduler",environment="prod"}) by (namespace)
               ) > 300
+              AND
+              max(pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler",environment="prod"}) by (namespace) == 1
             )
           for: 1m
           labels:
