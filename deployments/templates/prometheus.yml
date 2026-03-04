@@ -122,8 +122,8 @@ spec:
             message: Memory usage compared to the memory limit on the container in ${ENV_NAME} is more than 85% for 5m
             dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
           expr: |-
-            (sum(container_memory_working_set_bytes{namespace="${NAMESPACE}", container="laa-landing-page", image!=""}) 
-            / 
+            (sum(container_memory_working_set_bytes{namespace="${NAMESPACE}", container="laa-landing-page", image!=""})
+            /
             sum(kube_pod_container_resource_limits{namespace="${NAMESPACE}", container="laa-landing-page", unit="byte"})) * 100 > 85
           for: 5m
           labels:
