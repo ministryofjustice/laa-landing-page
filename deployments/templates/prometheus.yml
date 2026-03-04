@@ -355,17 +355,21 @@ spec:
           expr: |
             (
               (
-                max(pda_sync_last_firms_disabled{namespace="${NAMESPACE}",source="scheduler"}) by (namespace) > 100
-                AND
-                max(pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler"}) by (namespace) == 1
+                max by (namespace) (
+                  pda_sync_last_firms_disabled{namespace="${NAMESPACE}",source="scheduler"}
+                  and on (namespace, pod)
+                  (pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler"} == 1)
+                ) > 100
               )
               and on() is_alert_hours
             )
             OR
             (
-              max(pda_sync_last_firms_disabled{namespace="${NAMESPACE}",source="scheduler",environment="prod"}) by (namespace) > 100
-              AND
-              max(pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler",environment="prod"}) by (namespace) == 1
+              max by (namespace) (
+                pda_sync_last_firms_disabled{namespace="${NAMESPACE}",source="scheduler",environment="prod"}
+                and on (namespace, pod)
+                (pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler",environment="prod"} == 1)
+              ) > 100
             )
           for: 1m
           labels:
@@ -378,17 +382,21 @@ spec:
           expr: |
             (
               (
-                max(pda_sync_last_offices_deleted{namespace="${NAMESPACE}",source="scheduler"}) by (namespace) > 200
-                AND
-                max(pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler"}) by (namespace) == 1
+                max by (namespace) (
+                  pda_sync_last_offices_deleted{namespace="${NAMESPACE}",source="scheduler"}
+                  and on (namespace, pod)
+                  (pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler"} == 1)
+                ) > 200
               )
               and on() is_alert_hours
             )
             OR
             (
-              max(pda_sync_last_offices_deleted{namespace="${NAMESPACE}",source="scheduler",environment="prod"}) by (namespace) > 200
-              AND
-              max(pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler",environment="prod"}) by (namespace) == 1
+              max by (namespace) (
+                pda_sync_last_offices_deleted{namespace="${NAMESPACE}",source="scheduler",environment="prod"}
+                and on (namespace, pod)
+                (pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler",environment="prod"} == 1)
+              ) > 200
             )
           for: 1m
           labels:
@@ -401,25 +409,29 @@ spec:
           expr: |
             (
               (
-                (
-                  max(pda_sync_last_firms_created{namespace="${NAMESPACE}",source="scheduler"}) by (namespace)
-                  +
-                  max(pda_sync_last_offices_created{namespace="${NAMESPACE}",source="scheduler"}) by (namespace)
+                max by (namespace) (
+                  (
+                    pda_sync_last_firms_created{namespace="${NAMESPACE}",source="scheduler"}
+                    +
+                    pda_sync_last_offices_created{namespace="${NAMESPACE}",source="scheduler"}
+                  )
+                  and on (namespace, pod)
+                  (pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler"} == 1)
                 ) > 300
-                AND
-                max(pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler"}) by (namespace) == 1
               )
               and on() is_alert_hours
             )
             OR
             (
-              (
-                max(pda_sync_last_firms_created{namespace="${NAMESPACE}",source="scheduler",environment="prod"}) by (namespace)
-                +
-                max(pda_sync_last_offices_created{namespace="${NAMESPACE}",source="scheduler",environment="prod"}) by (namespace)
+              max by (namespace) (
+                (
+                  pda_sync_last_firms_created{namespace="${NAMESPACE}",source="scheduler",environment="prod"}
+                  +
+                  pda_sync_last_offices_created{namespace="${NAMESPACE}",source="scheduler",environment="prod"}
+                )
+                and on (namespace, pod)
+                (pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler",environment="prod"} == 1)
               ) > 300
-              AND
-              max(pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler",environment="prod"}) by (namespace) == 1
             )
           for: 1m
           labels:
