@@ -303,15 +303,35 @@ public class DataProviderService {
                 boolean needsUpdate = false;
                 boolean nameUpdateSkipped = false;
 
-                // Check parent firm changes
+                // Check parent firm changes - apply PASS 2 sync validation rules
                 String currentParentCode = dbFirm.getParentFirm() != null ? dbFirm.getParentFirm().getCode() : null;
-                String newParentCode = (pdaFirm.getParentFirmNumber() != null
+                String rawNewParentCode = (pdaFirm.getParentFirmNumber() != null
                     && !pdaFirm.getParentFirmNumber().trim().isEmpty()
                     && !pdaFirm.getParentFirmNumber().trim().equalsIgnoreCase("null"))
                     ? pdaFirm.getParentFirmNumber().trim() : null;
 
-                if ((currentParentCode == null && newParentCode != null)
-                    || (currentParentCode != null && !currentParentCode.equals(newParentCode))) {
+                // Apply PASS 2 sync validation rules to get effective parent code
+                // This mirrors what synchronizeWithPda() will actually do
+                String effectiveNewParentCode = rawNewParentCode;
+                if (rawNewParentCode != null) {
+                    Firm parentFirm = firmsByCode.get(rawNewParentCode);
+                    if (parentFirm == null) {
+                        // SYNC RULE: Parent firm not found -> cleared to null
+                        effectiveNewParentCode = null;
+                        log.debug("Firm {} raw parent {} not found - sync will clear parent to null", firmCode, rawNewParentCode);
+                    } else if (parentFirm.getType() == FirmType.ADVOCATE) {
+                        // SYNC RULE: ADVOCATE firms cannot be parents -> cleared to null
+                        effectiveNewParentCode = null;
+                        log.debug("Firm {} raw parent {} is ADVOCATE type - sync will clear parent to null", firmCode, rawNewParentCode);
+                    } else if (parentFirm.getParentFirm() != null) {
+                        // SYNC RULE: Multi-level hierarchy not allowed -> cleared to null
+                        effectiveNewParentCode = null;
+                        log.debug("Firm {} raw parent {} has a parent - sync will clear parent to null (multi-level not allowed)", firmCode, rawNewParentCode);
+                    }
+                }
+
+                if ((currentParentCode == null && effectiveNewParentCode != null)
+                    || (currentParentCode != null && !currentParentCode.equals(effectiveNewParentCode))) {
                     parentChanged = true;
                 }
 
@@ -329,15 +349,15 @@ public class DataProviderService {
                 }
 
                 if (parentChanged) {
-                    log.debug("COMPARE: Firm {} needs parent firm update: '{}' -> '{}'", firmCode, currentParentCode, newParentCode);
+                    log.debug("COMPARE: Firm {} needs parent firm update: '{}' -> '{}'", firmCode, currentParentCode, effectiveNewParentCode);
                     needsUpdate = true;
 
-                    // Track granular parent change types
-                    if (currentParentCode == null && newParentCode != null) {
+                    // Track granular parent change types using effective parent code
+                    if (currentParentCode == null && effectiveNewParentCode != null) {
                         firmUpdatesParentSet++;  // Setting parent
-                    } else if (currentParentCode != null && newParentCode == null) {
+                    } else if (currentParentCode != null && effectiveNewParentCode == null) {
                         firmUpdatesParentCleared++;  // Clearing parent
-                    } else if (currentParentCode != null && newParentCode != null) {
+                    } else if (currentParentCode != null && effectiveNewParentCode != null) {
                         firmUpdatesParentChanged++;  // Changing parent
                     }
                 }
@@ -530,12 +550,12 @@ public class DataProviderService {
         if (firmUpdates > 0) {
             log.info("    -> {} with name changes only", firmUpdatesNameOnly);
             log.info("    -> {} with parent firm changes only", firmUpdatesParentOnly);
-            if (firmUpdatesParentOnly > 0) {
+            log.info("    -> {} with both name and parent changes", firmUpdatesNameAndParent);
+            if (firmUpdatesParentSet + firmUpdatesParentCleared + firmUpdatesParentChanged > 0) {
                 log.info("        * {} setting parent (null -> parent)", firmUpdatesParentSet);
                 log.info("        * {} clearing parent (parent -> null)", firmUpdatesParentCleared);
                 log.info("        * {} changing parent (parent A -> parent B)", firmUpdatesParentChanged);
             }
-            log.info("    -> {} with both name and parent changes", firmUpdatesNameAndParent);
             if (firmUpdatesNameSkipped > 0) {
                 log.info("    -> {} with name changes skipped (duplicate name exists)", firmUpdatesNameSkipped);
             }
