@@ -337,14 +337,17 @@ spec:
             dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
           expr: |
             (
-              is_alert_hours
-              AND
-              increase(pda_sync_success_total{namespace="${NAMESPACE}",source="scheduler"}[26h]) == 0
+              (
+                is_alert_hours
+                AND
+                increase(pda_sync_success_total{namespace="${NAMESPACE}",source="scheduler"}[26h]) == 0
+              )
+              OR
+              (
+                increase(pda_sync_success_total{namespace="${NAMESPACE}",source="scheduler",environment="prod"}[26h]) == 0
+              )
             )
-            OR
-            (
-              increase(pda_sync_success_total{namespace="${NAMESPACE}",source="scheduler",environment="prod"}[26h]) == 0
-            )
+            unless absent(pda_sync_success_total{namespace="${NAMESPACE}",source="scheduler"})
           for: 1h
           labels:
             severity: ${ALERT_SEVERITY}

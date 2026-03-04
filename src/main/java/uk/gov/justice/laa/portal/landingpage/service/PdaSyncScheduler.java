@@ -235,6 +235,15 @@ public class PdaSyncScheduler {
         long startTime = System.nanoTime();
         lastSyncTimestamp = System.currentTimeMillis() / 1000; // Unix timestamp in seconds
 
+        // Reset result gauges at start of attempt to avoid showing stale data after failures
+        lastSyncFirmsCreated = 0;
+        lastSyncFirmsUpdated = 0;
+        lastSyncFirmsDisabled = 0;
+        lastSyncOfficesCreated = 0;
+        lastSyncOfficesUpdated = 0;
+        lastSyncOfficesDeleted = 0;
+        lastSyncErrorCount = 0;
+
         try {
             CompletableFuture<PdaSyncResultDto> future = dataProviderService.synchronizeWithPdaAsync();
 
