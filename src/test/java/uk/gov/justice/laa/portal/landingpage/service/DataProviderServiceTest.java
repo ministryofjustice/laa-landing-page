@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -1400,6 +1401,421 @@ class DataProviderServiceTest {
 
             // Then - firm with office is created, firms without offices are skipped
             assertThat(result.getFirmCreates()).isEqualTo(1);
+        }
+
+        @Test
+        @SuppressWarnings("unchecked")
+        void shouldClearParentWhenParentIsAdvocateType() throws Exception {
+            // Given - PDA has firm with parent, but parent is ADVOCATE type (not allowed)
+            Table pdaTable = createMultiRowTable(Arrays.asList(
+                new Object[]{"P001", "Parent Firm", "ADVOCATE", null, "OP001", "1 Parent St", null, null, "London", "SW1A 1AA"},
+                new Object[]{"F001", "Child Firm", "LEGAL_SERVICES_PROVIDER", "P001", "O001", "2 Child St", null, null, "London", "SW1A 1AB"}
+            ));
+
+            Firm parentFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("P001")
+                .name("Parent Firm")
+                .type(FirmType.ADVOCATE) // ADVOCATE cannot be parent
+                .enabled(true)
+                .build();
+
+            Firm childFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("F001")
+                .name("Child Firm")
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .parentFirm(parentFirm) // Currently has parent
+                .enabled(true)
+                .build();
+
+            Office parentOffice = Office.builder()
+                .id(UUID.randomUUID())
+                .code("OP001")
+                .firm(parentFirm)
+                .build();
+
+            Office childOffice = Office.builder()
+                .id(UUID.randomUUID())
+                .code("O001")
+                .firm(childFirm)
+                .build();
+
+            String jsonResponse = createJsonResponse(pdaTable);
+            String jsonArray = jsonResponse.substring(jsonResponse.indexOf("["), jsonResponse.lastIndexOf("]") + 1);
+            when(dataProviderConfig.isUseLocalFile()).thenReturn(false);
+            doReturn(requestHeadersUriSpec).when(dataProviderRestClient).get();
+            doReturn(requestHeadersUriSpec).when(requestHeadersUriSpec).uri(anyString());
+            doReturn(responseSpec).when(requestHeadersUriSpec).retrieve();
+            when(responseSpec.body(String.class)).thenReturn(jsonResponse);
+            when(objectMapper.readTree(anyString())).thenReturn(rootNode);
+            when(rootNode.get("offices")).thenReturn(officesNode);
+            when(officesNode.isArray()).thenReturn(true);
+            when(objectMapper.writeValueAsString(officesNode)).thenReturn(jsonArray);
+
+            when(firmRepository.findAllWithParentFirm()).thenReturn(Arrays.asList(parentFirm, childFirm));
+            when(officeRepository.findAllWithFirm()).thenReturn(Arrays.asList(parentOffice, childOffice));
+
+            // When
+            var result = dataProviderService.compareWithDatabase();
+
+            // Then - child firm should be marked for update (parent will be cleared)
+            assertThat(result.getUpdated()).anyMatch(i ->
+                i.getType().equals("firm") && i.getCode().equals("F001"));
+        }
+
+        @Test
+        @SuppressWarnings("unchecked")
+        void shouldClearParentWhenParentHasParent() throws Exception {
+            // Given - PDA has firm with parent, but parent has its own parent (multi-level not allowed)
+            Table pdaTable = createMultiRowTable(Arrays.asList(
+                new Object[]{"GP001", "Grandparent Firm", "LEGAL_SERVICES_PROVIDER", null, "OGP001", "1 GP St", null, null, "London", "SW1A 1AA"},
+                new Object[]{"P001", "Parent Firm", "LEGAL_SERVICES_PROVIDER", "GP001", "OP001", "2 Parent St", null, null, "London", "SW1A 1AB"},
+                new Object[]{"F001", "Child Firm", "LEGAL_SERVICES_PROVIDER", "P001", "O001", "3 Child St", null, null, "London", "SW1A 1AC"}
+            ));
+
+            Firm grandparentFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("GP001")
+                .name("Grandparent Firm")
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .enabled(true)
+                .build();
+
+            Firm parentFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("P001")
+                .name("Parent Firm")
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .parentFirm(grandparentFirm) // Parent has a parent
+                .enabled(true)
+                .build();
+
+            Firm childFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("F001")
+                .name("Child Firm")
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .enabled(true)
+                .build();
+
+            Office grandparentOffice = Office.builder()
+                .id(UUID.randomUUID())
+                .code("OGP001")
+                .firm(grandparentFirm)
+                .build();
+
+            Office parentOffice = Office.builder()
+                .id(UUID.randomUUID())
+                .code("OP001")
+                .firm(parentFirm)
+                .build();
+
+            Office childOffice = Office.builder()
+                .id(UUID.randomUUID())
+                .code("O001")
+                .firm(childFirm)
+                .build();
+
+            String jsonResponse = createJsonResponse(pdaTable);
+            String jsonArray = jsonResponse.substring(jsonResponse.indexOf("["), jsonResponse.lastIndexOf("]") + 1);
+            when(dataProviderConfig.isUseLocalFile()).thenReturn(false);
+            doReturn(requestHeadersUriSpec).when(dataProviderRestClient).get();
+            doReturn(requestHeadersUriSpec).when(requestHeadersUriSpec).uri(anyString());
+            doReturn(responseSpec).when(requestHeadersUriSpec).retrieve();
+            when(responseSpec.body(String.class)).thenReturn(jsonResponse);
+            when(objectMapper.readTree(anyString())).thenReturn(rootNode);
+            when(rootNode.get("offices")).thenReturn(officesNode);
+            when(officesNode.isArray()).thenReturn(true);
+            when(objectMapper.writeValueAsString(officesNode)).thenReturn(jsonArray);
+
+            when(firmRepository.findAllWithParentFirm()).thenReturn(Arrays.asList(grandparentFirm, parentFirm, childFirm));
+            when(officeRepository.findAllWithFirm()).thenReturn(Arrays.asList(grandparentOffice, parentOffice, childOffice));
+
+            // When
+            var result = dataProviderService.compareWithDatabase();
+
+            // Then - child firm attempting to set parent with parent should not be marked for update
+            // (effective parent code is null due to multi-level hierarchy rule)
+            assertThat(result.getExists()).anyMatch(i ->
+                i.getType().equals("firm") && i.getCode().equals("F001"));
+        }
+
+        @Test
+        @SuppressWarnings("unchecked")
+        void shouldClearParentWhenPdaParentWillBeCreatedWithItsOwnParent() throws Exception {
+            // Given - PDA parent doesn't exist in DB but will be created, and that parent has its own parent
+            Table pdaTable = createMultiRowTable(Arrays.asList(
+                new Object[]{"GP001", "Grandparent Firm", "LEGAL_SERVICES_PROVIDER", null, "OGP001", "1 GP St", null, null, "London", "SW1A 1AA"},
+                new Object[]{"P001", "Parent Firm", "LEGAL_SERVICES_PROVIDER", "GP001", "OP001", "2 Parent St", null, null, "London", "SW1A 1AB"},
+                new Object[]{"F001", "Child Firm", "LEGAL_SERVICES_PROVIDER", "P001", "O001", "3 Child St", null, null, "London", "SW1A 1AC"}
+            ));
+
+            Firm childFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("F001")
+                .name("Child Firm")
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .enabled(true)
+                .build();
+
+            Office childOffice = Office.builder()
+                .id(UUID.randomUUID())
+                .code("O001")
+                .firm(childFirm)
+                .build();
+
+            String jsonResponse = createJsonResponse(pdaTable);
+            String jsonArray = jsonResponse.substring(jsonResponse.indexOf("["), jsonResponse.lastIndexOf("]") + 1);
+            when(dataProviderConfig.isUseLocalFile()).thenReturn(false);
+            doReturn(requestHeadersUriSpec).when(dataProviderRestClient).get();
+            doReturn(requestHeadersUriSpec).when(requestHeadersUriSpec).uri(anyString());
+            doReturn(responseSpec).when(requestHeadersUriSpec).retrieve();
+            when(responseSpec.body(String.class)).thenReturn(jsonResponse);
+            when(objectMapper.readTree(anyString())).thenReturn(rootNode);
+            when(rootNode.get("offices")).thenReturn(officesNode);
+            when(officesNode.isArray()).thenReturn(true);
+            when(objectMapper.writeValueAsString(officesNode)).thenReturn(jsonArray);
+
+            // Only child firm exists in DB, parent will be created but has grandparent
+            when(firmRepository.findAllWithParentFirm()).thenReturn(Arrays.asList(childFirm));
+            when(officeRepository.findAllWithFirm()).thenReturn(Arrays.asList(childOffice));
+
+            // When
+            var result = dataProviderService.compareWithDatabase();
+
+            // Then - F001 should exist (no parent change since parent-to-be-created has its own parent)
+            assertThat(result.getExists()).anyMatch(i ->
+                i.getType().equals("firm") && i.getCode().equals("F001"));
+        }
+
+        @Test
+        @SuppressWarnings("unchecked")
+        void shouldDetectParentSetFromNullToValue() throws Exception {
+            // Given - firm has no parent, PDA provides parent
+            Table pdaTable = createMultiRowTable(Arrays.asList(
+                new Object[]{"P001", "Parent Firm", "LEGAL_SERVICES_PROVIDER", null, "OP001", "1 Parent St", null, null, "London", "SW1A 1AA"},
+                new Object[]{"F001", "Child Firm", "LEGAL_SERVICES_PROVIDER", "P001", "O001", "2 Child St", null, null, "London", "SW1A 1AB"}
+            ));
+
+            Firm parentFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("P001")
+                .name("Parent Firm")
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .enabled(true)
+                .build();
+
+            Firm childFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("F001")
+                .name("Child Firm")
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .parentFirm(null) // No parent currently
+                .enabled(true)
+                .build();
+
+            Office parentOffice = Office.builder()
+                .id(UUID.randomUUID())
+                .code("OP001")
+                .firm(parentFirm)
+                .build();
+
+            Office childOffice = Office.builder()
+                .id(UUID.randomUUID())
+                .code("O001")
+                .firm(childFirm)
+                .build();
+
+            String jsonResponse = createJsonResponse(pdaTable);
+            String jsonArray = jsonResponse.substring(jsonResponse.indexOf("["), jsonResponse.lastIndexOf("]") + 1);
+            when(dataProviderConfig.isUseLocalFile()).thenReturn(false);
+            doReturn(requestHeadersUriSpec).when(dataProviderRestClient).get();
+            doReturn(requestHeadersUriSpec).when(requestHeadersUriSpec).uri(anyString());
+            doReturn(responseSpec).when(requestHeadersUriSpec).retrieve();
+            when(responseSpec.body(String.class)).thenReturn(jsonResponse);
+            when(objectMapper.readTree(anyString())).thenReturn(rootNode);
+            when(rootNode.get("offices")).thenReturn(officesNode);
+            when(officesNode.isArray()).thenReturn(true);
+            when(objectMapper.writeValueAsString(officesNode)).thenReturn(jsonArray);
+
+            when(firmRepository.findAllWithParentFirm()).thenReturn(Arrays.asList(parentFirm, childFirm));
+            when(officeRepository.findAllWithFirm()).thenReturn(Arrays.asList(parentOffice, childOffice));
+
+            // When
+            var result = dataProviderService.compareWithDatabase();
+
+            // Then - child firm should be marked for update (parent being set)
+            assertThat(result.getUpdated()).anyMatch(i ->
+                i.getType().equals("firm") && i.getCode().equals("F001"));
+        }
+
+        @Test
+        @SuppressWarnings("unchecked")
+        void shouldDetectParentClearedFromValueToNull() throws Exception {
+            // Given - firm has parent in DB, PDA doesn't provide parent
+            Table pdaTable = createMultiRowTable(Arrays.asList(
+                new Object[]{"P001", "Parent Firm", "LEGAL_SERVICES_PROVIDER", null, "OP001", "1 Parent St", null, null, "London", "SW1A 1AA"},
+                new Object[]{"F001", "Child Firm", "LEGAL_SERVICES_PROVIDER", null, "O001", "2 Child St", null, null, "London", "SW1A 1AB"}
+            ));
+
+            Firm parentFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("P001")
+                .name("Parent Firm")
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .enabled(true)
+                .build();
+
+            Firm childFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("F001")
+                .name("Child Firm")
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .parentFirm(parentFirm) // Has parent currently
+                .enabled(true)
+                .build();
+
+            Office parentOffice = Office.builder()
+                .id(UUID.randomUUID())
+                .code("OP001")
+                .firm(parentFirm)
+                .build();
+
+            Office childOffice = Office.builder()
+                .id(UUID.randomUUID())
+                .code("O001")
+                .firm(childFirm)
+                .build();
+
+            String jsonResponse = createJsonResponse(pdaTable);
+            String jsonArray = jsonResponse.substring(jsonResponse.indexOf("["), jsonResponse.lastIndexOf("]") + 1);
+            when(dataProviderConfig.isUseLocalFile()).thenReturn(false);
+            doReturn(requestHeadersUriSpec).when(dataProviderRestClient).get();
+            doReturn(requestHeadersUriSpec).when(requestHeadersUriSpec).uri(anyString());
+            doReturn(responseSpec).when(requestHeadersUriSpec).retrieve();
+            when(responseSpec.body(String.class)).thenReturn(jsonResponse);
+            when(objectMapper.readTree(anyString())).thenReturn(rootNode);
+            when(rootNode.get("offices")).thenReturn(officesNode);
+            when(officesNode.isArray()).thenReturn(true);
+            when(objectMapper.writeValueAsString(officesNode)).thenReturn(jsonArray);
+
+            when(firmRepository.findAllWithParentFirm()).thenReturn(Arrays.asList(parentFirm, childFirm));
+            when(officeRepository.findAllWithFirm()).thenReturn(Arrays.asList(parentOffice, childOffice));
+
+            // When
+            var result = dataProviderService.compareWithDatabase();
+
+            // Then - child firm should be marked for update (parent being cleared)
+            assertThat(result.getUpdated()).anyMatch(i ->
+                i.getType().equals("firm") && i.getCode().equals("F001"));
+        }
+
+        @Test
+        @SuppressWarnings("unchecked")
+        void shouldDetectFirmNameChangeSkippedButParentChanged() throws Exception {
+            // Given - firm name changed to duplicate, but parent also changed
+            Table pdaTable = createMultiRowTable(Arrays.asList(
+                new Object[]{"P001", "Parent Firm", "LEGAL_SERVICES_PROVIDER", null, "OP001", "1 Parent St", null, null, "London", "SW1A 1AA"},
+                new Object[]{"F001", "Duplicate Name", "LEGAL_SERVICES_PROVIDER", "P001", "O001", "2 Firm St", null, null, "London", "SW1A 1AB"},
+                new Object[]{"F002", "Duplicate Name", "LEGAL_SERVICES_PROVIDER", null, "O002", "3 Other St", null, null, "London", "SW1A 1AC"}
+            ));
+
+            Firm parentFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("P001")
+                .name("Parent Firm")
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .enabled(true)
+                .build();
+
+            Firm targetFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("F001")
+                .name("Old Name")
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .parentFirm(null) // No parent initially
+                .enabled(true)
+                .build();
+
+            Firm duplicateNameFirm = Firm.builder()
+                .id(UUID.randomUUID())
+                .code("F002")
+                .name("Duplicate Name") // Already has the name F001 wants
+                .type(FirmType.LEGAL_SERVICES_PROVIDER)
+                .enabled(true)
+                .build();
+
+            Office parentOffice = Office.builder()
+                .id(UUID.randomUUID())
+                .code("OP001")
+                .firm(parentFirm)
+                .build();
+
+            Office targetOffice = Office.builder()
+                .id(UUID.randomUUID())
+                .code("O001")
+                .firm(targetFirm)
+                .build();
+
+            Office duplicateOffice = Office.builder()
+                .id(UUID.randomUUID())
+                .code("O002")
+                .firm(duplicateNameFirm)
+                .build();
+
+            String jsonResponse = createJsonResponse(pdaTable);
+            String jsonArray = jsonResponse.substring(jsonResponse.indexOf("["), jsonResponse.lastIndexOf("]") + 1);
+            when(dataProviderConfig.isUseLocalFile()).thenReturn(false);
+            doReturn(requestHeadersUriSpec).when(dataProviderRestClient).get();
+            doReturn(requestHeadersUriSpec).when(requestHeadersUriSpec).uri(anyString());
+            doReturn(responseSpec).when(requestHeadersUriSpec).retrieve();
+            when(responseSpec.body(String.class)).thenReturn(jsonResponse);
+            when(objectMapper.readTree(anyString())).thenReturn(rootNode);
+            when(rootNode.get("offices")).thenReturn(officesNode);
+            when(officesNode.isArray()).thenReturn(true);
+            when(objectMapper.writeValueAsString(officesNode)).thenReturn(jsonArray);
+
+            when(firmRepository.findAllWithParentFirm()).thenReturn(Arrays.asList(parentFirm, targetFirm, duplicateNameFirm));
+            when(officeRepository.findAllWithFirm()).thenReturn(Arrays.asList(parentOffice, targetOffice, duplicateOffice));
+
+            // When
+            var result = dataProviderService.compareWithDatabase();
+
+            // Then - F001 should be marked for update (name skipped but parent changed)
+            assertThat(result.getUpdated()).anyMatch(i ->
+                i.getType().equals("firm") && i.getCode().equals("F001"));
+        }
+
+        private Table createMultiRowTable(List<Object[]> rows) {
+            StringColumn firmNumber = StringColumn.create("firmNumber");
+            StringColumn firmName = StringColumn.create("firmName");
+            StringColumn firmType = StringColumn.create("firmType");
+            StringColumn parentFirmNumber = StringColumn.create("parentFirmNumber");
+            StringColumn officeAccountNumber = StringColumn.create("officeAccountNumber");
+            StringColumn officeAddressLine1 = StringColumn.create("officeAddressLine1");
+            StringColumn officeAddressLine2 = StringColumn.create("officeAddressLine2");
+            StringColumn officeAddressLine3 = StringColumn.create("officeAddressLine3");
+            StringColumn officeAddressCity = StringColumn.create("officeAddressCity");
+            StringColumn officeAddressPostcode = StringColumn.create("officeAddressPostcode");
+
+            for (Object[] row : rows) {
+                firmNumber.append((String) row[0]);
+                firmName.append((String) row[1]);
+                firmType.append((String) row[2]);
+                parentFirmNumber.append((String) row[3]);
+                officeAccountNumber.append((String) row[4]);
+                officeAddressLine1.append((String) row[5]);
+                officeAddressLine2.append((String) row[6]);
+                officeAddressLine3.append((String) row[7]);
+                officeAddressCity.append((String) row[8]);
+                officeAddressPostcode.append((String) row[9]);
+            }
+
+            return Table.create("test")
+                .addColumns(firmNumber, firmName, firmType, parentFirmNumber,
+                    officeAccountNumber, officeAddressLine1, officeAddressLine2,
+                    officeAddressLine3, officeAddressCity, officeAddressPostcode);
         }
 
         private Table createTestTable(String firmNumber, String firmName, String firmType, String parentFirmNumber,
