@@ -1,0 +1,25 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-firm_and_number_of_users_disabled
+      author: leonardopalmeiro
+      changes:
+        - addColumn:
+            tableName: user_account_status_audit
+            columns:
+              - column:
+                  name: firm_id
+                  type: varchar(255)
+                  constraints:
+                    nullable: true
+              - column:
+                  name: number_of_users_disabled
+                  type: integer
+                  constraints:
+                    nullable: true
+      rollback:
+        - dropColumn:
+            tableName: user_account_status_audit
+            columnName: firm_id
+        - dropColumn:
+            tableName: user_account_status_audit
+            columnName: number_of_users_disabled

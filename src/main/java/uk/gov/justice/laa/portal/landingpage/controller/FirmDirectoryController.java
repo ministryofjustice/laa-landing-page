@@ -25,6 +25,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedOffices;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserTypeReasonDisable;
 import uk.gov.justice.laa.portal.landingpage.forms.DisableUserReasonForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
@@ -37,8 +38,12 @@ import uk.gov.justice.laa.portal.landingpage.viewmodel.DisableUserReasonViewMode
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
+import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.EXTERNAL_USER_ADMIN;
+import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.GLOBAL_ADMIN;
+import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.SECURITY_RESPONSE;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 
 /**
@@ -64,10 +69,11 @@ public class FirmDirectoryController {
     @Value("${feature.flag.firm.directory.enabled}")
     private boolean firmDirectoryEnabled;
 
-    private boolean checkRoles(Authentication authentication) {
-        return accessControlService.userHasAuthzRole(authentication, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())
-                || accessControlService.userHasAuthzRole(authentication, AuthzRole.GLOBAL_ADMIN.getRoleName())
-                || accessControlService.userHasAuthzRole(authentication, AuthzRole.SECURITY_RESPONSE.getRoleName());
+    private boolean isShowDisableAllButton(Authentication authentication, String firmId) {
+        return (accessControlService.userHasAuthzRole(authentication, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())
+                || accessControlService.userHasAuthzRole(authentication, GLOBAL_ADMIN.getRoleName())
+                || accessControlService.userHasAuthzRole(authentication, AuthzRole.SECURITY_RESPONSE.getRoleName()))
+        && userAccountStatusService.hasActiveUserByFirmId(firmId);
     }
 
     @GetMapping()
@@ -99,7 +105,8 @@ public class FirmDirectoryController {
     public String displayFirmDetails(
             @PathVariable UUID id,
             Model model,
-            @ModelAttribute FirmOfficesCriteria criteria) {
+            @ModelAttribute FirmOfficesCriteria criteria,
+            Authentication authentication) {
 
         PaginatedOffices paginatedOffices = officeService.getOfficesPage(
                 id,
@@ -108,10 +115,11 @@ public class FirmDirectoryController {
                 criteria.getSort(),
                 criteria.getDirection()
         );
-
+        boolean showDisableAllButton = isShowDisableAllButton(authentication, String.valueOf(id));
         model.addAttribute("firm", firmService.getFirm(id));
         model.addAttribute("firmOffices", paginatedOffices);
         model.addAttribute("criteria", criteria);
+        model.addAttribute("showDisableAllButton", showDisableAllButton);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Firm Details");
 
         return "firm-directory/firm-offices";
@@ -156,8 +164,9 @@ public class FirmDirectoryController {
         }
         // add all the variables of confirmation
         modelFromSession.addAttribute("reasonIdSelected", disableUserReasonForm.getReasonId());
-        model.addAttribute("totalOfSingleFirm", 10);
-        model.addAttribute("totalOfMultiFirm", 10);
+        Map<String, Long> counts = userAccountStatusService.getUserCountsForFirm(id);
+        model.addAttribute("totalOfSingleFirm", counts.get("totalOfSingleFirm"));
+        model.addAttribute("totalOfMultiFirm", counts.get("totalOfMultiFirm"));
         return "firm-directory/bulk-confirmation";
     }
 
@@ -173,19 +182,18 @@ public class FirmDirectoryController {
         UUID disabledReasonId = UUID.fromString((String) modelFromSession.getAttribute("reasonIdSelected"));
         try {
             userAccountStatusService.disableUserAllUserByFirmId(id, disabledReasonId, disabledByUserId);
+            // Add success banner
+            redirectAttributes.addFlashAttribute("successMessage", "All user accounts has been disabled");
+            return "redirect:/admin/firmDirectory/" + id;
         } catch (Exception e) {
+            log.error("Error during Bulk disable user {}", e.getMessage());
             throw new RuntimeException(e);
         }
-        // Add success banner
-        redirectAttributes.addFlashAttribute("successMessage", "All user accounts has been disabled");
-
-        return "redirect:/admin/firmDirectory/" + id;
 
     }
 
     @GetMapping("/cancel")
     public String cancelBulkUserDisable(HttpSession session) {
-        //TODO remove all the fields
         session.removeAttribute("disableUserReasonModel");
         return "redirect:/admin/firmDirectory";
     }

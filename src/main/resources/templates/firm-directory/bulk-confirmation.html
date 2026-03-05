@@ -43,20 +43,23 @@
                     </div>
                     <div>
                         <ul class="govuk-list govuk-list--bullet">
-                            <li>
-                                <a th:href="@{/admin/users/audit(firmSearch=${firm.name}, selectedFirmId=${firm.id})}">
+                            <li th:if="${totalOfSingleFirm >= 1}">
+                                <a th:href="@{/admin/users/audit(firmSearch=${firm.name},
+                                    selectedFirmId=${firm.id} ,
+                                    selectedUserType='EXTERNAL')}"
+                                   target="_blank">
                                     <span th:text="${totalOfSingleFirm}"/>
                                     <span th:text="${totalOfSingleFirm > 1 ? 'users' : 'user'}"/> linked to
                                     <span th:text="${firm.name}"/> (open in a new window)
                                 </a>
                             </li>
-                            <li>
+                            <li th:if="${totalOfMultiFirm >= 1}">
 
                                 <a th:href="@{/admin/users/audit(
                                                     firmSearch=${firm.name},
                                                     selectedFirmId=${firm.id},
                                                     selectedUserType='MULTI_FIRM'
-                                   )}">
+                                   )}" target="_blank">
                                     <span th:text="${totalOfMultiFirm}" />
                                     multi-firm <span th:text="${totalOfMultiFirm > 1 ? 'users' : 'user'}"/>, who will lose access to all of their
                                     firms (open in a new window)

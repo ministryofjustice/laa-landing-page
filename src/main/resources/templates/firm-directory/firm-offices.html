@@ -177,7 +177,7 @@
             Back to Firm Directory
         </a>
 
-        <a class="govuk-button govuk-button--warning"
+        <a th:if="${showDisableAllButton}" class="govuk-button govuk-button--warning"
            th:href="@{/admin/firmDirectory/{id}/reasonForDisable(id=${firm.id})}"
             >
             Disable All Users
