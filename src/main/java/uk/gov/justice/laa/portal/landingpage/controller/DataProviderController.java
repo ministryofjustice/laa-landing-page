@@ -37,9 +37,9 @@ public class DataProviderController {
      *
      * @return ResponseEntity containing JSON with categorized comparison results
      */
-    @GetMapping("/compare")
-    public ResponseEntity<String> compareProviderOffices() {
-        log.debug("Received request to compare PDA data with database");
+    @GetMapping("/report")
+    public ResponseEntity<String> reportProviderOffices() {
+        log.debug("Received request to report PDA data comparison with database");
         try {
             ComparisonResultDto result = dataProviderService.compareWithDatabase();
 
