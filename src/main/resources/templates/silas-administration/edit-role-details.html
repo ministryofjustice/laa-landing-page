@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'edit-app-details'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>SiLAS Administration</title>
+</head>
+
+<body>
+<nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+    <ol class="govuk-breadcrumbs__list">
+        <li class="govuk-breadcrumbs__list-item">
+            <a class="govuk-breadcrumbs__link" th:href="@{'/admin/silas-administration#roles'}">Home</a>
+        </li>
+        <li class="govuk-breadcrumbs__list-item">
+            SiLAS Administration
+        </li>
+    </ol>
+</nav>
+
+<main class="govuk-main-wrapper" id="main-content">
+    <div class="govuk-grid-row">
+        <div class="govuk-grid-column-two-thirds">
+
+            <div th:if="${errorMessage}" class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title" tabindex="-1" data-module="govuk-error-summary">
+                <h2 class="govuk-error-summary__title" id="error-summary-title">
+                    There is a problem
+                </h2>
+                <div class="govuk-error-summary__body">
+                    <ul class="govuk-list govuk-error-summary__list">
+                        <li th:each="message : ${errorMessage}">
+                            <span th:text="${message}"></span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <h1 class="govuk-heading-xl">SiLAS Administration</h1>
+
+            <h2 class="govuk-heading-m govuk-!-padding-top-3">Legal Aid Services: <span th:text="${appRole.name}"></span></h2>
+
+            <form method="post" th:action="@{'/admin/silas-administration/role/' + ${appRole.id}}" th:object="${appRoleDetailsForm}">
+
+                <input type="hidden" name="appRoleId" th:value="${appRoleId}" />
+
+                <div class="govuk-form-group" th:classappend="${#fields.hasErrors('name')} ? 'govuk-form-group--error' : ''" id="app-name-group">
+                    <label class="govuk-label govuk-label--m" for="role-name">
+                        Name
+                    </label>
+                    <div th:if="${#fields.hasErrors('name')}" class="govuk-error-message" id="role-name-error">
+                        <span class="govuk-visually-hidden">Error:</span>
+                        <span th:errors="*{name}"></span>
+                    </div>
+
+                    <input class="govuk-input" name="name" type="text"
+                           th:field="*{name}" id="role-name"
+                           th:aria-describedby="${#fields.hasErrors('name')} ? 'name-error' : null" />
+
+                </div>
+
+
+                <div class="govuk-form-group" th:classappend="${#fields.hasErrors('description')} ? 'govuk-form-group--error' : ''" id="app-description-group">
+                    <label class="govuk-label govuk-label--m" for="app-description">
+                        Description
+                    </label>
+                    <div th:if="${#fields.hasErrors('description')}" class="govuk-error-message" id="app-description-error">
+                        <span class="govuk-visually-hidden">Error:</span>
+                        <span th:errors="*{description}"></span>
+                    </div>
+
+                    <textarea class="govuk-textarea"
+                              th:classappend="${#fields.hasErrors('description')} ? 'govuk-textarea--error' : ''"
+                              id="app-description"
+                              name="description"
+                              rows="8"
+                              th:field="*{description}"></textarea>
+                </div>
+
+                <div class="govuk-button-group">
+                    <button type="submit" class="govuk-button" data-module="govuk-button">
+                        Continue
+                    </button>
+                    <a class="govuk-link" th:href="@{'/admin/silas-administration/cancel/roles'}">Cancel</a>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</main>
+</body>
+
+</html>

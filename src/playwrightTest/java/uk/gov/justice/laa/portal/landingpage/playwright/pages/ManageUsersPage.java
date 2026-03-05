@@ -1,22 +1,21 @@
 package uk.gov.justice.laa.portal.landingpage.playwright.pages;
 
-import com.microsoft.playwright.Locator;
-import com.microsoft.playwright.Page;
+import java.util.List;
 
-import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import com.microsoft.playwright.options.LoadState;
-import com.microsoft.playwright.options.WaitForSelectorState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.microsoft.playwright.Locator;
+import com.microsoft.playwright.Page;
+import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+import com.microsoft.playwright.options.LoadState;
+import com.microsoft.playwright.options.WaitForSelectorState;
+
 import uk.gov.justice.laa.portal.landingpage.playwright.common.TestUser;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.TestUtils;
-
-import java.util.List;
 
 
 public class ManageUsersPage {
@@ -124,11 +123,11 @@ public class ManageUsersPage {
 
         this.continueButtonFirmSelection = page.locator("button.govuk-button:has-text('Continue')");
 
-        this.emailFormatError = page.locator("div.govuk-error-message p:has-text('Enter an email address in the correct format')");
-        this.emailDomainError = page.locator("div.govuk-error-message p:has-text('The email address domain is not valid or cannot receive emails.')");
-        this.firstNameInvalidCharsError = page.locator("div.govuk-error-message p:has-text('First name must not contain numbers or special characters')");
-        this.lastNameInvalidCharsError = page.locator("div.govuk-error-message p:has-text('Last name must not contain numbers or special characters')");
-        this.selectUserTypeError = page.locator("div.govuk-error-message p:has-text('Select a user type')");
+        this.emailFormatError = page.locator("div.govuk-error-message:has-text('Enter an email address in the correct format')");
+        this.emailDomainError = page.locator("div.govuk-error-message:has-text('The email address domain is not valid or cannot receive emails.')");
+        this.firstNameInvalidCharsError = page.locator("div.govuk-error-message:has-text('First name must not contain numbers or special characters')");
+        this.lastNameInvalidCharsError = page.locator("div.govuk-error-message:has-text('Last name must not contain numbers or special characters')");
+        this.selectUserTypeError = page.locator("div.govuk-error-message:has-text('Select a user type')");
     }
 
 
@@ -171,6 +170,9 @@ public class ManageUsersPage {
         );
     }
 
+    public boolean isDeleteUserVisible() {
+        return deleteUserLink.isVisible();
+    }
 
     // Edit user - backwards compatible
     public void clickEditUser() {
@@ -246,7 +248,13 @@ public class ManageUsersPage {
     }
 
     public void verifyUserDetailsPopulated() {
-        assertTrue(page.locator(".govuk-summary-list__row:has-text(\"Email\") .govuk-summary-list__value").isVisible());
+        // Wait for the page to load by checking if the email row is visible
+        Locator emailRow = page.locator(".govuk-summary-list__row:has-text(\"Email\") .govuk-summary-list__value");
+        emailRow.waitFor(new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.VISIBLE)
+                .setTimeout(5000));
+
+        assertTrue(emailRow.isVisible());
         assertTrue(page.locator(".govuk-summary-list__row:has-text(\"First name\") .govuk-summary-list__value").isVisible());
         assertTrue(page.locator(".govuk-summary-list__row:has-text(\"Last name\") .govuk-summary-list__value").isVisible());
     }
@@ -325,9 +333,14 @@ public class ManageUsersPage {
     }
 
     public Locator firstIncompleteUserRowLocator() {
-        return page.locator(
+        Locator locator = page.locator(
                 "tr.govuk-table__row:has(span.moj-badge.moj-badge--blue:has-text('INCOMPLETE'))"
         ).first();
+        // Wait for the row to be visible
+        locator.waitFor(new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.VISIBLE)
+                .setTimeout(5000));
+        return locator;
     }
 
     public Locator externalUserRowLocator() {
@@ -493,6 +506,10 @@ public class ManageUsersPage {
         emailInput.fill("bad email");
         clickContinueUserDetails();
 
+        // Wait for error message to appear
+        emailFormatError.waitFor(new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.VISIBLE)
+                .setTimeout(5000));
         assertTrue(emailFormatError.isVisible());
     }
 
@@ -500,6 +517,10 @@ public class ManageUsersPage {
         emailInput.fill("user@invalid-domain");
         clickContinueUserDetails();
 
+        // Wait for error message to appear
+        emailDomainError.waitFor(new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.VISIBLE)
+                .setTimeout(5000));
         assertTrue(emailDomainError.isVisible());
     }
 

@@ -1,14 +1,20 @@
 package uk.gov.justice.laa.portal.landingpage.dto;
 
+import lombok.Getter;
 import uk.gov.justice.laa.portal.landingpage.entity.EventType;
 
+import java.util.UUID;
+
+@Getter
 public class UpdateAppDisplayOrderAuditEvent extends AuditEvent {
 
+    private final UUID userProfileId;
 
-    public UpdateAppDisplayOrderAuditEvent(CurrentUserDto currentUserDto) {
+    public UpdateAppDisplayOrderAuditEvent(CurrentUserDto currentUserDto, UUID userProfileId) {
         super();
         this.userId = currentUserDto.getUserId();
         this.userName = currentUserDto.getName();
+        this.userProfileId = userProfileId;
     }
 
     @Override
@@ -18,7 +24,7 @@ public class UpdateAppDisplayOrderAuditEvent extends AuditEvent {
 
     @Override
     public String getDescription() {
-        return String.format("User '%s' (ID: %s) has updated App display order",
-                userName, userId);
+        return String.format("User (Profile ID: '%s' Entra OID: '%s') has updated App display order",
+                userProfileId, userId);
     }
 }

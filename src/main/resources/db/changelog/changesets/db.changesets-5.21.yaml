@@ -1,0 +1,25 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1740481260000-1
+      author: sankavi.mohanraj
+      dbms: postgresql
+      comment: Add CREATE_LAA_APP_ROLE permission to SILAS System Administration role
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO role_permission (app_role_id, permission)
+              SELECT (SELECT id FROM app_role WHERE name = 'SILAS System Administration'),
+                     'CREATE_LAA_APP_ROLE'
+              WHERE NOT EXISTS (
+                SELECT 1 FROM role_permission
+                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'SILAS System Administration')
+                  AND permission = 'CREATE_LAA_APP_ROLE'
+              );
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: |
+              DELETE FROM role_permission
+              WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'SILAS System Administration')
+                AND permission = 'CREATE_LAA_APP_ROLE';
