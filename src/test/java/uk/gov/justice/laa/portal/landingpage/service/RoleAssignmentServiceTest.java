@@ -19,15 +19,22 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.RoleAssignmentRepository;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -197,4 +204,125 @@ public class RoleAssignmentServiceTest {
 
         assertThat(roleAssignmentService.canUserAssignRolesForApp(userProfile, appDto)).isFalse();
     }
+
+    @Test
+    void getLaaAppRoleAssignmentRestrictions_shouldBuildMapCorrectly() {
+        Object[] row1 = new Object[]{"A1", "Assignable1", "Desc1", "B1", "Assigning1"};
+        Object[] row2 = new Object[]{"A1", "Assignable1", "Desc1", "B2", "Assigning2"};
+        when(roleAssignmentRepository.findAssignableRolesWithAssigningRoles())
+                .thenReturn(List.of(row1, row2));
+
+        var result = roleAssignmentService.getLaaAppRoleAssignmentRestrictions();
+
+        assertEquals(1, result.size());
+
+        var key = result.keySet().iterator().next();
+        assertEquals("A1", key.getId());
+        assertEquals("Assignable1", key.getName());
+        assertEquals("Desc1", key.getDescription());
+
+        var values = result.get(key);
+        assertEquals(2, values.size());
+        assertEquals("B1", values.get(0).getId());
+        assertEquals("B2", values.get(1).getId());
+    }
+
+    @Test
+    void getLaaAppRoleAssignmentRestrictionsByAppName_shouldBuildMapCorrectly() {
+        Object[] row = new Object[] { "A2", "AssignableX", "DescX", "C1", "AssigningX" };
+        List<Object[]> rows = new ArrayList<>();
+        rows.add(row);
+
+        when(roleAssignmentRepository.findAssignableRolesWithAssigningRolesByAppName("MyApp"))
+                .thenReturn(rows);
+
+        var result = roleAssignmentService.getLaaAppRoleAssignmentRestrictionsByAppName("MyApp");
+
+        assertEquals(1, result.size());
+
+        var key = result.keySet().iterator().next();
+        assertEquals("A2", key.getId());
+        assertEquals("AssignableX", key.getName());
+    }
+
+    @Test
+    void updateRoleAssignmentRestrictions_shouldThrow_whenRoleAssignsItself() {
+
+        UUID targetId = UUID.randomUUID();
+
+        AppRole targetRole = AppRole.builder().id(targetId).name("TARGET_ROLE").build();
+        List<String> ids = List.of(targetId.toString());
+
+        when(appRoleRepository.findById(targetId)).thenReturn(Optional.of(targetRole));
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> roleAssignmentService.updateRoleAssignmentRestrictions(targetId.toString(), ids)
+        );
+
+        assertThat(ex.getMessage()).contains("cannot assign itself");
+    }
+
+    @Test
+    void updateRoleAssignmentRestrictions_shouldThrow_whenAssignerMissing() {
+        UUID existing = UUID.randomUUID();
+        UUID missing = UUID.randomUUID();
+        UUID targetId = UUID.randomUUID();
+
+        AppRole targetRole = AppRole.builder().id(targetId).name("TARGET_ROLE").build();
+
+        when(appRoleRepository.findById(targetId)).thenReturn(Optional.of(targetRole));
+        when(appRoleRepository.findAllById(any())).thenReturn(
+                List.of(AppRole.builder().id(existing).name("ROLE_EXISTING").build())
+        );
+
+        List<String> ids = List.of(existing.toString(), missing.toString());
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> roleAssignmentService.updateRoleAssignmentRestrictions(targetId.toString(), ids)
+        );
+
+        assertThat(ex.getMessage()).contains("Assigning roles not found");
+        assertThat(ex.getMessage()).contains(missing.toString());
+    }
+
+    @Test
+    void updateRoleAssignmentRestrictions_shouldDeleteOnly_whenNoAssigners() {
+        UUID targetId = UUID.randomUUID();
+
+        AppRole targetRole = AppRole.builder().id(targetId).name("TARGET_ROLE").build();
+        when(appRoleRepository.findById(targetId)).thenReturn(Optional.of(targetRole));
+
+        roleAssignmentService.updateRoleAssignmentRestrictions(targetId.toString(), null);
+
+        verify(roleAssignmentRepository).deleteByAssignableRole(targetRole);
+        verify(roleAssignmentRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void updateRoleAssignmentRestrictions_shouldCreateRoleAssignments() {
+        UUID assigner1 = UUID.randomUUID();
+        UUID assigner2 = UUID.randomUUID();
+        UUID targetId = UUID.randomUUID();
+
+        AppRole targetRole = AppRole.builder().id(targetId).name("TARGET_ROLE").build();
+
+        AppRole role1 = AppRole.builder().id(assigner1).name("ROLE_1").build();
+        AppRole role2 = AppRole.builder().id(assigner2).name("ROLE_2").build();
+
+        when(appRoleRepository.findById(targetId)).thenReturn(Optional.of(targetRole));
+        when(appRoleRepository.findAllById(any())).thenReturn(List.of(role1, role2));
+
+        List<String> ids = List.of(assigner1.toString(), assigner2.toString());
+
+        roleAssignmentService.updateRoleAssignmentRestrictions(targetId.toString(), ids);
+
+        verify(roleAssignmentRepository).deleteByAssignableRole(targetRole);
+        verify(roleAssignmentRepository).saveAll(argThat((List<RoleAssignment> list) ->
+                list.size() == 2
+                        && list.stream().allMatch(ra -> ra.getAssignableRole().equals(targetRole))
+        ));
+    }
+
 }
