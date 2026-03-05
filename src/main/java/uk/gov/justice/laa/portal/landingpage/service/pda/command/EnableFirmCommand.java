@@ -33,8 +33,8 @@ public class EnableFirmCommand implements PdaSyncCommand {
                 firmRepository.save(firm);
                 result.setFirmsReactivated(result.getFirmsReactivated() + 1);
 
-                log.info("Re-enabled firm: {} (name: {}) - restoring user access",
-                    firm.getCode(), firm.getName());
+                log.info("Re-enabled firm: {} - restoring user access",
+                    firm.getCode());
             } else {
                 log.debug("Firm {} is already enabled, skipping reactivation",
                     firm.getCode());

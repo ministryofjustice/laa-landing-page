@@ -22,6 +22,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import org.mockito.Mock;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -1149,6 +1150,15 @@ class DataProviderServiceTest {
     @SuppressWarnings("unchecked")
     class CompareWithDatabaseTests {
 
+        @BeforeEach
+        void setUpEntityManagerMocks() {
+            // Set up entity manager mocks for native queries used in compareWithDatabase
+            // Use lenient() to avoid UnnecessaryStubbingException in tests that don't trigger these code paths
+            lenient().when(entityManager.createNativeQuery(anyString())).thenReturn(query);
+            lenient().when(query.setParameter(anyString(), any())).thenReturn(query);
+            lenient().when(query.getResultList()).thenReturn(Collections.emptyList());
+        }
+
         @Test
         @SuppressWarnings("unchecked")
         void shouldDetectNewFirm() throws Exception {
@@ -1362,7 +1372,6 @@ class DataProviderServiceTest {
 
             when(firmRepository.findAllWithParentFirm()).thenReturn(Arrays.asList(existingFirm));
             when(officeRepository.findAllWithFirm()).thenReturn(Arrays.asList(existingOffice1, existingOffice2));
-            when(userProfileRepository.findByOfficeIdIn(any())).thenReturn(Collections.emptyList());
 
             // When
             var result = dataProviderService.compareWithDatabase();
@@ -1897,6 +1906,15 @@ class DataProviderServiceTest {
     @Nested
     @SuppressWarnings("unchecked")
     class SynchronizeWithPdaTests {
+
+        @BeforeEach
+        void setUpEntityManagerMocks() {
+            // Set up entity manager mocks for native queries used in synchronizeWithPda
+            // Use lenient() to avoid UnnecessaryStubbingException in tests that don't trigger these code paths
+            lenient().when(entityManager.createNativeQuery(anyString())).thenReturn(query);
+            lenient().when(query.setParameter(anyString(), any())).thenReturn(query);
+            lenient().when(query.getResultList()).thenReturn(Collections.emptyList());
+        }
 
         @Test
         @SuppressWarnings("unchecked")

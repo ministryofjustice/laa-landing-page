@@ -61,14 +61,13 @@ public class UpdateFirmCommand implements PdaSyncCommand {
                 // Check for duplicate name BEFORE attempting update to avoid aborting transaction
                 Firm existingFirmWithName = firmRepository.findFirmByName(pdaFirm.getFirmName());
                 if (existingFirmWithName != null && !existingFirmWithName.getId().equals(firm.getId())) {
-                    log.debug("Duplicate firm name '{}' detected for firm {} - skipping name update",
-                        pdaFirm.getFirmName(), pdaFirm.getFirmNumber());
-                    result.addWarning("Duplicate firm name '" + pdaFirm.getFirmName()
-                        + "' for firm " + pdaFirm.getFirmNumber() + " - name update skipped");
+                    log.debug("Duplicate firm name detected for firm {} - skipping name update",
+                        pdaFirm.getFirmNumber());
+                    result.addWarning("Duplicate firm name for firm " + pdaFirm.getFirmNumber() + " - name update skipped");
                     // Don't update the name, but continue with other updates
                 } else {
-                    log.debug("Updating firm {}: name '{}' -> '{}'",
-                        pdaFirm.getFirmNumber(), firm.getName(), pdaFirm.getFirmName());
+                    log.debug("Updating firm {}: name updated",
+                        pdaFirm.getFirmNumber());
                     firm.setName(pdaFirm.getFirmName());
                     updated = true;
                 }
@@ -132,10 +131,9 @@ public class UpdateFirmCommand implements PdaSyncCommand {
         } catch (DataIntegrityViolationException e) {
             // Check if this is a duplicate name constraint violation
             if (e.getMessage() != null && e.getMessage().contains("firm_name_key")) {
-                log.debug("Duplicate firm name '{}' for firm {} - skipping entire update to avoid constraint violation",
-                    pdaFirm.getFirmName(), pdaFirm.getFirmNumber());
-                result.addWarning("Duplicate firm name '" + pdaFirm.getFirmName()
-                    + "' for firm " + pdaFirm.getFirmNumber() + " - update skipped to avoid constraint violation");
+                log.debug("Duplicate firm name for firm {} - skipping entire update to avoid constraint violation",
+                    pdaFirm.getFirmNumber());
+                result.addWarning("Duplicate firm name for firm " + pdaFirm.getFirmNumber() + " - update skipped to avoid constraint violation");
                 // Don't add error, just warning - allow sync to continue
             } else {
                 // For other data integrity violations, add as error
@@ -145,10 +143,9 @@ public class UpdateFirmCommand implements PdaSyncCommand {
         } catch (Exception e) {
             // Check if this is a duplicate name constraint violation (wrapped in different exception type)
             if (e.getMessage() != null && e.getMessage().contains("firm_name_key")) {
-                log.debug("Duplicate firm name '{}' for firm {} - skipping entire update to avoid constraint violation",
-                    pdaFirm.getFirmName(), pdaFirm.getFirmNumber());
-                result.addWarning("Duplicate firm name '" + pdaFirm.getFirmName()
-                    + "' for firm " + pdaFirm.getFirmNumber() + " - update skipped to avoid constraint violation");
+                log.debug("Duplicate firm name for firm {} - skipping entire update to avoid constraint violation",
+                    pdaFirm.getFirmNumber());
+                result.addWarning("Duplicate firm name for firm " + pdaFirm.getFirmNumber() + " - update skipped to avoid constraint violation");
                 // Don't add error, just warning - allow sync to continue
             } else {
                 log.error("Failed to update firm {}: {}", pdaFirm.getFirmNumber(), e.getMessage());
