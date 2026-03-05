@@ -25,7 +25,6 @@ import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedOffices;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserTypeReasonDisable;
 import uk.gov.justice.laa.portal.landingpage.forms.DisableUserReasonForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
@@ -42,9 +41,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.EXTERNAL_USER_ADMIN;
 import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.GLOBAL_ADMIN;
-import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.SECURITY_RESPONSE;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 
 /**
@@ -70,11 +67,11 @@ public class FirmDirectoryController {
     @Value("${feature.flag.firm.directory.enabled}")
     private boolean firmDirectoryEnabled;
 
-    private boolean isShowDisableAllButton(Authentication authentication, String firmId) {
+    private boolean showDisableAllButton(Authentication authentication, String firmId) {
         return (accessControlService.userHasAuthzRole(authentication, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())
                 || accessControlService.userHasAuthzRole(authentication, GLOBAL_ADMIN.getRoleName())
                 || accessControlService.userHasAuthzRole(authentication, AuthzRole.SECURITY_RESPONSE.getRoleName()))
-        && userAccountStatusService.hasActiveUserByFirmId(firmId);
+                && userAccountStatusService.hasActiveUserByFirmId(firmId);
     }
 
     @GetMapping()
@@ -116,7 +113,7 @@ public class FirmDirectoryController {
                 criteria.getSort(),
                 criteria.getDirection()
         );
-        boolean showDisableAllButton = isShowDisableAllButton(authentication, String.valueOf(id));
+        boolean showDisableAllButton = showDisableAllButton(authentication, String.valueOf(id));
         model.addAttribute("firm", firmService.getFirm(id));
         model.addAttribute("firmOffices", paginatedOffices);
         model.addAttribute("criteria", criteria);

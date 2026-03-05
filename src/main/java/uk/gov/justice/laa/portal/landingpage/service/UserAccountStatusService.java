@@ -48,21 +48,19 @@ public class UserAccountStatusService {
                 .map(reason -> mapper.map(reason, DisableUserReasonDto.class))
                 .toList());
 
-
-        switch (userTypeReasonDisable) {
-            case IS_USER_DISABLE:
-                Set<String> keepReasons = Set.of("Absence", "Provider Discretion");
-                disableUserReasonDtos.removeIf(u -> !keepReasons.contains(u.getName()));
-                break;
-            case BULK_DISABLE:
-                Set<String> keepReasonsBulk = Set.of("Compliance Breach"
-                        , "Contract Ended"
-                        , "Cyber Risk"
-                        , "Firm Closure / Merger"
-                        , "Investigation Pending"
-                        , "User Request");
-                disableUserReasonDtos.removeIf(u -> !keepReasonsBulk.contains(u.getName()));
-                break;
+        if (userTypeReasonDisable.equals(UserTypeReasonDisable.IS_USER_DISABLE)) {
+            Set<String> keepReasons = Set.of("Absence", "Provider Discretion");
+            disableUserReasonDtos.removeIf(u -> !keepReasons.contains(u.getName()));
+        } else if (userTypeReasonDisable.equals(UserTypeReasonDisable.BULK_DISABLE)) {
+            Set<String> keepReasonsBulk = Set.of(
+                    "Compliance Breach",
+                    "Contract Ended",
+                    "Cyber Risk",
+                    "Firm Closure / Merger",
+                    "Investigation Pending",
+                    "User Request"
+            );
+            disableUserReasonDtos.removeIf(u -> !keepReasonsBulk.contains(u.getName()));
         }
 
         return disableUserReasonDtos;
@@ -129,11 +127,11 @@ public class UserAccountStatusService {
         Map<String, Long> result = new HashMap<>();
         List<UserProfile> userProfiles = userProfileRepository.findByFirmId(UUID.fromString(firmId));
         long totalOfSingleFirm = userProfiles.stream()
-                .filter( userProfile -> userProfile.getEntraUser().isEnabled() && !userProfile.getEntraUser().isMultiFirmUser())
+                .filter(userProfile -> userProfile.getEntraUser().isEnabled() && !userProfile.getEntraUser().isMultiFirmUser())
                 .count();
 
         long totalOfMultiFirm = userProfiles.stream()
-                .filter( userProfile -> userProfile.getEntraUser().isEnabled() && userProfile.getEntraUser().isMultiFirmUser())
+                .filter(userProfile -> userProfile.getEntraUser().isEnabled() && userProfile.getEntraUser().isMultiFirmUser())
                 .count();
 
         result.put("totalOfSingleFirm", totalOfSingleFirm);
@@ -143,7 +141,7 @@ public class UserAccountStatusService {
 
     }
 
-    public boolean hasActiveUserByFirmId(String firmId){
+    public boolean hasActiveUserByFirmId(String firmId) {
         List<EntraUser> entraUsers = userProfileRepository.findByFirmId(UUID.fromString(firmId)).stream()
                 .map(UserProfile::getEntraUser)
                 .filter(EntraUser::isEnabled)
@@ -177,10 +175,10 @@ public class UserAccountStatusService {
             entraUser.setEnabled(false);
             entraUserRepository.saveAndFlush(entraUser);
             totalOfUsersDisabled++;
-            log.info("User with entraID: {} has been disabled successfully with reason: {} By: {}"
-                    , entraUser.getEntraOid()
-                    , reason.getEntraDescription()
-                    , disabledByUser.getEntraOid());
+            log.info("User with entraID: {} has been disabled successfully with reason: {} By: {}",
+                    entraUser.getEntraOid(),
+                    reason.getEntraDescription(),
+                    disabledByUser.getEntraOid());
 
         }
 
