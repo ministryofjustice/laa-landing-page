@@ -39,6 +39,7 @@ import uk.gov.justice.laa.portal.landingpage.viewmodel.DisableUserReasonViewMode
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.EXTERNAL_USER_ADMIN;
@@ -131,6 +132,9 @@ public class FirmDirectoryController {
                                       Model model,
                                       HttpSession session,
                                       Authentication authentication) {
+        Optional<Model> modelFromSession = getObjectFromHttpSession(session, "disableUserReasonModel", Model.class);
+        modelFromSession.ifPresent(value -> model.addAttribute("reasonIdSelected",
+                UUID.fromString((String) value.getAttribute("reasonIdSelected"))));
 
         FirmDto firm =  firmService.getFirm(id);
         List<DisableUserReasonViewModel> reasons = new ArrayList<>(userAccountStatusService.getDisableUserReasons(UserTypeReasonDisable.BULK_DISABLE).stream()
@@ -184,6 +188,7 @@ public class FirmDirectoryController {
             userAccountStatusService.disableUserAllUserByFirmId(id, disabledReasonId, disabledByUserId);
             // Add success banner
             redirectAttributes.addFlashAttribute("successMessage", "All user accounts has been disabled");
+            session.removeAttribute("disableUserReasonModel");
             return "redirect:/admin/firmDirectory/" + id;
         } catch (Exception e) {
             log.error("Error during Bulk disable user {}", e.getMessage());
