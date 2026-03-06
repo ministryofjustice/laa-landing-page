@@ -1006,7 +1006,8 @@ public class UserController {
                                     BindingResult result,
                                     HttpSession session,
                                     Model model,
-                                    RedirectAttributes redirectAttributes) throws IOException {
+                                    RedirectAttributes redirectAttributes,
+                                    Authentication authentication) throws IOException {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         model.addAttribute("user", user);
         session.setAttribute("user", user);
@@ -1033,11 +1034,13 @@ public class UserController {
             log.info("Validation errors occurred while updating user details: {}", result.getAllErrors());
             return "edit-user-details";
         }
+        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
 
         userService.updateUserDetails(user.getEntraUser().getId(),
                 editUserDetailsForm.getEmail(),
                 editUserDetailsForm.getFirstName(),
-                editUserDetailsForm.getLastName());
+                editUserDetailsForm.getLastName(),
+                currentUserProfile);
 
         //model.addAttribute("isEditUserSuccess", true);
 

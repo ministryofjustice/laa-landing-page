@@ -1017,7 +1017,7 @@ public class UserService {
      * @param lastName  The user's last name
      * @throws IOException If an error occurs during the update
      */
-    public void updateUserDetails(String userId, String email, String firstName, String lastName)
+    public void updateUserDetails(String userId, String email, String firstName, String lastName, UserProfile currentUserProfile)
             throws IOException {
         Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
         if (optionalUser.isPresent()) {
@@ -1031,9 +1031,9 @@ public class UserService {
                 TechServicesApiResponse<ChangeAccountEnabledResponse> response = techServicesClient.updateUserDetails(entraUser.getEntraOid(), firstName, lastName, email);
                 if (response.isSuccess()) {
                     //update user information on database
-                    EntraUser updatedEntraUser = entraUserRepository.saveAndFlush(entraUser);
+                    entraUserRepository.saveAndFlush(entraUser);
                     UpdateUserInfoAuditEvent updateUserInfoAuditEvent = new UpdateUserInfoAuditEvent(
-                            entraUser, updatedEntraUser);
+                            entraUser.getEntraOid(), String.valueOf(currentUserProfile.getId()), currentUserProfile.getEntraUser().getEntraOid());
                     eventService.logEvent(updateUserInfoAuditEvent);
                     logger.info("Successfully updated user details in database for user ID: {}",
                             userId);
