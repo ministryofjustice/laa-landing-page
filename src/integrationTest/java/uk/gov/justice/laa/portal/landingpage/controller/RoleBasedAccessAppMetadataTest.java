@@ -29,10 +29,10 @@ public class RoleBasedAccessAppMetadataTest extends RoleBasedAccessIntegrationTe
     }
 
     @Test
-    public void testGlobalAdminCannotAccessSilasAdminAndSeeLink() throws Exception {
+    public void testGlobalAdminCanAccessSilasAdminAndSeeLink() throws Exception {
         EntraUser globalAdmin = globalAdmins.getFirst();
-        testCanSeeSilasAdminLink(globalAdmin, false);
-        testCanAccessSilasAdminPage(globalAdmin, status().is4xxClientError());
+        testCanSeeSilasAdminLink(globalAdmin, true);
+        testCanAccessSilasAdminPage(globalAdmin, status().is2xxSuccessful());
     }
 
     @Test

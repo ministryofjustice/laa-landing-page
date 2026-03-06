@@ -21,7 +21,6 @@ public class AdminPageTest extends BaseFrontEndTest {
 
     private static Stream<TestUser> nonPermittedUsers() {
         return Stream.of(
-                TestUser.GLOBAL_ADMIN,
                 TestUser.INTERNAL_USER_VIEWER,
                 TestUser.INTERNAL_USER_MANAGER,
                 TestUser.EXTERNAL_USER_VIEWER,
@@ -353,6 +352,13 @@ public class AdminPageTest extends BaseFrontEndTest {
                 page.locator("h1.govuk-heading-xl:has-text('SiLAS Administration')").count(),
                 "SiLAS Administration heading should not be visible to user " + user.name()
         );
+    }
+    
+    @Test
+    @DisplayName("Global admin can see SiLAS Administration page loads and shows expected heading")
+    void globalAdmin_canSeeAdminPageContent() {
+        AdminPage adminPage = loginAndGetAdminPage(TestUser.GLOBAL_ADMIN);
+        adminPage.assertOnPage();
     }
 
     private void clickEditAppLinkForFirstLegalAidService() {
