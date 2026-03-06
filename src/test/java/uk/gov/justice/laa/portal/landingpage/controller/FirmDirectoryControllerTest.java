@@ -1,29 +1,45 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import jakarta.servlet.http.HttpSession;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.modelmapper.ModelMapper;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.core.Authentication;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
+import uk.gov.justice.laa.portal.landingpage.dto.DisableUserReasonDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDirectoryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDirectorySearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmOfficesCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedOffices;
+import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserTypeReasonDisable;
+import uk.gov.justice.laa.portal.landingpage.forms.DisableUserReasonForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
+import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
+import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,7 +57,16 @@ class FirmDirectoryControllerTest {
     private OfficeService officeService;
 
     @Mock
+    private UserAccountStatusService userAccountStatusService;
+
+    @Mock
     private Authentication authentication;
+
+    @Mock
+    private HttpSession session;
+
+    @Mock
+    private ModelMapper mapper;
 
     private Model model;
 
@@ -50,8 +75,10 @@ class FirmDirectoryControllerTest {
 
     @BeforeEach
     void setUp() {
+        mapper = new MapperConfig().modelMapper();
         model = new ExtendedModelMap();
         ReflectionTestUtils.setField(firmDirectoryController, "firmDirectoryEnabled", true);
+
     }
 
     @Test
@@ -167,5 +194,160 @@ class FirmDirectoryControllerTest {
         assertThat(model.getAttribute("firmOffices")).isEqualTo(paginatedOffices);
         assertThat(model.getAttribute("criteria")).isEqualTo(criteria);
         assertThat(model.getAttribute("firm")).isEqualTo(firm);
+    }
+
+    @Test
+    void displayReasonForDisableGet() {
+
+        UUID id = UUID.randomUUID();
+
+        FirmDto firm = FirmDto.builder().id(id).code("A123").name("TestName").build();
+        DisableUserReasonForm disableUserReasonForm = new DisableUserReasonForm();
+
+        when(firmService.getFirm(String.valueOf(id))).thenReturn(firm);
+        when(userAccountStatusService.getDisableUserReasons(UserTypeReasonDisable.BULK_DISABLE)).thenReturn(getDisableUserReasonDtos());
+
+        String result = firmDirectoryController.reasonForDisableGet(String.valueOf(id),disableUserReasonForm, model, session, authentication);
+
+        assertThat(result).isEqualTo("firm-directory/bulk-disable-user-reason");
+        assertThat(model.getAttribute("firm")).isEqualTo(firm);
+        assertThat(model.getAttribute("reasonIdSelected")).isNull();
+        assertThat(model.getAttribute("disableUserReasonsForm")).isEqualTo(disableUserReasonForm);
+    }
+
+    @Test
+    void displayReasonForDisableGetFromSessionInformation() {
+
+        UUID id = UUID.randomUUID();
+
+        FirmDto firm = FirmDto.builder().id(id).code("A123").name("TestName").build();
+        DisableUserReasonForm disableUserReasonForm = new DisableUserReasonForm();
+        List<DisableUserReasonDto> reasonDtos = getDisableUserReasonDtos();
+
+        MockHttpSession httpSession = new MockHttpSession();
+        ExtendedModelMap disableUserReasonModel = new ExtendedModelMap();
+        disableUserReasonModel.addAttribute("reasonIdSelected", String.valueOf(reasonDtos.get(0).getId()));
+        httpSession.setAttribute("disableUserReasonModel", disableUserReasonModel);
+
+        when(firmService.getFirm(String.valueOf(id))).thenReturn(firm);
+        when(userAccountStatusService.getDisableUserReasons(UserTypeReasonDisable.BULK_DISABLE)).thenReturn(reasonDtos);
+
+        String result = firmDirectoryController.reasonForDisableGet(String.valueOf(id),disableUserReasonForm, model, httpSession, authentication);
+
+        assertThat(result).isEqualTo("firm-directory/bulk-disable-user-reason");
+        assertThat(model.getAttribute("firm")).isEqualTo(firm);
+        assertThat(model.getAttribute("reasonIdSelected")).isEqualTo(reasonDtos.get(0).getId());
+        assertThat(model.getAttribute("disableUserReasonsForm")).isEqualTo(disableUserReasonForm);
+    }
+
+    @Test
+    void postReasonForDisableFromSessionInformationWithNoErrors() {
+        UUID id = UUID.randomUUID();
+
+        List<DisableUserReasonDto> reasonDtos = getDisableUserReasonDtos();
+
+        MockHttpSession httpSession = new MockHttpSession();
+        ExtendedModelMap disableUserReasonModel = new ExtendedModelMap();
+        disableUserReasonModel.addAttribute("reasonIdSelected", String.valueOf(reasonDtos.get(0).getId()));
+        httpSession.setAttribute("disableUserReasonModel", disableUserReasonModel);
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(true);
+
+        DisableUserReasonForm disableUserReasonForm = new DisableUserReasonForm();
+        disableUserReasonForm.setReasonId(String.valueOf(reasonDtos.get(0).getId()));
+        String result = firmDirectoryController.reasonForDisablePost(String.valueOf(id),disableUserReasonForm, bindingResult, authentication, model, httpSession);
+
+        assertThat(result).isEqualTo("firm-directory/bulk-disable-user-reason");
+        assertThat(model.getAttribute("disableUserReasonsForm")).isEqualTo(disableUserReasonForm);
+        assertThat(model.getAttribute("totalOfSingleFirm")).isNull();
+        assertThat(model.getAttribute("totalOfMultiFirm")).isNull();
+
+    }
+
+    @Test
+    void postReasonForDisableFromSessionInformationWithErrors() {
+
+        UUID id = UUID.randomUUID();
+
+        FirmDto firm = FirmDto.builder().id(id).code("A123").name("TestName").build();
+        List<DisableUserReasonDto> reasonDtos = getDisableUserReasonDtos();
+
+        MockHttpSession httpSession = new MockHttpSession();
+        ExtendedModelMap disableUserReasonModel = new ExtendedModelMap();
+        disableUserReasonModel.addAttribute("reasonIdSelected", String.valueOf(reasonDtos.get(0).getId()));
+        httpSession.setAttribute("disableUserReasonModel", disableUserReasonModel);
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+
+        when(firmService.getFirm(String.valueOf(id))).thenReturn(firm);
+        when(userAccountStatusService.getDisableUserReasons(UserTypeReasonDisable.BULK_DISABLE)).thenReturn(reasonDtos);
+        Map<String, Long> totals = new HashMap<>();
+        totals.put("totalOfSingleFirm", 1L);
+        totals.put("totalOfMultiFirm", 1L);
+        when(userAccountStatusService.getUserCountsForFirm(String.valueOf(id))).thenReturn(totals);
+        DisableUserReasonForm disableUserReasonForm = new DisableUserReasonForm();
+        disableUserReasonForm.setReasonId(String.valueOf(reasonDtos.get(0).getId()));
+        String result = firmDirectoryController.reasonForDisablePost(String.valueOf(id),disableUserReasonForm, bindingResult, authentication, model, httpSession);
+
+        assertThat(result).isEqualTo("firm-directory/bulk-confirmation");
+        assertThat(model.getAttribute("disableUserReasonsForm")).isEqualTo(disableUserReasonForm);
+        assertThat(model.getAttribute("totalOfSingleFirm")).isEqualTo(1);
+        assertThat(model.getAttribute("totalOfMultiFirm")).isEqualTo(1);
+
+    }
+
+    private static @NotNull List<DisableUserReasonDto> getDisableUserReasonDtos() {
+        DisableUserReasonDto reason = DisableUserReasonDto.builder()
+                .id(UUID.randomUUID())
+                .name("Test Reason")
+                .description("A test reason.")
+                .build();
+
+        DisableUserReasonDto complianceBreach = DisableUserReasonDto.builder()
+                .id(UUID.randomUUID())
+                .name("Compliance Breach")
+                .description("A compliance breach reason.")
+                .build();
+
+        DisableUserReasonDto contractEnded = DisableUserReasonDto.builder()
+                .id(UUID.randomUUID())
+                .name("Contract Ended")
+                .description("A contract ended reason.")
+                .build();
+
+        DisableUserReasonDto cyberRisk = DisableUserReasonDto.builder()
+                .id(UUID.randomUUID())
+                .name("Cyber Risk")
+                .description("A cyber risk reason.")
+                .build();
+
+        DisableUserReasonDto firmClosureMerger = DisableUserReasonDto.builder()
+                .id(UUID.randomUUID())
+                .name("Firm Closure / Merger")
+                .description("A firm closure / merger reason.")
+                .build();
+
+        DisableUserReasonDto investigationPending = DisableUserReasonDto.builder()
+                .id(UUID.randomUUID())
+                .name("Investigation Pending")
+                .description("An investigation pending reason.")
+                .build();
+
+        DisableUserReasonDto userRequest = DisableUserReasonDto.builder()
+                .id(UUID.randomUUID())
+                .name("User Request")
+                .description("A user request reason.")
+                .build();
+
+        List<DisableUserReasonDto> reasons = List.of(reason,
+                complianceBreach,
+                contractEnded,
+                cyberRisk,
+                firmClosureMerger,
+                investigationPending,
+                userRequest);
+        return reasons;
     }
 }

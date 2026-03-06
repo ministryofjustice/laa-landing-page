@@ -155,12 +155,9 @@ public class FirmDirectoryController {
         Model modelFromSession = getObjectFromHttpSession(session, "disableUserReasonModel", Model.class).orElseThrow();
         model.addAttribute("firm", modelFromSession.getAttribute("firm"));
         model.addAttribute("disableUserReasonsForm", disableUserReasonForm);
+        model.addAttribute("reasons", modelFromSession.getAttribute("reasons"));
         if (result.hasErrors()) {
             log.info("Validation errors occurred while post reason for disable: {}", result.getAllErrors());
-
-            model.addAttribute("reasons", modelFromSession.getAttribute("reasons"));
-            model.addAttribute("firm", modelFromSession.getAttribute("firm"));
-            model.addAttribute("disableUserReasonsForm", disableUserReasonForm);
             return "firm-directory/bulk-disable-user-reason";
         }
         // add all the variables of confirmation
