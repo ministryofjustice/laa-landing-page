@@ -235,7 +235,7 @@ public class SilasAdministrationTest extends RoleBasedAccessIntegrationTest {
                 .andExpect(status().is3xxRedirection())
                 .andReturn();
 
-        assertEquals("/admin/silas-administration#admin-apps", result.getResponse().getRedirectedUrl());
+        assertEquals("/admin/silas-administration?tab=admin-apps", result.getResponse().getRedirectedUrl());
     }
 
     @Test
