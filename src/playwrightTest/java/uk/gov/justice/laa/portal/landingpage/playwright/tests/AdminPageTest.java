@@ -98,6 +98,39 @@ public class AdminPageTest extends BaseFrontEndTest {
     }
 
     @Test
+    @DisplayName("Edit SiLAS App Role Restrictions End to End")
+    void silas_app_role_restrictions_app_end_to_end() {
+        AdminPage adminPage = loginAndGetAdminPage(TestUser.SILAS_ADMINISTRATION);
+
+        adminPage.assertRoleAssignRestrictionsTabContent();
+
+        Assertions.assertTrue(
+                adminPage.getRoleAssignRestrictionsRowCount() > 0,
+                "Expected Role assignment restrictions table to contain at least 1 row"
+        );
+
+        clickFirstChangeLinkOnRoleAssignRestrictionsTab();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        Assertions.assertTrue(page.locator("h1.govuk-fieldset__heading").textContent().contains("Test LAA App One Access"));
+        Locator others = page.locator("input[type='checkbox']");
+        for (int i = 0; i < 3; i++) {
+            others.nth(i).check();
+        }
+
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Continue")).click();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Confirm")).click();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        PlaywrightAssertions.assertThat(
+                page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions().setName("App role assignment restrictions updated"))
+        ).isVisible();
+
+    }
+
+    @Test
     @DisplayName("Reorder Legal Aid Service End to End")
     void legalAidServicesTab_reorder_apps_end_to_end() {
         AdminPage adminPage = loginAndGetAdminPage(TestUser.SILAS_ADMINISTRATION);
@@ -337,6 +370,17 @@ public class AdminPageTest extends BaseFrontEndTest {
                 page.url().contains(expectedUrlFragment),
                 "Expected URL to contain '" + expectedUrlFragment + "' after clicking Edit link for Legal Aid Service"
         );
+    }
+
+    private void clickFirstChangeLinkOnRoleAssignRestrictionsTab() {
+        page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Change")).first().click();
+
+        String expectedUrlFragment = "/admin/silas-administration/role/assignRestrictions/dddddddd-dddd-dddd-dddd-aaaaaaaaaaaa";
+        Assertions.assertTrue(
+                page.url().contains(expectedUrlFragment),
+                "Expected URL to contain '" + expectedUrlFragment + "' after clicking Change link for Role assignment restrictions"
+        );
+
     }
 
     private static void assertSuccessBanner(Page page, String message) {
