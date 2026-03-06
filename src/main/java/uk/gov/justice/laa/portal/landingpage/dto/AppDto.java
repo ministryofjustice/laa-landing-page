@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Objects;
 
@@ -15,6 +16,8 @@ import java.util.Objects;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AppDto implements Comparable<AppDto>, Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     private String id;
     private String name;
     private String title;
@@ -62,6 +65,8 @@ public class AppDto implements Comparable<AppDto>, Serializable {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class AlternativeAppDescriptionDto implements Serializable {
+        @Serial
+        private static final long serialVersionUID = 1L;
         private String assignedAppId;
         private String alternativeDescription;
     }

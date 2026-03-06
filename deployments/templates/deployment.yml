@@ -270,6 +270,8 @@ spec:
               value: "${FEATURE_FLAG_SYNC_APPS_FROM_ENTRA}"
             - name: FEATURE_FLAG_SYNC_APP_UPDATES_FROM_ENTRA
               value: "${FEATURE_FLAG_SYNC_APP_UPDATES_FROM_ENTRA}"
+            - name: FEATURE_FLAG_EDIT_USER_DETAILS
+              value: "${FEATURE_FLAG_EDIT_USER_DETAILS}"
             - name: SPRING_SESSION_JDBC_ENABLED
               value: "${SPRING_SESSION_JDBC_ENABLED}"
             - name: APP_MEANS_AND_MATCH_UI1_NAME
