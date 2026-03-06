@@ -3261,8 +3261,12 @@ class AdminControllerTest {
         void postCheckAnswers_whenSessionMissing_redirectsToLanding() {
             Model model = new ExtendedModelMap();
             MockHttpSession session = new MockHttpSession();
+            Authentication auth = mock(Authentication.class);
+            CurrentUserDto currentUser = new CurrentUserDto();
+            currentUser.setUserId(UUID.randomUUID());
+            currentUser.setName("Admin User");
 
-            String view = adminController.roleAssignmentRestrictionCheckAnsPost(model, session);
+            String view = adminController.roleAssignmentRestrictionCheckAnsPost(auth, model, session);
 
             assertThat(view).isEqualTo("redirect:/silas-administration/role");
             verifyNoInteractions(roleAssignmentService);
@@ -3287,14 +3291,20 @@ class AdminControllerTest {
             session.setAttribute("assignableAppRoleId", targetId);
             session.setAttribute("appRoleSelections", vms);
 
-            String view = adminController.roleAssignmentRestrictionCheckAnsPost(model, session);
+            Authentication auth = mock(Authentication.class);
+            CurrentUserDto currentUser = new CurrentUserDto();
+            currentUser.setUserId(UUID.randomUUID());
+            currentUser.setName("Admin User");
+            when(loginService.getCurrentUser(auth)).thenReturn(currentUser);
+
+            String view = adminController.roleAssignmentRestrictionCheckAnsPost(auth, model, session);
 
             assertThat(view).isEqualTo("silas-administration/edit-role-assignment-restrictions-confirmation");
 
             // Verify service invoked with distinct IDs [A,B] (self filtered)
             @SuppressWarnings("unchecked")
             ArgumentCaptor<Iterable<String>> idsCap = ArgumentCaptor.forClass(Iterable.class);
-            verify(roleAssignmentService).updateRoleAssignmentRestrictions(eq(targetId), (List<String>) idsCap.capture());
+            verify(roleAssignmentService).updateRoleAssignmentRestrictions(eq(currentUser), eq(targetId), (List<String>) idsCap.capture());
 
             List<String> passed = (List<String>) idsCap.getValue();
             assertThat(passed).containsExactlyInAnyOrder(dtoA.getId(), dtoB.getId());

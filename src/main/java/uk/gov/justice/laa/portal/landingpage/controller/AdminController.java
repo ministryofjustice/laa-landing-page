@@ -994,7 +994,7 @@ public class AdminController {
 
     @PostMapping("/silas-administration/role/assignRestrictions/check-answers")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_LAA_APP_ROLE_ASSIGN_RESTRICTIONS)")
-    public String roleAssignmentRestrictionCheckAnsPost(Model model, HttpSession session) {
+    public String roleAssignmentRestrictionCheckAnsPost(Authentication authentication, Model model, HttpSession session) {
         model.addAttribute(ModelAttributes.PAGE_TITLE, SILAS_ADMINISTRATION_TITLE);
 
         var appRoleIdOpt = getObjectFromHttpSession(session, "assignableAppRoleId", String.class);
@@ -1012,7 +1012,8 @@ public class AdminController {
                 .distinct()
                 .toList();
 
-        roleAssignmentService.updateRoleAssignmentRestrictions(appRoleId, selectedAssigningRoleIds);
+        CurrentUserDto currentUser = loginService.getCurrentUser(authentication);
+        roleAssignmentService.updateRoleAssignmentRestrictions(currentUser, appRoleId, selectedAssigningRoleIds);
 
         clearSessionAttributes(session);
 

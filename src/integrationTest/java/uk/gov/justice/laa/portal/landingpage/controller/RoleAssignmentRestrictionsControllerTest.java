@@ -6,6 +6,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
@@ -26,6 +27,7 @@ import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -185,7 +187,7 @@ class RoleAssignmentRestrictionsControllerTest extends BaseIntegrationTest {
                         .name("silas-administration/edit-role-assignment-restrictions-confirmation"));
 
         ArgumentCaptor<List<String>> cap = ArgumentCaptor.forClass(List.class);
-        verify(roleAssignmentService).updateRoleAssignmentRestrictions(eq(targetId), cap.capture());
+        verify(roleAssignmentService).updateRoleAssignmentRestrictions(isA(CurrentUserDto.class), eq(targetId), cap.capture());
         List<String> passed = cap.getValue();
         assertThat(passed).containsExactlyInAnyOrder(dtoA.getId(), dtoB.getId());
         assertThat(passed).doesNotContain(targetId);

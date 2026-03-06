@@ -10,6 +10,8 @@ import org.modelmapper.ModelMapper;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UpdateAppRoleAssignRestrictionsAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.RoleAssignment;
@@ -32,6 +34,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -49,11 +52,14 @@ public class RoleAssignmentServiceTest {
     private AppRoleRepository appRoleRepository;
     @Mock
     private AppRepository appRepository;
+    @Mock
+    private EventService eventService;
 
     private final UUID gbAdminId = UUID.randomUUID();
     private final UUID exAdminId = UUID.randomUUID();
     private final UUID exManId = UUID.randomUUID();
     private final UUID firmManId = UUID.randomUUID();
+    private CurrentUserDto currentUserDto;
     App app;
     AppRole gbAdmin;
     AppRole exMan;
@@ -64,13 +70,16 @@ public class RoleAssignmentServiceTest {
     @BeforeEach
     void setUp() {
         mapper = new MapperConfig().modelMapper();
-        roleAssignmentService = new RoleAssignmentService(roleAssignmentRepository, appRepository, appRoleRepository, mapper);
+        roleAssignmentService = new RoleAssignmentService(roleAssignmentRepository, appRepository, appRoleRepository, mapper, eventService);
         app = App.builder().id(UUID.randomUUID()).name("app").securityGroupOid("sec_grp_oid").securityGroupName("sec_grp_name").build();
         gbAdmin = AppRole.builder().id(gbAdminId).name("globalAdmin").description("appRole1").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).authzRole(true).build();
         exAdmin = AppRole.builder().id(exAdminId).name("externalAdmin").description("appRole2").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).authzRole(true).build();
         exMan = AppRole.builder().id(exManId).name("externalManager").description("appRole3").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).authzRole(true).build();
         firmMan = AppRole.builder().id(firmManId).name("firmManager").description("appRole4").userTypeRestriction(new UserType[]{UserType.EXTERNAL}).app(app).authzRole(true).build();
         app.setAppRoles(Set.of(gbAdmin, exAdmin, exMan, firmMan));
+        currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("Admin User");
         RoleAssignment roleAssignment1 = RoleAssignment.builder().assigningRole(gbAdmin).assignableRole(exAdmin).build();
         RoleAssignment roleAssignment2 = RoleAssignment.builder().assigningRole(gbAdmin).assignableRole(exMan).build();
         RoleAssignment roleAssignment3 = RoleAssignment.builder().assigningRole(gbAdmin).assignableRole(firmMan).build();
@@ -78,6 +87,7 @@ public class RoleAssignmentServiceTest {
         lenient().when(roleAssignmentRepository.findByAssigningRole_IdIn(List.of(gbAdminId))).thenReturn(List.of(roleAssignment1, roleAssignment2, roleAssignment3));
         lenient().when(roleAssignmentRepository.findByAssigningRole_IdIn(List.of(exAdminId))).thenReturn(List.of());
         lenient().when(roleAssignmentRepository.findByAssigningRole_IdIn(List.of(firmManId))).thenReturn(List.of());
+
     }
 
     @Test
@@ -257,7 +267,7 @@ public class RoleAssignmentServiceTest {
 
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
-                () -> roleAssignmentService.updateRoleAssignmentRestrictions(targetId.toString(), ids)
+                () -> roleAssignmentService.updateRoleAssignmentRestrictions(currentUserDto, targetId.toString(), ids)
         );
 
         assertThat(ex.getMessage()).contains("cannot assign itself");
@@ -280,7 +290,7 @@ public class RoleAssignmentServiceTest {
 
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
-                () -> roleAssignmentService.updateRoleAssignmentRestrictions(targetId.toString(), ids)
+                () -> roleAssignmentService.updateRoleAssignmentRestrictions(currentUserDto, targetId.toString(), ids)
         );
 
         assertThat(ex.getMessage()).contains("Assigning roles not found");
@@ -294,7 +304,7 @@ public class RoleAssignmentServiceTest {
         AppRole targetRole = AppRole.builder().id(targetId).name("TARGET_ROLE").build();
         when(appRoleRepository.findById(targetId)).thenReturn(Optional.of(targetRole));
 
-        roleAssignmentService.updateRoleAssignmentRestrictions(targetId.toString(), null);
+        roleAssignmentService.updateRoleAssignmentRestrictions(currentUserDto, targetId.toString(), null);
 
         verify(roleAssignmentRepository).deleteByAssignableRole(targetRole);
         verify(roleAssignmentRepository, never()).saveAll(any());
@@ -316,13 +326,14 @@ public class RoleAssignmentServiceTest {
 
         List<String> ids = List.of(assigner1.toString(), assigner2.toString());
 
-        roleAssignmentService.updateRoleAssignmentRestrictions(targetId.toString(), ids);
+        roleAssignmentService.updateRoleAssignmentRestrictions(currentUserDto, targetId.toString(), ids);
 
         verify(roleAssignmentRepository).deleteByAssignableRole(targetRole);
         verify(roleAssignmentRepository).saveAll(argThat((List<RoleAssignment> list) ->
                 list.size() == 2
                         && list.stream().allMatch(ra -> ra.getAssignableRole().equals(targetRole))
         ));
+        verify(eventService).logEvent(isA(UpdateAppRoleAssignRestrictionsAuditEvent.class));
     }
 
 }

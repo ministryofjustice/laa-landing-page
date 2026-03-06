@@ -7,8 +7,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UpdateAppRoleAssignRestrictionsAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.BaseEntity;
 import uk.gov.justice.laa.portal.landingpage.entity.RoleAssignment;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
@@ -38,6 +41,7 @@ public class RoleAssignmentService {
     private final AppRepository appRepository;
     private final AppRoleRepository appRoleRepository;
     private final ModelMapper mapper;
+    private final EventService eventService;
 
     public boolean canAssignRole(Set<AppRole> editorRoles, Collection<String> targetRoles) {
         List<UUID> targetRoleIds = targetRoles.stream().map(UUID::fromString).distinct().toList();
@@ -85,7 +89,7 @@ public class RoleAssignmentService {
             Set<AppRole> editorRoles = new HashSet<>(userProfile.getAppRoles());
 
             List<UUID> assigneeRoles = app.getAppRoles().stream()
-                    .map(appRole -> appRole.getId())
+                    .map(BaseEntity::getId)
                     .collect(Collectors.toList());
 
             if (assigneeRoles.isEmpty() || editorRoles.isEmpty()) {
@@ -137,7 +141,7 @@ public class RoleAssignmentService {
     }
 
     @Transactional
-    public void updateRoleAssignmentRestrictions(String appRoleId, List<String> selectedAssigningRoleIds) {
+    public void updateRoleAssignmentRestrictions(CurrentUserDto currentUserDto, String appRoleId, List<String> selectedAssigningRoleIds) {
         UUID targetId = UUID.fromString(appRoleId);
         AppRole targetRole = appRoleRepository.findById(targetId).orElseThrow();
 
@@ -172,6 +176,10 @@ public class RoleAssignmentService {
 
             roleAssignmentRepository.saveAll(newRows);
         }
+
+        UpdateAppRoleAssignRestrictionsAuditEvent event =
+                new UpdateAppRoleAssignRestrictionsAuditEvent(currentUserDto, targetRole.getId(), targetRole.getName());
+        eventService.logEvent(event);
 
     }
 
