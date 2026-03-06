@@ -2372,4 +2372,244 @@ class DataProviderServiceTest {
             return json.toString();
         }
     }
+
+    @Nested
+    class ShutdownAndConstraintBypassTests {
+
+        @Test
+        void shouldDetectShutdownBeforeSync() throws Exception {
+            // Given - simulate shutdown flag being set
+            dataProviderService.onShutdown();
+
+            // When
+            CompletableFuture<PdaSyncResultDto> future = dataProviderService.synchronizeWithPdaAsync();
+            PdaSyncResultDto result = future.get();
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getWarnings()).anyMatch(w -> w.contains("application is shutting down"));
+        }
+
+        @Test
+        void shouldExecuteEnableFirmOfficeCheckBypass() throws Exception {
+            // Given
+            when(entityManager.createNativeQuery(anyString())).thenReturn(query);
+            when(query.executeUpdate()).thenReturn(0);
+
+            // When - invoke via reflection
+            java.lang.reflect.Method method = DataProviderService.class.getDeclaredMethod("enableFirmOfficeCheckBypass");
+            method.setAccessible(true);
+            method.invoke(dataProviderService);
+
+            // Then
+            verify(entityManager).createNativeQuery("SET app.internal.pda_sync_bypass_constraint_check = 'true'");
+            verify(query).executeUpdate();
+        }
+
+        @Test
+        void shouldHandleEnableBypassFailure() throws Exception {
+            // Given
+            when(entityManager.createNativeQuery(anyString())).thenReturn(query);
+            when(query.executeUpdate()).thenThrow(new RuntimeException("Database error"));
+
+            // When/Then - should throw exception
+            java.lang.reflect.Method method = DataProviderService.class.getDeclaredMethod("enableFirmOfficeCheckBypass");
+            method.setAccessible(true);
+            assertThatThrownBy(() -> method.invoke(dataProviderService))
+                .hasCauseInstanceOf(RuntimeException.class)
+                .getCause()
+                .hasMessageContaining("Cannot enable constraint bypass");
+        }
+
+        @Test
+        void shouldExecuteResetFirmOfficeCheckBypass() throws Exception {
+            // Given
+            when(entityManager.createNativeQuery(anyString())).thenReturn(query);
+            when(query.executeUpdate()).thenReturn(0);
+
+            // When - invoke via reflection
+            java.lang.reflect.Method method = DataProviderService.class.getDeclaredMethod("resetFirmOfficeCheckBypass");
+            method.setAccessible(true);
+            method.invoke(dataProviderService);
+
+            // Then
+            verify(entityManager).createNativeQuery("RESET app.internal.pda_sync_bypass_constraint_check");
+            verify(query, atLeast(1)).executeUpdate();
+        }
+
+        @Test
+        void shouldHandleResetBypassFailureGracefully() throws Exception {
+            // Given - reset will fail but should not throw
+            when(entityManager.createNativeQuery(anyString())).thenReturn(query);
+            when(query.executeUpdate()).thenThrow(new RuntimeException("Reset error"));
+
+            // When - invoke via reflection (should not throw)
+            java.lang.reflect.Method method = DataProviderService.class.getDeclaredMethod("resetFirmOfficeCheckBypass");
+            method.setAccessible(true);
+            method.invoke(dataProviderService);
+
+            // Then - should complete without throwing exception
+            verify(entityManager).createNativeQuery("RESET app.internal.pda_sync_bypass_constraint_check");
+        }
+
+        @Test
+        void shouldSetShutdownFlagOnPreDestroy() throws Exception {
+            // When
+            dataProviderService.onShutdown();
+
+            // Then - shuttingDown flag is set (reflected in future sync attempts)
+            // We can verify this by attempting a sync which should be aborted
+            CompletableFuture<PdaSyncResultDto> future = dataProviderService.synchronizeWithPdaAsync();
+            PdaSyncResultDto result = future.get();
+
+            assertThat(result.getWarnings()).anyMatch(w -> w.contains("shutting down"));
+        }
+    }
+
+    @Nested
+    class ApiRequestTests {
+
+        @Test
+        @SuppressWarnings("unchecked")
+        void shouldFetchFromApiWhenNotUsingLocalFile() throws Exception {
+            // Given
+            String pdaJson = "{\"offices\": [{\"firmNumber\": \"F001\", \"firmName\": \"API Firm\"}]}";
+            String officesArray = "[{\"firmNumber\": \"F001\", \"firmName\": \"API Firm\"}]";
+
+            when(dataProviderConfig.isUseLocalFile()).thenReturn(false);
+            doReturn(requestHeadersUriSpec).when(dataProviderRestClient).get();
+            doReturn(requestHeadersUriSpec).when(requestHeadersUriSpec).uri("/provider-offices/snapshot");
+            doReturn(responseSpec).when(requestHeadersUriSpec).retrieve();
+            when(responseSpec.body(String.class)).thenReturn(pdaJson);
+            when(objectMapper.readTree(pdaJson)).thenReturn(rootNode);
+            when(rootNode.get("offices")).thenReturn(officesNode);
+            when(officesNode.isArray()).thenReturn(true);
+            when(objectMapper.writeValueAsString(officesNode)).thenReturn(officesArray);
+
+            // When
+            Table result = dataProviderService.getProviderOfficesSnapshot();
+
+            // Then
+            assertThat(result).isNotNull();
+            verify(dataProviderRestClient).get();
+            verify(requestHeadersUriSpec).uri("/provider-offices/snapshot");
+        }
+
+        @Test
+        void shouldThrowWhenApiFails() {
+            // Given
+            when(dataProviderConfig.isUseLocalFile()).thenReturn(false);
+            doReturn(requestHeadersUriSpec).when(dataProviderRestClient).get();
+            doReturn(requestHeadersUriSpec).when(requestHeadersUriSpec).uri(anyString());
+            doReturn(responseSpec).when(requestHeadersUriSpec).retrieve();
+            when(responseSpec.body(String.class)).thenThrow(new RuntimeException("API connection failed"));
+
+            // When/Then
+            assertThatThrownBy(() -> dataProviderService.getProviderOfficesSnapshot())
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Failed to fetch provider offices snapshot from PDA");
+        }
+    }
+
+    @Nested
+    class AdditionalCoverageTests {
+
+        @Test
+        void shouldHandleSynchronizeWithPdaDuringShutdown() throws Exception {
+            // Given - shutdown is triggered
+            // When shutdown flag is set, synchronizeWithPdaAsync returns immediately
+            // without calling transaction template or entity manager
+            dataProviderService.onShutdown();
+
+            // When
+            CompletableFuture<PdaSyncResultDto> future = dataProviderService.synchronizeWithPdaAsync();
+            PdaSyncResultDto result = future.get();
+
+            // Then
+            assertThat(result.getWarnings()).anyMatch(w -> w.contains("shutting down"));
+        }
+
+        @Test
+        void shouldHandleConnectionClosedDuringSync() throws Exception {
+            // Given - simulate connection closed error (shutdown scenario)
+            when(transactionTemplate.execute(any(TransactionCallback.class))).thenAnswer(invocation -> {
+                TransactionCallback<?> callback = invocation.getArgument(0);
+                try {
+                    return callback.doInTransaction(transactionStatus);
+                } catch (Exception e) {
+                    throw new RuntimeException("connection closed");
+                }
+            });
+            when(entityManager.createNativeQuery(anyString())).thenReturn(query);
+            when(query.executeUpdate()).thenThrow(new RuntimeException("connection closed"));
+
+            // When
+            CompletableFuture<PdaSyncResultDto> future = dataProviderService.synchronizeWithPdaAsync();
+            PdaSyncResultDto result = future.get();
+
+            // Then
+            assertThat(result).isNotNull();
+            // Result should indicate interruption
+        }
+
+        @Test
+        void shouldLogErrorsButContinueOnPartialFailure() throws Exception {
+            // Given - sync will encounter an error but not connection closed
+            when(transactionTemplate.execute(any(TransactionCallback.class))).thenAnswer(invocation -> {
+                TransactionCallback<?> callback = invocation.getArgument(0);
+                try {
+                    return callback.doInTransaction(transactionStatus);
+                } catch (Exception e) {
+                    PdaSyncResultDto errorResult = PdaSyncResultDto.builder().build();
+                    errorResult.addError("Sync exception: " + e.getMessage());
+                    return errorResult;
+                }
+            });
+            when(entityManager.createNativeQuery(anyString())).thenReturn(query);
+            when(query.executeUpdate()).thenThrow(new RuntimeException("Data validation error"));
+
+            // When
+            CompletableFuture<PdaSyncResultDto> future = dataProviderService.synchronizeWithPdaAsync();
+            PdaSyncResultDto result = future.get();
+
+            // Then
+            assertThat(result).isNotNull();
+        }
+
+        @Test
+        void shouldCompleteWithResultWhenSyncSucceeds() throws Exception {
+            // Given
+            PdaSyncResultDto successResult = PdaSyncResultDto.builder().build();
+            successResult.setFirmsCreated(5);
+            successResult.setOfficesCreated(10);
+
+            when(transactionTemplate.execute(any(TransactionCallback.class)))
+                .thenReturn(successResult)
+                .thenReturn(null); // Second call for reset
+
+            // When
+            CompletableFuture<PdaSyncResultDto> future = dataProviderService.synchronizeWithPdaAsync();
+            PdaSyncResultDto result = future.get();
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getFirmsCreated()).isEqualTo(5);
+            assertThat(result.getOfficesCreated()).isEqualTo(10);
+        }
+
+        @Test
+        void shouldHandleNullTransactionResult() throws Exception {
+            // Given - transaction returns null
+            when(transactionTemplate.execute(any(TransactionCallback.class)))
+                .thenReturn(null)
+                .thenReturn(null);
+
+            // When
+            CompletableFuture<PdaSyncResultDto> future = dataProviderService.synchronizeWithPdaAsync();
+            PdaSyncResultDto result = future.get();
+
+            // Then
+            assertThat(result).isNull();
+        }
+    }
 }
