@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -9,6 +10,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.DisableUserReasonDto;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -25,6 +27,7 @@ import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiRespons
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesErrorResponse;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -93,7 +96,6 @@ public class UserAccountStatusServiceTest {
     @Test
     public void testGetDisableUserReasonsMapsReasonsCorrectlyForProvideAdmin() {
         // Given
-
         DisableUserReason reason = DisableUserReason.builder()
                 .id(UUID.randomUUID())
                 .name("Test Reason")
@@ -122,6 +124,78 @@ public class UserAccountStatusServiceTest {
         assertThat(returnedReasons)
                 .isEqualTo(List.of(mapper.map(absence, DisableUserReasonDto.class),
                         mapper.map(providerDiscretion, DisableUserReasonDto.class)));
+
+    }
+
+    @Test
+    public void testGetDisableUserReasonsMapsReasonsCorrectlyForBulkDisable() {
+        // Given
+        DisableUserReason reason = DisableUserReason.builder()
+                .id(UUID.randomUUID())
+                .name("Test Reason")
+                .description("A test reason.")
+                .build();
+
+        DisableUserReason complianceBreach = DisableUserReason.builder()
+                .id(UUID.randomUUID())
+                .name("Compliance Breach")
+                .description("A compliance breach reason.")
+                .build();
+
+        DisableUserReason contractEnded = DisableUserReason.builder()
+                .id(UUID.randomUUID())
+                .name("Contract Ended")
+                .description("A contract ended reason.")
+                .build();
+
+        DisableUserReason cyberRisk = DisableUserReason.builder()
+                .id(UUID.randomUUID())
+                .name("Cyber Risk")
+                .description("A cyber risk reason.")
+                .build();
+
+        DisableUserReason firmClosureMerger = DisableUserReason.builder()
+                .id(UUID.randomUUID())
+                .name("Firm Closure / Merger")
+                .description("A firm closure / merger reason.")
+                .build();
+
+        DisableUserReason investigationPending = DisableUserReason.builder()
+                .id(UUID.randomUUID())
+                .name("Investigation Pending")
+                .description("An investigation pending reason.")
+                .build();
+
+        DisableUserReason userRequest = DisableUserReason.builder()
+                .id(UUID.randomUUID())
+                .name("User Request")
+                .description("A user request reason.")
+                .build();
+
+        when(disableUserReasonRepository.findAll()).thenReturn(List.of(reason,
+                complianceBreach,
+                contractEnded,
+                cyberRisk,
+                firmClosureMerger,
+                investigationPending,
+                userRequest));
+
+        // When
+        List<DisableUserReasonDto> returnedReasons = userAccountStatusService.getDisableUserReasons(UserTypeReasonDisable.BULK_DISABLE);
+
+        // Then
+        assertThat(returnedReasons).isNotEmpty();
+        assertThat(returnedReasons.size()).isEqualTo(6);
+        ModelMapper mapper = new ModelMapper();
+        assertThat(returnedReasons)
+                .isEqualTo(List.of(
+                        mapper.map(complianceBreach, DisableUserReasonDto.class),
+                        mapper.map(contractEnded, DisableUserReasonDto.class),
+                        mapper.map(cyberRisk, DisableUserReasonDto.class),
+                        mapper.map(firmClosureMerger, DisableUserReasonDto.class),
+                        mapper.map(investigationPending, DisableUserReasonDto.class),
+                        mapper.map(userRequest, DisableUserReasonDto.class)
+                        ));
 
     }
 
@@ -651,5 +725,229 @@ public class UserAccountStatusServiceTest {
         verify(entraUserRepository, times(2)).findById(any());
         verify(entraUserRepository, times(0)).saveAndFlush(any());
         verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
+    }
+
+    @Nested
+    class UserCountsForFirmTests {
+
+        @Test
+        void shouldReturnCorrectCountsForSingleAndMultiFirmUsers() {
+            UUID firmId = UUID.randomUUID();
+            List<UserProfile> userProfiles = List.of(
+                    UserProfile.builder()
+                            .entraUser(EntraUser.builder()
+                                    .enabled(true)
+                                    .build())
+                            .build(),
+                    UserProfile.builder()
+                            .entraUser(EntraUser.builder()
+                                    .enabled(true)
+                                    .multiFirmUser(true)
+                                    .build())
+                            .build()
+            );
+            when(userProfileRepository.findByFirmId(firmId)).thenReturn(userProfiles);
+
+
+            Map<String, Long> result = userAccountStatusService.getUserCountsForFirm(String.valueOf(firmId));
+
+
+            // Assert
+            assertThat(result.get("totalOfSingleFirm")).isEqualTo(1);
+            assertThat(result.get("totalOfMultiFirm")).isEqualTo(1);
+
+        }
+
+        @Test
+        void shouldReturnCorrectCountsForMultiFirmUsersOnly() {
+            UUID firmId = UUID.randomUUID();
+            List<UserProfile> userProfiles = List.of(
+                    UserProfile.builder()
+                            .entraUser(EntraUser.builder()
+                                    .enabled(true)
+                                    .multiFirmUser(true)
+                                    .build())
+                            .build()
+            );
+            when(userProfileRepository.findByFirmId(firmId)).thenReturn(userProfiles);
+
+            Map<String, Long> result = userAccountStatusService.getUserCountsForFirm(String.valueOf(firmId));
+
+            // Assert
+            assertThat(result.get("totalOfSingleFirm")).isEqualTo(0);
+            assertThat(result.get("totalOfMultiFirm")).isEqualTo(1);
+
+        }
+
+        @Test
+        void shouldReturnCorrectCountsForSingleFirmOnly() {
+            UUID firmId = UUID.randomUUID();
+            List<UserProfile> userProfiles = List.of(
+                    UserProfile.builder()
+                            .entraUser(EntraUser.builder()
+                                    .enabled(true)
+                                    .build())
+                            .build()
+            );
+            when(userProfileRepository.findByFirmId(firmId)).thenReturn(userProfiles);
+
+            Map<String, Long> result = userAccountStatusService.getUserCountsForFirm(String.valueOf(firmId));
+
+            // Assert
+            assertThat(result.get("totalOfSingleFirm")).isEqualTo(1);
+            assertThat(result.get("totalOfMultiFirm")).isEqualTo(0);
+
+        }
+
+    }
+
+    @Nested
+    class HasActiveUserByFirmIdTest {
+
+        @Test
+        void shouldReturnTrueWhenIsWithoutAnyActiveUserByFirmId(){
+            UUID firmId = UUID.randomUUID();
+            boolean result = userAccountStatusService.hasActiveUserByFirmId(String.valueOf(firmId));
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        void shouldReturnTrueWhenHasActiveUserByFirmId(){
+            UUID firmId = UUID.randomUUID();
+            List<UserProfile> userProfiles = List.of(
+                    UserProfile.builder()
+                            .entraUser(EntraUser.builder()
+                                    .enabled(true)
+                                    .build())
+                            .build()
+            );
+            when(userProfileRepository.findByFirmId(firmId)).thenReturn(userProfiles);
+
+            boolean result = userAccountStatusService.hasActiveUserByFirmId(String.valueOf(firmId));
+
+            assertThat(result).isTrue();
+        }
+
+    }
+
+    @Nested
+    class DisableUserAllUserByFirmIdTest {
+
+        @Test
+        public void testDisableAllUserThrowsExceptionWhenDisabledByUserNotFound() {
+            EntraUser enabledUser = EntraUser.builder()
+                    .id(UUID.randomUUID())
+                    .firstName("Enabled")
+                    .lastName("User")
+                    .build();
+
+            when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
+            assertThrows(RuntimeException.class, () -> userAccountStatusService.disableUserAllUserByFirmId("firmId", UUID.randomUUID(), UUID.randomUUID()));
+
+        }
+
+        @Test
+        public void testDisableAllUserThrowsExceptionWhenDisabledByReasonNotFound() {
+            EntraUser enabledUser = EntraUser.builder()
+                    .id(UUID.randomUUID())
+                    .firstName("Enabled")
+                    .lastName("User")
+                    .build();
+
+            DisableUserReason reason = DisableUserReason.builder()
+                    .id(UUID.randomUUID())
+                    .build();
+
+            when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
+            when(disableUserReasonRepository.findById(eq(reason.getId()))).thenReturn(Optional.of(reason));
+            assertThrows(RuntimeException.class, () -> userAccountStatusService.disableUserAllUserByFirmId("firmID", UUID.randomUUID(), enabledUser.getId()));
+
+        }
+
+        @Test
+        public void testDisableAllUserSuccessfully() {
+            UUID firmId = UUID.randomUUID();
+            EntraUser enabledUser = EntraUser.builder()
+                    .id(UUID.randomUUID())
+                    .firstName("Enabled")
+                    .lastName("User")
+                    .build();
+
+            DisableUserReason reason = DisableUserReason.builder()
+                    .id(UUID.randomUUID())
+                    .name("test Reason")
+                    .build();
+
+            List<UserProfile> userProfiles = List.of(
+                    UserProfile.builder()
+                            .entraUser(EntraUser.builder()
+                                    .enabled(true)
+                                    .build())
+                            .id(UUID.randomUUID())
+                            .build()
+
+            );
+            TechServicesApiResponse<ChangeAccountEnabledResponse> techServicesResponse = TechServicesApiResponse.success(null);
+
+            when(techServicesClient.disableUser(any(), any())).thenReturn(techServicesResponse);
+            when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
+            when(disableUserReasonRepository.findById(eq(reason.getId()))).thenReturn(Optional.of(reason));
+            when(userProfileRepository.findByFirmId(eq(firmId))).thenReturn(userProfiles);
+
+            userAccountStatusService.disableUserAllUserByFirmId(String.valueOf(firmId), reason.getId(), enabledUser.getId());
+
+            verify(entraUserRepository, times(1)).saveAndFlush(any());
+            verify(techServicesClient, times(1)).disableUser(any(), any());
+            verify(userAccountStatusAuditRepository, times(1)).saveAndFlush(any());
+
+        }
+
+        @Test
+        public void testDisableAllUserExceptionFromTechService() {
+            UUID firmId = UUID.randomUUID();
+            EntraUser enabledUser = EntraUser.builder()
+                    .id(UUID.randomUUID())
+                    .firstName("Enabled")
+                    .lastName("User")
+                    .build();
+
+            DisableUserReason reason = DisableUserReason.builder()
+                    .id(UUID.randomUUID())
+                    .name("test Reason")
+                    .build();
+
+            List<UserProfile> userProfiles = List.of(
+                    UserProfile.builder()
+                            .entraUser(EntraUser.builder()
+                                    .enabled(true)
+                                    .build())
+                            .id(UUID.randomUUID())
+                            .build()
+
+            );
+            TechServicesErrorResponse errorResponse = TechServicesErrorResponse.builder()
+                    .code("TestCode")
+                    .success(false)
+                    .errors(new String[] {"Error"})
+                    .message("An error occurred")
+                    .build();
+            TechServicesApiResponse<ChangeAccountEnabledResponse> techServicesResponse = TechServicesApiResponse.error(errorResponse);
+
+            when(techServicesClient.disableUser(any(), any())).thenReturn(techServicesResponse);
+            when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
+            when(disableUserReasonRepository.findById(eq(reason.getId()))).thenReturn(Optional.of(reason));
+            when(userProfileRepository.findByFirmId(eq(firmId))).thenReturn(userProfiles);
+
+            assertThrows(TechServicesClientException.class, () ->
+                    userAccountStatusService.disableUserAllUserByFirmId(
+                            String.valueOf(firmId),
+                            reason.getId(),
+                            enabledUser.getId()));
+
+            verify(techServicesClient, times(1)).disableUser(any(), any());
+            verify(entraUserRepository, times(0)).saveAndFlush(any());
+            verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
+
+        }
     }
 }

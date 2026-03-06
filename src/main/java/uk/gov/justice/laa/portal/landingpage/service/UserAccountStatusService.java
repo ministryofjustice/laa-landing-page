@@ -192,7 +192,9 @@ public class UserAccountStatusService {
                 .numberOfUsersDisabled(totalOfUsersDisabled)
                 .build();
         userAccountStatusAuditRepository.saveAndFlush(userAccountStatusAudit);
-        log.info("Bulk disable user complete successfully : {}", userAccountStatusAudit);
+        log.info("Bulk disable user complete successfully : {} Total user disabled : {}",
+                userAccountStatusAudit,
+                totalOfUsersDisabled);
 
     }
 
