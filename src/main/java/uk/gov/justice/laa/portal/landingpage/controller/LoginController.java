@@ -99,8 +99,8 @@ public class LoginController {
                     // Check if user has SiLAS Administration role
                     EntraUser currentUser = loginService.getCurrentEntraUser(authentication);
                     hasSilasAdminRole = (currentUser != null
-                            && AccessControlService.userHasAuthzRole(currentUser, AuthzRole.SILAS_ADMINISTRATION.getRoleName())) ||
-                            (currentUser != null
+                            && AccessControlService.userHasAuthzRole(currentUser, AuthzRole.SILAS_ADMINISTRATION.getRoleName()))
+                            || (currentUser != null
                                     && AccessControlService.userHasAnyGivenPermissions(currentUser, Permission.VIEW_LAA_APP_METADATA));
                     canViewFirmDirectory = currentUser != null
                             && AccessControlService.userHasAnyGivenPermissions(currentUser, Permission.VIEW_FIRM_DIRECTORY);
