@@ -22,7 +22,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.Assertions;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
@@ -1913,6 +1912,7 @@ class UserServiceTest {
 
             EntraUser entraUser = EntraUser.builder()
                     .id(userId)
+                    .entraOid(String.valueOf(userId))
                     .firstName(firstName)
                     .lastName(lastName)
                     .email(email)
@@ -1926,8 +1926,13 @@ class UserServiceTest {
                     .thenReturn(TechServicesApiResponse
                             .success(ChangeAccountEnabledResponse.builder().success(true).build()));
 
+            UUID userProfileId = UUID.randomUUID();
             UserProfile userProfile = UserProfile.builder()
-                    .id(UUID.randomUUID())
+                    .id(userProfileId)
+                    .entraUser(EntraUser.builder()
+                            .id(userProfileId)
+                            .entraOid(String.valueOf(userProfileId))
+                            .build())
                     .build();
             // Act
             userService.updateUserDetails(userId.toString(), email, firstName, lastName, userProfile);
@@ -1939,6 +1944,7 @@ class UserServiceTest {
             EntraUser saved = captor.getValue();
             assertThat(saved).usingRecursiveComparison().isEqualTo(EntraUser.builder()
                     .id(userId)
+                    .entraOid(String.valueOf(userId))
                     .firstName(firstName)
                     .lastName(lastName)
                     .email(email)
@@ -1947,8 +1953,8 @@ class UserServiceTest {
             verify(mockEventService).logEvent(captorUpdateUserInfoAuditEvent.capture());
             UpdateUserInfoAuditEvent updateUserAuditEvent = captorUpdateUserInfoAuditEvent.getValue();
             assertThat(updateUserAuditEvent.getDescription()).isEqualTo(String.format("""
-                    Existing user id %s updated, email: email@example.com, first name: John, last name: Doe, with email@example.com John Doe
-                    """, userId));
+                    User details updated for existing user entra oid: %s by user entra oid: %s profile id: %s
+                    """, userId, userProfileId, userProfileId));
             assertThat(updateUserAuditEvent.getEventType()).isEqualTo(EventType.UPDATE_USER);
         }
 
@@ -2037,6 +2043,9 @@ class UserServiceTest {
                     .thenReturn(response);
             UserProfile userProfile = UserProfile.builder()
                     .id(UUID.randomUUID())
+                    .entraUser(EntraUser.builder()
+                            .id(UUID.randomUUID())
+                            .build())
                     .build();
             // Act - should not throw exception
             userService.updateUserDetails(userId.toString(), mail, firstName, lastName, userProfile);
