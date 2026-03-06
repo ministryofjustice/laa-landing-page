@@ -90,6 +90,10 @@ public class EntraUser extends AuditableEntity {
     @Builder.Default
     private boolean enabled = true;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "invitation_status", length = 255)
+    private InvitationStatus invitationStatus;
+
     @OneToMany(mappedBy = "entraUser", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @ToString.Exclude
     @JsonIgnore
