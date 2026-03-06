@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -18,6 +19,7 @@ public class CcmsMessage implements Serializable {
     @JsonProperty("userName")
     private final String userName;
     @JsonProperty("vendorNumber")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private final String vendorNumber;
     @JsonProperty("firstName")
     private final String firstName;
