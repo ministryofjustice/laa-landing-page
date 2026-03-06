@@ -1925,8 +1925,12 @@ class UserServiceTest {
             when(techServicesClient.updateUserDetails(any(), any(), any(), any()))
                     .thenReturn(TechServicesApiResponse
                             .success(ChangeAccountEnabledResponse.builder().success(true).build()));
+
+            UserProfile userProfile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .build();
             // Act
-            userService.updateUserDetails(userId.toString(), email, firstName, lastName);
+            userService.updateUserDetails(userId.toString(), email, firstName, lastName, userProfile);
 
             // Assert
             ArgumentCaptor<EntraUser> captor = ArgumentCaptor.forClass(EntraUser.class);
@@ -1958,9 +1962,12 @@ class UserServiceTest {
             when(techServicesClient.updateUserDetails(any(), any(), any(), any()))
                     .thenReturn(TechServicesApiResponse
                             .success(ChangeAccountEnabledResponse.builder().success(true).build()));
+            UserProfile userProfile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .build();
             // Act & Assert
             IOException exception = Assertions.assertThrows(IOException.class,
-                    () -> userService.updateUserDetails(userId.toString(), "email@email.com", "Jonh", "Doe"));
+                    () -> userService.updateUserDetails(userId.toString(), "email@email.com", "Jonh", "Doe", userProfile));
             assertThat(exception.getMessage()).contains("Failed to update user details in database");
         }
 
@@ -1977,9 +1984,12 @@ class UserServiceTest {
                                     .message("tech Service error")
                                     .code("400")
                                     .build()));
+            UserProfile userProfile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .build();
             // Act & Assert
             IOException exception = Assertions.assertThrows(IOException.class,
-                    () -> userService.updateUserDetails(userId.toString(), "email@email.com", "Jonh", "Doe"));
+                    () -> userService.updateUserDetails(userId.toString(), "email@email.com", "Jonh", "Doe", userProfile));
             assertThat(exception.getMessage()).contains("Failed to update user details in database");
             assertThat(exception.getCause().getMessage()).contains("Tech Services API call failed: TechServicesErrorResponse(success=false, code=400, message=tech Service error, errors=null)");
 
@@ -1992,9 +2002,11 @@ class UserServiceTest {
             when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.empty());
 
             ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
-
+            UserProfile userProfile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .build();
             // Act
-            userService.updateUserDetails(userId.toString(), "email@email.com", "John", "Doe");
+            userService.updateUserDetails(userId.toString(), "email@email.com", "John", "Doe", userProfile);
 
             // Assert
             List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
@@ -2023,9 +2035,11 @@ class UserServiceTest {
                     .success(ChangeAccountEnabledResponse.builder().success(true).build());
             when(techServicesClient.updateUserDetails(anyString(), anyString(), anyString(), anyString()))
                     .thenReturn(response);
-
+            UserProfile userProfile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .build();
             // Act - should not throw exception
-            userService.updateUserDetails(userId.toString(), mail, firstName, lastName);
+            userService.updateUserDetails(userId.toString(), mail, firstName, lastName, userProfile);
 
             // Assert - database update should occur
             verify(mockEntraUserRepository).saveAndFlush(entraUser);

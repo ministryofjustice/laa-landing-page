@@ -1799,7 +1799,7 @@ class UserControllerTest {
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
 
         // When
-        String view = userController.updateUserDetails(userId, form, bindingResult, testSession, model, redirectAttributes);
+        String view = userController.updateUserDetails(userId, form, bindingResult, testSession, model, redirectAttributes, authentication);
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
@@ -1831,7 +1831,7 @@ class UserControllerTest {
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
 
         // When
-        String view = userController.updateUserDetails(userId, form, bindingResult, testSession, model, redirectAttributes);
+        String view = userController.updateUserDetails(userId, form, bindingResult, testSession, model, redirectAttributes, authentication);
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
@@ -1862,7 +1862,7 @@ class UserControllerTest {
         MockHttpSession testSession = new MockHttpSession();
 
         // When
-        String view = userController.updateUserDetails(userId, form, bindingResult, testSession,  model, redirectAttributes);
+        String view = userController.updateUserDetails(userId, form, bindingResult, testSession,  model, redirectAttributes, authentication);
 
         // Then
         assertThat(view).isEqualTo("edit-user-details");
@@ -1894,7 +1894,7 @@ class UserControllerTest {
         MockHttpSession testSession = new MockHttpSession();
 
         // When
-        String view = userController.updateUserDetails(userId, form, bindingResult, testSession,  model, redirectAttributes);
+        String view = userController.updateUserDetails(userId, form, bindingResult, testSession,  model, redirectAttributes, authentication);
 
         // Then
         assertThat(view).isEqualTo("edit-user-details");
@@ -1928,7 +1928,7 @@ class UserControllerTest {
         MockHttpSession testSession = new MockHttpSession();
 
         // When
-        String view = userController.updateUserDetails(userId, form, bindingResult, testSession, model, redirectAttributes);
+        String view = userController.updateUserDetails(userId, form, bindingResult, testSession, model, redirectAttributes, authentication);
 
         // Then
         assertThat(view).isEqualTo("edit-user-details");
