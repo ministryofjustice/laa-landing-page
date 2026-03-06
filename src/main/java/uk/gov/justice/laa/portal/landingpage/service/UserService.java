@@ -1033,7 +1033,7 @@ public class UserService {
                     //update user information on database
                     entraUserRepository.saveAndFlush(entraUser);
                     UpdateUserInfoAuditEvent updateUserInfoAuditEvent = new UpdateUserInfoAuditEvent(
-                            entraUser.getEntraOid(), String.valueOf(currentUserProfile.getId()), currentUserProfile.getEntraUser().getEntraOid());
+                            entraUser, String.valueOf(currentUserProfile.getId()), currentUserProfile.getEntraUser().getEntraOid());
                     eventService.logEvent(updateUserInfoAuditEvent);
                     logger.info("Successfully updated user details in database for user ID: {}",
                             userId);

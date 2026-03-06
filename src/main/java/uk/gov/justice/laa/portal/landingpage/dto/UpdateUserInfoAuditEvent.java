@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.dto;
 
 import lombok.Getter;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.EventType;
 
 import java.io.Serial;
@@ -19,8 +20,9 @@ public class UpdateUserInfoAuditEvent extends AuditEvent implements Serializable
             User details updated for existing user entra oid: %s by user entra oid: %s profile id: %s
             """;
 
-    public UpdateUserInfoAuditEvent(String userOid, String actorOid, String actorProfileId) {
-        this.userOid = userOid;
+    public UpdateUserInfoAuditEvent(EntraUser user, String actorOid, String actorProfileId) {
+        this.userId = user.getId();
+        this.userOid = user.getEntraOid();
         this.actorOid = actorOid;
         this.actorProfileId = actorProfileId;
     }

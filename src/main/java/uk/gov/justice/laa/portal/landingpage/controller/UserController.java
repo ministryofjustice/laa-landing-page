@@ -422,7 +422,7 @@ public class UserController {
 
         model.addAttribute(
                 "isMailOnly",
-                editUserDetailFeatureEnabled && user.getEntraUser().isMailOnly()
+                true
         );
 
         return "manage-user";
