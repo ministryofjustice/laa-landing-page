@@ -6,6 +6,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.Authentication;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
@@ -38,6 +39,9 @@ class FirmDirectoryControllerTest {
 
     @Mock
     private OfficeService officeService;
+
+    @Mock
+    private Authentication authentication;
 
     private Model model;
 
@@ -157,7 +161,7 @@ class FirmDirectoryControllerTest {
 
         when(firmService.getFirm(id)).thenReturn(firm);
 
-        String result = firmDirectoryController.displayFirmDetails(id, model, criteria);
+        String result = firmDirectoryController.displayFirmDetails(id, model, criteria, authentication);
 
         assertThat(result).isEqualTo("firm-directory/firm-offices");
         assertThat(model.getAttribute("firmOffices")).isEqualTo(paginatedOffices);

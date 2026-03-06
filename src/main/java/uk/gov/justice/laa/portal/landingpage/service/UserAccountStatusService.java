@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.dto.DisableUserReasonDto;
@@ -11,18 +12,23 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserTypeReasonDisable;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.DisableUserReasonRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserAccountStatusService {
@@ -33,17 +39,30 @@ public class UserAccountStatusService {
     private final EntraUserRepository entraUserRepository;
     private final TechServicesClient techServicesClient;
     private final UserService userService;
+    private final UserProfileRepository userProfileRepository;
 
-    public List<DisableUserReasonDto> getDisableUserReasons(boolean isProvideAdmin) {
+    public List<DisableUserReasonDto> getDisableUserReasons(UserTypeReasonDisable userTypeReasonDisable) {
         List<DisableUserReason> reasons = disableUserReasonRepository.findAll();
         List<DisableUserReasonDto> disableUserReasonDtos = new java.util.ArrayList<>(reasons.stream()
                 .filter(DisableUserReason::isUserSelectable)
                 .map(reason -> mapper.map(reason, DisableUserReasonDto.class))
                 .toList());
-        if (isProvideAdmin) {
+
+        if (userTypeReasonDisable.equals(UserTypeReasonDisable.IS_USER_DISABLE)) {
             Set<String> keepReasons = Set.of("Absence", "Provider Discretion");
             disableUserReasonDtos.removeIf(u -> !keepReasons.contains(u.getName()));
+        } else if (userTypeReasonDisable.equals(UserTypeReasonDisable.BULK_DISABLE)) {
+            Set<String> keepReasonsBulk = Set.of(
+                    "Compliance Breach",
+                    "Contract Ended",
+                    "Cyber Risk",
+                    "Firm Closure / Merger",
+                    "Investigation Pending",
+                    "User Request"
+            );
+            disableUserReasonDtos.removeIf(u -> !keepReasonsBulk.contains(u.getName()));
         }
+
         return disableUserReasonDtos;
     }
 
@@ -75,7 +94,6 @@ public class UserAccountStatusService {
                 .filter(UserProfile::isActiveProfile)
                 .findFirst()
                 .map(UserProfile::getFirm).orElse(null);
-
         if (userService.isInternal(disabledById)
                 || (disabledUserFirm != null && disabledByUserFirm != null && disabledByUserFirm.getId().equals(disabledUserFirm.getId()))) {
             // Disable user in Entra via tech services.
@@ -103,6 +121,81 @@ public class UserAccountStatusService {
         } else {
             throw new RuntimeException(String.format("Unable to disable the user %s by %s", disabledUserId, disabledById));
         }
+    }
+
+    public Map<String, Long> getUserCountsForFirm(String firmId) {
+        Map<String, Long> result = new HashMap<>();
+        List<UserProfile> userProfiles = userProfileRepository.findByFirmId(UUID.fromString(firmId));
+        long totalOfSingleFirm = userProfiles.stream()
+                .filter(userProfile -> userProfile.getEntraUser().isEnabled() && !userProfile.getEntraUser().isMultiFirmUser())
+                .count();
+
+        long totalOfMultiFirm = userProfiles.stream()
+                .filter(userProfile -> userProfile.getEntraUser().isEnabled() && userProfile.getEntraUser().isMultiFirmUser())
+                .count();
+
+        result.put("totalOfSingleFirm", totalOfSingleFirm);
+        result.put("totalOfMultiFirm", totalOfMultiFirm);
+
+        return result;
+
+    }
+
+    public boolean hasActiveUserByFirmId(String firmId) {
+        List<EntraUser> entraUsers = userProfileRepository.findByFirmId(UUID.fromString(firmId)).stream()
+                .map(UserProfile::getEntraUser)
+                .filter(EntraUser::isEnabled)
+                .toList();
+        return !entraUsers.isEmpty();
+    }
+
+    public void disableUserAllUserByFirmId(String firmId, UUID disableReasonId, UUID disabledById) {
+        log.info("Started Bulk disable users");
+        // Fetch entities
+        EntraUser disabledByUser = entraUserRepository.findById(disabledById)
+                .orElseThrow(() -> new RuntimeException(String.format("Could not find a user account with id \"%s\"", disabledById)));
+        DisableUserReason reason = disableUserReasonRepository.findById(disableReasonId)
+                .orElseThrow(() -> new RuntimeException(String.format("Could not find a disable user reason with id \"%s\"", disableReasonId)));
+
+        List<EntraUser> entraUsers = userProfileRepository.findByFirmId(UUID.fromString(firmId)).stream()
+                .map(UserProfile::getEntraUser)
+                .filter(EntraUser::isEnabled)
+                .toList();
+        Integer totalOfUsersDisabled = 0;
+        for (EntraUser entraUser : entraUsers) {
+            // Disable user in Entra via tech services.
+            TechServicesApiResponse<ChangeAccountEnabledResponse> changeAccountEnabledResponse
+                    = techServicesClient.disableUser(mapper.map(entraUser, EntraUserDto.class), reason.getEntraDescription());
+            if (!changeAccountEnabledResponse.isSuccess()) {
+                throw new TechServicesClientException(changeAccountEnabledResponse.getError().getMessage(),
+                        changeAccountEnabledResponse.getError().getCode(),
+                        changeAccountEnabledResponse.getError().getErrors());
+            }
+            // Perform disable
+            entraUser.setEnabled(false);
+            entraUserRepository.saveAndFlush(entraUser);
+            totalOfUsersDisabled++;
+            log.info("User with entraID: {} has been disabled successfully with reason: {} By: {}",
+                    entraUser.getEntraOid(),
+                    reason.getEntraDescription(),
+                    disabledByUser.getEntraOid());
+
+        }
+
+        UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
+                .entraUser(disabledByUser)
+                .disableUserReason(reason)
+                .statusChange(UserAccountStatus.DISABLED)
+                .statusChangedBy(disabledByUser.getFirstName() + " " + disabledByUser.getLastName())
+                .statusChangedDate(LocalDateTime.now())
+                .firmId(firmId)
+                .numberOfUsersDisabled(totalOfUsersDisabled)
+                .build();
+        userAccountStatusAuditRepository.saveAndFlush(userAccountStatusAudit);
+        log.info("Bulk disable user complete successfully : {} Total user disabled : {}",
+                userAccountStatusAudit,
+                totalOfUsersDisabled);
+
     }
 
     @SuppressWarnings("checkstyle:VariableDeclarationUsageDistance")
