@@ -30,7 +30,8 @@ public enum Permission {
     EDIT_LAA_APP_METADATA,
     DELETE_LAA_APP_ROLE,
     TRIGGER_LAA_APP_SYNC,
-    CREATE_LAA_APP_ROLE;
+    CREATE_LAA_APP_ROLE,
+    EDIT_LAA_APP_ROLE_ASSIGN_RESTRICTIONS;
 
     public static final String[] ADMIN_PERMISSIONS = {
             VIEW_INTERNAL_USER.name(),

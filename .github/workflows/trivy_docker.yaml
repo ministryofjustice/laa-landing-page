@@ -28,7 +28,7 @@ jobs:
 
       # scan image for vulns
       - name: Scan Docker Image with Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@97e0b3872f55f89b95b2f65b3dbab56962816478
         with:
           image-ref: 'laa-landing-page:latest'
           # exit-code: 1

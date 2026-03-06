@@ -2785,12 +2785,8 @@ class UserControllerTest {
         when(bindingResult.hasErrors()).thenReturn(true);
         when(bindingResult.getAllErrors()).thenReturn(Collections.emptyList());
 
-        AppRoleViewModel role1 = new AppRoleViewModel();
-        role1.setName("role1");
-        role1.setSelected(true);
-        AppRoleViewModel role2 = new AppRoleViewModel();
-        role2.setName("role2");
-        role2.setSelected(true);
+        AppRoleViewModel role1 = AppRoleViewModel.builder().name("role1").selected(true).build();
+        AppRoleViewModel role2 = AppRoleViewModel.builder().name("role2").selected(true).build();
         List<AppRoleViewModel> roles = List.of(role1, role2);
 
         Model modelFromSession = new ExtendedModelMap();
@@ -4360,9 +4356,7 @@ class UserControllerTest {
         rolesForm.setRoles(null); // Validation error
 
         Model sessionModel = new ExtendedModelMap();
-        AppRoleViewModel role1 = new AppRoleViewModel();
-        role1.setId("role1");
-        role1.setSelected(true);
+        AppRoleViewModel role1 = AppRoleViewModel.builder().name("role1").selected(true).build();
         sessionModel.addAttribute("roles", List.of(role1));
         sessionModel.addAttribute("user", new UserProfileDto());
         sessionModel.addAttribute("grantAccessSelectedAppIndex", 0);
