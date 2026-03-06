@@ -36,8 +36,8 @@ public class CreateOfficeCommand implements PdaSyncCommand {
 
             officeRepository.save(office);
             result.setOfficesCreated(result.getOfficesCreated() + 1);
-            log.debug("Created office: {} for firm {} (address: {}, {})",
-                pdaOffice.getOfficeAccountNo(), firm.getCode(), pdaOffice.getAddressLine1(), pdaOffice.getCity());
+            log.debug("Created office: {} for firm {}",
+                pdaOffice.getOfficeAccountNo(), firm.getCode());
         } catch (Exception e) {
             log.error("Failed to create office {}: {}", pdaOffice.getOfficeAccountNo(), e.getMessage());
             result.addError("Failed to create office " + pdaOffice.getOfficeAccountNo() + ": " + e.getMessage());
