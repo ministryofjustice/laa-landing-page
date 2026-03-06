@@ -104,6 +104,7 @@ import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
@@ -134,6 +135,7 @@ public class UserController {
     private final EmailValidationService emailValidationService;
     private final AppRoleService appRoleService;
     private final UserAccountStatusService userAccountStatusService;
+    private final NotificationService notificationService;
 
 
     @Value("${feature.flag.disable.user}")
@@ -1394,6 +1396,16 @@ public class UserController {
                     user.getEntraUser(), updateResult.get("diff"),
                     "role");
             eventService.logEvent(updateUserAuditEvent);
+
+            if (user.getUserType() == UserType.EXTERNAL && user.getEntraUser() != null && updateResult.get("diff") != null && !updateResult.get("diff").isEmpty()) {
+                notificationService.notifyUserAccessChange(
+                    user.getId(),
+                    user.getEntraUser().getFirstName(),
+                    user.getEntraUser().getEmail(),
+                    "Service roles",
+                    updateResult.get("diff")
+                );
+            }
         }
         // Clear the session
         session.removeAttribute("editUserAllSelectedRoles");
@@ -1586,6 +1598,17 @@ public class UserController {
                 userProfileDto.getEntraUser(),
                 changed, "office");
         eventService.logEvent(updateUserAuditEvent);
+
+        if (userProfileDto.getUserType() == UserType.EXTERNAL && userProfileDto.getEntraUser() != null && changed != null && !changed.isEmpty()) {
+            notificationService.notifyUserAccessChange(
+                userProfileDto.getId(),
+                userProfileDto.getEntraUser().getFirstName(),
+                userProfileDto.getEntraUser().getEmail(),
+                "Offices",
+                changed
+            );
+        }
+
         // Clear the session model
         session.removeAttribute("editUserOfficesModel");
         session.removeAttribute("officesForm");
@@ -2312,6 +2335,16 @@ public class UserController {
                     "Access granted",
                     "access_grant_complete");
             eventService.logEvent(updateUserAuditEvent);
+
+            if (userProfileDto.getUserType() == UserType.EXTERNAL && userProfileDto.getEntraUser() != null) {
+                notificationService.notifyUserAccessChange(
+                    userProfileDto.getId(),
+                    userProfileDto.getEntraUser().getFirstName(),
+                    userProfileDto.getEntraUser().getEmail(),
+                    "Access granted",
+                    "You have been granted access to services and offices"
+                );
+            }
 
         } catch (Exception e) {
             log.error("Error completing grant access for user: " + id, e);
