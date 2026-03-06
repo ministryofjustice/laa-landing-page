@@ -1,11 +1,17 @@
 package uk.gov.justice.laa.portal.landingpage.viewmodel;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.Serializable;
 
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 public class AppRoleViewModel implements Comparable<AppRoleViewModel>, Serializable {
     private String id;
     private int ordinal;
