@@ -498,4 +498,45 @@ class LoginControllerTest {
             assertThat(model.getAttribute("hasSilasAdminRole")).isEqualTo(false);
         }
     }
+
+    @Test
+    void givenCurrentUserHasSilasRolePermission_whenHomeGet_thenSetsHasSilasAdminRoleTrue() throws IOException {
+        // Arrange
+        Model model = new ConcurrentModel();
+        String userId = UUID.randomUUID().toString();
+        UserSessionData userSessionData = UserSessionData.builder()
+                .user(EntraUserDto.builder().id(userId).build())
+                .name("Test User")
+                .build();
+
+        EntraUser entraUser = EntraUser.builder()
+                .email("test@test.com")
+                .userProfiles(Set.of(UserProfile.builder()
+                        .activeProfile(true)
+                        .appRoles(Set.of(AppRole.builder()
+                                .permissions(Set.of(Permission.VIEW_FIRM_DIRECTORY))
+                                .authzRole(true)
+                                .build()))
+                        .build()))
+                .build();
+
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(loginService.processUserSession(any(Authentication.class), any(OAuth2AuthorizedClient.class), any(HttpSession.class)))
+                .thenReturn(userSessionData);
+
+        EntraUser mockCurrentUser = mock(EntraUser.class);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(mockCurrentUser);
+
+        try (MockedStatic<AccessControlService> mocked = mockStatic(AccessControlService.class)) {
+            mocked.when(() -> AccessControlService.userHasAnyGivenPermissions(mockCurrentUser, Permission.VIEW_LAA_APP_METADATA))
+                    .thenReturn(true);
+
+            // Act
+            String viewName = controller.home(model, authentication, session, authClient);
+
+            // Assert
+            assertThat(viewName).isEqualTo("home");
+            assertThat(model.getAttribute("hasSilasAdminRole")).isEqualTo(true);
+        }
+    }
 }
