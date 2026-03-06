@@ -9,16 +9,17 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.DisableUserReasonDto;
-import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserTypeReasonDisable;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.DisableUserReasonRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesErrorResponse;
@@ -49,6 +50,8 @@ public class UserAccountStatusServiceTest {
     private TechServicesClient techServicesClient;
     @Mock
     private UserService userService;
+    @Mock
+    private UserProfileRepository userProfileRepository;
 
     @InjectMocks
     private UserAccountStatusService userAccountStatusService;
@@ -57,7 +60,12 @@ public class UserAccountStatusServiceTest {
     public void setup() {
         ModelMapper mapper = new MapperConfig().modelMapper();
         userAccountStatusService = new UserAccountStatusService(disableUserReasonRepository,
-                userAccountStatusAuditRepository, mapper, entraUserRepository, techServicesClient, userService);
+                userAccountStatusAuditRepository,
+                mapper,
+                entraUserRepository,
+                techServicesClient,
+                userService,
+                userProfileRepository);
     }
 
     @Test
@@ -72,7 +80,7 @@ public class UserAccountStatusServiceTest {
         when(disableUserReasonRepository.findAll()).thenReturn(List.of(reason));
 
         // When
-        List<DisableUserReasonDto> returnedReasons = userAccountStatusService.getDisableUserReasons(false);
+        List<DisableUserReasonDto> returnedReasons = userAccountStatusService.getDisableUserReasons(UserTypeReasonDisable.DEFAULT);
 
         // Then
         assertThat(returnedReasons).isNotEmpty();
@@ -105,7 +113,7 @@ public class UserAccountStatusServiceTest {
         when(disableUserReasonRepository.findAll()).thenReturn(List.of(reason, absence, providerDiscretion));
 
         // When
-        List<DisableUserReasonDto> returnedReasons = userAccountStatusService.getDisableUserReasons(true);
+        List<DisableUserReasonDto> returnedReasons = userAccountStatusService.getDisableUserReasons(UserTypeReasonDisable.IS_USER_DISABLE);
 
         // Then
         assertThat(returnedReasons).isNotEmpty();
