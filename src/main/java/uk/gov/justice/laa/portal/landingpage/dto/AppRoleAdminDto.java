@@ -6,6 +6,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.Serial;
+import java.io.Serializable;
+
 /**
  * DTO for AppRole administration display
  */
@@ -13,7 +16,9 @@ import org.jetbrains.annotations.NotNull;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AppRoleAdminDto implements Comparable<AppRoleAdminDto> {
+public class AppRoleAdminDto implements Comparable<AppRoleAdminDto>, Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     private String id;
     private String name;
     private String description;
