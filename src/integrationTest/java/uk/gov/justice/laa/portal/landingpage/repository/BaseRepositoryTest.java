@@ -104,10 +104,14 @@ public class BaseRepositoryTest {
     }
 
     protected UserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType, boolean active) {
+        return buildLaaUserProfile(entraUser, userType, active, "Global Admin");
+    }
+
+    protected UserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType, boolean active, String roleName) {
         List<AppRole> allAppRoles = appRoleRepository.findAllWithPermissions();
         AppRole globalAdminAppRole = allAppRoles.stream()
                 .filter(AppRole::isAuthzRole)
-                .filter(role -> role.getName().equals("Global Admin"))
+                .filter(role -> role.getName().equals(roleName))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Could not find app role"));
         return UserProfile.builder().entraUser(entraUser)
@@ -118,7 +122,7 @@ public class BaseRepositoryTest {
     }
 
     protected UserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType) {
-        return buildLaaUserProfile(entraUser, userType, false);
+        return buildLaaUserProfile(entraUser, userType, false, "Global Admin");
     }
 
     protected String generateEntraId() {
