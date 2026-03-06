@@ -12,4 +12,5 @@ public class CurrentUserDto implements Serializable {
     private static final long serialVersionUID = 1L;
     private UUID userId;
     private String name;
+    private UUID entraOid;
 }
