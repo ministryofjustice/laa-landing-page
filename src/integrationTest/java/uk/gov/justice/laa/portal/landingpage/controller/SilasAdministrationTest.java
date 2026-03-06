@@ -239,13 +239,13 @@ public class SilasAdministrationTest extends RoleBasedAccessIntegrationTest {
     }
 
     @Test
-    public void testGlobalAdminCannotAccessAdministrationPage() throws Exception {
+    public void testGlobalAdminCanAccessAdministrationPage() throws Exception {
         EntraUser loggedInUser = globalAdmins.getFirst();
         loggedInUser = entraUserRepository.saveAndFlush(loggedInUser);
 
         this.mockMvc.perform(get("/admin/silas-administration")
                         .with(defaultOauth2Login(loggedInUser)))
-                .andExpect(status().is4xxClientError());
+                .andExpect(status().is2xxSuccessful());
     }
 
     @Test
