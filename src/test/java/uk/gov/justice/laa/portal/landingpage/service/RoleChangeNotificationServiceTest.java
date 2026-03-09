@@ -141,13 +141,22 @@ class RoleChangeNotificationServiceTest {
     }
 
     @Test
-    void shouldNotSendMessage_whenUserIsInternal() {
+    void shouldSendMessage_whenUserIsInternal() throws Exception {
         userProfile.setUserType(UserType.INTERNAL);
+        when(objectMapper.writeValueAsString(any())).thenReturn("{\"test\":\"message\"}");
+        when(sqsClient.sendMessage(any(SendMessageRequest.class)))
+                .thenReturn(SendMessageResponse.builder().messageId("test-message-id").build());
 
         boolean result = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
 
         assertThat(result).isTrue();
-        verify(sqsClient, never()).sendMessage(any(SendMessageRequest.class));
+        verify(sqsClient).sendMessage(argThat((SendMessageRequest request) -> {
+            return request.queueUrl().equals(QUEUE_URL)
+                    && request.messageGroupId().equals(userProfile.getLegacyUserId().toString())
+                    && request.messageDeduplicationId() != null
+                    && request.messageAttributes().get("userType").stringValue().equals(UserType.INTERNAL.toString())
+                    && request.messageBody().equals("{\"test\":\"message\"}");
+        }));
     }
 
     @Test
@@ -163,6 +172,7 @@ class RoleChangeNotificationServiceTest {
             return request.queueUrl().equals(QUEUE_URL)
                     && request.messageGroupId().equals(userProfile.getLegacyUserId().toString())
                     && request.messageDeduplicationId() != null
+                    && request.messageAttributes().get("userType").stringValue().equals(UserType.EXTERNAL.name())
                     && request.messageBody().equals("{\"test\":\"message\"}");
         }));
     }

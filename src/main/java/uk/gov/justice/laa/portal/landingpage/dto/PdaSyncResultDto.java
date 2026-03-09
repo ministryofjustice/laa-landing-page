@@ -3,6 +3,8 @@ package uk.gov.justice.laa.portal.landingpage.dto;
 import lombok.Builder;
 import lombok.Data;
 
+import java.io.Serial;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,7 +13,10 @@ import java.util.List;
  */
 @Data
 @Builder
-public class PdaSyncResultDto {
+public class PdaSyncResultDto implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     @Builder.Default
     private int firmsCreated = 0;
