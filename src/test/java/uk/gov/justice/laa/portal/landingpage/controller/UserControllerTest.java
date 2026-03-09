@@ -731,7 +731,7 @@ class UserControllerTest {
 
         // Assert
         assertThat(view).isEqualTo("delete-user-success");
-        verify(userService).deleteExternalUser(eq(userProfileId), eq(reason.trim()), eq(currentUser.getId()), eq(currentUser.getEntraOid()));
+        verify(userService).deleteExternalUser(eq(userProfileId), eq(reason.trim()), eq(currentUser.getId()));
         verify(eventService).logEvent(any(DeleteUserSuccessAuditEvent.class));
     }
 
@@ -751,7 +751,7 @@ class UserControllerTest {
         EntraUser currentUser = EntraUser.builder().id(UUID.randomUUID()).build();
         when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(targetProfile));
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
-        when(userService.deleteExternalUser(anyString(), anyString(), any(UUID.class), anyString()))
+        when(userService.deleteExternalUser(anyString(), anyString(), any(UUID.class)))
                 .thenThrow(new RuntimeException("Tech Services unavailable"));
         String reason = "email typo";
         // Act
@@ -760,7 +760,7 @@ class UserControllerTest {
         // Assert
         assertThat(view).isEqualTo("delete-user-reason");
         assertThat(model.getAttribute("globalErrorMessage")).isEqualTo("User delete failed, please try again later");
-        verify(userService).deleteExternalUser(eq(userProfileId), eq(reason.trim()), eq(currentUser.getId()), eq(currentUser.getEntraOid()));
+        verify(userService).deleteExternalUser(eq(userProfileId), eq(reason.trim()), eq(currentUser.getId()));
         verify(eventService).logEvent(any(DeleteUserAttemptAuditEvent.class));
     }
 

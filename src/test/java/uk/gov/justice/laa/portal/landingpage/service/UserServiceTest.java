@@ -282,7 +282,7 @@ class UserServiceTest {
                 .thenReturn(true);
 
         // Act
-        userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID(), anyString());
+        userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID());
 
         // Assert
         verify(techServicesClient).deleteRoleAssignment(entraId);
@@ -323,7 +323,7 @@ class UserServiceTest {
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
 
         // Act
-        userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID(), anyString());
+        userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID());
 
         // Assert
         verify(techServicesClient).deleteRoleAssignment(entraId);
@@ -362,7 +362,7 @@ class UserServiceTest {
         when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
 
         // Act
-        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID(), entraId.toString());
+        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID());
 
         // Assert
         verify(techServicesClient).deleteRoleAssignment(entraId);
@@ -393,7 +393,7 @@ class UserServiceTest {
 
         // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID(), anyString()));
+                () -> userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID()));
         assertThat(ex.getMessage()).contains("tech services down");
         verify(mockUserProfileRepository, never()).deleteAll(any());
         verify(mockEntraUserRepository, never()).delete(any());
@@ -415,7 +415,7 @@ class UserServiceTest {
 
         // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> userService.deleteExternalUser(profileId.toString(), "reason", UUID.randomUUID(), anyString()));
+                () -> userService.deleteExternalUser(profileId.toString(), "reason", UUID.randomUUID()));
         assertThat(ex.getMessage()).contains("Deletion is only permitted for external users");
         verify(techServicesClient, never()).deleteRoleAssignment(any());
     }

@@ -192,7 +192,7 @@ public class UserService {
             int after = roles.size();
             if (after < before) {
                 logger.warn("Attempt to assign internal role user entra ID {}.",
-                        userProfile.getEntraUser().getId());
+                        userProfile.getEntraUser().getEntraOid());
             }
 
             Set<AppRole> newRoles = new HashSet<>(roles);
@@ -357,7 +357,7 @@ public class UserService {
      *                      logging)
      */
     @Transactional
-    public DeletedUser deleteExternalUser(String userProfileId, String reason, UUID actorId, String actorEntraUserId) {
+    public DeletedUser deleteExternalUser(String userProfileId, String reason, UUID actorId) {
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
         if (optionalUserProfile.isEmpty()) {
             throw new RuntimeException("User profile not found: " + userProfileId);
@@ -374,9 +374,9 @@ public class UserService {
                     "Associated Entra user not found for profile: " + userProfileId);
         }
 
-        logger.debug(
-                "Deleting external user. actorId={}, userProfileId={}, entraUserId={}, email={}, reason=\"{}\"",
-                actorId, userProfileId, entraUser.getId(), entraUser.getEmail(), reason);
+        logger.info(
+                "Deleting external user. actorId={}, userProfileId={}, entraUserId={}, reason=\"{}\"",
+                actorId, userProfileId, entraUser.getId(), reason);
 
         // first send update to tech services
         techServicesClient.deleteRoleAssignment(userProfile.getEntraUser().getId());
@@ -548,8 +548,8 @@ public class UserService {
             throw new RuntimeException("Cannot delete internal users");
         }
 
-        logger.debug(
-                "Deleting Entra user without profile. actorId={}, entraUserId={}, email={}, reason=\"{}\"",
+        logger.info(
+                "Deleting Entra user without profile. actorId={}, entraUserId={}, reason=\"{}\"",
                 actorId, entraUserId, entraUser.getEmail(), reason);
 
         // Notify Tech Services to remove Entra group memberships
@@ -769,8 +769,8 @@ public class UserService {
         logger.info("Adding user profile for entra user: {}", entraUserDto.getEntraOid());
 
         if (!entraUserDto.isMultiFirmUser()) {
-            logger.error("User with entra id: {} {} is not a multi-firm user", entraUserDto.getEntraOid());
-            throw new RuntimeException(String.format("User with entra id: %s is not a multi-firm user",
+            logger.error("User with entra oid: {} is not a multi-firm user", entraUserDto.getEntraOid());
+            throw new RuntimeException(String.format("User with entra oid: %s is not a multi-firm user",
                     entraUserDto.getEntraOid()));
         }
 
@@ -851,7 +851,7 @@ public class UserService {
         notificationService.notifyDeleteFirmAccess(userProfile.getId(), entraUserDto.getFirstName(),
                 entraUserDto.getEmail(), firmDto.getName());
 
-        logger.info("User profile added successfully for user with entra oid: {} ({})", entraUserDto.getEntraOid());
+        logger.info("User profile added successfully for user with entra oid: {}", entraUserDto.getEntraOid());
 
         return userProfile;
     }
@@ -914,7 +914,7 @@ public class UserService {
                 .map(appRole -> mapper.map(appRole, AppRoleDto.class)).toList();
     }
 
-    public EntraUser getUserByEntraId(UUID userId) { // here
+    public EntraUser getUserByEntraId(UUID userId) {
         Optional<EntraUser> optionalUser = entraUserRepository.findByEntraOid(userId.toString());
         return optionalUser.orElse(null);
     }
@@ -1463,7 +1463,6 @@ public class UserService {
             Sort sortObj = ascending ? Sort.by(sortField).ascending() : Sort.by(sortField).descending();
             PageRequest pageRequest = PageRequest.of(page - 1, pageSize, sortObj);
             // UserType must be treated as a string because we are using native queries
-            // here.
 
             Page<? extends UserAuditProjection> resultPage;
             if (sortByProfileCount) {
