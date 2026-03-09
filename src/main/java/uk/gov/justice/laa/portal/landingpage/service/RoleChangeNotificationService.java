@@ -76,20 +76,21 @@ public class RoleChangeNotificationService {
 
     private void sendRoleChangeNotificationToSqs(UserProfile userProfile, Set<String> newPuiRoles, Set<String> oldPuiRoles) throws Exception {
         EntraUser entraUser = userProfile.getEntraUser();
-        if (!newPuiRoles.equals(oldPuiRoles)
-                && userProfile.getUserType() != UserType.INTERNAL) {
+        if (!newPuiRoles.equals(oldPuiRoles)) {
             log.info("CCMS roles updated for user: {}, generating message", userProfile.getEntraUser().getEntraOid());
-            CcmsMessage message = CcmsMessage.builder()
+            CcmsMessage.CcmsMessageBuilder ccmsMessageBuilder = CcmsMessage.builder()
                     .userName(userProfile.getLegacyUserId().toString())
-                    .vendorNumber(userProfile.getFirm().getCode())
                     .firstName(entraUser.getFirstName())
                     .lastName(entraUser.getLastName())
                     .timestamp(LocalDateTime.now())
                     .email(entraUser.getEmail())
-                    .responsibilityKey(newPuiRoles.stream().toList())
-                    .build();
+                    .responsibilityKey(newPuiRoles.stream().toList());
 
-            String messageBody = objectMapper.writeValueAsString(message);
+            if (UserType.EXTERNAL.equals(userProfile.getUserType())) {
+                ccmsMessageBuilder.vendorNumber(userProfile.getFirm().getCode());
+            }
+
+            String messageBody = objectMapper.writeValueAsString(ccmsMessageBuilder.build());
             log.info("CCMS role change message: {}", messageBody);
 
             Map<String, MessageAttributeValue> userTypeAttribute = Map.of(USER_TYPE_ATTRIBUTE, MessageAttributeValue.builder()

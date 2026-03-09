@@ -55,4 +55,12 @@ public interface AppRoleRepository extends JpaRepository<AppRole, UUID> {
     @Modifying
     void deleteRolePermissions(UUID roleId);
 
+    @Query("""
+            select ra.assigningRole
+            from RoleAssignment ra
+            where ra.assignableRole.id = :assignableRoleId
+            order by ra.assigningRole.ordinal
+            """)
+    List<AppRole> findAssigningRolesFor(UUID assignableRoleId);
+
 }

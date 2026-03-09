@@ -28,4 +28,6 @@ public interface TechServicesClient {
 
     TechServicesApiResponse<GetAllApplicationsResponse> getAllApplications();
 
+    TechServicesApiResponse<ChangeAccountEnabledResponse> updateUserDetails(String entraOid, String firstName, String lastName, String email);
+
 }
