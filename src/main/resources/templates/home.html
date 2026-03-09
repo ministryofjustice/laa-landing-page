@@ -109,16 +109,6 @@
                     </div>
                 </div>
 
-                <script th:inline="javascript">
-                    document.addEventListener('DOMContentLoaded', function () {
-                        const userHasNoRoles = /*[[${userHasNoRoles}]]*/ false;
-                        const toastElement = document.getElementById('account-activation-toast');
-                        if (toastElement && userHasNoRoles) {
-                            toastElement.removeAttribute('hidden');
-                        }
-                    });
-                </script>
-
                 <h2 class="govuk-heading-l">Legal aid services</h2>
 
                 <div th:if="${userHasNoRoles}" class="govuk-grid-row">
