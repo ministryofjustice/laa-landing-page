@@ -117,6 +117,11 @@ public class AuditUserDetailDto implements Serializable {
     private boolean enabled;
 
     /**
+     * User's entra oid
+     */
+    private String entraOid;
+
+    /**
      * Profile DTO for the audit detail view
      */
     @Data

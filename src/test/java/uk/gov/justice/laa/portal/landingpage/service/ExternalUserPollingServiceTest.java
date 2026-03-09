@@ -19,6 +19,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUsersResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesErrorResponse;
 
@@ -159,12 +160,12 @@ class ExternalUserPollingServiceTest {
     void shouldProcessUsersSuccessfully_whenApiReturnsUsers() {
         when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
         
-        GetUsersResponse.TechServicesUser user1 = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser user1 = TechServicesUser.builder()
                 .id("user1")
                 .displayName("John Doe")
                 .mail("john@example.com")
                 .build();
-        GetUsersResponse.TechServicesUser user2 = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser user2 = TechServicesUser.builder()
                 .id("user2")
                 .displayName("Jane Smith")
                 .mail("jane@example.com")
@@ -293,7 +294,7 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(disableUserReasonRepository.findAll()).thenReturn(List.of(inactivityReason));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName("NewFirstName")
                 .surname("NewLastName")
@@ -302,14 +303,14 @@ class ExternalUserPollingServiceTest {
                 .lastSignIn("2025-01-18T10:30:00Z")
                 .build();
 
-        GetUsersResponse.TechServicesUser disabledUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser disabledUser = TechServicesUser.builder()
                 .id("user456")
                 .givenName("Jane")
                 .surname("Doe")
                 .accountEnabled(false) // Changed to false to match disable logic
                 .isMailOnly(false)
-                .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
-                        .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
+                .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
+                        .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
                                 .disabledReason("NoGroupsDisable")
                                 .build())
@@ -348,7 +349,7 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName("John")
                 .surname("Doe")
@@ -375,7 +376,7 @@ class ExternalUserPollingServiceTest {
 
         when(entraUserRepository.findByEntraOid("nonexistent123")).thenReturn(Optional.empty());
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("nonexistent123")
                 .givenName("John")
                 .surname("Doe")
@@ -424,7 +425,7 @@ class ExternalUserPollingServiceTest {
         when(entraUserRepository.findByEntraOid("user1")).thenReturn(Optional.of(user1));
         when(entraUserRepository.findByEntraOid("user2")).thenReturn(Optional.of(user2));
 
-        GetUsersResponse.TechServicesUser apiUser1 = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser1 = TechServicesUser.builder()
                 .id("user1")
                 .givenName("John")
                 .surname("Doe")
@@ -432,7 +433,7 @@ class ExternalUserPollingServiceTest {
                 .isMailOnly(true) // changed
                 .lastSignIn("2025-01-18T10:30:00Z")
                 .build();
-        GetUsersResponse.TechServicesUser apiUser2 = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser2 = TechServicesUser.builder()
                 .id("user2")
                 .givenName("Jane")
                 .surname("Smith")
@@ -485,7 +486,7 @@ class ExternalUserPollingServiceTest {
         
         when(entraUserRepository.findByEntraOid("deleted-user-with-profiles")).thenReturn(Optional.of(existingUser));
 
-        GetUsersResponse.TechServicesUser deletedUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser deletedUser = TechServicesUser.builder()
                 .id("deleted-user-with-profiles")
                 .givenName("Jane")
                 .surname("Smith")
@@ -520,7 +521,7 @@ class ExternalUserPollingServiceTest {
 
         when(entraUserRepository.findByEntraOid("nonexistent-deleted-user")).thenReturn(Optional.empty());
 
-        GetUsersResponse.TechServicesUser deletedUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser deletedUser = TechServicesUser.builder()
                 .id("nonexistent-deleted-user")
                 .givenName("Ghost")
                 .surname("User")
@@ -571,7 +572,7 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(entraUserRepository.findByEntraOid("user-to-delete")).thenReturn(Optional.of(userToDelete));
 
-        GetUsersResponse.TechServicesUser updateUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser updateUser = TechServicesUser.builder()
                 .id("user-to-update")
                 .givenName("John")
                 .surname("Doe")
@@ -580,7 +581,7 @@ class ExternalUserPollingServiceTest {
                 .deleted(false) // not deleted
                 .build();
 
-        GetUsersResponse.TechServicesUser deleteUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser deleteUser = TechServicesUser.builder()
                 .id("user-to-delete")
                 .givenName("Jane")
                 .surname("Smith")
@@ -675,7 +676,7 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName("John")
                 .surname("Doe")
@@ -718,7 +719,7 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(userAccountStatusAuditRepository.findByEntraUser(userToDelete)).thenReturn(List.of(auditRecord));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName("John")
                 .surname("Doe")
@@ -771,7 +772,7 @@ class ExternalUserPollingServiceTest {
     void shouldHandleNullEntraUserInDeleteUser() {
         when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("nonexistent123")
                 .givenName("John")
                 .surname("Doe")
@@ -809,7 +810,7 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName("NewFirstName")
                 .surname("NewLastName")
@@ -847,7 +848,7 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName(null)
                 .surname(null)
@@ -875,7 +876,7 @@ class ExternalUserPollingServiceTest {
 
         when(entraUserRepository.findByEntraOid("user123")).thenThrow(new RuntimeException("Database error"));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName("John")
                 .surname("Doe")
@@ -920,14 +921,14 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(disableUserReasonRepository.findAll()).thenReturn(List.of(inactivityReason));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName("John")
                 .surname("Doe")
                 .accountEnabled(true)
                 .isMailOnly(false)
-                .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
-                        .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
+                .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
+                        .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
                                 .disabledReason("NoGroupsDisable")
                                 .build())
@@ -961,14 +962,14 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName("John")
                 .surname("Doe")
                 .accountEnabled(true)
                 .isMailOnly(false)
-                .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
-                        .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
+                .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
+                        .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
                                 .disabledReason("NoGroupsDisable")
                                 .build())
@@ -1103,7 +1104,7 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(disabledUser));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName("John")
                 .surname("Doe")
@@ -1149,14 +1150,14 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(disableUserReasonRepository.findAll()).thenReturn(List.of(inactivityReason));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName("John")
                 .surname("Doe")
                 .accountEnabled(false) // Disabled in Entra
                 .isMailOnly(false)
-                .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
-                        .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
+                .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
+                        .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
                                 .disabledReason("NoGroupsDisable")
                                 .build())
@@ -1192,14 +1193,14 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(alreadyDisabledUser));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName("John")
                 .surname("Doe")
                 .accountEnabled(false)
                 .isMailOnly(false)
-                .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
-                        .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
+                .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
+                        .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
                                 .disabledReason("NoGroupsDisable")
                                 .build())
@@ -1236,14 +1237,14 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName("John")
                 .surname("Doe")
                 .accountEnabled(true)
                 .isMailOnly(false)
-                .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
-                        .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
+                .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
+                        .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
                                 .invitationProgress(InvitationStatus.INVITE_SENT)
                                 .build())
@@ -1282,14 +1283,14 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName("John")
                 .surname("Doe")
                 .accountEnabled(true)
                 .isMailOnly(false)
-                .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
-                        .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
+                .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
+                        .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
                                 .invitationProgress(InvitationStatus.AWAITING_MFA)
                                 .build())
@@ -1328,14 +1329,14 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName("John")
                 .surname("Doe")
                 .accountEnabled(true)
                 .isMailOnly(false)
-                .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
-                        .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
+                .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
+                        .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
                                 .invitationProgress(null)
                                 .build())
@@ -1374,14 +1375,14 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName("John")
                 .surname("Doe")
                 .accountEnabled(true)
                 .isMailOnly(false)
-                .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
-                        .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
+                .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
+                        .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
                                 .invitationProgress(InvitationStatus.AWAITING_VERIFICATION)
                                 .build())
