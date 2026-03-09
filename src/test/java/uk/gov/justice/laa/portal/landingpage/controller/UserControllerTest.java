@@ -6015,7 +6015,7 @@ class UserControllerTest {
         when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(returnedUser));
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
-        when(disableUserService.getDisableUserReasons(UserTypeReasonDisable.IS_USER_DISABLE)).thenReturn(List.of(reason));
+        when(disableUserService.getDisableUserReasons(UserTypeReasonDisable.DEFAULT)).thenReturn(List.of(reason));
 
         String view = userController.disableUserReasonsGet(userId.toString(), form, model, session, authentication, referer, profileId);
 
