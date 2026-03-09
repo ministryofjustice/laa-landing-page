@@ -10,6 +10,26 @@
 
 <body>
     <main class="govuk-main-wrapper" id="main-content">
+        <!-- Activation Toast -->
+        <div th:if="${userHasNoRoles}"
+             id="account-activation-toast"
+             class="govuk-notification-banner govuk-notification-banner--success"
+             role="alert" aria-live="polite"
+             aria-labelledby="account-activation-toast-title"
+             data-module="govuk-notification-banner">
+
+            <div class="govuk-notification-banner__header">
+                <h2 class="govuk-notification-banner__title" id="account-activation-toast-title">
+                    Success
+                </h2>
+            </div>
+
+            <div class="govuk-notification-banner__content">
+                <p class="govuk-notification-banner__heading">
+                    You have successfully activated your account.
+                </p>
+            </div>
+        </div>
         <!-- Success banner for firm switch -->
         <div th:if="${messageType == 'success' and activeFirm != null}" id="firm-switch-success-banner"
             class="govuk-notification-banner govuk-notification-banner--success" role="alert"
@@ -89,17 +109,50 @@
                     </div>
                 </div>
 
+                <script th:inline="javascript">
+                    document.addEventListener('DOMContentLoaded', function () {
+                        const userHasNoRoles = /*[[${userHasNoRoles}]]*/ false;
+                        const toastElement = document.getElementById('account-activation-toast');
+                        if (toastElement && userHasNoRoles) {
+                            toastElement.removeAttribute('hidden');
+                        }
+                    });
+                </script>
+
                 <h2 class="govuk-heading-l">Legal aid services</h2>
 
                 <div th:if="${userHasNoRoles}" class="govuk-grid-row">
                     <div class="govuk-grid-column-full">
                         <div class="govuk-inset-text">
-                            <p>Your account has been activated.</p>
-                            <p th:if="${isInternalUser}">You cannot currently access any services. Contact
-                                the
-                                MOJ Service Desk to request access.</p>
-                            <p th:unless="${isInternalUser}">You cannot currently access any services. Contact your
-                                Provider Admin to request access.</p>
+                            <div th:if="${isInternalUser}">
+                                <p>Your account has been activated.</p>
+                                <p>You cannot currently access any services. Contact the MOJ Service Desk to request</p>
+                                     access.
+                            </div>
+                            <div th:if="${!isInternalUser && isProviderAdmin}">
+                                <p>You don’t currently have access to any Legal Aid services. If you need access, you
+                                    can add new services and roles for yourself using the Manage Your Users admin service.
+                                </p>
+                                <p>
+                                    For more guidance or support,
+                                    <a href="https://legalaidlearning.justice.gov.uk/online-support-2/" class="govuk-link" target="_blank" rel="noopener noreferrer">
+                                        contact the LAA Online Support Team (opens in a new tab).
+                                    </a>
+                                </p>
+                            </div>
+
+                            <div th:if="${!isInternalUser && !isProviderAdmin}">
+                                <p>Your firm admin is working on giving you access to the services you need. There’s
+                                    nothing else you need to do.
+                                </p>
+                                <p>If you still don’t have access after 2 working days, reach out to your firm admin.
+                                    You may know them as your LAA liaison. Alternatively, for more guidance or support,
+                                    <a href="https://legalaidlearning.justice.gov.uk/online-support-2/" class="govuk-link" target="_blank" rel="noopener noreferrer">
+                                        contact the LAA Online Support Team (opens in a new tab).
+                                    </a>
+                                </p>
+                            </div>
+
                         </div>
                     </div>
                 </div>
