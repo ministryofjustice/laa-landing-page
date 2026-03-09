@@ -54,9 +54,6 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 
-import com.microsoft.graph.core.content.BatchRequestContent;
-import com.microsoft.graph.core.content.BatchResponseContent;
-import com.microsoft.graph.core.requests.BatchRequestBuilder;
 import com.microsoft.graph.models.DirectoryObject;
 import com.microsoft.graph.models.DirectoryObjectCollectionResponse;
 import com.microsoft.graph.models.DirectoryRole;
@@ -66,13 +63,10 @@ import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.microsoft.graph.users.UsersRequestBuilder;
 import com.microsoft.graph.users.item.UserItemRequestBuilder;
 import com.microsoft.graph.users.item.memberof.MemberOfRequestBuilder;
-import com.microsoft.kiota.RequestAdapter;
-import com.microsoft.kiota.RequestInformation;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
-import okhttp3.Request;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -82,6 +76,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
+import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserInfoAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserFirmReassignmentEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
@@ -90,6 +85,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.EventType;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
@@ -112,6 +108,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditAccountStatusProjection;
+import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
@@ -1911,23 +1908,54 @@ class UserServiceTest {
             UUID userId = UUID.randomUUID();
             String firstName = "John";
             String lastName = "Doe";
+            String email = "email@example.com";
 
             EntraUser entraUser = EntraUser.builder()
                     .id(userId)
-                    .firstName("OldFirst")
-                    .lastName("OldLast")
-                    .email("old@example.com")
+                    .entraOid(String.valueOf(userId))
+                    .firstName(firstName)
+                    .lastName(lastName)
+                    .email(email)
                     .build();
+
             when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
             when(mockEntraUserRepository.saveAndFlush(any())).thenReturn(entraUser);
+            TechServicesApiResponse<ChangeAccountEnabledResponse> response = TechServicesApiResponse
+                    .success(ChangeAccountEnabledResponse.builder().success(true).build());
+            when(techServicesClient.updateUserDetails(any(), any(), any(), any()))
+                    .thenReturn(TechServicesApiResponse
+                            .success(ChangeAccountEnabledResponse.builder().success(true).build()));
 
+            UUID userProfileId = UUID.randomUUID();
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .entraUser(EntraUser.builder()
+                            .id(userProfileId)
+                            .entraOid(String.valueOf(userProfileId))
+                            .build())
+                    .build();
             // Act
-            userService.updateUserDetails(userId.toString(), firstName, lastName);
+            userService.updateUserDetails(userId.toString(), email, firstName, lastName, userProfile);
 
             // Assert
-            assertThat(entraUser.getFirstName()).isEqualTo(firstName);
-            assertThat(entraUser.getLastName()).isEqualTo(lastName);
-            verify(mockEntraUserRepository).saveAndFlush(entraUser);
+            ArgumentCaptor<EntraUser> captor = ArgumentCaptor.forClass(EntraUser.class);
+            verify(mockEntraUserRepository).saveAndFlush(captor.capture());
+
+            EntraUser saved = captor.getValue();
+            assertThat(saved).usingRecursiveComparison().isEqualTo(EntraUser.builder()
+                    .id(userId)
+                    .entraOid(String.valueOf(userId))
+                    .firstName(firstName)
+                    .lastName(lastName)
+                    .email(email)
+                    .build());
+            ArgumentCaptor<UpdateUserInfoAuditEvent> captorUpdateUserInfoAuditEvent = ArgumentCaptor.forClass(UpdateUserInfoAuditEvent.class);
+            verify(mockEventService).logEvent(captorUpdateUserInfoAuditEvent.capture());
+            UpdateUserInfoAuditEvent updateUserAuditEvent = captorUpdateUserInfoAuditEvent.getValue();
+            assertThat(updateUserAuditEvent.getDescription()).isEqualTo(String.format("""
+                    User details updated for existing user entra oid: %s by user entra oid: %s profile id: %s
+                    """, userId, userProfileId, userProfileId));
+            assertThat(updateUserAuditEvent.getEventType()).isEqualTo(EventType.UPDATE_USER);
         }
 
         @Test
@@ -1937,11 +1965,40 @@ class UserServiceTest {
             EntraUser entraUser = EntraUser.builder().id(userId).build();
             when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
             when(mockEntraUserRepository.saveAndFlush(any())).thenThrow(new RuntimeException("DB error"));
-
+            when(techServicesClient.updateUserDetails(any(), any(), any(), any()))
+                    .thenReturn(TechServicesApiResponse
+                            .success(ChangeAccountEnabledResponse.builder().success(true).build()));
+            UserProfile userProfile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .build();
             // Act & Assert
             IOException exception = Assertions.assertThrows(IOException.class,
-                    () -> userService.updateUserDetails(userId.toString(), "John", "Doe"));
+                    () -> userService.updateUserDetails(userId.toString(), "email@email.com", "Jonh", "Doe", userProfile));
             assertThat(exception.getMessage()).contains("Failed to update user details in database");
+        }
+
+        @Test
+        void updateUserDetails_throwsIoException_whenTechServiceFails() {
+            // Arrange
+            UUID userId = UUID.randomUUID();
+            EntraUser entraUser = EntraUser.builder().id(userId).build();
+            when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
+            when(techServicesClient.updateUserDetails(any(), any(), any(), any()))
+                    .thenReturn(TechServicesApiResponse
+                            .error(TechServicesErrorResponse.builder()
+                                    .success(false)
+                                    .message("tech Service error")
+                                    .code("400")
+                                    .build()));
+            UserProfile userProfile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .build();
+            // Act & Assert
+            IOException exception = Assertions.assertThrows(IOException.class,
+                    () -> userService.updateUserDetails(userId.toString(), "email@email.com", "Jonh", "Doe", userProfile));
+            assertThat(exception.getMessage()).contains("Failed to update user details in database");
+            assertThat(exception.getCause().getMessage()).contains("Tech Services API call failed: TechServicesErrorResponse(success=false, code=400, message=tech Service error, errors=null)");
+
         }
 
         @Test
@@ -1951,12 +2008,14 @@ class UserServiceTest {
             when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.empty());
 
             ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
-
+            UserProfile userProfile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .build();
             // Act
-            userService.updateUserDetails(userId.toString(), "John", "Doe");
+            userService.updateUserDetails(userId.toString(), "email@email.com", "John", "Doe", userProfile);
 
             // Assert
-            List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
+            List<ILoggingEvent> warningLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
             assertThat(warningLogs).isNotEmpty();
             assertThat(warningLogs.getFirst().getFormattedMessage())
                     .contains("User with id " + userId + " not found in database");
@@ -1966,12 +2025,30 @@ class UserServiceTest {
         void updateUserDetails_handlesRepositoryException_gracefully() throws IOException {
             // Arrange
             UUID userId = UUID.randomUUID();
-            EntraUser entraUser = EntraUser.builder().id(userId).build();
+            String mail = "email@email.com";
+            String firstName = "John";
+            String lastName = "Doe";
+            EntraUser entraUser = EntraUser.builder()
+                    .id(userId)
+                    .entraOid(String.valueOf(userId))
+                    .email(mail)
+                    .firstName(firstName)
+                    .lastName(lastName)
+                    .build();
             when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
             when(mockEntraUserRepository.saveAndFlush(any())).thenReturn(entraUser);
-
+            TechServicesApiResponse<ChangeAccountEnabledResponse> response = TechServicesApiResponse
+                    .success(ChangeAccountEnabledResponse.builder().success(true).build());
+            when(techServicesClient.updateUserDetails(anyString(), anyString(), anyString(), anyString()))
+                    .thenReturn(response);
+            UserProfile userProfile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(EntraUser.builder()
+                            .id(UUID.randomUUID())
+                            .build())
+                    .build();
             // Act - should not throw exception
-            userService.updateUserDetails(userId.toString(), "John", "Doe");
+            userService.updateUserDetails(userId.toString(), mail, firstName, lastName, userProfile);
 
             // Assert - database update should occur
             verify(mockEntraUserRepository).saveAndFlush(entraUser);

@@ -77,6 +77,8 @@ public abstract class BaseIntegrationTest extends BaseRepositoryTest {
 
     protected EntraUser defaultLoggedInUser;
 
+    protected EntraUser silasAdminUser;
+
     @AfterAll
     protected void baseAfterAll() {
         userProfileRepository.deleteAll();
@@ -88,6 +90,7 @@ public abstract class BaseIntegrationTest extends BaseRepositoryTest {
     @BeforeAll
     public void beforeAll() {
         defaultLoggedInUser = buildGlobalAdmin();
+        silasAdminUser = buildSilasAdmin();
     }
 
     protected final ObjectMapper mapper = new ObjectMapper().findAndRegisterModules().configure(
@@ -178,8 +181,17 @@ public abstract class BaseIntegrationTest extends BaseRepositoryTest {
 
     public EntraUser buildGlobalAdmin() {
         EntraUser loggedInUser = buildEntraUser(generateEntraId(), "test@test.com", "Test", "User");
-        UserProfile profile = buildLaaUserProfile(loggedInUser, UserType.INTERNAL, true);
+        UserProfile profile = buildLaaUserProfile(loggedInUser, UserType.INTERNAL, true, "Global Admin");
         loggedInUser.setUserProfiles(Set.of(profile));
         return entraUserRepository.saveAndFlush(loggedInUser);
     }
+
+    public EntraUser buildSilasAdmin() {
+        EntraUser loggedInUser = buildEntraUser(generateEntraId(), "silas-admin@test.com", "SiLAS", "Admin");
+        UserProfile profile = buildLaaUserProfile(loggedInUser, UserType.INTERNAL, true, "SILAS System Administration");
+        loggedInUser.setUserProfiles(Set.of(profile));
+        return entraUserRepository.saveAndFlush(loggedInUser);
+    }
+
+
 }
