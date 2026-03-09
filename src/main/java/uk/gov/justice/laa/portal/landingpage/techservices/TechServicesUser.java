@@ -95,8 +95,11 @@ public class TechServicesUser implements Serializable {
         @JsonProperty("DisabledReason")
         private String disabledReason;
 
-        @JsonProperty("InvitationStatus")
-        private InvitationStatus invitationStatus;
+        @JsonProperty("InvitationProgress")
+        private InvitationStatus invitationProgress;
+
+        @JsonProperty("ActivationCode")
+        private String activationCode;
     }
 }
 

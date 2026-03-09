@@ -193,8 +193,8 @@
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Invitation State</dt>
-                                        <dd class="govuk-summary-list__value" th:if="${entraUser == null || entraUser.customSecurityAttributes == null || entraUser.customSecurityAttributes.guestUserStatus == null}">Unknown</dd>
-                                        <dd class="govuk-summary-list__value" th:if="${entraUser != null && entraUser.customSecurityAttributes != null && entraUser.customSecurityAttributes.guestUserStatus != null}" th:text="${entraUser.customSecurityAttributes.guestUserStatus.invitationStatus}"></dd>
+                                        <dd class="govuk-summary-list__value" th:if="${entraUser == null || entraUser.customSecurityAttributes == null || entraUser.customSecurityAttributes.guestUserStatus == null || entraUser.customSecurityAttributes.guestUserStatus.invitationProgress == null}">Unknown</dd>
+                                        <dd class="govuk-summary-list__value" th:if="${entraUser != null && entraUser.customSecurityAttributes != null && entraUser.customSecurityAttributes.guestUserStatus != null}" th:text="${entraUser.customSecurityAttributes.guestUserStatus.invitationProgress}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Object ID</dt>
