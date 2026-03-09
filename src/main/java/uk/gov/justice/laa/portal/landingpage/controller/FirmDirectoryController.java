@@ -175,8 +175,9 @@ public class FirmDirectoryController {
                                          HttpSession session,
                                          Authentication authentication)  {
         Model modelFromSession = getObjectFromHttpSession(session, "disableUserReasonModel", Model.class).orElseThrow();
-        //save the user information
+
         UUID disabledByUserId = loginService.getCurrentEntraUser(authentication).getId();
+
         UUID disabledReasonId = UUID.fromString((String) modelFromSession.getAttribute("reasonIdSelected"));
         try {
             userAccountStatusService.disableUserAllUserByFirmId(id, disabledReasonId, disabledByUserId);
