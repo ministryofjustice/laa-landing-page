@@ -6,6 +6,7 @@ public enum InvitationStatus {
     INVITE_SENT("InviteSent"),
     AWAITING_MFA("AwaitingMFA"),
     AWAITING_VERIFICATION("AwaitingVerification"),
+    VERIFICATION_SUCCESS("VerificationSuccess"),
     VERIFICATION_FAILED("VerificationFailed");
 
     private final String value;

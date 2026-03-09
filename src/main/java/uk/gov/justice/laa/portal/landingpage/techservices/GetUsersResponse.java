@@ -93,8 +93,11 @@ public class GetUsersResponse implements Serializable {
         
         @JsonProperty("DisabledReason")
         private String disabledReason;
+
+        @JsonProperty("InvitationProgress")
+        private InvitationStatus invitationProgress;
         
-        @JsonProperty("InvitationStatus")
-        private InvitationStatus invitationStatus;
+        @JsonProperty("ActivationCode")
+        private String activationCode;
     }
 }
