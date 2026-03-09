@@ -1245,7 +1245,7 @@ class ExternalUserPollingServiceTest {
                 .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
                         .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
-                                .invitationStatus(InvitationStatus.INVITE_SENT)
+                                .invitationProgress(InvitationStatus.INVITE_SENT)
                                 .build())
                         .build())
                 .build();
@@ -1291,7 +1291,7 @@ class ExternalUserPollingServiceTest {
                 .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
                         .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
-                                .invitationStatus(InvitationStatus.AWAITING_MFA)
+                                .invitationProgress(InvitationStatus.AWAITING_MFA)
                                 .build())
                         .build())
                 .build();
@@ -1337,7 +1337,7 @@ class ExternalUserPollingServiceTest {
                 .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
                         .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
-                                .invitationStatus(null)
+                                .invitationProgress(null)
                                 .build())
                         .build())
                 .build();
@@ -1383,7 +1383,7 @@ class ExternalUserPollingServiceTest {
                 .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
                         .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
-                                .invitationStatus(InvitationStatus.AWAITING_VERIFICATION)
+                                .invitationProgress(InvitationStatus.AWAITING_VERIFICATION)
                                 .build())
                         .build())
                 .build();
