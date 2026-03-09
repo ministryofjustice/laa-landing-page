@@ -1237,14 +1237,14 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName("John")
                 .surname("Doe")
                 .accountEnabled(true)
                 .isMailOnly(false)
-                .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
-                        .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
+                .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
+                        .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
                                 .invitationProgress(InvitationStatus.INVITE_SENT)
                                 .build())
@@ -1283,14 +1283,14 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName("John")
                 .surname("Doe")
                 .accountEnabled(true)
                 .isMailOnly(false)
-                .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
-                        .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
+                .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
+                        .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
                                 .invitationProgress(InvitationStatus.AWAITING_MFA)
                                 .build())
@@ -1329,14 +1329,14 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName("John")
                 .surname("Doe")
                 .accountEnabled(true)
                 .isMailOnly(false)
-                .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
-                        .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
+                .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
+                        .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
                                 .invitationProgress(null)
                                 .build())
@@ -1375,14 +1375,14 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName("John")
                 .surname("Doe")
                 .accountEnabled(true)
                 .isMailOnly(false)
-                .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
-                        .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
+                .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
+                        .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
                                 .invitationProgress(InvitationStatus.AWAITING_VERIFICATION)
                                 .build())

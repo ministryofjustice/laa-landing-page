@@ -174,7 +174,7 @@ public class ExternalUserPollingService {
                 updatedCount);
     }
 
-    private void updateAccountActivationStatus(GetUsersResponse.TechServicesUser user, EntraUser entraUser) {
+    private void updateAccountActivationStatus(TechServicesUser user, EntraUser entraUser) {
         boolean hasInvitationStatus = user.getCustomSecurityAttributes() != null
                 && user.getCustomSecurityAttributes().getGuestUserStatus() != null
                 && user.getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress() != null;
