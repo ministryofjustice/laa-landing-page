@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -92,8 +93,11 @@ public class GetUsersResponse implements Serializable {
         
         @JsonProperty("DisabledReason")
         private String disabledReason;
-        
+
         @JsonProperty("InvitationProgress")
-        private String invitationProgress;
+        private InvitationStatus invitationProgress;
+        
+        @JsonProperty("ActivationCode")
+        private String activationCode;
     }
 }

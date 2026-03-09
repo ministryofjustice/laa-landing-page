@@ -10,6 +10,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraLastSyncMetadata;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.repository.DisableUserReasonRepository;
@@ -1216,6 +1217,190 @@ class ExternalUserPollingServiceTest {
 
         verify(entraUserRepository).save(alreadyDisabledUser);
         verify(userAccountStatusAuditRepository, never()).save(any(UserAccountStatusAudit.class));
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldUpdateInvitationStatus_whenApiReturnsInvitationStatus() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        EntraUser existingUser = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user123")
+                .firstName("John")
+                .lastName("Doe")
+                .email("user@example.com")
+                .enabled(true)
+                .mailOnly(false)
+                .invitationStatus(null)
+                .build();
+        when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
+
+        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+                .id("user123")
+                .givenName("John")
+                .surname("Doe")
+                .accountEnabled(true)
+                .isMailOnly(false)
+                .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
+                        .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
+                                .odataType("#microsoft.graph.customSecurityAttributeValue")
+                                .invitationProgress(InvitationStatus.INVITE_SENT)
+                                .build())
+                        .build())
+                .build();
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
+        verify(entraUserRepository).save(userCaptor.capture());
+        EntraUser savedUser = userCaptor.getValue();
+        assertThat(savedUser.getInvitationStatus()).isEqualTo(InvitationStatus.INVITE_SENT);
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldUpdateInvitationStatus_whenStatusChanges() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        EntraUser existingUser = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user123")
+                .firstName("John")
+                .lastName("Doe")
+                .email("user@example.com")
+                .enabled(true)
+                .mailOnly(false)
+                .invitationStatus(InvitationStatus.INVITE_SENT)
+                .build();
+        when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
+
+        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+                .id("user123")
+                .givenName("John")
+                .surname("Doe")
+                .accountEnabled(true)
+                .isMailOnly(false)
+                .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
+                        .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
+                                .odataType("#microsoft.graph.customSecurityAttributeValue")
+                                .invitationProgress(InvitationStatus.AWAITING_MFA)
+                                .build())
+                        .build())
+                .build();
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
+        verify(entraUserRepository).save(userCaptor.capture());
+        EntraUser savedUser = userCaptor.getValue();
+        assertThat(savedUser.getInvitationStatus()).isEqualTo(InvitationStatus.AWAITING_MFA);
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldHandleNullInvitationStatus_gracefully() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        EntraUser existingUser = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user123")
+                .firstName("John")
+                .lastName("Doe")
+                .email("user@example.com")
+                .enabled(true)
+                .mailOnly(false)
+                .invitationStatus(InvitationStatus.INVITE_SENT)
+                .build();
+        when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
+
+        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+                .id("user123")
+                .givenName("John")
+                .surname("Doe")
+                .accountEnabled(true)
+                .isMailOnly(false)
+                .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
+                        .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
+                                .odataType("#microsoft.graph.customSecurityAttributeValue")
+                                .invitationProgress(null)
+                                .build())
+                        .build())
+                .build();
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
+        verify(entraUserRepository).save(userCaptor.capture());
+        EntraUser savedUser = userCaptor.getValue();
+        assertThat(savedUser.getInvitationStatus()).isEqualTo(InvitationStatus.INVITE_SENT);
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldNotUpdateInvitationStatus_whenStatusIsSame() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        EntraUser existingUser = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user123")
+                .firstName("John")
+                .lastName("Doe")
+                .email("user@example.com")
+                .enabled(true)
+                .mailOnly(false)
+                .invitationStatus(InvitationStatus.AWAITING_VERIFICATION)
+                .build();
+        when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
+
+        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+                .id("user123")
+                .givenName("John")
+                .surname("Doe")
+                .accountEnabled(true)
+                .isMailOnly(false)
+                .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
+                        .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
+                                .odataType("#microsoft.graph.customSecurityAttributeValue")
+                                .invitationProgress(InvitationStatus.AWAITING_VERIFICATION)
+                                .build())
+                        .build())
+                .build();
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
+        verify(entraUserRepository).save(userCaptor.capture());
+        EntraUser savedUser = userCaptor.getValue();
+        assertThat(savedUser.getInvitationStatus()).isEqualTo(InvitationStatus.AWAITING_VERIFICATION);
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
 }

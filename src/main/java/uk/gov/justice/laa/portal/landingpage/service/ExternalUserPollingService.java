@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraLastSyncMetadata;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
@@ -24,6 +25,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -138,6 +140,8 @@ public class ExternalUserPollingService {
                         disableUserWithReason(user, entraUser);
                     }
 
+                    updateAccountActivationStatus(user, entraUser);
+
                     if (user.getGivenName() != null && !user.getGivenName().equals(entraUser.getFirstName())) {
                         entraUser.setFirstName(user.getGivenName());
                     }
@@ -167,6 +171,22 @@ public class ExternalUserPollingService {
         
         log.info("User synchronization completed: {} users updated",
                 updatedCount);
+    }
+
+    private void updateAccountActivationStatus(GetUsersResponse.TechServicesUser user, EntraUser entraUser) {
+        boolean hasInvitationStatus = user.getCustomSecurityAttributes() != null
+                && user.getCustomSecurityAttributes().getGuestUserStatus() != null
+                && user.getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress() != null;
+
+        if (hasInvitationStatus) {
+            InvitationStatus invitationStatus = user.getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress();
+            boolean shouldUpdateActivationStatus = !Objects.equals(entraUser.getInvitationStatus(), invitationStatus);
+
+            if (shouldUpdateActivationStatus) {
+                entraUser.setInvitationStatus(invitationStatus);
+                log.info("Updated invitation status for user {} to: {}", entraUser.getEntraOid(), invitationStatus);
+            }
+        }
     }
 
     private void deleteUser(EntraUser entraUser) {
