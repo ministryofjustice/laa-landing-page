@@ -805,14 +805,14 @@ public class UserAccountStatusServiceTest {
     class HasActiveUserByFirmIdTest {
 
         @Test
-        void shouldReturnTrueWhenIsWithoutAnyActiveUserByFirmId(){
+        void shouldReturnTrueWhenIsWithoutAnyActiveUserByFirmId() {
             UUID firmId = UUID.randomUUID();
             boolean result = userAccountStatusService.hasActiveUserByFirmId(String.valueOf(firmId));
             assertThat(result).isFalse();
         }
 
         @Test
-        void shouldReturnTrueWhenHasActiveUserByFirmId(){
+        void shouldReturnTrueWhenHasActiveUserByFirmId() {
             UUID firmId = UUID.randomUUID();
             List<UserProfile> userProfiles = List.of(
                     UserProfile.builder()

@@ -326,7 +326,6 @@ class FirmDirectoryControllerTest {
         UUID id = UUID.randomUUID();
 
         FirmDto firm = FirmDto.builder().id(id).code("A123").name("TestName").build();
-        DisableUserReasonForm disableUserReasonForm = new DisableUserReasonForm();
         List<DisableUserReasonDto> reasonDtos = getDisableUserReasonDtos();
 
         MockHttpSession httpSession = new MockHttpSession();
@@ -336,7 +335,7 @@ class FirmDirectoryControllerTest {
 
         when(firmService.getFirm(String.valueOf(id))).thenReturn(firm);
         when(userAccountStatusService.getDisableUserReasons(UserTypeReasonDisable.BULK_DISABLE)).thenReturn(reasonDtos);
-
+        DisableUserReasonForm disableUserReasonForm = new DisableUserReasonForm();
         String result = firmDirectoryController.reasonForDisableGet(String.valueOf(id), disableUserReasonForm, model, httpSession, authentication);
 
         assertThat(result).isEqualTo("firm-directory/bulk-disable-user-reason");
@@ -347,8 +346,6 @@ class FirmDirectoryControllerTest {
 
     @Test
     void postReasonForDisableFromSessionInformationWithErrors() {
-        UUID id = UUID.randomUUID();
-
         List<DisableUserReasonDto> reasonDtos = getDisableUserReasonDtos();
 
         MockHttpSession httpSession = new MockHttpSession();
@@ -361,6 +358,7 @@ class FirmDirectoryControllerTest {
 
         DisableUserReasonForm disableUserReasonForm = new DisableUserReasonForm();
         disableUserReasonForm.setReasonId(String.valueOf(reasonDtos.get(0).getId()));
+        UUID id = UUID.randomUUID();
         String result = firmDirectoryController.reasonForDisablePost(String.valueOf(id), disableUserReasonForm, bindingResult, authentication, model, httpSession);
 
         assertThat(result).isEqualTo("firm-directory/bulk-disable-user-reason");
@@ -372,8 +370,6 @@ class FirmDirectoryControllerTest {
 
     @Test
     void postReasonForDisableFromSessionInformationWithNoErrors() {
-        UUID id = UUID.randomUUID();
-
         List<DisableUserReasonDto> reasonDtos = getDisableUserReasonDtos();
 
         MockHttpSession httpSession = new MockHttpSession();
@@ -387,6 +383,7 @@ class FirmDirectoryControllerTest {
         Map<String, Long> totals = new HashMap<>();
         totals.put("totalOfSingleFirm", 1L);
         totals.put("totalOfMultiFirm", 1L);
+        UUID id = UUID.randomUUID();
         when(userAccountStatusService.getUserCountsForFirm(String.valueOf(id))).thenReturn(totals);
         DisableUserReasonForm disableUserReasonForm = new DisableUserReasonForm();
         disableUserReasonForm.setReasonId(String.valueOf(reasonDtos.get(0).getId()));
