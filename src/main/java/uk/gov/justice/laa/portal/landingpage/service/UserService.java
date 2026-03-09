@@ -740,7 +740,7 @@ public class UserService {
             logger.error("User with entra oid: {} is not a multi-firm user, firm selection can not be skipped",
                     entraUser.getEntraOid());
             throw new RuntimeException(String.format(
-                    "User with entra id: %s is not a multi-firm user, firm selection can not be skipped",
+                    "User with entra oid: %s is not a multi-firm user, firm selection can not be skipped",
                     entraUser.getEntraOid()));
         }
 

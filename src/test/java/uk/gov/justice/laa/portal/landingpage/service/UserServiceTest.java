@@ -2898,7 +2898,7 @@ class UserServiceTest {
                     () -> userService.createUser(entraUserDto, firm, true, "admin", false),
                     "Expected Runtime Exception");
             assertThat(rtEx.getMessage())
-                    .isEqualTo("User with entra id: id is not a multi-firm user, firm selection can not be skipped");
+                    .isEqualTo("User with entra oid: id is not a multi-firm user, firm selection can not be skipped");
             verify(mockEntraUserRepository, never()).saveAndFlush(any());
             verify(techServicesClient, times(1)).registerNewUser(any(EntraUserDto.class));
         }
