@@ -176,10 +176,10 @@ public class ExternalUserPollingService {
     private void updateAccountActivationStatus(GetUsersResponse.TechServicesUser user, EntraUser entraUser) {
         boolean hasInvitationStatus = user.getCustomSecurityAttributes() != null
                 && user.getCustomSecurityAttributes().getGuestUserStatus() != null
-                && user.getCustomSecurityAttributes().getGuestUserStatus().getInvitationStatus() != null;
+                && user.getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress() != null;
 
         if (hasInvitationStatus) {
-            InvitationStatus invitationStatus = user.getCustomSecurityAttributes().getGuestUserStatus().getInvitationStatus();
+            InvitationStatus invitationStatus = user.getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress();
             boolean shouldUpdateActivationStatus = !Objects.equals(entraUser.getInvitationStatus(), invitationStatus);
 
             if (shouldUpdateActivationStatus) {
