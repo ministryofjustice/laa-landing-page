@@ -131,7 +131,7 @@ public class FirmDirectoryController {
                                       Authentication authentication) {
         Optional<Model> modelFromSession = getObjectFromHttpSession(session, "disableUserReasonModel", Model.class);
         modelFromSession.ifPresent(value -> model.addAttribute("reasonIdSelected",
-                UUID.fromString((String) value.getAttribute("reasonIdSelected"))));
+                value.getAttribute("reasonIdSelected")));
 
         FirmDto firm =  firmService.getFirm(id);
         List<DisableUserReasonViewModel> reasons = new ArrayList<>(userAccountStatusService.getDisableUserReasons(UserTypeReasonDisable.BULK_DISABLE).stream()
