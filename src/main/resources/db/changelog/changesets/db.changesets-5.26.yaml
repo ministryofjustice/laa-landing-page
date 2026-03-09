@@ -1,0 +1,26 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-additional-silas-system-admin-v1-20260225
+      author: suresh.kavali
+
+      changes:
+
+        - sql:
+            splitStatements: true
+            sql: |
+              INSERT INTO role_permission (app_role_id, permission)
+              VALUES (
+                  (SELECT id FROM app_role WHERE name = 'SILAS System Administration'),
+                  'DELETE_LAA_APP_ROLE'
+              );
+
+      rollback:
+
+        - sql:
+            sql: |
+              DELETE FROM role_permission
+              WHERE permission IN ('DELETE_LAA_APP_ROLE')
+                AND app_role_id = (
+                    SELECT id FROM app_role 
+                    WHERE name = 'SILAS System Administration'
+                );

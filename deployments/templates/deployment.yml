@@ -80,60 +80,8 @@ spec:
               value: "${TEST_DATA_NON_ADMIN_PRINCIPALS}"
             - name: TEST_DATA_INTERNAL_PRINCIPALS
               value: "${TEST_DATA_INTERNAL_PRINCIPALS}"
-            - name: APP_CIVIL_APPLY_NAME
-              value: "${APP_CIVIL_APPLY_NAME}"
-            - name: APP_CIVIL_APPLY_DETAILS
-              value: "${APP_CIVIL_APPLY_DETAILS}"
-            - name: APP_CIVIL_APPLY_URL
-              value: "${APP_CIVIL_APPLY_URL}"
-            - name: APP_CRIME_APPLY_NAME
-              value: "${APP_CRIME_APPLY_NAME}"
-            - name: APP_CRIME_APPLY_DETAILS
-              value: "${APP_CRIME_APPLY_DETAILS}"
-            - name: APP_CRIME_APPLY_URL
-              value: "${APP_CRIME_APPLY_URL}"
-            - name: APP_PUI_NAME
-              value: "${APP_PUI_NAME}"
-            - name: APP_PUI_DETAILS
-              value: "${APP_PUI_DETAILS}"
             - name: APP_PUI_URL
               value: "${APP_PUI_URL}"
-            - name: APP_SUBMIT_CRIME_FORM_NAME
-              value: "${APP_SUBMIT_CRIME_FORM_NAME}"
-            - name: APP_SUBMIT_CRIME_FORM_DETAILS
-              value: "${APP_SUBMIT_CRIME_FORM_DETAILS}"
-            - name: APP_SUBMIT_CRIME_FORM_URL
-              value: "${APP_SUBMIT_CRIME_FORM_URL}"
-            - name: APP_CCMS_ACCOUNT_LINK_NAME
-              value: "${APP_CCMS_ACCOUNT_LINK_NAME}"
-            - name: APP_CCMS_ACCOUNT_LINK_DETAILS
-              value: "${APP_CCMS_ACCOUNT_LINK_DETAILS}"
-            - name: APP_CCMS_ACCOUNT_LINK_URL
-              value: "${APP_CCMS_ACCOUNT_LINK_URL}"
-            - name: APP_SUBMIT_A_BULK_CLAIM_NAME
-              value: "${APP_SUBMIT_A_BULK_CLAIM_NAME}"
-            - name: APP_SUBMIT_A_BULK_CLAIM_DETAILS
-              value: "${APP_SUBMIT_A_BULK_CLAIM_DETAILS}"
-            - name: APP_SUBMIT_A_BULK_CLAIM_URL
-              value: "${APP_SUBMIT_A_BULK_CLAIM_URL}"
-            - name: APP_AMEND_A_CLAIM_NAME
-              value: "${APP_AMEND_A_CLAIM_NAME}"
-            - name: APP_AMEND_A_CLAIM_DETAILS
-              value: "${APP_AMEND_A_CLAIM_DETAILS}"
-            - name: APP_AMEND_A_CLAIM_URL
-              value: "${APP_AMEND_A_CLAIM_URL}"
-            - name: APP_CIVIL_DECIDE_NAME
-              value: "${APP_CIVIL_DECIDE_NAME}"
-            - name: APP_CIVIL_DECIDE_DETAILS
-              value: "${APP_CIVIL_DECIDE_DETAILS}"
-            - name: APP_CIVIL_DECIDE_URL
-              value: "${APP_CIVIL_DECIDE_URL}"
-            - name: APP_CIVIL_CLAIM_FOR_PAYMENT_NAME
-              value: "${APP_CIVIL_CLAIM_FOR_PAYMENT_NAME}"
-            - name: APP_CIVIL_CLAIM_FOR_PAYMENT_DETAILS
-              value: "${APP_CIVIL_CLAIM_FOR_PAYMENT_DETAILS}"
-            - name: APP_CIVIL_CLAIM_FOR_PAYMENT_URL
-              value: "${APP_CIVIL_CLAIM_FOR_PAYMENT_URL}"
             - name: TECH_SERVICES_LAA_BUSINESS_UNIT
               value: "${TECH_SERVICES_LAA_BUSINESS_UNIT}"
             - name: TECH_SERVICES_AZURE_SCOPE
@@ -232,6 +180,16 @@ spec:
               value: "${TECH_SERVICES_REQ_READ_TIMEOUT}"
             - name: TECH_SERVICES_REQ_CONNECT_TIMEOUT
               value: "${TECH_SERVICES_REQ_CONNECT_TIMEOUT}"
+            - name: PDA_SYNC_SCHEDULER_ENABLED
+              value: "${PDA_SYNC_SCHEDULER_ENABLED}"
+            - name: PDA_SYNC_SCHEDULER_CRON
+              value: "${PDA_SYNC_SCHEDULER_CRON}"
+            - name: PDA_SYNC_SCHEDULER_RUN_ON_STARTUP
+              value: "${PDA_SYNC_SCHEDULER_RUN_ON_STARTUP}"
+            - name: APP_DATA_PROVIDER_BASE_URL
+              value: "${APP_DATA_PROVIDER_BASE_URL}"
+            - name: APP_DATA_PROVIDER_API_KEY
+              value: "${APP_DATA_PROVIDER_API_KEY}"
             - name: SENTRY_ENVIRONMENT
               value: "${SENTRY_ENVIRONMENT}"
             - name: SENTRY_ENABLED
@@ -256,6 +214,12 @@ spec:
               value: "${FEATURE_FLAG_FIRM_DIRECTORY_ENABLED}"
             - name: FEATURE_FLAG_DISABLE_USER
               value: "${FEATURE_FLAG_DISABLE_USER}"
+            - name: FEATURE_FLAG_SYNC_APPS_FROM_ENTRA
+              value: "${FEATURE_FLAG_SYNC_APPS_FROM_ENTRA}"
+            - name: FEATURE_FLAG_SYNC_APP_UPDATES_FROM_ENTRA
+              value: "${FEATURE_FLAG_SYNC_APP_UPDATES_FROM_ENTRA}"
+            - name: FEATURE_FLAG_EDIT_USER_DETAILS
+              value: "${FEATURE_FLAG_EDIT_USER_DETAILS}"
             - name: SPRING_SESSION_JDBC_ENABLED
               value: "${SPRING_SESSION_JDBC_ENABLED}"
             - name: APP_MEANS_AND_MATCH_UI1_NAME

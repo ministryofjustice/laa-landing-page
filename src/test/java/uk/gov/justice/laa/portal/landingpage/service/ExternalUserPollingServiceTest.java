@@ -10,6 +10,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraLastSyncMetadata;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.repository.DisableUserReasonRepository;
@@ -18,6 +19,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUsersResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesErrorResponse;
 
@@ -132,7 +134,7 @@ class ExternalUserPollingServiceTest {
     }
 
     @Test
-    void shouldCapTimeGapToOneHour_whenGapExceedsSixtyMinutes() {
+    void shouldCapTimeGapTo30Minutes_whenGapExceeds30Minutes() {
         LocalDateTime lastSuccessfulTo = LocalDateTime.now().minusHours(3); // 3 hours ago
         EntraLastSyncMetadata existingMetadata = EntraLastSyncMetadata.builder()
                 .id("ENTRA_USER_SYNC")
@@ -158,12 +160,12 @@ class ExternalUserPollingServiceTest {
     void shouldProcessUsersSuccessfully_whenApiReturnsUsers() {
         when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
         
-        GetUsersResponse.TechServicesUser user1 = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser user1 = TechServicesUser.builder()
                 .id("user1")
                 .displayName("John Doe")
                 .mail("john@example.com")
                 .build();
-        GetUsersResponse.TechServicesUser user2 = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser user2 = TechServicesUser.builder()
                 .id("user2")
                 .displayName("Jane Smith")
                 .mail("jane@example.com")
@@ -292,7 +294,7 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(disableUserReasonRepository.findAll()).thenReturn(List.of(inactivityReason));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName("NewFirstName")
                 .surname("NewLastName")
@@ -301,14 +303,14 @@ class ExternalUserPollingServiceTest {
                 .lastSignIn("2025-01-18T10:30:00Z")
                 .build();
 
-        GetUsersResponse.TechServicesUser disabledUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser disabledUser = TechServicesUser.builder()
                 .id("user456")
                 .givenName("Jane")
                 .surname("Doe")
-                .accountEnabled(true)
+                .accountEnabled(false) // Changed to false to match disable logic
                 .isMailOnly(false)
-                .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
-                        .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
+                .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
+                        .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
                                 .disabledReason("NoGroupsDisable")
                                 .build())
@@ -347,7 +349,7 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName("John")
                 .surname("Doe")
@@ -374,7 +376,7 @@ class ExternalUserPollingServiceTest {
 
         when(entraUserRepository.findByEntraOid("nonexistent123")).thenReturn(Optional.empty());
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("nonexistent123")
                 .givenName("John")
                 .surname("Doe")
@@ -423,7 +425,7 @@ class ExternalUserPollingServiceTest {
         when(entraUserRepository.findByEntraOid("user1")).thenReturn(Optional.of(user1));
         when(entraUserRepository.findByEntraOid("user2")).thenReturn(Optional.of(user2));
 
-        GetUsersResponse.TechServicesUser apiUser1 = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser1 = TechServicesUser.builder()
                 .id("user1")
                 .givenName("John")
                 .surname("Doe")
@@ -431,7 +433,7 @@ class ExternalUserPollingServiceTest {
                 .isMailOnly(true) // changed
                 .lastSignIn("2025-01-18T10:30:00Z")
                 .build();
-        GetUsersResponse.TechServicesUser apiUser2 = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser2 = TechServicesUser.builder()
                 .id("user2")
                 .givenName("Jane")
                 .surname("Smith")
@@ -450,7 +452,8 @@ class ExternalUserPollingServiceTest {
         externalUserPollingService.updateSyncMetadata();
 
         verify(entraUserRepository).save(user1);
-        verify(entraUserRepository).save(user2);
+        verify(entraUserRepository, times(2)).save(user2);
+        verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
 
@@ -483,7 +486,7 @@ class ExternalUserPollingServiceTest {
         
         when(entraUserRepository.findByEntraOid("deleted-user-with-profiles")).thenReturn(Optional.of(existingUser));
 
-        GetUsersResponse.TechServicesUser deletedUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser deletedUser = TechServicesUser.builder()
                 .id("deleted-user-with-profiles")
                 .givenName("Jane")
                 .surname("Smith")
@@ -518,7 +521,7 @@ class ExternalUserPollingServiceTest {
 
         when(entraUserRepository.findByEntraOid("nonexistent-deleted-user")).thenReturn(Optional.empty());
 
-        GetUsersResponse.TechServicesUser deletedUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser deletedUser = TechServicesUser.builder()
                 .id("nonexistent-deleted-user")
                 .givenName("Ghost")
                 .surname("User")
@@ -569,7 +572,7 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(entraUserRepository.findByEntraOid("user-to-delete")).thenReturn(Optional.of(userToDelete));
 
-        GetUsersResponse.TechServicesUser updateUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser updateUser = TechServicesUser.builder()
                 .id("user-to-update")
                 .givenName("John")
                 .surname("Doe")
@@ -578,7 +581,7 @@ class ExternalUserPollingServiceTest {
                 .deleted(false) // not deleted
                 .build();
 
-        GetUsersResponse.TechServicesUser deleteUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser deleteUser = TechServicesUser.builder()
                 .id("user-to-delete")
                 .givenName("Jane")
                 .surname("Smith")
@@ -673,7 +676,7 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName("John")
                 .surname("Doe")
@@ -716,7 +719,7 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(userAccountStatusAuditRepository.findByEntraUser(userToDelete)).thenReturn(List.of(auditRecord));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName("John")
                 .surname("Doe")
@@ -743,7 +746,7 @@ class ExternalUserPollingServiceTest {
     }
 
     @Test
-    void shouldCapTimeGapTo30Minutes_whenGapExceeds30Minutes() {
+    void shouldCapTimeGapTo30Minutes_whenGapExceeds30Minutes_secondScenario() {
         LocalDateTime lastSuccessfulTo = LocalDateTime.now().minusHours(2);
         EntraLastSyncMetadata existingMetadata = EntraLastSyncMetadata.builder()
                 .id("ENTRA_USER_SYNC")
@@ -769,7 +772,7 @@ class ExternalUserPollingServiceTest {
     void shouldHandleNullEntraUserInDeleteUser() {
         when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("nonexistent123")
                 .givenName("John")
                 .surname("Doe")
@@ -807,7 +810,7 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName("NewFirstName")
                 .surname("NewLastName")
@@ -825,7 +828,8 @@ class ExternalUserPollingServiceTest {
 
         externalUserPollingService.updateSyncMetadata();
 
-        verify(entraUserRepository).save(existingUser);
+        verify(entraUserRepository, times(2)).save(existingUser); // Called twice: once in enableUserWithReason, once in main sync
+        verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class)); // Enable audit is created
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
 
@@ -844,7 +848,7 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName(null)
                 .surname(null)
@@ -872,7 +876,7 @@ class ExternalUserPollingServiceTest {
 
         when(entraUserRepository.findByEntraOid("user123")).thenThrow(new RuntimeException("Database error"));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName("John")
                 .surname("Doe")
@@ -917,14 +921,14 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(disableUserReasonRepository.findAll()).thenReturn(List.of(inactivityReason));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName("John")
                 .surname("Doe")
                 .accountEnabled(true)
                 .isMailOnly(false)
-                .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
-                        .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
+                .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
+                        .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
                                 .disabledReason("NoGroupsDisable")
                                 .build())
@@ -958,14 +962,14 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
 
-        GetUsersResponse.TechServicesUser apiUser = GetUsersResponse.TechServicesUser.builder()
+        TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
                 .givenName("John")
                 .surname("Doe")
                 .accountEnabled(true)
                 .isMailOnly(false)
-                .customSecurityAttributes(GetUsersResponse.CustomSecurityAttributes.builder()
-                        .guestUserStatus(GetUsersResponse.GuestUserStatus.builder()
+                .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
+                        .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
                                 .disabledReason("NoGroupsDisable")
                                 .build())
@@ -981,8 +985,8 @@ class ExternalUserPollingServiceTest {
 
         externalUserPollingService.updateSyncMetadata();
 
-        verify(entraUserRepository).save(existingUser);
-        verify(userAccountStatusAuditRepository, never()).save(any(UserAccountStatusAudit.class));
+        verify(entraUserRepository, times(2)).save(existingUser); // Called twice: once in enableUserWithReason, once in main sync
+        verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class)); // Enable audit is created
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
 
@@ -1082,6 +1086,322 @@ class ExternalUserPollingServiceTest {
         assertThat(fromDate).matches(formattedDatePattern);
         assertThat(toDate).matches(formattedDatePattern);
         
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldEnableUser_whenUserIsDisabledInSilasButEnabledInEntra() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        EntraUser disabledUser = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user123")
+                .firstName("John")
+                .lastName("Doe")
+                .email("user@example.com")
+                .enabled(false) // Disabled in SILAS
+                .mailOnly(false)
+                .build();
+        when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(disabledUser));
+
+        TechServicesUser apiUser = TechServicesUser.builder()
+                .id("user123")
+                .givenName("John")
+                .surname("Doe")
+                .accountEnabled(true) // Enabled in Entra
+                .isMailOnly(false)
+                .build();
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        verify(entraUserRepository, times(2)).save(disabledUser); // Once for enable, once for main sync
+        verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldDisableUser_whenUserHasDisabledReasonAndIsEnabledInSilas() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        EntraUser enabledUser = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user123")
+                .firstName("John")
+                .lastName("Doe")
+                .email("user@example.com")
+                .enabled(true) // Enabled in SILAS
+                .mailOnly(false)
+                .build();
+        when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(enabledUser));
+
+        DisableUserReason inactivityReason = DisableUserReason.builder()
+                .id(java.util.UUID.randomUUID())
+                .name("Inactivity")
+                .description("Disabled due to inactivity")
+                .entraDescription("Inactivity")
+                .userSelectable(false)
+                .build();
+        when(disableUserReasonRepository.findAll()).thenReturn(List.of(inactivityReason));
+
+        TechServicesUser apiUser = TechServicesUser.builder()
+                .id("user123")
+                .givenName("John")
+                .surname("Doe")
+                .accountEnabled(false) // Disabled in Entra
+                .isMailOnly(false)
+                .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
+                        .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
+                                .odataType("#microsoft.graph.customSecurityAttributeValue")
+                                .disabledReason("NoGroupsDisable")
+                                .build())
+                        .build())
+                .build();
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        verify(entraUserRepository, times(2)).save(enabledUser);
+        verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldNotDisableUser_whenUserIsAlreadyDisabledInSilas() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        EntraUser alreadyDisabledUser = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user123")
+                .firstName("John")
+                .lastName("Doe")
+                .email("user@example.com")
+                .enabled(false) // Already disabled in SILAS
+                .mailOnly(false)
+                .build();
+        when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(alreadyDisabledUser));
+
+        TechServicesUser apiUser = TechServicesUser.builder()
+                .id("user123")
+                .givenName("John")
+                .surname("Doe")
+                .accountEnabled(false)
+                .isMailOnly(false)
+                .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
+                        .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
+                                .odataType("#microsoft.graph.customSecurityAttributeValue")
+                                .disabledReason("NoGroupsDisable")
+                                .build())
+                        .build())
+                .build();
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        verify(entraUserRepository).save(alreadyDisabledUser);
+        verify(userAccountStatusAuditRepository, never()).save(any(UserAccountStatusAudit.class));
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldUpdateInvitationStatus_whenApiReturnsInvitationStatus() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        EntraUser existingUser = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user123")
+                .firstName("John")
+                .lastName("Doe")
+                .email("user@example.com")
+                .enabled(true)
+                .mailOnly(false)
+                .invitationStatus(null)
+                .build();
+        when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
+
+        TechServicesUser apiUser = TechServicesUser.builder()
+                .id("user123")
+                .givenName("John")
+                .surname("Doe")
+                .accountEnabled(true)
+                .isMailOnly(false)
+                .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
+                        .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
+                                .odataType("#microsoft.graph.customSecurityAttributeValue")
+                                .invitationProgress(InvitationStatus.INVITE_SENT)
+                                .build())
+                        .build())
+                .build();
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
+        verify(entraUserRepository).save(userCaptor.capture());
+        EntraUser savedUser = userCaptor.getValue();
+        assertThat(savedUser.getInvitationStatus()).isEqualTo(InvitationStatus.INVITE_SENT);
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldUpdateInvitationStatus_whenStatusChanges() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        EntraUser existingUser = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user123")
+                .firstName("John")
+                .lastName("Doe")
+                .email("user@example.com")
+                .enabled(true)
+                .mailOnly(false)
+                .invitationStatus(InvitationStatus.INVITE_SENT)
+                .build();
+        when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
+
+        TechServicesUser apiUser = TechServicesUser.builder()
+                .id("user123")
+                .givenName("John")
+                .surname("Doe")
+                .accountEnabled(true)
+                .isMailOnly(false)
+                .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
+                        .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
+                                .odataType("#microsoft.graph.customSecurityAttributeValue")
+                                .invitationProgress(InvitationStatus.AWAITING_MFA)
+                                .build())
+                        .build())
+                .build();
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
+        verify(entraUserRepository).save(userCaptor.capture());
+        EntraUser savedUser = userCaptor.getValue();
+        assertThat(savedUser.getInvitationStatus()).isEqualTo(InvitationStatus.AWAITING_MFA);
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldHandleNullInvitationStatus_gracefully() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        EntraUser existingUser = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user123")
+                .firstName("John")
+                .lastName("Doe")
+                .email("user@example.com")
+                .enabled(true)
+                .mailOnly(false)
+                .invitationStatus(InvitationStatus.INVITE_SENT)
+                .build();
+        when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
+
+        TechServicesUser apiUser = TechServicesUser.builder()
+                .id("user123")
+                .givenName("John")
+                .surname("Doe")
+                .accountEnabled(true)
+                .isMailOnly(false)
+                .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
+                        .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
+                                .odataType("#microsoft.graph.customSecurityAttributeValue")
+                                .invitationProgress(null)
+                                .build())
+                        .build())
+                .build();
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
+        verify(entraUserRepository).save(userCaptor.capture());
+        EntraUser savedUser = userCaptor.getValue();
+        assertThat(savedUser.getInvitationStatus()).isEqualTo(InvitationStatus.INVITE_SENT);
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldNotUpdateInvitationStatus_whenStatusIsSame() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        EntraUser existingUser = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user123")
+                .firstName("John")
+                .lastName("Doe")
+                .email("user@example.com")
+                .enabled(true)
+                .mailOnly(false)
+                .invitationStatus(InvitationStatus.AWAITING_VERIFICATION)
+                .build();
+        when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
+
+        TechServicesUser apiUser = TechServicesUser.builder()
+                .id("user123")
+                .givenName("John")
+                .surname("Doe")
+                .accountEnabled(true)
+                .isMailOnly(false)
+                .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
+                        .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
+                                .odataType("#microsoft.graph.customSecurityAttributeValue")
+                                .invitationProgress(InvitationStatus.AWAITING_VERIFICATION)
+                                .build())
+                        .build())
+                .build();
+        
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
+        verify(entraUserRepository).save(userCaptor.capture());
+        EntraUser savedUser = userCaptor.getValue();
+        assertThat(savedUser.getInvitationStatus()).isEqualTo(InvitationStatus.AWAITING_VERIFICATION);
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
 }

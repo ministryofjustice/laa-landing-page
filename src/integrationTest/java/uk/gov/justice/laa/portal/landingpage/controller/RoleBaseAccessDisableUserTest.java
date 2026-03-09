@@ -118,7 +118,7 @@ public class RoleBaseAccessDisableUserTest extends RoleBasedAccessIntegrationTes
         UserAccountStatusAudit statusChange = statusChanges.getFirst();
         assertThat(statusChange.getEntraUser().getId()).isEqualTo(accessedUser.getId());
         assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DISABLED);
-        assertThat(statusChange.getDisabledBy()).isEqualTo(loggedInUser.getFirstName() + " " + loggedInUser.getLastName());
+        assertThat(statusChange.getStatusChangedBy()).isEqualTo(loggedInUser.getFirstName() + " " + loggedInUser.getLastName());
         // Teardown
         accessedUser.setEnabled(true);
         entraUserRepository.saveAndFlush(accessedUser);
@@ -138,7 +138,7 @@ public class RoleBaseAccessDisableUserTest extends RoleBasedAccessIntegrationTes
         UserAccountStatusAudit statusChange = statusChanges.getFirst();
         assertThat(statusChange.getEntraUser().getId()).isEqualTo(accessedUser.getId());
         assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DISABLED);
-        assertThat(statusChange.getDisabledBy()).isEqualTo(loggedInUser.getFirstName() + " " + loggedInUser.getLastName());
+        assertThat(statusChange.getStatusChangedBy()).isEqualTo(loggedInUser.getFirstName() + " " + loggedInUser.getLastName());
         // Teardown
         accessedUser.setEnabled(true);
         entraUserRepository.saveAndFlush(accessedUser);
@@ -158,7 +158,7 @@ public class RoleBaseAccessDisableUserTest extends RoleBasedAccessIntegrationTes
         UserAccountStatusAudit statusChange = statusChanges.getFirst();
         assertThat(statusChange.getEntraUser().getId()).isEqualTo(accessedUser.getId());
         assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DISABLED);
-        assertThat(statusChange.getDisabledBy()).isEqualTo(loggedInUser.getFirstName() + " " + loggedInUser.getLastName());
+        assertThat(statusChange.getStatusChangedBy()).isEqualTo(loggedInUser.getFirstName() + " " + loggedInUser.getLastName());
         // Teardown
         accessedUser.setEnabled(true);
         entraUserRepository.saveAndFlush(accessedUser);
@@ -188,7 +188,7 @@ public class RoleBaseAccessDisableUserTest extends RoleBasedAccessIntegrationTes
         UserAccountStatusAudit statusChange = statusChanges.getFirst();
         assertThat(statusChange.getEntraUser().getId()).isEqualTo(accessedUser.getId());
         assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DISABLED);
-        assertThat(statusChange.getDisabledBy()).isEqualTo(loggedInUser.getFirstName() + " " + loggedInUser.getLastName());
+        assertThat(statusChange.getStatusChangedBy()).isEqualTo(loggedInUser.getFirstName() + " " + loggedInUser.getLastName());
         // Teardown
         accessedUser.setEnabled(true);
         entraUserRepository.saveAndFlush(accessedUser);
@@ -208,7 +208,7 @@ public class RoleBaseAccessDisableUserTest extends RoleBasedAccessIntegrationTes
         UserAccountStatusAudit statusChange = statusChanges.getFirst();
         assertThat(statusChange.getEntraUser().getId()).isEqualTo(accessedUser.getId());
         assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DISABLED);
-        assertThat(statusChange.getDisabledBy()).isEqualTo(loggedInUser.getFirstName() + " " + loggedInUser.getLastName());
+        assertThat(statusChange.getStatusChangedBy()).isEqualTo(loggedInUser.getFirstName() + " " + loggedInUser.getLastName());
         // Teardown
         accessedUser.setEnabled(true);
         entraUserRepository.saveAndFlush(accessedUser);

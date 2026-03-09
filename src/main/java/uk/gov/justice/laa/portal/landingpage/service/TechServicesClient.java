@@ -4,6 +4,8 @@ import java.util.UUID;
 
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.GetAllApplicationsResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.GetUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUsersResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
@@ -24,5 +26,11 @@ public interface TechServicesClient {
     TechServicesApiResponse<ChangeAccountEnabledResponse> enableUser(EntraUserDto user);
 
     TechServicesApiResponse<GetUsersResponse> getUsers(String fromDateTime, String toDateTime);
+
+    TechServicesApiResponse<GetUserResponse> getUser(String entraOid);
+
+    TechServicesApiResponse<GetAllApplicationsResponse> getAllApplications();
+
+    TechServicesApiResponse<ChangeAccountEnabledResponse> updateUserDetails(String entraOid, String firstName, String lastName, String email);
 
 }

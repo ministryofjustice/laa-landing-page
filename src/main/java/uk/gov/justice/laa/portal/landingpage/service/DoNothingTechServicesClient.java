@@ -3,12 +3,22 @@ package uk.gov.justice.laa.portal.landingpage.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.entity.App;
+import uk.gov.justice.laa.portal.landingpage.entity.AppType;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.GetAllApplicationsResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.GetUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUsersResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static java.util.Collections.emptyList;
@@ -16,6 +26,14 @@ import static java.util.Collections.emptyList;
 public class DoNothingTechServicesClient implements TechServicesClient {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
+
+    private final AppRepository appRepository;
+    private final EntraUserRepository entraUserRepository;
+
+    public DoNothingTechServicesClient(AppRepository appRepository, EntraUserRepository entraUserRepository) {
+        this.appRepository = appRepository;
+        this.entraUserRepository = entraUserRepository;
+    }
 
     @Override
     public void updateRoleAssignment(UUID userId) {
@@ -60,6 +78,44 @@ public class DoNothingTechServicesClient implements TechServicesClient {
     }
 
     @Override
+    public TechServicesApiResponse<GetUserResponse> getUser(String entraOid) {
+        logger.info("Get user request received on Dummy Tech Services Client for entra oid: {}",
+                entraOid);
+
+        Optional<EntraUser> optionalDbUser = entraUserRepository.findByEntraOid(entraOid);
+        TechServicesUser user;
+        if (optionalDbUser.isEmpty()) {
+            // If ID not found, just return empty object.
+            user = TechServicesUser.builder().build();
+        } else {
+            // Build a dummy Tech Services user based on what we have in the DB.
+            EntraUser dbUser = optionalDbUser.get();
+            user = TechServicesUser.builder()
+                    .id(dbUser.getEntraOid())
+                    .givenName(dbUser.getFirstName())
+                    .surname(dbUser.getLastName())
+                    .mail(dbUser.getEmail())
+                    .displayName(dbUser.getFirstName() + " " + dbUser.getLastName())
+                    .deleted(false)
+                    .email(dbUser.getEmail())
+                    .accountEnabled(dbUser.isEnabled())
+                    .build();
+        }
+        // Build dummy entra user response
+        return TechServicesApiResponse.success(GetUserResponse.builder()
+                .message("User retrieved successfully")
+                .user(user)
+                .build());
+    }
+
+    @Override
+    public TechServicesApiResponse<ChangeAccountEnabledResponse> updateUserDetails(String entraOid, String firstName, String lastName, String email) {
+        return TechServicesApiResponse.success(ChangeAccountEnabledResponse.builder().success(true)
+                .message("Successfully Update user details.")
+                .build());
+    }
+
+    @Override
     public TechServicesApiResponse<ChangeAccountEnabledResponse> disableUser(EntraUserDto user, String reason) {
         return TechServicesApiResponse.success(ChangeAccountEnabledResponse.builder().success(true)
                 .message("Successfully disabled user.")
@@ -71,5 +127,27 @@ public class DoNothingTechServicesClient implements TechServicesClient {
         return TechServicesApiResponse.success(ChangeAccountEnabledResponse.builder().success(true)
                 .message("Successfully enabled user.")
                 .build());
+    }
+
+    @Override
+    public TechServicesApiResponse<GetAllApplicationsResponse> getAllApplications() {
+        List<GetAllApplicationsResponse.TechServicesApplication> existingApps = appRepository.findAppsByAppType(AppType.LAA)
+                .stream()
+                .map(this::mapAppToTechServicesApp)
+                .toList();
+        return TechServicesApiResponse.success(GetAllApplicationsResponse.builder()
+                .success(true)
+                .apps(existingApps)
+                .build());
+    }
+
+    private GetAllApplicationsResponse.TechServicesApplication mapAppToTechServicesApp(App app) {
+        return GetAllApplicationsResponse.TechServicesApplication.builder()
+                .id(app.getEntraAppId())
+                .name(app.getName())
+                .url(app.getUrl())
+                .securityGroups(List.of(GetAllApplicationsResponse.TechServicesApplication.AppSecurityGroup.builder()
+                        .id(app.getSecurityGroupOid()).name(app.getSecurityGroupName()).build()))
+                .build();
     }
 }

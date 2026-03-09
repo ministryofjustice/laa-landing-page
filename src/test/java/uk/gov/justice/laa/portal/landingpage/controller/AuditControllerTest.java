@@ -9,6 +9,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.apache.tomcat.util.http.parser.TE;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,7 +54,11 @@ import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AuditExportService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
+import uk.gov.justice.laa.portal.landingpage.service.TechServicesClient;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.techservices.GetUserResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
 @ExtendWith(MockitoExtension.class)
@@ -82,6 +87,9 @@ class AuditControllerTest {
     @Mock
     private AuditExportService auditExportService;
 
+    @Mock
+    private TechServicesClient techServicesClient;
+
     private PaginatedAuditUsers mockPaginatedUsers;
     private List<AppRoleDto> mockSilasRoles;
     private Model model;
@@ -89,7 +97,7 @@ class AuditControllerTest {
     @BeforeEach
     void setUp() {
         auditController = new AuditController(userService, loginService, eventService, accessControlService,
-                auditExportService, firmRepository, authenticatedUser);
+                auditExportService, firmRepository, authenticatedUser, techServicesClient);
         model = new ExtendedModelMap();
 
         // Setup mock audit users
@@ -527,6 +535,20 @@ class AuditControllerTest {
                 .profiles(Collections.emptyList())
                 .build();
 
+        TechServicesUser techServicesUser = TechServicesUser.builder()
+                .id(UUID.randomUUID().toString())
+                .givenName("Test")
+                .surname("User")
+                .build();
+
+        GetUserResponse getUserResponse = GetUserResponse.builder()
+                .success(true)
+                .user(techServicesUser)
+                .build();
+
+        TechServicesApiResponse<GetUserResponse> techServicesResponse = TechServicesApiResponse.success(getUserResponse);
+
+        when(techServicesClient.getUser(any())).thenReturn(techServicesResponse);
         when(userService.getAuditUserDetail(userId, 1, 5)).thenReturn(mockUserDetail);
 
         // When
@@ -584,6 +606,21 @@ class AuditControllerTest {
                 .build();
         Map<String, List<String>> expectedList = new HashMap<>();
         expectedList.put("App 1", List.of("Role 1"));
+
+        TechServicesUser techServicesUser = TechServicesUser.builder()
+                .id(UUID.randomUUID().toString())
+                .givenName("Test")
+                .surname("User")
+                .build();
+
+        GetUserResponse getUserResponse = GetUserResponse.builder()
+                .success(true)
+                .user(techServicesUser)
+                .build();
+
+        TechServicesApiResponse<GetUserResponse> techServicesResponse = TechServicesApiResponse.success(getUserResponse);
+
+        when(techServicesClient.getUser(any())).thenReturn(techServicesResponse);
         when(userService.getAuditUserDetail(userId, 1, 10)).thenReturn(mockUserDetail);
 
         // When
@@ -628,6 +665,20 @@ class AuditControllerTest {
                 .currentProfilePage(2)
                 .build();
 
+        TechServicesUser techServicesUser = TechServicesUser.builder()
+                .id(UUID.randomUUID().toString())
+                .givenName("Test")
+                .surname("User")
+                .build();
+
+        GetUserResponse getUserResponse = GetUserResponse.builder()
+                .success(true)
+                .user(techServicesUser)
+                .build();
+
+        TechServicesApiResponse<GetUserResponse> techServicesResponse = TechServicesApiResponse.success(getUserResponse);
+
+        when(techServicesClient.getUser(any())).thenReturn(techServicesResponse);
         when(userService.getAuditUserDetail(userId, profilePage, profileSize)).thenReturn(mockUserDetail);
 
         // When
@@ -860,7 +911,7 @@ class AuditControllerTest {
 
         byte[] csvBytes = "Name,Email\nP1,p1@example.com\n".getBytes(java.nio.charset.StandardCharsets.UTF_8);
         AuditExportService.AuditCsvExport export = new AuditExportService.AuditCsvExport("audit.csv", csvBytes);
-        when(auditExportService.downloadAuditCsv(any(), any())).thenReturn(export);
+        when(auditExportService.downloadAuditCsv(any(), any(), any())).thenReturn(export);
 
         ResponseEntity<byte[]> response = auditController.downloadAuditCsv(criteria);
 
@@ -874,6 +925,6 @@ class AuditControllerTest {
 
         verify(userService, times(1)).getAuditUsers("TestSearch", null, null, null, null, 1, 500, "name", "asc", true);
         verify(userService, times(1)).getAuditUsers("TestSearch", null, null, null, null, 2, 500, "name", "asc", true);
-        verify(auditExportService, times(1)).downloadAuditCsv(any(), any());
+        verify(auditExportService, times(1)).downloadAuditCsv(any(), any(), any());
     }
 }

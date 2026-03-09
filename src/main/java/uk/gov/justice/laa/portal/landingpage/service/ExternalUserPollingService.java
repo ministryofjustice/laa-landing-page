@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraLastSyncMetadata;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
@@ -17,6 +18,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUsersResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 
 import java.time.LocalDateTime;
@@ -24,6 +26,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -108,10 +111,10 @@ public class ExternalUserPollingService {
      * @param users List of users from Tech Services API
      * @param syncTime The sync time to set as lastSyncedOn
      */
-    private void synchronizeUsers(List<GetUsersResponse.TechServicesUser> users, LocalDateTime syncTime) {
+    private void synchronizeUsers(List<TechServicesUser> users, LocalDateTime syncTime) {
         int updatedCount = 0;
         
-        for (GetUsersResponse.TechServicesUser user : users) {
+        for (TechServicesUser user : users) {
             try {
                 Optional<EntraUser> entraUserOptional = entraUserRepository.findByEntraOid(user.getId());
                 
@@ -126,10 +129,19 @@ public class ExternalUserPollingService {
                         continue;
                     }
 
+                    boolean isEnabledInSilas = entraUser.isEnabled();
+
                     // Update user fields if not deleted
-                    if (shouldDisableUser(user, entraUser)) {
+
+                    if (user.isAccountEnabled() && !isEnabledInSilas) {
+                        // user account enabled in entra, re-enabling in silas
+                        enableUserWithReason(user, entraUser);
+                    } else if (shouldDisableUser(user, isEnabledInSilas)) {
+                        //user account has disabled reason in entra, disabling in silas
                         disableUserWithReason(user, entraUser);
                     }
+
+                    updateAccountActivationStatus(user, entraUser);
 
                     if (user.getGivenName() != null && !user.getGivenName().equals(entraUser.getFirstName())) {
                         entraUser.setFirstName(user.getGivenName());
@@ -137,10 +149,6 @@ public class ExternalUserPollingService {
 
                     if (user.getSurname() != null && !user.getSurname().equals(entraUser.getLastName())) {
                         entraUser.setLastName(user.getSurname());
-                    }
-
-                    if (user.isAccountEnabled() != entraUser.isEnabled()) {
-                        entraUser.setEnabled(user.isAccountEnabled());
                     }
 
                     if (user.isMailOnly() != entraUser.isMailOnly()) {
@@ -164,6 +172,22 @@ public class ExternalUserPollingService {
         
         log.info("User synchronization completed: {} users updated",
                 updatedCount);
+    }
+
+    private void updateAccountActivationStatus(TechServicesUser user, EntraUser entraUser) {
+        boolean hasInvitationStatus = user.getCustomSecurityAttributes() != null
+                && user.getCustomSecurityAttributes().getGuestUserStatus() != null
+                && user.getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress() != null;
+
+        if (hasInvitationStatus) {
+            InvitationStatus invitationStatus = user.getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress();
+            boolean shouldUpdateActivationStatus = !Objects.equals(entraUser.getInvitationStatus(), invitationStatus);
+
+            if (shouldUpdateActivationStatus) {
+                entraUser.setInvitationStatus(invitationStatus);
+                log.info("Updated invitation status for user {} to: {}", entraUser.getEntraOid(), invitationStatus);
+            }
+        }
     }
 
     private void deleteUser(EntraUser entraUser) {
@@ -222,17 +246,14 @@ public class ExternalUserPollingService {
         }
     }
 
-    private boolean shouldDisableUser(GetUsersResponse.TechServicesUser user, EntraUser entraUser) {
-        if (user.getCustomSecurityAttributes() != null
+    private boolean shouldDisableUser(TechServicesUser user, boolean isEnabledInSilas) {
+        // Only disable if user is currently enabled in silas and has a disabled reason from Entra
+        return isEnabledInSilas && user.getCustomSecurityAttributes() != null
                 && user.getCustomSecurityAttributes().getGuestUserStatus() != null
-                && user.getCustomSecurityAttributes().getGuestUserStatus().getDisabledReason() != null) {
-
-            return entraUser.isEnabled();
-        }
-        return false;
+                && user.getCustomSecurityAttributes().getGuestUserStatus().getDisabledReason() != null;
     }
 
-    private void disableUserWithReason(GetUsersResponse.TechServicesUser user, EntraUser entraUser) {
+    private void disableUserWithReason(TechServicesUser user, EntraUser entraUser) {
         try {
             String disabledReasonFromApi = user.getCustomSecurityAttributes()
                     .getGuestUserStatus().getDisabledReason();
@@ -246,8 +267,8 @@ public class ExternalUserPollingService {
                     .entraUser(entraUser)
                     .disableUserReason(disableReason)
                     .statusChange(UserAccountStatus.DISABLED)
-                    .disabledBy("External user sync") // Automated disable from API sync
-                    .disabledDate(LocalDateTime.now())
+                    .statusChangedBy("External user sync") // Automated disable from API sync
+                    .statusChangedDate(LocalDateTime.now())
                     .build();
             
             userAccountStatusAuditRepository.save(audit);
@@ -257,6 +278,29 @@ public class ExternalUserPollingService {
                     
         } catch (Exception e) {
             log.error("Error disabling user {} ({}): {}", 
+                    entraUser.getEmail(), entraUser.getEntraOid(), e.getMessage(), e);
+        }
+    }
+
+    private void enableUserWithReason(TechServicesUser user, EntraUser entraUser) {
+        try {
+            entraUser.setEnabled(true);
+            entraUserRepository.save(entraUser);
+
+            UserAccountStatusAudit audit = UserAccountStatusAudit.builder()
+                    .entraUser(entraUser)
+                    .statusChange(UserAccountStatus.ENABLED)
+                    .statusChangedBy("External user sync") // Automated enable from API sync
+                    .statusChangedDate(LocalDateTime.now())
+                    .build();
+
+            userAccountStatusAuditRepository.save(audit);
+
+            log.info("Enabled user: {} ({}) from external user API sync", 
+                    entraUser.getEmail(), entraUser.getEntraOid());
+
+        } catch (Exception e) {
+            log.error("Error enabling user {} ({}): {}", 
                     entraUser.getEmail(), entraUser.getEntraOid(), e.getMessage(), e);
         }
     }

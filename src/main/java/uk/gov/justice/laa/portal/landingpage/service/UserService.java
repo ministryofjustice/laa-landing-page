@@ -32,15 +32,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import com.microsoft.graph.core.content.BatchRequestContent;
 import com.microsoft.graph.models.DirectoryRole;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
-import com.microsoft.kiota.RequestInformation;
 
 import jakarta.transaction.Transactional;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -49,11 +46,10 @@ import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto.AuditProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
-import uk.gov.justice.laa.portal.landingpage.dto.FirmDirectoryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
-import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
+import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserInfoAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserFirmReassignmentEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
@@ -85,6 +81,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditProjection;
+import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
@@ -329,9 +326,7 @@ public class UserService {
         });
 
         if (user.getUserProfiles() == null || user.getUserProfiles().isEmpty()) {
-            logger.error("User profile not found for the given user id: {}", userId);
-            throw new RuntimeException(
-                    String.format("User profile not found for the given user id: %s", userId));
+            return Optional.empty();
         }
 
         return user.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
@@ -1012,33 +1007,44 @@ public class UserService {
     }
 
     /**
-     * Update user details in Microsoft Graph and local database
+     * Update user details in entra and database
      *
      * @param userId    The user ID
+     * @param email The user's email
      * @param firstName The user's first name
      * @param lastName  The user's last name
      * @throws IOException If an error occurs during the update
      */
-    public void updateUserDetails(String userId, String firstName, String lastName)
+    public void updateUserDetails(String userId, String email, String firstName, String lastName, UserProfile currentUserProfile)
             throws IOException {
-        // Update local database
         Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
         if (optionalUser.isPresent()) {
             EntraUser entraUser = optionalUser.get();
+            entraUser.setEmail(email);
             entraUser.setFirstName(firstName);
             entraUser.setLastName(lastName);
 
             try {
-                entraUserRepository.saveAndFlush(entraUser);
-                logger.info("Successfully updated user details in database for user ID: {}",
-                        userId);
+                // update on tech services
+                TechServicesApiResponse<ChangeAccountEnabledResponse> response = techServicesClient.updateUserDetails(entraUser.getEntraOid(), firstName, lastName, email);
+                if (response.isSuccess()) {
+                    //update user information on database
+                    entraUserRepository.saveAndFlush(entraUser);
+                    UpdateUserInfoAuditEvent updateUserInfoAuditEvent = new UpdateUserInfoAuditEvent(
+                            entraUser, String.valueOf(currentUserProfile.getId()), currentUserProfile.getEntraUser().getEntraOid());
+                    eventService.logEvent(updateUserInfoAuditEvent);
+                    logger.info("Successfully updated user details in database for user ID: {}",
+                            userId);
+                } else {
+                    throw new RuntimeException("Tech Services API call failed: " + response.getError());
+                }
             } catch (Exception e) {
                 logger.error("Failed to update user details in database for user ID: {}", userId,
                         e);
                 throw new IOException("Failed to update user details in database", e);
             }
         } else {
-            logger.warn(
+            logger.info(
                     "User with id {} not found in database. Could not update local user details.",
                     userId);
         }
@@ -1518,8 +1524,14 @@ public class UserService {
         }
 
         // Map to DTOs
-        List<AuditUserDto> auditUsers =
-                userPage.getContent().stream().map(user -> mapToAuditUserDto(user, csvExport)).toList();
+        List<AuditUserDto> auditUsers;
+        if (csvExport) {
+            auditUsers =
+                userPage.getContent().stream().map(user -> mapToAuditUserDtoForCsv(user, csvExport, firmId)).toList();
+        } else {
+            auditUsers =
+                    userPage.getContent().stream().map(user -> mapToAuditUserDto(user, csvExport)).toList();
+        }
 
         return PaginatedAuditUsers.builder().users(auditUsers)
                 .totalUsers(userPage.getTotalElements()).totalPages(userPage.getTotalPages())
@@ -1564,6 +1576,27 @@ public class UserService {
                 .entraStatus(user.getUserStatus() != null ? user.getUserStatus().name() : "UNKNOWN")
                 // TODO: Fetch activationStatus from TechServices API
                 .activationStatus(null).build();
+    }
+
+    private AuditUserDto mapToAuditUserDtoForCsv(EntraUser user, boolean csvExport, UUID firmId) {
+        // Get all user profiles
+        List<UserProfile> profiles = user.getUserProfiles() != null ? new ArrayList<>(user.getUserProfiles())
+                : Collections.emptyList();
+
+        // Get firm associations
+        String firmAssociation = determineFirmAssociation(profiles);
+
+        // Get selected firm user roles
+        boolean userRole = determineIsProviderAdminForSelectedFirm(profiles, firmId);
+
+        String getAppAccess = determineAppAccess(profiles, firmId);
+
+        // Get firm code
+        String firmCode = determineFirmCode(profiles, csvExport);
+
+        return AuditUserDto.builder().name(user.getFirstName() + " " + user.getLastName())
+                .email(user.getEmail()).firmAssociation(firmAssociation).firmCode(firmCode).appAccess(getAppAccess)
+                .isMultiFirmUser(user.isMultiFirmUser()).isProviderAdmin(userRole).build();
     }
 
     /**
@@ -1627,8 +1660,8 @@ public class UserService {
         Set<String> firmCodes = new HashSet<>();
 
         if (!csvExport) {
-            firmCodes = profiles.stream().map(UserProfile::getFirm).filter(Objects::nonNull)
-                .map(Firm::getCode).collect(Collectors.toCollection(TreeSet::new));
+            firmCodes = profiles.stream().map(profile -> profile.getFirm()).filter(Objects::nonNull)
+                .map(Firm::getCode).collect(Collectors.toCollection(HashSet::new));
         } else {
             List<Firm> sortedFirms =
                     profiles.stream().map(UserProfile::getFirm
@@ -1675,6 +1708,34 @@ public class UserService {
     public List<AppRoleDto> getAllSilasRoles() {
         return appRoleRepository.findAllAuthzRoles().stream()
                 .map(role -> mapper.map(role, AppRoleDto.class)).toList();
+    }
+
+    /**
+     * Determine if the user is a Firm User Manager for the filtered firm
+     */
+    public boolean determineIsProviderAdminForSelectedFirm(List<UserProfile> profiles, UUID firmId) {
+        return profiles.stream()
+                .filter(p -> firmId.equals(p.getFirm().getId()))
+                .anyMatch(profile ->
+                        profile.getAppRoles().stream()
+                                .anyMatch(role -> role.getName().equals("Firm User Manager"))
+                );
+    }
+
+    /**
+     * Determine what app access a user has for the filtered firm
+     */
+    public String determineAppAccess(List<UserProfile> profiles, UUID firmId) {
+        return profiles.stream()
+                .filter(p -> firmId.equals(p.getFirm().getId()))
+                .flatMap(profile -> profile.getAppRoles().stream())
+                .map(AppRole::getApp)
+                .filter(Objects::nonNull)
+                .distinct()
+                .map(App::getName)
+                .distinct()
+                .sorted()
+                .collect(Collectors.joining(", "));
     }
 
     /**
@@ -1752,7 +1813,9 @@ public class UserService {
                 .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
                         : "UNKNOWN")
                 .profiles(profileDtos).totalProfiles(allProfiles.size()).totalProfilePages(1)
-                .currentProfilePage(1).build();
+                .currentProfilePage(1)
+                .entraOid(entraUser.getEntraOid())
+                .build();
     }
 
     /**
@@ -1796,6 +1859,7 @@ public class UserService {
         // Build detail DTO
         return AuditUserDetailDto.builder().userId(entraUser.getId().toString())
                 .email(entraUser.getEmail()).firstName(entraUser.getFirstName())
+                .enabled(entraUser.isEnabled())
                 .lastName(entraUser.getLastName())
                 .fullName(entraUser.getFirstName() + " " + entraUser.getLastName())
                 .isMultiFirmUser(entraUser.isMultiFirmUser()).userType(userType)
@@ -1807,7 +1871,9 @@ public class UserService {
                 .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
                         : "UNKNOWN")
                 .profiles(profileDtos).totalProfiles(totalProfiles).totalProfilePages(totalPages)
-                .currentProfilePage(profilePage).hasNoProfile(false).build();
+                .currentProfilePage(profilePage).hasNoProfile(false)
+                .entraOid(entraUser.getEntraOid())
+                .build();
     }
 
     /**
@@ -1845,7 +1911,9 @@ public class UserService {
                 .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
                         : "UNKNOWN")
                 .profiles(Collections.emptyList()).totalProfiles(0).totalProfilePages(0)
-                .currentProfilePage(1).hasNoProfile(true).build();
+                .currentProfilePage(1).hasNoProfile(true)
+                .entraOid(entraUser.getEntraOid())
+                .build();
     }
 
     /**

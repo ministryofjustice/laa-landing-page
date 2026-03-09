@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Objects;
 
@@ -15,6 +16,8 @@ import java.util.Objects;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AppDto implements Comparable<AppDto>, Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     private String id;
     private String name;
     private String title;
@@ -25,6 +28,7 @@ public class AppDto implements Comparable<AppDto>, Serializable {
     private AppType appType;
     private boolean enabled;
     private AlternativeAppDescriptionDto alternativeAppDescription;
+    private ChangeType changeType;
 
     @Override
     public boolean equals(Object obj) {
@@ -41,13 +45,19 @@ public class AppDto implements Comparable<AppDto>, Serializable {
 
     @Override
     public int compareTo(@NotNull AppDto o) {
-        int cmp = ordinal - o.ordinal;
+        int cmp = Boolean.compare(o.enabled, enabled);
 
-        if (cmp == 0) {
-            return o.name.compareToIgnoreCase(name);
+        if (cmp != 0) {
+            return cmp;
         }
 
-        return cmp;
+        cmp = ordinal - o.ordinal;
+
+        if (cmp != 0) {
+            return cmp;
+        }
+
+        return name.compareToIgnoreCase(o.name);
     }
 
     @Data
@@ -55,7 +65,17 @@ public class AppDto implements Comparable<AppDto>, Serializable {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class AlternativeAppDescriptionDto implements Serializable {
+        @Serial
+        private static final long serialVersionUID = 1L;
         private String assignedAppId;
         private String alternativeDescription;
+    }
+
+    public enum ChangeType {
+        NONE,
+        ADDED,
+        UPDATED,
+        DELETED,
+        REVIEW,
     }
 }

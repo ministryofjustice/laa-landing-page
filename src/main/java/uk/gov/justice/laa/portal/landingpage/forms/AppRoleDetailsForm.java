@@ -1,0 +1,28 @@
+package uk.gov.justice.laa.portal.landingpage.forms;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.io.Serial;
+import java.io.Serializable;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class AppRoleDetailsForm implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
+    private String appRoleId;
+    @NotBlank(message = "Application role name cannot be empty")
+    @Size(max = 255, message = "Application name cannot exceed 255 characters")
+    private String name;
+    @NotBlank(message = "Application description cannot be empty")
+    @Size(max = 1000, message = "Application description cannot exceed 1000 characters")
+    private String description;
+    private int ordinal;
+}

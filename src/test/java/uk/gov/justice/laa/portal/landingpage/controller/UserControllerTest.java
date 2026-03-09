@@ -183,10 +183,13 @@ class UserControllerTest {
         when(userService.getEntraUserById(enabledUserId.toString())).thenReturn(Optional.of(enabledUser));
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(enabledByUser);
 
-        String view = userController.enableUserPost(enabledUserId.toString(), authentication, model);
+        String referer = "manage";
+
+        String view = userController.enableUserPost(enabledUserId.toString(), authentication, model, referer);
 
         assertThat(view).isEqualTo("enable-user-completed");
         assertThat(model.getAttribute("user")).isEqualTo(enabledUser);
+        assertThat(model.getAttribute("referer")).isEqualTo(referer);
         assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Enable User Success - " + enabledUser.getFullName());
     }
 
@@ -195,7 +198,7 @@ class UserControllerTest {
         UUID noUserId = UUID.randomUUID();
         when(userService.getEntraUserById(noUserId.toString())).thenReturn(Optional.empty());
 
-        assertThrows(NoSuchElementException.class, () -> userController.enableUserPost(noUserId.toString(), authentication, model));
+        assertThrows(NoSuchElementException.class, () -> userController.enableUserPost(noUserId.toString(), authentication, model, null));
 
     }
 
@@ -1768,45 +1771,6 @@ class UserControllerTest {
     }
 
     @Test
-    void editUserDetails_ReTry_shouldPopulateSavedDataAndReturnView() {
-        // Given
-        String userId = "user123";
-        EntraUserDto entraUser = new EntraUserDto();
-        entraUser.setId(userId);
-        entraUser.setFirstName("John");
-        entraUser.setLastName("Doe");
-        entraUser.setEmail("john.doe@example.com");
-
-        UserProfileDto userProfile = UserProfileDto.builder()
-                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
-                .entraUser(entraUser)
-                .build();
-
-        session = new MockHttpSession();
-        session.setAttribute("user", userProfile);
-        EditUserDetailsForm form = new EditUserDetailsForm();
-        form.setFirstName("Changed");
-        form.setLastName("Changed");
-        form.setEmail("john.doe@example.com");
-        session.setAttribute("editUserDetailsForm", form);
-
-        // When
-        String view = userController.editUserDetails(userId, model, session);
-
-        // Then
-        assertThat(view).isEqualTo("edit-user-details");
-        assertThat(model.getAttribute("user")).isEqualTo(userProfile);
-
-        EditUserDetailsForm updatedForm = (EditUserDetailsForm) model.getAttribute("editUserDetailsForm");
-        assertThat(updatedForm).isNotNull();
-        assertThat(updatedForm.getFirstName()).isEqualTo("Changed");
-        assertThat(updatedForm.getLastName()).isEqualTo("Changed");
-        assertThat(updatedForm.getEmail()).isEqualTo("john.doe@example.com");
-
-        verify(userService, never()).getUserProfileById(userId);
-    }
-
-    @Test
     void editUserDetails_shouldThrowExceptionWhenUserNotFound() {
         // Given
         String userId = "nonexistent";
@@ -1818,7 +1782,7 @@ class UserControllerTest {
     }
 
     @Test
-    void updateUserDetails_shouldUpdateUserAndRedirect() throws IOException {
+    void updateUserDetails_shouldUpdateUserAndRedirectWithSameEmail() throws IOException {
         // Given
         final String userId = "user123";
         EditUserDetailsForm form = new EditUserDetailsForm();
@@ -1831,26 +1795,64 @@ class UserControllerTest {
         MockHttpSession testSession = new MockHttpSession();
         UserProfileDto userProfile = UserProfileDto.builder()
                 .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .entraUser(EntraUserDto.builder()
+                        .email("jane.smith@example.com").build())
                 .build();
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
 
         // When
-        String view = userController.updateUserDetails(userId, form, bindingResult, testSession);
+        String view = userController.updateUserDetails(userId, form, bindingResult, testSession, model, redirectAttributes, authentication);
 
         // Then
-        assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/details-check-answer");
+        assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
         assertThat(testSession.getAttribute("user")).isNotNull();
-        assertThat(testSession.getAttribute("editUserDetailsForm")).isNotNull();
+        assertThat(testSession.getAttribute("editUserDetailsForm")).isNull();
+        assertThat(redirectAttributes.getFlashAttributes().get("isEditUserSuccess"))
+                .isEqualTo(true);
     }
 
     @Test
-    void updateUserDetails_shouldReturnToFormOnValidationErrors() throws IOException {
+    void updateUserDetails_ShouldUpdateUserAndRedirectWithDifferentEmail() throws IOException {
         // Given
         final String userId = "user123";
         EditUserDetailsForm form = new EditUserDetailsForm();
         form.setFirstName("Jane");
         form.setLastName("Smith");
-        form.setEmail("jane.smith@example.com");
+        form.setEmail("jane.test@example.com");
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(false);
+        MockHttpSession testSession = new MockHttpSession();
+        UserProfileDto userProfile = UserProfileDto.builder()
+                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .entraUser(EntraUserDto.builder()
+                        .email("jane.smith@example.com").build())
+                .build();
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
+
+        // When
+        String view = userController.updateUserDetails(userId, form, bindingResult, testSession, model, redirectAttributes, authentication);
+
+        // Then
+        assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
+        assertThat(testSession.getAttribute("user")).isNotNull();
+        assertThat(testSession.getAttribute("editUserDetailsForm")).isNull();
+        assertThat(redirectAttributes.getFlashAttributes().get("isEditUserSuccess"))
+                .isEqualTo(true);
+    }
+
+    @Test
+    void updateUserDetails_shouldReturnToFormOnValidationErrors_InvalidDomain() throws IOException {
+        // Given
+        final String userId = "user123";
+        EditUserDetailsForm form = new EditUserDetailsForm();
+        form.setFirstName("Jane");
+        form.setLastName("Smith");
+        form.setEmail("invalidDomain");
 
         EntraUserDto entraUser = new EntraUserDto();
         UserProfileDto userProfile = UserProfileDto.builder()
@@ -1864,96 +1866,79 @@ class UserControllerTest {
         MockHttpSession testSession = new MockHttpSession();
 
         // When
-        String view = userController.updateUserDetails(userId, form, bindingResult, testSession);
+        String view = userController.updateUserDetails(userId, form, bindingResult, testSession,  model, redirectAttributes, authentication);
 
         // Then
         assertThat(view).isEqualTo("edit-user-details");
+        verify(bindingResult).rejectValue("email", "email.invalidDomain",
+                "The email address domain is not valid or cannot receive emails.");
         assertThat(testSession.getAttribute("user")).isEqualTo(userProfile);
-        assertThat(testSession.getAttribute("editUserDetailsForm")).isEqualTo(form);
     }
 
     @Test
-    void updateUserDetailsCheck_shouldRedirectNullSessionForm() throws IOException {
+    void updateUserDetails_shouldReturnToFormOnValidationErrors_emailAddressIsAlreadyAssociatedWithAnotherUser() throws IOException {
         // Given
-        String userId = "user123";
-        EntraUserDto entraUser = new EntraUserDto();
-        entraUser.setId(userId);
-        MockHttpSession testSession = new MockHttpSession();
-        // When
-        String view = userController.updateUserDetailsCheck(userId, model, testSession);
-        // Then
-        assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
-    }
+        final String userId = "user123";
+        EditUserDetailsForm form = new EditUserDetailsForm();
+        form.setFirstName("Jane");
+        form.setLastName("Smith");
+        form.setEmail("jane.smith@example.com");
 
-    @Test
-    void updateUserDetailsCheck() throws IOException {
-        // Given
-        String userId = "user123";
         EntraUserDto entraUser = new EntraUserDto();
-        entraUser.setId(userId);
-
         UserProfileDto userProfile = UserProfileDto.builder()
                 .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
                 .entraUser(entraUser)
                 .build();
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
-        session = new MockHttpSession();
-        EditUserDetailsForm form = new EditUserDetailsForm();
-        form.setFirstName("Changed");
-        form.setLastName("Changed");
-        form.setEmail("john.doe@example.com");
-        session.setAttribute("editUserDetailsForm", form);
-        model = new ExtendedModelMap();
+        when(userService.userExistsByEmail(anyString())).thenReturn(true);
+        when(emailValidationService.isValidEmailDomain(anyString())).thenReturn(true);
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(true);
+        MockHttpSession testSession = new MockHttpSession();
+
         // When
-        String view = userController.updateUserDetailsCheck(userId, model, session);
+        String view = userController.updateUserDetails(userId, form, bindingResult, testSession,  model, redirectAttributes, authentication);
+
         // Then
-        assertThat(view).isEqualTo("edit-user-details-check-answer");
-        assertThat(model.getAttribute("editUserDetailsForm")).isEqualTo(form);
-        assertThat(model.getAttribute("user")).isEqualTo(userProfile);
+        assertThat(view).isEqualTo("edit-user-details");
+        verify(bindingResult).rejectValue("email", "error.email",
+                "This email address is already associated with another user.");
+        assertThat(testSession.getAttribute("user")).isEqualTo(userProfile);
     }
 
     @Test
-    void updateUserDetailsSubmit_shouldRedirectNullSessionForm() throws IOException {
+    void updateUserDetails_shouldReturnToFormOnValidationErrors_emailAddressIsAlreadyRegisteredMultiFirmUser() throws IOException {
         // Given
-        String userId = "user123";
-        EntraUserDto entraUser = new EntraUserDto();
-        entraUser.setId(userId);
+        final String userId = "user123";
+        EditUserDetailsForm form = new EditUserDetailsForm();
+        form.setFirstName("Jane");
+        form.setLastName("Smith");
+        form.setEmail("jane.smith@example.com");
 
+        EntraUserDto entraUser = new EntraUserDto();
         UserProfileDto userProfile = UserProfileDto.builder()
                 .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
                 .entraUser(entraUser)
                 .build();
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
-        MockHttpSession testSession = new MockHttpSession();
-        // When
-        String view = userController.updateUserDetailsSubmit(userId, testSession);
-        // Then
-        assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
-    }
+        when(userService.userExistsByEmail(anyString())).thenReturn(true);
+        when(userService.isMultiFirmUserByEmail(anyString())).thenReturn(true);
+        when(emailValidationService.isValidEmailDomain(anyString())).thenReturn(true);
 
-    @Test
-    void updateUserDetailsSubmit() throws IOException {
-        // Given
-        String userId = "550e8400-e29b-41d4-a716-446655440000";
-        EntraUserDto entraUser = new EntraUserDto();
-        entraUser.setId(userId);
 
-        UserProfileDto userProfile = UserProfileDto.builder()
-                .id(UUID.fromString(userId))
-                .entraUser(entraUser)
-                .build();
-        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(true);
         MockHttpSession testSession = new MockHttpSession();
-        EditUserDetailsForm form = new EditUserDetailsForm();
-        form.setFirstName("John");
-        form.setLastName("Doe");
-        testSession.setAttribute("editUserDetailsForm", form);
+
         // When
-        String view = userController.updateUserDetailsSubmit(userId, testSession);
+        String view = userController.updateUserDetails(userId, form, bindingResult, testSession, model, redirectAttributes, authentication);
+
         // Then
-        verify(userService).updateUserDetails(eq("550e8400-e29b-41d4-a716-446655440000"), eq("John"), eq("Doe"));
-        assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/confirmation");
-        assertThat(testSession.getAttribute("editUserDetailsForm")).isNull();
+        assertThat(view).isEqualTo("edit-user-details");
+        verify(bindingResult).rejectValue("email", "error.email",
+                "This email address is already registered as a multi-firm user.");
+        assertThat(testSession.getAttribute("user")).isEqualTo(userProfile);
     }
 
     @Test
@@ -2786,12 +2771,8 @@ class UserControllerTest {
         when(bindingResult.hasErrors()).thenReturn(true);
         when(bindingResult.getAllErrors()).thenReturn(Collections.emptyList());
 
-        AppRoleViewModel role1 = new AppRoleViewModel();
-        role1.setName("role1");
-        role1.setSelected(true);
-        AppRoleViewModel role2 = new AppRoleViewModel();
-        role2.setName("role2");
-        role2.setSelected(true);
+        AppRoleViewModel role1 = AppRoleViewModel.builder().name("role1").selected(true).build();
+        AppRoleViewModel role2 = AppRoleViewModel.builder().name("role2").selected(true).build();
         List<AppRoleViewModel> roles = List.of(role1, role2);
 
         Model modelFromSession = new ExtendedModelMap();
@@ -4361,9 +4342,7 @@ class UserControllerTest {
         rolesForm.setRoles(null); // Validation error
 
         Model sessionModel = new ExtendedModelMap();
-        AppRoleViewModel role1 = new AppRoleViewModel();
-        role1.setId("role1");
-        role1.setSelected(true);
+        AppRoleViewModel role1 = AppRoleViewModel.builder().name("role1").selected(true).build();
         sessionModel.addAttribute("roles", List.of(role1));
         sessionModel.addAttribute("user", new UserProfileDto());
         sessionModel.addAttribute("grantAccessSelectedAppIndex", 0);
@@ -5990,11 +5969,16 @@ class UserControllerTest {
         DisableUserReasonForm form = new DisableUserReasonForm();
         form.setReasonId(reason.getId().toString());
 
+        String referer = "manage";
+        String profileId = UUID.randomUUID().toString();
+
         when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(returnedUser));
-        when(disableUserService.getDisableUserReasons()).thenReturn(List.of(reason));
+        when(disableUserService.getDisableUserReasons(anyBoolean())).thenReturn(List.of(reason));
+        when(loginService.getCurrentProfile(authentication))
+                .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
 
 
-        String view = userController.disableUserReasonsGet(userId.toString(), form, model, session);
+        String view = userController.disableUserReasonsGet(userId.toString(), form, model, session, authentication, referer, profileId);
 
         Assertions.assertEquals("disable-user-reason", view);
         Assertions.assertEquals(returnedUser, model.getAttribute("user"));
@@ -6009,6 +5993,139 @@ class UserControllerTest {
         DisableUserReasonViewModel returnedReason = (DisableUserReasonViewModel) returnedReasonObject;
         Assertions.assertEquals(reason.getId(), returnedReason.getId());
         Assertions.assertEquals("Disable User - " + returnedUser.getFullName(), model.getAttribute(ModelAttributes.PAGE_TITLE));
+        Assertions.assertEquals(referer, model.getAttribute("referer"));
+    }
+
+    @Test
+    public void testDisableUserGetReturnsReasonAndUserWithAuditReferer() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        EntraUserDto returnedUser = EntraUserDto.builder()
+                .id(userId.toString())
+                .fullName("Test User")
+                .build();
+        DisableUserReasonDto reason = DisableUserReasonDto.builder()
+                .id(UUID.randomUUID())
+                .name("Test Reason")
+                .description("A test reason.")
+                .build();
+        DisableUserReasonForm form = new DisableUserReasonForm();
+        form.setReasonId(reason.getId().toString());
+
+        String referer = "audit";
+        String profileId = UUID.randomUUID().toString();
+
+        when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(returnedUser));
+        when(loginService.getCurrentProfile(authentication))
+                .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(disableUserService.getDisableUserReasons(false)).thenReturn(List.of(reason));
+
+        String view = userController.disableUserReasonsGet(userId.toString(), form, model, session, authentication, referer, profileId);
+
+        Assertions.assertEquals("disable-user-reason", view);
+        Assertions.assertEquals(returnedUser, model.getAttribute("user"));
+
+        Object returnedReasonsObject = model.getAttribute("reasons");
+        Assertions.assertNotNull(returnedReasonsObject);
+        Assertions.assertInstanceOf(List.class, returnedReasonsObject);
+        List<?> returnedReasonList = (List<?>) returnedReasonsObject;
+        Object returnedReasonObject = returnedReasonList.getFirst();
+        Assertions.assertInstanceOf(DisableUserReasonViewModel.class, returnedReasonObject);
+
+        DisableUserReasonViewModel returnedReason = (DisableUserReasonViewModel) returnedReasonObject;
+        Assertions.assertEquals(reason.getId(), returnedReason.getId());
+        Assertions.assertEquals("Disable User - " + returnedUser.getFullName(), model.getAttribute(ModelAttributes.PAGE_TITLE));
+        Assertions.assertEquals(referer, model.getAttribute("referer"));
+    }
+
+    @Test
+    public void testDisableUserGetReturnsReasonForProvideAdmin() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        EntraUserDto returnedUser = EntraUserDto.builder()
+            .id(userId.toString())
+            .fullName("Test User")
+            .build();
+        DisableUserReasonDto reason = DisableUserReasonDto.builder()
+            .id(UUID.randomUUID())
+            .name("Test Reason")
+            .description("A test reason.")
+            .build();
+        DisableUserReasonForm form = new DisableUserReasonForm();
+        form.setReasonId(reason.getId().toString());
+
+        when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(returnedUser));
+        when(disableUserService.getDisableUserReasons(true)).thenReturn(List.of(reason));
+
+        Set<AppRole> editorRoles = Set.of(AppRole.builder()
+            .name(FIRM_USER_MANAGER.getDescription())
+            .build());
+        when(loginService.getCurrentProfile(authentication))
+            .thenReturn(UserProfile.builder().appRoles(editorRoles).build());
+
+        String referer = "audit";
+        String profileId = UUID.randomUUID().toString();
+
+        String view = userController.disableUserReasonsGet(userId.toString(), form, model, session, authentication, referer, profileId);
+
+        Assertions.assertEquals("disable-user-reason", view);
+        Assertions.assertEquals(returnedUser, model.getAttribute("user"));
+
+        Object returnedReasonsObject = model.getAttribute("reasons");
+        Assertions.assertNotNull(returnedReasonsObject);
+        Assertions.assertInstanceOf(List.class, returnedReasonsObject);
+        List<?> returnedReasonList = (List<?>) returnedReasonsObject;
+        Object returnedReasonObject = returnedReasonList.getFirst();
+        Assertions.assertInstanceOf(DisableUserReasonViewModel.class, returnedReasonObject);
+
+        DisableUserReasonViewModel returnedReason = (DisableUserReasonViewModel) returnedReasonObject;
+        Assertions.assertEquals(reason.getId(), returnedReason.getId());
+        Assertions.assertEquals("Disable User - " + returnedUser.getFullName(), model.getAttribute(ModelAttributes.PAGE_TITLE));
+    }
+
+    @Test
+    public void testDisableUserGetReturnsReasonAndUserWithNullReferer() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        EntraUserDto returnedUser = EntraUserDto.builder()
+                .id(userId.toString())
+                .fullName("Test User")
+                .build();
+        DisableUserReasonDto reason = DisableUserReasonDto.builder()
+                .id(UUID.randomUUID())
+                .name("Test Reason")
+                .description("A test reason.")
+                .build();
+        DisableUserReasonForm form = new DisableUserReasonForm();
+        form.setReasonId(reason.getId().toString());
+
+        String referer = null;
+        String profileId = UUID.randomUUID().toString();
+
+        when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(returnedUser));
+        when(disableUserService.getDisableUserReasons(anyBoolean())).thenReturn(List.of(reason));
+        Set<AppRole> editorRoles = Set.of(AppRole.builder()
+                .name(FIRM_USER_MANAGER.getDescription())
+                .build());
+        when(loginService.getCurrentProfile(authentication))
+                .thenReturn(UserProfile.builder().appRoles(editorRoles).build());
+
+        String view = userController.disableUserReasonsGet(userId.toString(), form, model, session, authentication, referer, profileId);
+
+        Assertions.assertEquals("disable-user-reason", view);
+        Assertions.assertEquals(returnedUser, model.getAttribute("user"));
+
+        Object returnedReasonsObject = model.getAttribute("reasons");
+        Assertions.assertNotNull(returnedReasonsObject);
+        Assertions.assertInstanceOf(List.class, returnedReasonsObject);
+        List<?> returnedReasonList = (List<?>) returnedReasonsObject;
+        Object returnedReasonObject = returnedReasonList.getFirst();
+        Assertions.assertInstanceOf(DisableUserReasonViewModel.class, returnedReasonObject);
+
+        DisableUserReasonViewModel returnedReason = (DisableUserReasonViewModel) returnedReasonObject;
+        Assertions.assertEquals(reason.getId(), returnedReason.getId());
+        Assertions.assertEquals("Disable User - " + returnedUser.getFullName(), model.getAttribute(ModelAttributes.PAGE_TITLE));
+        Assertions.assertEquals(referer, model.getAttribute("referer"));
     }
 
     @Test
@@ -6040,12 +6157,13 @@ class UserControllerTest {
         when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(returnedUser));
         when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
 
-
-        String view = userController.disableUserReasonsPost(userId.toString(), form, result, authentication, model, session);
+        String referer = "manage";
+        String view = userController.disableUserReasonsPost(userId.toString(), form, result, authentication, model, session, referer);
 
         Assertions.assertEquals("disable-user-completed", view);
         Assertions.assertEquals(returnedUser, model.getAttribute("user"));
         Assertions.assertEquals(form, model.getAttribute("disableUserReasonsForm"));
+        Assertions.assertEquals(model.getAttribute("referer"), referer);
         Assertions.assertEquals("Disable User Success - " + returnedUser.getFullName(), model.getAttribute(ModelAttributes.PAGE_TITLE));
     }
 
@@ -6072,7 +6190,8 @@ class UserControllerTest {
 
         when(session.getAttribute(eq("disableUserReasonModel"))).thenReturn(model);
 
-        String view = userController.disableUserReasonsPost(UUID.randomUUID().toString(), form, result, authentication, model, session);
+        String referer = "manage";
+        String view = userController.disableUserReasonsPost(UUID.randomUUID().toString(), form, result, authentication, model, session, referer);
 
         Assertions.assertEquals("disable-user-reason", view);
         Assertions.assertEquals("There was an error\nThere was another error", model.getAttribute("errorMessage"));
@@ -6174,7 +6293,7 @@ class UserControllerTest {
             when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER)).thenReturn(true);
 
             // Set up the user's firms (different from the one being accessed)
-            FirmDto userFirm = new FirmDto(userFirmId, "User's Firm", "UF1", null, false, false);
+            FirmDto userFirm = new FirmDto(userFirmId, "User's Firm", "UF1", null, false, false, false);
             when(firmService.getUserFirm(externalUser)).thenReturn(Optional.of(userFirm));
 
             // When / Then
