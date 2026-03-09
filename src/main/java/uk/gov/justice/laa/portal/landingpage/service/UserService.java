@@ -1817,7 +1817,9 @@ public class UserService {
                 .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
                         : "UNKNOWN")
                 .profiles(profileDtos).totalProfiles(allProfiles.size()).totalProfilePages(1)
-                .currentProfilePage(1).build();
+                .currentProfilePage(1)
+                .entraOid(entraUser.getEntraOid())
+                .build();
     }
 
     /**
@@ -1873,7 +1875,9 @@ public class UserService {
                 .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
                         : "UNKNOWN")
                 .profiles(profileDtos).totalProfiles(totalProfiles).totalProfilePages(totalPages)
-                .currentProfilePage(profilePage).hasNoProfile(false).build();
+                .currentProfilePage(profilePage).hasNoProfile(false)
+                .entraOid(entraUser.getEntraOid())
+                .build();
     }
 
     /**
@@ -1911,7 +1915,9 @@ public class UserService {
                 .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
                         : "UNKNOWN")
                 .profiles(Collections.emptyList()).totalProfiles(0).totalProfilePages(0)
-                .currentProfilePage(1).hasNoProfile(true).build();
+                .currentProfilePage(1).hasNoProfile(true)
+                .entraOid(entraUser.getEntraOid())
+                .build();
     }
 
     /**
