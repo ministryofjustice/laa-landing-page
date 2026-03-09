@@ -10,6 +10,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.servlet.view.RedirectView;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -82,6 +83,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({ BadRequestException.class})
     public ResponseEntity<ClaimEnrichmentResponse> handleBadRequestExceptionException(Exception ex) {
         return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    /**
+     * Handle missing static resources (e.g., favicon.ico)
+     * Silently returns 404 without throwing exceptions
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Void> handleNoResourceFoundException(NoResourceFoundException ex) {
+        // Browsers automatically request favicon.ico, return clean 404
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
 
     /**
