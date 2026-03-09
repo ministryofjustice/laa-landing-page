@@ -3,30 +3,19 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 import jakarta.annotation.Resource;
 
 import jakarta.transaction.Transactional;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.ui.ModelMap;
+import org.springframework.ui.ExtendedModelMap;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 
-import uk.gov.justice.laa.portal.landingpage.dto.DisableUserReasonDto;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
-import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
-import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 
-import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -41,10 +30,6 @@ public class FirmDirectoryTest extends BaseIntegrationTest {
 
     @Resource
     private MockMvc mockMvc;
-
-    @Autowired
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    private UserAccountStatusService userAccountStatusService;
 
     @Test
     public void accessFirmDirectorySearchScreen() throws Exception {
@@ -110,56 +95,34 @@ public class FirmDirectoryTest extends BaseIntegrationTest {
 
     @Test
     @Transactional
-    public void reasonForDisablePostWithoutError() throws Exception {
-
+    void reasonForDisablePostWithoutError() throws Exception {
+        // Arrange
         Firm firm1 = buildFirm("Test Firm", "A123");
         Office office1 = buildOffice(firm1, "Test Office", "123 Test Street", "BT12 3AB", "O123");
         firmRepository.saveAndFlush(firm1);
         officeRepository.saveAndFlush(office1);
 
-        UUID firmId = firm1.getId();
-
-        mockMvc.perform(post(FIRM_DIRECTORY_PATH + "/" + firmId + "/reasonForDisable")
-                        .with(defaultOauth2Login(defaultLoggedInUser)))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(view().name("firm-directory/bulk-confirmation"))
-                .andExpect(model().attribute(ModelAttributes.PAGE_TITLE, "Choose a reason to disable access for - " + firm1.getName()));
-    }
-
-    @Test
-    void post_reasonForDisable_success_renders_confirmation_view() throws Exception {
-        // Arrange
         String firmId = String.valueOf(UUID.randomUUID());
-        Long selectedReasonId = 7L;
+        String selectedReasonId = String.valueOf(UUID.randomUUID());
 
-        // Seed the session with a Model carrying "firm" and "reasons"
-        ModelMap sessionModel = new ModelMap();
-        Firm firm =  buildFirm("Test Firm", "A123");; // or your real Firm type
-        sessionModel.addAttribute("firm", firm);
-        List<DisableUserReasonDto> reasons = List.of(new DisableUserReasonDto(UUID.randomUUID(), "Fraud", "Fraud"), new DisableUserReasonDto(UUID.randomUUID(), "Other","Other" ));
-        sessionModel.addAttribute("reasons", reasons);
-
-        MockHttpSession session = new MockHttpSession();
-        session.setAttribute("disableUserReasonModel", sessionModel);
-
-        // Mock the counts service
-        Map<String, Long> counts = Map.of(
-                "totalOfSingleFirm", 5L,
-                "totalOfMultiFirm", 2L
-        );
-        //when(userAccountStatusService.getUserCountsForFirm(any())).thenReturn(counts);
+        MockHttpSession httpSession = new MockHttpSession();
+        ExtendedModelMap disableUserReasonModel = new ExtendedModelMap();
+        disableUserReasonModel.addAttribute("reasonIdSelected", selectedReasonId);
+        disableUserReasonModel.addAttribute("firm", FirmDto.builder()
+                .id(firm1.getId())
+                .name(firm1.getName())
+                .code(firm1.getCode())
+                .build());
+        httpSession.setAttribute("disableUserReasonModel", disableUserReasonModel);
 
         // Act + Assert
-        MvcResult result = mockMvc.perform(post(FIRM_DIRECTORY_PATH + "/" + firmId + "/reasonForDisable")
-                        .session(session)
+        mockMvc.perform(post(FIRM_DIRECTORY_PATH + "/" + firmId + "/reasonForDisable")
+                        .session(httpSession)
                         .with(defaultOauth2Login(defaultLoggedInUser))
                         .with(csrf())
                         .param("reasonId", String.valueOf(selectedReasonId)))
-                .andExpect(status().is3xxRedirection())
-                .andReturn();
-
-
-        // Optional: verify service call
-        verify(userAccountStatusService).getUserCountsForFirm(firmId);
+                .andExpect(status().is2xxSuccessful())
+                .andExpect(view().name("firm-directory/bulk-confirmation"))
+                .andExpect(model().attribute(ModelAttributes.PAGE_TITLE, "Remove access for all - " + firm1.getName()));
     }
 }
