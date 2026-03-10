@@ -1422,23 +1422,13 @@ public class UserController {
                     user.getEntraUser(), updateResult.get("diff"),
                     "role");
             eventService.logEvent(updateUserAuditEvent);
-
-            if (user.getUserType() == UserType.EXTERNAL && user.getEntraUser() != null && updateResult.get("diff") != null && !updateResult.get("diff").isEmpty()) {
-                notificationService.notifyUserAccessChange(
-                    user.getId(),
-                    user.getEntraUser().getFirstName(),
-                    user.getEntraUser().getEmail(),
-                    "Service roles",
-                    updateResult.get("diff")
-                );
-            }
+            notifyExternalUserRoleChange(user, updateResult.get("diff"), "Service roles");
         }
         // Clear the session
         session.removeAttribute("editUserAllSelectedRoles");
         session.removeAttribute("selectedApps");
         return "redirect:/admin/users/edit/" + id + "/confirmation";
     }
-
     /**
      * Get user offices for editing
      *
@@ -1624,17 +1614,7 @@ public class UserController {
                 userProfileDto.getEntraUser(),
                 changed, "office");
         eventService.logEvent(updateUserAuditEvent);
-
-        if (userProfileDto.getUserType() == UserType.EXTERNAL && userProfileDto.getEntraUser() != null && changed != null && !changed.isEmpty()) {
-            notificationService.notifyUserAccessChange(
-                userProfileDto.getId(),
-                userProfileDto.getEntraUser().getFirstName(),
-                userProfileDto.getEntraUser().getEmail(),
-                "Offices",
-                changed
-            );
-        }
-
+        notifyExternalUserRoleChange(userProfileDto, changed, "Offices");
         // Clear the session model
         session.removeAttribute("editUserOfficesModel");
         session.removeAttribute("officesForm");
@@ -2362,15 +2342,7 @@ public class UserController {
                     "access_grant_complete");
             eventService.logEvent(updateUserAuditEvent);
 
-            if (userProfileDto.getUserType() == UserType.EXTERNAL && userProfileDto.getEntraUser() != null) {
-                notificationService.notifyUserAccessChange(
-                    userProfileDto.getId(),
-                    userProfileDto.getEntraUser().getFirstName(),
-                    userProfileDto.getEntraUser().getEmail(),
-                    "Access granted",
-                    "You have been granted access to services and offices"
-                );
-            }
+            notifyExternalUserRoleChange(userProfileDto, "You have been granted access to services and offices", "Access granted");
 
         } catch (Exception e) {
             log.error("Error completing grant access for user: " + id, e);
@@ -2975,6 +2947,21 @@ public class UserController {
             log.error("Error reassigning firm for user {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("success", false, "message", "An error occurred while reassigning the user"));
+        }
+    }
+    private void notifyExternalUserRoleChange(UserProfileDto user, String changeDetails, String changeType) {
+        if (user.getUserType() == UserType.EXTERNAL
+                && user.getEntraUser() != null
+                && changeDetails != null
+                && !changeDetails.isEmpty()) {
+
+            notificationService.notifyUserAccessChange(
+                    user.getId(),
+                    user.getEntraUser().getFirstName(),
+                    user.getEntraUser().getEmail(),
+                    changeType,
+                    changeDetails
+            );
         }
     }
 }
