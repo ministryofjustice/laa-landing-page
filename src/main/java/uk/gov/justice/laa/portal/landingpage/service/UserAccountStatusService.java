@@ -134,7 +134,7 @@ public class UserAccountStatusService {
 
     public Map<String, Integer> getUserCountsForFirm(String firmId) {
         Map<String, Integer> result = new HashMap<>();
-        List<CountFirmByMultifirmFlag> countFirmByMultifirmFlagList = userProfileRepository.countByMultifirmFlag(firmId);
+        List<CountFirmByMultifirmFlag> countFirmByMultifirmFlagList = userProfileRepository.countByMultifirmFlag(UUID.fromString(firmId));
 
         for (CountFirmByMultifirmFlag count : countFirmByMultifirmFlagList){
             if(count.getIsMultifirm()){
@@ -149,7 +149,7 @@ public class UserAccountStatusService {
     }
 
     public boolean hasActiveUserByFirmId(String firmId) {
-        return userProfileRepository.hasActiveUserByFirmId(firmId);
+        return userProfileRepository.hasActiveUserByFirmId(UUID.fromString(firmId));
     }
 
     public void disableUserAllUserByFirmId(String firmId, UUID disableReasonId, UUID disabledById) {

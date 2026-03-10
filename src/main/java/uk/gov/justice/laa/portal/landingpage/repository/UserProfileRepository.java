@@ -228,7 +228,7 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                     """,
             nativeQuery = true
     )
-    boolean hasActiveUserByFirmId(@Param("firmId") String firmId);
+    boolean hasActiveUserByFirmId(@Param("firmId") UUID firmId);
 
 
     @Query(value = """
@@ -243,7 +243,7 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
     GROUP BY eu.multi_firm_user
     """,
             nativeQuery = true)
-    List<CountFirmByMultifirmFlag> countByMultifirmFlag(@Param("firmId") String firmId);
+    List<CountFirmByMultifirmFlag> countByMultifirmFlag(@Param("firmId") UUID firmId);
 
 
 }

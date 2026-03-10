@@ -160,7 +160,7 @@ public class FirmDirectoryController {
         }
         // add all the variables of confirmation
         modelFromSession.addAttribute("reasonIdSelected", disableUserReasonForm.getReasonId());
-        Map<String, Long> counts = userAccountStatusService.getUserCountsForFirm(id);
+        Map<String, Integer> counts = userAccountStatusService.getUserCountsForFirm(id);
         model.addAttribute("totalOfSingleFirm", counts.get("totalOfSingleFirm"));
         model.addAttribute("totalOfMultiFirm", counts.get("totalOfMultiFirm"));
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Remove access for all - " + firm.getName());
