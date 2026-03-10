@@ -2045,4 +2045,5 @@ public class UserService {
         logger.info("User profile {} reassigned from firm {} to firm {} and legacyId from {} to {} by user with entra oid: {} (Reason: {})",
                 userProfileId, oldFirm.getName(), newFirm.getName(), oldLegacyId, userProfile.getLegacyUserId(), performedByEntraUserId, reason);
     }
+
 }

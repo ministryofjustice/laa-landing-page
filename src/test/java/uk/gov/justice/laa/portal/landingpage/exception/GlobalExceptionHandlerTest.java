@@ -91,7 +91,7 @@ class GlobalExceptionHandlerTest {
         MethodArgumentNotValidException exception = mock(MethodArgumentNotValidException.class);
         BindingResult bindingResult = mock(BindingResult.class);
         FieldError fieldError = new FieldError("object", "field", "Field validation failed");
-        
+
         when(exception.getBindingResult()).thenReturn(bindingResult);
         when(bindingResult.getFieldErrors()).thenReturn(List.of(fieldError));
 
@@ -184,7 +184,7 @@ class GlobalExceptionHandlerTest {
 
         // Act & Assert
         RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
-            RuntimeException.class, 
+            RuntimeException.class,
             () -> exceptionHandler.handleGenericException(exception, request)
         );
         assertEquals(exception, thrown.getCause());
@@ -200,7 +200,134 @@ class GlobalExceptionHandlerTest {
 
         // Act & Assert
         RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
-            RuntimeException.class, 
+            RuntimeException.class,
+            () -> exceptionHandler.handleAccessException(exception, request)
+        );
+        assertEquals(exception, thrown.getCause());
+    }
+
+    @Test
+    void handleAccessException_apiRequestByContentType() {
+        // Arrange
+        String errorMessage = "unauthorized error";
+        AccessDeniedException exception = new AccessDeniedException(errorMessage);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Content-Type", "application/json"); // API request via Content-Type
+
+        // Act
+        ResponseEntity<ClaimEnrichmentResponse> response = exceptionHandler.handleAccessException(exception, request);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(401, response.getStatusCode().value());
+        assertFalse(response.getBody().isSuccess());
+        assertTrue(response.getBody().getMessage().contains(errorMessage));
+    }
+
+    @Test
+    void handleAccessException_apiRequestByUri() {
+        // Arrange
+        String errorMessage = "unauthorized error";
+        AccessDeniedException exception = new AccessDeniedException(errorMessage);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/api/pda/report"); // API request via URI
+
+        // Act
+        ResponseEntity<ClaimEnrichmentResponse> response = exceptionHandler.handleAccessException(exception, request);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(401, response.getStatusCode().value());
+        assertFalse(response.getBody().isSuccess());
+        assertTrue(response.getBody().getMessage().contains(errorMessage));
+    }
+
+    @Test
+    void handleGenericException_apiRequestByContentType() {
+        // Arrange
+        String errorMessage = "Unexpected error";
+        Exception exception = new Exception(errorMessage);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Content-Type", "application/json"); // API request via Content-Type
+
+        // Act
+        ResponseEntity<ClaimEnrichmentResponse> response = exceptionHandler.handleGenericException(exception, request);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(500, response.getStatusCode().value());
+        assertFalse(response.getBody().isSuccess());
+        assertTrue(response.getBody().getMessage().contains(errorMessage));
+    }
+
+    @Test
+    void handleGenericException_apiRequestByUri() {
+        // Arrange
+        String errorMessage = "Unexpected error";
+        Exception exception = new Exception(errorMessage);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/api/claim/enrich"); // API request via URI
+
+        // Act
+        ResponseEntity<ClaimEnrichmentResponse> response = exceptionHandler.handleGenericException(exception, request);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(500, response.getStatusCode().value());
+        assertFalse(response.getBody().isSuccess());
+        assertTrue(response.getBody().getMessage().contains(errorMessage));
+    }
+
+    @Test
+    void handleNoResourceFoundException() {
+        // Arrange
+        org.springframework.web.servlet.resource.NoResourceFoundException exception =
+            new org.springframework.web.servlet.resource.NoResourceFoundException(
+                org.springframework.http.HttpMethod.GET, "/favicon.ico");
+
+        // Act
+        ResponseEntity<Void> response = exceptionHandler.handleNoResourceFoundException(exception);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(404, response.getStatusCode().value());
+    }
+
+    @Test
+    void handleAuthorizationDeniedException_apiRequest() {
+        // Arrange
+        String errorMessage = "authorization denied";
+        org.springframework.security.authorization.AuthorizationDeniedException exception =
+            new org.springframework.security.authorization.AuthorizationDeniedException(
+                errorMessage,
+                new org.springframework.security.authorization.AuthorizationDecision(false));
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Accept", "application/json"); // API request
+
+        // Act
+        ResponseEntity<ClaimEnrichmentResponse> response = exceptionHandler.handleAccessException(exception, request);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(401, response.getStatusCode().value());
+        assertFalse(response.getBody().isSuccess());
+        assertTrue(response.getBody().getMessage().contains(errorMessage));
+    }
+
+    @Test
+    void handleAuthorizationDeniedException_webRequest_rethrowsException() {
+        // Arrange
+        String errorMessage = "authorization denied";
+        org.springframework.security.authorization.AuthorizationDeniedException exception =
+            new org.springframework.security.authorization.AuthorizationDeniedException(
+                errorMessage,
+                new org.springframework.security.authorization.AuthorizationDecision(false));
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Accept", "text/html"); // Web request
+
+        // Act & Assert
+        RuntimeException thrown = org.junit.jupiter.api.Assertions.assertThrows(
+            RuntimeException.class,
             () -> exceptionHandler.handleAccessException(exception, request)
         );
         assertEquals(exception, thrown.getCause());
