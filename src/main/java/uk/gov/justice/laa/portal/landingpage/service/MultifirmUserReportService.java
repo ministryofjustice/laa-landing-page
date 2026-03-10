@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -40,6 +41,7 @@ public class MultifirmUserReportService {
         reportRows.addAll(entraUserRepository.findUnlinkedMultifirmUsersCount());
         reportRows.addAll(entraUserRepository.findTotalMultiFirmUsersCount());
         File multifirmUserCsv = writeToCsv(reportRows);
+
         try {
             reportUploadService.uploadCsvToSharePoint(multifirmUserCsv, folderPath);
         } catch (FileNotFoundException e) {
@@ -50,12 +52,18 @@ public class MultifirmUserReportService {
     private File writeToCsv(List<Object[]> rows) {
 
         String timestamp = LocalDateTime.now().format(fileTimestamp);
-        String fileName = "SiLAS-multifirm-user-report-" + timestamp;
+        String fileName = "SiLAS-multifirm-user-report-" + timestamp + ".csv";
 
         try {
             CsvMapper csvMapper = CsvMapper.builder().build();
 
-            Path tempFile = Files.createTempFile(fileName, ".csv");
+
+            Path tempFile = Paths.get(
+                    System.getProperty("java.io.tmpdir"),
+                    fileName
+            );
+            Files.createFile(tempFile);
+
 
             CsvSchema schema = CsvSchema.builder()
                     .addColumn("Firm Name")

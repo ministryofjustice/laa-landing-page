@@ -23,39 +23,37 @@ public class ReportUploadService {
 
         FileInputStream fileInputStream = new FileInputStream(file);
 
-        Site site = graphClientConfig.graphUploadClient()
-                .sites()
-                .bySiteId("mojodevl.sharepoint.com:/sites/SiLASDataExtracts")
-                .get();
+            Site site = graphClientConfig.graphUploadClient()
+                    .sites()
+                    .bySiteId("mojodevl.sharepoint.com:/sites/SiLASDataExtracts")
+                    .get();
 
-        final String siteId = site.getId();
+            final String siteId = site.getId();
 
-        log.info("Site ID: {}", siteId);
+            Drive drive = graphClientConfig.graphUploadClient()
+                    .sites()
+                    .bySiteId(siteId)
+                    .drive()
+                    .get();
 
-        Drive drive = graphClientConfig.graphUploadClient()
-                .sites()
-                .bySiteId(siteId)
-                .drive()
-                .get();
+            String driveId = drive.getId();
 
-        String driveId = drive.getId();
+            log.info("Uploading report to SharePoint: {}", file.getName());
 
-        log.info("Drive ID: {}", driveId);
+            DriveItem uploadCsv =
+                    graphClientConfig.graphUploadClient()
+                            .drives()
+                            .byDriveId(driveId)
+                            .items()
+                            .byDriveItemId("root:/" + folderPath + "/" + file.getName() + ":")
+                            .content()
+                            .put(fileInputStream);
 
-        DriveItem uploadCsv =
-                graphClientConfig.graphUploadClient()
-                        .drives()
-                        .byDriveId(driveId)
-                        .items()
-                        .byDriveItemId("root:" + folderPath + ":")
-                        .content()
-                        .put(fileInputStream);
-
-        if (uploadCsv != null) {
-            log.info("File uploaded successfully");
-        } else {
-            log.error("File upload failed");
+            if (uploadCsv != null) {
+                log.info("File uploaded successfully");
+            } else {
+                log.error("File upload failed");
+            }
         }
     }
 
-}
