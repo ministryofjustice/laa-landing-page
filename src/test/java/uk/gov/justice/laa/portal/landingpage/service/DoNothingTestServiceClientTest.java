@@ -15,20 +15,26 @@ import org.slf4j.LoggerFactory;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetAllApplicationsResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.GetUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUsersResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
 
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -42,6 +48,9 @@ public class DoNothingTestServiceClientTest {
     @Mock
     private AppRepository appRepository;
 
+    @Mock
+    private EntraUserRepository entraUserRepository;
+
     private TechServicesClient techServicesClient;
 
     @BeforeEach
@@ -51,7 +60,7 @@ public class DoNothingTestServiceClientTest {
         logAppender.start();
         logger.addAppender(logAppender);
         logger.setLevel(ch.qos.logback.classic.Level.DEBUG);
-        techServicesClient = new DoNothingTechServicesClient(appRepository);
+        techServicesClient = new DoNothingTechServicesClient(appRepository, entraUserRepository);
 
     }
 
@@ -119,6 +128,24 @@ public class DoNothingTestServiceClientTest {
         TechServicesApiResponse<ChangeAccountEnabledResponse> response = techServicesClient.enableUser(user);
         assertThat(response.isSuccess()).isTrue();
         assertThat(response.getData().getMessage()).isEqualTo("Successfully enabled user.");
+    }
+
+    @Test
+    public void testUpdateUserDetailsReturnsSuccessResponse() {
+        EntraUserDto user = EntraUserDto.builder()
+                .entraOid("entraOid")
+                .firstName("firstName")
+                .lastName("lastName")
+                .build();
+        TechServicesApiResponse<ChangeAccountEnabledResponse> response = techServicesClient
+                .updateUserDetails(
+                        user.getEntraOid(),
+                        user.getFirstName(),
+                        user.getLastName(),
+                        user.getEmail()
+                );
+        assertThat(response.isSuccess()).isTrue();
+        assertThat(response.getData().getMessage()).isEqualTo("Successfully Update user details.");
     }
 
     @Test
@@ -239,6 +266,35 @@ public class DoNothingTestServiceClientTest {
         assertThat(mapped.getSecurityGroups()).hasSize(1);
         assertThat(mapped.getSecurityGroups().getFirst().getId()).isEqualTo("SGX");
         assertThat(mapped.getSecurityGroups().getFirst().getName()).isEqualTo("SG Name");
+    }
+
+    @Test
+    public void testGetUserReturnsDummyObjectWhenNotFound() {
+        UUID userId = UUID.randomUUID();
+        when(entraUserRepository.findByEntraOid(eq(userId.toString()))).thenReturn(Optional.empty());
+        TechServicesApiResponse<GetUserResponse> response = techServicesClient.getUser(userId.toString());
+        assertThat(response.isSuccess()).isTrue();
+    }
+
+    @Test
+    public void testGetUserReturnsDbDetailsWhenUserFound() {
+        UUID userId = UUID.randomUUID();
+        EntraUser entraUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .entraOid(userId.toString())
+                .firstName("Test")
+                .lastName("User")
+                .email("test@test.com")
+                .build();
+        when(entraUserRepository.findByEntraOid(eq(userId.toString()))).thenReturn(Optional.of(entraUser));
+        TechServicesApiResponse<GetUserResponse> response = techServicesClient.getUser(userId.toString());
+        assertThat(response.isSuccess()).isTrue();
+        assertThat(response.getData()).isNotNull();
+        GetUserResponse getUserResponse = response.getData();
+        assertThat(getUserResponse.getUser()).isNotNull();
+        TechServicesUser techServicesUser = getUserResponse.getUser();
+        assertThat(techServicesUser.getEmail()).isEqualTo(entraUser.getEmail());
+        assertThat(techServicesUser.getId()).isEqualTo(entraUser.getEntraOid());
     }
 
     // Helper builder for App entity in tests

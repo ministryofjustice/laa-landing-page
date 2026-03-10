@@ -1,0 +1,25 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1736077500-1
+      author: sankavi.mohanraj
+      dbms: postgresql
+      comment: Add invitation_status column to entra_user table to track user invitation status
+      changes:
+        - addColumn:
+            tableName: entra_user
+            columns:
+              - column:
+                  name: invitation_status
+                  type: varchar(255)
+                  constraints:
+                    nullable: true
+        - sql:
+            dbms: postgresql
+            sql: "ALTER TABLE entra_user ADD CONSTRAINT entra_user_invitation_status_check CHECK ((invitation_status)::text = ANY ((ARRAY['INVITE_SENT'::character varying, 'AWAITING_MFA'::character varying, 'AWAITING_VERIFICATION'::character varying, 'VERIFICATION_FAILED'::character varying])::text[]))"
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: "ALTER TABLE entra_user DROP CONSTRAINT IF EXISTS entra_user_invitation_status_check"
+        - dropColumn:
+            tableName: entra_user
+            columnName: invitation_status

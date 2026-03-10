@@ -32,11 +32,11 @@
                 flex-wrap: wrap;
             }
 
-            .govuk-grid-row .govuk-grid-column-one-half {
+            .govuk-grid-row > .govuk-grid-column-one-half {
                 display: flex;
             }
 
-            .govuk-grid-row .govuk-grid-column-one-half .govuk-summary-card {
+            .govuk-grid-row > .govuk-grid-column-one-half > .govuk-summary-card {
                 width: 100%;
                 display: flex;
                 flex-direction: column;
@@ -57,11 +57,28 @@
                 margin-top: 0px;
                 margin-bottom: 5px;
             }
+
+            .identity-row > .govuk-grid-column-one-half {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
         </style>
 
         <div class="govuk-grid-row">
             <div class="govuk-grid-column-full">
                 <h1 class="govuk-heading-l" th:text="${user.fullName}">User Name</h1>
+
+                <!-- Show message for users without profiles (external users only) -->
+                <div th:if="${entraUser == null}"
+                     style="display: flex; align-items: flex-start; gap: 0.5rem; margin-top: 2rem; margin-bottom: 1.5rem; padding: 15px; background-color: #f3f2f1; border-left: 5px solid #0b0c0c;">
+                    <div
+                            style="background-color: #0b0c0c; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.5rem; font-weight: bold; line-height: 1;">
+                        i</div>
+                    <p class="govuk-body" style="margin: 0; padding-top: 0.25rem;">
+                        There was a problem retrieving Entra Audit Data for this user. Please reload the page to try again.
+                    </p>
+                </div>
 
                 <!-- Multi-firm user notification -->
                 <div th:if="${user.isMultiFirmUser}"
@@ -81,10 +98,13 @@
                 <!-- Identity Information Section -->
                 <h2 class="govuk-heading-m">Identity information</h2>
 
-                <div class="govuk-grid-row">
-                    <!-- User Details Card -->
+                <div class="govuk-grid-row identity-row">
+
+                    <!-- LEFT COLUMN -->
                     <div class="govuk-grid-column-one-half">
-                        <div class="govuk-summary-card">
+
+                        <!-- User Details Card (Top Left) -->
+                        <div class="govuk-summary-card govuk-!-margin-bottom-6">
                             <div class="govuk-summary-card__title-wrapper">
                                 <h3 class="govuk-summary-card__title">User details</h3>
                             </div>
@@ -105,13 +125,11 @@
                                 </dl>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Audit Data Card -->
-                    <div class="govuk-grid-column-one-half">
+                        <!-- Silas Audit Data Card (Bottom Left) -->
                         <div class="govuk-summary-card">
                             <div class="govuk-summary-card__title-wrapper">
-                                <h3 class="govuk-summary-card__title">Audit data</h3>
+                                <h3 class="govuk-summary-card__title">SiLAS Audit Data</h3>
                             </div>
                             <div class="govuk-summary-card__content">
                                 <dl class="govuk-summary-list">
@@ -125,6 +143,7 @@
                                             th:text="${user.lastLoginDate != null ? #temporals.format(user.lastLoginDate, 'dd MMM yyyy HH:mm') : ''}">
                                         </dd>
                                     </div>
+
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Entra status</dt>
                                         <dd class="govuk-summary-list__value">
@@ -151,7 +170,53 @@
                                 </dl>
                             </div>
                         </div>
+
                     </div>
+
+                    <!-- RIGHT COLUMN -->
+                    <div class="govuk-grid-column-one-half">
+
+                        <!-- Entra Audit Data Card (Full Right Column) -->
+                        <div class="govuk-summary-card">
+                            <div class="govuk-summary-card__title-wrapper">
+                                <h3 class="govuk-summary-card__title">Entra Audit data</h3>
+                            </div>
+                            <div class="govuk-summary-card__content">
+                                <dl class="govuk-summary-list">
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Account Status</dt>
+                                        <dd class="govuk-summary-list__value">
+                                            <strong class="govuk-tag govuk-tag--green" th:if="${entraUser != null && entraUser.accountEnabled}">Active</strong>
+                                            <strong class="govuk-tag govuk-tag--red" th:if="${entraUser != null && !entraUser.accountEnabled}">Disabled</strong>
+                                            <strong class="govuk-tag govuk-tag--grey" th:if="${entraUser == null}">Unknown</strong>
+                                        </dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Invitation State</dt>
+                                        <dd class="govuk-summary-list__value" th:if="${entraUser == null || entraUser.customSecurityAttributes == null || entraUser.customSecurityAttributes.guestUserStatus == null || entraUser.customSecurityAttributes.guestUserStatus.invitationProgress == null}">Unknown</dd>
+                                        <dd class="govuk-summary-list__value" th:if="${entraUser != null && entraUser.customSecurityAttributes != null && entraUser.customSecurityAttributes.guestUserStatus != null}" th:text="${entraUser.customSecurityAttributes.guestUserStatus.invitationProgress}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Object ID</dt>
+                                        <dd class="govuk-summary-list__value" th:if="${entraUser != null}" th:text="${entraUser.id}"></dd>
+                                        <dd class="govuk-summary-list__value" th:if="${entraUser == null}">Unknown</dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Created Date/Time</dt>
+                                        <dd class="govuk-summary-list__value" th:if="${entraUser == null}">Unknown</dd>
+                                        <dd class="govuk-summary-list__value" th:if="${entraUser != null}" th:text="${entraUser.createdDateTime}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Email</dt>
+                                        <dd class="govuk-summary-list__value" th:if="${entraUser == null}">Unknown</dd>
+                                        <dd class="govuk-summary-list__value" th:if="${entraUser != null}" th:text="${entraUser.email}"></dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </div>
+
+                    </div>
+
                 </div>
 
                 <!-- Profile Information Section - Only show for external users -->

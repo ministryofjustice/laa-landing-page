@@ -28,4 +28,5 @@ public class EntraUserDto implements Serializable {
     @Builder.Default
     private boolean enabled = true;
     private String disabledBy;
+    private boolean mailOnly;
 }
