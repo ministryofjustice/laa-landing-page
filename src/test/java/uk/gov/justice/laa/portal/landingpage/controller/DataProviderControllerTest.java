@@ -51,7 +51,7 @@ class DataProviderControllerTest {
         when(dataProviderService.compareWithDatabase()).thenReturn(comparisonResult);
 
         // When
-        ResponseEntity<String> response = controller.compareProviderOffices();
+        ResponseEntity<String> response = controller.reportProviderOffices();
 
         // Then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -67,7 +67,7 @@ class DataProviderControllerTest {
         when(dataProviderService.compareWithDatabase()).thenThrow(new RuntimeException("Test error"));
 
         // When
-        ResponseEntity<String> response = controller.compareProviderOffices();
+        ResponseEntity<String> response = controller.reportProviderOffices();
 
         // Then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -91,7 +91,7 @@ class DataProviderControllerTest {
         when(dataProviderService.compareWithDatabase()).thenReturn(comparisonResult);
 
         // When
-        ResponseEntity<String> response = controller.compareProviderOffices();
+        ResponseEntity<String> response = controller.reportProviderOffices();
 
         // Then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);

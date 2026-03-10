@@ -58,8 +58,8 @@ public class DisableFirmCommand implements PdaSyncCommand {
             firmRepository.save(firm);
             result.setFirmsDisabled(result.getFirmsDisabled() + 1);
 
-            log.debug("Disabled firm: {} (name: {}) - preserving offices and user associations",
-                firm.getCode(), firm.getName());
+            log.debug("Disabled firm: {} - preserving offices and user associations",
+                firm.getCode());
         } catch (Exception e) {
             log.error("Failed to disable firm {}: {}", firm.getCode(), e.getMessage());
             result.addError("Failed to disable firm " + firm.getCode() + ": " + e.getMessage());

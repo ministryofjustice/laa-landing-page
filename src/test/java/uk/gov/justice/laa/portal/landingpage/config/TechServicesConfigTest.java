@@ -76,7 +76,7 @@ public class TechServicesConfigTest {
 
     @Test
     void techServicesConfig_shouldCreateDoNothingTechServicesNotifierInstance() {
-        TechServicesClient techServicesClient = techServicesConfig.doNothingTechServicesClient(appRepository);
+        TechServicesClient techServicesClient = techServicesConfig.doNothingTechServicesClient(appRepository, entraUserRepository);
         assertThat(techServicesClient).isNotNull();
         assertThat(techServicesClient).isInstanceOf(DoNothingTechServicesClient.class);
     }

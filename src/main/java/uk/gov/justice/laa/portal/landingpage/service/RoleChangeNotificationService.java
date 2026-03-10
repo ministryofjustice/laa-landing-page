@@ -90,7 +90,7 @@ public class RoleChangeNotificationService {
                 ccmsMessageBuilder.vendorNumber(userProfile.getFirm().getCode());
             }
 
-            String messageBody = objectMapper.writeValueAsString(ccmsMessageBuilder.toString());
+            String messageBody = objectMapper.writeValueAsString(ccmsMessageBuilder.build());
             log.info("CCMS role change message: {}", messageBody);
 
             Map<String, MessageAttributeValue> userTypeAttribute = Map.of(USER_TYPE_ATTRIBUTE, MessageAttributeValue.builder()
