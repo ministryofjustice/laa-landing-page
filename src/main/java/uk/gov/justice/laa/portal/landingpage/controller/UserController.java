@@ -1434,6 +1434,7 @@ public class UserController {
      * @return View name for editing user offices
      * @throws IllegalArgumentException If the user ID is invalid or not found
      */
+
     @GetMapping("/users/edit/{id}/offices")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
     public String editUserOffices(@PathVariable String id, Model model, Authentication authentication, HttpSession session) {
@@ -2946,6 +2947,7 @@ public class UserController {
                     .body(Map.of("success", false, "message", "An error occurred while reassigning the user"));
         }
     }
+
     private void notifyExternalUserRoleChange(UserProfileDto user, String changeDetails, String changeType) {
         if (user.getUserType() == UserType.EXTERNAL
                 && user.getEntraUser() != null
