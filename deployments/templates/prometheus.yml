@@ -122,8 +122,8 @@ spec:
             message: Memory usage compared to the memory limit on the container in ${ENV_NAME} is more than 85% for 5m
             dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
           expr: |-
-            (sum(container_memory_working_set_bytes{namespace="${NAMESPACE}", container="laa-landing-page", image!=""}) 
-            / 
+            (sum(container_memory_working_set_bytes{namespace="${NAMESPACE}", container="laa-landing-page", image!=""})
+            /
             sum(kube_pod_container_resource_limits{namespace="${NAMESPACE}", container="laa-landing-page", unit="byte"})) * 100 > 85
           for: 5m
           labels:
@@ -272,5 +272,166 @@ spec:
               aws_rds_database_connections_average{dbinstance_identifier="$RDS_DB_IDENTIFIER", environment="prod"} > 65
             )
           for: 5m
+          labels:
+            severity: ${ALERT_SEVERITY}
+
+    - name: pda-sync-rules
+      rules:
+        - alert: PdaSyncFailed
+          annotations:
+            message: PDA sync in ${ENV_NAME} failed - last sync status is failure (-1)
+            dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
+          expr: |
+            (
+              (min by (namespace) (pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler"}) == -1)
+              and on() is_alert_hours
+            )
+            OR
+            (
+              min by (namespace) (pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler",environment="prod"}) == -1
+            )
+          for: 2m
+          labels:
+            severity: ${ALERT_SEVERITY}
+
+        - alert: PdaSyncErrors
+          annotations:
+            message: PDA sync in ${ENV_NAME} encountered {{ $value }} errors over the last 15 minutes
+            dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
+          expr: |
+            (
+              (sum by (namespace) (increase(pda_sync_errors_total{namespace="${NAMESPACE}",source="scheduler"}[15m])) > 10)
+              and on() is_alert_hours
+            )
+            OR
+            (
+              sum by (namespace) (increase(pda_sync_errors_total{namespace="${NAMESPACE}",source="scheduler",environment="prod"}[15m])) > 10
+            )
+          for: 1m
+          labels:
+            severity: ${ALERT_SEVERITY}
+
+        - alert: PdaSyncDurationHigh
+          annotations:
+            message: PDA sync duration in ${ENV_NAME} is taking longer than 5 minutes
+            dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
+          expr: |
+            (
+              (max by (namespace) (max_over_time(pda_sync_last_duration_seconds{namespace="${NAMESPACE}",source="scheduler"}[10m])) > 300)
+              and on() is_alert_hours
+            )
+            OR
+            (
+              max by (namespace) (max_over_time(pda_sync_last_duration_seconds{namespace="${NAMESPACE}",source="scheduler",environment="prod"}[10m])) > 300
+            )
+          for: 5m
+          labels:
+            severity: ${ALERT_SEVERITY}
+
+        - alert: PdaSyncNoRecentSuccess
+          annotations:
+            message: No successful PDA sync in ${ENV_NAME} for the last 26 hours (expected daily sync at 7 AM)
+            dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
+          expr: |
+            (
+              (
+                (time() - max by (namespace) (pda_sync_last_success_timestamp{namespace="${NAMESPACE}",source="scheduler"} and pda_sync_last_success_timestamp > 0) > 26 * 60 * 60)
+                and on() is_alert_hours
+              )
+              OR
+              (
+                time() - max by (namespace) (pda_sync_last_success_timestamp{namespace="${NAMESPACE}",source="scheduler",environment="prod"} and pda_sync_last_success_timestamp > 0) > 26 * 60 * 60
+              )
+            )
+          for: 1h
+          labels:
+            severity: ${ALERT_SEVERITY}
+
+        - alert: PdaSyncHighFirmDeletions
+          annotations:
+            message: PDA sync in ${ENV_NAME} disabled {{ $value }} firms in the last successful sync - possible data quality issue
+            dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
+          expr: |
+            (
+              (
+                max by (namespace) (
+                  pda_sync_last_firms_disabled{namespace="${NAMESPACE}",source="scheduler"}
+                  and on (namespace, pod)
+                  (pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler"} == 1)
+                ) > 100
+              )
+              and on() is_alert_hours
+            )
+            OR
+            (
+              max by (namespace) (
+                pda_sync_last_firms_disabled{namespace="${NAMESPACE}",source="scheduler",environment="prod"}
+                and on (namespace, pod)
+                (pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler",environment="prod"} == 1)
+              ) > 100
+            )
+          for: 1m
+          labels:
+            severity: ${ALERT_SEVERITY}
+
+        - alert: PdaSyncHighOfficeDeletions
+          annotations:
+            message: PDA sync in ${ENV_NAME} deleted {{ $value }} offices in the last successful sync - possible data quality issue
+            dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
+          expr: |
+            (
+              (
+                max by (namespace) (
+                  pda_sync_last_offices_deleted{namespace="${NAMESPACE}",source="scheduler"}
+                  and on (namespace, pod)
+                  (pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler"} == 1)
+                ) > 200
+              )
+              and on() is_alert_hours
+            )
+            OR
+            (
+              max by (namespace) (
+                pda_sync_last_offices_deleted{namespace="${NAMESPACE}",source="scheduler",environment="prod"}
+                and on (namespace, pod)
+                (pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler",environment="prod"} == 1)
+              ) > 200
+            )
+          for: 1m
+          labels:
+            severity: ${ALERT_SEVERITY}
+
+        - alert: PdaSyncHighCreationRate
+          annotations:
+            message: PDA sync in ${ENV_NAME} created {{ $value }} new firms/offices in the last successful sync - possible data anomaly or bulk import
+            dashboard_url: "https://grafana.live.cloud-platform.service.justice.gov.uk/d/${NAMESPACE}"
+          expr: |
+            (
+              (
+                max by (namespace) (
+                  (
+                    pda_sync_last_firms_created{namespace="${NAMESPACE}",source="scheduler"}
+                    +
+                    pda_sync_last_offices_created{namespace="${NAMESPACE}",source="scheduler"}
+                  )
+                  and on (namespace, pod)
+                  (pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler"} == 1)
+                ) > 300
+              )
+              and on() is_alert_hours
+            )
+            OR
+            (
+              max by (namespace) (
+                (
+                  pda_sync_last_firms_created{namespace="${NAMESPACE}",source="scheduler",environment="prod"}
+                  +
+                  pda_sync_last_offices_created{namespace="${NAMESPACE}",source="scheduler",environment="prod"}
+                )
+                and on (namespace, pod)
+                (pda_sync_last_status{namespace="${NAMESPACE}",source="scheduler",environment="prod"} == 1)
+              ) > 300
+            )
+          for: 1m
           labels:
             severity: ${ALERT_SEVERITY}

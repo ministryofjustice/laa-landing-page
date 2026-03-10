@@ -10,8 +10,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
 import org.springframework.transaction.annotation.Transactional;
+
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
 import uk.gov.justice.laa.portal.landingpage.entity.CountFirmByMultifirmFlag;
@@ -198,6 +198,22 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             WHERE ups.firm.id = :firmId
             """)
     List<UserProfile> findByFirmId(@Param("firmId") UUID firmId);
+
+    /**
+     * Counts user profile-office associations for each office ID.
+     * Returns a list of Object arrays where each array contains [officeId, count].
+     * This is more efficient than loading UserProfile entities with their offices collection.
+     *
+     * @param officeIds the list of office IDs to query
+     * @return list of Object[] where [0] is office_id (UUID) and [1] is count (Long/Integer)
+     */
+    @Query(value = """
+            SELECT office_id, COUNT(*)
+            FROM user_profile_office
+            WHERE office_id IN :officeIds
+            GROUP BY office_id
+            """, nativeQuery = true)
+    List<Object[]> countAssociationsByOfficeIds(@Param("officeIds") List<UUID> officeIds);
 
     @Query(
             value = """

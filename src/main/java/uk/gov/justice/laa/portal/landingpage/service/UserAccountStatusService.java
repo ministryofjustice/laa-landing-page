@@ -4,8 +4,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.DisableUserReasonDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.CountFirmByMultifirmFlag;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
@@ -29,9 +33,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-@Slf4j
+import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.EXTERNAL_USER_ADMIN;
+
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserAccountStatusService {
 
     private final DisableUserReasonRepository disableUserReasonRepository;
@@ -95,6 +101,7 @@ public class UserAccountStatusService {
                 .filter(UserProfile::isActiveProfile)
                 .findFirst()
                 .map(UserProfile::getFirm).orElse(null);
+
         if (userService.isInternal(disabledById)
                 || (disabledUserFirm != null && disabledByUserFirm != null && disabledByUserFirm.getId().equals(disabledUserFirm.getId()))) {
             // Disable user in Entra via tech services.
@@ -107,6 +114,7 @@ public class UserAccountStatusService {
             }
 
             // Perform disable
+            disabledUser.setDisabledBy(disabledById);
             disabledUser.setEnabled(false);
             entraUserRepository.saveAndFlush(disabledUser);
 
@@ -203,22 +211,10 @@ public class UserAccountStatusService {
                 .orElseThrow(() -> new RuntimeException(String.format("Could not find a user account to disable with id \"%s\"", enabledUserId)));
         EntraUser enabledByUser = entraUserRepository.findById(enabledById)
                 .orElseThrow(() -> new RuntimeException(String.format("Could not find a user account with id \"%s\"", enabledById)));
-        if (!userService.isInternal(enabledById) && enabledUser.isMultiFirmUser()) {
-            throw new RuntimeException(String.format("Multi firm user %s can not be enabled", enabledUserId));
-        }
 
-        Firm enabledByUserFirm = enabledByUser.getUserProfiles().stream()
-                .filter(UserProfile::isActiveProfile)
-                .findFirst()
-                .map(UserProfile::getFirm)
-                .orElse(null);
-        Firm enabledUserFirm = enabledUser.getUserProfiles().stream()
-                .filter(UserProfile::isActiveProfile)
-                .findFirst()
-                .map(UserProfile::getFirm).orElse(null);
+        boolean isUserEnablementAllowed = isUserEnablementAllowed(enabledUser, enabledByUser);
 
-        if (userService.isInternal(enabledById)
-                || (enabledUserFirm != null && enabledByUserFirm != null && enabledByUserFirm.getId().equals(enabledUserFirm.getId()))) {
+        if (isUserEnablementAllowed) {
             // Enable user in Entra via tech services.
             TechServicesApiResponse<ChangeAccountEnabledResponse> changeAccountEnabledResponse
                     = techServicesClient.enableUser(mapper.map(enabledUser, EntraUserDto.class));
@@ -229,6 +225,7 @@ public class UserAccountStatusService {
             }
 
             // Perform enable
+            enabledUser.setDisabledBy(null);
             enabledUser.setEnabled(true);
             entraUserRepository.saveAndFlush(enabledUser);
 
@@ -244,4 +241,74 @@ public class UserAccountStatusService {
             throw new RuntimeException(String.format("Unable to enable the user %s by %s", enabledUserId, enabledById));
         }
     }
+
+    private boolean isUserEnablementAllowed(EntraUser targetUser, EntraUser actor) {
+        if (targetUser.isEnabled()) {
+            throw new RuntimeException(String.format("The user %s is enabled already", targetUser.getId()));
+        }
+
+        if (!userService.isInternal(actor.getId()) && targetUser.isMultiFirmUser()) {
+            log.info("Multi-fim user {} can not be enabled by non-internal user {}", targetUser.getId(), actor.getId());
+            return false;
+        }
+
+        UserProfile actorUserProfile = actor.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
+                .orElseThrow(() -> new RuntimeException(String.format("Could not find an active user profile for user with id \"%s\"", actor.getId())));
+        UUID actorUserProfileId = actor.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
+                .map(UserProfile::getId)
+                .orElseThrow(() -> new RuntimeException(String.format("Could not find an active user profile for user with id \"%s\"", actor.getId())));
+
+        UUID disabledByUserProfileId = targetUser.getDisabledBy();
+
+        if (actorUserProfileId.equals(disabledByUserProfileId)) {
+            return true;
+        }
+
+        List<String> actingUserRoles = actorUserProfile.getAppRoles().stream().map(AppRole::getName).toList();
+
+        UserProfileDto disabledByProfile = disabledByUserProfileId == null ? null :
+                userService.getUserProfileById(disabledByUserProfileId.toString()).orElse(null);
+        List<AppRoleDto> disabledByUserRoles = disabledByProfile == null ? List.of() : disabledByProfile.getAppRoles();
+
+
+        String disabledByUserRole = disabledByUserRoles.stream()
+                .map(AppRoleDto::getName)
+                .filter(name ->
+                        name.equals(EXTERNAL_USER_ADMIN.getRoleName())
+                                || name.equals(AuthzRole.FIRM_USER_MANAGER.getRoleName())
+                )
+                .findFirst()
+                .orElse("NONE");
+
+
+        if (actingUserRoles.contains(AuthzRole.FIRM_USER_MANAGER.getRoleName())) {
+            if (!disabledByUserRole.equals(AuthzRole.FIRM_USER_MANAGER.getRoleName())) {
+                log.info("FUM {} is enabling the user {} but is not disabled by an FUM", actor.getId(), targetUser.getId());
+                return false;
+            }
+            Firm enabledByUserFirm = actor.getUserProfiles().stream()
+                    .filter(UserProfile::isActiveProfile)
+                    .findFirst()
+                    .map(UserProfile::getFirm)
+                    .orElse(null);
+            Firm enabledUserFirm = targetUser.getUserProfiles().stream()
+                    .filter(UserProfile::isActiveProfile)
+                    .findFirst()
+                    .map(UserProfile::getFirm).orElse(null);
+
+            log.info("FUM {} enabling user {} is in firm {}", actor.getId(), targetUser.getId(), enabledUserFirm);
+
+            return enabledUserFirm != null && enabledByUserFirm != null
+                    && enabledByUserFirm.getId().equals(enabledUserFirm.getId());
+        }
+
+        if (actingUserRoles.contains(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())) {
+            log.info("EUA {}, is enabling the user {}", actor.getId(), targetUser.getId());
+            return disabledByUserRole.equals(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName());
+        }
+
+
+        return true;
+    }
+
 }

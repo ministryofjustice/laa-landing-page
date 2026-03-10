@@ -4,16 +4,23 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
+import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.DisableUserReasonDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserTypeReasonDisable;
@@ -33,9 +40,11 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -96,6 +105,7 @@ public class UserAccountStatusServiceTest {
     @Test
     public void testGetDisableUserReasonsMapsReasonsCorrectlyForProvideAdmin() {
         // Given
+
         DisableUserReason reason = DisableUserReason.builder()
                 .id(UUID.randomUUID())
                 .name("Test Reason")
@@ -386,7 +396,7 @@ public class UserAccountStatusServiceTest {
         TechServicesErrorResponse errorResponse = TechServicesErrorResponse.builder()
                 .code("TestCode")
                 .success(false)
-                .errors(new String[] {"Error"})
+                .errors(new String[]{"Error"})
                 .message("An error occurred")
                 .build();
         TechServicesApiResponse<ChangeAccountEnabledResponse> techServicesResponse = TechServicesApiResponse.error(errorResponse);
@@ -494,6 +504,12 @@ public class UserAccountStatusServiceTest {
 
     @Test
     public void testEnableUserEnabledUserWhenTechServicesRequestIsSuccess() {
+        UUID disabledById = UUID.randomUUID();
+        UserProfileDto disabledByUserProfile = UserProfileDto.builder()
+                .id(disabledById)
+                .activeProfile(true)
+                .appRoles(List.of(AppRoleDto.builder().id(UUID.randomUUID().toString()).name("Global Admin").build()))
+                .build();
         Firm firm = Firm.builder().id(UUID.randomUUID()).name("Test Firm").build();
         UserProfile enabledUserProfile = UserProfile.builder().id(UUID.randomUUID())
                 .activeProfile(true)
@@ -504,11 +520,13 @@ public class UserAccountStatusServiceTest {
                 .firstName("Enabled")
                 .lastName("User")
                 .enabled(false)
+                .disabledBy(disabledById)
                 .userProfiles(Set.of(enabledUserProfile))
                 .build();
         UserProfile enabledByUserProfile = UserProfile.builder().id(UUID.randomUUID())
                 .activeProfile(true)
                 .firm(firm)
+                .appRoles(Set.of(AppRole.builder().id(UUID.randomUUID()).name("Global Admin").build()))
                 .build();
         EntraUser enabledByUser = EntraUser.builder()
                 .id(UUID.randomUUID())
@@ -522,6 +540,7 @@ public class UserAccountStatusServiceTest {
         when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
         when(entraUserRepository.findById(eq(enabledByUser.getId()))).thenReturn(Optional.of(enabledByUser));
         when(techServicesClient.enableUser(any())).thenReturn(techServicesResponse);
+        when(userService.getUserProfileById(disabledById.toString())).thenReturn(Optional.of(disabledByUserProfile));
 
         userAccountStatusService.enableUser(enabledUser.getId(), enabledByUser.getId());
 
@@ -532,6 +551,12 @@ public class UserAccountStatusServiceTest {
 
     @Test
     public void testEnableUserEnablesUserWhenEnabledByInternalUser() {
+        UUID disabledById = UUID.randomUUID();
+        UserProfileDto disabledByUserProfile = UserProfileDto.builder()
+                .id(disabledById)
+                .activeProfile(true)
+                .appRoles(List.of(AppRoleDto.builder().id(UUID.randomUUID().toString()).name("External User Admin").build()))
+                .build();
         Firm firm = Firm.builder().id(UUID.randomUUID()).name("Test Firm").build();
         UserProfile enabledUserProfile = UserProfile.builder().id(UUID.randomUUID())
                 .activeProfile(true)
@@ -543,10 +568,12 @@ public class UserAccountStatusServiceTest {
                 .lastName("User")
                 .enabled(false)
                 .userProfiles(Set.of(enabledUserProfile))
+                .disabledBy(disabledById)
                 .build();
         UserProfile enabledByUserProfile = UserProfile.builder().id(UUID.randomUUID())
                 .activeProfile(true)
                 .userType(UserType.INTERNAL)
+                .appRoles(Set.of(AppRole.builder().id(UUID.randomUUID()).name("External User Admin").build()))
                 .build();
         EntraUser enabledByUser = EntraUser.builder()
                 .id(UUID.randomUUID())
@@ -560,6 +587,7 @@ public class UserAccountStatusServiceTest {
         when(entraUserRepository.findById(eq(enabledByUser.getId()))).thenReturn(Optional.of(enabledByUser));
         when(techServicesClient.enableUser(any())).thenReturn(techServicesResponse);
         when(userService.isInternal(any(UUID.class))).thenReturn(true);
+        when(userService.getUserProfileById(disabledById.toString())).thenReturn(Optional.of(disabledByUserProfile));
 
         userAccountStatusService.enableUser(enabledUser.getId(), enabledByUser.getId());
 
@@ -627,10 +655,16 @@ public class UserAccountStatusServiceTest {
 
     @Test
     public void testEnableUserThrowsExceptionWhenTechServicesRequestIsError() {
+        UserProfileDto disabledByUserProfile = UserProfileDto.builder().id(UUID.randomUUID())
+                .activeProfile(true)
+                .userType(UserType.INTERNAL)
+                .appRoles(List.of(AppRoleDto.builder().id(UUID.randomUUID().toString()).name("External User Admin").build()))
+                .build();
         Firm firm = Firm.builder().id(UUID.randomUUID()).name("Test Firm").build();
         UserProfile enabledUserProfile = UserProfile.builder().id(UUID.randomUUID())
                 .activeProfile(true)
                 .firm(firm)
+                .appRoles(Set.of(AppRole.builder().id(UUID.randomUUID()).name("External User Admin").build()))
                 .build();
         EntraUser enabledUser = EntraUser.builder()
                 .id(UUID.randomUUID())
@@ -638,10 +672,12 @@ public class UserAccountStatusServiceTest {
                 .lastName("User")
                 .enabled(false)
                 .userProfiles(Set.of(enabledUserProfile))
+                .disabledBy(disabledByUserProfile.getId())
                 .build();
         UserProfile enabledByUserProfile = UserProfile.builder().id(UUID.randomUUID())
                 .activeProfile(true)
                 .firm(firm)
+                .appRoles(Set.of(AppRole.builder().id(UUID.randomUUID()).name("External User Admin").build()))
                 .build();
         EntraUser enabledByUser = EntraUser.builder()
                 .id(UUID.randomUUID())
@@ -652,7 +688,7 @@ public class UserAccountStatusServiceTest {
         TechServicesErrorResponse errorResponse = TechServicesErrorResponse.builder()
                 .code("TestCode")
                 .success(false)
-                .errors(new String[] {"Error"})
+                .errors(new String[]{"Error"})
                 .message("An error occurred")
                 .build();
         TechServicesApiResponse<ChangeAccountEnabledResponse> techServicesResponse = TechServicesApiResponse.error(errorResponse);
@@ -660,6 +696,7 @@ public class UserAccountStatusServiceTest {
         when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
         when(entraUserRepository.findById(eq(enabledByUser.getId()))).thenReturn(Optional.of(enabledByUser));
         when(techServicesClient.enableUser(any())).thenReturn(techServicesResponse);
+        when(userService.getUserProfileById(disabledByUserProfile.getId().toString())).thenReturn(Optional.of(disabledByUserProfile));
 
         assertThrows(TechServicesClientException.class, () -> userAccountStatusService.enableUser(enabledUser.getId(), enabledByUser.getId()));
         assertThat(enabledUser.isEnabled()).isFalse();
@@ -726,6 +763,658 @@ public class UserAccountStatusServiceTest {
         verify(entraUserRepository, times(0)).saveAndFlush(any());
         verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
     }
+
+    @Test
+    public void testEnableUserThrowsExceptionWhenUserAlreadyEnabled() {
+        EntraUser enabledUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .firstName("Enabled")
+                .lastName("User")
+                .enabled(true)
+                .build();
+
+        when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
+
+        assertThrows(RuntimeException.class, () -> userAccountStatusService.enableUser(enabledUser.getId(), UUID.randomUUID()));
+        assertThat(enabledUser.isEnabled()).isTrue();
+        verify(entraUserRepository, times(2)).findById(any());
+        verify(entraUserRepository, times(0)).saveAndFlush(any());
+        verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
+    }
+
+    @Test
+    public void testEnableUserThrowsExceptionWhenUserIsMultiFirmEnabledByFirmUserManager() {
+        EntraUser enabledUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .firstName("Enabled")
+                .lastName("User")
+                .multiFirmUser(true)
+                .enabled(false)
+                .build();
+
+        when(userService.isInternal(any(UUID.class))).thenReturn(false);
+        when(entraUserRepository.findById(any(UUID.class))).thenReturn(Optional.of(enabledUser));
+
+        assertThrows(RuntimeException.class, () -> userAccountStatusService.enableUser(enabledUser.getId(), UUID.randomUUID()));
+        verify(entraUserRepository, times(2)).findById(any());
+        verify(entraUserRepository, times(0)).saveAndFlush(any());
+        verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
+    }
+
+    @Test
+    void shouldThrow_whenActorEnablesSelf() {
+        UUID id = UUID.randomUUID();
+        assertThatThrownBy(() -> userAccountStatusService.enableUser(id, id))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("can not be enabled by themselves");
+    }
+
+    @Test
+    void shouldThrow_whenTargetUserNotFound() {
+        UUID targetId = UUID.randomUUID();
+        UUID actorId = UUID.randomUUID();
+
+        when(entraUserRepository.findById(targetId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userAccountStatusService.enableUser(targetId, actorId))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Could not find a user account to disable");
+    }
+
+    @Test
+    void shouldThrow_whenActorUserNotFound() {
+        UUID targetId = UUID.randomUUID();
+        UUID actorId = UUID.randomUUID();
+
+        EntraUser target = EntraUser.builder()
+                .id(targetId)
+                .enabled(false)
+                .build();
+
+        when(entraUserRepository.findById(targetId)).thenReturn(Optional.of(target));
+        when(entraUserRepository.findById(actorId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userAccountStatusService.enableUser(targetId, actorId))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Could not find a user account with id");
+    }
+
+    @Test
+    void shouldThrow_whenEnablementNotAllowedForMultiFirmUser() {
+        UUID targetId = UUID.randomUUID();
+        UUID actorId = UUID.randomUUID();
+
+        EntraUser target = EntraUser.builder()
+                .id(targetId)
+                .enabled(false)
+                .multiFirmUser(true)
+                .disabledBy(UUID.randomUUID())
+                .userProfiles(Set.of(UserProfile.builder().id(UUID.randomUUID()).activeProfile(true).build()))
+                .build();
+
+        EntraUser actor = EntraUser.builder()
+                .id(actorId)
+                .userProfiles(Set.of(UserProfile.builder().id(UUID.randomUUID()).activeProfile(true).build()))
+                .build();
+
+        when(entraUserRepository.findById(targetId)).thenReturn(Optional.of(target));
+        when(entraUserRepository.findById(actorId)).thenReturn(Optional.of(actor));
+
+        // internal rule returns false
+        when(userService.isInternal(actorId)).thenReturn(false);
+
+        assertThatThrownBy(() -> userAccountStatusService.enableUser(targetId, actorId))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Unable to enable the user");
+    }
+
+    @Test
+    void shouldThrow_whenTechServiceCallFails() {
+        UUID targetId = UUID.randomUUID();
+        UUID actorId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+
+        Firm firm = Firm.builder().id(UUID.randomUUID()).build();
+
+        UserProfile actorProfile = UserProfile.builder()
+                .id(profileId)
+                .activeProfile(true)
+                .firm(firm)
+                .appRoles(Set.of(AppRole.builder()
+                        .name(AuthzRole.FIRM_USER_MANAGER.getRoleName()).build()))
+                .build();
+
+        UserProfile targetProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .activeProfile(true)
+                .firm(firm)
+                .build();
+
+        EntraUser target = EntraUser.builder()
+                .id(targetId)
+                .enabled(false)
+                .disabledBy(profileId)
+                .userProfiles(Set.of(targetProfile))
+                .build();
+
+        EntraUser actor = EntraUser.builder()
+                .id(actorId)
+                .userProfiles(Set.of(actorProfile))
+                .firstName("John")
+                .lastName("Doe")
+                .build();
+
+        when(entraUserRepository.findById(targetId)).thenReturn(Optional.of(target));
+        when(entraUserRepository.findById(actorId)).thenReturn(Optional.of(actor));
+        when(userService.isInternal(actorId)).thenReturn(true);
+
+        // Tech services failure mock
+        TechServicesApiResponse<ChangeAccountEnabledResponse> failedResponse =
+                TechServicesApiResponse.error(TechServicesErrorResponse.builder().code("FAIL")
+                        .message("FAIL").build());
+
+        when(techServicesClient.enableUser(any())).thenReturn(failedResponse);
+
+        assertThatThrownBy(() -> userAccountStatusService.enableUser(targetId, actorId))
+                .isInstanceOf(TechServicesClientException.class)
+                .hasMessageContaining("FAIL");
+
+        verify(entraUserRepository, never()).saveAndFlush(any());
+        verify(userAccountStatusAuditRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void shouldEnableUserSuccessfullyEnabledAndDisabledByExternalUserAdmin() {
+        UUID targetId = UUID.randomUUID();
+        UUID actorId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+
+        Firm firm = Firm.builder().id(UUID.randomUUID()).build();
+
+        UserProfile actorProfile = UserProfile.builder()
+                .id(profileId)
+                .activeProfile(true)
+                .firm(firm)
+                .appRoles(Set.of(
+                        AppRole.builder()
+                                .name(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())
+                                .build()
+                ))
+                .build();
+
+        UserProfile targetProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .activeProfile(true)
+                .firm(firm)
+                .build();
+
+        UUID disabledById = UUID.randomUUID();
+        EntraUser target = EntraUser.builder()
+                .id(targetId)
+                .enabled(false)
+                .disabledBy(disabledById)
+                .userProfiles(Set.of(targetProfile))
+                .build();
+
+        EntraUser actor = EntraUser.builder()
+                .id(actorId)
+                .firstName("John")
+                .lastName("Doe")
+                .userProfiles(Set.of(actorProfile))
+                .build();
+
+        UserProfileDto disablerProfile = UserProfileDto.builder()
+                .id(disabledById)
+                .appRoles(List.of(AppRoleDto.builder()
+                        .name(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())
+                        .build()))
+                .build();
+
+        ChangeAccountEnabledResponse changeResp = ChangeAccountEnabledResponse.builder().build();
+
+        TechServicesApiResponse<ChangeAccountEnabledResponse> successResp =
+                TechServicesApiResponse.success(changeResp);
+
+        when(entraUserRepository.findById(targetId)).thenReturn(Optional.of(target));
+        when(entraUserRepository.findById(actorId)).thenReturn(Optional.of(actor));
+        when(userService.getUserProfileById(disabledById.toString())).thenReturn(Optional.of(disablerProfile));
+
+        when(userService.isInternal(actorId)).thenReturn(true);
+        when(techServicesClient.enableUser(any())).thenReturn(successResp);
+
+        userAccountStatusService.enableUser(targetId, actorId);
+
+        // assert user enabled
+        assertThat(target.isEnabled()).isTrue();
+        assertThat(target.getDisabledBy()).isNull();
+
+        verify(entraUserRepository).saveAndFlush(target);
+
+        ArgumentCaptor<UserAccountStatusAudit> auditCaptor =
+                ArgumentCaptor.forClass(UserAccountStatusAudit.class);
+
+        verify(userAccountStatusAuditRepository).saveAndFlush(auditCaptor.capture());
+
+        UserAccountStatusAudit audit = auditCaptor.getValue();
+
+        assertThat(audit.getEntraUser()).isEqualTo(target);
+        assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ENABLED);
+        assertThat(audit.getStatusChangedBy()).isEqualTo("John Doe");
+    }
+
+    @Test
+    void shouldEnableUserSuccessfullyEnabledAndDisabledByFirmUserManager() {
+        UUID targetId = UUID.randomUUID();
+        UUID actorId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+
+        Firm firm = Firm.builder().id(UUID.randomUUID()).build();
+
+        UserProfile actorProfile = UserProfile.builder()
+                .id(profileId)
+                .activeProfile(true)
+                .firm(firm)
+                .appRoles(Set.of(
+                        AppRole.builder()
+                                .name(AuthzRole.FIRM_USER_MANAGER.getRoleName())
+                                .build()
+                ))
+                .build();
+
+        UserProfile targetProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .activeProfile(true)
+                .firm(firm)
+                .build();
+
+        UUID disabledById = UUID.randomUUID();
+        EntraUser target = EntraUser.builder()
+                .id(targetId)
+                .enabled(false)
+                .disabledBy(disabledById)
+                .userProfiles(Set.of(targetProfile))
+                .build();
+
+        EntraUser actor = EntraUser.builder()
+                .id(actorId)
+                .firstName("John")
+                .lastName("Doe")
+                .userProfiles(Set.of(actorProfile))
+                .build();
+
+        UserProfileDto disablerProfile = UserProfileDto.builder()
+                .id(disabledById)
+                .appRoles(List.of(AppRoleDto.builder()
+                        .name(AuthzRole.FIRM_USER_MANAGER.getRoleName())
+                        .build()))
+                .build();
+
+        ChangeAccountEnabledResponse changeResp = ChangeAccountEnabledResponse.builder().build();
+
+        TechServicesApiResponse<ChangeAccountEnabledResponse> successResp =
+                TechServicesApiResponse.success(changeResp);
+
+        when(entraUserRepository.findById(targetId)).thenReturn(Optional.of(target));
+        when(entraUserRepository.findById(actorId)).thenReturn(Optional.of(actor));
+        when(userService.getUserProfileById(disabledById.toString())).thenReturn(Optional.of(disablerProfile));
+
+        when(userService.isInternal(actorId)).thenReturn(true);
+        when(techServicesClient.enableUser(any())).thenReturn(successResp);
+
+        userAccountStatusService.enableUser(targetId, actorId);
+
+        // assert user enabled
+        assertThat(target.isEnabled()).isTrue();
+        assertThat(target.getDisabledBy()).isNull();
+
+        verify(entraUserRepository).saveAndFlush(target);
+
+        ArgumentCaptor<UserAccountStatusAudit> auditCaptor =
+                ArgumentCaptor.forClass(UserAccountStatusAudit.class);
+
+        verify(userAccountStatusAuditRepository).saveAndFlush(auditCaptor.capture());
+
+        UserAccountStatusAudit audit = auditCaptor.getValue();
+
+        assertThat(audit.getEntraUser()).isEqualTo(target);
+        assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ENABLED);
+        assertThat(audit.getStatusChangedBy()).isEqualTo("John Doe");
+    }
+
+    @Test
+    void shouldEnableUserFailedEnabledAndDisabledByFirmUserManagerButOfDifferentFirm() {
+        UUID targetId = UUID.randomUUID();
+        UUID actorId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+
+        Firm firm1 = Firm.builder().id(UUID.randomUUID()).build();
+        Firm firm2 = Firm.builder().id(UUID.randomUUID()).build();
+
+        UserProfile actorProfile = UserProfile.builder()
+                .id(profileId)
+                .activeProfile(true)
+                .firm(firm1)
+                .appRoles(Set.of(
+                        AppRole.builder()
+                                .name(AuthzRole.FIRM_USER_MANAGER.getRoleName())
+                                .build()
+                ))
+                .build();
+
+        UserProfile targetProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .activeProfile(true)
+                .firm(firm2)
+                .build();
+
+        UUID disabledById = UUID.randomUUID();
+        EntraUser target = EntraUser.builder()
+                .id(targetId)
+                .enabled(false)
+                .disabledBy(disabledById)
+                .userProfiles(Set.of(targetProfile))
+                .build();
+
+        EntraUser actor = EntraUser.builder()
+                .id(actorId)
+                .firstName("John")
+                .lastName("Doe")
+                .userProfiles(Set.of(actorProfile))
+                .build();
+
+        UserProfileDto disablerProfile = UserProfileDto.builder()
+                .id(disabledById)
+                .appRoles(List.of(AppRoleDto.builder()
+                        .name(AuthzRole.FIRM_USER_MANAGER.getRoleName())
+                        .build()))
+                .build();
+
+        when(entraUserRepository.findById(targetId)).thenReturn(Optional.of(target));
+        when(entraUserRepository.findById(actorId)).thenReturn(Optional.of(actor));
+        when(userService.getUserProfileById(disabledById.toString())).thenReturn(Optional.of(disablerProfile));
+
+        when(userService.isInternal(actorId)).thenReturn(false);
+
+        assertThatThrownBy(() -> userAccountStatusService.enableUser(targetId, actorId))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Unable to enable the user ");
+    }
+
+    @Test
+    void shouldEnableUserSuccessfullyEnabledByGlobalAdmin() {
+        UUID targetId = UUID.randomUUID();
+        UUID actorId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+
+        Firm firm = Firm.builder().id(UUID.randomUUID()).build();
+
+        UserProfile actorProfile = UserProfile.builder()
+                .id(profileId)
+                .activeProfile(true)
+                .appRoles(Set.of(
+                        AppRole.builder()
+                                .name(AuthzRole.GLOBAL_ADMIN.getRoleName())
+                                .build()
+                ))
+                .build();
+
+        UserProfile targetProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .activeProfile(true)
+                .firm(firm)
+                .build();
+
+        UUID disabledById = UUID.randomUUID();
+        EntraUser target = EntraUser.builder()
+                .id(targetId)
+                .enabled(false)
+                .disabledBy(disabledById)
+                .userProfiles(Set.of(targetProfile))
+                .build();
+
+        EntraUser actor = EntraUser.builder()
+                .id(actorId)
+                .firstName("John")
+                .lastName("Doe")
+                .userProfiles(Set.of(actorProfile))
+                .build();
+
+        UserProfileDto disablerProfile = UserProfileDto.builder()
+                .id(disabledById)
+                .appRoles(List.of(AppRoleDto.builder()
+                        .name(AuthzRole.FIRM_USER_MANAGER.getRoleName())
+                        .build()))
+                .build();
+
+        ChangeAccountEnabledResponse changeResp = ChangeAccountEnabledResponse.builder().build();
+
+        TechServicesApiResponse<ChangeAccountEnabledResponse> successResp =
+                TechServicesApiResponse.success(changeResp);
+
+        when(entraUserRepository.findById(targetId)).thenReturn(Optional.of(target));
+        when(entraUserRepository.findById(actorId)).thenReturn(Optional.of(actor));
+        when(userService.getUserProfileById(disabledById.toString())).thenReturn(Optional.of(disablerProfile));
+
+        when(userService.isInternal(actorId)).thenReturn(true);
+        when(techServicesClient.enableUser(any())).thenReturn(successResp);
+
+        userAccountStatusService.enableUser(targetId, actorId);
+
+        // assert user enabled
+        assertThat(target.isEnabled()).isTrue();
+        assertThat(target.getDisabledBy()).isNull();
+
+        verify(entraUserRepository).saveAndFlush(target);
+
+        ArgumentCaptor<UserAccountStatusAudit> auditCaptor =
+                ArgumentCaptor.forClass(UserAccountStatusAudit.class);
+
+        verify(userAccountStatusAuditRepository).saveAndFlush(auditCaptor.capture());
+
+        UserAccountStatusAudit audit = auditCaptor.getValue();
+
+        assertThat(audit.getEntraUser()).isEqualTo(target);
+        assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ENABLED);
+        assertThat(audit.getStatusChangedBy()).isEqualTo("John Doe");
+    }
+
+    @Test
+    void shouldEnableMultiFirmUserSuccessfullyEnabledByGlobalAdmin() {
+        UUID targetId = UUID.randomUUID();
+        UUID actorId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+
+        Firm firm = Firm.builder().id(UUID.randomUUID()).build();
+
+        UserProfile actorProfile = UserProfile.builder()
+                .id(profileId)
+                .activeProfile(true)
+                .appRoles(Set.of(
+                        AppRole.builder()
+                                .name(AuthzRole.GLOBAL_ADMIN.getRoleName())
+                                .build()
+                ))
+                .build();
+
+        UserProfile targetProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .activeProfile(true)
+                .firm(firm)
+                .build();
+
+        UUID disabledById = UUID.randomUUID();
+        EntraUser target = EntraUser.builder()
+                .id(targetId)
+                .enabled(false)
+                .disabledBy(disabledById)
+                .userProfiles(Set.of(targetProfile))
+                .multiFirmUser(true)
+                .build();
+
+        EntraUser actor = EntraUser.builder()
+                .id(actorId)
+                .firstName("John")
+                .lastName("Doe")
+                .userProfiles(Set.of(actorProfile))
+                .build();
+
+        UserProfileDto disablerProfile = UserProfileDto.builder()
+                .id(disabledById)
+                .appRoles(List.of(AppRoleDto.builder()
+                        .name(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())
+                        .build()))
+                .build();
+
+        ChangeAccountEnabledResponse changeResp = ChangeAccountEnabledResponse.builder().build();
+
+        TechServicesApiResponse<ChangeAccountEnabledResponse> successResp =
+                TechServicesApiResponse.success(changeResp);
+
+        when(entraUserRepository.findById(targetId)).thenReturn(Optional.of(target));
+        when(entraUserRepository.findById(actorId)).thenReturn(Optional.of(actor));
+        when(userService.getUserProfileById(disabledById.toString())).thenReturn(Optional.of(disablerProfile));
+
+        when(userService.isInternal(actorId)).thenReturn(true);
+        when(techServicesClient.enableUser(any())).thenReturn(successResp);
+
+        userAccountStatusService.enableUser(targetId, actorId);
+
+        // assert user enabled
+        assertThat(target.isEnabled()).isTrue();
+        assertThat(target.getDisabledBy()).isNull();
+
+        verify(entraUserRepository).saveAndFlush(target);
+
+        ArgumentCaptor<UserAccountStatusAudit> auditCaptor =
+                ArgumentCaptor.forClass(UserAccountStatusAudit.class);
+
+        verify(userAccountStatusAuditRepository).saveAndFlush(auditCaptor.capture());
+
+        UserAccountStatusAudit audit = auditCaptor.getValue();
+
+        assertThat(audit.getEntraUser()).isEqualTo(target);
+        assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ENABLED);
+        assertThat(audit.getStatusChangedBy()).isEqualTo("John Doe");
+    }
+
+    @Test
+    void globalAdminCanEnableUserDisabledByUnknown() {
+        UUID targetId = UUID.randomUUID();
+        UUID actorId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+
+        Firm firm = Firm.builder().id(UUID.randomUUID()).build();
+
+        UserProfile actorProfile = UserProfile.builder()
+                .id(profileId)
+                .activeProfile(true)
+                .appRoles(Set.of(
+                        AppRole.builder()
+                                .name(AuthzRole.GLOBAL_ADMIN.getRoleName())
+                                .build()
+                ))
+                .build();
+
+        UserProfile targetProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .activeProfile(true)
+                .firm(firm)
+                .build();
+
+        EntraUser target = EntraUser.builder()
+                .id(targetId)
+                .enabled(false)
+                .userProfiles(Set.of(targetProfile))
+                .multiFirmUser(true)
+                .build();
+
+        EntraUser actor = EntraUser.builder()
+                .id(actorId)
+                .firstName("John")
+                .lastName("Doe")
+                .userProfiles(Set.of(actorProfile))
+                .build();
+
+
+        ChangeAccountEnabledResponse changeResp = ChangeAccountEnabledResponse.builder().build();
+
+        TechServicesApiResponse<ChangeAccountEnabledResponse> successResp =
+                TechServicesApiResponse.success(changeResp);
+
+        when(entraUserRepository.findById(targetId)).thenReturn(Optional.of(target));
+        when(entraUserRepository.findById(actorId)).thenReturn(Optional.of(actor));
+
+        when(userService.isInternal(actorId)).thenReturn(true);
+        when(techServicesClient.enableUser(any())).thenReturn(successResp);
+
+        userAccountStatusService.enableUser(targetId, actorId);
+
+        // assert user enabled
+        assertThat(target.isEnabled()).isTrue();
+        assertThat(target.getDisabledBy()).isNull();
+
+        verify(entraUserRepository).saveAndFlush(target);
+
+        ArgumentCaptor<UserAccountStatusAudit> auditCaptor =
+                ArgumentCaptor.forClass(UserAccountStatusAudit.class);
+
+        verify(userAccountStatusAuditRepository).saveAndFlush(auditCaptor.capture());
+
+        UserAccountStatusAudit audit = auditCaptor.getValue();
+
+        assertThat(audit.getEntraUser()).isEqualTo(target);
+        assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ENABLED);
+        assertThat(audit.getStatusChangedBy()).isEqualTo("John Doe");
+    }
+
+    @Test
+    void firmUserManagerCannotEnableUserDisabledByUnknown() {
+        UUID targetId = UUID.randomUUID();
+        UUID actorId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+
+        Firm firm = Firm.builder().id(UUID.randomUUID()).build();
+
+        UserProfile actorProfile = UserProfile.builder()
+                .id(profileId)
+                .activeProfile(true)
+                .appRoles(Set.of(
+                        AppRole.builder()
+                                .name(AuthzRole.FIRM_USER_MANAGER.getRoleName())
+                                .build()
+                ))
+                .build();
+
+        UserProfile targetProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .activeProfile(true)
+                .firm(firm)
+                .build();
+
+        EntraUser target = EntraUser.builder()
+                .id(targetId)
+                .enabled(false)
+                .userProfiles(Set.of(targetProfile))
+                .multiFirmUser(true)
+                .build();
+
+        EntraUser actor = EntraUser.builder()
+                .id(actorId)
+                .firstName("John")
+                .lastName("Doe")
+                .userProfiles(Set.of(actorProfile))
+                .build();
+
+        when(entraUserRepository.findById(targetId)).thenReturn(Optional.of(target));
+        when(entraUserRepository.findById(actorId)).thenReturn(Optional.of(actor));
+
+        when(userService.isInternal(actorId)).thenReturn(true);
+
+        assertThatThrownBy(() -> userAccountStatusService.enableUser(targetId, actorId))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Unable to enable the user ");
+    }
+
 
     @Nested
     class UserCountsForFirmTests {

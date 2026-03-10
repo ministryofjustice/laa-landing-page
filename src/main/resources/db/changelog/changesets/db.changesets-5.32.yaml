@@ -1,0 +1,18 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-disabled-by-column-to-entra-user
+      author: suresh kavali
+      changes:
+        - addColumn:
+            tableName: entra_user
+            columns:
+              - column:
+                  name: disabled_by
+                  type: uuid
+                  constraints:
+                    nullable: true
+
+      rollback:
+        - dropColumn:
+            tableName: entra_user
+            columnName: disabled_by
