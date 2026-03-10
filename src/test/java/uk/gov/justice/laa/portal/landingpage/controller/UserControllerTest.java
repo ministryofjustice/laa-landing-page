@@ -601,7 +601,7 @@ class UserControllerTest {
     }
 
     @Test
-    void manageUser_shouldASeeEditButtonExternalUserAdmin() {
+    void manageUser_shouldSeeEditButtonExternalUserAdmin() {
         // Arrange
         // Given - Editor is an Internal user
         EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
