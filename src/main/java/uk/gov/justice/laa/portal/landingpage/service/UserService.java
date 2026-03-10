@@ -2051,4 +2051,5 @@ public class UserService {
         logger.info("User profile {} reassigned from firm {} to firm {} and legacyId from {} to {} by {} (Reason: {})",
                 userProfileId, oldFirm.getName(), newFirm.getName(), oldLegacyId, userProfile.getLegacyUserId(), performedByName, reason);
     }
+
 }
