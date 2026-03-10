@@ -24,13 +24,13 @@ public class RoleBasedAccessEnableUserTest extends RoleBasedAccessIntegrationTes
 
     @Test
     public void testExternalUserAdminCanEnableUser() throws Exception {
-        EntraUser loggedInUser = externalUserAdmins.getFirst();
         EntraUser accessedUser = externalUsersNoRoles.getFirst();
         accessedUser.setEnabled(false);
         UserProfile disabledByProfile = externalUserAdmins.getLast().getUserProfiles().stream()
                 .filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
         accessedUser.setDisabledBy(disabledByProfile.getId());
         entraUserRepository.saveAndFlush(accessedUser);
+        EntraUser loggedInUser = externalUserAdmins.getFirst();
         sendEnableUserPost(loggedInUser, accessedUser, status().isOk());
         accessedUser = entraUserRepository.findById(accessedUser.getId()).orElseThrow();
         assertThat(accessedUser.isEnabled()).isTrue();
@@ -74,13 +74,13 @@ public class RoleBasedAccessEnableUserTest extends RoleBasedAccessIntegrationTes
 
     @Test
     public void testFirmUserManagerCanEnableUser() throws Exception {
-        EntraUser loggedInUser = firmUserManagers.getFirst();
         EntraUser accessedUser = externalUsersNoRoles.getLast();
         accessedUser.setEnabled(false);
         UserProfile disabledByProfile = firmUserManagers.getLast().getUserProfiles().stream()
                 .filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
         accessedUser.setDisabledBy(disabledByProfile.getId());
         entraUserRepository.saveAndFlush(accessedUser);
+        EntraUser loggedInUser = firmUserManagers.getFirst();
         sendEnableUserPost(loggedInUser, accessedUser, status().isOk());
         accessedUser = entraUserRepository.findById(accessedUser.getId()).orElseThrow();
         assertThat(accessedUser.isEnabled()).isTrue();
