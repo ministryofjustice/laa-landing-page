@@ -248,15 +248,17 @@ public class ExternalUserPollingService {
 
     private boolean shouldDisableUser(TechServicesUser user, boolean isEnabledInSilas) {
         // Only disable if user is currently enabled in silas and has a disabled reason from Entra
-        return isEnabledInSilas && user.getCustomSecurityAttributes() != null
-                && user.getCustomSecurityAttributes().getGuestUserStatus() != null
-                && user.getCustomSecurityAttributes().getGuestUserStatus().getDisabledReason() != null;
+        return isEnabledInSilas && !user.isAccountEnabled() && user.getCustomSecurityAttributes() != null
+                && user.getCustomSecurityAttributes().getDisabledReasonStatus() != null
+                && user.getCustomSecurityAttributes().getDisabledReasonStatus().getAdditionalProperties() != null
+                && !user.getCustomSecurityAttributes().getDisabledReasonStatus().getAdditionalProperties().isEmpty();
     }
 
     private void disableUserWithReason(TechServicesUser user, EntraUser entraUser) {
         try {
             String disabledReasonFromApi = user.getCustomSecurityAttributes()
-                    .getGuestUserStatus().getDisabledReason();
+                    .getDisabledReasonStatus().getAdditionalProperties()
+                    .values().iterator().next().toString();
 
             DisableUserReason disableReason = findOrCreateDisableReason(disabledReasonFromApi);
 

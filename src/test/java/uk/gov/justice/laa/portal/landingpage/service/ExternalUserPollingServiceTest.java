@@ -26,6 +26,7 @@ import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesErrorRespo
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -313,6 +314,10 @@ class ExternalUserPollingServiceTest {
                         .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
                                 .disabledReason("NoGroupsDisable")
+                                .build())
+                        .disabledReasonStatus(TechServicesUser.DisabledReasonStatus.builder()
+                                .odataType("#microsoft.graph.disabledReason")
+                                .additionalProperties(Map.of("NoGroupsDisable", "NoGroupsDisable"))
                                 .build())
                         .build())
                 .build();
@@ -919,7 +924,6 @@ class ExternalUserPollingServiceTest {
                 .entraDescription("Inactivity")
                 .userSelectable(false)
                 .build();
-        when(disableUserReasonRepository.findAll()).thenReturn(List.of(inactivityReason));
 
         TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
@@ -928,9 +932,9 @@ class ExternalUserPollingServiceTest {
                 .accountEnabled(true)
                 .isMailOnly(false)
                 .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
-                        .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
+                        .disabledReasonStatus(TechServicesUser.DisabledReasonStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
-                                .disabledReason("NoGroupsDisable")
+                                .additionalProperties(Map.of("NoGroupsDisable", "NoGroupsDisable"))
                                 .build())
                         .build())
                 .build();
@@ -1160,6 +1164,10 @@ class ExternalUserPollingServiceTest {
                         .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
                                 .disabledReason("NoGroupsDisable")
+                                .build())
+                        .disabledReasonStatus(TechServicesUser.DisabledReasonStatus.builder()
+                                .odataType("#microsoft.graph.disabledReason")
+                                .additionalProperties(Map.of("NoGroupsDisable", "NoGroupsDisable"))
                                 .build())
                         .build())
                 .build();
