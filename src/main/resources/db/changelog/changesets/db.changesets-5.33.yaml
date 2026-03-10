@@ -1,0 +1,47 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1741746600-1
+      author: sankavi.mohanraj
+      comment: Update app_role unique constraint to include user_type_restriction
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "ALTER TABLE app_role DROP CONSTRAINT IF EXISTS app_role_app_id_ccms_code_key"
+        - sql:
+            dbms: postgresql
+            sql: |
+              CREATE UNIQUE INDEX IF NOT EXISTS app_role_app_id_ccms_code_user_type_idx 
+              ON app_role (app_id, ccms_code, user_type_restriction) 
+              WHERE ccms_code IS NOT NULL;
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: |
+              DROP INDEX IF EXISTS app_role_app_id_ccms_code_user_type_idx;
+        - addUniqueConstraint:
+            columnNames: app_id, ccms_code
+            constraintName: app_role_app_id_ccms_code_key
+            tableName: app_role
+
+  - changeSet:
+      id: 1741746600-2
+      author: system
+      comment: Update app_role name constraint to be unique by user_type_restriction
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "ALTER TABLE app_role DROP CONSTRAINT IF EXISTS app_role_name_key"
+        - sql:
+            dbms: postgresql
+            sql: |
+              CREATE UNIQUE INDEX IF NOT EXISTS app_role_name_user_type_idx 
+              ON app_role (name, user_type_restriction);
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: |
+              DROP INDEX IF EXISTS app_role_name_user_type_idx;
+        - addUniqueConstraint:
+            columnNames: name
+            constraintName: app_role_name_key
+            tableName: app_role
