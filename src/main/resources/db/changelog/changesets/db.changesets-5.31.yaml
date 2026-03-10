@@ -1,0 +1,20 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1741737840-1
+      author: sankavi.mohanraj
+      dbms: postgresql
+      comment: Update invitation_status check constraint to include VERIFICATION_SUCCESS
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "ALTER TABLE entra_user DROP CONSTRAINT IF EXISTS entra_user_invitation_status_check"
+        - sql:
+            dbms: postgresql
+            sql: "ALTER TABLE entra_user ADD CONSTRAINT entra_user_invitation_status_check CHECK ((invitation_status)::text = ANY ((ARRAY['INVITE_SENT'::character varying, 'AWAITING_MFA'::character varying, 'AWAITING_VERIFICATION'::character varying, 'VERIFICATION_SUCCESS'::character varying, 'VERIFICATION_FAILED'::character varying])::text[]))"
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: "ALTER TABLE entra_user DROP CONSTRAINT IF EXISTS entra_user_invitation_status_check"
+        - sql:
+            dbms: postgresql
+            sql: "ALTER TABLE entra_user ADD CONSTRAINT entra_user_invitation_status_check CHECK ((invitation_status)::text = ANY ((ARRAY['INVITE_SENT'::character varying, 'AWAITING_MFA'::character varying, 'AWAITING_VERIFICATION'::character varying, 'VERIFICATION_FAILED'::character varying])::text[]))"
