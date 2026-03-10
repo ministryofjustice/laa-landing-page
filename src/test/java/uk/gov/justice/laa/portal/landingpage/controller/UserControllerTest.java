@@ -998,12 +998,10 @@ class UserControllerTest {
         session.setAttribute("firm", firmDto);
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("tester");
-
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
         when(userService.createUser(any(), any(), anyBoolean(), any(), anyBoolean())).thenReturn(user);
         String redirectUrl = userController.addUserCheckAnswers(session, authentication, model);
-
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(session.getAttribute("user")).isNotNull();
         assertThat(session.getAttribute("userProfile")).isNotNull();
@@ -1026,12 +1024,10 @@ class UserControllerTest {
         session.setAttribute("isUserManager", false);
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("tester");
-
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         EntraUser user = EntraUser.builder().userProfiles(Set.of(UserProfile.builder().build())).build();
         when(userService.createUser(any(), any(), anyBoolean(), any(), anyBoolean())).thenReturn(user);
         String redirectUrl = userController.addUserCheckAnswers(session, authentication, model);
-
         assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
         assertThat(session.getAttribute("user")).isNotNull();
         assertThat(session.getAttribute("userProfile")).isNotNull();

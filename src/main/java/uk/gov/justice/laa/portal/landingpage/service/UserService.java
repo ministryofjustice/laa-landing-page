@@ -566,8 +566,8 @@ public class UserService {
         if (!auditRecords.isEmpty()) {
             userAccountStatusAuditRepository.deleteAll(auditRecords);
             userAccountStatusAuditRepository.flush();
-            logger.debug("Deleted {} audit records for user: {} ({})",
-                    auditRecords.size(), entraUser.getEmail(), entraUser.getId());
+            logger.info("Deleted {} audit records for user: {}",
+                    auditRecords.size(), entraUser.getId());
         }
 
         // Delete from local database
