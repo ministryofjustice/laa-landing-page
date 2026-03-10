@@ -14,6 +14,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
+import uk.gov.justice.laa.portal.landingpage.entity.CountFirmByMultifirmFlag;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -197,4 +198,36 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             WHERE ups.firm.id = :firmId
             """)
     List<UserProfile> findByFirmId(@Param("firmId") UUID firmId);
+
+    @Query(
+            value = """
+                    SELECT EXISTS (
+                        SELECT 1
+                        FROM user_profile up
+                        INNER JOIN firm f ON up.firm_id = f.id
+                        INNER JOIN entra_user eu ON up.entra_user_id = eu.id
+                        WHERE f.id = :firmId
+                          AND eu.enabled = TRUE
+                    )
+                    """,
+            nativeQuery = true
+    )
+    boolean hasActiveUserByFirmId(@Param("firmId") String firmId);
+
+
+    @Query(value = """
+    SELECT
+        eu.multi_firm_user AS isMultiFirm,
+        COUNT(*) AS userCount
+    FROM user_profile up
+    INNER JOIN firm f ON up.firm_id = f.id
+    INNER JOIN entra_user eu ON up.entra_user_id = eu.id
+    WHERE f.id = :firmId
+      AND eu.enabled = TRUE
+    GROUP BY eu.multi_firm_user
+    """,
+            nativeQuery = true)
+    List<CountFirmByMultifirmFlag> countByMultifirmFlag(@Param("firmId") String firmId);
+
+
 }

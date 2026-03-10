@@ -27,7 +27,6 @@ databaseChangeLog:
         id: add-bulk_disable-firm-user-permission
         author: leonardopalmeiro
         changes:
-
           # add permission of Security Response
           - sql:
               dbms: postgresql

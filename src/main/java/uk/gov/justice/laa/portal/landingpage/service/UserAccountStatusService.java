@@ -6,6 +6,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.dto.DisableUserReasonDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.entity.CountFirmByMultifirmFlag;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
@@ -123,30 +124,24 @@ public class UserAccountStatusService {
         }
     }
 
-    public Map<String, Long> getUserCountsForFirm(String firmId) {
-        Map<String, Long> result = new HashMap<>();
-        List<UserProfile> userProfiles = userProfileRepository.findByFirmId(UUID.fromString(firmId));
-        long totalOfSingleFirm = userProfiles.stream()
-                .filter(userProfile -> userProfile.getEntraUser().isEnabled() && !userProfile.getEntraUser().isMultiFirmUser())
-                .count();
+    public Map<String, Integer> getUserCountsForFirm(String firmId) {
+        Map<String, Integer> result = new HashMap<>();
+        List<CountFirmByMultifirmFlag> countFirmByMultifirmFlagList = userProfileRepository.countByMultifirmFlag(firmId);
 
-        long totalOfMultiFirm = userProfiles.stream()
-                .filter(userProfile -> userProfile.getEntraUser().isEnabled() && userProfile.getEntraUser().isMultiFirmUser())
-                .count();
-
-        result.put("totalOfSingleFirm", totalOfSingleFirm);
-        result.put("totalOfMultiFirm", totalOfMultiFirm);
+        for (CountFirmByMultifirmFlag count : countFirmByMultifirmFlagList){
+            if(count.getIsMultifirm()){
+                result.put("totalOfMultiFirm", count.getUserCount());
+            } else {
+                result.put("totalOfSingleFirm", count.getUserCount());
+            }
+        }
 
         return result;
 
     }
 
     public boolean hasActiveUserByFirmId(String firmId) {
-        List<EntraUser> entraUsers = userProfileRepository.findByFirmId(UUID.fromString(firmId)).stream()
-                .map(UserProfile::getEntraUser)
-                .filter(EntraUser::isEnabled)
-                .toList();
-        return !entraUsers.isEmpty();
+        return userProfileRepository.hasActiveUserByFirmId(firmId);
     }
 
     public void disableUserAllUserByFirmId(String firmId, UUID disableReasonId, UUID disabledById) {

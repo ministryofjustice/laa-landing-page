@@ -41,7 +41,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.GLOBAL_ADMIN;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 
 /**
@@ -68,9 +67,7 @@ public class FirmDirectoryController {
     private boolean firmDirectoryEnabled;
 
     private boolean showDisableAllButton(Authentication authentication, String firmId) {
-        return (accessControlService.userHasAuthzRole(authentication, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())
-                || accessControlService.userHasAuthzRole(authentication, GLOBAL_ADMIN.getRoleName())
-                || accessControlService.userHasAuthzRole(authentication, AuthzRole.SECURITY_RESPONSE.getRoleName()))
+        return accessControlService.userHasAuthzRole(authentication, AuthzRole.SECURITY_RESPONSE.getRoleName())
                 && userAccountStatusService.hasActiveUserByFirmId(firmId);
     }
 
