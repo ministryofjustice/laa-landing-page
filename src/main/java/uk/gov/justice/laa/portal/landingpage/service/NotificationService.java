@@ -87,24 +87,23 @@ public class NotificationService {
     }
 
     public void notifyUserAccessChange(UUID userProfileId, String firstName, String email, String changeType, String changes) {
-        if ("placeholder".equalsIgnoreCase(notificationProperties.getUserAccessChangeEmailTemplate())) {
+        if ("NONE".equalsIgnoreCase(notificationProperties.getUserAccessChangeEmailTemplate())) {
             log.info("Email template for user access change is not ready, skipping notification email for User: {}", userProfileId);
             return;
         }
 
         log.info("Sending user access change notification for User: {} (change type: {})", userProfileId, changeType);
-        if (null != email) {
-            emailService.sendMail(
-                    email,
-                    notificationProperties.getUserAccessChangeEmailTemplate(),
-                    Map.of("first_name", firstName, "change_type", changeType, "changes", changes, "portal_url", notificationProperties.getPortalUrl()),
-                    String.format(
-                            REFERENCE_TEMPLATE_ACCESS_CHANGE,
-                            userProfileId
-                    )
-            );
-            log.info("User access change notification sent to: {} for User ID: {}", email, userProfileId);
-        }
+
+        emailService.sendMail(
+                email,
+                notificationProperties.getUserAccessChangeEmailTemplate(),
+                Map.of("first_name", firstName, "change_type", changeType, "changes", changes, "portal_url", notificationProperties.getPortalUrl()),
+                String.format(
+                        REFERENCE_TEMPLATE_ACCESS_CHANGE,
+                        userProfileId
+                )
+        );
+        log.info("User access change notification sent to: {} for User ID: {}", email, userProfileId);
     }
 
 
