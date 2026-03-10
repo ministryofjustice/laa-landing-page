@@ -162,7 +162,6 @@
                         <td class="govuk-table__cell"></td>
                         <td class="govuk-table__cell" th:text="${app.ordinal}">0</td>
                         <td class="govuk-table__cell">
-                            <a th:href="@{'/admin/silas-administration/app/' + ${app.id}}" class="govuk-link">Change</a>
                         </td>
                     </tr>
                     </tbody>
@@ -186,12 +185,8 @@
 
             <!-- Action buttons at top right -->
             <div style="text-align: right; margin-bottom: 30px;">
-                <form class="form" method="post" th:action="@{/admin/silas-administration/sync/apps}">
-                    <button th:if="${canTriggerAppSync}" class="govuk-button" data-module="govuk-button"
-                            type="submit" style="margin-right: 10px;">
-                        Sync Apps
-                    </button>
-                </form>
+                <a th:if="${canTriggerAppSync}" class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
+                   th:href="@{/admin/silas-administration/sync/apps}">Sync Apps</a>
             </div>
 
             <!-- Success banner (disable auto focus to avoid scroll) -->
