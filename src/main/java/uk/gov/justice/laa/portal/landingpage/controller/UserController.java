@@ -101,6 +101,7 @@ import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
@@ -131,6 +132,7 @@ public class UserController {
     private final EmailValidationService emailValidationService;
     private final AppRoleService appRoleService;
     private final UserAccountStatusService userAccountStatusService;
+    private final NotificationService notificationService;
 
 
     @Value("${feature.flag.disable.user}")
@@ -1417,13 +1419,13 @@ public class UserController {
                     user.getEntraUser(), updateResult.get("diff"),
                     "role");
             eventService.logEvent(updateUserAuditEvent);
+            notifyExternalUserRoleChange(user, updateResult.get("diff"), "Service roles");
         }
         // Clear the session
         session.removeAttribute("editUserAllSelectedRoles");
         session.removeAttribute("selectedApps");
         return "redirect:/admin/users/edit/" + id + "/confirmation";
     }
-
     /**
      * Get user offices for editing
      *
@@ -1432,6 +1434,7 @@ public class UserController {
      * @return View name for editing user offices
      * @throws IllegalArgumentException If the user ID is invalid or not found
      */
+
     @GetMapping("/users/edit/{id}/offices")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
     public String editUserOffices(@PathVariable String id, Model model, Authentication authentication, HttpSession session) {
@@ -1609,6 +1612,7 @@ public class UserController {
                 userProfileDto.getEntraUser(),
                 changed, "office");
         eventService.logEvent(updateUserAuditEvent);
+        notifyExternalUserRoleChange(userProfileDto, changed, "Offices");
         // Clear the session model
         session.removeAttribute("editUserOfficesModel");
         session.removeAttribute("officesForm");
@@ -2336,6 +2340,8 @@ public class UserController {
                     "access_grant_complete");
             eventService.logEvent(updateUserAuditEvent);
 
+            notifyExternalUserRoleChange(userProfileDto, "You have been granted access to services and offices", "Access granted");
+
         } catch (Exception e) {
             log.error("Error completing grant access for user: " + id, e);
             // Could add error handling here if needed
@@ -2939,6 +2945,22 @@ public class UserController {
             log.error("Error reassigning firm for user {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("success", false, "message", "An error occurred while reassigning the user"));
+        }
+    }
+
+    private void notifyExternalUserRoleChange(UserProfileDto user, String changeDetails, String changeType) {
+        if (user.getUserType() == UserType.EXTERNAL
+                && user.getEntraUser() != null
+                && changeDetails != null
+                && !changeDetails.isEmpty()) {
+
+            notificationService.notifyUserAccessChange(
+                    user.getId(),
+                    user.getEntraUser().getFirstName(),
+                    user.getEntraUser().getEmail(),
+                    changeType,
+                    changeDetails
+            );
         }
     }
 }
