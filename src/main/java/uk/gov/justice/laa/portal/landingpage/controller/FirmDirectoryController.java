@@ -25,6 +25,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedOffices;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserTypeReasonDisable;
 import uk.gov.justice.laa.portal.landingpage.forms.DisableUserReasonForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
@@ -67,7 +68,7 @@ public class FirmDirectoryController {
     private boolean firmDirectoryEnabled;
 
     private boolean showDisableAllButton(Authentication authentication, String firmId) {
-        return accessControlService.userHasAuthzRole(authentication, AuthzRole.SECURITY_RESPONSE.getRoleName())
+        return accessControlService.authenticatedUserHasPermission(Permission.BULK_DISABLE_FIRM_USERS)
                 && userAccountStatusService.hasActiveUserByFirmId(firmId);
     }
 
