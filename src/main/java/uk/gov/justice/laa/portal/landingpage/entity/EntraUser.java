@@ -2,7 +2,9 @@ package uk.gov.justice.laa.portal.landingpage.entity;
 
 import java.time.LocalDateTime;
 import java.util.Set;
+import java.util.UUID;
 
+import jakarta.annotation.Nullable;
 import lombok.Builder;
 import org.hibernate.annotations.ColumnDefault;
 
@@ -27,6 +29,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.Comment;
 
 @Entity
 @Table(name = "entra_user", indexes = {
@@ -89,6 +92,11 @@ public class EntraUser extends AuditableEntity {
     @ColumnDefault("true")
     @Builder.Default
     private boolean enabled = true;
+
+    @Column(name = "disabled_by", nullable = true, length = 255)
+    @Nullable
+    @Comment(value = "The user profile id of the admin who disabled the user")
+    private UUID disabledBy;
 
     @OneToMany(mappedBy = "entraUser", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @ToString.Exclude
