@@ -18,6 +18,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUsersResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 
 import java.time.LocalDateTime;
@@ -110,10 +111,10 @@ public class ExternalUserPollingService {
      * @param users List of users from Tech Services API
      * @param syncTime The sync time to set as lastSyncedOn
      */
-    private void synchronizeUsers(List<GetUsersResponse.TechServicesUser> users, LocalDateTime syncTime) {
+    private void synchronizeUsers(List<TechServicesUser> users, LocalDateTime syncTime) {
         int updatedCount = 0;
         
-        for (GetUsersResponse.TechServicesUser user : users) {
+        for (TechServicesUser user : users) {
             try {
                 Optional<EntraUser> entraUserOptional = entraUserRepository.findByEntraOid(user.getId());
                 
@@ -173,13 +174,13 @@ public class ExternalUserPollingService {
                 updatedCount);
     }
 
-    private void updateAccountActivationStatus(GetUsersResponse.TechServicesUser user, EntraUser entraUser) {
+    private void updateAccountActivationStatus(TechServicesUser user, EntraUser entraUser) {
         boolean hasInvitationStatus = user.getCustomSecurityAttributes() != null
                 && user.getCustomSecurityAttributes().getGuestUserStatus() != null
-                && user.getCustomSecurityAttributes().getGuestUserStatus().getInvitationStatus() != null;
+                && user.getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress() != null;
 
         if (hasInvitationStatus) {
-            InvitationStatus invitationStatus = user.getCustomSecurityAttributes().getGuestUserStatus().getInvitationStatus();
+            InvitationStatus invitationStatus = user.getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress();
             boolean shouldUpdateActivationStatus = !Objects.equals(entraUser.getInvitationStatus(), invitationStatus);
 
             if (shouldUpdateActivationStatus) {
@@ -245,14 +246,14 @@ public class ExternalUserPollingService {
         }
     }
 
-    private boolean shouldDisableUser(GetUsersResponse.TechServicesUser user, boolean isEnabledInSilas) {
+    private boolean shouldDisableUser(TechServicesUser user, boolean isEnabledInSilas) {
         // Only disable if user is currently enabled in silas and has a disabled reason from Entra
         return isEnabledInSilas && user.getCustomSecurityAttributes() != null
                 && user.getCustomSecurityAttributes().getGuestUserStatus() != null
                 && user.getCustomSecurityAttributes().getGuestUserStatus().getDisabledReason() != null;
     }
 
-    private void disableUserWithReason(GetUsersResponse.TechServicesUser user, EntraUser entraUser) {
+    private void disableUserWithReason(TechServicesUser user, EntraUser entraUser) {
         try {
             String disabledReasonFromApi = user.getCustomSecurityAttributes()
                     .getGuestUserStatus().getDisabledReason();
@@ -281,7 +282,7 @@ public class ExternalUserPollingService {
         }
     }
 
-    private void enableUserWithReason(GetUsersResponse.TechServicesUser user, EntraUser entraUser) {
+    private void enableUserWithReason(TechServicesUser user, EntraUser entraUser) {
         try {
             entraUser.setEnabled(true);
             entraUserRepository.save(entraUser);

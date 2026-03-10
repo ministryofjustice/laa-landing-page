@@ -86,8 +86,8 @@ public class TechServicesConfig {
             havingValue = "false",
             matchIfMissing = false
     )
-    public TechServicesClient doNothingTechServicesClient(AppRepository appRepository) {
-        return new DoNothingTechServicesClient(appRepository);
+    public TechServicesClient doNothingTechServicesClient(AppRepository appRepository, EntraUserRepository entraUserRepository) {
+        return new DoNothingTechServicesClient(appRepository, entraUserRepository);
     }
 
     @Bean("tokenExpiryJwtDecoder")

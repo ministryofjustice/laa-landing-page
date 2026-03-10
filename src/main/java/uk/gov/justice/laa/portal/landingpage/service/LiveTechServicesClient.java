@@ -22,11 +22,14 @@ import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.exception.BadRequestException;
+import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetAllApplicationsResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.GetUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUsersResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailRequest;
@@ -527,6 +530,53 @@ public class LiveTechServicesClient implements TechServicesClient {
                     responseBody, ex);
             throw new RuntimeException("Unexpected error while getting users from Tech Services.", ex);
         }
+    }
+
+    @Override
+    public TechServicesApiResponse<GetUserResponse> getUser(String entraOid) {
+        String accessToken = getAccessToken();
+        logger.info("Calling Tech Services GET user endpoint for business unit: {} with entra oid: {}",
+                laaBusinessUnit, entraOid);
+
+        String uri = String.format(TECH_SERVICES_GET_USERS_ENDPOINT, "", laaBusinessUnit)
+                + "/" + entraOid;
+
+        try {
+            ResponseEntity<GetUserResponse> response = restClient.get()
+                    .uri(uri)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                    .retrieve()
+                    .toEntity(GetUserResponse.class);
+
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                logger.info("Successfully retrieved user from Tech Services for business unit: {}", laaBusinessUnit);
+                return TechServicesApiResponse.success(response.getBody());
+            } else {
+                throw new TechServicesClientException(response);
+            }
+        } catch (TechServicesClientException ex) {
+            ResponseEntity<?> responseEntity = ex.getResponseEntity();
+            String statusCode = responseEntity.getStatusCode().toString();
+            String message = responseEntity.getBody() != null ? responseEntity.getBody().toString() : "";
+            return buildErrorResponse(statusCode, message);
+        } catch (HttpClientErrorException | HttpServerErrorException httpEx) {
+            String statusCode = httpEx.getStatusCode().toString();
+            String message = httpEx.getResponseBodyAsString();
+            return buildErrorResponse(statusCode, message);
+        } catch (Exception ex) {
+            String statusCode = "500";
+            String message = "An unexpected error has occurred";
+            return buildErrorResponse(statusCode, message);
+        }
+    }
+
+    private static <T> TechServicesApiResponse<T> buildErrorResponse(String statusCode, String message) {
+        TechServicesErrorResponse errorResponse = TechServicesErrorResponse.builder()
+                .code(statusCode)
+                .errors(new String[]{message})
+                .build();
+        return TechServicesApiResponse.error(errorResponse);
     }
 
     @Override
