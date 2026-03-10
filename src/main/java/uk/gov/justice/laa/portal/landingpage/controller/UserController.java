@@ -420,12 +420,9 @@ public class UserController {
         Map<String, Object> filters = (Map<String, Object>) session.getAttribute("userListFilters");
         boolean hasFilters = hasActiveFilters(filters);
         model.addAttribute("hasFilters", hasFilters);
-        boolean loggedUserIsExternalAdmin =  accessControlService.userHasAuthzRole(authentication, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName());
-        if (editUserDetailFeatureEnabled && externalUser && loggedUserIsExternalAdmin){
-            model.addAttribute(
-                    "isMailOnly",
-                    user.getEntraUser().isMailOnly()
-            );
+        boolean loggedUserIsExternalAdmin = accessControlService.userHasAuthzRole(authentication, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName());
+        if (editUserDetailFeatureEnabled && externalUser && loggedUserIsExternalAdmin) {
+            model.addAttribute("showEditButton", true);
         }
 
         return "manage-user";
