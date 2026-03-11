@@ -1438,7 +1438,7 @@ public class UserAccountStatusServiceTest {
             when(userProfileRepository.findByFirmId(firmId)).thenReturn(userProfiles);
 
 
-            Map<String, Long> result = userAccountStatusService.getUserCountsForFirm(String.valueOf(firmId));
+            Map<String, Integer> result = userAccountStatusService.getUserCountsForFirm(String.valueOf(firmId));
 
 
             // Assert
@@ -1460,7 +1460,7 @@ public class UserAccountStatusServiceTest {
             );
             when(userProfileRepository.findByFirmId(firmId)).thenReturn(userProfiles);
 
-            Map<String, Long> result = userAccountStatusService.getUserCountsForFirm(String.valueOf(firmId));
+            Map<String, Integer> result = userAccountStatusService.getUserCountsForFirm(String.valueOf(firmId));
 
             // Assert
             assertThat(result.get("totalOfSingleFirm")).isEqualTo(0);
@@ -1480,7 +1480,7 @@ public class UserAccountStatusServiceTest {
             );
             when(userProfileRepository.findByFirmId(firmId)).thenReturn(userProfiles);
 
-            Map<String, Long> result = userAccountStatusService.getUserCountsForFirm(String.valueOf(firmId));
+            Map<String, Integer> result = userAccountStatusService.getUserCountsForFirm(String.valueOf(firmId));
 
             // Assert
             assertThat(result.get("totalOfSingleFirm")).isEqualTo(1);

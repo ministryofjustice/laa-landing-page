@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
-import uk.gov.justice.laa.portal.landingpage.entity.CountFirmByMultifirmFlag;
+import uk.gov.justice.laa.portal.landingpage.entity.CountFirms;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -232,18 +232,18 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
 
 
     @Query(value = """
-    SELECT
-        eu.multi_firm_user AS isMultiFirm,
-        COUNT(*) AS userCount
-    FROM user_profile up
-    INNER JOIN firm f ON up.firm_id = f.id
-    INNER JOIN entra_user eu ON up.entra_user_id = eu.id
-    WHERE f.id = :firmId
-      AND eu.enabled = TRUE
-    GROUP BY eu.multi_firm_user
-    """,
+            SELECT
+                eu.multi_firm_user AS isMultiFirm,
+                COUNT(*) AS userCount
+            FROM user_profile up
+            INNER JOIN firm f ON up.firm_id = f.id
+            INNER JOIN entra_user eu ON up.entra_user_id = eu.id
+            WHERE f.id = :firmId
+              AND eu.enabled = TRUE
+            GROUP BY eu.multi_firm_user
+            """,
             nativeQuery = true)
-    List<CountFirmByMultifirmFlag> countByMultifirmFlag(@Param("firmId") UUID firmId);
+    List<CountFirms> countByMultifirmFlag(@Param("firmId") UUID firmId);
 
 
 }

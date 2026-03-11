@@ -154,7 +154,6 @@ public class FirmDirectoryController {
         model.addAttribute("firm", modelFromSession.getAttribute("firm"));
         model.addAttribute("disableUserReasonsForm", disableUserReasonForm);
         model.addAttribute("reasons", modelFromSession.getAttribute("reasons"));
-        FirmDto firm = (FirmDto) modelFromSession.getAttribute("firm");
         if (result.hasErrors()) {
             log.info("Validation errors occurred while post reason for disable: {}", result.getAllErrors());
             return "firm-directory/bulk-disable-user-reason";
@@ -164,6 +163,7 @@ public class FirmDirectoryController {
         Map<String, Integer> counts = userAccountStatusService.getUserCountsForFirm(id);
         model.addAttribute("totalOfSingleFirm", counts.get("totalOfSingleFirm"));
         model.addAttribute("totalOfMultiFirm", counts.get("totalOfMultiFirm"));
+        FirmDto firm = (FirmDto) modelFromSession.getAttribute("firm");
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Remove access for all - " + firm.getName());
 
         return "firm-directory/bulk-confirmation";

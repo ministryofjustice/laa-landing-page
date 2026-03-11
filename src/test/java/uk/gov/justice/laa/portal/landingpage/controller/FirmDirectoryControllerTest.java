@@ -380,9 +380,9 @@ class FirmDirectoryControllerTest {
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
 
-        Map<String, Long> totals = new HashMap<>();
-        totals.put("totalOfSingleFirm", 1L);
-        totals.put("totalOfMultiFirm", 1L);
+        Map<String, Integer> totals = new HashMap<>();
+        totals.put("totalOfSingleFirm", 1);
+        totals.put("totalOfMultiFirm", 1);
         UUID id = UUID.randomUUID();
         when(userAccountStatusService.getUserCountsForFirm(String.valueOf(id))).thenReturn(totals);
         DisableUserReasonForm disableUserReasonForm = new DisableUserReasonForm();

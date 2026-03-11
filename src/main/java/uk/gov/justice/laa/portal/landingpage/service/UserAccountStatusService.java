@@ -10,7 +10,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
-import uk.gov.justice.laa.portal.landingpage.entity.CountFirmByMultifirmFlag;
+import uk.gov.justice.laa.portal.landingpage.entity.CountFirms;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
@@ -134,10 +134,10 @@ public class UserAccountStatusService {
 
     public Map<String, Integer> getUserCountsForFirm(String firmId) {
         Map<String, Integer> result = new HashMap<>();
-        List<CountFirmByMultifirmFlag> countFirmByMultifirmFlagList = userProfileRepository.countByMultifirmFlag(UUID.fromString(firmId));
+        List<CountFirms> countFirmsList = userProfileRepository.countByMultifirmFlag(UUID.fromString(firmId));
 
-        for (CountFirmByMultifirmFlag count : countFirmByMultifirmFlagList){
-            if(count.getIsMultifirm()){
+        for (CountFirms count : countFirmsList) {
+            if (count.getIsMultifirm()) {
                 result.put("totalOfMultiFirm", count.getUserCount());
             } else {
                 result.put("totalOfSingleFirm", count.getUserCount());
