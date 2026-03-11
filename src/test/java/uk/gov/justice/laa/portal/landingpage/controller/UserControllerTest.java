@@ -96,6 +96,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserTypeReasonDisable;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
@@ -6020,7 +6021,7 @@ class UserControllerTest {
         String profileId = UUID.randomUUID().toString();
 
         when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(returnedUser));
-        when(disableUserService.getDisableUserReasons(anyBoolean())).thenReturn(List.of(reason));
+        when(disableUserService.getDisableUserReasons(any())).thenReturn(List.of(reason));
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
 
@@ -6065,7 +6066,7 @@ class UserControllerTest {
         when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(returnedUser));
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
-        when(disableUserService.getDisableUserReasons(false)).thenReturn(List.of(reason));
+        when(disableUserService.getDisableUserReasons(UserTypeReasonDisable.DEFAULT)).thenReturn(List.of(reason));
 
         String view = userController.disableUserReasonsGet(userId.toString(), form, model, session, authentication, referer, profileId);
 
@@ -6102,7 +6103,7 @@ class UserControllerTest {
         form.setReasonId(reason.getId().toString());
 
         when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(returnedUser));
-        when(disableUserService.getDisableUserReasons(true)).thenReturn(List.of(reason));
+        when(disableUserService.getDisableUserReasons(UserTypeReasonDisable.IS_USER_DISABLE)).thenReturn(List.of(reason));
 
         Set<AppRole> editorRoles = Set.of(AppRole.builder()
             .name(FIRM_USER_MANAGER.getDescription())
@@ -6150,7 +6151,7 @@ class UserControllerTest {
         String profileId = UUID.randomUUID().toString();
 
         when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(returnedUser));
-        when(disableUserService.getDisableUserReasons(anyBoolean())).thenReturn(List.of(reason));
+        when(disableUserService.getDisableUserReasons(any())).thenReturn(List.of(reason));
         Set<AppRole> editorRoles = Set.of(AppRole.builder()
                 .name(FIRM_USER_MANAGER.getDescription())
                 .build());
