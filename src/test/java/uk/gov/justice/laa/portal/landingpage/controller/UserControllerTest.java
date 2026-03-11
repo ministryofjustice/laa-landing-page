@@ -86,6 +86,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
@@ -595,6 +596,53 @@ class UserControllerTest {
         assertThat(model.getAttribute("user")).isEqualTo(mockUser);
         assertThat(model.getAttribute("hasFilters")).isEqualTo(false);
         assertThat(model.getAttribute("canViewAllProfiles")).isEqualTo(false);
+        assertThat(model.getAttribute("showEditButton")).isNull();
+        verify(userService).getUserProfileById(userId);
+    }
+
+    @Test
+    void manageUser_shouldSeeEditButtonExternalUserAdmin() {
+        // Arrange
+        // Given - Editor is an Internal user
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.EXTERNAL)
+                .build();
+        String userId = "user42";
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setId(userId);
+        entraUser.setFullName("External User Admin");
+
+        AppRoleDto appRoleDto = AppRoleDto.builder().app(AppDto.builder().enabled(true).build()).build();
+        UserProfileDto mockUser = UserProfileDto.builder()
+                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .entraUser(entraUser)
+                .appRoles(List.of(appRoleDto))
+                .offices(List.of(OfficeDto.builder()
+                        .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440001"))
+                        .code("Test Office")
+                        .address(OfficeDto.AddressDto.builder().addressLine1("Test Address").build())
+                        .build()))
+                .userType(UserType.EXTERNAL)
+                .build();
+
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
+        when(accessControlService.userHasAuthzRole(authentication, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())).thenReturn(true);
+        userController.editUserDetailFeatureEnabled = true;
+        // Act
+        String view = userController.manageUser(userId, false, model, session, authentication);
+
+        // Assert
+        assertThat(view).isEqualTo("manage-user");
+        assertThat(model.getAttribute("user")).isEqualTo(mockUser);
+        assertThat(model.getAttribute("hasFilters")).isEqualTo(false);
+        assertThat(model.getAttribute("canViewAllProfiles")).isEqualTo(false);
+        assertThat(model.getAttribute("showEditButton")).isEqualTo(true);
         verify(userService).getUserProfileById(userId);
     }
 
