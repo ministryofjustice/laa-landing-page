@@ -144,7 +144,7 @@ public class AdminController {
         return "silas-administration/administration";
     }
 
-    @PostMapping("/silas-administration/sync/apps")
+    @GetMapping("/silas-administration/sync/apps")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).TRIGGER_LAA_APP_SYNC)")
     public String syncLaaApps(Authentication authentication, Model model, HttpSession session) {
 
