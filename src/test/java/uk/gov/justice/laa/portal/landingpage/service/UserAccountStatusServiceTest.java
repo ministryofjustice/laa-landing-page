@@ -1422,20 +1422,6 @@ public class UserAccountStatusServiceTest {
         @Test
         void shouldReturnCorrectCountsForSingleAndMultiFirmUsers() {
             UUID firmId = UUID.randomUUID();
-            List<UserProfile> userProfiles = List.of(
-                    UserProfile.builder()
-                            .entraUser(EntraUser.builder()
-                                    .enabled(true)
-                                    .build())
-                            .build(),
-                    UserProfile.builder()
-                            .entraUser(EntraUser.builder()
-                                    .enabled(true)
-                                    .multiFirmUser(true)
-                                    .build())
-                            .build()
-            );
-
             when(userProfileRepository.countByMultifirmFlag(firmId))
                     .thenReturn(List.of(new CountFirms(true, 1L),
                             new CountFirms(false, 1L)));
@@ -1451,20 +1437,13 @@ public class UserAccountStatusServiceTest {
         @Test
         void shouldReturnCorrectCountsForMultiFirmUsersOnly() {
             UUID firmId = UUID.randomUUID();
-            List<UserProfile> userProfiles = List.of(
-                    UserProfile.builder()
-                            .entraUser(EntraUser.builder()
-                                    .enabled(true)
-                                    .multiFirmUser(true)
-                                    .build())
-                            .build()
-            );
-            when(userProfileRepository.findByFirmId(firmId)).thenReturn(userProfiles);
+            when(userProfileRepository.countByMultifirmFlag(firmId))
+                    .thenReturn(List.of(new CountFirms(true, 1L)));
 
             Map<String, Long> result = userAccountStatusService.getUserCountsForFirm(String.valueOf(firmId));
 
             // Assert
-            assertThat(result.get("totalOfSingleFirm")).isEqualTo(0);
+            assertThat(result.get("totalOfSingleFirm")).isNull();
             assertThat(result.get("totalOfMultiFirm")).isEqualTo(1);
 
         }
@@ -1472,20 +1451,14 @@ public class UserAccountStatusServiceTest {
         @Test
         void shouldReturnCorrectCountsForSingleFirmOnly() {
             UUID firmId = UUID.randomUUID();
-            List<UserProfile> userProfiles = List.of(
-                    UserProfile.builder()
-                            .entraUser(EntraUser.builder()
-                                    .enabled(true)
-                                    .build())
-                            .build()
-            );
-            when(userProfileRepository.findByFirmId(firmId)).thenReturn(userProfiles);
+            when(userProfileRepository.countByMultifirmFlag(firmId))
+                    .thenReturn(List.of(new CountFirms(false, 1L)));
 
             Map<String, Long> result = userAccountStatusService.getUserCountsForFirm(String.valueOf(firmId));
 
             // Assert
             assertThat(result.get("totalOfSingleFirm")).isEqualTo(1);
-            assertThat(result.get("totalOfMultiFirm")).isEqualTo(0);
+            assertThat(result.get("totalOfMultiFirm")).isNull();
 
         }
 
