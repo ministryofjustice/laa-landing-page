@@ -65,6 +65,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
@@ -422,11 +423,10 @@ public class UserController {
         Map<String, Object> filters = (Map<String, Object>) session.getAttribute("userListFilters");
         boolean hasFilters = hasActiveFilters(filters);
         model.addAttribute("hasFilters", hasFilters);
-
-        model.addAttribute(
-                "isMailOnly",
-                true
-        );
+        boolean loggedUserIsExternalAdmin = accessControlService.userHasAuthzRole(authentication, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName());
+        if (editUserDetailFeatureEnabled && externalUser && loggedUserIsExternalAdmin) {
+            model.addAttribute("showEditButton", true);
+        }
 
         return "manage-user";
     }

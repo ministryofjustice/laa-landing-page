@@ -145,7 +145,7 @@
                             <div class="govuk-summary-card__title-wrapper" style="align-items: center;">
                                 <h2 class="govuk-summary-card__title">User details</h2>
                                 <ul class="govuk-summary-card__actions">
-                                    <li th:if="${isMailOnly}" class="govuk-summary-card__action">
+                                    <li th:if="${showEditButton}" class="govuk-summary-card__action">
                                         <a class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
                                            th:href="@{/admin/users/edit/{id}/details(id=${user.id})}">Edit user</a>
                                     </li>
