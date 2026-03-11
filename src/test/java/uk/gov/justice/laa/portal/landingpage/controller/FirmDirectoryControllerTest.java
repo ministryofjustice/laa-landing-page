@@ -442,7 +442,7 @@ class FirmDirectoryControllerTest {
 
         assertThat(result).isEqualTo(String.format("redirect:/admin/firmDirectory"));
         assertThat(httpSession.getAttribute("disableUserReasonModel")).isNull();
-
+        assertThat(httpSession.getAttribute("reasonIdSelected")).isNull();
     }
 
     @Test
