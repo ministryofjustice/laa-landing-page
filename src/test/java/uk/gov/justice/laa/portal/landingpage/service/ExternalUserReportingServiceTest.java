@@ -22,11 +22,14 @@ class ExternalUserReportingServiceTest {
     @Mock
     private FirmRepository firmRepository;
 
+    @Mock
+    private ReportUploadService reportUploadService;
+
     private ExternalUserReportingService externalUserReportingService;
 
     @BeforeEach
     void setUp() {
-        externalUserReportingService = Mockito.spy(new ExternalUserReportingService(firmRepository));
+        externalUserReportingService = Mockito.spy(new ExternalUserReportingService(firmRepository, reportUploadService));
     }
 
     @Test

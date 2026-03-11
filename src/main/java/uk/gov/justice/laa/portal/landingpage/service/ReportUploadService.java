@@ -5,6 +5,7 @@ import com.microsoft.graph.models.DriveItem;
 import com.microsoft.graph.models.Site;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.config.GraphClientConfig;
 
@@ -17,6 +18,9 @@ import java.io.FileNotFoundException;
 @RequiredArgsConstructor
 public class ReportUploadService {
 
+    @Value("${report.sharepoint.site.id}")
+    private  String SHAREPOINT_URL;
+
     private final GraphClientConfig graphClientConfig;
 
     public void uploadCsvToSharePoint(File file, String folderPath) throws FileNotFoundException {
@@ -25,7 +29,7 @@ public class ReportUploadService {
 
             Site site = graphClientConfig.graphUploadClient()
                     .sites()
-                    .bySiteId("mojodevl.sharepoint.com:/sites/SiLASDataExtracts")
+                    .bySiteId(SHAREPOINT_URL)
                     .get();
 
             final String siteId = site.getId();
@@ -38,7 +42,28 @@ public class ReportUploadService {
 
             String driveId = drive.getId();
 
-            log.info("Uploading report to SharePoint: {}", file.getName());
+
+        try {
+            DriveItem existing = graphClientConfig.graphUploadClient()
+                    .drives()
+                    .byDriveId(driveId)
+                    .items()
+                    .byDriveItemId("root:/" + folderPath + "/" + file.getName() + ":")
+                    .get();
+
+            if (existing != null) {
+                log.warn("File '{}' already exists in SharePoint. Skipping upload.", file.getName());
+                return;
+            }
+
+        } catch (Exception ex) {
+            if (ex.getMessage().contains("404")) {
+                log.info("File '{}' does not exist in SharePoint. Proceeding with upload.", file.getName());
+            }
+        }
+
+
+        log.info("Uploading report to SharePoint: {}", file.getName());
 
             DriveItem uploadCsv =
                     graphClientConfig.graphUploadClient()

@@ -4,7 +4,7 @@ import com.azure.core.credential.TokenCredential;
 import com.azure.identity.ClientSecretCredential;
 import com.azure.identity.ClientSecretCredentialBuilder;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
-import lombok.Value;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -23,7 +23,6 @@ public class GraphClientConfig {
 
     @Value("${report.service.secret}")
     private String REPORT_SECRET;
-
 
     public GraphClientConfig(TokenCredentialFactory credentialFactory) {
         this.credentialFactory = credentialFactory;

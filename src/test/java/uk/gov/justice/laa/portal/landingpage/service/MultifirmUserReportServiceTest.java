@@ -29,13 +29,16 @@ class MultifirmUserReportServiceTest {
     @Mock
     private EntraUserRepository entraUserRepository;
 
+    @Mock
+    private ReportUploadService reportUploadService;
+
     private MultifirmUserReportService service;
 
     private static final String REPORT_PREFIX = "SiLAS-multifirm-user-report-";
 
     @BeforeEach
     void setUp() {
-        service = new MultifirmUserReportService(firmRepository, entraUserRepository);
+        service = new MultifirmUserReportService(firmRepository, entraUserRepository, reportUploadService);
     }
 
     private Path getGeneratedCsvFile() throws IOException {
