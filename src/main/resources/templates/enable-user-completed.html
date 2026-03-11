@@ -22,8 +22,14 @@
             </div>
         </div>
 
-        <form class="govuk-!-padding-top-6" th:action="@{/admin/users}" method="get">
+        <form th:if="${referer != null && referer.equals('manage')}" class="govuk-!-padding-top-6" th:action="@{/admin/users}" method="get">
             <button class="govuk-button govuk-button--primary" type="submit">Go back to manage your users</button>
+        </form>
+        <form th:if="${referer != null && referer.equals('audit')}" class="govuk-!-padding-top-6" th:action="@{/admin/users/audit}" method="get">
+            <button class="govuk-button govuk-button--primary" type="submit">Go back to audit table</button>
+        </form>
+        <form th:if="${referer == null}" class="govuk-!-padding-top-6" th:action="@{/admin/users/audit}" method="get">
+            <button class="govuk-button govuk-button--primary" type="submit">Go back to home page</button>
         </form>
     </div>
 </main>

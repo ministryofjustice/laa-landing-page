@@ -23,6 +23,7 @@ public class NotificationService {
     private static final String REFERENCE_TEMPLATE_NEW_USER = "laa-portal-notice-of-new-user-%s";
     private static final String REFERENCE_TEMPLATE_ADD_MF_PROFILE = "laa-portal-notice-of-delegate-firm-access-%s";
     private static final String REFERENCE_TEMPLATE_REVOKE_FIRM_ACCESS = "laa-portal-notice-of-revoke-firm-access-%s";
+    private static final String REFERENCE_TEMPLATE_ACCESS_CHANGE = "laa-portal-notice-of-access-change-%s";
     private static final String USER_NAME = "name";
     private static final String INVITATION_URL = "invitationURL";
     private static final String PORTAL_URL = "portalURL";
@@ -84,6 +85,27 @@ public class NotificationService {
             log.info("Revoke firm access notification sent to: {} for User ID: {}", email, userProfileId);
         }
     }
+
+    public void notifyUserAccessChange(UUID userProfileId, String firstName, String email, String changeType, String changes) {
+        if ("NONE".equalsIgnoreCase(notificationProperties.getUserAccessChangeEmailTemplate())) {
+            log.info("Email template for user access change is not ready, skipping notification email for User: {}", userProfileId);
+            return;
+        }
+
+        log.info("Sending user access change notification for User: {} (change type: {})", userProfileId, changeType);
+
+        emailService.sendMail(
+                email,
+                notificationProperties.getUserAccessChangeEmailTemplate(),
+                Map.of("first_name", firstName, "change_type", changeType, "changes", changes, "portal_url", notificationProperties.getPortalUrl()),
+                String.format(
+                        REFERENCE_TEMPLATE_ACCESS_CHANGE,
+                        userProfileId
+                )
+        );
+        log.info("User access change notification sent to: {} for User ID: {}", email, userProfileId);
+    }
+
 
     public Map<String, String> addProperties(String username, String invitationUrl) {
 

@@ -24,11 +24,13 @@ public class AdminPage {
     private final Locator adminServicesTab;
     private final Locator legalAidServicesTab;
     private final Locator rolesAndPermissionsTab;
+    private final Locator rolesAssignmentRestrictionsTab;
 
     // Panels
     private final Locator adminServicesPanel;
     private final Locator legalAidServicesPanel;
     private final Locator rolesAndPermissionsPanel;
+    private final Locator rolesAssignmentRestrictionsPanel;
 
     // --- Admin Services tab content ---
     private final Locator adminServicesTable;
@@ -41,7 +43,13 @@ public class AdminPage {
     private final Locator legalAidServicesHeaders;
     private final Locator legalAidServicesRows;
     private final Locator reorderLegalAidServicesButton;
-    private final Locator syncLegalAidServicesAppsButton;
+    private final Locator syncLegalAidServicesAppsLink;
+
+    // --- Legal Aid Services tab content ---
+    private final Locator roleAssignRestrictionsTable;
+    private final Locator roleAssignRestrictionsHeaders;
+    private final Locator roleAssignRestrictionsRows;
+    private final Locator roleAssignRestappFilterSelect;
 
     // --- Roles and Permissions tab content ---
     private final Locator createNewRoleButton;
@@ -73,11 +81,13 @@ public class AdminPage {
         this.adminServicesTab = page.locator("#tab-admin-apps");
         this.legalAidServicesTab = page.locator("#tab-apps");
         this.rolesAndPermissionsTab = page.locator("#tab-roles");
+        this.rolesAssignmentRestrictionsTab = page.locator("#tab-role-assignment-restrictions");
 
         // Panels
         this.adminServicesPanel = page.locator("#admin-apps");
         this.legalAidServicesPanel = page.locator("#apps");
         this.rolesAndPermissionsPanel = page.locator("#roles");
+        this.rolesAssignmentRestrictionsPanel = page.locator("#role-assignment-restrictions");
 
         // Admin Services
         this.adminServicesTable = adminServicesPanel.locator("table.govuk-table");
@@ -90,7 +100,15 @@ public class AdminPage {
         this.legalAidServicesHeaders = legalAidServicesTable.locator("thead th.govuk-table__header");
         this.legalAidServicesRows = legalAidServicesTable.locator("tbody.govuk-table__body tr.govuk-table__row");
         this.reorderLegalAidServicesButton = legalAidServicesPanel.locator("button.govuk-button:has-text('Reorder legal aid services')");
-        this.syncLegalAidServicesAppsButton = legalAidServicesPanel.locator("button.govuk-button:has-text('Sync Apps')");
+        this.syncLegalAidServicesAppsLink =
+                legalAidServicesPanel.locator("a.govuk-link.govuk-\\!-font-weight-regular:has-text('Sync Apps')");
+
+
+        // Role Assignment Restrictions
+        this.roleAssignRestrictionsTable = rolesAssignmentRestrictionsPanel.locator("table.govuk-table");
+        this.roleAssignRestrictionsHeaders = roleAssignRestrictionsTable.locator("thead th.govuk-table__header");
+        this.roleAssignRestrictionsRows = roleAssignRestrictionsTable.locator("tbody.govuk-table__body tr.govuk-table__row");
+        this.roleAssignRestappFilterSelect = rolesAssignmentRestrictionsPanel.locator("#role-assign-restrictions-app-filter");
 
         // Roles & Permissions
         this.createNewRoleButton = rolesAndPermissionsPanel.locator("a.govuk-button:has-text('Create a new role')");
@@ -154,6 +172,12 @@ public class AdminPage {
         return this;
     }
 
+    public AdminPage goToRoleAssignmentRestrictionsTab() {
+        rolesAssignmentRestrictionsTab.click();
+        assertThat(rolesAssignmentRestrictionsPanel).isVisible();
+        return this;
+    }
+
     // -------------------------
     // Admin Services
     // -------------------------
@@ -195,9 +219,26 @@ public class AdminPage {
         return this;
     }
 
+    public AdminPage assertRoleAssignRestrictionsTabContent() {
+        goToRoleAssignmentRestrictionsTab();
+        assertThat(roleAssignRestappFilterSelect).isVisible();
+        assertThat(roleAssignRestrictionsTable).isVisible();
+
+        assertHeadersContainExactly(
+                roleAssignRestrictionsHeaders,
+                List.of("Assignable Role", "Description", "Can Be Assigned By", "")
+        );
+        return this;
+    }
+
     public int getLegalAidServicesRowCount() {
         goToLegalAidServicesTab();
         return legalAidServicesRows.count();
+    }
+
+    public int getRoleAssignRestrictionsRowCount() {
+        goToRoleAssignmentRestrictionsTab();
+        return roleAssignRestrictionsRows.count();
     }
 
     public AdminPage assertReorderLegalAidServicesButtonVisible() {
@@ -208,7 +249,7 @@ public class AdminPage {
 
     public AdminPage assertSyncRolesLegalAidServicesButtonVisible() {
         goToLegalAidServicesTab();
-        assertThat(syncLegalAidServicesAppsButton).isVisible();
+        assertThat(syncLegalAidServicesAppsLink).isVisible();
         return this;
     }
 

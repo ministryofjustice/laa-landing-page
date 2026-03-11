@@ -49,8 +49,11 @@ import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AuditExportService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
+import uk.gov.justice.laa.portal.landingpage.service.TechServicesClient;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.service.AuditExportService.AuditCsvExport;
+import uk.gov.justice.laa.portal.landingpage.techservices.GetUserResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 
 @Slf4j
 @Controller
@@ -65,6 +68,7 @@ public class AuditController {
     private final AuditExportService auditExportService;
     private final FirmRepository firmRepository;
     private final AuthenticatedUser authenticatedUser;
+    private final TechServicesClient techServicesClient;
 
     @Value("${feature.flag.disable.user}")
     private boolean disableUserFeatureEnabled;
@@ -144,7 +148,6 @@ public class AuditController {
         if (isEntraId) {
             // Load user by EntraUser ID (for users without profiles)
             userDetail = userService.getAuditUserDetailByEntraId(userId);
-            canDisableUser = accessControlService.canDisableUser(userId.toString());
         } else {
             // Try to load by UserProfile ID first (existing behavior)
             try {
@@ -156,6 +159,11 @@ public class AuditController {
                 userDetail = userService.getAuditUserDetailByEntraId(userId);
             }
         }
+        TechServicesApiResponse<GetUserResponse> entraUserResponse = techServicesClient.getUser(userDetail.getEntraOid());
+        if (entraUserResponse.isSuccess()) {
+            model.addAttribute("entraUser", entraUserResponse.getData().getUser());
+        }
+        canDisableUser = accessControlService.canDisableUser(userDetail.getUserId());
 
         // Add attributes to model
         model.addAttribute("user", userDetail);

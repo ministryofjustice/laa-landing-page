@@ -2,7 +2,9 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -15,6 +17,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -34,6 +37,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.validation.BeanPropertyBindingResult;
@@ -62,6 +66,7 @@ import uk.gov.justice.laa.portal.landingpage.forms.AppRoleDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRolesOrderForm;
 import uk.gov.justice.laa.portal.landingpage.forms.AppsOrderForm;
 import uk.gov.justice.laa.portal.landingpage.forms.DeleteAppRoleReasonForm;
+import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AdminService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
@@ -69,6 +74,8 @@ import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
+import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
+import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
 @ExtendWith(MockitoExtension.class)
 class AdminControllerTest {
@@ -88,6 +95,8 @@ class AdminControllerTest {
     @Mock
     private MockHttpSession mockHttpSession;
     private ModelMapper mapper;
+    @Mock
+    private RoleAssignmentService roleAssignmentService;
 
     private AdminController adminController;
     private Model model;
@@ -97,7 +106,8 @@ class AdminControllerTest {
     @BeforeEach
     void setUp() {
         mapper = new ModelMapper();
-        adminController = new AdminController(mapper, loginService, eventService, adminService, appService, appRoleService, accessControlService);
+        adminController = new AdminController(mapper, loginService, eventService, adminService,
+                appService, appRoleService, accessControlService, roleAssignmentService);
         model = new ExtendedModelMap();
     }
 
@@ -703,7 +713,7 @@ class AdminControllerTest {
 
         String view = adminController.cancel(session, "admin-apps");
 
-        assertEquals("redirect:/admin/silas-administration#admin-apps", view);
+        assertEquals("redirect:/admin/silas-administration?tab=admin-apps", view);
         assertThat(session.getAttribute("appDetailsForm")).isNull();
     }
 
@@ -920,7 +930,7 @@ class AdminControllerTest {
 
         String view = adminController.cancel(session, "apps");
 
-        assertEquals("redirect:/admin/silas-administration#apps", view);
+        assertEquals("redirect:/admin/silas-administration?tab=apps", view);
         assertThat(session.getAttribute("appDetailsForm")).isNull();
         assertThat(session.getAttribute("appId")).isNull();
     }
@@ -931,7 +941,7 @@ class AdminControllerTest {
 
         String view = adminController.cancel(session, "invalid-tab");
 
-        assertEquals("redirect:/admin/silas-administration#admin-apps", view);
+        assertEquals("redirect:/admin/silas-administration?tab=admin-apps", view);
     }
 
     @Test
@@ -948,7 +958,7 @@ class AdminControllerTest {
 
         String view = adminController.cancel(session, "roles");
 
-        assertEquals("redirect:/admin/silas-administration#roles", view);
+        assertEquals("redirect:/admin/silas-administration?tab=roles", view);
         assertThat(session.getAttribute("appDetailsForm")).isNull();
         assertThat(session.getAttribute("appDetailsFormModel")).isNull();
         assertThat(session.getAttribute("appId")).isNull();
@@ -2920,6 +2930,7 @@ class AdminControllerTest {
 
             // default permission TRUE
             when(accessControlService.authenticatedUserHasPermission(Permission.TRIGGER_LAA_APP_SYNC)).thenReturn(true);
+            ReflectionTestUtils.setField(adminController, "syncAppsFromEntra", "true");
         }
 
         @Test
@@ -2962,7 +2973,7 @@ class AdminControllerTest {
             assertThat(view).isEqualTo(VIEW);
 
             // Then: verify session clear method called
-            verify(mockHttpSession, times(12)).removeAttribute(anyString());
+            verify(mockHttpSession, times(14)).removeAttribute(anyString());
 
             // Then: verify model attributes
             assertThat(model.getAttribute(PAGE_TITLE_KEY)).isEqualTo(PAGE_TITLE_VALUE);
@@ -3018,7 +3029,7 @@ class AdminControllerTest {
             String view = adminController.syncLaaApps(authentication, model, mockHttpSession);
 
             // Session cleared
-            verify(mockHttpSession, times(12)).removeAttribute(anyString());
+            verify(mockHttpSession, times(14)).removeAttribute(anyString());
 
             // View OK
             assertThat(view).isEqualTo(VIEW);
@@ -3080,6 +3091,236 @@ class AdminControllerTest {
 
         private AppDto app(String id, String name) {
             return AppDto.builder().name(name).build();
+        }
+    }
+
+    @Nested
+    class RoleAssignmentRestrictionControllerUnitTest {
+
+        private String targetId;
+        private AppRoleDto targetDto;
+
+        private AppRoleDto dtoA;
+        private AppRoleDto dtoB;
+        private AppRoleDto dtoC;
+
+        @BeforeEach
+        void setUp() {
+            // Shared test data
+            targetId = UUID.randomUUID().toString();
+            targetDto = AppRoleDto.builder()
+                    .id(targetId)
+                    .name("Target Role")
+                    .build();
+
+            dtoA = dto("A", "Alpha");
+            dtoB = dto("B", "Beta");
+            dtoC = dto("C", "Charlie");
+        }
+
+        private AppRoleDto dto(String suffix, String name) {
+            return AppRoleDto.builder()
+                    .id(UUID.nameUUIDFromBytes(("DTO-" + suffix).getBytes()).toString())
+                    .name(name)
+                    .build();
+        }
+
+        @Test
+        void getFirstPage_whenNoSessionSelections_buildsFromServices_andMarksSelected() {
+            Model model = new ExtendedModelMap();
+            MockHttpSession session = new MockHttpSession();
+
+            // DB says: dtoB can assign
+            when(appRoleService.findById(targetId)).thenReturn(Optional.of(targetDto));
+            when(appRoleService.getAssigningRolesFor(targetId)).thenReturn(List.of(dtoB));
+            when(appRoleService.getAllAuthzRoles()).thenReturn(List.of(dtoA, dtoB, dtoC));
+
+            String view = adminController.roleAssignmentRestrictionGet(targetId, model, session);
+
+            assertThat(view).isEqualTo("silas-administration/edit-role-assignment-restrictions");
+            assertThat(model.getAttribute("appRole")).isNotNull();
+
+            @SuppressWarnings("unchecked")
+            List<AppRoleViewModel> vms =
+                    (List<AppRoleViewModel>) model.getAttribute("assigningRoleViewModels");
+            assertThat(vms).isNotNull().hasSize(3);
+
+            Map<String, Boolean> selectedById = new HashMap<>();
+            vms.forEach(vm -> selectedById.put(vm.getId(), vm.isSelected()));
+            assertThat(selectedById.get(dtoB.getId())).isTrue();
+            assertThat(selectedById.get(dtoA.getId())).isFalse();
+            assertThat(selectedById.get(dtoC.getId())).isFalse();
+        }
+
+        @Test
+        void getFirstPage_whenSessionSelectionsPresent_prefersSession() {
+
+            MockHttpSession session = new MockHttpSession();
+            // Session already has selections: A and C selected
+            List<AppRoleViewModel> sessionVms = List.of(
+                    vm(dtoA, true),
+                    vm(dtoB, false),
+                    vm(dtoC, true)
+            );
+            session.setAttribute("appRoleSelections", sessionVms);
+
+            when(appRoleService.findById(targetId)).thenReturn(Optional.of(targetDto));
+            when(appRoleService.getAssigningRolesFor(targetId)).thenReturn(List.of());
+            when(appRoleService.getAllAuthzRoles()).thenReturn(List.of(dtoA, dtoB, dtoC));
+
+            String view = adminController.roleAssignmentRestrictionGet(targetId, model, session);
+
+            assertThat(view).isEqualTo("silas-administration/edit-role-assignment-restrictions");
+
+            @SuppressWarnings("unchecked")
+            List<AppRoleViewModel> vms =
+                    (List<AppRoleViewModel>) model.getAttribute("assigningRoleViewModels");
+            assertThat(vms).isNotNull().hasSize(3);
+
+            Map<String, Boolean> selectedById = new HashMap<>();
+            vms.forEach(vm -> selectedById.put(vm.getId(), vm.isSelected()));
+            assertThat(selectedById.get(dtoA.getId())).isTrue();
+            assertThat(selectedById.get(dtoB.getId())).isFalse();
+            assertThat(selectedById.get(dtoC.getId())).isTrue();
+        }
+
+        @Test
+        void postFirstPage_storesSelectionsInSession_andRedirectsCheckAnswers() {
+            when(appRoleService.findById(targetId)).thenReturn(Optional.of(targetDto));
+            when(appRoleService.getAllAuthzRoles()).thenReturn(List.of(dtoA, dtoB, dtoC));
+
+            RolesForm form = new RolesForm();
+            form.setRoles(List.of(dtoA.getId(), dtoC.getId())); // selected by user
+
+            MockHttpSession session = new MockHttpSession();
+            String view = adminController.roleAssignmentRestrictionPost(targetId, form, model, session);
+
+            assertThat(view).isEqualTo("redirect:/admin/silas-administration/role/assignRestrictions/check-answers");
+            assertThat(session.getAttribute("assignableAppRoleId")).isEqualTo(targetId);
+
+            @SuppressWarnings("unchecked")
+            List<AppRoleViewModel> stored =
+                    (List<AppRoleViewModel>) session.getAttribute("appRoleSelections");
+            assertThat(stored).isNotNull().hasSize(3);
+            Map<String, Boolean> selectedById = new HashMap<>();
+            stored.forEach(vm -> selectedById.put(vm.getId(), vm.isSelected()));
+
+            assertThat(selectedById.get(dtoA.getId())).isTrue();
+            assertThat(selectedById.get(dtoB.getId())).isFalse();
+            assertThat(selectedById.get(dtoC.getId())).isTrue();
+        }
+
+        @Test
+        void getCheckAnswers_whenSessionMissing_redirectsToLanding() {
+            Model model = new ExtendedModelMap();
+            MockHttpSession session = new MockHttpSession();
+
+            String view = adminController.roleAssignmentRestrictionCheckAnsGet(model, session);
+
+            assertThat(view).isEqualTo("redirect:/silas-administration/role");
+        }
+
+        @Test
+        void getCheckAnswers_withSession_populatesModel_andFiltersSelf() {
+            List<AppRoleViewModel> vms = new ArrayList<>();
+            vms.add(vm(dtoA, true));
+            vms.add(vm(dtoB, false));
+            vms.add(AppRoleViewModel.builder()
+                    .id(targetId)
+                    .name("Target Role")
+                    .selected(true)
+                    .build()
+            );
+
+            MockHttpSession session = new MockHttpSession();
+            session.setAttribute("assignableAppRoleId", targetId);
+            session.setAttribute("appRoleSelections", vms);
+
+            when(appRoleService.findById(targetId)).thenReturn(Optional.of(targetDto));
+            when(appRoleService.getAssigningRolesFor(targetId)).thenReturn(List.of(dtoB)); // original
+            // After self-filter, only A should be passed to getByIds
+            when(appRoleService.getByIds(List.of(dtoA.getId()))).thenReturn(List.of(dtoA));
+
+            String view = adminController.roleAssignmentRestrictionCheckAnsGet(model, session);
+
+            assertThat(view).isEqualTo("silas-administration/edit-role-assignment-restrictions-check-answers");
+            assertThat(model.getAttribute("appRole")).isNotNull();
+
+            @SuppressWarnings("unchecked")
+            List<AppRoleDto> original =
+                    (List<AppRoleDto>) model.getAttribute("originalAssigningRoles");
+            @SuppressWarnings("unchecked")
+            List<AppRoleDto> updated =
+                    (List<AppRoleDto>) model.getAttribute("newAssigningRoles");
+
+            assertThat(original).isNotNull().extracting(AppRoleDto::getId).containsExactly(dtoB.getId());
+            assertThat(updated).isNotNull().extracting(AppRoleDto::getId).containsExactly(dtoA.getId());
+        }
+
+        @Test
+        void postCheckAnswers_whenSessionMissing_redirectsToLanding() {
+            Model model = new ExtendedModelMap();
+            MockHttpSession session = new MockHttpSession();
+            Authentication auth = mock(Authentication.class);
+            CurrentUserDto currentUser = new CurrentUserDto();
+            currentUser.setUserId(UUID.randomUUID());
+            currentUser.setName("Admin User");
+
+            String view = adminController.roleAssignmentRestrictionCheckAnsPost(auth, model, session);
+
+            assertThat(view).isEqualTo("redirect:/silas-administration/role");
+            verifyNoInteractions(roleAssignmentService);
+        }
+
+        @Test
+        void postCheckAnswers_withSession_callsServiceWithDistinctFilteredIds_andClearsSession() {
+            // Selected include duplicates and self
+            List<AppRoleViewModel> vms = new ArrayList<>();
+            vms.add(vm(dtoA, true));
+            vms.add(vm(dtoA, true));     // duplicate
+            vms.add(vm(dtoB, true));
+            vms.add(vm(dtoC, false));
+            vms.add(AppRoleViewModel.builder()
+                    .id(targetId)        // self
+                    .name("Target Role")
+                    .selected(true)
+                    .build()
+            );
+
+            MockHttpSession session = new MockHttpSession();
+            session.setAttribute("assignableAppRoleId", targetId);
+            session.setAttribute("appRoleSelections", vms);
+
+            Authentication auth = mock(Authentication.class);
+            CurrentUserDto currentUser = new CurrentUserDto();
+            currentUser.setUserId(UUID.randomUUID());
+            currentUser.setName("Admin User");
+            when(loginService.getCurrentUser(auth)).thenReturn(currentUser);
+
+            String view = adminController.roleAssignmentRestrictionCheckAnsPost(auth, model, session);
+
+            assertThat(view).isEqualTo("silas-administration/edit-role-assignment-restrictions-confirmation");
+
+            // Verify service invoked with distinct IDs [A,B] (self filtered)
+            @SuppressWarnings("unchecked")
+            ArgumentCaptor<Iterable<String>> idsCap = ArgumentCaptor.forClass(Iterable.class);
+            verify(roleAssignmentService).updateRoleAssignmentRestrictions(eq(currentUser), eq(targetId), (List<String>) idsCap.capture());
+
+            List<String> passed = (List<String>) idsCap.getValue();
+            assertThat(passed).containsExactlyInAnyOrder(dtoA.getId(), dtoB.getId());
+            assertThat(passed).doesNotContain(targetId);
+
+            // Session cleared
+            assertThat(session.getAttribute("assignableAppRoleId")).isNull();
+            assertThat(session.getAttribute("appRoleSelections")).isNull();
+        }
+
+        private AppRoleViewModel vm(AppRoleDto dto, boolean selected) {
+            return AppRoleViewModel.builder()
+                    .id(dto.getId())
+                    .name(dto.getName())
+                    .selected(selected)
+                    .build();
         }
     }
 }

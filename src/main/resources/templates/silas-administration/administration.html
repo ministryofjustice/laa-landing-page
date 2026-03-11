@@ -128,6 +128,14 @@
                     Roles and Permissions
                 </a>
             </li>
+            <li class="govuk-tabs__list-item"
+                th:classappend="${activeTab == 'role-assignment-restrictions'} ? ' govuk-tabs__list-item--selected' : null">
+                <a class="govuk-tabs__tab" href="#role-assignment-restrictions" id="tab-role-assignment-restrictions" role="tab"
+                   aria-controls="role-assignment-restrictions"
+                   th:attr="aria-selected=${activeTab == 'role-assignment-restrictions'} ? 'true' : 'false', tabindex=${activeTab == 'role-assignment-restrictions'} ? null : '-1'">
+                    Role Assignment Restrictions
+                </a>
+            </li>
         </ul>
 
         <!-- ===================== Admin Services Tab Content ===================== -->
@@ -154,7 +162,6 @@
                         <td class="govuk-table__cell"></td>
                         <td class="govuk-table__cell" th:text="${app.ordinal}">0</td>
                         <td class="govuk-table__cell">
-                            <a th:href="@{'/admin/silas-administration/app/' + ${app.id}}" class="govuk-link">Change</a>
                         </td>
                     </tr>
                     </tbody>
@@ -178,12 +185,8 @@
 
             <!-- Action buttons at top right -->
             <div style="text-align: right; margin-bottom: 30px;">
-                <form class="form" method="post" th:action="@{/admin/silas-administration/sync/apps}">
-                    <button th:if="${canTriggerAppSync}" class="govuk-button" data-module="govuk-button"
-                            type="submit" style="margin-right: 10px;">
-                        Sync Apps
-                    </button>
-                </form>
+                <a th:if="${canTriggerAppSync}" class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
+                   th:href="@{/admin/silas-administration/sync/apps}">Sync Apps</a>
             </div>
 
             <!-- Success banner (disable auto focus to avoid scroll) -->
@@ -266,10 +269,12 @@
 
         <!-- Action buttons at top right -->
         <div style="text-align: right; margin-bottom: 30px;">
-            <a href="/admin/silas-administration/roles/create" class="govuk-button" data-module="govuk-button" style="margin-right: 10px;">
+            <a th:href="@{/admin/silas-administration/roles/create}" class="govuk-button" data-module="govuk-button"
+               style="margin-right: 10px;">
                 Create a new role
             </a>
-            <a href="/admin/silas-administration/delete-role" class="govuk-button govuk-button--warning" data-module="govuk-button" style="margin-right: 10px;">
+            <a th:href="@{/admin/silas-administration/delete-role}" class="govuk-button govuk-button--warning"
+               data-module="govuk-button" style="margin-right: 10px;">
                 Delete a role
             </a>
         </div>
@@ -345,6 +350,97 @@
                 No roles configured for the selected application.
             </div>
         </div>
+
+
+        <!-- ===================== Role Assignment Restrictions Tab Content ===================== -->
+        <div class="govuk-tabs__panel"
+             id="role-assignment-restrictions"
+             role="tabpanel" aria-labelledby="tab-role-assignment-restrictions"
+             th:classappend="${activeTab != 'role-assignment-restrictions'} ? ' govuk-tabs__panel--hidden' : null">
+
+            <!-- Error summary (disable auto focus to avoid scroll) -->
+            <div th:if="${appRoleAssignmentRestrictionsErrorMessage}" class="govuk-error-summary"
+                 data-module="govuk-error-summary" data-disable-auto-focus="true">
+                <div class="govuk-error-summary__body">
+                    <ul class="govuk-list govuk-error-summary__list">
+                        <li>
+                            <a href="#role-assign-restrict-apps" th:text="${appRoleAssignmentRestrictionsErrorMessage}">Please select an application for managing role assignment restrictions</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Filter by App -->
+            <div class="govuk-form-group">
+                <label class="govuk-label" for="appFilter">Select application</label>
+                <div class="govuk-hint" id="role-assign-restrictions-app-filter-hint">
+                    You can select roles for all Legal Aid Services on this page.
+                </div>
+                <!-- IMPORTANT: no '#roles' fragment in action; use query param instead -->
+                <form method="get" th:action="@{/admin/silas-administration}">
+                    <input type="hidden" name="tab" value="role-assignment-restrictions" />
+                    <select class="govuk-select" id="role-assign-restrictions-app-filter" name="appFilter"
+                            aria-describedby="appFilter-hint" onchange="this.form.submit()" style="max-width: 350px;">
+                        <option value="">All applications</option>
+                        <option th:each="appName : ${appNames}"
+                                th:value="${appName}"
+                                th:text="${appName}"
+                                th:selected="${appFilter != null and appFilter == appName}">
+                            App Name
+                        </option>
+                    </select>
+                </form>
+            </div>
+
+            <div th:if="${roles != null and !roles.isEmpty()}">
+                <table class="govuk-table">
+                    <thead class="govuk-table__head">
+                    <tr class="govuk-table__row">
+                        <th scope="col" class="govuk-table__header" style="width: 30%;">Assignable Role</th>
+                        <th scope="col" class="govuk-table__header" style="width: 30%;">Description</th>
+                        <th scope="col" class="govuk-table__header" style="width: 30%;">Can Be Assigned By</th>
+                        <th scope="col" class="govuk-table__header" style="width: 10%;"></th>
+                    </tr>
+                    </thead>
+                    <tbody class="govuk-table__body">
+                    <tr class="govuk-table__row"
+                        th:each="entry : ${roleAssignmentRestrictions}">
+
+                        <td class="govuk-table__cell"
+                            th:text="${entry.key.name}"
+                            style="word-break: break-word;">
+                            Assignable Role Name
+                        </td>
+
+                        <td class="govuk-table__cell"
+                            th:text="${entry.key.description}"
+                            style="word-break: break-word;">
+                            Assignable Role Description
+                        </td>
+
+                        <td class="govuk-table__cell" style="word-break: break-word;">
+                            <span th:each="assigningRole, iterStat : ${entry.value}">
+                                <span th:text="${assigningRole.name}"></span>
+                                <span th:if="${!iterStat.last}"><br/></span>
+                            </span>
+                        </td>
+
+                        <td class="govuk-table__cell">
+                            <a th:href="@{'/admin/silas-administration/role/assignRestrictions/' + ${entry.key.id}}"
+                               class="govuk-link">Change</a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+
+            </div>
+
+            <div th:if="${roles == null or roles.isEmpty()}" class="govuk-inset-text">
+                No role to configure role restrictionss configured for the selected application.
+            </div>
+        </div>
+
+
     </div>
 </main>
 </body>

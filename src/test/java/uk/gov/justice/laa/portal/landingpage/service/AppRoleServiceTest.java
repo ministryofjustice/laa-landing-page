@@ -911,4 +911,47 @@ class AppRoleServiceTest {
         assertEquals("Test Role", result.getName());
         assertEquals("Test App", result.getParentAppName());
     }
+
+    @Test
+    void getAllAuthzRoles_ShouldReturnMappedDtos() {
+        // Arrange
+        AppRole appRole = AppRole.builder().id(UUID.randomUUID()).name("TEST_ROLE").build();
+        AppRoleDto appRoleDto = AppRoleDto.builder().id(appRole.getId().toString()).name(appRole.getName()).build();
+        List<AppRole> roles = List.of(appRole);
+        when(appRoleRepository.findAllAuthzRoles()).thenReturn(roles);
+        when(modelMapper.map(appRole, AppRoleDto.class)).thenReturn(appRoleDto);
+
+        // Act
+        List<AppRoleDto> result = appRoleService.getAllAuthzRoles();
+
+        // Assert
+        assertEquals(1, result.size());
+        assertEquals(appRoleDto, result.getFirst());
+
+        verify(appRoleRepository).findAllAuthzRoles();
+        verify(modelMapper).map(appRole, AppRoleDto.class);
+    }
+
+    @Test
+    void getAssigningRolesFor_ShouldReturnMappedDtos() {
+        // Arrange
+        AppRole appRole = AppRole.builder().id(UUID.randomUUID()).name("TEST_ROLE").build();
+        AppRoleDto appRoleDto = AppRoleDto.builder().id(appRole.getId().toString()).name(appRole.getName()).build();
+        String idStr = appRole.getId().toString();
+        List<AppRole> roles = List.of(appRole);
+
+        when(appRoleRepository.findAssigningRolesFor(appRole.getId())).thenReturn(roles);
+        when(modelMapper.map(appRole, AppRoleDto.class)).thenReturn(appRoleDto);
+
+        // Act
+        List<AppRoleDto> result = appRoleService.getAssigningRolesFor(idStr);
+
+        // Assert
+        assertEquals(1, result.size());
+        assertEquals(appRoleDto, result.getFirst());
+
+        verify(appRoleRepository).findAssigningRolesFor(appRole.getId());
+        verify(modelMapper).map(appRole, AppRoleDto.class);
+    }
+
 }

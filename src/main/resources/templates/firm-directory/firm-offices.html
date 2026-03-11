@@ -13,12 +13,28 @@
 <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
     <ol class="govuk-breadcrumbs__list">
         <li class="govuk-breadcrumbs__list-item">
-            <a class="govuk-breadcrumbs__link" href="/firm-directory/search-page">
-                < Back</a>
+            <a class="govuk-back-link"
+               th:href="@{/admin/firmDirectory}">Back</a>
         </li>
     </ol>
 </nav>
 <main class="govuk-main-wrapper" id="main-content">
+
+    <div th:if="${successMessage}" class="govuk-notification-banner govuk-notification-banner--success" role="alert"
+         aria-labelledby="govuk-notification-banner-title" data-module="govuk-notification-banner">
+        <div class="govuk-notification-banner__header">
+            <h2 class="govuk-notification-banner__title" id="govuk-notification-banner-title">
+                Success
+            </h2>
+        </div>
+        <div class="govuk-notification-banner__content"
+             style="display: flex; justify-content: space-between; align-items: center;">
+            <p class="govuk-notification-banner__heading" style="margin: 0;">
+                <span th:text="${successMessage}"></span>
+            </p>
+        </div>
+    </div>
+
     <fieldset class="govuk-fieldset">
         <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
             <h1 class="govuk-fieldset__heading" th:text="${firm.name}">
@@ -153,6 +169,19 @@
                 </li>
             </ul>
         </nav>
+    </div>
+    <!-- Action Buttons -->
+    <div class="govuk-button-group govuk-!-margin-top-4">
+        <!-- Back Button -->
+        <a class="govuk-button" th:href="@{/admin/firmDirectory}">
+            Back to Firm Directory
+        </a>
+
+        <a th:if="${showDisableAllButton}" class="govuk-button govuk-button--warning"
+           th:href="@{/admin/firmDirectory/{id}/reasonForDisable(id=${firm.id})}"
+            >
+            Disable All Users
+        </a>
     </div>
     </main>
 </body>

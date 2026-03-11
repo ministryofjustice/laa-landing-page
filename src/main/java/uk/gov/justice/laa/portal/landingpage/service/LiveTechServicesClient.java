@@ -22,11 +22,14 @@ import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.exception.BadRequestException;
+import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetAllApplicationsResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.GetUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUsersResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailRequest;
@@ -35,6 +38,7 @@ import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiRespons
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesErrorResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.UpdateUserDetailsRequest;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -529,6 +533,53 @@ public class LiveTechServicesClient implements TechServicesClient {
     }
 
     @Override
+    public TechServicesApiResponse<GetUserResponse> getUser(String entraOid) {
+        String accessToken = getAccessToken();
+        logger.info("Calling Tech Services GET user endpoint for business unit: {} with entra oid: {}",
+                laaBusinessUnit, entraOid);
+
+        String uri = String.format(TECH_SERVICES_GET_USERS_ENDPOINT, "", laaBusinessUnit)
+                + "/" + entraOid;
+
+        try {
+            ResponseEntity<GetUserResponse> response = restClient.get()
+                    .uri(uri)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                    .retrieve()
+                    .toEntity(GetUserResponse.class);
+
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                logger.info("Successfully retrieved user from Tech Services for business unit: {}", laaBusinessUnit);
+                return TechServicesApiResponse.success(response.getBody());
+            } else {
+                throw new TechServicesClientException(response);
+            }
+        } catch (TechServicesClientException ex) {
+            ResponseEntity<?> responseEntity = ex.getResponseEntity();
+            String statusCode = responseEntity.getStatusCode().toString();
+            String message = responseEntity.getBody() != null ? responseEntity.getBody().toString() : "";
+            return buildErrorResponse(statusCode, message);
+        } catch (HttpClientErrorException | HttpServerErrorException httpEx) {
+            String statusCode = httpEx.getStatusCode().toString();
+            String message = httpEx.getResponseBodyAsString();
+            return buildErrorResponse(statusCode, message);
+        } catch (Exception ex) {
+            String statusCode = "500";
+            String message = "An unexpected error has occurred";
+            return buildErrorResponse(statusCode, message);
+        }
+    }
+
+    private static <T> TechServicesApiResponse<T> buildErrorResponse(String statusCode, String message) {
+        TechServicesErrorResponse errorResponse = TechServicesErrorResponse.builder()
+                .code(statusCode)
+                .errors(new String[]{message})
+                .build();
+        return TechServicesApiResponse.error(errorResponse);
+    }
+
+    @Override
     public TechServicesApiResponse<GetAllApplicationsResponse> getAllApplications() {
         String accessToken = getAccessToken();
         ResponseEntity<GetAllApplicationsResponse> response = null;
@@ -587,6 +638,79 @@ public class LiveTechServicesClient implements TechServicesClient {
             logger.error("Unexpected error while getting applications from Tech Services. Response body: {}",
                     responseBody, ex);
             throw new RuntimeException("Unexpected error while getting applications from Tech Services.", ex);
+        }
+    }
+
+    @Override
+    public TechServicesApiResponse<ChangeAccountEnabledResponse> updateUserDetails(String entraOid, String firstName, String lastName, String email) {
+        ResponseEntity<ChangeAccountEnabledResponse> response = null;
+        try {
+
+            UpdateUserDetailsRequest request = new UpdateUserDetailsRequest(firstName, lastName, email);
+            String uri = String.format(TECH_SERVICES_UPDATE_USER_GRP_ENDPOINT, laaBusinessUnit, entraOid);
+            logger.info("Sending request to tech services to update user details: {}", request);
+            String accessToken = getAccessToken();
+            response = restClient
+                    .patch()
+                    .uri(uri)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .toEntity(ChangeAccountEnabledResponse.class);
+
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                logger.info("Successfully update users details from Tech Services for business unit: {}", laaBusinessUnit);
+                return TechServicesApiResponse.success(response.getBody());
+
+            } else {
+                logger.warn("Unexpected response from Tech Services Patch users details endpoint: status={}, body={}",
+                        response.getStatusCode(), response.getBody());
+                return TechServicesApiResponse.error(TechServicesErrorResponse.builder()
+                        .success(false)
+                        .code("UNEXPECTED_RESPONSE")
+                        .message("Unexpected response from Tech Services")
+                        .build());
+            }
+
+        } catch (HttpClientErrorException | HttpServerErrorException httpEx) {
+            String errorJson = httpEx.getResponseBodyAsString();
+            logger.info("The patch users details error response from TS: {}", errorJson);
+            TechServicesErrorResponse errorResponse = null;
+            try {
+                if (errorJson.isEmpty()) {
+                    errorResponse = TechServicesErrorResponse.builder()
+                            .code(httpEx.getStatusCode().toString())
+                            .message(httpEx.getStatusText())
+                            .success(false)
+                            .build();
+                } else {
+                    errorResponse = objectMapper.readValue(errorJson, TechServicesErrorResponse.class);
+                }
+                if (httpEx.getStatusCode().is4xxClientError()) {
+                    logger.info("Error while updating users details from Tech Services, the root cause is {} ({})",
+                            errorResponse.getMessage(), errorResponse.getCode());
+                    return TechServicesApiResponse.error(errorResponse);
+                }
+                if (httpEx.getStatusCode().is5xxServerError()) {
+                    logger.warn("Error while updating users details from Tech Services, the root cause is {} ({})",
+                            errorResponse.getMessage(), errorResponse.getCode());
+                    return TechServicesApiResponse.error(errorResponse);
+                }
+                logger.warn("Error while getting users from Tech Services, the root cause is {} ({})",
+                        errorResponse.getMessage(), errorResponse.getCode(), httpEx);
+                throw httpEx;
+            } catch (Exception ex) {
+                String responseBody = response != null && response.getBody() != null ? response.getBody().toString() : "Unknown";
+                logger.warn("Error while getting users from Tech Services. The response body is {}",
+                        responseBody, ex);
+                throw new RuntimeException("Error while getting users from Tech Services.", ex);
+            }
+        } catch (Exception ex) {
+            String responseBody = response != null && response.getBody() != null ? response.getBody().toString() : "Unknown";
+            logger.error("Unexpected error while Update users details from Tech Services. Response body: {}",
+                    responseBody, ex);
+            throw new RuntimeException("Unexpected error while updating users details from Tech Services.", ex);
         }
     }
 

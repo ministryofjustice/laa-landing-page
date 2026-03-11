@@ -10,10 +10,11 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
 import org.springframework.transaction.annotation.Transactional;
+
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
+import uk.gov.justice.laa.portal.landingpage.entity.CountFirms;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -197,4 +198,50 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             WHERE ups.firm.id = :firmId
             """)
     List<UserProfile> findByFirmId(@Param("firmId") UUID firmId);
+
+    /**
+     * Counts user profile-office associations for each office ID.
+     * Returns a list of Object arrays where each array contains [officeId, count].
+     * This is more efficient than loading UserProfile entities with their offices collection.
+     *
+     * @param officeIds the list of office IDs to query
+     * @return list of Object[] where [0] is office_id (UUID) and [1] is count (Long/Integer)
+     */
+    @Query(value = """
+            SELECT office_id, COUNT(*)
+            FROM user_profile_office
+            WHERE office_id IN :officeIds
+            GROUP BY office_id
+            """, nativeQuery = true)
+    List<Object[]> countAssociationsByOfficeIds(@Param("officeIds") List<UUID> officeIds);
+
+    @Query(
+            value = """
+                    SELECT EXISTS (
+                        SELECT 1
+                        FROM user_profile up
+                        INNER JOIN entra_user eu ON up.entra_user_id = eu.id
+                        WHERE up.firm_id = :firmId
+                          AND eu.enabled = TRUE
+                    )
+                    """,
+            nativeQuery = true
+    )
+    boolean hasActiveUserByFirmId(@Param("firmId") UUID firmId);
+
+
+    @Query(value = """
+            SELECT
+                eu.multi_firm_user AS isMultiFirm,
+                COUNT(*) AS userCount
+            FROM user_profile up
+            INNER JOIN entra_user eu ON up.entra_user_id = eu.id
+            WHERE up.firm_id = :firmId
+              AND eu.enabled = TRUE
+            GROUP BY eu.multi_firm_user
+            """,
+            nativeQuery = true)
+    List<CountFirms> countFirmsById(@Param("firmId") UUID firmId);
+
+
 }

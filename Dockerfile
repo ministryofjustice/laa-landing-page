@@ -2,7 +2,7 @@ FROM amazoncorretto:21-alpine
 
 # CVE-2024-58251
 RUN apk update && \
-    apk add --no-cache --upgrade openssl busybox && \
+    apk add --no-cache --upgrade openssl busybox zlib && \
     rm -rf /var/cache/apk/*
 
 # Create a group and user to run the application

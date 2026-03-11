@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -10,6 +11,7 @@ import java.util.stream.Collectors;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -51,13 +53,17 @@ import uk.gov.justice.laa.portal.landingpage.forms.AppRoleDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRolesOrderForm;
 import uk.gov.justice.laa.portal.landingpage.forms.AppsOrderForm;
 import uk.gov.justice.laa.portal.landingpage.forms.DeleteAppRoleReasonForm;
+import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AdminService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
 import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
+import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
+import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 
 /**
@@ -73,7 +79,9 @@ public class AdminController {
     private final ModelMapper modelMapper;
 
     public static final String SILAS_ADMINISTRATION_TITLE = "SiLAS Administration";
-    private static final Set<String> VALID_TABS = Set.of("admin-apps", "apps", "roles");
+    private static final Set<String> VALID_TABS = Set.of("admin-apps", "apps", "roles", "role-assignment-restrictions");
+    @Value("${feature.flag.enable.app.sync.from.entra}")
+    private String syncAppsFromEntra;
 
     private final LoginService loginService;
     private final EventService eventService;
@@ -81,6 +89,7 @@ public class AdminController {
     private final AppService appService;
     private final AppRoleService appRoleService;
     private final AccessControlService accessControlService;
+    private final RoleAssignmentService roleAssignmentService;
 
     /**
      * Display SiLAS Administration landing page with Admin Services tab by default
@@ -114,10 +123,15 @@ public class AdminController {
                 ? appRoleService.getLaaAppRolesByAppName(appFilter)
                 : appRoleService.getAllLaaAppRoles();
 
+        Map<AppRoleDto, List<AppRoleDto>> roleAssignmentRestrictions = StringUtils.hasText(appFilter)
+                ? roleAssignmentService.getLaaAppRoleAssignmentRestrictionsByAppName(appFilter)
+                : roleAssignmentService.getLaaAppRoleAssignmentRestrictions();
+        model.addAttribute("roleAssignmentRestrictions", roleAssignmentRestrictions);
+
         model.addAttribute("roles", roles);
         model.addAttribute("appFilter", appFilter);
-        model.addAttribute("canTriggerAppSync",
-                accessControlService.authenticatedUserHasPermission(Permission.EDIT_LAA_APP_METADATA));
+        model.addAttribute("canTriggerAppSync", Boolean.parseBoolean(syncAppsFromEntra)
+                && accessControlService.authenticatedUserHasPermission(Permission.EDIT_LAA_APP_METADATA));
         session.setAttribute("appFilter", appFilter);
 
         // Get distinct app names for filter dropdown
@@ -130,7 +144,7 @@ public class AdminController {
         return "silas-administration/administration";
     }
 
-    @PostMapping("/silas-administration/sync/apps")
+    @GetMapping("/silas-administration/sync/apps")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).TRIGGER_LAA_APP_SYNC)")
     public String syncLaaApps(Authentication authentication, Model model, HttpSession session) {
 
@@ -152,8 +166,8 @@ public class AdminController {
         List<AppRoleAdminDto> roles = appRoleService.getAllLaaAppRoles();
 
         model.addAttribute("roles", roles);
-        model.addAttribute("canTriggerAppSync",
-                accessControlService.authenticatedUserHasPermission(Permission.TRIGGER_LAA_APP_SYNC));
+        model.addAttribute("canTriggerAppSync", Boolean.parseBoolean(syncAppsFromEntra)
+                && accessControlService.authenticatedUserHasPermission(Permission.TRIGGER_LAA_APP_SYNC));
         model.addAttribute("appSyncSuccessful", true);
 
         model.addAttribute("appNames", apps.stream()
@@ -765,14 +779,7 @@ public class AdminController {
             tab = "admin-apps";
         }
 
-        return "redirect:/admin/silas-administration#" + tab;
-    }
-
-    private void clearSessionAttributes(HttpSession session) {
-        List.of("appDetailsForm", "appDetailsFormModel", "appId", "appsOrderForm", "deleteAppRoleReasonForm",
-                        "appRoleDetailsForm", "appRoleDetailsFormModel", "appFilter", "roleId", "appRolesOrderForm",
-                        "roleIdForDeletion", "roleNameForDeletion")
-                .forEach(session::removeAttribute);
+        return "redirect:/admin/silas-administration?tab=" + tab;
     }
 
     private List<String> buildErrorMessages(BindingResult result) {
@@ -892,4 +899,132 @@ public class AdminController {
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Role created");
         return "silas-administration/create-role-confirmation";
     }
+
+    @GetMapping("/silas-administration/role/assignRestrictions/{appRoleId}")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_LAA_APP_ROLE_ASSIGN_RESTRICTIONS)")
+    public String roleAssignmentRestrictionGet(@PathVariable String appRoleId, Model model, HttpSession session) {
+        model.addAttribute(ModelAttributes.PAGE_TITLE, SILAS_ADMINISTRATION_TITLE);
+
+        AppRoleDto appRoleDto = appRoleService.findById(appRoleId).orElseThrow();
+        List<AppRoleDto> assignableByRoles = appRoleService.getAssigningRolesFor(appRoleId);
+        List<String> assigningRoleIds = assignableByRoles.stream().map(AppRoleDto::getId).toList();
+        List<AppRoleDto> allAuthzRoles = appRoleService.getAllAuthzRoles();
+
+        List<AppRoleViewModel> assigningRoleViewModels = getListFromHttpSession(session, "appRoleSelections", AppRoleViewModel.class)
+                .orElse(allAuthzRoles.stream()
+                        .map(dto -> {
+                            AppRoleViewModel viewModel = modelMapper.map(dto, AppRoleViewModel.class);
+                            viewModel.setSelected(assigningRoleIds.contains(dto.getId()));
+                            return viewModel;
+                        }).sorted().toList());
+
+
+        // Load all admin apps data for admin-apps tab
+        model.addAttribute("appRole", appRoleDto);
+        model.addAttribute("assigningRoleViewModels", assigningRoleViewModels);
+
+        return "silas-administration/edit-role-assignment-restrictions";
+    }
+
+    @PostMapping("/silas-administration/role/assignRestrictions/{appRoleId}")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_LAA_APP_ROLE_ASSIGN_RESTRICTIONS)")
+    public String roleAssignmentRestrictionPost(@PathVariable String appRoleId, RolesForm rolesForm, Model model, HttpSession session) {
+        model.addAttribute(ModelAttributes.PAGE_TITLE, SILAS_ADMINISTRATION_TITLE);
+
+        AppRoleDto appRoleDto = appRoleService.findById(appRoleId).orElseThrow();
+        List<AppRoleDto> allAuthzRoles = appRoleService.getAllAuthzRoles();
+
+        session.setAttribute("assignableAppRoleId", appRoleId);
+        List<AppRoleViewModel> assigningRoleViewModels = allAuthzRoles.stream()
+                .map(dto -> {
+                    AppRoleViewModel vm = modelMapper.map(dto, AppRoleViewModel.class);
+                    boolean selected = rolesForm != null && rolesForm.getRoles() != null && rolesForm.getRoles().contains(dto.getId());
+                    vm.setSelected(selected);
+                    return vm;
+                })
+                .sorted(Comparator.comparing(AppRoleViewModel::getName, String.CASE_INSENSITIVE_ORDER))
+                .toList();
+
+        session.setAttribute("appRoleSelections", assigningRoleViewModels);
+
+        model.addAttribute("appRole", appRoleDto);
+        model.addAttribute("assigningRoleViewModels", assigningRoleViewModels);
+
+        return "redirect:/admin/silas-administration/role/assignRestrictions/check-answers";
+    }
+
+    @GetMapping("/silas-administration/role/assignRestrictions/check-answers")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_LAA_APP_ROLE_ASSIGN_RESTRICTIONS)")
+    public String roleAssignmentRestrictionCheckAnsGet(Model model, HttpSession session) {
+        model.addAttribute(ModelAttributes.PAGE_TITLE, SILAS_ADMINISTRATION_TITLE);
+
+        var appRoleIdOpt = getObjectFromHttpSession(session, "assignableAppRoleId", String.class);
+        var selectionOpt = getListFromHttpSession(session, "appRoleSelections", AppRoleViewModel.class);
+
+        if (appRoleIdOpt.isEmpty() || selectionOpt.isEmpty()) {
+            return "redirect:/silas-administration/role";
+        }
+
+        String appRoleId = appRoleIdOpt.get();
+        AppRoleDto appRoleDto = appRoleService.findById(appRoleId).orElseThrow();
+        List<AppRoleViewModel> assigningRoleViewModels = selectionOpt.get();
+
+        List<String> selectedAssigningRoleIds = assigningRoleViewModels.stream()
+                .filter(AppRoleViewModel::isSelected)
+                .map(AppRoleViewModel::getId)
+                .filter(id -> !id.equals(appRoleId))
+                .distinct()
+                .toList();
+
+        List<AppRoleDto> originalAssigningRoles = appRoleService.getAssigningRolesFor(appRoleId);
+        List<AppRoleDto> newAssigningRoles = selectedAssigningRoleIds.isEmpty()
+                ? List.of()
+                : appRoleService.getByIds(selectedAssigningRoleIds);
+
+        Comparator<AppRoleDto> byName = Comparator.comparing(AppRoleDto::getName, String.CASE_INSENSITIVE_ORDER);
+        originalAssigningRoles = originalAssigningRoles.stream().sorted(byName).toList();
+        newAssigningRoles = newAssigningRoles.stream().sorted(byName).toList();
+
+        model.addAttribute("appRole", appRoleDto);
+        model.addAttribute("originalAssigningRoles", originalAssigningRoles);
+        model.addAttribute("newAssigningRoles", newAssigningRoles);
+
+        return "silas-administration/edit-role-assignment-restrictions-check-answers";
+    }
+
+    @PostMapping("/silas-administration/role/assignRestrictions/check-answers")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_LAA_APP_ROLE_ASSIGN_RESTRICTIONS)")
+    public String roleAssignmentRestrictionCheckAnsPost(Authentication authentication, Model model, HttpSession session) {
+        model.addAttribute(ModelAttributes.PAGE_TITLE, SILAS_ADMINISTRATION_TITLE);
+
+        var appRoleIdOpt = getObjectFromHttpSession(session, "assignableAppRoleId", String.class);
+        var selectionOpt = getListFromHttpSession(session, "appRoleSelections", AppRoleViewModel.class);
+
+        if (appRoleIdOpt.isEmpty() || selectionOpt.isEmpty()) {
+            return "redirect:/silas-administration/role";
+        }
+
+        String appRoleId = appRoleIdOpt.get();
+        List<String> selectedAssigningRoleIds = selectionOpt.get().stream()
+                .filter(AppRoleViewModel::isSelected)
+                .map(AppRoleViewModel::getId)
+                .filter(id -> !id.equals(appRoleId))
+                .distinct()
+                .toList();
+
+        CurrentUserDto currentUser = loginService.getCurrentUser(authentication);
+        roleAssignmentService.updateRoleAssignmentRestrictions(currentUser, appRoleId, selectedAssigningRoleIds);
+
+        clearSessionAttributes(session);
+
+        return "silas-administration/edit-role-assignment-restrictions-confirmation";
+    }
+
+    private void clearSessionAttributes(HttpSession session) {
+        List.of("appDetailsForm", "appDetailsFormModel", "appId", "appsOrderForm", "deleteAppRoleReasonForm",
+                        "appRoleDetailsForm", "appRoleDetailsFormModel", "appFilter", "roleId", "appRolesOrderForm",
+                        "roleIdForDeletion", "roleNameForDeletion", "assignableAppRoleId", "appRoleSelections")
+                .forEach(session::removeAttribute);
+    }
+
 }
