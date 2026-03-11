@@ -1422,7 +1422,7 @@ public class UserAccountStatusServiceTest {
         @Test
         void shouldReturnCorrectCountsForSingleAndMultiFirmUsers() {
             UUID firmId = UUID.randomUUID();
-            when(userProfileRepository.countByMultifirmFlag(firmId))
+            when(userProfileRepository.countFirmsById(firmId))
                     .thenReturn(List.of(new CountFirms(true, 1L),
                             new CountFirms(false, 1L)));
 
@@ -1437,7 +1437,7 @@ public class UserAccountStatusServiceTest {
         @Test
         void shouldReturnCorrectCountsForMultiFirmUsersOnly() {
             UUID firmId = UUID.randomUUID();
-            when(userProfileRepository.countByMultifirmFlag(firmId))
+            when(userProfileRepository.countFirmsById(firmId))
                     .thenReturn(List.of(new CountFirms(true, 1L)));
 
             Map<String, Long> result = userAccountStatusService.getUserCountsForFirm(String.valueOf(firmId));
@@ -1451,7 +1451,7 @@ public class UserAccountStatusServiceTest {
         @Test
         void shouldReturnCorrectCountsForSingleFirmOnly() {
             UUID firmId = UUID.randomUUID();
-            when(userProfileRepository.countByMultifirmFlag(firmId))
+            when(userProfileRepository.countFirmsById(firmId))
                     .thenReturn(List.of(new CountFirms(false, 1L)));
 
             Map<String, Long> result = userAccountStatusService.getUserCountsForFirm(String.valueOf(firmId));

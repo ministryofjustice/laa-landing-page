@@ -134,7 +134,7 @@ public class UserAccountStatusService {
 
     public Map<String, Long> getUserCountsForFirm(String firmId) {
         Map<String, Long> result = new HashMap<>();
-        List<CountFirms> countFirmsList = userProfileRepository.countByMultifirmFlag(UUID.fromString(firmId));
+        List<CountFirms> countFirmsList = userProfileRepository.countFirmsById(UUID.fromString(firmId));
 
         for (CountFirms count : countFirmsList) {
             if (count.getIsMultifirm()) {

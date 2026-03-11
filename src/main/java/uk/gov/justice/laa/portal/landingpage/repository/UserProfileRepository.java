@@ -243,7 +243,7 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             GROUP BY eu.multi_firm_user
             """,
             nativeQuery = true)
-    List<CountFirms> countByMultifirmFlag(@Param("firmId") UUID firmId);
+    List<CountFirms> countFirmsById(@Param("firmId") UUID firmId);
 
 
 }
