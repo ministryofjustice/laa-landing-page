@@ -220,9 +220,8 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                     SELECT EXISTS (
                         SELECT 1
                         FROM user_profile up
-                        INNER JOIN firm f ON up.firm_id = f.id
                         INNER JOIN entra_user eu ON up.entra_user_id = eu.id
-                        WHERE f.id = :firmId
+                        WHERE up.firm_id = :firmId
                           AND eu.enabled = TRUE
                     )
                     """,
@@ -236,9 +235,8 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                 eu.multi_firm_user AS isMultiFirm,
                 COUNT(*) AS userCount
             FROM user_profile up
-            INNER JOIN firm f ON up.firm_id = f.id
             INNER JOIN entra_user eu ON up.entra_user_id = eu.id
-            WHERE f.id = :firmId
+            WHERE up.firm_id = :firmId
               AND eu.enabled = TRUE
             GROUP BY eu.multi_firm_user
             """,
