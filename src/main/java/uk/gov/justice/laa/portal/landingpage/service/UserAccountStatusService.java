@@ -283,7 +283,8 @@ public class UserAccountStatusService {
                 .orElse("NONE");
 
         if (actingUserRoles.contains(GLOBAL_ADMIN.getRoleName())
-                || actingUserRoles.contains(EXTERNAL_USER_MANAGER.getRoleName())) {
+                || actingUserRoles.contains(EXTERNAL_USER_MANAGER.getRoleName())
+                || actingUserRoles.contains(AuthzRole.SECURITY_RESPONSE.getRoleName())) {
             return true;
         }
 
