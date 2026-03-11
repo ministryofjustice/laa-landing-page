@@ -28,7 +28,6 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmOfficesCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedOffices;
-import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
@@ -281,7 +280,7 @@ class FirmDirectoryControllerTest {
         when(firmService.getFirm(String.valueOf(id))).thenReturn(firm);
         when(userAccountStatusService.getDisableUserReasons(UserTypeReasonDisable.BULK_DISABLE)).thenReturn(getDisableUserReasonDtos());
 
-        String result = firmDirectoryController.reasonForDisableGet(String.valueOf(id), disableUserReasonForm, model, session, authentication);
+        String result = firmDirectoryController.reasonForDisableGet(String.valueOf(id), disableUserReasonForm, model, session);
 
         assertThat(result).isEqualTo("firm-directory/bulk-disable-user-reason");
         assertThat(model.getAttribute("firm")).isEqualTo(firm);
@@ -298,18 +297,36 @@ class FirmDirectoryControllerTest {
         List<DisableUserReasonDto> reasonDtos = getDisableUserReasonDtos();
 
         MockHttpSession httpSession = new MockHttpSession();
-        ExtendedModelMap disableUserReasonModel = new ExtendedModelMap();
-        disableUserReasonModel.addAttribute("reasonIdSelected", String.valueOf(reasonDtos.get(0).getId()));
-        httpSession.setAttribute("disableUserReasonModel", disableUserReasonModel);
+        httpSession.setAttribute("reasonIdSelected", String.valueOf(reasonDtos.get(0).getId()));
 
         when(firmService.getFirm(String.valueOf(id))).thenReturn(firm);
         when(userAccountStatusService.getDisableUserReasons(UserTypeReasonDisable.BULK_DISABLE)).thenReturn(reasonDtos);
         DisableUserReasonForm disableUserReasonForm = new DisableUserReasonForm();
-        String result = firmDirectoryController.reasonForDisableGet(String.valueOf(id), disableUserReasonForm, model, httpSession, authentication);
+        String result = firmDirectoryController.reasonForDisableGet(String.valueOf(id), disableUserReasonForm, model, httpSession);
 
         assertThat(result).isEqualTo("firm-directory/bulk-disable-user-reason");
         assertThat(model.getAttribute("firm")).isEqualTo(firm);
-        assertThat(model.getAttribute("reasonIdSelected")).isEqualTo(String.valueOf(reasonDtos.get(0).getId()));
+        assertThat(model.getAttribute("reasonIdSelected")).isEqualTo(reasonDtos.get(0).getId());
+        assertThat(model.getAttribute("disableUserReasonsForm")).isEqualTo(disableUserReasonForm);
+    }
+
+    @Test
+    void displayReasonForDisableGetWithoutSessionInformation() {
+
+        UUID id = UUID.randomUUID();
+
+        FirmDto firm = FirmDto.builder().id(id).code("A123").name("TestName").build();
+        List<DisableUserReasonDto> reasonDtos = getDisableUserReasonDtos();
+
+        when(firmService.getFirm(String.valueOf(id))).thenReturn(firm);
+        when(userAccountStatusService.getDisableUserReasons(UserTypeReasonDisable.BULK_DISABLE)).thenReturn(reasonDtos);
+        DisableUserReasonForm disableUserReasonForm = new DisableUserReasonForm();
+
+        String result = firmDirectoryController.reasonForDisableGet(String.valueOf(id), disableUserReasonForm, model, session);
+
+        assertThat(result).isEqualTo("firm-directory/bulk-disable-user-reason");
+        assertThat(model.getAttribute("firm")).isEqualTo(firm);
+        assertThat(model.getAttribute("reasonIdSelected")).isNull();
         assertThat(model.getAttribute("disableUserReasonsForm")).isEqualTo(disableUserReasonForm);
     }
 
@@ -328,7 +345,7 @@ class FirmDirectoryControllerTest {
         DisableUserReasonForm disableUserReasonForm = new DisableUserReasonForm();
         disableUserReasonForm.setReasonId(String.valueOf(reasonDtos.get(0).getId()));
         UUID id = UUID.randomUUID();
-        String result = firmDirectoryController.reasonForDisablePost(String.valueOf(id), disableUserReasonForm, bindingResult, authentication, model, httpSession);
+        String result = firmDirectoryController.reasonForDisablePost(String.valueOf(id), disableUserReasonForm, bindingResult, model, httpSession);
 
         assertThat(result).isEqualTo("firm-directory/bulk-disable-user-reason");
         assertThat(model.getAttribute("disableUserReasonsForm")).isEqualTo(disableUserReasonForm);
@@ -361,7 +378,7 @@ class FirmDirectoryControllerTest {
         when(userAccountStatusService.getUserCountsForFirm(String.valueOf(id))).thenReturn(totals);
         DisableUserReasonForm disableUserReasonForm = new DisableUserReasonForm();
         disableUserReasonForm.setReasonId(String.valueOf(reasonDtos.get(0).getId()));
-        String result = firmDirectoryController.reasonForDisablePost(String.valueOf(id), disableUserReasonForm, bindingResult, authentication, model, httpSession);
+        String result = firmDirectoryController.reasonForDisablePost(String.valueOf(id), disableUserReasonForm, bindingResult, model, httpSession);
 
         assertThat(result).isEqualTo("firm-directory/bulk-confirmation");
         assertThat(model.getAttribute("disableUserReasonsForm")).isEqualTo(disableUserReasonForm);
@@ -377,9 +394,7 @@ class FirmDirectoryControllerTest {
         List<DisableUserReasonDto> reasonDtos = getDisableUserReasonDtos();
 
         MockHttpSession httpSession = new MockHttpSession();
-        ExtendedModelMap disableUserReasonModel = new ExtendedModelMap();
-        disableUserReasonModel.addAttribute("reasonIdSelected", String.valueOf(reasonDtos.get(0).getId()));
-        httpSession.setAttribute("disableUserReasonModel", disableUserReasonModel);
+        httpSession.setAttribute("reasonIdSelected", String.valueOf(reasonDtos.get(0).getId()));
 
         EntraUser disabledUser = EntraUser.builder()
                 .id(id)
@@ -397,6 +412,23 @@ class FirmDirectoryControllerTest {
 
         assertThat(httpSession.getAttribute("disableUserReasonModel")).isNull();
 
+    }
+
+    @Test
+    void confirmationBulkDisablePostWitExceptionWhenReasonIdSelectedIsNull() {
+        UUID id = UUID.randomUUID();
+        List<DisableUserReasonDto> reasonDtos = getDisableUserReasonDtos();
+        EntraUser disabledUser = EntraUser.builder()
+                .id(id)
+                .entraOid(String.valueOf(id))
+                .build();
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(disabledUser);
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+        Assertions.assertThrows(RuntimeException.class,
+                () -> firmDirectoryController.confirmationBulkDisablePost(String.valueOf(id), model, redirectAttributes, session, authentication));
+
+        verify(userAccountStatusService, times(0)).disableUserAllUserByFirmId(String.valueOf(id), reasonDtos.get(0).getId(), id);
     }
 
     @Test
@@ -420,9 +452,7 @@ class FirmDirectoryControllerTest {
         List<DisableUserReasonDto> reasonDtos = getDisableUserReasonDtos();
 
         MockHttpSession httpSession = new MockHttpSession();
-        ExtendedModelMap disableUserReasonModel = new ExtendedModelMap();
-        disableUserReasonModel.addAttribute("reasonIdSelected", String.valueOf(reasonDtos.get(0).getId()));
-        httpSession.setAttribute("disableUserReasonModel", disableUserReasonModel);
+        httpSession.setAttribute("reasonIdSelected", String.valueOf(reasonDtos.get(0).getId()));
 
         EntraUser disabledUser = EntraUser.builder()
                 .id(id)
