@@ -50,7 +50,7 @@
                     <div class="govuk-radios" data-module="govuk-radios">
                         <div class="govuk-radios__item" th:each="reason : ${reasons}">
                             <input class="govuk-radios__input" type="radio" th:id="${reason.id}" name="reasonId"
-                                    th:value="${reason.id}" th:checked="${reason.getId().equals(reasonIdSelected)}">
+                                    th:value="${reason.id}" th:checked="${reason.id == reasonIdSelected}" />
                             <label class="govuk-label govuk-radios__label" th:for="${reason.id}">
                                 <span th:text="${reason.name}"></span>
                             </label>
