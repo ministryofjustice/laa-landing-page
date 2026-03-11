@@ -243,17 +243,6 @@ public class UserAccountStatusService {
         }
     }
 
-    public boolean canEnableUser(String targetUserProfileId, UUID editorUserProfileId) {
-        UserProfile targetUserProfile = userProfileRepository.findById(UUID.fromString(targetUserProfileId)).orElse(null);
-        UserProfile editorUserProfile = userProfileRepository.findById(editorUserProfileId).orElse(null);
-
-        if (targetUserProfile == null || editorUserProfile == null) {
-            return false;
-        }
-
-        return isUserEnablementAllowed(targetUserProfile.getEntraUser(), editorUserProfile.getEntraUser());
-    }
-
     private boolean isUserEnablementAllowed(EntraUser targetUser, EntraUser actor) {
         if (targetUser.isEnabled()) {
             log.info("The user {} is enabled already", targetUser.getId());
