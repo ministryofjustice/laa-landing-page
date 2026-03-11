@@ -15,7 +15,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.DisableUserReasonDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
-import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.entity.CountFirms;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -1435,10 +1435,12 @@ public class UserAccountStatusServiceTest {
                                     .build())
                             .build()
             );
-            when(userProfileRepository.findByFirmId(firmId)).thenReturn(userProfiles);
+            when(userProfileRepository.countByMultifirmFlag(firmId))
+                    .thenReturn(List.of(new CountFirms(true, 1L)
+                            , new CountFirms(false, 1L)));
 
 
-            Map<String, Integer> result = userAccountStatusService.getUserCountsForFirm(String.valueOf(firmId));
+            Map<String, Long> result = userAccountStatusService.getUserCountsForFirm(String.valueOf(firmId));
 
 
             // Assert
@@ -1460,7 +1462,7 @@ public class UserAccountStatusServiceTest {
             );
             when(userProfileRepository.findByFirmId(firmId)).thenReturn(userProfiles);
 
-            Map<String, Integer> result = userAccountStatusService.getUserCountsForFirm(String.valueOf(firmId));
+            Map<String, Long> result = userAccountStatusService.getUserCountsForFirm(String.valueOf(firmId));
 
             // Assert
             assertThat(result.get("totalOfSingleFirm")).isEqualTo(0);
@@ -1480,7 +1482,7 @@ public class UserAccountStatusServiceTest {
             );
             when(userProfileRepository.findByFirmId(firmId)).thenReturn(userProfiles);
 
-            Map<String, Integer> result = userAccountStatusService.getUserCountsForFirm(String.valueOf(firmId));
+            Map<String, Long> result = userAccountStatusService.getUserCountsForFirm(String.valueOf(firmId));
 
             // Assert
             assertThat(result.get("totalOfSingleFirm")).isEqualTo(1);
@@ -1503,14 +1505,7 @@ public class UserAccountStatusServiceTest {
         @Test
         void shouldReturnTrueWhenHasActiveUserByFirmId() {
             UUID firmId = UUID.randomUUID();
-            List<UserProfile> userProfiles = List.of(
-                    UserProfile.builder()
-                            .entraUser(EntraUser.builder()
-                                    .enabled(true)
-                                    .build())
-                            .build()
-            );
-            when(userProfileRepository.findByFirmId(firmId)).thenReturn(userProfiles);
+            when(userProfileRepository.hasActiveUserByFirmId(firmId)).thenReturn(true);
 
             boolean result = userAccountStatusService.hasActiveUserByFirmId(String.valueOf(firmId));
 

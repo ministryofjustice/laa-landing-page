@@ -132,8 +132,8 @@ public class UserAccountStatusService {
         }
     }
 
-    public Map<String, Integer> getUserCountsForFirm(String firmId) {
-        Map<String, Integer> result = new HashMap<>();
+    public Map<String, Long> getUserCountsForFirm(String firmId) {
+        Map<String, Long> result = new HashMap<>();
         List<CountFirms> countFirmsList = userProfileRepository.countByMultifirmFlag(UUID.fromString(firmId));
 
         for (CountFirms count : countFirmsList) {

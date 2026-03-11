@@ -160,7 +160,7 @@ public class FirmDirectoryController {
         }
         // add all the variables of confirmation
         modelFromSession.addAttribute("reasonIdSelected", disableUserReasonForm.getReasonId());
-        Map<String, Integer> counts = userAccountStatusService.getUserCountsForFirm(id);
+        Map<String, Long> counts = userAccountStatusService.getUserCountsForFirm(id);
         model.addAttribute("totalOfSingleFirm", counts.get("totalOfSingleFirm"));
         model.addAttribute("totalOfMultiFirm", counts.get("totalOfMultiFirm"));
         FirmDto firm = (FirmDto) modelFromSession.getAttribute("firm");

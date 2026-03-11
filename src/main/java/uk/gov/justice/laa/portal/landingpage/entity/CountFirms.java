@@ -1,10 +1,23 @@
 package uk.gov.justice.laa.portal.landingpage.entity;
 
-public interface CountFirms {
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
-    Boolean getIsMultifirm();
+@Getter
+@Setter
+@ToString
+@NoArgsConstructor
+@AllArgsConstructor
+public class CountFirms {
 
-    Integer getUserCount();
+    private Boolean isMultifirm;
+    private Long userCount;
+
 
 
 }

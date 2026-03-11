@@ -102,7 +102,7 @@ public class FirmDirectoryTest extends BaseIntegrationTest {
         firmRepository.saveAndFlush(firm1);
         officeRepository.saveAndFlush(office1);
 
-        String firmId = String.valueOf(UUID.randomUUID());
+
         String selectedReasonId = String.valueOf(UUID.randomUUID());
 
         MockHttpSession httpSession = new MockHttpSession();
@@ -114,7 +114,7 @@ public class FirmDirectoryTest extends BaseIntegrationTest {
                 .code(firm1.getCode())
                 .build());
         httpSession.setAttribute("disableUserReasonModel", disableUserReasonModel);
-
+        String firmId = String.valueOf(UUID.randomUUID());
         // Act + Assert
         mockMvc.perform(post(FIRM_DIRECTORY_PATH + "/" + firmId + "/reasonForDisable")
                         .session(httpSession)

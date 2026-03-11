@@ -354,9 +354,9 @@ class FirmDirectoryControllerTest {
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
 
-        Map<String, Integer> totals = new HashMap<>();
-        totals.put("totalOfSingleFirm", 1);
-        totals.put("totalOfMultiFirm", 1);
+        Map<String, Long> totals = new HashMap<>();
+        totals.put("totalOfSingleFirm", 1L);
+        totals.put("totalOfMultiFirm", 1L);
 
         when(userAccountStatusService.getUserCountsForFirm(String.valueOf(id))).thenReturn(totals);
         DisableUserReasonForm disableUserReasonForm = new DisableUserReasonForm();
@@ -365,8 +365,8 @@ class FirmDirectoryControllerTest {
 
         assertThat(result).isEqualTo("firm-directory/bulk-confirmation");
         assertThat(model.getAttribute("disableUserReasonsForm")).isEqualTo(disableUserReasonForm);
-        assertThat(model.getAttribute("totalOfSingleFirm")).isEqualTo(1);
-        assertThat(model.getAttribute("totalOfMultiFirm")).isEqualTo(1);
+        assertThat(model.getAttribute("totalOfSingleFirm")).isEqualTo(1L);
+        assertThat(model.getAttribute("totalOfMultiFirm")).isEqualTo(1L);
         assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Remove access for all - " + firmDto.getName());
     }
 
