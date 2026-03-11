@@ -1435,13 +1435,12 @@ public class UserAccountStatusServiceTest {
                                     .build())
                             .build()
             );
-            when(userProfileRepository.countByMultifirmFlag(firmId))
-                    .thenReturn(List.of(new CountFirms(true, 1L)
-                            , new CountFirms(false, 1L)));
 
+            when(userProfileRepository.countByMultifirmFlag(firmId))
+                    .thenReturn(List.of(new CountFirms(true, 1L),
+                            new CountFirms(false, 1L)));
 
             Map<String, Long> result = userAccountStatusService.getUserCountsForFirm(String.valueOf(firmId));
-
 
             // Assert
             assertThat(result.get("totalOfSingleFirm")).isEqualTo(1);
