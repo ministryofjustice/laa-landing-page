@@ -1,0 +1,57 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-firm_and_number_of_users_disabled
+      author: leonardopalmeiro
+      changes:
+        - addColumn:
+            tableName: user_account_status_audit
+            columns:
+              - column:
+                  name: firm_id
+                  type: varchar(255)
+                  constraints:
+                    nullable: true
+              - column:
+                  name: number_of_users_disabled
+                  type: integer
+                  constraints:
+                    nullable: true
+      rollback:
+        - dropColumn:
+            tableName: user_account_status_audit
+            columnName: firm_id
+        - dropColumn:
+            tableName: user_account_status_audit
+            columnName: number_of_users_disabled
+  - changeSet:
+        id: add-bulk_disable-firm-user-permission
+        author: leonardopalmeiro
+        changes:
+          # add permission of Security Response
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Security Response'), 'VIEW_FIRM_DIRECTORY');"
+          # add BULK_DISABLE_FIRM_USERS permissions
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Admin'), 'BULK_DISABLE_FIRM_USERS');"
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'BULK_DISABLE_FIRM_USERS')"
+          - sql:
+              dbms: postgresql
+              sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Security Response'), 'BULK_DISABLE_FIRM_USERS')"
+        rollback:
+          #remove permission of Security Response
+          - sql:
+              dbms: postgresql
+              sql: "DELETE FROM role_permission WHERE permission = 'VIEW_FIRM_DIRECTORY' AND app_role_id = (SELECT id FROM app_role WHERE name =('Security Response'))"
+          - sql:
+              dbms: postgresql
+              sql: "DELETE FROM role_permission WHERE permission = 'BULK_DISABLE_FIRM_USERS' AND app_role_id = (SELECT id FROM app_role WHERE name =('External User Admin'))"
+          - sql:
+              dbms: postgresql
+              sql: "DELETE FROM role_permission WHERE permission = 'BULK_DISABLE_FIRM_USERS' AND app_role_id = (SELECT id FROM app_role WHERE name =('Global Admin'))"
+          - sql:
+              dbms: postgresql
+              sql: "DELETE FROM role_permission WHERE permission = 'BULK_DISABLE_FIRM_USERS' AND app_role_id = (SELECT id FROM app_role WHERE name =('Security Response'))"
