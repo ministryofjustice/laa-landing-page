@@ -23,7 +23,6 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmOfficesCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedFirmDirectory;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedOffices;
-import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserTypeReasonDisable;
@@ -39,7 +38,7 @@ import uk.gov.justice.laa.portal.landingpage.viewmodel.DisableUserReasonViewMode
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.UUID;
 
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
@@ -67,7 +66,7 @@ public class FirmDirectoryController {
     @Value("${feature.flag.firm.directory.enabled}")
     private boolean firmDirectoryEnabled;
 
-    private boolean showDisableAllButton(Authentication authentication, String firmId) {
+    private boolean showDisableAllButton(String firmId) {
         return accessControlService.authenticatedUserHasPermission(Permission.BULK_DISABLE_FIRM_USERS)
                 && userAccountStatusService.hasActiveUserByFirmId(firmId);
     }
@@ -111,7 +110,7 @@ public class FirmDirectoryController {
                 criteria.getSort(),
                 criteria.getDirection()
         );
-        boolean showDisableAllButton = showDisableAllButton(authentication, String.valueOf(id));
+        boolean showDisableAllButton = showDisableAllButton(String.valueOf(id));
         model.addAttribute("firm", firmService.getFirm(id));
         model.addAttribute("firmOffices", paginatedOffices);
         model.addAttribute("criteria", criteria);
@@ -127,12 +126,11 @@ public class FirmDirectoryController {
     public String reasonForDisableGet(@PathVariable String id,
                                       DisableUserReasonForm disableUserReasonForm,
                                       Model model,
-                                      HttpSession session,
-                                      Authentication authentication) {
-        Optional<Model> modelFromSession = getObjectFromHttpSession(session, "disableUserReasonModel", Model.class);
-        modelFromSession.ifPresent(value -> model.addAttribute("reasonIdSelected",
-                value.getAttribute("reasonIdSelected")));
-
+                                      HttpSession session) {
+        String disabledReasonId = (String) session.getAttribute("reasonIdSelected");
+        if (!Objects.isNull(disabledReasonId)) {
+            model.addAttribute("reasonIdSelected", UUID.fromString(disabledReasonId));
+        }
         FirmDto firm =  firmService.getFirm(id);
         List<DisableUserReasonViewModel> reasons = new ArrayList<>(userAccountStatusService.getDisableUserReasons(UserTypeReasonDisable.BULK_DISABLE).stream()
                 .map(reason -> mapper.map(reason, DisableUserReasonViewModel.class))
@@ -151,7 +149,6 @@ public class FirmDirectoryController {
     public String reasonForDisablePost(@PathVariable String id,
                                        @Valid @ModelAttribute("disableUserReasonsForm") DisableUserReasonForm disableUserReasonForm,
                                        BindingResult result,
-                                       Authentication authentication,
                                        Model model,
                                        HttpSession session)  {
         Model modelFromSession = getObjectFromHttpSession(session, "disableUserReasonModel", Model.class).orElseThrow();
@@ -163,7 +160,7 @@ public class FirmDirectoryController {
             return "firm-directory/bulk-disable-user-reason";
         }
         // add all the variables of confirmation
-        modelFromSession.addAttribute("reasonIdSelected", disableUserReasonForm.getReasonId());
+        session.setAttribute("reasonIdSelected", disableUserReasonForm.getReasonId());
         Map<String, Long> counts = userAccountStatusService.getUserCountsForFirm(id);
         model.addAttribute("totalOfSingleFirm", counts.get("totalOfSingleFirm"));
         model.addAttribute("totalOfMultiFirm", counts.get("totalOfMultiFirm"));
@@ -181,16 +178,17 @@ public class FirmDirectoryController {
                                          RedirectAttributes redirectAttributes,
                                          HttpSession session,
                                          Authentication authentication)  {
-        Model modelFromSession = getObjectFromHttpSession(session, "disableUserReasonModel", Model.class).orElseThrow();
-
-        UUID disabledByUserId = loginService.getCurrentEntraUser(authentication).getId();
-
-        UUID disabledReasonId = UUID.fromString((String) modelFromSession.getAttribute("reasonIdSelected"));
         try {
-            userAccountStatusService.disableUserAllUserByFirmId(id, disabledReasonId, disabledByUserId);
+            UUID disabledByUserId = loginService.getCurrentEntraUser(authentication).getId();
+            String disabledReasonId = (String) session.getAttribute("reasonIdSelected");
+            if (Objects.isNull(disabledReasonId)) {
+                throw new RuntimeException("Could not find a selected reason from the session");
+            }
+            userAccountStatusService.disableUserAllUserByFirmId(id, UUID.fromString(disabledReasonId), disabledByUserId);
             // Add success banner
             redirectAttributes.addFlashAttribute("successMessage", "All user accounts has been disabled");
             session.removeAttribute("disableUserReasonModel");
+            session.removeAttribute("reasonIdSelected");
             return "redirect:/admin/firmDirectory/" + id;
         } catch (Exception e) {
             log.error("Error during Bulk disable user {}", e.getMessage());
@@ -204,6 +202,7 @@ public class FirmDirectoryController {
             + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).BULK_DISABLE_FIRM_USERS)")
     public String cancelBulkUserDisable(HttpSession session) {
         session.removeAttribute("disableUserReasonModel");
+        session.removeAttribute("reasonIdSelected");
         return "redirect:/admin/firmDirectory";
     }
 
