@@ -34,13 +34,7 @@ databaseChangeLog:
           # add BULK_DISABLE_FIRM_USERS permissions
           - sql:
               dbms: postgresql
-              sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Viewer'), 'BULK_DISABLE_FIRM_USERS');"
-          - sql:
-              dbms: postgresql
               sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Admin'), 'BULK_DISABLE_FIRM_USERS');"
-          - sql:
-              dbms: postgresql
-              sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Manager'), 'BULK_DISABLE_FIRM_USERS')"
           - sql:
               dbms: postgresql
               sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'BULK_DISABLE_FIRM_USERS')"
@@ -54,13 +48,7 @@ databaseChangeLog:
               sql: "DELETE FROM role_permission WHERE permission = 'VIEW_FIRM_DIRECTORY' AND app_role_id = (SELECT id FROM app_role WHERE name =('Security Response'))"
           - sql:
               dbms: postgresql
-              sql: "DELETE FROM role_permission WHERE permission = 'BULK_DISABLE_FIRM_USERS' AND app_role_id = (SELECT id FROM app_role WHERE name =('External User Viewer'))"
-          - sql:
-              dbms: postgresql
               sql: "DELETE FROM role_permission WHERE permission = 'BULK_DISABLE_FIRM_USERS' AND app_role_id = (SELECT id FROM app_role WHERE name =('External User Admin'))"
-          - sql:
-              dbms: postgresql
-              sql: "DELETE FROM role_permission WHERE permission = 'BULK_DISABLE_FIRM_USERS' AND app_role_id = (SELECT id FROM app_role WHERE name =('External User Manager'))"
           - sql:
               dbms: postgresql
               sql: "DELETE FROM role_permission WHERE permission = 'BULK_DISABLE_FIRM_USERS' AND app_role_id = (SELECT id FROM app_role WHERE name =('Global Admin'))"
