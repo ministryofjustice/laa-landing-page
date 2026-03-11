@@ -31,6 +31,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.PaginatedOffices;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserTypeReasonDisable;
 import uk.gov.justice.laa.portal.landingpage.forms.DisableUserReasonForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
@@ -184,7 +185,7 @@ class FirmDirectoryControllerTest {
     }
 
     @Test
-    void displayFirmDetails() {
+    void displayFirmDetailsWithoutDisableAllButtonWhenHasActiveUserByFirmIdIsFalse() {
 
         FirmOfficesCriteria criteria = new FirmOfficesCriteria();
         UUID id = UUID.randomUUID();
@@ -201,7 +202,8 @@ class FirmDirectoryControllerTest {
         )).thenReturn(paginatedOffices);
 
         when(firmService.getFirm(id)).thenReturn(firm);
-        when(accessControlService.userHasAuthzRole(authentication, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())).thenReturn(true);
+        when(accessControlService.authenticatedUserHasPermission(Permission.BULK_DISABLE_FIRM_USERS)).thenReturn(true);
+        when(userAccountStatusService.hasActiveUserByFirmId(String.valueOf(id))).thenReturn(false);
         String result = firmDirectoryController.displayFirmDetails(id, model, criteria, authentication);
 
         assertThat(result).isEqualTo("firm-directory/firm-offices");
@@ -212,7 +214,7 @@ class FirmDirectoryControllerTest {
     }
 
     @Test
-    void displayFirmDetailsWithDisableButtonAndForExternalUser() {
+    void displayFirmDetailsWithDisableAllButtonForPermissionBulkDisableFirmUsers() {
 
         FirmOfficesCriteria criteria = new FirmOfficesCriteria();
         UUID id = UUID.randomUUID();
@@ -229,7 +231,7 @@ class FirmDirectoryControllerTest {
         )).thenReturn(paginatedOffices);
 
         when(firmService.getFirm(id)).thenReturn(firm);
-        when(accessControlService.userHasAuthzRole(authentication, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())).thenReturn(true);
+        when(accessControlService.authenticatedUserHasPermission(Permission.BULK_DISABLE_FIRM_USERS)).thenReturn(true);
         when(userAccountStatusService.hasActiveUserByFirmId(any())).thenReturn(true);
         String result = firmDirectoryController.displayFirmDetails(id, model, criteria, authentication);
 
@@ -241,7 +243,7 @@ class FirmDirectoryControllerTest {
     }
 
     @Test
-    void displayFirmDetailsWithDisableButtonAndForGlobalAdmin() {
+    void displayFirmDetailsWithoutDisableButtonAndForUserWithoutPermission() {
 
         FirmOfficesCriteria criteria = new FirmOfficesCriteria();
         UUID id = UUID.randomUUID();
@@ -258,47 +260,14 @@ class FirmDirectoryControllerTest {
         )).thenReturn(paginatedOffices);
 
         when(firmService.getFirm(id)).thenReturn(firm);
-        when(accessControlService.userHasAuthzRole(authentication, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())).thenReturn(false);
-        when(accessControlService.userHasAuthzRole(authentication, AuthzRole.GLOBAL_ADMIN.getRoleName())).thenReturn(true);
-        when(userAccountStatusService.hasActiveUserByFirmId(any())).thenReturn(true);
+        when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(false);
         String result = firmDirectoryController.displayFirmDetails(id, model, criteria, authentication);
 
         assertThat(result).isEqualTo("firm-directory/firm-offices");
         assertThat(model.getAttribute("firmOffices")).isEqualTo(paginatedOffices);
         assertThat(model.getAttribute("criteria")).isEqualTo(criteria);
         assertThat(model.getAttribute("firm")).isEqualTo(firm);
-        assertThat(model.getAttribute("showDisableAllButton")).isEqualTo(true);
-    }
-
-    @Test
-    void displayFirmDetailsWithDisableButtonAndForSecurityResponse() {
-
-        FirmOfficesCriteria criteria = new FirmOfficesCriteria();
-        UUID id = UUID.randomUUID();
-
-        PaginatedOffices paginatedOffices = new PaginatedOffices();
-        FirmDto firm = FirmDto.builder().id(id).code("A123").name("TestName").build();
-
-        when(officeService.getOfficesPage(
-                id,
-                criteria.getPage(),
-                criteria.getSize(),
-                criteria.getSort(),
-                criteria.getDirection()
-        )).thenReturn(paginatedOffices);
-
-        when(firmService.getFirm(id)).thenReturn(firm);
-        when(accessControlService.userHasAuthzRole(authentication, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())).thenReturn(false);
-        when(accessControlService.userHasAuthzRole(authentication, AuthzRole.GLOBAL_ADMIN.getRoleName())).thenReturn(false);
-        when(accessControlService.userHasAuthzRole(authentication, AuthzRole.SECURITY_RESPONSE.getRoleName())).thenReturn(true);
-        when(userAccountStatusService.hasActiveUserByFirmId(any())).thenReturn(true);
-        String result = firmDirectoryController.displayFirmDetails(id, model, criteria, authentication);
-
-        assertThat(result).isEqualTo("firm-directory/firm-offices");
-        assertThat(model.getAttribute("firmOffices")).isEqualTo(paginatedOffices);
-        assertThat(model.getAttribute("criteria")).isEqualTo(criteria);
-        assertThat(model.getAttribute("firm")).isEqualTo(firm);
-        assertThat(model.getAttribute("showDisableAllButton")).isEqualTo(true);
+        assertThat(model.getAttribute("showDisableAllButton")).isEqualTo(false);
     }
 
     @Test
@@ -340,7 +309,7 @@ class FirmDirectoryControllerTest {
 
         assertThat(result).isEqualTo("firm-directory/bulk-disable-user-reason");
         assertThat(model.getAttribute("firm")).isEqualTo(firm);
-        assertThat(model.getAttribute("reasonIdSelected")).isEqualTo(reasonDtos.get(0).getId());
+        assertThat(model.getAttribute("reasonIdSelected")).isEqualTo(String.valueOf(reasonDtos.get(0).getId()));
         assertThat(model.getAttribute("disableUserReasonsForm")).isEqualTo(disableUserReasonForm);
     }
 
@@ -371,10 +340,15 @@ class FirmDirectoryControllerTest {
     @Test
     void postReasonForDisableFromSessionInformationWithNoErrors() {
         List<DisableUserReasonDto> reasonDtos = getDisableUserReasonDtos();
-
+        UUID id = UUID.randomUUID();
         MockHttpSession httpSession = new MockHttpSession();
         ExtendedModelMap disableUserReasonModel = new ExtendedModelMap();
         disableUserReasonModel.addAttribute("reasonIdSelected", String.valueOf(reasonDtos.get(0).getId()));
+        FirmDto firmDto = FirmDto.builder()
+                .id(id)
+                .name("firmName")
+                .build();
+        disableUserReasonModel.addAttribute("firm", firmDto);
         httpSession.setAttribute("disableUserReasonModel", disableUserReasonModel);
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
@@ -383,7 +357,7 @@ class FirmDirectoryControllerTest {
         Map<String, Integer> totals = new HashMap<>();
         totals.put("totalOfSingleFirm", 1);
         totals.put("totalOfMultiFirm", 1);
-        UUID id = UUID.randomUUID();
+
         when(userAccountStatusService.getUserCountsForFirm(String.valueOf(id))).thenReturn(totals);
         DisableUserReasonForm disableUserReasonForm = new DisableUserReasonForm();
         disableUserReasonForm.setReasonId(String.valueOf(reasonDtos.get(0).getId()));
@@ -391,9 +365,9 @@ class FirmDirectoryControllerTest {
 
         assertThat(result).isEqualTo("firm-directory/bulk-confirmation");
         assertThat(model.getAttribute("disableUserReasonsForm")).isEqualTo(disableUserReasonForm);
-        assertThat(model.getAttribute("totalOfSingleFirm")).isEqualTo(1L);
-        assertThat(model.getAttribute("totalOfMultiFirm")).isEqualTo(1L);
-
+        assertThat(model.getAttribute("totalOfSingleFirm")).isEqualTo(1);
+        assertThat(model.getAttribute("totalOfMultiFirm")).isEqualTo(1);
+        assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Remove access for all - " + firmDto.getName());
     }
 
     @Test
