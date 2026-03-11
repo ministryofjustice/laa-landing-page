@@ -1,5 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.repository;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -74,6 +76,8 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
                 WHERE up5.entraUser.id = u.id AND up5.userType = :userType
             ))
             AND (:multiFirm IS NULL OR u.multiFirmUser = :multiFirm)
+            AND (:inactiveSinceDateFlag IS NULL OR u.lastLoginDate < :inactiveSinceDate OR u.lastLoginDate IS NULL)
+            AND (:neverActivated IS NULL OR u.invitationStatus <> 'VERIFICATION_SUCCESS')
             """, countQuery = """
             SELECT COUNT(DISTINCT u.id) FROM EntraUser u
             WHERE (:searchTerm IS NULL OR :searchTerm = '' OR
@@ -98,6 +102,8 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
                 WHERE up5.entraUser.id = u.id AND up5.userType = :userType
             ))
             AND (:multiFirm IS NULL OR u.multiFirmUser = :multiFirm)
+            AND (:inactiveSinceDateFlag IS NULL OR u.lastLoginDate < :inactiveSinceDate OR u.lastLoginDate IS NULL)
+            AND (:neverActivated IS NULL OR u.invitationStatus <> 'VERIFICATION_SUCCESS')
             """)
     Page<EntraUser> findAllUsersForAudit(
             @Param("searchTerm") String searchTerm,
@@ -106,6 +112,9 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             @Param("appId") UUID appId,
             @Param("userType") UserType userType,
             @Param("multiFirm") Boolean multiFirm,
+            @Param("inactiveSinceDateFlag") String inactiveSinceDateFlag,
+            @Param("inactiveSinceDate") LocalDateTime inactiveSinceDate,
+            @Param("neverActivated") String neverActivated,
             Pageable pageable);
 
     /**
@@ -150,6 +159,8 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             AND (:appId IS NULL OR app_filter.entra_user_id IS NOT NULL)
             AND (:userType IS NULL OR up.user_type = :userType)
             AND (:multiFirm IS NULL or u.multi_firm_user = :multiFirm)
+            AND (:inactiveSinceDateFlag IS NULL OR u.last_login_date < :inactiveSinceDate OR u.last_login_date IS NULL)
+            AND (:neverActivated IS NULL OR u.invitation_status != 'VERIFICATION_SUCCESS')
             GROUP BY u.id
             """, nativeQuery = true)
     Page<UserAuditProfileCountProjection> findAllUsersForAuditWithProfileCount(
@@ -159,6 +170,9 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             @Param("appId") UUID appId,
             @Param("userType") String userType,
             @Param("multiFirm") Boolean multiFirm,
+            @Param("inactiveSinceDateFlag") String inactiveSinceDateFlag,
+            @Param("inactiveSinceDate") LocalDateTime inactiveSinceDate,
+            @Param("neverActivated") String neverActivated,
             Pageable pageable);
 
     /**
@@ -192,6 +206,8 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             AND (:appId IS NULL OR app_filter.entra_user_id IS NOT NULL)
             AND (:userType IS NULL OR up.user_type = :userType)
             AND (:multiFirm IS NULL or u.multi_firm_user = :multiFirm)
+            AND (:inactiveSinceDateFlag IS NULL OR u.last_login_date < :inactiveSinceDate OR u.last_login_date IS NULL)
+            AND (:neverActivated IS NULL OR u.invitation_status != 'VERIFICATION_SUCCESS')
             GROUP BY u.id
             """, nativeQuery = true)
     Page<UserAuditFirmProjection> findAllUsersForAuditWithFirm(
@@ -201,6 +217,9 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             @Param("appId") UUID appId,
             @Param("userType") String userType,
             @Param("multiFirm") Boolean multiFirm,
+            @Param("inactiveSinceDateFlag") String inactiveSinceDateFlag,
+            @Param("inactiveSinceDate") LocalDateTime inactiveSinceDate,
+            @Param("neverActivated") String neverActivated,
             Pageable pageable);
 
     /**
@@ -270,6 +289,8 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             ))
             AND (:userType IS NULL OR up.user_type = :userType)
             AND (:multiFirm IS NULL or u.multi_firm_user = :multiFirm)
+            AND (:inactiveSinceDateFlag IS NULL OR u.last_login_date < :inactiveSinceDate OR u.last_login_date IS NULL)
+            AND (:neverActivated IS NULL OR u.invitation_status != 'VERIFICATION_SUCCESS')
             """, nativeQuery = true)
     Page<UserAuditAccountStatusProjection> findAllUsersForAuditWithAccountStatus(
             @Param("searchTerm") String searchTerm,
@@ -278,6 +299,9 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             @Param("appId") UUID appId,
             @Param("userType") String userType,
             @Param("multiFirm") Boolean multiFirm,
+            @Param("inactiveSinceDateFlag") String inactiveSinceDateFlag,
+            @Param("inactiveSinceDate") LocalDateTime inactiveSinceDate,
+            @Param("neverActivated") String neverActivated,
             Pageable pageable);
 
     boolean existsByEntraOidAndEnabledFalse(String id);

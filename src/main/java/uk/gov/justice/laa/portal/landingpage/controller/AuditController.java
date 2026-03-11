@@ -47,11 +47,11 @@ import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AuditExportService;
+import uk.gov.justice.laa.portal.landingpage.service.AuditExportService.AuditCsvExport;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.TechServicesClient;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
-import uk.gov.justice.laa.portal.landingpage.service.AuditExportService.AuditCsvExport;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 
@@ -89,7 +89,8 @@ public class AuditController {
         PaginatedAuditUsers paginatedUsers = userService.getAuditUsers(
                 criteria.getSearch(), criteria.getSelectedFirmId(), criteria.getSilasRole(),
                 criteria.getSelectedAppId(), criteria.getSelectedUserType(),
-                criteria.getPage(), criteria.getSize(), criteria.getSort(), criteria.getDirection(), false);
+                criteria.getPage(), criteria.getSize(), criteria.getSort(), criteria.getDirection(), false,
+                criteria.getInactiveSinceDate(), criteria.getNeverActivated());
         // Build firm search form
         FirmSearchForm firmSearchForm = new FirmSearchForm(criteria.getFirmSearch(), criteria.getSelectedFirmId());
         // Add attributes to model
@@ -119,6 +120,8 @@ public class AuditController {
         model.addAttribute("selectedUserType",
                 criteria.getSelectedUserType() != null ? criteria.getSelectedUserType().toString() : "");
         model.addAttribute("selectedFirmName", criteria.getSelectedFirmName());
+        model.addAttribute("inactiveSinceDate", criteria.getInactiveSinceDate());
+        model.addAttribute("neverActivated", criteria.getNeverActivated() != null ? criteria.getNeverActivated() : false);
         model.addAttribute("sort", criteria.getSort());
         model.addAttribute("direction", criteria.getDirection());
         model.addAttribute("exportCsv",
@@ -275,7 +278,9 @@ public class AuditController {
                     pageSize,
                     criteria.getSort(),
                     criteria.getDirection(),
-                    true
+                    true,
+                    criteria.getInactiveSinceDate(),
+                    criteria.getNeverActivated()
             );
 
             firmData.addAll(result.getUsers());
