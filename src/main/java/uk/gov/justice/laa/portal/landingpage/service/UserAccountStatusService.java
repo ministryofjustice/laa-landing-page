@@ -34,8 +34,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.EXTERNAL_USER_ADMIN;
-import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.EXTERNAL_USER_MANAGER;
-import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.GLOBAL_ADMIN;
+import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.FIRM_USER_MANAGER;
 
 @Service
 @RequiredArgsConstructor
@@ -244,9 +243,21 @@ public class UserAccountStatusService {
         }
     }
 
+    public boolean canEnableUser(String targetUserProfileId, UUID editorUserProfileId) {
+        UserProfile targetUserProfile = userProfileRepository.findById(UUID.fromString(targetUserProfileId)).orElse(null);
+        UserProfile editorUserProfile = userProfileRepository.findById(editorUserProfileId).orElse(null);
+
+        if (targetUserProfile == null || editorUserProfile == null) {
+            return false;
+        }
+
+        return isUserEnablementAllowed(targetUserProfile.getEntraUser(), editorUserProfile.getEntraUser());
+    }
+
     private boolean isUserEnablementAllowed(EntraUser targetUser, EntraUser actor) {
         if (targetUser.isEnabled()) {
-            throw new RuntimeException(String.format("The user %s is enabled already", targetUser.getId()));
+            log.info("The user {} is enabled already", targetUser.getId());
+            return false;
         }
 
         if (!userService.isInternal(actor.getId()) && targetUser.isMultiFirmUser()) {
@@ -282,9 +293,8 @@ public class UserAccountStatusService {
                 .findFirst()
                 .orElse("NONE");
 
-        if (actingUserRoles.contains(GLOBAL_ADMIN.getRoleName())
-                || actingUserRoles.contains(EXTERNAL_USER_MANAGER.getRoleName())
-                || actingUserRoles.contains(AuthzRole.SECURITY_RESPONSE.getRoleName())) {
+        if (!(actingUserRoles.contains(FIRM_USER_MANAGER.getRoleName())
+                || actingUserRoles.contains(EXTERNAL_USER_ADMIN.getRoleName()))) {
             return true;
         }
 
