@@ -11,7 +11,7 @@
 <body>
     <main class="govuk-main-wrapper" id="main-content">
         <!-- Activation Toast -->
-        <div th:if="${userHasNoRoles}"
+        <div th:if="${showAccountActivationMsg}"
              id="account-activation-toast"
              class="govuk-notification-banner govuk-notification-banner--success"
              role="alert" aria-live="polite"
