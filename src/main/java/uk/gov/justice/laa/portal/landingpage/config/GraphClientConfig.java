@@ -16,13 +16,13 @@ public class GraphClientConfig {
     private final TokenCredentialFactory credentialFactory;
 
     @Value("${report.service.client.id}")
-    private String REPORT_CLIENT_ID;
+    private String reportClientId;
 
     @Value("${report.service.tenant.id}")
-    private String REPORT_TENANT_ID;
+    private String reportTenantId;
 
     @Value("${report.service.secret}")
-    private String REPORT_SECRET;
+    private String reportSecret;
 
     public GraphClientConfig(TokenCredentialFactory credentialFactory) {
         this.credentialFactory = credentialFactory;
@@ -40,9 +40,9 @@ public class GraphClientConfig {
     public GraphServiceClient graphUploadClient() {
         ClientSecretCredential credential =
                 new ClientSecretCredentialBuilder()
-                        .clientId(REPORT_CLIENT_ID)
-                        .clientSecret(REPORT_SECRET)
-                        .tenantId(REPORT_TENANT_ID)
+                        .clientId(reportClientId)
+                        .clientSecret(reportSecret)
+                        .tenantId(reportTenantId)
                         .build();
         String[] scopes = new String[]{"https://graph.microsoft.com/.default"};
         return new GraphServiceClient(credential, scopes);

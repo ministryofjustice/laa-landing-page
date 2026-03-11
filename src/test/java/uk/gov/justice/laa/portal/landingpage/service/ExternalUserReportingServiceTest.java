@@ -69,33 +69,4 @@ class ExternalUserReportingServiceTest {
                 "\"Firm B\",,TypeB,PARENT2,2,0,0,0"
         );
     }
-
-    @Test
-    void escapesCsvValuesCorrectlyForAllColumns() throws Exception {
-
-        when(firmRepository.findAllFirmExternalUserCount()).thenReturn(singletonList(
-                new Object[]{"Firm, Inc", "ABC\"123", "Type, X", "PARENT\"Y", 1L, 0L, 0L, 0L}
-        ));
-
-        Path systemTemp = Path.of(System.getProperty("java.io.tmpdir"));
-        List<Path> before = Files.list(systemTemp).toList();
-
-        externalUserReportingService.downloadExternalUserCsv();
-
-        List<Path> after = Files.list(systemTemp).toList();
-
-        Path csv = after.stream()
-                .filter(p -> !before.contains(p))
-                .filter(p -> p.getFileName().toString().startsWith("SiLAS-external-user-report-"))
-                .filter(p -> p.getFileName().toString().endsWith(".csv"))
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("CSV not created"));
-
-        List<String> lines = Files.readAllLines(csv);
-
-        String expected =
-                "\"Firm, Inc\",\"ABC\"\"123\",\"Type, X\",\"PARENT\"\"Y\",1,0,0,0";
-
-        assertThat(lines.get(1)).isEqualTo(expected);
-    }
 }

@@ -19,7 +19,7 @@ import java.io.FileNotFoundException;
 public class ReportUploadService {
 
     @Value("${report.sharepoint.site.id}")
-    private  String SHAREPOINT_URL;
+    private String sharepointUrl;
 
     private final GraphClientConfig graphClientConfig;
 
@@ -27,29 +27,29 @@ public class ReportUploadService {
 
         FileInputStream fileInputStream = new FileInputStream(file);
 
-            Site site = graphClientConfig.graphUploadClient()
-                    .sites()
-                    .bySiteId(SHAREPOINT_URL)
-                    .get();
+        Site site = graphClientConfig.graphUploadClient()
+            .sites()
+            .bySiteId(sharepointUrl)
+            .get();
 
-            final String siteId = site.getId();
+        final String siteId = site.getId();
 
-            Drive drive = graphClientConfig.graphUploadClient()
-                    .sites()
-                    .bySiteId(siteId)
-                    .drive()
-                    .get();
+        Drive drive = graphClientConfig.graphUploadClient()
+                .sites()
+                .bySiteId(siteId)
+                .drive()
+                .get();
 
-            String driveId = drive.getId();
+        String driveId = drive.getId();
 
 
         try {
             DriveItem existing = graphClientConfig.graphUploadClient()
-                    .drives()
-                    .byDriveId(driveId)
-                    .items()
-                    .byDriveItemId("root:/" + folderPath + "/" + file.getName() + ":")
-                    .get();
+                .drives()
+                .byDriveId(driveId)
+                .items()
+                .byDriveItemId("root:/" + folderPath + "/" + file.getName() + ":")
+                .get();
 
             if (existing != null) {
                 log.warn("File '{}' already exists in SharePoint. Skipping upload.", file.getName());
@@ -65,20 +65,20 @@ public class ReportUploadService {
 
         log.info("Uploading report to SharePoint: {}", file.getName());
 
-            DriveItem uploadCsv =
-                    graphClientConfig.graphUploadClient()
-                            .drives()
-                            .byDriveId(driveId)
-                            .items()
-                            .byDriveItemId("root:/" + folderPath + "/" + file.getName() + ":")
-                            .content()
-                            .put(fileInputStream);
+        DriveItem uploadCsv =
+                graphClientConfig.graphUploadClient()
+                        .drives()
+                        .byDriveId(driveId)
+                        .items()
+                        .byDriveItemId("root:/" + folderPath + "/" + file.getName() + ":")
+                        .content()
+                        .put(fileInputStream);
 
-            if (uploadCsv != null) {
-                log.info("File uploaded successfully");
-            } else {
-                log.error("File upload failed");
-            }
+        if (uploadCsv != null) {
+            log.info("File uploaded successfully");
+        } else {
+            log.error("File upload failed");
         }
     }
+}
 

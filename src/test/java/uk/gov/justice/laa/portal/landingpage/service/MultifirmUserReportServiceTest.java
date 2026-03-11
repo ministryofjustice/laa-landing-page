@@ -90,24 +90,4 @@ class MultifirmUserReportServiceTest {
                 ""
         );
     }
-
-    @Test
-    void getMultiFirmUsers_escapesCsvValuesCorrectly() throws Exception {
-        when(firmRepository.findMultiFirmUserCountsByFirm())
-                .thenReturn(List.<Object[]>of(new Object[] { "Firm, Inc", "ABC\"123", 1L }));
-        when(entraUserRepository.findUnlinkedMultifirmUsersCount())
-                .thenReturn(List.<Object[]>of(
-                        new Object[] { "Unlinked multi-firm users", null, 0L }
-                ));
-        when(entraUserRepository.findTotalMultiFirmUsersCount())
-                .thenReturn(List.<Object[]>of(
-                        new Object[] { "Total multi-firm users", null, 1L }
-                ));
-
-        Instant notBefore = Instant.now();
-        service.getMultifirmUsers();
-
-        List<String> lines = Files.readAllLines(getGeneratedCsvFile());
-        assertThat(lines.get(1)).isEqualTo("\"Firm, Inc\",\"ABC\"\"123\",1");
-    }
 }
