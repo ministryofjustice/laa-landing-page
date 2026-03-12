@@ -378,6 +378,9 @@ public class UserController {
         final boolean canDisableUser = disableUserFeatureEnabled
                 && accessControlService.canDisableUser(user.getEntraUser().getId());
         model.addAttribute("canDisableUser", canDisableUser);
+        final boolean canEnableUser = disableUserFeatureEnabled
+                && accessControlService.canEnableUser(user.getEntraUser().getId());
+        model.addAttribute("canEnableUser", canEnableUser);
         final boolean userIsEnabled = user.getEntraUser().isEnabled();
         model.addAttribute("userIsEnabled", userIsEnabled);
         boolean showResendVerificationLink = accessControlService.canSendVerificationEmail(id);
@@ -563,7 +566,7 @@ public class UserController {
     }
 
     @GetMapping("/users/manage/{id}/enable")
-    @PreAuthorize("@accessControlService.canDisableUser(#id)")
+    @PreAuthorize("@accessControlService.canEnableUser(#id)")
     public String enableUserGet(@PathVariable String id,
                                  Model model,
                                  String referer,
@@ -578,7 +581,7 @@ public class UserController {
     }
 
     @PostMapping("/users/manage/{id}/enable")
-    @PreAuthorize("@accessControlService.canDisableUser(#id)")
+    @PreAuthorize("@accessControlService.canEnableUser(#id)")
     public String enableUserPost(@PathVariable String id,
                                          Authentication authentication,
                                          Model model,
