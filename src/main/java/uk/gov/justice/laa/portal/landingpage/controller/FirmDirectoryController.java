@@ -66,8 +66,11 @@ public class FirmDirectoryController {
     @Value("${feature.flag.firm.directory.enabled}")
     private boolean firmDirectoryEnabled;
 
+    @Value("${feature.flag.bulk.disable.user}")
+    public boolean bulkUserDisableFeatureEnabled;
+
     private boolean showDisableAllButton(String firmId) {
-        return accessControlService.authenticatedUserHasPermission(Permission.BULK_DISABLE_FIRM_USERS)
+        return bulkUserDisableFeatureEnabled && accessControlService.authenticatedUserHasPermission(Permission.BULK_DISABLE_FIRM_USERS)
                 && userAccountStatusService.hasActiveUserByFirmId(firmId);
     }
 
