@@ -62,6 +62,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
@@ -75,6 +76,7 @@ import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.DisableUserReasonRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
@@ -108,6 +110,7 @@ public class UserService {
     private final FirmRepository firmRepository;
     private final EventService eventService;
     private final NotificationService notificationService;
+    private final DisableUserReasonRepository disableUserReasonRepository;
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
@@ -119,7 +122,7 @@ public class UserService {
             UserAccountStatusAuditRepository userAccountStatusAuditRepository,
             RoleChangeNotificationService roleChangeNotificationService, FirmService firmService,
             FirmRepository firmRepository, EventService eventService,
-            NotificationService notificationService) {
+            NotificationService notificationService, DisableUserReasonRepository disableUserReasonRepository) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -135,6 +138,7 @@ public class UserService {
         this.firmRepository = firmRepository;
         this.eventService = eventService;
         this.notificationService = notificationService;
+        this.disableUserReasonRepository = disableUserReasonRepository;
     }
 
     public boolean hasUserFirmAlreadyAssigned(String email, UUID firmId) {
@@ -378,6 +382,9 @@ public class UserService {
                 "Deleting external user. actorId={}, userProfileId={}, entraUserId={}, email={}, reason=\"{}\"",
                 actorId, userProfileId, entraUser.getId(), entraUser.getEmail(), reason);
 
+        if (entraUser.isEnabled()) { entraUser.setEnabled(false); }
+        entraUserRepository.saveAndFlush(entraUser);
+
         // first send update to tech services
         techServicesClient.deleteRoleAssignment(userProfile.getEntraUser().getId());
 
@@ -550,6 +557,9 @@ public class UserService {
         logger.info(
                 "Deleting Entra user without profile. actorId={}, entraUserId={}, email={}, reason=\"{}\"",
                 actorId, entraUserId, entraUser.getEmail(), reason);
+
+        if (entraUser.isEnabled()) { entraUser.setEnabled(false); }
+        entraUserRepository.saveAndFlush(entraUser);
 
         // Notify Tech Services to remove Entra group memberships
         try {
