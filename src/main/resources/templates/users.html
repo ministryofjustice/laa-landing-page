@@ -836,7 +836,7 @@
                                 </span>
                             </td>
                             <td class="govuk-table__cell">
-                                <span th:if="${user.userProfileStatus?.getValue() == 'PENDING'}"
+                                <span th:if="${user.userProfileStatus?.getValue() == 'PENDING' && user.invitationStatus?.name() == }"
                                     class="moj-badge moj-badge--blue">INCOMPLETE</span>
                                 <span th:if="${user.userProfileStatus?.getValue() == 'COMPLETE'}"
                                     class="moj-badge moj-badge--green">COMPLETE</span>
