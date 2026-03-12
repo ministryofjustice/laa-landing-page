@@ -27,4 +27,6 @@ public class EntraUserDto implements Serializable {
     private UserStatus userStatus;
     @Builder.Default
     private boolean enabled = true;
+    private String disabledBy;
+    private boolean mailOnly;
 }

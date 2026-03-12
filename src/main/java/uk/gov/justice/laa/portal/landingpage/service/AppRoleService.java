@@ -294,4 +294,18 @@ public class AppRoleService {
                 .orElse(0);
         return maxOrdinal + 1;
     }
+
+    public List<AppRoleDto> getAllAuthzRoles() {
+        return appRoleRepository.findAllAuthzRoles().stream()
+                .map((element) -> modelMapper.map(element, AppRoleDto.class))
+                .toList();
+    }
+
+    public List<AppRoleDto> getAssigningRolesFor(String appRoleId) {
+        List<AppRole> assigningRolesFor = appRoleRepository.findAssigningRolesFor(UUID.fromString(appRoleId));;
+        return assigningRolesFor.stream()
+                .map(appRole -> modelMapper.map(appRole, AppRoleDto.class))
+                .toList();
+    }
+
 }

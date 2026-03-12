@@ -2,7 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -34,12 +34,13 @@ public class DataProviderController {
     /**
      * API endpoint to compare PDA data with local database.
      * Returns structured comparison showing created, updated, deleted, and matched items.
+     * Uses POST to prevent casual browser access.
      *
      * @return ResponseEntity containing JSON with categorized comparison results
      */
-    @GetMapping("/compare")
-    public ResponseEntity<String> compareProviderOffices() {
-        log.debug("Received request to compare PDA data with database");
+    @PostMapping("/report")
+    public ResponseEntity<String> reportProviderOffices() {
+        log.debug("Received request to report PDA data comparison with database");
         try {
             ComparisonResultDto result = dataProviderService.compareWithDatabase();
 

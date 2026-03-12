@@ -1,0 +1,25 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1772715664-1
+      author: suresh.kavali
+      dbms: postgresql
+      comment: Add EDIT_LAA_APP_ROLE_ASSIGN_RESTRICTIONS permission to SILAS System Administration role
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO role_permission (app_role_id, permission)
+              SELECT (SELECT id FROM app_role WHERE name = 'SILAS System Administration'),
+                     'EDIT_LAA_APP_ROLE_ASSIGN_RESTRICTIONS'
+              WHERE NOT EXISTS (
+                SELECT 1 FROM role_permission
+                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'SILAS System Administration')
+                  AND permission = 'EDIT_LAA_APP_ROLE_ASSIGN_RESTRICTIONS'
+              );
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: |
+              DELETE FROM role_permission
+              WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'SILAS System Administration')
+                AND permission = 'TRIGGER_LAA_APP_SYNC';

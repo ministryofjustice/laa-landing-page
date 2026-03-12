@@ -65,6 +65,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
@@ -72,6 +73,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserTypeReasonDisable;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
@@ -100,6 +102,7 @@ import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
@@ -130,10 +133,14 @@ public class UserController {
     private final EmailValidationService emailValidationService;
     private final AppRoleService appRoleService;
     private final UserAccountStatusService userAccountStatusService;
+    private final NotificationService notificationService;
 
 
     @Value("${feature.flag.disable.user}")
     public boolean disableUserFeatureEnabled;
+
+    @Value("${feature.flag.edit.user.details}")
+    public boolean editUserDetailFeatureEnabled;
 
     @GetMapping("/users")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
@@ -371,6 +378,9 @@ public class UserController {
         final boolean canDisableUser = disableUserFeatureEnabled
                 && accessControlService.canDisableUser(user.getEntraUser().getId());
         model.addAttribute("canDisableUser", canDisableUser);
+        final boolean canEnableUser = disableUserFeatureEnabled
+                && accessControlService.canEnableUser(user.getEntraUser().getId());
+        model.addAttribute("canEnableUser", canEnableUser);
         final boolean userIsEnabled = user.getEntraUser().isEnabled();
         model.addAttribute("userIsEnabled", userIsEnabled);
         boolean showResendVerificationLink = accessControlService.canSendVerificationEmail(id);
@@ -416,6 +426,10 @@ public class UserController {
         Map<String, Object> filters = (Map<String, Object>) session.getAttribute("userListFilters");
         boolean hasFilters = hasActiveFilters(filters);
         model.addAttribute("hasFilters", hasFilters);
+        boolean loggedUserIsExternalAdmin = accessControlService.userHasAuthzRole(authentication, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName());
+        if (editUserDetailFeatureEnabled && externalUser && loggedUserIsExternalAdmin) {
+            model.addAttribute("showEditButton", true);
+        }
 
         return "manage-user";
     }
@@ -488,8 +502,10 @@ public class UserController {
         }
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
-        boolean isProvideAdmin = RolesUtils.isProvideAdmin(currentUserProfile.getAppRoles());
-        List<DisableUserReasonViewModel> reasons = new ArrayList<>(userAccountStatusService.getDisableUserReasons(isProvideAdmin).stream()
+        UserTypeReasonDisable userTypeReasonDisable = RolesUtils.isProvideAdmin(currentUserProfile.getAppRoles())
+                ? UserTypeReasonDisable.IS_USER_DISABLE
+                : UserTypeReasonDisable.DEFAULT;
+        List<DisableUserReasonViewModel> reasons = new ArrayList<>(userAccountStatusService.getDisableUserReasons(userTypeReasonDisable).stream()
                 .map(reason -> mapper.map(reason, DisableUserReasonViewModel.class))
                 .toList());
         model.addAttribute("user", user);
@@ -550,7 +566,7 @@ public class UserController {
     }
 
     @GetMapping("/users/manage/{id}/enable")
-    @PreAuthorize("@accessControlService.canDisableUser(#id)")
+    @PreAuthorize("@accessControlService.canEnableUser(#id)")
     public String enableUserGet(@PathVariable String id,
                                  Model model,
                                  String referer,
@@ -565,7 +581,7 @@ public class UserController {
     }
 
     @PostMapping("/users/manage/{id}/enable")
-    @PreAuthorize("@accessControlService.canDisableUser(#id)")
+    @PreAuthorize("@accessControlService.canEnableUser(#id)")
     public String enableUserPost(@PathVariable String id,
                                          Authentication authentication,
                                          Model model,
@@ -968,17 +984,12 @@ public class UserController {
     @GetMapping("/users/edit/{id}/details")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String editUserDetails(@PathVariable String id, Model model, HttpSession session) {
-        UserProfileDto user = (UserProfileDto) session.getAttribute("user");
-        if (Objects.isNull(user)) {
-            user = userService.getUserProfileById(id).orElseThrow();
-        }
-        EditUserDetailsForm editUserDetailsForm = (EditUserDetailsForm) session.getAttribute("editUserDetailsForm");
-        if (Objects.isNull(editUserDetailsForm)) {
-            editUserDetailsForm = new EditUserDetailsForm();
-            editUserDetailsForm.setFirstName(user.getEntraUser().getFirstName());
-            editUserDetailsForm.setLastName(user.getEntraUser().getLastName());
-            editUserDetailsForm.setEmail(user.getEntraUser().getEmail());
-        }
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();;
+        EditUserDetailsForm editUserDetailsForm = new EditUserDetailsForm();
+        editUserDetailsForm.setFirstName(user.getEntraUser().getFirstName());
+        editUserDetailsForm.setLastName(user.getEntraUser().getLastName());
+        editUserDetailsForm.setEmail(user.getEntraUser().getEmail());
+
         model.addAttribute("editUserDetailsForm", editUserDetailsForm);
         model.addAttribute("user", user);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user details - " + user.getFullName());
@@ -999,60 +1010,54 @@ public class UserController {
     @PostMapping("/users/edit/{id}/details")
     @PreAuthorize("@accessControlService.canEditUser(#id)")
     public String updateUserDetails(@PathVariable String id,
-            @Valid EditUserDetailsForm editUserDetailsForm, BindingResult result,
-            HttpSession session) throws IOException {
+                                    @Valid EditUserDetailsForm editUserDetailsForm,
+                                    BindingResult result,
+                                    HttpSession session,
+                                    Model model,
+                                    RedirectAttributes redirectAttributes,
+                                    Authentication authentication) throws IOException {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
+        model.addAttribute("user", user);
         session.setAttribute("user", user);
-        session.setAttribute("editUserDetailsForm", editUserDetailsForm);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user details - " + user.getFullName());
+
+        if (Objects.nonNull(editUserDetailsForm.getEmail()) && !editUserDetailsForm.getEmail().isEmpty()) {
+            boolean isSameEmail = Objects.equals(user.getEntraUser().getEmail(), editUserDetailsForm.getEmail());
+            if (!isSameEmail && userService.userExistsByEmail(editUserDetailsForm.getEmail())) {
+                // Check if the existing user is a multi-firm user
+                if (userService.isMultiFirmUserByEmail(editUserDetailsForm.getEmail())) {
+                    result.rejectValue("email", "error.email",
+                            "This email address is already registered as a multi-firm user.");
+                } else {
+                    result.rejectValue("email", "error.email", "This email address is already associated with another user.");
+                }
+            }
+
+            if (!emailValidationService.isValidEmailDomain(editUserDetailsForm.getEmail())) {
+                result.rejectValue("email", "email.invalidDomain",
+                        "The email address domain is not valid or cannot receive emails.");
+            }
+        }
         if (result.hasErrors()) {
-            log.debug("Validation errors occurred while updating user details: {}", result.getAllErrors());
-            // If there are validation errors, return to the edit user details page with
-            // errors
+            log.info("Validation errors occurred while updating user details: {}", result.getAllErrors());
             return "edit-user-details";
         }
-        return "redirect:/admin/users/edit/" + id + "/details-check-answer";
-    }
+        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
 
-    @GetMapping("/users/edit/{id}/details-check-answer")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
-    public String updateUserDetailsCheck(@PathVariable String id, Model model,
-            HttpSession session) throws IOException {
-        EditUserDetailsForm editUserDetailsForm = (EditUserDetailsForm) session.getAttribute("editUserDetailsForm");
-        if (Objects.isNull(editUserDetailsForm)) {
-            return "redirect:/admin/users/manage/" + id;
-        }
-        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-        model.addAttribute("editUserDetailsForm", editUserDetailsForm);
-        model.addAttribute("user", user);
-        model.addAttribute(ModelAttributes.PAGE_TITLE,
-                "Edit user details - Check your answers - " + user.getFullName());
-        return "edit-user-details-check-answer";
-    }
+        userService.updateUserDetails(user.getEntraUser().getId(),
+                editUserDetailsForm.getEmail(),
+                editUserDetailsForm.getFirstName(),
+                editUserDetailsForm.getLastName(),
+                currentUserProfile);
 
-    /**
-     * Update user details
-     *
-     * @param id      User ID
-     * @param session HttpSession to store user details
-     * @return Redirect to user management page
-     * @throws IOException              If an error occurs during user update
-     * @throws IllegalArgumentException If the user ID is invalid or not found
-     */
-    @PostMapping("/users/edit/{id}/details-check-answer")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
-    public String updateUserDetailsSubmit(@PathVariable String id,
-            HttpSession session) throws IOException {
-        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-        EditUserDetailsForm editUserDetailsForm = (EditUserDetailsForm) session.getAttribute("editUserDetailsForm");
-        if (Objects.isNull(editUserDetailsForm)) {
-            return "redirect:/admin/users/manage/" + id;
-        }
-        // Update user details
-        // TODO audit log needed
-        userService.updateUserDetails(user.getEntraUser().getId(), editUserDetailsForm.getFirstName(),
-                editUserDetailsForm.getLastName());
-        session.removeAttribute("editUserDetailsForm");
-        return "redirect:/admin/users/edit/" + id + "/confirmation";
+        //model.addAttribute("isEditUserSuccess", true);
+
+        // Add success message
+        redirectAttributes.addFlashAttribute("isEditUserSuccess",
+                true);
+
+        // Redirect to manage user page
+        return "redirect:/admin/users/manage/" + id;
     }
 
     /**
@@ -1420,13 +1425,13 @@ public class UserController {
                     user.getEntraUser(), updateResult.get("diff"),
                     "role");
             eventService.logEvent(updateUserAuditEvent);
+            notifyExternalUserRoleChange(user, updateResult.get("diff"), "Service roles");
         }
         // Clear the session
         session.removeAttribute("editUserAllSelectedRoles");
         session.removeAttribute("selectedApps");
         return "redirect:/admin/users/edit/" + id + "/confirmation";
     }
-
     /**
      * Get user offices for editing
      *
@@ -1435,6 +1440,7 @@ public class UserController {
      * @return View name for editing user offices
      * @throws IllegalArgumentException If the user ID is invalid or not found
      */
+
     @GetMapping("/users/edit/{id}/offices")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
     public String editUserOffices(@PathVariable String id, Model model, Authentication authentication, HttpSession session) {
@@ -1612,6 +1618,7 @@ public class UserController {
                 userProfileDto.getEntraUser(),
                 changed, "office");
         eventService.logEvent(updateUserAuditEvent);
+        notifyExternalUserRoleChange(userProfileDto, changed, "Offices");
         // Clear the session model
         session.removeAttribute("editUserOfficesModel");
         session.removeAttribute("officesForm");
@@ -2339,6 +2346,8 @@ public class UserController {
                     "access_grant_complete");
             eventService.logEvent(updateUserAuditEvent);
 
+            notifyExternalUserRoleChange(userProfileDto, "You have been granted access to services and offices", "Access granted");
+
         } catch (Exception e) {
             log.error("Error completing grant access for user: " + id, e);
             // Could add error handling here if needed
@@ -2942,6 +2951,22 @@ public class UserController {
             log.error("Error reassigning firm for user {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("success", false, "message", "An error occurred while reassigning the user"));
+        }
+    }
+
+    private void notifyExternalUserRoleChange(UserProfileDto user, String changeDetails, String changeType) {
+        if (user.getUserType() == UserType.EXTERNAL
+                && user.getEntraUser() != null
+                && changeDetails != null
+                && !changeDetails.isEmpty()) {
+
+            notificationService.notifyUserAccessChange(
+                    user.getId(),
+                    user.getEntraUser().getFirstName(),
+                    user.getEntraUser().getEmail(),
+                    changeType,
+                    changeDetails
+            );
         }
     }
 }
