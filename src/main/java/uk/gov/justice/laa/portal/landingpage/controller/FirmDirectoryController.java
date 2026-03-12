@@ -124,8 +124,7 @@ public class FirmDirectoryController {
     }
 
     @GetMapping("/{id}/reasonForDisable")
-    @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions("
-            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).BULK_DISABLE_FIRM_USERS)")
+    @PreAuthorize("@accessControlService.canBulkDisableFirmUsers()")
     public String reasonForDisableGet(@PathVariable String id,
                                       DisableUserReasonForm disableUserReasonForm,
                                       Model model,
@@ -147,8 +146,7 @@ public class FirmDirectoryController {
     }
 
     @PostMapping("/{id}/reasonForDisable")
-    @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions("
-            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).BULK_DISABLE_FIRM_USERS)")
+    @PreAuthorize("@accessControlService.canBulkDisableFirmUsers()")
     public String reasonForDisablePost(@PathVariable String id,
                                        @Valid @ModelAttribute("disableUserReasonsForm") DisableUserReasonForm disableUserReasonForm,
                                        BindingResult result,
@@ -174,8 +172,7 @@ public class FirmDirectoryController {
     }
 
     @PostMapping("/{id}/confirmation")
-    @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions("
-            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).BULK_DISABLE_FIRM_USERS)")
+    @PreAuthorize("@accessControlService.canBulkDisableFirmUsers()")
     public String confirmationBulkDisablePost(@PathVariable String id,
                                          Model model,
                                          RedirectAttributes redirectAttributes,
@@ -201,8 +198,7 @@ public class FirmDirectoryController {
     }
 
     @GetMapping("/cancel")
-    @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions("
-            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).BULK_DISABLE_FIRM_USERS)")
+    @PreAuthorize("@accessControlService.canBulkDisableFirmUsers()")
     public String cancelBulkUserDisable(HttpSession session) {
         session.removeAttribute("disableUserReasonModel");
         session.removeAttribute("reasonIdSelected");
