@@ -28,9 +28,12 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import org.springframework.beans.factory.annotation.Value;
 
 import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.EXTERNAL_USER_ADMIN;
+import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.EXTERNAL_USER_MANAGER;
 import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.FIRM_USER_MANAGER;
+import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.GLOBAL_ADMIN;
 
 @Service
 public class AccessControlService {
@@ -42,6 +45,9 @@ public class AccessControlService {
     private final LoginService loginService;
 
     private final EntraUserRepository entraUserRepository;
+
+    @Value("${feature.flag.bulk.disable.user}")
+    private boolean bulkUserDisableFeatureEnabled;
 
     private static final Logger log = LoggerFactory.getLogger(AccessControlService.class);
 
@@ -290,8 +296,9 @@ public class AccessControlService {
                 .findFirst()
                 .orElse("NONE");
 
-        if (!(actingUserRoles.contains(FIRM_USER_MANAGER.getRoleName())
-                || actingUserRoles.contains(EXTERNAL_USER_ADMIN.getRoleName()))) {
+        if (actingUserRoles.contains(GLOBAL_ADMIN.getRoleName())
+                || actingUserRoles.contains(EXTERNAL_USER_MANAGER.getRoleName())
+                || actingUserRoles.contains(AuthzRole.SECURITY_RESPONSE.getRoleName())) {
             return userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER);
         }
 
@@ -497,6 +504,10 @@ public class AccessControlService {
                 && !userService.isInternal(accessedUser.getId())
                 && userHasAnyGivenPermissions(authenticatedUser, Permission.CREATE_EXTERNAL_USER,
                         Permission.EDIT_EXTERNAL_USER);
+    }
+
+    public boolean canBulkDisableFirmUsers() {
+        return bulkUserDisableFeatureEnabled && authenticatedUserHasAnyGivenPermissions(Permission.BULK_DISABLE_FIRM_USERS);
     }
 
 }
