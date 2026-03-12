@@ -214,6 +214,8 @@ spec:
               value: "${FEATURE_FLAG_FIRM_DIRECTORY_ENABLED}"
             - name: FEATURE_FLAG_DISABLE_USER
               value: "${FEATURE_FLAG_DISABLE_USER}"
+            - name: FEATURE_FLAG_BULK_DISABLE_USER
+              value: "${FEATURE_FLAG_BULK_DISABLE_USER}"
             - name: FEATURE_FLAG_SYNC_APPS_FROM_ENTRA
               value: "${FEATURE_FLAG_SYNC_APPS_FROM_ENTRA}"
             - name: FEATURE_FLAG_SYNC_APP_UPDATES_FROM_ENTRA

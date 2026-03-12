@@ -36,13 +36,6 @@
                         </div>
                     </div>
                 </div>
-                <div class="govuk-warning-text"  th:if="${!user.getEntraUser().isMailOnly()}">
-                    <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
-                    <strong class="govuk-warning-text__text">
-                        <span class="govuk-visually-hidden">Warning</span>
-                        This user has an externally managed identity and must be updated by their organisation.
-                    </strong>
-                </div>
                 <div class="govuk-form-group"
                     th:classappend="${#fields.hasErrors('email')} ? 'govuk-form-group--error'">
                     <label class="govuk-label govuk-label--m" for="email">
@@ -52,7 +45,6 @@
                         <p th:each="err : ${#fields.errors('email')}" th:text="${err}"></p>
                     </div>
                     <input class="govuk-input govuk-!-width-one-third" name="email" th:value="*{email}" id="email"
-                        th:readonly="${!user.getEntraUser().isMailOnly()}"
                         th:aria-describedby="${#fields.hasErrors('email')} ? 'email-error' : null"/>
                 </div>
                 <div class="govuk-form-group"
@@ -65,7 +57,6 @@
                     </div>
                     <input class="govuk-input govuk-!-width-one-third" name="firstName" type="text"
                         th:value="*{firstName}" id="firstName"
-                           th:readonly="${!user.entraUser.mailOnly}"
                         th:aria-describedby="${#fields.hasErrors('firstName')} ? 'firstName-error' : null" />
                 </div>
                 <div class="govuk-form-group"
@@ -78,10 +69,9 @@
                     </div>
                     <input class="govuk-input govuk-!-width-one-third" name="lastName" type="text"
                         th:value="*{lastName}" id="lastName"
-                        th:readonly="${!user.getEntraUser().isMailOnly()}"
                         th:aria-describedby="${#fields.hasErrors('lastName')} ? 'lastName-error' : null" />
                 </div>
-                <div th:if="${user.entraUser.mailOnly}" class="govuk-button-group" >
+                <div class="govuk-button-group" >
                     <button type="submit" class="govuk-button">Update</button>
                     <a th:href="@{/admin/users/edit/{id}/cancel(id=${user.id})}" class="govuk-link">Cancel</a>
                 </div>

@@ -246,7 +246,8 @@ public class UserAccountStatusService {
 
     private boolean isUserEnablementAllowed(EntraUser targetUser, EntraUser actor) {
         if (targetUser.isEnabled()) {
-            throw new RuntimeException(String.format("The user %s is enabled already", targetUser.getId()));
+            log.info("The user {} is enabled already", targetUser.getId());
+            return false;
         }
 
         if (!userService.isInternal(actor.getId()) && targetUser.isMultiFirmUser()) {

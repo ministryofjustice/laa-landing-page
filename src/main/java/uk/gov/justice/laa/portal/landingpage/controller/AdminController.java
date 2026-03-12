@@ -131,7 +131,7 @@ public class AdminController {
         model.addAttribute("roles", roles);
         model.addAttribute("appFilter", appFilter);
         model.addAttribute("canTriggerAppSync", Boolean.parseBoolean(syncAppsFromEntra)
-                && accessControlService.authenticatedUserHasPermission(Permission.EDIT_LAA_APP_METADATA));
+                && accessControlService.authenticatedUserHasPermission(Permission.TRIGGER_LAA_APP_SYNC));
         session.setAttribute("appFilter", appFilter);
 
         // Get distinct app names for filter dropdown
