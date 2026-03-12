@@ -30,7 +30,9 @@ import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 
 import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.EXTERNAL_USER_ADMIN;
+import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.EXTERNAL_USER_MANAGER;
 import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.FIRM_USER_MANAGER;
+import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.GLOBAL_ADMIN;
 
 @Service
 public class AccessControlService {
@@ -290,8 +292,9 @@ public class AccessControlService {
                 .findFirst()
                 .orElse("NONE");
 
-        if (!(actingUserRoles.contains(FIRM_USER_MANAGER.getRoleName())
-                || actingUserRoles.contains(EXTERNAL_USER_ADMIN.getRoleName()))) {
+        if (actingUserRoles.contains(GLOBAL_ADMIN.getRoleName())
+                || actingUserRoles.contains(EXTERNAL_USER_MANAGER.getRoleName())
+                || actingUserRoles.contains(AuthzRole.SECURITY_RESPONSE.getRoleName())) {
             return userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER);
         }
 
