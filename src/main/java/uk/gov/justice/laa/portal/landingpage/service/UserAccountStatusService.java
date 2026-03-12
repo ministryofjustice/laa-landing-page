@@ -34,7 +34,8 @@ import java.util.Set;
 import java.util.UUID;
 
 import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.EXTERNAL_USER_ADMIN;
-import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.FIRM_USER_MANAGER;
+import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.EXTERNAL_USER_MANAGER;
+import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.GLOBAL_ADMIN;
 
 @Service
 @RequiredArgsConstructor
@@ -282,8 +283,9 @@ public class UserAccountStatusService {
                 .findFirst()
                 .orElse("NONE");
 
-        if (!(actingUserRoles.contains(FIRM_USER_MANAGER.getRoleName())
-                || actingUserRoles.contains(EXTERNAL_USER_ADMIN.getRoleName()))) {
+        if (actingUserRoles.contains(GLOBAL_ADMIN.getRoleName())
+                || actingUserRoles.contains(EXTERNAL_USER_MANAGER.getRoleName())
+                || actingUserRoles.contains(AuthzRole.SECURITY_RESPONSE.getRoleName())) {
             return true;
         }
 
