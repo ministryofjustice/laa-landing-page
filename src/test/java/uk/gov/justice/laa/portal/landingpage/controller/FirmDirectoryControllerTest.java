@@ -92,6 +92,7 @@ class FirmDirectoryControllerTest {
         mapper = new MapperConfig().modelMapper();
         model = new ExtendedModelMap();
         ReflectionTestUtils.setField(firmDirectoryController, "firmDirectoryEnabled", true);
+        ReflectionTestUtils.setField(firmDirectoryController, "bulkUserDisableFeatureEnabled", true);
 
     }
 
