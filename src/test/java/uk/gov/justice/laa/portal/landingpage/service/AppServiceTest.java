@@ -440,8 +440,7 @@ class AppServiceTest {
 
 
     private TechServicesApiResponse<GetAllApplicationsResponse> successResponseWithApps(List<GetAllApplicationsResponse.TechServicesApplication> apps) {
-        GetAllApplicationsResponse data = GetAllApplicationsResponse.builder()
-                .success(true).apps(apps).build();
+        GetAllApplicationsResponse data = GetAllApplicationsResponse.builder().apps(apps).build();
         return TechServicesApiResponse.success(data);
     }
 
@@ -543,7 +542,7 @@ class AppServiceTest {
     }
 
     @Test
-    @DisplayName("DELETED: present only in local (already disabled) → no DB write, still returned as DELETED")
+    @DisplayName("NONE: present only in local (already disabled) → no DB write, still returned as NONE")
     void deleted_whenOnlyLocal_alreadyDisabled_noSave() throws Exception {
 
         App l1 = localApp("L1", "Local One", "https://l1", "SG1", "Group 1", false);
@@ -554,7 +553,7 @@ class AppServiceTest {
 
         List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
         assertThat(out).hasSize(1);
-        assertThat(out.get(0).getChangeType()).isEqualTo(AppDto.ChangeType.DELETED);
+        assertThat(out.get(0).getChangeType()).isEqualTo(AppDto.ChangeType.NONE);
 
         verify(appRepository, times(1)).saveAll(any());
         verify(eventService).logEvent(any(AppSynchronizationAuditEvent.class));
@@ -638,7 +637,7 @@ class AppServiceTest {
     @Test
     @DisplayName("Defensive nulls: apps list is null → treat as empty")
     void appsNull_treatedAsEmpty() throws Exception {
-        GetAllApplicationsResponse data = GetAllApplicationsResponse.builder().success(true).build();
+        GetAllApplicationsResponse data = GetAllApplicationsResponse.builder().build();
         TechServicesApiResponse<GetAllApplicationsResponse> resp = TechServicesApiResponse.success(data);
         when(techServicesClient.getAllApplications()).thenReturn(resp);
 

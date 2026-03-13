@@ -273,13 +273,7 @@ public class AccessControlService {
             return false;
         }
 
-        UUID actorUserProfileId = actorUserProfile.getId();
-
         UUID disabledByUserProfileId = targetUser.getDisabledBy();
-
-        if (actorUserProfileId.equals(disabledByUserProfileId)) {
-            return userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER);
-        }
 
         List<String> actingUserRoles = actorUserProfile.getAppRoles().stream().map(AppRole::getName).toList();
 

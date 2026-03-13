@@ -86,6 +86,32 @@ public class LiveTechServicesClientTest {
             .firstName("FirstName")
             .lastName("LastName")
             .build();
+    public static final String APP_LIST_TS_RESPONSE_BODY = """
+            [
+              {
+                "id": "00000000-0000-0000-0000-000000000001",
+                "application_name": "Service A",
+                "homepage_url": "https:/xxx.service.justice.gov.uk/1",
+                "security_groups": [
+                  {
+                    "id": "00000000-0000-0000-0000-000000000004",
+                    "name": "APPREG-User-Access-LAAD-Service-A"
+                  }
+                ]
+              },
+              {
+                "id": "00000000-0000-0000-0000-000000000002",
+                "application_name": "Service A",
+                "homepage_url": "https:/xxx.service.justice.gov.uk/2",
+                "security_groups": [
+                  {
+                    "id": "00000000-0000-0000-0000-000000000005",
+                    "name": "APPREG-User-Access-LAAD-Service-b"
+                  }
+                ]
+              }
+            ]
+            """;
     private ListAppender<ILoggingEvent> logAppender;
     @Mock
     private ClientSecretCredential clientSecretCredential;
@@ -1274,19 +1300,16 @@ public class LiveTechServicesClientTest {
         when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
 
-        GetAllApplicationsResponse body = GetAllApplicationsResponse.builder()
-                .success(true)
-                .apps(List.of()) // empty is fine
-                .build();
-
-        when(responseSpec.toEntity(GetAllApplicationsResponse.class))
-                .thenReturn(ResponseEntity.ok(body));
+        when(responseSpec.toEntity(String.class))
+                .thenReturn(ResponseEntity.ok(APP_LIST_TS_RESPONSE_BODY));
 
         TechServicesApiResponse<GetAllApplicationsResponse> out = liveTechServicesClient.getAllApplications();
 
         // wrapper success flag
         assertThat(out.isSuccess()).isTrue();
-        assertThat(out.getData()).isEqualTo(body);
+        assertThat(out.getData()).isInstanceOf(GetAllApplicationsResponse.class);
+        List<GetAllApplicationsResponse.TechServicesApplication> apps = out.getData().getApps();
+        assertThat(apps).hasSize(2);
     }
 
     @Test
@@ -1300,13 +1323,10 @@ public class LiveTechServicesClientTest {
         when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
 
-        GetAllApplicationsResponse body = GetAllApplicationsResponse.builder()
-                .success(true)
-                .apps(List.of())
-                .build();
+        String json = "{\"success\":false,\"code\":\"INVALID_REQUEST\",\"message\":\"Bad input\"}";
 
-        when(responseSpec.toEntity(GetAllApplicationsResponse.class))
-                .thenReturn(ResponseEntity.status(HttpStatus.ACCEPTED).body(body)); // 202
+        when(responseSpec.toEntity(String.class))
+                .thenReturn(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(json)); // 202
 
         TechServicesApiResponse<GetAllApplicationsResponse> out = liveTechServicesClient.getAllApplications();
 
@@ -1327,14 +1347,14 @@ public class LiveTechServicesClientTest {
         when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
         when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
 
-        when(responseSpec.toEntity(GetAllApplicationsResponse.class))
+        when(responseSpec.toEntity(String.class))
                 .thenReturn(ResponseEntity.ok(null));
 
-        TechServicesApiResponse<GetAllApplicationsResponse> out = liveTechServicesClient.getAllApplications();
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> liveTechServicesClient.getAllApplications());
 
-        assertThat(out.isSuccess()).isFalse();
-        assertThat(out.getError()).isNotNull();
-        assertThat(out.getError().getCode()).isEqualTo("UNEXPECTED_RESPONSE");
+        assertThat(ex.getMessage()).contains("Unexpected error while getting applications from Tech Services.");
+        assertLogMessage(Level.ERROR, "Unexpected error while getting applications from Tech Services. Response body: Unknown");
     }
 
     @Test
@@ -1355,7 +1375,7 @@ public class LiveTechServicesClientTest {
                 HttpStatus.BAD_REQUEST, "Bad Request", headers, json.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8
         );
 
-        when(responseSpec.toEntity(GetAllApplicationsResponse.class)).thenThrow(ex);
+        when(responseSpec.toEntity(String.class)).thenThrow(ex);
 
         TechServicesApiResponse<GetAllApplicationsResponse> out = liveTechServicesClient.getAllApplications();
 
@@ -1383,7 +1403,7 @@ public class LiveTechServicesClientTest {
                 HttpStatus.SERVICE_UNAVAILABLE, "Service Unavailable", headers, json.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8
         );
 
-        when(responseSpec.toEntity(GetAllApplicationsResponse.class)).thenThrow(ex);
+        when(responseSpec.toEntity(String.class)).thenThrow(ex);
 
         TechServicesApiResponse<GetAllApplicationsResponse> out = liveTechServicesClient.getAllApplications();
 
