@@ -332,7 +332,7 @@ class ExternalUserPollingServiceTest {
         externalUserPollingService.updateSyncMetadata();
 
         verify(entraUserRepository).save(existingUser);
-        verify(entraUserRepository, times(2)).save(userToDisable); // Called twice: once in disableUserWithReason, once in main sync
+        verify(entraUserRepository).save(userToDisable);
         verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
@@ -457,7 +457,7 @@ class ExternalUserPollingServiceTest {
         externalUserPollingService.updateSyncMetadata();
 
         verify(entraUserRepository).save(user1);
-        verify(entraUserRepository, times(2)).save(user2);
+        verify(entraUserRepository).save(user2);
         verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
@@ -833,7 +833,7 @@ class ExternalUserPollingServiceTest {
 
         externalUserPollingService.updateSyncMetadata();
 
-        verify(entraUserRepository, times(2)).save(existingUser); // Called twice: once in enableUserWithReason, once in main sync
+        verify(entraUserRepository).save(existingUser);
         verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class)); // Enable audit is created
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
@@ -989,7 +989,7 @@ class ExternalUserPollingServiceTest {
 
         externalUserPollingService.updateSyncMetadata();
 
-        verify(entraUserRepository, times(2)).save(existingUser); // Called twice: once in enableUserWithReason, once in main sync
+        verify(entraUserRepository).save(existingUser);
         verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class)); // Enable audit is created
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
@@ -1125,7 +1125,7 @@ class ExternalUserPollingServiceTest {
 
         externalUserPollingService.updateSyncMetadata();
 
-        verify(entraUserRepository, times(2)).save(disabledUser); // Once for enable, once for main sync
+        verify(entraUserRepository).save(disabledUser);
         verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
@@ -1181,7 +1181,7 @@ class ExternalUserPollingServiceTest {
 
         externalUserPollingService.updateSyncMetadata();
 
-        verify(entraUserRepository, times(2)).save(enabledUser);
+        verify(entraUserRepository).save(enabledUser);
         verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
