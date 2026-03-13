@@ -247,15 +247,17 @@ public class ExternalUserPollingService {
     private void disableUserWithReason(TechServicesUser user, EntraUser entraUser) {
         try {
             entraUser.setEnabled(false);
+            entraUserRepository.save(entraUser);
             log.info("Disabled user: {} from API sync",
                     entraUser.getEntraOid());
             if (user.getCustomSecurityAttributes() != null
                     && user.getCustomSecurityAttributes().getDisabledReasonStatus() != null
                     && user.getCustomSecurityAttributes().getDisabledReasonStatus().getAdditionalProperties() != null
                     && !user.getCustomSecurityAttributes().getDisabledReasonStatus().getAdditionalProperties().isEmpty()) {
-                String disabledReasonFromApi = user.getCustomSecurityAttributes()
+                Object reasonValue = user.getCustomSecurityAttributes()
                         .getDisabledReasonStatus().getAdditionalProperties()
                         .values().iterator().next();
+                String disabledReasonFromApi = reasonValue != null ? reasonValue.toString() : null;
                 DisableUserReason disableReason = findOrCreateDisableReason(disabledReasonFromApi);
                 UserAccountStatusAudit audit = UserAccountStatusAudit.builder()
                         .entraUser(entraUser)
@@ -279,7 +281,7 @@ public class ExternalUserPollingService {
     private void enableUserWithReason(TechServicesUser user, EntraUser entraUser) {
         try {
             entraUser.setEnabled(true);
-
+            entraUserRepository.save(entraUser);
             UserAccountStatusAudit audit = UserAccountStatusAudit.builder()
                     .entraUser(entraUser)
                     .statusChange(UserAccountStatus.ENABLED)

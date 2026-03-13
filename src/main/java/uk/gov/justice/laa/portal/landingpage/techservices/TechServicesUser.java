@@ -126,7 +126,7 @@ public class TechServicesUser implements Serializable {
         @JsonAnyGetter
         @JsonAnySetter
         @Builder.Default
-        private Map<String, String> additionalProperties = new HashMap<>();
+        private Map<String, Object> additionalProperties = new HashMap<>();
     }
 }
 
