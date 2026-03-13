@@ -143,6 +143,7 @@ public class AppService {
         Map<String, App> localById = localApps.stream()
                 .filter(Objects::nonNull)
                 .collect(Collectors.toMap(App::getEntraAppId, a -> a, (a, b) -> a));
+        int maxOrdinal = localApps.stream().mapToInt(App::getOrdinal).max().orElse(0);
 
         Set<String> allIds = new HashSet<>();
         allIds.addAll(remoteById.keySet());
@@ -201,7 +202,7 @@ public class AppService {
                 totalProcessed++;
 
             } else if (remote != null) {
-                App newApp = createLocalFromRemote(remote);
+                App newApp = createLocalFromRemote(remote, ++maxOrdinal);
                 modifiedApps.add(newApp);
                 syncedApp = toDtoWithChangeType(newApp, AppDto.ChangeType.ADDED);
                 newApps++;
@@ -210,12 +211,18 @@ public class AppService {
 
             } else {
                 assert local != null;
-                local.setEnabled(false);
-                modifiedApps.add(local);
-                syncedApp = toDtoWithChangeType(local, AppDto.ChangeType.DELETED);
-                deletedApps++;
+                if (local.isEnabled()) {
+                    local.setEnabled(false);
+                    modifiedApps.add(local);
+                    syncedApp = toDtoWithChangeType(local, AppDto.ChangeType.DELETED);
+                    deletedApps++;
+                    log.info("DELETED: App missing from remote; disabled locally (id={}, name={})", id, safe(local.getName()));
+                } else {
+                    noChanges++;
+                    syncedApp = toDtoWithChangeType(local, AppDto.ChangeType.NONE);
+                    log.info("Already DELETED: No changes for app (id={}, name={})", id, safe(local.getName()));
+                }
                 totalProcessed++;
-                log.info("DELETED: App missing from remote; disabled locally (id={}, name={})", id, safe(local.getName()));
             }
 
             result.add(syncedApp);
@@ -281,7 +288,7 @@ public class AppService {
     /**
      * Creates a new local App from a remote application; new entries start disabled.
      */
-    private App createLocalFromRemote(GetAllApplicationsResponse.TechServicesApplication remote) {
+    private App createLocalFromRemote(GetAllApplicationsResponse.TechServicesApplication remote, int ordinal) {
         String sgId = remote.getName();
         String sgName = remote.getName();
         String url = StringUtils.isEmpty(remote.getUrl()) ? "#" : remote.getUrl();
@@ -294,12 +301,16 @@ public class AppService {
 
         return App.builder()
                 .entraAppId(remote.getId())
+                .title(remote.getName())
                 .name(remote.getName())
+                .description(remote.getName())
+                .oidGroupName(remote.getName())
                 .url(url)
                 .securityGroupOid(sgId)
                 .securityGroupName(sgName)
                 .appType(AppType.LAA)
                 .enabled(false)
+                .ordinal(ordinal)
                 .build();
     }
 
@@ -322,7 +333,8 @@ public class AppService {
             return AppDto.ChangeType.REVIEW;
         } else if (remote != null
                 && (!StringUtils.equals(remote.getName(), local.getName())
-                || !StringUtils.equals(remote.getUrl(), local.getUrl())
+                || (!(remote.getUrl() == null && "#".equals(local.getUrl()))
+                    && (!StringUtils.equals(remote.getUrl(), local.getUrl())))
                 || !areSecurityGroupsEqual(remote.getSecurityGroups(), local))) {
             return AppDto.ChangeType.UPDATED;
         }

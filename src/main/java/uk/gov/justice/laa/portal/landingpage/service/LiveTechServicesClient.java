@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.service;
 
 import com.azure.core.credential.TokenRequestContext;
 import com.azure.identity.ClientSecretCredential;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +30,6 @@ import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledRe
 import uk.gov.justice.laa.portal.landingpage.techservices.GetAllApplicationsResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUsersResponse;
-import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailRequest;
@@ -582,7 +582,7 @@ public class LiveTechServicesClient implements TechServicesClient {
     @Override
     public TechServicesApiResponse<GetAllApplicationsResponse> getAllApplications() {
         String accessToken = getAccessToken();
-        ResponseEntity<GetAllApplicationsResponse> response = null;
+        ResponseEntity<String> response = null;
 
         try {
             logger.info("Calling Tech Services GET applications endpoint for business unit: {}", laaBusinessUnit);
@@ -594,13 +594,16 @@ public class LiveTechServicesClient implements TechServicesClient {
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                     .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                     .retrieve()
-                    .toEntity(GetAllApplicationsResponse.class);
+                    .toEntity(String.class);
 
-            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+            if (response.getStatusCode().is2xxSuccessful()) {
                 logger.info("Successfully retrieved applications from Tech Services for business unit: {}", laaBusinessUnit);
-                return TechServicesApiResponse.success(response.getBody());
+                List<GetAllApplicationsResponse.TechServicesApplication> responseBody = objectMapper.readValue(response.getBody(),
+                        new TypeReference<List<GetAllApplicationsResponse.TechServicesApplication>>(){});
+                GetAllApplicationsResponse getAllApplicationsResponse = GetAllApplicationsResponse.builder().apps(responseBody).build();
+                return TechServicesApiResponse.success(getAllApplicationsResponse);
             } else {
-                logger.warn("Unexpected response from Tech Services GET applications endpoint: status={}, body={}",
+                logger.error("Unexpected response from Tech Services GET applications endpoint: status={}, body={}",
                         response.getStatusCode(), response.getBody());
                 return TechServicesApiResponse.error(TechServicesErrorResponse.builder()
                         .success(false)
