@@ -836,9 +836,9 @@
                                 </span>
                             </td>
                             <td class="govuk-table__cell">
-                                <span th:if="${user.userProfileStatus?.getValue() == 'PENDING' && (user.invitationStatus?.name() == 'AWAITING_VERIFICATION' || user.invitationStatus?.name() == 'VERIFICATION_FAILED') && user.enabled}"
+                                <span th:if="${user.userProfileStatus?.getValue() == 'PENDING' && (!user.hasOffice() || !user.isAllOffices) && (user.invitationStatus?.name() == 'AWAITING_VERIFICATION' || user.invitationStatus?.name() == 'VERIFICATION_FAILED') && user.enabled}"
                                     class="moj-badge moj-badge--blue">INCOMPLETE</span>
-                                <span th:if="${user.userProfileStatus?.getValue() == 'PENDING' && user.invitationStatus?.name() == 'VERIFICATION_SUCCESS' && user.enabled}"
+                                <span th:if="${!user.hasAppRoles && user.invitationStatus?.name() == 'VERIFICATION_SUCCESS' && user.enabled}"
                                       class="moj-badge moj-badge--purple">NO ROLES ASSIGNED</span>
                                 <span th:if="${user.userProfileStatus?.getValue() == 'COMPLETE' && user.invitationStatus?.name() == 'AWAITING_VERIFICATION' && user.enabled}"
                                       class="moj-badge moj-badge--grey">ACTIVATION PENDING</span>

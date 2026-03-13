@@ -11,4 +11,5 @@ import java.util.UUID;
 public record UserSearchResultsDto(UUID id, boolean activeProfile, UserType userType, UUID legacyUserId,
                                    UserProfileStatus userProfileStatus, boolean multiFirmUser, String firstName,
                                    String lastName, String fullName, String email, UserStatus userStatus,
-                                   String firmName, InvitationStatus invitationStatus, boolean enabled) implements Serializable {}
+                                   String firmName, InvitationStatus invitationStatus, boolean enabled,
+                                   boolean isAllOffices, boolean hasOffice, boolean hasAppRoles) implements Serializable {}

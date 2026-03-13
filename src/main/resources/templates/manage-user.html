@@ -87,7 +87,7 @@
                         <h1 class="govuk-heading-xl" th:text="${user.fullName}"></h1>
                         <span th:if="${user.userProfileStatus?.getValue() == 'PENDING' && (user.entraUser.invitationStatus?.name() == 'AWAITING_VERIFICATION' || user.entraUser.invitationStatus?.name() == 'VERIFICATION_FAILED') && user.entraUser.enabled}"
                               class="govuk-tag govuk-tag--blue govuk-!-font-weight-bold govuk-!-margin-top-1 ">INCOMPLETE</span>
-                        <span th:if="${user.userProfileStatus?.getValue() == 'PENDING' && user.entraUser.invitationStatus?.name() == 'VERIFICATION_SUCCESS' && user.entraUser.enabled}"
+                        <span th:if="${user.activeProfile && user.entraUser.invitationStatus?.name() == 'VERIFICATION_SUCCESS' && user.entraUser.enabled}"
                               class="govuk-tag govuk-tag--purple govuk-!-font-weight-bold govuk-!-margin-top-1" style="min-width: 200px">NO ROLES ASSIGNED</span>
                         <span th:if="${user.userProfileStatus?.getValue() == 'COMPLETE' && user.entraUser.invitationStatus?.name() == 'AWAITING_VERIFICATION' && user.entraUser.enabled}"
                               class="govuk-tag govuk-tag--grey govuk-!-font-weight-bold govuk-!-margin-top-1" style="min-width: 200px">ACTIVATION PENDING</span>
