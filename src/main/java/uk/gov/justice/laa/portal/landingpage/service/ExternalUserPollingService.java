@@ -125,7 +125,7 @@ public class ExternalUserPollingService {
                         deleteUser(entraUser);
                         updatedCount++;
                         log.info("Deleted user: {}  - marked as deleted in Entra",
-                                entraUser.getEmail());
+                                entraUser.getEntraOid());
                         continue;
                     }
 
@@ -136,7 +136,7 @@ public class ExternalUserPollingService {
                     if (user.isAccountEnabled() && !isEnabledInSilas) {
                         // user account enabled in entra, re-enabling in silas
                         enableUserWithReason(user, entraUser);
-                    } else if (shouldDisableUser(user, isEnabledInSilas)) {
+                    } else if (!user.isAccountEnabled() && isEnabledInSilas) {
                         //user account has disabled reason in entra, disabling in silas
                         disableUserWithReason(user, entraUser);
                     }
@@ -163,7 +163,7 @@ public class ExternalUserPollingService {
 
                     entraUserRepository.save(entraUser);
                     updatedCount++;
-                    log.info("Updated user: {} ({})", entraUser.getEmail(), user.getId());
+                    log.info("Updated user: {}", entraUser.getEntraOid());
                 }
             } catch (Exception e) {
                 log.error("Error synchronizing user {}: {}", user.getId(), e.getMessage(), e);
@@ -201,8 +201,8 @@ public class ExternalUserPollingService {
             if (!auditRecords.isEmpty()) {
                 userAccountStatusAuditRepository.deleteAll(auditRecords);
                 userAccountStatusAuditRepository.flush();
-                log.info("Deleted {} audit records for user: {} ({})",
-                        auditRecords.size(), entraUser.getEmail(), entraUser.getEntraOid());
+                log.info("Deleted {} audit records for user: {}",
+                        auditRecords.size(), entraUser.getEntraOid());
             }
 
             List<UserProfile> userProfiles = entraUser.getUserProfiles() != null 
@@ -235,50 +235,46 @@ public class ExternalUserPollingService {
             entraUserRepository.delete(entraUser);
             entraUserRepository.flush();
             
-            log.info("Successfully deleted user and all related entities: {} ({})",
-                    entraUser.getEmail(), entraUser.getEntraOid());
+            log.info("Successfully deleted user and all related entities: {}", entraUser.getEntraOid());
                     
         } catch (Exception e) {
-            String email = entraUser.getEmail() != null ? entraUser.getEmail() : "unknown";
             String oid = entraUser.getEntraOid() != null ? entraUser.getEntraOid() : "unknown";
-            log.error("Error deleting user {} ({}): {}", email, oid, e.getMessage(), e);
-            throw new RuntimeException("Failed to delete user: " + email, e);
+            log.error("Error deleting user {}: {}", oid, e.getMessage(), e);
+            throw new RuntimeException("Failed to delete user: " + oid, e);
         }
-    }
-
-    private boolean shouldDisableUser(TechServicesUser user, boolean isEnabledInSilas) {
-        // Only disable if user is currently enabled in silas and has a disabled reason from Entra
-        return isEnabledInSilas && user.getCustomSecurityAttributes() != null
-                && user.getCustomSecurityAttributes().getGuestUserStatus() != null
-                && user.getCustomSecurityAttributes().getGuestUserStatus().getDisabledReason() != null;
     }
 
     private void disableUserWithReason(TechServicesUser user, EntraUser entraUser) {
         try {
-            String disabledReasonFromApi = user.getCustomSecurityAttributes()
-                    .getGuestUserStatus().getDisabledReason();
-
-            DisableUserReason disableReason = findOrCreateDisableReason(disabledReasonFromApi);
-
             entraUser.setEnabled(false);
             entraUserRepository.save(entraUser);
+            log.info("Disabled user: {} from API sync",
+                    entraUser.getEntraOid());
+            if (user.getCustomSecurityAttributes() != null
+                    && user.getCustomSecurityAttributes().getDisabledReasonStatus() != null
+                    && user.getCustomSecurityAttributes().getDisabledReasonStatus().getAdditionalProperties() != null
+                    && !user.getCustomSecurityAttributes().getDisabledReasonStatus().getAdditionalProperties().isEmpty()) {
+                Object reasonValue = user.getCustomSecurityAttributes()
+                        .getDisabledReasonStatus().getAdditionalProperties()
+                        .values().iterator().next();
+                String disabledReasonFromApi = reasonValue != null ? reasonValue.toString() : null;
+                DisableUserReason disableReason = findOrCreateDisableReason(disabledReasonFromApi);
+                UserAccountStatusAudit audit = UserAccountStatusAudit.builder()
+                        .entraUser(entraUser)
+                        .disableUserReason(disableReason)
+                        .statusChange(UserAccountStatus.DISABLED)
+                        .statusChangedBy("External user sync") // Automated disable from API sync
+                        .statusChangedDate(LocalDateTime.now())
+                        .build();
 
-            UserAccountStatusAudit audit = UserAccountStatusAudit.builder()
-                    .entraUser(entraUser)
-                    .disableUserReason(disableReason)
-                    .statusChange(UserAccountStatus.DISABLED)
-                    .statusChangedBy("External user sync") // Automated disable from API sync
-                    .statusChangedDate(LocalDateTime.now())
-                    .build();
-            
-            userAccountStatusAuditRepository.save(audit);
-            
-            log.info("Disabled user: {} ({}) - Reason: {} from API sync", 
-                    entraUser.getEmail(), entraUser.getEntraOid(), disableReason.getName());
+                userAccountStatusAuditRepository.save(audit);
+                log.info("Disabled user: {} - Reason: {} from API sync",
+                        entraUser.getEntraOid(), disableReason.getName());
+            }
                     
         } catch (Exception e) {
-            log.error("Error disabling user {} ({}): {}", 
-                    entraUser.getEmail(), entraUser.getEntraOid(), e.getMessage(), e);
+            log.error("Error disabling user {} : {}",
+                    entraUser.getEntraOid(), e.getMessage(), e);
         }
     }
 
@@ -286,7 +282,6 @@ public class ExternalUserPollingService {
         try {
             entraUser.setEnabled(true);
             entraUserRepository.save(entraUser);
-
             UserAccountStatusAudit audit = UserAccountStatusAudit.builder()
                     .entraUser(entraUser)
                     .statusChange(UserAccountStatus.ENABLED)
@@ -296,12 +291,10 @@ public class ExternalUserPollingService {
 
             userAccountStatusAuditRepository.save(audit);
 
-            log.info("Enabled user: {} ({}) from external user API sync", 
-                    entraUser.getEmail(), entraUser.getEntraOid());
+            log.info("Enabled user: {} from external user API sync", entraUser.getEntraOid());
 
         } catch (Exception e) {
-            log.error("Error enabling user {} ({}): {}", 
-                    entraUser.getEmail(), entraUser.getEntraOid(), e.getMessage(), e);
+            log.error("Error enabling user {}: {}", entraUser.getEntraOid(), e.getMessage(), e);
         }
     }
 
