@@ -110,7 +110,6 @@ public class UserService {
     private final FirmRepository firmRepository;
     private final EventService eventService;
     private final NotificationService notificationService;
-    private final DisableUserReasonRepository disableUserReasonRepository;
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
@@ -122,7 +121,7 @@ public class UserService {
             UserAccountStatusAuditRepository userAccountStatusAuditRepository,
             RoleChangeNotificationService roleChangeNotificationService, FirmService firmService,
             FirmRepository firmRepository, EventService eventService,
-            NotificationService notificationService, DisableUserReasonRepository disableUserReasonRepository) {
+            NotificationService notificationService) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -138,7 +137,6 @@ public class UserService {
         this.firmRepository = firmRepository;
         this.eventService = eventService;
         this.notificationService = notificationService;
-        this.disableUserReasonRepository = disableUserReasonRepository;
     }
 
     public boolean hasUserFirmAlreadyAssigned(String email, UUID firmId) {
