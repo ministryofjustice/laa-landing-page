@@ -108,6 +108,9 @@ public class TechServicesUser implements Serializable {
 
         @JsonProperty("ActivationCode")
         private String activationCode;
+
+        @JsonProperty("Invitation")
+        private String invitation;
     }
 
     @Data
