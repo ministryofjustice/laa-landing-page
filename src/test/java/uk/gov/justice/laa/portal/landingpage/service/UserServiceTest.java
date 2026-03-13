@@ -344,6 +344,8 @@ class UserServiceTest {
                 .email("user@example.com")
                 .build();
 
+        EntraUserDto entraUserDto = new MapperConfig().modelMapper().map(entraUser, EntraUserDto.class);
+
         AppRole role1 = AppRole.builder().name("Role1").build();
 
         UserProfile profile = UserProfile.builder()
@@ -363,6 +365,7 @@ class UserServiceTest {
         var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID());
 
         // Assert
+        verify(techServicesClient).disableUser(entraUserDto, "Role Change / No Longer Required");
         verify(techServicesClient).deleteRoleAssignment(entraId);
         verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
@@ -416,6 +419,27 @@ class UserServiceTest {
                 () -> userService.deleteExternalUser(profileId.toString(), "reason", UUID.randomUUID()));
         assertThat(ex.getMessage()).contains("Deletion is only permitted for external users");
         verify(techServicesClient, never()).deleteRoleAssignment(any());
+    }
+
+    @Test
+    void deleteEntraUserWithoutProfile_successPath_removesUser() {
+        // Arrange
+        UUID entraId = UUID.randomUUID();
+        EntraUser entraUser = EntraUser.builder()
+                .id(entraId)
+                .email("user@example.com")
+                .build();
+
+        when(mockEntraUserRepository.findById(entraId)).thenReturn(Optional.of(entraUser));
+        when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(Collections.emptyList());
+
+        // Act
+        var result = userService.deleteEntraUserWithoutProfile(entraId.toString(), "duplicate user", UUID.randomUUID());
+
+        // Assert
+        verify(techServicesClient).disableUser(any(EntraUserDto.class), eq("Role Change / No Longer Required"));
+        verify(techServicesClient).deleteRoleAssignment(entraId);
+        assertThat(result).isNotNull();
     }
 
     @Test
