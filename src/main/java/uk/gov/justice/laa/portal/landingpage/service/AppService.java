@@ -247,8 +247,10 @@ public class AppService {
     private void applyRemoteFieldsToLocal(GetAllApplicationsResponse.TechServicesApplication remote, App local) {
         local.setName(remote.getName());
         if (StringUtils.isEmpty(remote.getUrl())) {
+            if (!"#".equals(local.getUrl())) {
+                local.setEnabled(false);
+            }
             local.setUrl("#");
-            local.setEnabled(false);
         } else {
             local.setUrl(remote.getUrl());
         }
