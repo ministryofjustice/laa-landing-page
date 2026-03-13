@@ -315,10 +315,6 @@ class ExternalUserPollingServiceTest {
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
                                 .disabledReason("NoGroupsDisable")
                                 .build())
-                        .disabledReasonStatus(TechServicesUser.DisabledReasonStatus.builder()
-                                .odataType("#microsoft.graph.disabledReason")
-                                .additionalProperties(Map.of("NoGroupsDisable", "NoGroupsDisable"))
-                                .build())
                         .build())
                 .build();
         
@@ -932,10 +928,6 @@ class ExternalUserPollingServiceTest {
                 .accountEnabled(true)
                 .isMailOnly(false)
                 .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
-                        .disabledReasonStatus(TechServicesUser.DisabledReasonStatus.builder()
-                                .odataType("#microsoft.graph.customSecurityAttributeValue")
-                                .additionalProperties(Map.of("NoGroupsDisable", "NoGroupsDisable"))
-                                .build())
                         .build())
                 .build();
         
@@ -1164,10 +1156,6 @@ class ExternalUserPollingServiceTest {
                         .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
                                 .disabledReason("NoGroupsDisable")
-                                .build())
-                        .disabledReasonStatus(TechServicesUser.DisabledReasonStatus.builder()
-                                .odataType("#microsoft.graph.disabledReason")
-                                .additionalProperties(Map.of("NoGroupsDisable", "NoGroupsDisable"))
                                 .build())
                         .build())
                 .build();

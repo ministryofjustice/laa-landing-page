@@ -251,13 +251,10 @@ public class ExternalUserPollingService {
             log.info("Disabled user: {} from API sync",
                     entraUser.getEntraOid());
             if (user.getCustomSecurityAttributes() != null
-                    && user.getCustomSecurityAttributes().getDisabledReasonStatus() != null
-                    && user.getCustomSecurityAttributes().getDisabledReasonStatus().getAdditionalProperties() != null
-                    && !user.getCustomSecurityAttributes().getDisabledReasonStatus().getAdditionalProperties().isEmpty()) {
-                Object reasonValue = user.getCustomSecurityAttributes()
-                        .getDisabledReasonStatus().getAdditionalProperties()
-                        .values().iterator().next();
-                String disabledReasonFromApi = reasonValue != null ? reasonValue.toString() : null;
+                    && user.getCustomSecurityAttributes().getGuestUserStatus() != null
+                    && user.getCustomSecurityAttributes().getGuestUserStatus().getDisabledReason() != null) {
+                String disabledReasonFromApi = user.getCustomSecurityAttributes()
+                        .getGuestUserStatus().getDisabledReason();
                 DisableUserReason disableReason = findOrCreateDisableReason(disabledReasonFromApi);
                 UserAccountStatusAudit audit = UserAccountStatusAudit.builder()
                         .entraUser(entraUser)
