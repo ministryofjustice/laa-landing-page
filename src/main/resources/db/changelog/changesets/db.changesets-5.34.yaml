@@ -1,0 +1,51 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1742018680-1
+      author: sankavi.mohanraj
+      comment: Update app_role unique constraint to include user_type_restriction
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "ALTER TABLE app_role DROP CONSTRAINT IF EXISTS app_role_app_id_ccms_code_key"
+        - sql:
+            dbms: postgresql
+            sql: |
+              CREATE UNIQUE INDEX IF NOT EXISTS app_role_app_id_ccms_code_user_type_idx 
+              ON app_role (app_id, ccms_code, user_type_restriction) 
+              WHERE ccms_code IS NOT NULL;
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: |
+              DROP INDEX IF EXISTS app_role_app_id_ccms_code_user_type_idx;
+        - addUniqueConstraint:
+            columnNames: app_id, ccms_code
+            constraintName: app_role_app_id_ccms_code_key
+            tableName: app_role
+
+  - changeSet:
+      id: 1742018680-2
+      author: sankavi.mohanraj
+      comment: Update app_role name constraint to allow non-unique names by user type only when legacy_sync is true
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "ALTER TABLE app_role DROP CONSTRAINT IF EXISTS app_role_name_key"
+        - sql:
+            dbms: postgresql
+            sql: "DROP INDEX IF EXISTS app_role_name_user_type_idx"
+        - sql:
+            dbms: postgresql
+            sql: |
+              CREATE UNIQUE INDEX IF NOT EXISTS app_role_name_legacy_sync_idx 
+              ON app_role (name, user_type_restriction) 
+              WHERE legacy_sync = false;
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: |
+              DROP INDEX IF EXISTS app_role_name_legacy_sync_idx;
+        - addUniqueConstraint:
+            columnNames: name
+            constraintName: app_role_name_key
+            tableName: app_role

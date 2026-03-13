@@ -226,13 +226,13 @@ public class AdminPageTest extends BaseFrontEndTest {
                 "Expected Legal Aid Services table to contain at least 1 row"
         );
 
-        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Sync Apps")).click();
+        page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Sync Apps")).click();
 
         adminPage = loginAndGetAdminPage(TestUser.SILAS_ADMINISTRATION);
         adminPage.assertLegalAidServicesTableColumns()
                 .assertSyncRolesLegalAidServicesButtonVisible();
 
-        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Sync Apps")).click();
+        page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Sync Apps")).click();
 
         assertSuccessBanner(page, "App Syncing successful");
 

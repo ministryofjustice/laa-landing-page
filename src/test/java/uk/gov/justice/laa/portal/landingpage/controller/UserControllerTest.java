@@ -86,6 +86,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
@@ -95,6 +96,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserTypeReasonDisable;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
@@ -118,6 +120,7 @@ import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
@@ -155,6 +158,8 @@ class UserControllerTest {
     private AppRoleService appRoleService;
     @Mock
     private UserAccountStatusService disableUserService;
+    @Mock
+    private NotificationService notificationService;
     private Model model;
     private FirmSearchForm firmSearchForm;
 
@@ -162,7 +167,7 @@ class UserControllerTest {
     void setUp() {
         userController = new UserController(loginService, userService, officeService, eventService, firmService,
                 new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService,
-                appRoleService, disableUserService);
+                appRoleService, disableUserService, notificationService);
         userController.disableUserFeatureEnabled = true;
         model = new ExtendedModelMap();
         firmSearchForm = FirmSearchForm.builder().build();
@@ -592,6 +597,53 @@ class UserControllerTest {
         assertThat(model.getAttribute("user")).isEqualTo(mockUser);
         assertThat(model.getAttribute("hasFilters")).isEqualTo(false);
         assertThat(model.getAttribute("canViewAllProfiles")).isEqualTo(false);
+        assertThat(model.getAttribute("showEditButton")).isNull();
+        verify(userService).getUserProfileById(userId);
+    }
+
+    @Test
+    void manageUser_shouldSeeEditButtonExternalUserAdmin() {
+        // Arrange
+        // Given - Editor is an Internal user
+        EntraUser editorEntraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        UserProfile editorUserProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .entraUser(editorEntraUser)
+                .appRoles(Set.of())
+                .offices(Set.of())
+                .userType(UserType.EXTERNAL)
+                .build();
+        String userId = "user42";
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setId(userId);
+        entraUser.setFullName("External User Admin");
+
+        AppRoleDto appRoleDto = AppRoleDto.builder().app(AppDto.builder().enabled(true).build()).build();
+        UserProfileDto mockUser = UserProfileDto.builder()
+                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .entraUser(entraUser)
+                .appRoles(List.of(appRoleDto))
+                .offices(List.of(OfficeDto.builder()
+                        .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440001"))
+                        .code("Test Office")
+                        .address(OfficeDto.AddressDto.builder().addressLine1("Test Address").build())
+                        .build()))
+                .userType(UserType.EXTERNAL)
+                .build();
+
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
+        when(accessControlService.userHasAuthzRole(authentication, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())).thenReturn(true);
+        userController.editUserDetailFeatureEnabled = true;
+        // Act
+        String view = userController.manageUser(userId, false, model, session, authentication);
+
+        // Assert
+        assertThat(view).isEqualTo("manage-user");
+        assertThat(model.getAttribute("user")).isEqualTo(mockUser);
+        assertThat(model.getAttribute("hasFilters")).isEqualTo(false);
+        assertThat(model.getAttribute("canViewAllProfiles")).isEqualTo(false);
+        assertThat(model.getAttribute("showEditButton")).isEqualTo(true);
         verify(userService).getUserProfileById(userId);
     }
 
@@ -5969,7 +6021,7 @@ class UserControllerTest {
         String profileId = UUID.randomUUID().toString();
 
         when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(returnedUser));
-        when(disableUserService.getDisableUserReasons(anyBoolean())).thenReturn(List.of(reason));
+        when(disableUserService.getDisableUserReasons(any())).thenReturn(List.of(reason));
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
 
@@ -6014,7 +6066,7 @@ class UserControllerTest {
         when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(returnedUser));
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
-        when(disableUserService.getDisableUserReasons(false)).thenReturn(List.of(reason));
+        when(disableUserService.getDisableUserReasons(UserTypeReasonDisable.DEFAULT)).thenReturn(List.of(reason));
 
         String view = userController.disableUserReasonsGet(userId.toString(), form, model, session, authentication, referer, profileId);
 
@@ -6051,7 +6103,7 @@ class UserControllerTest {
         form.setReasonId(reason.getId().toString());
 
         when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(returnedUser));
-        when(disableUserService.getDisableUserReasons(true)).thenReturn(List.of(reason));
+        when(disableUserService.getDisableUserReasons(UserTypeReasonDisable.IS_USER_DISABLE)).thenReturn(List.of(reason));
 
         Set<AppRole> editorRoles = Set.of(AppRole.builder()
             .name(FIRM_USER_MANAGER.getDescription())
@@ -6099,7 +6151,7 @@ class UserControllerTest {
         String profileId = UUID.randomUUID().toString();
 
         when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(returnedUser));
-        when(disableUserService.getDisableUserReasons(anyBoolean())).thenReturn(List.of(reason));
+        when(disableUserService.getDisableUserReasons(any())).thenReturn(List.of(reason));
         Set<AppRole> editorRoles = Set.of(AppRole.builder()
                 .name(FIRM_USER_MANAGER.getDescription())
                 .build());

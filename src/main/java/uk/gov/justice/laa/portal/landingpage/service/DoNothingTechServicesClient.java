@@ -136,7 +136,6 @@ public class DoNothingTechServicesClient implements TechServicesClient {
                 .map(this::mapAppToTechServicesApp)
                 .toList();
         return TechServicesApiResponse.success(GetAllApplicationsResponse.builder()
-                .success(true)
                 .apps(existingApps)
                 .build());
     }

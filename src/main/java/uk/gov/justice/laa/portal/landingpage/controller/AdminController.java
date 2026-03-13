@@ -131,7 +131,7 @@ public class AdminController {
         model.addAttribute("roles", roles);
         model.addAttribute("appFilter", appFilter);
         model.addAttribute("canTriggerAppSync", Boolean.parseBoolean(syncAppsFromEntra)
-                && accessControlService.authenticatedUserHasPermission(Permission.EDIT_LAA_APP_METADATA));
+                && accessControlService.authenticatedUserHasPermission(Permission.TRIGGER_LAA_APP_SYNC));
         session.setAttribute("appFilter", appFilter);
 
         // Get distinct app names for filter dropdown
@@ -144,7 +144,7 @@ public class AdminController {
         return "silas-administration/administration";
     }
 
-    @PostMapping("/silas-administration/sync/apps")
+    @GetMapping("/silas-administration/sync/apps")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).TRIGGER_LAA_APP_SYNC)")
     public String syncLaaApps(Authentication authentication, Model model, HttpSession session) {
 

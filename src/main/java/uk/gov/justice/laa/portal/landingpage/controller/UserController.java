@@ -65,6 +65,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
@@ -72,6 +73,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserTypeReasonDisable;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
@@ -100,6 +102,7 @@ import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
@@ -130,6 +133,7 @@ public class UserController {
     private final EmailValidationService emailValidationService;
     private final AppRoleService appRoleService;
     private final UserAccountStatusService userAccountStatusService;
+    private final NotificationService notificationService;
 
 
     @Value("${feature.flag.disable.user}")
@@ -374,6 +378,9 @@ public class UserController {
         final boolean canDisableUser = disableUserFeatureEnabled
                 && accessControlService.canDisableUser(user.getEntraUser().getId());
         model.addAttribute("canDisableUser", canDisableUser);
+        final boolean canEnableUser = disableUserFeatureEnabled
+                && accessControlService.canEnableUser(user.getEntraUser().getId());
+        model.addAttribute("canEnableUser", canEnableUser);
         final boolean userIsEnabled = user.getEntraUser().isEnabled();
         model.addAttribute("userIsEnabled", userIsEnabled);
         boolean showResendVerificationLink = accessControlService.canSendVerificationEmail(id);
@@ -419,11 +426,10 @@ public class UserController {
         Map<String, Object> filters = (Map<String, Object>) session.getAttribute("userListFilters");
         boolean hasFilters = hasActiveFilters(filters);
         model.addAttribute("hasFilters", hasFilters);
-
-        model.addAttribute(
-                "isMailOnly",
-                true
-        );
+        boolean loggedUserIsExternalAdmin = accessControlService.userHasAuthzRole(authentication, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName());
+        if (editUserDetailFeatureEnabled && externalUser && loggedUserIsExternalAdmin) {
+            model.addAttribute("showEditButton", true);
+        }
 
         return "manage-user";
     }
@@ -496,8 +502,10 @@ public class UserController {
         }
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
-        boolean isProvideAdmin = RolesUtils.isProvideAdmin(currentUserProfile.getAppRoles());
-        List<DisableUserReasonViewModel> reasons = new ArrayList<>(userAccountStatusService.getDisableUserReasons(isProvideAdmin).stream()
+        UserTypeReasonDisable userTypeReasonDisable = RolesUtils.isProvideAdmin(currentUserProfile.getAppRoles())
+                ? UserTypeReasonDisable.IS_USER_DISABLE
+                : UserTypeReasonDisable.DEFAULT;
+        List<DisableUserReasonViewModel> reasons = new ArrayList<>(userAccountStatusService.getDisableUserReasons(userTypeReasonDisable).stream()
                 .map(reason -> mapper.map(reason, DisableUserReasonViewModel.class))
                 .toList());
         model.addAttribute("user", user);
@@ -558,7 +566,7 @@ public class UserController {
     }
 
     @GetMapping("/users/manage/{id}/enable")
-    @PreAuthorize("@accessControlService.canDisableUser(#id)")
+    @PreAuthorize("@accessControlService.canEnableUser(#id)")
     public String enableUserGet(@PathVariable String id,
                                  Model model,
                                  String referer,
@@ -573,7 +581,7 @@ public class UserController {
     }
 
     @PostMapping("/users/manage/{id}/enable")
-    @PreAuthorize("@accessControlService.canDisableUser(#id)")
+    @PreAuthorize("@accessControlService.canEnableUser(#id)")
     public String enableUserPost(@PathVariable String id,
                                          Authentication authentication,
                                          Model model,
@@ -1417,13 +1425,13 @@ public class UserController {
                     user.getEntraUser(), updateResult.get("diff"),
                     "role");
             eventService.logEvent(updateUserAuditEvent);
+            notifyExternalUserRoleChange(user, updateResult.get("diff"), "Service roles");
         }
         // Clear the session
         session.removeAttribute("editUserAllSelectedRoles");
         session.removeAttribute("selectedApps");
         return "redirect:/admin/users/edit/" + id + "/confirmation";
     }
-
     /**
      * Get user offices for editing
      *
@@ -1432,6 +1440,7 @@ public class UserController {
      * @return View name for editing user offices
      * @throws IllegalArgumentException If the user ID is invalid or not found
      */
+
     @GetMapping("/users/edit/{id}/offices")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
     public String editUserOffices(@PathVariable String id, Model model, Authentication authentication, HttpSession session) {
@@ -1609,6 +1618,7 @@ public class UserController {
                 userProfileDto.getEntraUser(),
                 changed, "office");
         eventService.logEvent(updateUserAuditEvent);
+        notifyExternalUserRoleChange(userProfileDto, changed, "Offices");
         // Clear the session model
         session.removeAttribute("editUserOfficesModel");
         session.removeAttribute("officesForm");
@@ -2336,6 +2346,8 @@ public class UserController {
                     "access_grant_complete");
             eventService.logEvent(updateUserAuditEvent);
 
+            notifyExternalUserRoleChange(userProfileDto, "You have been granted access to services and offices", "Access granted");
+
         } catch (Exception e) {
             log.error("Error completing grant access for user: " + id, e);
             // Could add error handling here if needed
@@ -2939,6 +2951,22 @@ public class UserController {
             log.error("Error reassigning firm for user {}: {}", id, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("success", false, "message", "An error occurred while reassigning the user"));
+        }
+    }
+
+    private void notifyExternalUserRoleChange(UserProfileDto user, String changeDetails, String changeType) {
+        if (user.getUserType() == UserType.EXTERNAL
+                && user.getEntraUser() != null
+                && changeDetails != null
+                && !changeDetails.isEmpty()) {
+
+            notificationService.notifyUserAccessChange(
+                    user.getId(),
+                    user.getEntraUser().getFirstName(),
+                    user.getEntraUser().getEmail(),
+                    changeType,
+                    changeDetails
+            );
         }
     }
 }
