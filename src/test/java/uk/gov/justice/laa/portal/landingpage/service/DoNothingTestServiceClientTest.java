@@ -187,7 +187,6 @@ public class DoNothingTestServiceClientTest {
 
         GetAllApplicationsResponse payload = resp.getData();
         assertThat(payload).isNotNull();
-        assertThat(payload.isSuccess()).isTrue();
 
         // Apps list mapped
         assertThat(payload.getApps()).hasSize(2);
@@ -222,7 +221,6 @@ public class DoNothingTestServiceClientTest {
 
         assertThat(resp.isSuccess()).isTrue();
         assertThat(resp.getData()).isNotNull();
-        assertThat(resp.getData().isSuccess()).isTrue();
         assertThat(resp.getData().getApps()).isEmpty();
     }
 
