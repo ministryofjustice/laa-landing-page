@@ -15,13 +15,6 @@ import java.util.List;
 @AllArgsConstructor
 public class GetAllApplicationsResponse implements Serializable {
 
-    @JsonProperty("success")
-    private boolean success;
-
-    @JsonProperty("message")
-    private String message;
-
-    @JsonProperty("users")
     private List<TechServicesApplication> apps;
 
     @Data
