@@ -916,11 +916,11 @@
                                             width="22" height="22" alt="">
                                     </button>
                                 </th>
-                                <th scope="col" class="govuk-table__header"
+                                <th scope="col" class="govuk-table__header govuk-!-width-one-quarter"
                                     th:aria-sort="${sort == 'accountStatus' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="accountStatus"
                                         th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'accountStatus' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}">
-                                        Status
+                                        SILAS Status
                                         <img th:if="${sort == 'accountStatus' and direction == 'asc'}"
                                             th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
                                             alt="Sorted ascending">
@@ -931,7 +931,7 @@
                                             width="22" height="22" alt="">
                                     </button>
                                 </th>
-                                <th scope="col" class="govuk-table__header"
+                                <th scope="col" class="govuk-table__header govuk-!-width-one-quarter"
                                     th:aria-sort="${sort == 'isMultiFirmUser' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="isMultiFirmUser"
                                         th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'isMultiFirmUser' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}">

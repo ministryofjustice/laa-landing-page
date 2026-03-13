@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 
 @Data
@@ -29,4 +30,5 @@ public class EntraUserDto implements Serializable {
     private boolean enabled = true;
     private String disabledBy;
     private boolean mailOnly;
+    private InvitationStatus invitationStatus;
 }

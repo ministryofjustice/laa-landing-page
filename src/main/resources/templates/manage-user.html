@@ -85,10 +85,16 @@
                 <div class="moj-page-header-actions">
                     <div class="moj-page-header-actions__title" style="display: flex; align-items: center; gap: 1rem;">
                         <h1 class="govuk-heading-xl" th:text="${user.fullName}"></h1>
-                        <strong th:if="${!isAccessGranted}"
-                            class="govuk-tag govuk-tag--blue govuk-!-font-weight-bold govuk-!-margin-top-1">INCOMPLETE</strong>
-                        <strong th:if="${isAccessGranted}"
-                            class="govuk-tag govuk-tag--green govuk-!-font-weight-bold govuk-!-margin-top-1">COMPLETE</strong>
+                        <span th:if="${user.userProfileStatus?.getValue() == 'PENDING' && (user.entraUser.invitationStatus?.name() == 'AWAITING_VERIFICATION' || user.entraUser.invitationStatus?.name() == 'VERIFICATION_FAILED') && user.entraUser.enabled}"
+                              class="govuk-tag govuk-tag--blue govuk-!-font-weight-bold govuk-!-margin-top-1 ">INCOMPLETE</span>
+                        <span th:if="${user.userProfileStatus?.getValue() == 'PENDING' && user.entraUser.invitationStatus?.name() == 'VERIFICATION_SUCCESS' && user.entraUser.enabled}"
+                              class="govuk-tag govuk-tag--purple govuk-!-font-weight-bold govuk-!-margin-top-1" style="min-width: 200px">NO ROLES ASSIGNED</span>
+                        <span th:if="${user.userProfileStatus?.getValue() == 'COMPLETE' && user.entraUser.invitationStatus?.name() == 'AWAITING_VERIFICATION' && user.entraUser.enabled}"
+                              class="govuk-tag govuk-tag--grey govuk-!-font-weight-bold govuk-!-margin-top-1" style="min-width: 200px">ACTIVATION PENDING</span>
+                        <span th:if="${!user.entraUser.enabled}"
+                              class="govuk-tag govuk-tag--red govuk-!-font-weight-bold govuk-!-margin-top-1">DISABLED</span>
+                        <span th:if="${user.userProfileStatus?.getValue() == 'COMPLETE' && user.entraUser.invitationStatus?.name() == 'VERIFICATION_SUCCESS' && user.entraUser.enabled}"
+                              class="govuk-tag govuk-tag--green govuk-!-font-weight-bold govuk-!-margin-top-1">COMPLETE</span>
                     </div>
                     <form class="form" th:if="${!isAccessGranted and canEditUser}"
                         th:action="@{/admin/users/manage/{id}/grant-access(id=${user.id})}" method="post">

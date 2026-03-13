@@ -331,7 +331,7 @@ public class UserController {
                         .collect(Collectors.toList())
                 : Collections.emptyList();
         List<OfficeDto> userOffices = user.getOffices() != null ? user.getOffices() : Collections.emptyList();
-        final boolean isAccessGranted = userService.isAccessGranted(user.getId().toString());
+        final boolean isAccessGranted = true;
         final boolean canEditUser = accessControlService.canEditUser(user.getId().toString());
         model.addAttribute("user", user);
         model.addAttribute("userAppRoles", userAppRoles);

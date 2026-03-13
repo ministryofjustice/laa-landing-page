@@ -797,12 +797,12 @@
                                         width="22" height="22" alt="">
                                 </button>
                             </th>
-                            <th scope="col" class="govuk-table__header"
+                            <th scope="col" class="govuk-table__header govuk-!-width-one-quarter"
                                 th:aria-sort="${sort == 'userStatus' ? direction : 'none'}"
                                 style="width: 15%; min-width: 90px;">
                                 <button type="button" class="sort-button" data-sort="userStatus"
                                     th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'userStatus' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-show-multi-firm-users=${showMultiFirmUsers}">
-                                    Status
+                                    SILAS Status
                                     <img th:if="${sort == 'userStatus' and direction == 'asc'}"
                                         th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
                                     <img th:if="${sort == 'userStatus' and direction == 'desc'}"
@@ -836,9 +836,15 @@
                                 </span>
                             </td>
                             <td class="govuk-table__cell">
-                                <span th:if="${user.userProfileStatus?.getValue() == 'PENDING' && user.invitationStatus?.name() == }"
+                                <span th:if="${user.userProfileStatus?.getValue() == 'PENDING' && (user.invitationStatus?.name() == 'AWAITING_VERIFICATION' || user.invitationStatus?.name() == 'VERIFICATION_FAILED') && user.enabled}"
                                     class="moj-badge moj-badge--blue">INCOMPLETE</span>
-                                <span th:if="${user.userProfileStatus?.getValue() == 'COMPLETE'}"
+                                <span th:if="${user.userProfileStatus?.getValue() == 'PENDING' && user.invitationStatus?.name() == 'VERIFICATION_SUCCESS' && user.enabled}"
+                                      class="moj-badge moj-badge--purple">NO ROLES ASSIGNED</span>
+                                <span th:if="${user.userProfileStatus?.getValue() == 'COMPLETE' && user.invitationStatus?.name() == 'AWAITING_VERIFICATION' && user.enabled}"
+                                      class="moj-badge moj-badge--grey">ACTIVATION PENDING</span>
+                                <span th:if="${!user.enabled}"
+                                      class="moj-badge moj-badge--red">DISABLED</span>
+                                <span th:if="${user.userProfileStatus?.getValue() == 'COMPLETE' && user.invitationStatus?.name() == 'VERIFICATION_SUCCESS' && user.enabled}"
                                     class="moj-badge moj-badge--green">COMPLETE</span>
                             </td>
                         </tr>

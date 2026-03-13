@@ -1688,21 +1688,22 @@ public class UserService {
      * "Disabled"
      */
     private String determineAccountStatus(EntraUser user, List<UserProfile> profiles) {
+
         // Check if user has any pending profiles
         boolean hasPending = profiles.stream()
                 .anyMatch(profile -> profile.getUserProfileStatus() == UserProfileStatus.PENDING);
 
-        if (hasPending) {
-            return "Pending";
-        }
-
-        // Check user status
-        if (user.getUserStatus() == UserStatus.DEACTIVE) {
+        if (hasPending && user.getInvitationStatus().name().equals("AWAITING_VERIFICATION") && user.isEnabled()) {
+            return "Incomplete";
+        } else if (hasPending && user.getInvitationStatus().name().equals("VERIFICATION_SUCCESS") && user.isEnabled()) {
+            return "No roles assigned";
+        } else if (!hasPending && user.getInvitationStatus().name().equals("AWAITING_VERIFICATION") && user.isEnabled()) {
+            return "Activation pending";
+        } else if (user.getUserStatus() == UserStatus.DEACTIVE || !user.isEnabled()) {
             return "Disabled";
         }
 
-        // All other cases considered active
-        return "Active";
+        return "Complete";
     }
 
     /**
