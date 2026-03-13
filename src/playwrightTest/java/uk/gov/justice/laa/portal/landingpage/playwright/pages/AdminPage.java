@@ -43,7 +43,7 @@ public class AdminPage {
     private final Locator legalAidServicesHeaders;
     private final Locator legalAidServicesRows;
     private final Locator reorderLegalAidServicesButton;
-    private final Locator syncLegalAidServicesAppsButton;
+    private final Locator syncLegalAidServicesAppsLink;
 
     // --- Legal Aid Services tab content ---
     private final Locator roleAssignRestrictionsTable;
@@ -100,7 +100,9 @@ public class AdminPage {
         this.legalAidServicesHeaders = legalAidServicesTable.locator("thead th.govuk-table__header");
         this.legalAidServicesRows = legalAidServicesTable.locator("tbody.govuk-table__body tr.govuk-table__row");
         this.reorderLegalAidServicesButton = legalAidServicesPanel.locator("button.govuk-button:has-text('Reorder legal aid services')");
-        this.syncLegalAidServicesAppsButton = legalAidServicesPanel.locator("button.govuk-button:has-text('Sync Apps')");
+        this.syncLegalAidServicesAppsLink =
+                legalAidServicesPanel.locator("a.govuk-link.govuk-\\!-font-weight-regular:has-text('Sync Apps')");
+
 
         // Role Assignment Restrictions
         this.roleAssignRestrictionsTable = rolesAssignmentRestrictionsPanel.locator("table.govuk-table");
@@ -247,7 +249,7 @@ public class AdminPage {
 
     public AdminPage assertSyncRolesLegalAidServicesButtonVisible() {
         goToLegalAidServicesTab();
-        assertThat(syncLegalAidServicesAppsButton).isVisible();
+        assertThat(syncLegalAidServicesAppsLink).isVisible();
         return this;
     }
 

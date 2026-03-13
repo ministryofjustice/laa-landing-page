@@ -13,11 +13,13 @@ import uk.gov.justice.laa.portal.landingpage.config.NotificationsProperties;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring.addListAppenderToLogger;
 
 /**
@@ -225,7 +227,120 @@ public class NotificationServiceTest {
         notificationsProperties.setAddNewUserEmailTemplate("testAddNewUserEmailTemplate");
         notificationsProperties.setRevokeFirmAccessEmailTemplate("testRevokeFirmAccessEmailTemplate");
         notificationsProperties.setDelegateFirmAccessEmailTemplate("testDelegateFirmAccessEmailTemplate");
+        notificationsProperties.setUserAccessChangeEmailTemplate("testUserAccessChangeEmailTemplate");
         return notificationsProperties;
     }
 
+    @Test
+    void notifyUserAccessChangeShouldSendMailWhenEmailPresent() {
+        // Arrange
+        NotificationsProperties notificationsProperties = buildTestNotificationsProperties();
+        notificationService = new NotificationService(emailService, notificationsProperties);
+
+        UUID userProfileId = UUID.randomUUID();
+        String firstName = "Bob";
+        String email = "bob@example.com";
+        String changeType = "Service roles";
+        String changes = "Added: Role1, Removed: Role2";
+
+        // Act
+        notificationService.notifyUserAccessChange(userProfileId, firstName, email, changeType, changes);
+
+        // Assert - emailService should be called once
+        Mockito.verify(emailService, Mockito.times(1)).sendMail(
+                eq(email),
+                eq("testUserAccessChangeEmailTemplate"),
+                eq(Map.of("first_name", firstName, "change_type", changeType, "changes", changes, "portal_url", "testPortalUrl")),
+                eq(String.format("laa-portal-notice-of-access-change-%s", userProfileId))
+        );
+    }
+
+    @Test
+    void notifyUserAccessChangeShouldNotSendMailWhenEmailIsNull() {
+        // Arrange
+        NotificationsProperties notificationsProperties = buildTestNotificationsProperties();
+        notificationService = new NotificationService(emailService, notificationsProperties);
+
+        UUID userProfileId = UUID.randomUUID();
+        String firstName = "Bob";
+        String email = null;
+        String changeType = "Offices";
+        String changes = "Added: Office1";
+
+        // Act
+        notificationService.notifyUserAccessChange(userProfileId, firstName, email, changeType, changes);
+
+        // Assert
+        Mockito.verify(emailService, Mockito.times(1)).sendMail(
+                eq(null),
+                eq("testUserAccessChangeEmailTemplate"),
+                eq(Map.of("first_name", firstName, "change_type", changeType, "changes", changes, "portal_url", "testPortalUrl")),
+                eq(String.format("laa-portal-notice-of-access-change-%s", userProfileId))
+        );
+    }
+
+    @Test
+    void notifyUserAccessChangeShouldNotSendMailWhenTemplateIsPlaceholder() {
+        // Arrange
+        NotificationsProperties notificationsProperties = buildTestNotificationsProperties();
+        notificationsProperties.setUserAccessChangeEmailTemplate("none");
+        notificationService = new NotificationService(emailService, notificationsProperties);
+
+        UUID userProfileId = UUID.randomUUID();
+        String firstName = "Bob";
+        String email = "test@email.com";
+        String changeType = "Access granted";
+        String changes = "You have been granted access to services and offices";
+
+        ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(NotificationService.class);
+
+        // Act
+        notificationService.notifyUserAccessChange(userProfileId, firstName, email, changeType, changes);
+
+        // Assert
+        Mockito.verify(emailService, Mockito.times(0)).sendMail(any(), any(), any(), any());
+        List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
+        assertEquals(1, infoLogs.size());
+
+        assertThat(infoLogs)
+                .extracting(ILoggingEvent::getFormattedMessage)
+                .containsExactly(
+                        String.format("Email template for user access change is not ready, skipping notification email for User: %s", userProfileId));
+    }
+
+    @Test
+    void notifyUserAccessChangeShouldLogCorrectlyWhenEmailIsNull() {
+        // Arrange
+        NotificationsProperties notificationsProperties = buildTestNotificationsProperties();
+        notificationService = new NotificationService(emailService, notificationsProperties);
+
+        UUID userProfileId = UUID.randomUUID();
+        String firstName = "Charlie";
+        String email = null;
+        String changeType = "Services";
+        String changes = "Removed: Service A, Added: Service B";
+
+        ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(NotificationService.class);
+
+        // Act
+        notificationService.notifyUserAccessChange(userProfileId, firstName, email, changeType, changes);
+
+        // Assert – emailService is called even when email is null
+        Mockito.verify(emailService, Mockito.times(1)).sendMail(
+                eq(null),
+                eq("testUserAccessChangeEmailTemplate"),
+                eq(Map.of("first_name", firstName, "change_type", changeType, "changes", changes, "portal_url", "testPortalUrl")),
+                eq(String.format("laa-portal-notice-of-access-change-%s", userProfileId))
+        );
+
+        List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
+        assertEquals(2, infoLogs.size());
+
+        // Verify the log message content
+        assertThat(infoLogs)
+                .extracting(ILoggingEvent::getFormattedMessage)
+                .containsExactly(
+                        String.format("Sending user access change notification for User: %s (change type: %s)", userProfileId, changeType),
+                        String.format("User access change notification sent to: null for User ID: %s", userProfileId));
+    }
 }
