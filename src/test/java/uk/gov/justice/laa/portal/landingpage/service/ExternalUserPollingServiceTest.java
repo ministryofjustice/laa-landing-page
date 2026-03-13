@@ -26,6 +26,7 @@ import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesErrorRespo
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -314,6 +315,10 @@ class ExternalUserPollingServiceTest {
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
                                 .disabledReason("NoGroupsDisable")
                                 .build())
+                        .disabledReasonStatus(TechServicesUser.DisabledReasonStatus.builder()
+                                .odataType("#microsoft.graph.disabledReason")
+                                .additionalProperties(Map.of("NoGroupsDisable", "NoGroupsDisable"))
+                                .build())
                         .build())
                 .build();
         
@@ -326,8 +331,8 @@ class ExternalUserPollingServiceTest {
 
         externalUserPollingService.updateSyncMetadata();
 
-        verify(entraUserRepository).save(existingUser);
-        verify(entraUserRepository, times(2)).save(userToDisable); // Called twice: once in disableUserWithReason, once in main sync
+        verify(entraUserRepository, times(2)).save(existingUser);
+        verify(entraUserRepository, times(2)).save(userToDisable);
         verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
@@ -451,7 +456,7 @@ class ExternalUserPollingServiceTest {
 
         externalUserPollingService.updateSyncMetadata();
 
-        verify(entraUserRepository).save(user1);
+        verify(entraUserRepository, times(2)).save(user1);
         verify(entraUserRepository, times(2)).save(user2);
         verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
@@ -599,7 +604,7 @@ class ExternalUserPollingServiceTest {
 
         externalUserPollingService.updateSyncMetadata();
 
-        verify(entraUserRepository).save(userToUpdate);
+        verify(entraUserRepository, times(2)).save(userToUpdate);
 
         verify(entraUserRepository).delete(userToDelete);
         verify(entraUserRepository).flush();
@@ -828,7 +833,7 @@ class ExternalUserPollingServiceTest {
 
         externalUserPollingService.updateSyncMetadata();
 
-        verify(entraUserRepository, times(2)).save(existingUser); // Called twice: once in enableUserWithReason, once in main sync
+        verify(entraUserRepository, times(2)).save(existingUser);
         verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class)); // Enable audit is created
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
@@ -919,7 +924,6 @@ class ExternalUserPollingServiceTest {
                 .entraDescription("Inactivity")
                 .userSelectable(false)
                 .build();
-        when(disableUserReasonRepository.findAll()).thenReturn(List.of(inactivityReason));
 
         TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
@@ -928,9 +932,9 @@ class ExternalUserPollingServiceTest {
                 .accountEnabled(true)
                 .isMailOnly(false)
                 .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
-                        .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
+                        .disabledReasonStatus(TechServicesUser.DisabledReasonStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
-                                .disabledReason("NoGroupsDisable")
+                                .additionalProperties(Map.of("NoGroupsDisable", "NoGroupsDisable"))
                                 .build())
                         .build())
                 .build();
@@ -985,7 +989,7 @@ class ExternalUserPollingServiceTest {
 
         externalUserPollingService.updateSyncMetadata();
 
-        verify(entraUserRepository, times(2)).save(existingUser); // Called twice: once in enableUserWithReason, once in main sync
+        verify(entraUserRepository, times(2)).save(existingUser);
         verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class)); // Enable audit is created
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
@@ -1121,7 +1125,7 @@ class ExternalUserPollingServiceTest {
 
         externalUserPollingService.updateSyncMetadata();
 
-        verify(entraUserRepository, times(2)).save(disabledUser); // Once for enable, once for main sync
+        verify(entraUserRepository, times(2)).save(disabledUser);
         verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
@@ -1160,6 +1164,10 @@ class ExternalUserPollingServiceTest {
                         .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
                                 .disabledReason("NoGroupsDisable")
+                                .build())
+                        .disabledReasonStatus(TechServicesUser.DisabledReasonStatus.builder()
+                                .odataType("#microsoft.graph.disabledReason")
+                                .additionalProperties(Map.of("NoGroupsDisable", "NoGroupsDisable"))
                                 .build())
                         .build())
                 .build();
