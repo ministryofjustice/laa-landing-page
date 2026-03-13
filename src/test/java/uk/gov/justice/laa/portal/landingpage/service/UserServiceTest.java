@@ -344,8 +344,6 @@ class UserServiceTest {
                 .email("user@example.com")
                 .build();
 
-        EntraUserDto entraUserDto = new MapperConfig().modelMapper().map(entraUser, EntraUserDto.class);
-
         AppRole role1 = AppRole.builder().name("Role1").build();
 
         UserProfile profile = UserProfile.builder()
@@ -356,6 +354,8 @@ class UserServiceTest {
                 .appRoles(new HashSet<>(Set.of(role1)))
                 .build();
         entraUser.setUserProfiles(Set.of(profile));
+
+        EntraUserDto entraUserDto = new MapperConfig().modelMapper().map(entraUser, EntraUserDto.class);
 
         when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(profile));
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
