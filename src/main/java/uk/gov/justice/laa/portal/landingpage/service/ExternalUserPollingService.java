@@ -151,6 +151,10 @@ public class ExternalUserPollingService {
                         entraUser.setLastName(user.getSurname());
                     }
 
+                    if (user.getEmail() != null && !user.getEmail().equals(entraUser.getEmail())) {
+                        entraUser.setEmail(user.getEmail());
+                    }
+
                     if (user.isMailOnly() != entraUser.isMailOnly()) {
                         entraUser.setMailOnly(user.isMailOnly());
                     }

@@ -1086,6 +1086,46 @@ class ExternalUserPollingServiceTest {
     }
 
     @Test
+    void shouldUpdateEmail_whenEmailChangedInEntra() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        EntraUser silasUser = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user123")
+                .firstName("John")
+                .lastName("Doe")
+                .email("user@example.com")
+                .enabled(true)
+                .mailOnly(false)
+                .build();
+        when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(silasUser));
+
+        TechServicesUser apiUser = TechServicesUser.builder()
+                .id("user123")
+                .givenName("John")
+                .surname("Doe")
+                .email("emailUpdated@example.com")
+                .accountEnabled(true)
+                .isMailOnly(false)
+                .build();
+
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
+        verify(entraUserRepository).save(userCaptor.capture());
+        EntraUser savedUser = userCaptor.getValue();
+        assertThat(savedUser.getEmail()).isEqualTo("emailUpdated@example.com");
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
     void shouldEnableUser_whenUserIsDisabledInSilasButEnabledInEntra() {
         when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
 
