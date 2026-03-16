@@ -8,7 +8,7 @@ public enum InvitationStatus {
     AWAITING_VERIFICATION("AwaitingVerification"),
     VERIFICATION_SUCCESS("VerificationSuccess"),
     CODE_EXPIRED("CodeExpired"),
-    MEX_VERIFICATION_ATTEMPTS("MaxVerificationAttempts"),
+    MAX_VERIFICATION_ATTEMPTS("MaxVerificationAttempts"),
     VERIFICATION_FAILED("VerificationFailed");
 
     private final String value;
