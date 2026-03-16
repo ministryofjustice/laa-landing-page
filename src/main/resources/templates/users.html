@@ -856,6 +856,9 @@
                                             <!--user hasn't roles assigned any roles-->
                                             <span th:if="${!user.hasAppRoles}"
                                                 class="moj-badge moj-badge--purple">NO ROLES ASSIGNED</span>
+                                            <!--user has roles assigned and no office assigned-->
+                                            <span th:unless="${!user.hasAppRoles}"
+                                                  class="moj-badge moj-badge--blue">INCOMPLETE</span>
                                         </th:block>
                                         <!--entra verification still going-->
                                         <th:block th:unless="${user.invitationStatus?.name() == 'VERIFICATION_SUCCESS'}">

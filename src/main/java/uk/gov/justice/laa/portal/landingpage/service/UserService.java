@@ -1692,18 +1692,29 @@ public class UserService {
         // Check if user has any pending profiles
         boolean hasPending = profiles.stream()
                 .anyMatch(profile -> profile.getUserProfileStatus() == UserProfileStatus.PENDING);
-
-        if (hasPending && user.getInvitationStatus().name().equals("AWAITING_VERIFICATION") && user.isEnabled()) {
-            return "Incomplete";
-        } else if (hasPending && user.getInvitationStatus().name().equals("VERIFICATION_SUCCESS") && user.isEnabled()) {
-            return "No roles assigned";
-        } else if (!hasPending && user.getInvitationStatus().name().equals("AWAITING_VERIFICATION") && user.isEnabled()) {
-            return "Activation pending";
-        } else if (user.getUserStatus() == UserStatus.DEACTIVE || !user.isEnabled()) {
+        boolean noRolesAssigned = profiles.stream()
+                .anyMatch(profile -> profile.getAppRoles().isEmpty());
+        // user disable
+        if (!user.isEnabled() ){
             return "Disabled";
+        } else {//user active
+            // user is complete
+            if(!hasPending) {
+                if (user.getInvitationStatus().name().equals("AWAITING_VERIFICATION")) {
+                    return "Activation pending";
+                } else if (user.getInvitationStatus().name().equals("VERIFICATION_SUCCESS")) {
+                    return "Complete";
+                }
+            } else { // user is incomplete user hasn't roles assigned any roles
+                if (user.getInvitationStatus().name().equals("VERIFICATION_SUCCESS"))
+                    //check if user has roles assigned
+                    if (noRolesAssigned) {
+                        return "No roles assigned";
+                    }
+            }
         }
-
-        return "Complete";
+        //All the other situation is incomplete
+        return "Incomplete";
     }
 
     /**

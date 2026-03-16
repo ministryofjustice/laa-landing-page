@@ -102,14 +102,17 @@
                                 <th:block th:unless="${user.userProfileStatus?.getValue() == 'COMPLETE'}">
                                     <!--entra verification is success-->
                                     <th:block th:if="${user.entraUser.invitationStatus?.name() == 'VERIFICATION_SUCCESS'}">
-                                        <!--user hasn't roles assigned any roles-->
-                                        <span th:if="${!user.getAppRoles.isEmpty()}"
+                                        <!--user hasn't assigned any roles-->
+                                        <span th:if="${user.appRoles.isEmpty()}"
                                               class="govuk-tag govuk-tag--purple govuk-!-font-weight-bold govuk-!-margin-top-1" style="min-width: 200px">NO ROLES ASSIGNED</span>
+                                        <!--user has roles and no office assigned -->
+                                        <span th:unless="${user.appRoles.isEmpty()}"
+                                              class="govuk-tag govuk-tag--blue govuk-!-font-weight-bold govuk-!-margin-top-1">INCOMPLETE</span>
                                     </th:block>
                                     <!--entra verification still going-->
                                     <th:block th:unless="${user.entraUser.invitationStatus?.name() == 'VERIFICATION_SUCCESS'}">
                                         <!--All the other situation is incomplete-->
-                                        <span class="govuk-tag govuk-tag--blue govuk-!-font-weight-bold govuk-!-margin-top-1 ">INCOMPLETE</span>
+                                        <span class="govuk-tag govuk-tag--blue govuk-!-font-weight-bold govuk-!-margin-top-1">INCOMPLETE</span>
                                     </th:block>
                                 </th:block>
                             </th:block>
