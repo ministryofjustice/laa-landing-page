@@ -188,19 +188,19 @@
                         <div class="filters-container">
                             <!-- Filter by inactivity -->
                             <div class="govuk-!-padding-top-2">
-                                <details class="govuk-details" data-module="govuk-details">
+                                <details class="govuk-details" data-module="govuk-details" th:attr="open=${inactiveSinceDate != null ? 'open' : null}">
                                     <summary class="govuk-details__summary">
                                         <span class="govuk-details__summary-text">
-                                            Filter by inactivity
+                                            Filter by last login date
                                         </span>
                                     </summary>
                                     <div class="govuk-details__text">
                                         <div class="govuk-form-group">
                                             <label class="govuk-label" for="inactiveSinceDate">
-                                                Show users inactive since
+                                                Not logged in since
                                             </label>
                                             <div class="govuk-hint">
-                                                Includes users who have never logged in
+                                                Shows users whose last login was before this date.
                                             </div>
                                             <input class="govuk-input govuk-input--width-10"
                                                    id="inactiveSinceDate"
@@ -213,10 +213,10 @@
                             </div>
                             <!-- Filter for non-activation -->
                             <div class="govuk-!-padding-top-2">
-                                <details class="govuk-details" data-module="govuk-details">
+                                <details class="govuk-details" data-module="govuk-details" th:attr="open=${neverActivated ? 'open' : null}">
                                     <summary class="govuk-details__summary">
                                         <span class="govuk-details__summary-text">
-                                            Filter for non-activation
+                                            Filter by activation status
                                         </span>
                                     </summary>
                                     <div class="govuk-details__text">
@@ -232,6 +232,9 @@
                                                     <label class="govuk-label govuk-checkboxes__label" for="neverActivated">
                                                         Show users who never activated their account
                                                     </label>
+                                                    <div class="govuk-hint">
+                                                        Users whose invitation status is not verified.
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
