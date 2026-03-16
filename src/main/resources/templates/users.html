@@ -836,16 +836,35 @@
                                 </span>
                             </td>
                             <td class="govuk-table__cell">
-                                <span th:if="${user.userProfileStatus?.getValue() == 'PENDING' && (!user.hasOffice() || !user.isAllOffices) && (user.invitationStatus?.name() == 'AWAITING_VERIFICATION' || user.invitationStatus?.name() == 'VERIFICATION_FAILED') && user.enabled}"
-                                    class="moj-badge moj-badge--blue">INCOMPLETE</span>
-                                <span th:if="${!user.hasAppRoles && user.invitationStatus?.name() == 'VERIFICATION_SUCCESS' && user.enabled}"
-                                      class="moj-badge moj-badge--purple">NO ROLES ASSIGNED</span>
-                                <span th:if="${user.userProfileStatus?.getValue() == 'COMPLETE' && user.invitationStatus?.name() == 'AWAITING_VERIFICATION' && user.enabled}"
-                                      class="moj-badge moj-badge--grey">ACTIVATION PENDING</span>
-                                <span th:if="${!user.enabled}"
-                                      class="moj-badge moj-badge--red">DISABLED</span>
-                                <span th:if="${user.userProfileStatus?.getValue() == 'COMPLETE' && user.invitationStatus?.name() == 'VERIFICATION_SUCCESS' && user.enabled}"
-                                    class="moj-badge moj-badge--green">COMPLETE</span>
+                                <!--user disable-->
+                                <th:block th:if="${!user.enabled}">
+                                    <span class="moj-badge moj-badge--red">DISABLED</span>
+                                </th:block>
+                                <!--user active-->
+                                <th:block th:unless="${!user.enabled}">
+                                    <!--user is complete-->
+                                    <th:block th:if="${user.userProfileStatus?.getValue() == 'COMPLETE'}">
+                                        <span th:if="${user.invitationStatus?.name() == 'AWAITING_VERIFICATION'}"
+                                              class="moj-badge moj-badge--grey">ACTIVATION PENDING</span>
+                                        <span th:if="${user.invitationStatus?.name() == 'VERIFICATION_SUCCESS'}"
+                                              class="moj-badge moj-badge--green">COMPLETE</span>
+                                    </th:block>
+                                    <!--user is pending-->
+                                    <th:block th:unless="${user.userProfileStatus?.getValue() == 'COMPLETE'}">
+                                        <!--entra verification is success-->
+                                        <th:block th:if="${user.invitationStatus?.name() == 'VERIFICATION_SUCCESS'}">
+                                            <!--user hasn't roles assigned any roles-->
+                                            <span th:if="${!user.hasAppRoles}"
+                                                class="moj-badge moj-badge--purple">NO ROLES ASSIGNED</span>
+                                        </th:block>
+                                        <!--entra verification still going-->
+                                        <th:block th:unless="${user.invitationStatus?.name() == 'VERIFICATION_SUCCESS'}">
+                                            <!--All the other situation is incomplete-->
+                                            <span class="moj-badge moj-badge--blue">INCOMPLETE</span>
+                                        </th:block>
+                                    </th:block>
+                                </th:block>
+
                             </td>
                         </tr>
                     </tbody>
