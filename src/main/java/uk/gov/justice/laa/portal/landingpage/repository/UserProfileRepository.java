@@ -56,16 +56,10 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                         SELECT new uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto(ups.id, ups.activeProfile,
                                         ups.userType, ups.legacyUserId,  ups.userProfileStatus, u.multiFirmUser, u.firstName,
                                         u.lastName, CONCAT(u.firstName, ' ', u.lastName), u.email, u.userStatus, f.name,
-                                                    u.invitationStatus, u.enabled, ups.unrestrictedOfficeAccess,
-                                                                                    (SELECT COUNT(o) > 0
-                                                                                  FROM UserProfile p
-                                                                                  JOIN p.offices o
-                                                                                  WHERE p.id = ups.id),
-                                                                         (SELECT COUNT(r) > 0
-                                                                                  FROM UserProfile p2
-                                                                                  JOIN p2.appRoles r
-                                                                                  WHERE p2.id = ups.id)
-                                                                 )
+                                                    u.invitationStatus, u.enabled,
+                                                                      CASE WHEN (SELECT COUNT(r) FROM UserProfile p2 JOIN p2.appRoles r WHERE p2.id = ups.id) > 0 THEN TRUE ELSE FALSE END
+                                                                   )
+            
                                 FROM UserProfile ups
                                     JOIN ups.entraUser u
                                     LEFT JOIN ups.firm f

@@ -1692,21 +1692,22 @@ public class UserService {
         // Check if user has any pending profiles
         boolean hasPending = profiles.stream()
                 .anyMatch(profile -> profile.getUserProfileStatus() == UserProfileStatus.PENDING);
+        // Check if user has roles assigned
         boolean noRolesAssigned = profiles.stream()
                 .anyMatch(profile -> profile.getAppRoles().isEmpty());
         // user disable
-        if (!user.isEnabled() ){
+        if (!user.isEnabled()) {
             return "Disabled";
         } else {//user active
             // user is complete
-            if(!hasPending) {
-                if (user.getInvitationStatus().name().equals("AWAITING_VERIFICATION")) {
+            if (!hasPending) {
+                if (user.getInvitationStatus() == null || user.getInvitationStatus().name().equals("AWAITING_VERIFICATION")) {
                     return "Activation pending";
                 } else if (user.getInvitationStatus().name().equals("VERIFICATION_SUCCESS")) {
                     return "Complete";
                 }
             } else { // user is incomplete user hasn't roles assigned any roles
-                if (user.getInvitationStatus().name().equals("VERIFICATION_SUCCESS"))
+                if (user.getInvitationStatus() == null || user.getInvitationStatus().name().equals("VERIFICATION_SUCCESS"))
                     //check if user has roles assigned
                     if (noRolesAssigned) {
                         return "No roles assigned";
@@ -1854,6 +1855,18 @@ public class UserService {
         // Get all profiles for this user
         List<UserProfile> allProfiles = new ArrayList<>(entraUser.getUserProfiles());
 
+        // Check if user has any pending profiles
+        boolean hasPending = allProfiles.stream()
+                .anyMatch(userProfile -> userProfile.getUserProfileStatus() == UserProfileStatus.PENDING);
+
+        //Check if user haven't assigned any roles
+        boolean noRolesAssigned = allProfiles.stream()
+                .anyMatch(userProfile -> userProfile.getAppRoles().isEmpty());
+
+        //Check if user haven't assigned any roles
+        boolean noOfficeAssigned = allProfiles.stream()
+                .anyMatch(userProfile -> profile.getOffices().isEmpty() && !profile.isUnrestrictedOfficeAccess());
+
         // Sort with active profile first
         allProfiles.sort((p1, p2) -> Boolean.compare(p2.isActiveProfile(), p1.isActiveProfile()));
 
@@ -1882,13 +1895,15 @@ public class UserService {
                 .createdDate(entraUser.getCreatedDate()).createdBy(entraUser.getCreatedBy())
                 // TODO: Fetch lastLoginDate from Microsoft Graph API
                 .lastLoginDate(null)
-                // TODO: Fetch activationStatus from TechServices API or SILAS API
-                .activationStatus(null)
+                .activationStatus(entraUser.getInvitationStatus().name())
                 .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
                         : "UNKNOWN")
                 .profiles(profileDtos).totalProfiles(totalProfiles).totalProfilePages(totalPages)
                 .currentProfilePage(profilePage).hasNoProfile(false)
                 .entraOid(entraUser.getEntraOid())
+                .hasPending(hasPending)
+                .hasNoRole(noRolesAssigned)
+                .hasNoOffice(noOfficeAssigned)
                 .build();
     }
 
@@ -1909,6 +1924,18 @@ public class UserService {
                 ? new ArrayList<>(entraUser.getUserProfiles())
                 : Collections.emptyList();
 
+        //check if user is pending
+        boolean hasPending = allProfiles.stream()
+                .anyMatch(profile -> profile.getUserProfileStatus() == UserProfileStatus.PENDING);
+
+        //Check if user haven't assigned any roles
+        boolean noRolesAssigned = allProfiles.stream()
+                .anyMatch(profile -> profile.getAppRoles().isEmpty());
+
+        //Check if user haven't assigned any roles
+        boolean noOfficeAssigned = allProfiles.stream()
+                .anyMatch(profile -> profile.getOffices().isEmpty() && !profile.isUnrestrictedOfficeAccess());
+
         // Determine user type using shared method
         String userType = determineUserType(entraUser, allProfiles);
 
@@ -1922,13 +1949,15 @@ public class UserService {
                 .createdDate(entraUser.getCreatedDate()).createdBy(entraUser.getCreatedBy())
                 // TODO: Fetch lastLoginDate from Microsoft Graph API
                 .lastLoginDate(null)
-                // TODO: Fetch activationStatus from TechServices API or SILAS API
-                .activationStatus(null)
+                .activationStatus(entraUser.getInvitationStatus().name())
                 .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
                         : "UNKNOWN")
                 .profiles(Collections.emptyList()).totalProfiles(0).totalProfilePages(0)
                 .currentProfilePage(1).hasNoProfile(true)
                 .entraOid(entraUser.getEntraOid())
+                .hasPending(hasPending)
+                .hasNoRole(noRolesAssigned)
+                .hasNoOffice(noOfficeAssigned)
                 .build();
     }
 
