@@ -10,25 +10,32 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
+import uk.gov.justice.laa.portal.landingpage.entity.CountFirms;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserTypeReasonDisable;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.DisableUserReasonRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.EXTERNAL_USER_ADMIN;
+import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.EXTERNAL_USER_MANAGER;
+import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.GLOBAL_ADMIN;
 
 @Service
 @RequiredArgsConstructor
@@ -41,17 +48,30 @@ public class UserAccountStatusService {
     private final EntraUserRepository entraUserRepository;
     private final TechServicesClient techServicesClient;
     private final UserService userService;
+    private final UserProfileRepository userProfileRepository;
 
-    public List<DisableUserReasonDto> getDisableUserReasons(boolean isProvideAdmin) {
+    public List<DisableUserReasonDto> getDisableUserReasons(UserTypeReasonDisable userTypeReasonDisable) {
         List<DisableUserReason> reasons = disableUserReasonRepository.findAll();
         List<DisableUserReasonDto> disableUserReasonDtos = new java.util.ArrayList<>(reasons.stream()
                 .filter(DisableUserReason::isUserSelectable)
                 .map(reason -> mapper.map(reason, DisableUserReasonDto.class))
                 .toList());
-        if (isProvideAdmin) {
+
+        if (userTypeReasonDisable.equals(UserTypeReasonDisable.IS_USER_DISABLE)) {
             Set<String> keepReasons = Set.of("Absence", "Provider Discretion");
             disableUserReasonDtos.removeIf(u -> !keepReasons.contains(u.getName()));
+        } else if (userTypeReasonDisable.equals(UserTypeReasonDisable.BULK_DISABLE)) {
+            Set<String> keepReasonsBulk = Set.of(
+                    "Compliance Breach",
+                    "Contract Ended",
+                    "Cyber Risk",
+                    "Firm Closure / Merger",
+                    "Investigation Pending",
+                    "User Request"
+            );
+            disableUserReasonDtos.removeIf(u -> !keepReasonsBulk.contains(u.getName()));
         }
+
         return disableUserReasonDtos;
     }
 
@@ -114,6 +134,75 @@ public class UserAccountStatusService {
         }
     }
 
+    public Map<String, Long> getUserCountsForFirm(String firmId) {
+        Map<String, Long> result = new HashMap<>();
+        List<CountFirms> countFirmsList = userProfileRepository.countFirmsById(UUID.fromString(firmId));
+
+        for (CountFirms count : countFirmsList) {
+            if (count.getIsMultifirm()) {
+                result.put("totalOfMultiFirm", count.getUserCount());
+            } else {
+                result.put("totalOfSingleFirm", count.getUserCount());
+            }
+        }
+
+        return result;
+
+    }
+
+    public boolean hasActiveUserByFirmId(String firmId) {
+        return userProfileRepository.hasActiveUserByFirmId(UUID.fromString(firmId));
+    }
+
+    public void disableUserAllUserByFirmId(String firmId, UUID disableReasonId, UUID disabledById) {
+        log.info("Started Bulk disable users");
+        // Fetch entities
+        EntraUser disabledByUser = entraUserRepository.findById(disabledById)
+                .orElseThrow(() -> new RuntimeException(String.format("Could not find a user account with id \"%s\"", disabledById)));
+        DisableUserReason reason = disableUserReasonRepository.findById(disableReasonId)
+                .orElseThrow(() -> new RuntimeException(String.format("Could not find a disable user reason with id \"%s\"", disableReasonId)));
+
+        List<EntraUser> entraUsers = userProfileRepository.findByFirmId(UUID.fromString(firmId)).stream()
+                .map(UserProfile::getEntraUser)
+                .filter(EntraUser::isEnabled)
+                .toList();
+        Integer totalOfUsersDisabled = 0;
+        for (EntraUser entraUser : entraUsers) {
+            // Disable user in Entra via tech services.
+            TechServicesApiResponse<ChangeAccountEnabledResponse> changeAccountEnabledResponse
+                    = techServicesClient.disableUser(mapper.map(entraUser, EntraUserDto.class), reason.getEntraDescription());
+            if (!changeAccountEnabledResponse.isSuccess()) {
+                throw new TechServicesClientException(changeAccountEnabledResponse.getError().getMessage(),
+                        changeAccountEnabledResponse.getError().getCode(),
+                        changeAccountEnabledResponse.getError().getErrors());
+            }
+            // Perform disable
+            entraUser.setEnabled(false);
+            entraUserRepository.saveAndFlush(entraUser);
+            totalOfUsersDisabled++;
+            log.info("User with entraID: {} has been disabled successfully with reason: {} By: {}",
+                    entraUser.getEntraOid(),
+                    reason.getEntraDescription(),
+                    disabledByUser.getEntraOid());
+
+        }
+
+        UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
+                .entraUser(disabledByUser)
+                .disableUserReason(reason)
+                .statusChange(UserAccountStatus.DISABLED)
+                .statusChangedBy(disabledByUser.getFirstName() + " " + disabledByUser.getLastName())
+                .statusChangedDate(LocalDateTime.now())
+                .firmId(firmId)
+                .numberOfUsersDisabled(totalOfUsersDisabled)
+                .build();
+        userAccountStatusAuditRepository.saveAndFlush(userAccountStatusAudit);
+        log.info("Bulk disable user complete successfully : {} Total user disabled : {}",
+                userAccountStatusAudit,
+                totalOfUsersDisabled);
+
+    }
+
     @SuppressWarnings("checkstyle:VariableDeclarationUsageDistance")
     public void enableUser(UUID enabledUserId, UUID enabledById) {
         if (enabledUserId.equals(enabledById)) {
@@ -157,7 +246,8 @@ public class UserAccountStatusService {
 
     private boolean isUserEnablementAllowed(EntraUser targetUser, EntraUser actor) {
         if (targetUser.isEnabled()) {
-            throw new RuntimeException(String.format("The user %s is enabled already", targetUser.getId()));
+            log.info("The user {} is enabled already", targetUser.getId());
+            return false;
         }
 
         if (!userService.isInternal(actor.getId()) && targetUser.isMultiFirmUser()) {
@@ -193,6 +283,11 @@ public class UserAccountStatusService {
                 .findFirst()
                 .orElse("NONE");
 
+        if (actingUserRoles.contains(GLOBAL_ADMIN.getRoleName())
+                || actingUserRoles.contains(EXTERNAL_USER_MANAGER.getRoleName())
+                || actingUserRoles.contains(AuthzRole.SECURITY_RESPONSE.getRoleName())) {
+            return true;
+        }
 
         if (actingUserRoles.contains(AuthzRole.FIRM_USER_MANAGER.getRoleName())) {
             if (!disabledByUserRole.equals(AuthzRole.FIRM_USER_MANAGER.getRoleName())) {

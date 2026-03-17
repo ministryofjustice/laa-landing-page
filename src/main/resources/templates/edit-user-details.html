@@ -71,7 +71,7 @@
                         th:value="*{lastName}" id="lastName"
                         th:aria-describedby="${#fields.hasErrors('lastName')} ? 'lastName-error' : null" />
                 </div>
-                <div class="govuk-button-group">
+                <div class="govuk-button-group" >
                     <button type="submit" class="govuk-button">Update</button>
                     <a th:href="@{/admin/users/edit/{id}/cancel(id=${user.id})}" class="govuk-link">Cancel</a>
                 </div>

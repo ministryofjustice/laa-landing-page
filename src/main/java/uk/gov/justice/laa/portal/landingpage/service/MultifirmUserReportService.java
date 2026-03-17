@@ -11,10 +11,12 @@ import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -27,6 +29,8 @@ public class MultifirmUserReportService {
 
     private final FirmRepository firmRepository;
     private final EntraUserRepository entraUserRepository;
+    private final ReportUploadService reportUploadService;
+    private final String folderPath = "multifirm_user_reports";
     private final DateTimeFormatter fileTimestamp = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmm");
 
     public void getMultifirmUsers() {
@@ -37,18 +41,29 @@ public class MultifirmUserReportService {
         reportRows.addAll(entraUserRepository.findUnlinkedMultifirmUsersCount());
         reportRows.addAll(entraUserRepository.findTotalMultiFirmUsersCount());
         File multifirmUserCsv = writeToCsv(reportRows);
-        // Upload code goes here
+
+        try {
+            reportUploadService.uploadCsvToSharePoint(multifirmUserCsv, folderPath);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private File writeToCsv(List<Object[]> rows) {
 
         String timestamp = LocalDateTime.now().format(fileTimestamp);
-        String fileName = "SiLAS-multifirm-user-report-" + timestamp;
+        String fileName = "SiLAS-multifirm-user-report-" + timestamp + ".csv";
 
         try {
             CsvMapper csvMapper = CsvMapper.builder().build();
 
-            Path tempFile = Files.createTempFile(fileName, ".csv");
+
+            Path tempFile = Paths.get(
+                    System.getProperty("java.io.tmpdir"),
+                    fileName
+            );
+            Files.createFile(tempFile);
+
 
             CsvSchema schema = CsvSchema.builder()
                     .addColumn("Firm Name")

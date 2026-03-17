@@ -65,6 +65,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
@@ -72,6 +73,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserTypeReasonDisable;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
@@ -376,6 +378,9 @@ public class UserController {
         final boolean canDisableUser = disableUserFeatureEnabled
                 && accessControlService.canDisableUser(user.getEntraUser().getId());
         model.addAttribute("canDisableUser", canDisableUser);
+        final boolean canEnableUser = disableUserFeatureEnabled
+                && accessControlService.canEnableUser(user.getEntraUser().getId());
+        model.addAttribute("canEnableUser", canEnableUser);
         final boolean userIsEnabled = user.getEntraUser().isEnabled();
         model.addAttribute("userIsEnabled", userIsEnabled);
         boolean showResendVerificationLink = accessControlService.canSendVerificationEmail(id);
@@ -421,11 +426,10 @@ public class UserController {
         Map<String, Object> filters = (Map<String, Object>) session.getAttribute("userListFilters");
         boolean hasFilters = hasActiveFilters(filters);
         model.addAttribute("hasFilters", hasFilters);
-
-        model.addAttribute(
-                "isMailOnly",
-                true
-        );
+        boolean loggedUserIsExternalAdmin = accessControlService.userHasAuthzRole(authentication, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName());
+        if (editUserDetailFeatureEnabled && externalUser && loggedUserIsExternalAdmin) {
+            model.addAttribute("showEditButton", true);
+        }
 
         return "manage-user";
     }
@@ -498,8 +502,10 @@ public class UserController {
         }
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
-        boolean isProvideAdmin = RolesUtils.isProvideAdmin(currentUserProfile.getAppRoles());
-        List<DisableUserReasonViewModel> reasons = new ArrayList<>(userAccountStatusService.getDisableUserReasons(isProvideAdmin).stream()
+        UserTypeReasonDisable userTypeReasonDisable = RolesUtils.isProvideAdmin(currentUserProfile.getAppRoles())
+                ? UserTypeReasonDisable.IS_USER_DISABLE
+                : UserTypeReasonDisable.DEFAULT;
+        List<DisableUserReasonViewModel> reasons = new ArrayList<>(userAccountStatusService.getDisableUserReasons(userTypeReasonDisable).stream()
                 .map(reason -> mapper.map(reason, DisableUserReasonViewModel.class))
                 .toList());
         model.addAttribute("user", user);
@@ -560,7 +566,7 @@ public class UserController {
     }
 
     @GetMapping("/users/manage/{id}/enable")
-    @PreAuthorize("@accessControlService.canDisableUser(#id)")
+    @PreAuthorize("@accessControlService.canEnableUser(#id)")
     public String enableUserGet(@PathVariable String id,
                                  Model model,
                                  String referer,
@@ -575,7 +581,7 @@ public class UserController {
     }
 
     @PostMapping("/users/manage/{id}/enable")
-    @PreAuthorize("@accessControlService.canDisableUser(#id)")
+    @PreAuthorize("@accessControlService.canEnableUser(#id)")
     public String enableUserPost(@PathVariable String id,
                                          Authentication authentication,
                                          Model model,
