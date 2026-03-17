@@ -1698,7 +1698,7 @@ public class UserService {
         // user disable
         if (!user.isEnabled()) {
             return "Disabled";
-        } else {//user active
+        } else { //user active
             // user is complete
             if (!hasPending) {
                 if (user.getInvitationStatus() == null || user.getInvitationStatus().name().equals("AWAITING_VERIFICATION")) {
@@ -1707,11 +1707,12 @@ public class UserService {
                     return "Complete";
                 }
             } else { // user is incomplete user hasn't roles assigned any roles
-                if (user.getInvitationStatus() == null || user.getInvitationStatus().name().equals("VERIFICATION_SUCCESS"))
+                if (user.getInvitationStatus() == null || user.getInvitationStatus().name().equals("VERIFICATION_SUCCESS")) {
                     //check if user has roles assigned
                     if (noRolesAssigned) {
                         return "No roles assigned";
                     }
+                }
             }
         }
         //All the other situation is incomplete
