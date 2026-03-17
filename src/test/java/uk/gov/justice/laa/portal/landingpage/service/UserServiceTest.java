@@ -282,7 +282,7 @@ class UserServiceTest {
                 .thenReturn(true);
 
         // Act
-        userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID());
+        userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID().toString());
 
         // Assert
         verify(techServicesClient).deleteRoleAssignment(entraId);
@@ -323,7 +323,7 @@ class UserServiceTest {
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
 
         // Act
-        userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID());
+        userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID().toString());
 
         // Assert
         verify(techServicesClient).deleteRoleAssignment(entraId);
@@ -364,7 +364,7 @@ class UserServiceTest {
         when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
 
         // Act
-        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID());
+        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID().toString());
 
         // Assert
         verify(techServicesClient).disableUser(entraUserDto, "Role Change / No Longer Required");
@@ -396,7 +396,7 @@ class UserServiceTest {
 
         // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID()));
+                () -> userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID().toString()));
         assertThat(ex.getMessage()).contains("tech services down");
         verify(mockUserProfileRepository, never()).deleteAll(any());
         verify(mockEntraUserRepository, never()).delete(any());
@@ -418,7 +418,7 @@ class UserServiceTest {
 
         // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> userService.deleteExternalUser(profileId.toString(), "reason", UUID.randomUUID()));
+                () -> userService.deleteExternalUser(profileId.toString(), "reason", UUID.randomUUID().toString()));
         assertThat(ex.getMessage()).contains("Deletion is only permitted for external users");
         verify(techServicesClient, never()).deleteRoleAssignment(any());
     }
@@ -7170,7 +7170,7 @@ class UserServiceTest {
             RuntimeException ex = assertThrows(IllegalArgumentException.class, () -> {
                 userService.getAuditUserDetail(userId);
             });
-            assertThat(ex.getMessage()).contains("User profile not found with id: "+ userId);
+            assertThat(ex.getMessage()).contains("User profile not found with id: " + userId);
         }
 
         @Test

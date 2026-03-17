@@ -165,7 +165,7 @@ public class NotificationServiceTest {
                 .extracting(ILoggingEvent::getFormattedMessage)
                 .containsExactly(
                         String.format("Sending revoke firm access notification for User: %s", userProfileId),
-                        String.format("Revoke firm access notification sent to: alice@example.com for User ID: %s", userProfileId));
+                        String.format("Revoke firm access notification sent for User ID: %s", userProfileId));
     }
 
     @Test
@@ -341,6 +341,6 @@ public class NotificationServiceTest {
                 .extracting(ILoggingEvent::getFormattedMessage)
                 .containsExactly(
                         String.format("Sending user access change notification for User: %s (change type: %s)", userProfileId, changeType),
-                        String.format("User access change notification sent to: null for User ID: %s", userProfileId));
+                        String.format("User access change notification sent for User ID: %s", userProfileId));
     }
 }

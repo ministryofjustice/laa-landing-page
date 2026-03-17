@@ -455,7 +455,7 @@ public class UserController {
 
         EntraUser current = loginService.getCurrentEntraUser(authentication);
         try {
-            DeletedUser deletedUser = userService.deleteExternalUser(id, reason.trim(), current.getId());
+            DeletedUser deletedUser = userService.deleteExternalUser(id, reason.trim(), current.getEntraOid());
             DeleteUserSuccessAuditEvent deleteUserAuditEvent = new DeleteUserSuccessAuditEvent(
                     reason.trim(), UUID.fromString(current.getEntraOid()), deletedUser);
             eventService.logEvent(deleteUserAuditEvent);

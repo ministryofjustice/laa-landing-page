@@ -61,7 +61,7 @@ public class NotificationService {
                             firstName
                     )
             );
-            log.info("Multi Firm profile created notification sent to: {} for User ID: {}", email, userProfileId);
+            log.info("Multi Firm profile created notification sent for User ID: {}", userProfileId);
         }
     }
 
@@ -82,7 +82,7 @@ public class NotificationService {
                             firstName
                     )
             );
-            log.info("Revoke firm access notification sent to: {} for User ID: {}", email, userProfileId);
+            log.info("Revoke firm access notification sent for User ID: {}", userProfileId);
         }
     }
 
@@ -103,7 +103,7 @@ public class NotificationService {
                         userProfileId
                 )
         );
-        log.info("User access change notification sent to: {} for User ID: {}", email, userProfileId);
+        log.info("User access change notification sent for User ID: {}", userProfileId);
     }
 
 

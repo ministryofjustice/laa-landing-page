@@ -48,7 +48,7 @@ public class ClaimEnrichmentService {
         String appEntraId = request.getData().getAuthenticationContext().getClientServicePrincipal().getAppId();
         List<Firm> externalFirms = List.of();
         
-        log.info("Processing claim enrichment for user: {}", userPrincipalName);
+        log.info("Claim enrichment initiated for OID: {}", userId);
 
         try {
             // 1. Get the EntraUser from database

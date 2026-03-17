@@ -353,11 +353,11 @@ public class UserService {
      *
      * @param userProfileId the ID of the user profile (UUID as String)
      * @param reason        the reason for deletion, used for logging/audit
-     * @param actorId       the UUID of the actor performing the deletion (for
+     * @param actorId       the entra oid of the actor performing the deletion (for
      *                      logging)
      */
     @Transactional
-    public DeletedUser deleteExternalUser(String userProfileId, String reason, UUID actorId) {
+    public DeletedUser deleteExternalUser(String userProfileId, String reason, String actorId) {
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
         if (optionalUserProfile.isEmpty()) {
             throw new RuntimeException("User profile not found: " + userProfileId);
@@ -377,7 +377,7 @@ public class UserService {
         EntraUserDto entraUserDto = mapper.map(entraUser, EntraUserDto.class);
 
         logger.info(
-                "Deleting external user. actorId={}, userProfileId={}, entraUserId={}, reason=\"{}\"",
+                "Deleting external user. actorEntraId={}, userProfileId={}, entraUserId={}, reason=\"{}\"",
                 actorId, userProfileId, entraUser.getId(), reason);
 
 
@@ -391,7 +391,7 @@ public class UserService {
             userAccountStatusAuditRepository.deleteAll(auditRecords);
             userAccountStatusAuditRepository.flush();
             logger.debug("Deleted {} audit records for user: {} ({})",
-                    auditRecords.size(), entraUser.getEmail(), entraUser.getId());
+                    auditRecords.size(), entraUser.getEmail(), entraUser.getEntraOid());
         }
 
         // hard delete from silas db

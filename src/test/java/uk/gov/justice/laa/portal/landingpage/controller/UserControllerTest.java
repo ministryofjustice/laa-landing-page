@@ -783,7 +783,7 @@ class UserControllerTest {
 
         // Assert
         assertThat(view).isEqualTo("delete-user-success");
-        verify(userService).deleteExternalUser(eq(userProfileId), eq(reason.trim()), eq(currentUser.getId()));
+        verify(userService).deleteExternalUser(eq(userProfileId), eq(reason.trim()), eq(currentUser.getEntraOid()));
         verify(eventService).logEvent(any(DeleteUserSuccessAuditEvent.class));
     }
 
@@ -803,7 +803,7 @@ class UserControllerTest {
         EntraUser currentUser = EntraUser.builder().id(UUID.randomUUID()).build();
         when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(targetProfile));
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
-        when(userService.deleteExternalUser(anyString(), anyString(), any(UUID.class)))
+        when(userService.deleteExternalUser(anyString(), anyString(), any(String.class)))
                 .thenThrow(new RuntimeException("Tech Services unavailable"));
         String reason = "email typo";
         // Act
@@ -812,7 +812,7 @@ class UserControllerTest {
         // Assert
         assertThat(view).isEqualTo("delete-user-reason");
         assertThat(model.getAttribute("globalErrorMessage")).isEqualTo("User delete failed, please try again later");
-        verify(userService).deleteExternalUser(eq(userProfileId), eq(reason.trim()), eq(currentUser.getId()));
+        verify(userService).deleteExternalUser(eq(userProfileId), eq(reason.trim()), eq(currentUser.getEntraOid()));
         verify(eventService).logEvent(any(DeleteUserAttemptAuditEvent.class));
     }
 
@@ -2868,6 +2868,44 @@ class UserControllerTest {
         assertThat(view).isEqualTo("edit-user-confirmation");
         assertThat(model.getAttribute("user")).isEqualTo(userProfile);
         assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("User updated - testUserName");
+    }
+
+    @Test
+    void confirmCancelEditUserApps() {
+        // Given
+        String userId = "550e8400-e29b-41d4-a716-446655440000";
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setId(userId);
+        entraUser.setFullName("testUserName");
+        final UserProfileDto userProfile = UserProfileDto.builder()
+                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .entraUser(entraUser)
+                .build();
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
+        // When
+        String view = userController.confirmCancelEditUserApps(userId, model);
+        // Then
+        assertThat(view).isEqualTo("cancel-edit-user-confirmation");
+        assertThat(model.getAttribute("user")).isEqualTo(userProfile);
+    }
+
+    @Test
+    void confirmCancelEditUserOffices() {
+        // Given
+        String userId = "550e8400-e29b-41d4-a716-446655440000";
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setId(userId);
+        entraUser.setFullName("testUserName");
+        final UserProfileDto userProfile = UserProfileDto.builder()
+                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .entraUser(entraUser)
+                .build();
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
+        // When
+        String view = userController.confirmCancelEditUserOffices(userId, model);
+        // Then
+        assertThat(view).isEqualTo("cancel-edit-user-firm-confirmation");
+        assertThat(model.getAttribute("user")).isEqualTo(userProfile);
     }
 
     @Test
@@ -5772,6 +5810,23 @@ class UserControllerTest {
     }
 
     @Test
+    void confirmCancelGrantingAccess_shouldPopulateModelAndReturnView() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440013";
+        UserProfileDto user = new UserProfileDto();
+        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+
+        // When
+        String view = userController.confirmCancelGrantingAccess(userId, model);
+
+        // Then
+        assertThat(view).isEqualTo("cancel-grant-access-user-confirmation");
+        assertThat(model.getAttribute("user")).isEqualTo(user);
+    }
+
+    @Test
     void cancelGrantAccess_shouldClearSessionAndRedirectToManageUser() {
         // Given
         String userId = "550e8400-e29b-41d4-a716-446655440014";
@@ -6806,6 +6861,41 @@ class UserControllerTest {
         }
 
         @Test
+        void convertToMultiFirm_withAlreadyMultiFirmUser_redirectsWithError() {
+            // Given
+            String userId = UUID.randomUUID().toString();
+            MockHttpSession session = new MockHttpSession();
+
+            uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm sessionForm = new uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm();
+            sessionForm.setConvertToMultiFirm(true);
+            session.setAttribute("convertToMultiFirmForm", sessionForm);
+
+            UserProfileDto user = UserProfileDto.builder()
+                    .id(UUID.fromString(userId))
+                    .userType(UserType.EXTERNAL)
+                    .entraUser(EntraUserDto.builder()
+                            .id(userId)
+                            .firstName("Jane")
+                            .lastName("Smith")
+                            .multiFirmUser(true)
+                            .build())
+                    .build();
+
+            when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+
+            uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm form = new uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm();
+            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+            // When
+            String result = userController.convertToMultiFirm(userId, form, model, session, redirectAttributes);
+
+            // Then
+            assertThat(redirectAttributes.getFlashAttributes().get("errorMessage"))
+                    .isEqualTo("This user is already a multi-firm user");
+            assertThat(result).isEqualTo("redirect:/admin/users/manage/" + userId);
+        }
+
+        @Test
         void convertToMultiFirmPost_withValidYes_convertsUserAndRedirectsToManageUser() {
             // Given
             final String userId = UUID.randomUUID().toString();
@@ -7213,6 +7303,76 @@ class UserControllerTest {
 
             assertThat(view).isEqualTo("grant-access-user-roles");
             verify(userService).getAppRolesByAppIdAndUserType("app-id-1", UserType.INTERNAL, null);
+        }
+    }
+
+    @Nested
+    class FirmReassignmentPageTests {
+
+        @Test
+        public void showFirmReassignmentPage_withError() {
+            String userId = UUID.randomUUID().toString();
+            UUID selectedFirmId = UUID.randomUUID();
+
+            FirmDto firm = FirmDto.builder().name("firmOne").id(selectedFirmId).build();
+
+
+            UserProfileDto user = UserProfileDto.builder()
+                    .id(UUID.fromString(userId))
+                    .userType(UserType.EXTERNAL)
+                    .firm(firm)
+                    .entraUser(EntraUserDto.builder()
+                            .id(userId)
+                            .firstName("Jane")
+                            .lastName("Smith")
+                            .multiFirmUser(false)
+                            .build())
+                    .build();
+
+            when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+
+            // When
+            String result = userController.showFirmReassignmentPage(userId, selectedFirmId.toString(), "firmOne", "reassign", model,
+                    redirectAttributes);
+
+            assertThat(model.getAttribute("errorMessage")).isEqualTo("An error occurred while loading the page");
+            assertThat(result).isEqualTo("errors/error-generic");
+        }
+
+        @Test
+        public void showFirmReassignmentPage() {
+            String userId = UUID.randomUUID().toString();
+            UUID selectedFirmId = UUID.randomUUID();
+
+            FirmDto firm = FirmDto.builder().name("firmOne").id(selectedFirmId).build();
+            AppRoleDto appRoleDto = AppRoleDto.builder().app(AppDto.builder().enabled(true).build()).build();
+
+            UserProfileDto user = UserProfileDto.builder()
+                    .id(UUID.fromString(userId))
+                    .userType(UserType.EXTERNAL)
+                    .firm(firm)
+                    .appRoles(List.of(appRoleDto))
+                    .entraUser(EntraUserDto.builder()
+                            .id(userId)
+                            .firstName("Jane")
+                            .lastName("Smith")
+                            .multiFirmUser(false)
+                            .build())
+                    .build();
+
+            when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+
+            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+            // When
+            String result = userController.showFirmReassignmentPage(userId, selectedFirmId.toString(), "firmOne", "reassign", model,
+                    redirectAttributes);
+
+            assertThat(redirectAttributes.getFlashAttributes().get("errorMessage"))
+                    .isEqualTo("All app assignments must be removed before assigning a different firm to the account");
+            assertThat(model.getAttribute("errorMessage"))
+                    .isEqualTo("All app assignments must be removed before assigning a different firm to the account");
+            assertThat(result).isEqualTo("redirect:/admin/users/manage/" + userId);
         }
     }
 }
