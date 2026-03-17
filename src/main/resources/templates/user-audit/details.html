@@ -147,6 +147,28 @@
                                         <dt class="govuk-summary-list__key">Created by</dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.createdBy}"></dd>
                                     </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">SILAS Status</dt>
+                                        <dd class="govuk-summary-list__value">
+                                            <!--user disable-->
+                                            <th:block th:if="${!user.enabled}">
+                                                <strong class="govuk-tag govuk-tag--red">Disable</strong>
+                                            </th:block>
+                                            <!--user active-->
+                                            <th:block th:unless="${!user.enabled}">
+                                                <!--user still pending-->
+                                                <th:block th:if="${user.hasPending}" >
+                                                    <!--no role assigned-->
+                                                    <strong th:if="${user.hasNoRole}" class="govuk-tag govuk-tag--purple">No roles assigned</strong>
+                                                    <strong th:unless="${user.hasNoRole}" class="govuk-tag govuk-tag--blue">Incomplete</strong>
+                                                </th:block>
+                                                <!--user is complete-->
+                                                <th:block th:unless="${user.hasPending}">
+                                                    <strong class="govuk-tag govuk-tag--green">Complete</strong>
+                                                </th:block>
+                                            </th:block>
+                                        </dd>
+                                    </div>
                                 </dl>
                             </div>
                         </div>
@@ -169,6 +191,16 @@
                                             <strong class="govuk-tag govuk-tag--green" th:if="${entraUser != null && entraUser.accountEnabled}">Active</strong>
                                             <strong class="govuk-tag govuk-tag--red" th:if="${entraUser != null && !entraUser.accountEnabled}">Disabled</strong>
                                             <strong class="govuk-tag govuk-tag--grey" th:if="${entraUser == null}">Unknown</strong>
+                                        </dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Activation Status</dt>
+                                        <dd class="govuk-summary-list__value">
+                                            <strong class="govuk-tag govuk-tag--purple" th:if="${entraUser != null && user.activationStatus == 'INVITE_SENT'}">Invite sent</strong>
+                                            <strong class="govuk-tag govuk-tag--orange" th:if="${entraUser != null && user.activationStatus == 'AWAITING_MFA'}">Awaiting MFA</strong>
+                                            <strong class="govuk-tag govuk-tag--grey" th:if="${entraUser != null && user.activationStatus == 'AWAITING_VERIFICATION'}">Activation pending</strong>
+                                            <strong class="govuk-tag govuk-tag--green" th:if="${entraUser != null && user.activationStatus == 'VERIFICATION_SUCCESS'}">Verification success</strong>
+                                            <strong class="govuk-tag govuk-tag--red" th:if="${entraUser != null && user.activationStatus == 'VERIFICATION_FAILED'}">Verification failed</strong>
                                         </dd>
                                     </div>
                                     <div class="govuk-summary-list__row" th:if="${entraUser != null && !entraUser.accountEnabled}">
