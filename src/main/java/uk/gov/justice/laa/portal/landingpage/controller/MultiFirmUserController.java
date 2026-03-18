@@ -851,7 +851,7 @@ public class MultiFirmUserController {
                     rolesAdded);
             eventService.logEvent(addUserProfileAuditEvent);
         } catch (Exception ex) {
-            log.error("Error creating new profile for user: {}", user.getFullName(), ex);
+            log.error("Error creating new profile for user: {} with entra id: {}", user.getEntraOid(), userProfile.getId(), ex);
             throw ex;
         }
 

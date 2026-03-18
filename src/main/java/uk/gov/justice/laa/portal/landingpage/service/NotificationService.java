@@ -28,8 +28,8 @@ public class NotificationService {
     private static final String INVITATION_URL = "invitationURL";
     private static final String PORTAL_URL = "portalURL";
 
-    public void notifyCreateUser(String name, String email, String invitationUrl) {
-        log.info("Starting add new user notification for User ID: {}", name);
+    public void notifyCreateUser(String name, String userId, String email, String invitationUrl) {
+        log.info("Starting add new user notification for User ID: {}", userId);
         if (null != email) {
             emailService.sendMail(
                     email,
@@ -40,7 +40,7 @@ public class NotificationService {
                             name
                     )
             );
-            log.info("Welcome user notification sent to: {} for User ID: {}", email, name);
+            log.info("Welcome user notification sent to user: {}", userId);
         }
     }
 
