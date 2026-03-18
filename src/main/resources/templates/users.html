@@ -848,7 +848,9 @@
                                               class="moj-badge moj-badge--grey">ACTIVATION PENDING</span>
                                         <span th:if="${user.invitationStatus?.name() == 'VERIFICATION_SUCCESS'}"
                                               class="moj-badge moj-badge--green">COMPLETE</span>
-                                        <span th:if="${user.invitationStatus?.name() == 'VERIFICATION_FAILED' || user.invitationStatus?.name() == 'INVITE_SENT' || user.invitationStatus?.name() == 'AWAITING_MFA' }"
+                                        <span th:if="${user.invitationStatus?.name() == 'VERIFICATION_FAILED'}"
+                                              class="moj-badge moj-badge--red">VERIFICATION FAILED</span>
+                                        <span th:if="${user.invitationStatus?.name() == 'INVITE_SENT' || user.invitationStatus?.name() == 'AWAITING_MFA' }"
                                               class="moj-badge moj-badge--blue">INCOMPLETE</span>
                                     </th:block>
                                     <!--user is pending-->
@@ -859,14 +861,15 @@
                                             <span th:if="${!user.hasAppRoles}"
                                                 class="moj-badge moj-badge--purple">NO ROLES ASSIGNED</span>
                                             <!--user has roles assigned and no office assigned-->
-                                            <span th:unless="${!user.hasAppRoles}"
+                                            <span th:unless="${!user.hasAppRoles()}"
                                                   class="moj-badge moj-badge--blue">INCOMPLETE</span>
                                         </th:block>
                                         <!--entra verification still going-->
-                                        <th:block th:unless="${user.invitationStatus?.name() == 'VERIFICATION_SUCCESS'}">
-                                            <!--All the other situation is incomplete-->
-                                            <span class="moj-badge moj-badge--blue">INCOMPLETE</span>
-                                        </th:block>
+                                        <span th:if="${user.invitationStatus?.name() == 'VERIFICATION_FAILED'}"
+                                              class="moj-badge moj-badge--red">VERIFICATION FAILED</span>
+                                        <span th:if="${user.invitationStatus?.name() == 'INVITE_SENT' || user.invitationStatus?.name() == 'AWAITING_MFA' }"
+                                              class="moj-badge moj-badge--blue">INCOMPLETE</span>
+
                                     </th:block>
                                 </th:block>
                             </td>
