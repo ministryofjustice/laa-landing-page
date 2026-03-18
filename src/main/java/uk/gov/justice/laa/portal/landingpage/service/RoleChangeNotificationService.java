@@ -77,7 +77,7 @@ public class RoleChangeNotificationService {
     private void sendRoleChangeNotificationToSqs(UserProfile userProfile, Set<String> newPuiRoles, Set<String> oldPuiRoles) throws Exception {
         EntraUser entraUser = userProfile.getEntraUser();
         if (!newPuiRoles.equals(oldPuiRoles)) {
-            log.info("CCMS roles updated for user: {}, generating message", userProfile.getEntraUser().getEntraOid());
+            log.info("CCMS roles updated for user: {} with entra oid: {}, generating message", userProfile.getId(), userProfile.getEntraUser().getEntraOid());
             CcmsMessage.CcmsMessageBuilder ccmsMessageBuilder = CcmsMessage.builder()
                     .userName(userProfile.getLegacyUserId().toString())
                     .firstName(entraUser.getFirstName())
@@ -91,7 +91,8 @@ public class RoleChangeNotificationService {
             }
 
             String messageBody = objectMapper.writeValueAsString(ccmsMessageBuilder.build());
-            log.info("CCMS role change message: {}", messageBody);
+            log.info("CCMS role change generated for user profile: {} with entra oid: {} and legacy profile id: {} containing CCMS roles: {}",
+                    userProfile.getId(), userProfile.getEntraUser().getEntraOid(), userProfile.getLegacyUserId().toString(), newPuiRoles);
 
             Map<String, MessageAttributeValue> userTypeAttribute = Map.of(USER_TYPE_ATTRIBUTE, MessageAttributeValue.builder()
                     .stringValue(userProfile.getUserType().toString())
@@ -107,17 +108,17 @@ public class RoleChangeNotificationService {
                     .build();
 
             SendMessageResponse response = sqsClient.sendMessage(sendMessageRequest);
-            log.info("CCMS role change message sent to queue for user: {}, messageId: {}",
-                entraUser.getEntraOid(), response.messageId());
+            log.info("CCMS role change message sent to queue for user: {} with entra oid: {}, messageId: {}",
+                    userProfile.getId(), entraUser.getEntraOid(), response.messageId());
         } else {
-            log.info("No CCMS roles updated for user: {}, skipping", userProfile.getEntraUser().getEntraOid());
+            log.info("No CCMS roles updated for user: {} with entra oid: {}, skipping", userProfile.getId(), userProfile.getEntraUser().getEntraOid());
         }
     }
 
     @Recover
     public boolean recoverFromRetryFailure(RuntimeException e, UserProfile userProfile) {
-        log.error("All retry attempts failed for CCMS notification for user: {}, saving roles to db and moving on",
-            userProfile.getEntraUser().getEntraOid(), e);
+        log.error("All retry attempts failed for CCMS notification for user: {} with entra oid: {}, saving roles to db and moving on",
+                userProfile.getId(), userProfile.getEntraUser().getEntraOid(), e);
         return false;
     }
 
@@ -154,12 +155,12 @@ public class RoleChangeNotificationService {
                         .collect(Collectors.toSet());
                 notificationSuccess = sendMessage(profile, ccmsRoles, Collections.emptySet());
 
-                log.info("CCMS role sync for user {}: {}", profile.getEntraUser().getEntraOid(), notificationSuccess);
+                log.info("CCMS role sync for user: {} with entra oid: {} {}", profile.getId(), profile.getEntraUser().getEntraOid(), notificationSuccess);
 
                 profile.setLastCcmsSyncSuccessful(notificationSuccess);
                 userProfileRepository.save(profile);
             } catch (Exception e) {
-                log.error("Error syncing roles for user {}", profile.getEntraUser().getEntraOid(), e);
+                log.error("Error syncing roles for user: {} with entra oid: {}", profile.getId(), profile.getEntraUser().getEntraOid(), e);
             }
 
             if (notificationSuccess) {

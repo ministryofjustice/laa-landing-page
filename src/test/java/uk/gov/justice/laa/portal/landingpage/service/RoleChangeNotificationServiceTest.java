@@ -238,6 +238,7 @@ class RoleChangeNotificationServiceTest {
                 .legacyUserId(UUID.randomUUID())
                 .appRoles(Set.of(puiRole2))
                 .firm(firm2)
+                .id(UUID.randomUUID())
                 .build();
 
         SendMessageResponse response = SendMessageResponse.builder().messageId("test-message-id").build();
@@ -258,11 +259,11 @@ class RoleChangeNotificationServiceTest {
         assertThat(savedProfile.get(1).isLastCcmsSyncSuccessful()).isTrue();
         verify(sqsClient, times(2)).sendMessage(any(SendMessageRequest.class));
         assertLogMessage("Initializing CCMS role change message for user: test-entra-oid");
-        assertLogMessage("CCMS roles updated for user: test-entra-oid");
-        assertLogMessage("CCMS role sync for user test-entra-oid: true");
+        assertLogMessage(String.format("CCMS roles updated for user: %s with entra oid: test-entra-oid", userProfile.getId()));
+        assertLogMessage(String.format("CCMS role sync for user: %s with entra oid: test-entra-oid true", userProfile.getId()));
         assertLogMessage("Initializing CCMS role change message for user: OID123");
-        assertLogMessage("CCMS roles updated for user: OID123");
-        assertLogMessage("CCMS role sync for user OID123: true");
+        assertLogMessage(String.format("CCMS roles updated for user: %s with entra oid: OID123", userProfile2.getId()));
+        assertLogMessage(String.format("CCMS role sync for user: %s with entra oid: OID123 true", userProfile2.getId()));
         assertLogMessage("CCMS role sync complete. Successful: 2, Unsuccessful: 0");
     }
 
@@ -284,7 +285,7 @@ class RoleChangeNotificationServiceTest {
         assertThat(savedProfile.isLastCcmsSyncSuccessful()).isFalse();
         verify(sqsClient, never()).sendMessage(any(SendMessageRequest.class));
         assertLogMessage("Skipping CCMS update for user: test-entra-oid");
-        assertLogMessage("CCMS role sync for user test-entra-oid: false");
+        assertLogMessage(String.format("CCMS role sync for user: %s with entra oid: test-entra-oid false", userProfile.getId()));
         assertLogMessage("CCMS role sync complete. Successful: 0, Unsuccessful: 1");
     }
 
@@ -296,6 +297,7 @@ class RoleChangeNotificationServiceTest {
         Firm firm = Firm.builder().code("FIRM001").build();
         UserProfile profile = UserProfile.builder()
                 .entraUser(entraUser)
+                .id(UUID.randomUUID())
                 .userType(UserType.EXTERNAL)
                 .legacyUserId(UUID.randomUUID())
                 .appRoles(Set.of(appRole))
@@ -311,10 +313,11 @@ class RoleChangeNotificationServiceTest {
         // Assert
         verify(userProfileRepository, never()).save(any());
         assertLogMessage("Initializing CCMS role change message for user: OID123");
-        assertLogMessage("CCMS roles updated for user: OID123");
-        assertLogMessage("CCMS role change message:");
+        assertLogMessage(String.format("CCMS roles updated for user: %s with entra oid: OID123", profile.getId()));
+        assertLogMessage(String.format("CCMS role change generated for user profile: %s with entra oid: "
+                + "OID123 and legacy profile id: %s containing CCMS roles: [CCMS_ROLE]", profile.getId(), profile.getLegacyUserId()));
         assertLogMessage("CCMS notification attempt failed for user: OID123", Level.WARN);
-        assertLogMessage("Error syncing roles for user OID123", Level.ERROR);
+        assertLogMessage(String.format("Error syncing roles for user: %s with entra oid: OID123", profile.getId()), Level.ERROR);
         assertLogMessage("CCMS role sync complete. Successful: 0, Unsuccessful: 1");
     }
 

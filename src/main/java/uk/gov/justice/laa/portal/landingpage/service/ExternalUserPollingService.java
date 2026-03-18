@@ -124,7 +124,7 @@ public class ExternalUserPollingService {
                     if (user.isDeleted()) {
                         deleteUser(entraUser);
                         updatedCount++;
-                        log.info("Deleted user: {}  - marked as deleted in Entra",
+                        log.info("Deleted entra user: {}  - marked as deleted in Entra",
                                 entraUser.getEntraOid());
                         continue;
                     }
@@ -167,7 +167,7 @@ public class ExternalUserPollingService {
 
                     entraUserRepository.save(entraUser);
                     updatedCount++;
-                    log.info("Updated user: {}", entraUser.getEntraOid());
+                    log.info("Updated user: {} with entra oid {}", user.getId(), entraUser.getEntraOid());
                 }
             } catch (Exception e) {
                 log.error("Error synchronizing user {}: {}", user.getId(), e.getMessage(), e);
@@ -205,7 +205,7 @@ public class ExternalUserPollingService {
             if (!auditRecords.isEmpty()) {
                 userAccountStatusAuditRepository.deleteAll(auditRecords);
                 userAccountStatusAuditRepository.flush();
-                log.info("Deleted {} audit records for user: {}",
+                log.info("Deleted {} audit records for entra user: {} ",
                         auditRecords.size(), entraUser.getEntraOid());
             }
 
@@ -239,12 +239,13 @@ public class ExternalUserPollingService {
             entraUserRepository.delete(entraUser);
             entraUserRepository.flush();
             
-            log.info("Successfully deleted user and all related entities: {}", entraUser.getEntraOid());
+            log.info("Successfully deleted entra user and all related entities: {}",
+                     entraUser.getEntraOid());
                     
         } catch (Exception e) {
             String oid = entraUser.getEntraOid() != null ? entraUser.getEntraOid() : "unknown";
-            log.error("Error deleting user {}: {}", oid, e.getMessage(), e);
-            throw new RuntimeException("Failed to delete user: " + oid, e);
+            log.error("Error deleting entra user {}: {}",  oid, e.getMessage(), e);
+            throw new RuntimeException("Failed to delete entra user: " + oid, e);
         }
     }
 
@@ -274,7 +275,7 @@ public class ExternalUserPollingService {
             }
                     
         } catch (Exception e) {
-            log.error("Error disabling user {} : {}",
+            log.error("Error disabling entra user {}: {}",
                     entraUser.getEntraOid(), e.getMessage(), e);
         }
     }
@@ -292,10 +293,11 @@ public class ExternalUserPollingService {
 
             userAccountStatusAuditRepository.save(audit);
 
-            log.info("Enabled user: {} from external user API sync", entraUser.getEntraOid());
+            log.info("Enabled entra user: {} from external user API sync", entraUser.getEntraOid());
 
         } catch (Exception e) {
-            log.error("Error enabling user {}: {}", entraUser.getEntraOid(), e.getMessage(), e);
+            log.error("Error enabling entra user {}: {}",
+                    entraUser.getEntraOid(), e.getMessage(), e);
         }
     }
 
