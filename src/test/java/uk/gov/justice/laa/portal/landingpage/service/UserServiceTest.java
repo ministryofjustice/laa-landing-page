@@ -1,6 +1,8 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -86,6 +88,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.EventType;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
+import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
@@ -6816,6 +6819,172 @@ class UserServiceTest {
             assertThat(capturedPageRequest.getSort().getOrderFor("email")).isNotNull();
             assertThat(capturedPageRequest.getSort().getOrderFor("email").getDirection())
                     .isEqualTo(Sort.Direction.ASC);
+        }
+    }
+
+    @Nested
+    class GetAuditUsersDormantFiltersTests {
+
+        private EntraUser buildUser(UUID id, String firstName, String lastName, String email,
+                LocalDateTime lastLoginDate, InvitationStatus invitationStatus) {
+            return EntraUser.builder()
+                    .id(id)
+                    .firstName(firstName)
+                    .lastName(lastName)
+                    .email(email)
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .lastLoginDate(lastLoginDate)
+                    .invitationStatus(invitationStatus)
+                    .userProfiles(new HashSet<>())
+                    .build();
+        }
+
+        @Test
+        void getAuditUsers_withInactiveSinceDate_passesCorrectFlagAndDateToRepository() {
+            // Given
+            LocalDate cutoffDate = LocalDate.of(2025, 1, 1);
+            UUID userId = UUID.randomUUID();
+            EntraUser user = buildUser(userId, "Old", "User", "old@example.com",
+                    LocalDateTime.of(2024, 6, 1, 0, 0), InvitationStatus.VERIFICATION_SUCCESS);
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user), PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null),
+                    eq("active"), eq(cutoffDate.atStartOfDay()), eq(null),
+                    any(PageRequest.class)))
+                    .thenReturn(userPage);
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When
+            PaginatedAuditUsers result = userService.getAuditUsers(
+                    null, null, null, null, null, 1, 10, "name", "asc", false, cutoffDate, null);
+
+            // Then
+            assertThat(result.getUsers()).hasSize(1);
+            verify(mockEntraUserRepository).findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null),
+                    eq("active"), eq(cutoffDate.atStartOfDay()), eq(null),
+                    any(PageRequest.class));
+        }
+
+        @Test
+        void getAuditUsers_withNoInactiveSinceDate_passesNullFlagAndNullDateToRepository() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            EntraUser user = buildUser(userId, "Active", "User", "active@example.com",
+                    LocalDateTime.now(), InvitationStatus.VERIFICATION_SUCCESS);
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user), PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null),
+                    eq(null), eq(null), eq(null),
+                    any(PageRequest.class)))
+                    .thenReturn(userPage);
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When
+            PaginatedAuditUsers result = userService.getAuditUsers(
+                    null, null, null, null, null, 1, 10, "name", "asc", false, null, null);
+
+            // Then
+            assertThat(result.getUsers()).hasSize(1);
+            verify(mockEntraUserRepository).findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null),
+                    eq(null), eq(null), eq(null),
+                    any(PageRequest.class));
+        }
+
+        @Test
+        void getAuditUsers_withNeverActivatedTrue_passesNeverActivatedFlagToRepository() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            EntraUser user = buildUser(userId, "Never", "Activated", "never@example.com",
+                    null, InvitationStatus.INVITE_SENT);
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user), PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null),
+                    eq(null), eq(null), eq("true"),
+                    any(PageRequest.class)))
+                    .thenReturn(userPage);
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When
+            PaginatedAuditUsers result = userService.getAuditUsers(
+                    null, null, null, null, null, 1, 10, "name", "asc", false, null, true);
+
+            // Then
+            assertThat(result.getUsers()).hasSize(1);
+            verify(mockEntraUserRepository).findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null),
+                    eq(null), eq(null), eq("true"),
+                    any(PageRequest.class));
+        }
+
+        @Test
+        void getAuditUsers_withNeverActivatedFalse_passesNullFlagToRepository() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            EntraUser user = buildUser(userId, "Verified", "User", "verified@example.com",
+                    LocalDateTime.now(), InvitationStatus.VERIFICATION_SUCCESS);
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user), PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null),
+                    eq(null), eq(null), eq(null),
+                    any(PageRequest.class)))
+                    .thenReturn(userPage);
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When
+            PaginatedAuditUsers result = userService.getAuditUsers(
+                    null, null, null, null, null, 1, 10, "name", "asc", false, null, false);
+
+            // Then
+            assertThat(result.getUsers()).hasSize(1);
+            verify(mockEntraUserRepository).findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null),
+                    eq(null), eq(null), eq(null),
+                    any(PageRequest.class));
+        }
+
+        @Test
+        void getAuditUsers_withBothFilters_passesBothFlagsToRepository() {
+            // Given
+            LocalDate cutoffDate = LocalDate.of(2025, 6, 1);
+            UUID userId = UUID.randomUUID();
+            EntraUser user = buildUser(userId, "Dormant", "User", "dormant@example.com",
+                    LocalDateTime.of(2024, 1, 1, 0, 0), InvitationStatus.INVITE_SENT);
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user), PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null),
+                    eq("active"), eq(cutoffDate.atStartOfDay()), eq("true"),
+                    any(PageRequest.class)))
+                    .thenReturn(userPage);
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When
+            PaginatedAuditUsers result = userService.getAuditUsers(
+                    null, null, null, null, null, 1, 10, "name", "asc", false, cutoffDate, true);
+
+            // Then
+            assertThat(result.getUsers()).hasSize(1);
+            verify(mockEntraUserRepository).findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null),
+                    eq("active"), eq(cutoffDate.atStartOfDay()), eq("true"),
+                    any(PageRequest.class));
         }
     }
 
