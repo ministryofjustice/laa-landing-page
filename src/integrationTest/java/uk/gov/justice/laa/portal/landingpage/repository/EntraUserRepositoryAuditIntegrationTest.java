@@ -321,7 +321,7 @@ class EntraUserRepositoryAuditIntegrationTest extends BaseRepositoryTest {
         LocalDateTime cutoff = LocalDateTime.of(2025, 1, 1, 0, 0);
 
         // login before cutoff — should be included
-        EntraUser staleUser = createTestUserWithLoginAndInvitation(
+        final EntraUser staleUser = createTestUserWithLoginAndInvitation(
                 "Stale", "User", "stale@example.com",
                 LocalDateTime.of(2024, 6, 1, 0, 0), InvitationStatus.VERIFICATION_SUCCESS);
 
@@ -350,7 +350,7 @@ class EntraUserRepositoryAuditIntegrationTest extends BaseRepositoryTest {
     void findAllUsersForAudit_withNeverActivated_returnsOnlyUsersWhoseInvitationStatusIsNotVerified() {
         // Given
         // invitation not yet successful — should be included
-        EntraUser neverActivated = createTestUserWithLoginAndInvitation(
+        final EntraUser neverActivated = createTestUserWithLoginAndInvitation(
                 "Never", "Activated", "never@example.com",
                 null, InvitationStatus.INVITE_SENT);
 
@@ -376,12 +376,12 @@ class EntraUserRepositoryAuditIntegrationTest extends BaseRepositoryTest {
         LocalDateTime cutoff = LocalDateTime.of(2025, 1, 1, 0, 0);
 
         // matches date filter only (logged in before cutoff, but is verified)
-        EntraUser staleButVerified = createTestUserWithLoginAndInvitation(
+        final EntraUser staleButVerified = createTestUserWithLoginAndInvitation(
                 "Stale", "Verified", "staleverified@example.com",
                 LocalDateTime.of(2024, 3, 1, 0, 0), InvitationStatus.VERIFICATION_SUCCESS);
 
         // matches neverActivated filter only (recent login, but not verified)
-        EntraUser recentButUnverified = createTestUserWithLoginAndInvitation(
+        final EntraUser recentButUnverified = createTestUserWithLoginAndInvitation(
                 "Recent", "Unverified", "recentunverified@example.com",
                 LocalDateTime.of(2025, 6, 1, 0, 0), InvitationStatus.INVITE_SENT);
 
