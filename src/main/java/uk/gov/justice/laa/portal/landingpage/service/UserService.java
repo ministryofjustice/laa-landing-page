@@ -1865,11 +1865,11 @@ public class UserService {
 
         // Check if user has any pending profiles
         boolean hasPending = allProfiles.stream()
-                .anyMatch(userProfile -> userProfile.getUserProfileStatus() == UserProfileStatus.PENDING);
+                .anyMatch(up -> UserProfileStatus.PENDING.equals(up.getUserProfileStatus()));
 
         //Check if user haven't assigned any roles
         boolean noRolesAssigned = allProfiles.stream()
-                .anyMatch(userProfile -> userProfile.getAppRoles().isEmpty());
+                .anyMatch(userProfile -> userProfile.getAppRoles() == null || userProfile.getAppRoles().isEmpty());
 
         // Sort with active profile first
         allProfiles.sort((p1, p2) -> Boolean.compare(p2.isActiveProfile(), p1.isActiveProfile()));
@@ -1905,8 +1905,8 @@ public class UserService {
                 .profiles(profileDtos).totalProfiles(totalProfiles).totalProfilePages(totalPages)
                 .currentProfilePage(profilePage).hasNoProfile(false)
                 .entraOid(entraUser.getEntraOid())
-                .hasPending(hasPending)
-                .hasNoRole(noRolesAssigned)
+                .isPending(hasPending)
+                .isNoRole(noRolesAssigned)
                 .build();
     }
 
@@ -1933,7 +1933,7 @@ public class UserService {
 
         //Check if user haven't assigned any roles
         boolean noRolesAssigned = allProfiles.stream()
-                .anyMatch(profile -> profile.getAppRoles().isEmpty());
+                .anyMatch(profile ->  profile.getAppRoles() == null || profile.getAppRoles().isEmpty());
 
         // Determine user type using shared method
         String userType = determineUserType(entraUser, allProfiles);
@@ -1954,8 +1954,8 @@ public class UserService {
                 .profiles(Collections.emptyList()).totalProfiles(0).totalProfilePages(0)
                 .currentProfilePage(1).hasNoProfile(true)
                 .entraOid(entraUser.getEntraOid())
-                .hasPending(hasPending)
-                .hasNoRole(noRolesAssigned)
+                .isPending(hasPending)
+                .isNoRole(noRolesAssigned)
                 .build();
     }
 

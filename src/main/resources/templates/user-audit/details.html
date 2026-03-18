@@ -157,13 +157,13 @@
                                             <!--user active-->
                                             <th:block th:unless="${!user.enabled}">
                                                 <!--user still pending-->
-                                                <th:block th:if="${user.hasPending}" >
+                                                <th:block th:if="${user.isPending}" >
                                                     <!--no role assigned-->
-                                                    <strong th:if="${user.hasNoRole}" class="govuk-tag govuk-tag--purple">No roles assigned</strong>
-                                                    <strong th:unless="${user.hasNoRole}" class="govuk-tag govuk-tag--blue">Incomplete</strong>
+                                                    <strong th:if="${user.isNoRole}" class="govuk-tag govuk-tag--purple">No roles assigned</strong>
+                                                    <strong th:unless="${user.isNoRole}" class="govuk-tag govuk-tag--blue">Incomplete</strong>
                                                 </th:block>
                                                 <!--user is complete-->
-                                                <th:block th:unless="${user.hasPending}">
+                                                <th:block th:unless="${user.isPending}">
                                                     <strong class="govuk-tag govuk-tag--green">Complete</strong>
                                                 </th:block>
                                             </th:block>

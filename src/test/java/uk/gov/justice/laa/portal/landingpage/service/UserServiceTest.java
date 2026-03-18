@@ -7271,6 +7271,8 @@ class UserServiceTest {
             assertThat(result.getTotalProfiles()).isEqualTo(3);
             assertThat(result.getTotalProfilePages()).isEqualTo(2);
             assertThat(result.getCurrentProfilePage()).isEqualTo(2);
+            assertThat(result.isNoRole()).isEqualTo(2);
+
         }
     }
 
