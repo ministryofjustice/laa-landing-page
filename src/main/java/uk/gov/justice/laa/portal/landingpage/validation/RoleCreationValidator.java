@@ -1,4 +1,4 @@
-package uk.gov.justice.laa.portal.landingpage.validator;
+package uk.gov.justice.laa.portal.landingpage.validation;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.Nullable;

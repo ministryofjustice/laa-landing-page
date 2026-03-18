@@ -61,7 +61,7 @@ import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
-import uk.gov.justice.laa.portal.landingpage.validator.RoleCreationValidator;
+import uk.gov.justice.laa.portal.landingpage.validation.RoleCreationValidator;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
