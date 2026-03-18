@@ -80,7 +80,7 @@
                     </dd>
                     <dd class="govuk-summary-list__actions">
                         <a class="govuk-link"
-                           th:href="@{'/admin/silas-administration/app/' + ${appRole.id}}">
+                           th:href="@{/admin/silas-administration/role/assignRestrictions/{appRoleId}(appRoleId=${appRole.id})}">
                             Change<span class="govuk-visually-hidden"></span>
                         </a>
                     </dd>
