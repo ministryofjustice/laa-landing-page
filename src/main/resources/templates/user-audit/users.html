@@ -130,6 +130,10 @@
                                     name="selectedAppId" th:value="${selectedAppId}">
                                 <input th:if="${selectedUserType != null and selectedUserType != ''}" type="hidden"
                                        name="selectedUserType" th:value="${selectedUserType}">
+                                <input th:if="${inactiveSinceDate != null}" type="hidden"
+                                       name="inactiveSinceDate" th:value="${inactiveSinceDate}">
+                                <input th:if="${neverActivated}" type="hidden"
+                                       name="neverActivated" th:value="${neverActivated}">
                             </form>
                         </fieldset>
                     </div>
@@ -174,6 +178,66 @@
                                 <option value="EXTERNAL" th:selected="${selectedUserType == 'EXTERNAL'}">External</option>
                                 <option value="MULTI_FIRM" th:selected="${selectedUserType == 'MULTI_FIRM'}">External Multi-Firm</option>
                             </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dormant Account Filters -->
+                <div class="govuk-grid-row govuk-!-margin-top-4">
+                    <div class="govuk-grid-column-full">
+                        <div class="filters-container">
+                            <!-- Filter by inactivity -->
+                            <div class="govuk-!-padding-top-2">
+                                <details class="govuk-details" data-module="govuk-details" th:attr="open=${inactiveSinceDate != null ? 'open' : null}">
+                                    <summary class="govuk-details__summary">
+                                        <span class="govuk-details__summary-text">
+                                            Filter by last login date
+                                        </span>
+                                    </summary>
+                                    <div class="govuk-details__text">
+                                        <div class="govuk-form-group">
+                                            <label class="govuk-label" for="inactiveSinceDate">
+                                                Not logged in since
+                                            </label>
+                                            <div class="govuk-hint">
+                                                Shows users whose last login was before this date.
+                                            </div>
+                                            <input class="govuk-input govuk-input--width-10"
+                                                   id="inactiveSinceDate"
+                                                   name="inactiveSinceDate"
+                                                   type="date"
+                                                   th:value="${inactiveSinceDate}">
+                                        </div>
+                                    </div>
+                                </details>
+                            </div>
+                            <!-- Filter for non-activation -->
+                            <div class="govuk-!-padding-top-2">
+                                <details class="govuk-details" data-module="govuk-details" th:attr="open=${neverActivated ? 'open' : null}">
+                                    <summary class="govuk-details__summary">
+                                        <span class="govuk-details__summary-text">
+                                            Filter by activation status
+                                        </span>
+                                    </summary>
+                                    <div class="govuk-details__text">
+                                        <div class="govuk-form-group">
+                                            <div class="govuk-checkboxes govuk-checkboxes--small">
+                                                <div class="govuk-checkboxes__item">
+                                                    <input class="govuk-checkboxes__input"
+                                                           id="neverActivated"
+                                                           name="neverActivated"
+                                                           type="checkbox"
+                                                           value="true"
+                                                           th:checked="${neverActivated}">
+                                                    <label class="govuk-label govuk-checkboxes__label" for="neverActivated">
+                                                        Show users who never activated their account
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </details>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -751,6 +815,36 @@
                             currentUrl.searchParams.set('selectedUserType', this.value);
                         } else {
                             currentUrl.searchParams.delete('selectedUserType');
+                        }
+                        currentUrl.searchParams.set('page', '1');
+                        window.location.href = currentUrl.toString();
+                    });
+                }
+
+                // Inactive since date filter auto-submit
+                const inactiveSinceDateFilter = document.getElementById('inactiveSinceDate');
+                if (inactiveSinceDateFilter) {
+                    inactiveSinceDateFilter.addEventListener('change', function () {
+                        const currentUrl = new URL(window.location.href);
+                        if (this.value) {
+                            currentUrl.searchParams.set('inactiveSinceDate', this.value);
+                        } else {
+                            currentUrl.searchParams.delete('inactiveSinceDate');
+                        }
+                        currentUrl.searchParams.set('page', '1');
+                        window.location.href = currentUrl.toString();
+                    });
+                }
+
+                // Never activated filter auto-submit
+                const neverActivatedFilter = document.getElementById('neverActivated');
+                if (neverActivatedFilter) {
+                    neverActivatedFilter.addEventListener('change', function () {
+                        const currentUrl = new URL(window.location.href);
+                        if (this.checked) {
+                            currentUrl.searchParams.set('neverActivated', 'true');
+                        } else {
+                            currentUrl.searchParams.delete('neverActivated');
                         }
                         currentUrl.searchParams.set('page', '1');
                         window.location.href = currentUrl.toString();
