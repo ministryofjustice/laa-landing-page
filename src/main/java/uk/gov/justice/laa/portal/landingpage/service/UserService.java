@@ -1713,7 +1713,7 @@ public class UserService {
                 } else if (user.getInvitationStatus().name().equals("VERIFICATION_SUCCESS")) {
                     return "Complete";
                 } else if (user.getInvitationStatus().name().equals("VERIFICATION_FAILED")){
-                    return "Verification Failed";
+                    return "Activation Failed";
                 }
             } else { // user is incomplete user hasn't roles assigned any roles
                 if (user.getInvitationStatus() == null || user.getInvitationStatus().name().equals("VERIFICATION_SUCCESS")) {
@@ -1722,7 +1722,7 @@ public class UserService {
                         return "No roles assigned";
                     }
                 } else if (user.getInvitationStatus().name().equals("VERIFICATION_FAILED")){
-                    return "Verification Failed";
+                    return "Activation Failed";
                 }
             }
         }

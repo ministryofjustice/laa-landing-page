@@ -98,7 +98,7 @@
                                     <span th:if="${user.entraUser.invitationStatus?.name() == 'VERIFICATION_SUCCESS'}"
                                           class="govuk-tag govuk-tag--green govuk-!-font-weight-bold govuk-!-margin-top-1">COMPLETE</span>
                                     <span th:if="${user.entraUser.invitationStatus?.name() == 'VERIFICATION_FAILED'}"
-                                          class="govuk-tag govuk-tag--red govuk-!-font-weight-bold govuk-!-margin-top-1"  style="min-width: 200px">VERIFICATION FAILED</span>
+                                          class="govuk-tag govuk-tag--red govuk-!-font-weight-bold govuk-!-margin-top-1"  style="min-width: 200px">ACTIVATION FAILED</span>
                                     <span th:if="${user.entraUser.invitationStatus?.name() == 'INVITE_SENT' || user.entraUser.invitationStatus?.name() == 'AWAITING_MFA'}"
                                           class="govuk-tag govuk-tag--blue govuk-!-font-weight-bold govuk-!-margin-top-1">INCOMPLETE</span>
                                 </th:block>
@@ -117,7 +117,7 @@
                                     <th:block th:unless="${user.entraUser.invitationStatus?.name() == 'VERIFICATION_SUCCESS'}">
 
                                         <span th:if="${user.entraUser.invitationStatus?.name() == 'VERIFICATION_FAILED'}"
-                                              class="govuk-tag govuk-tag--red govuk-!-font-weight-bold govuk-!-margin-top-1"  style="min-width: 200px">VERIFICATION FAILED</span>
+                                              class="govuk-tag govuk-tag--red govuk-!-font-weight-bold govuk-!-margin-top-1"  style="min-width: 200px">ACTIVATION FAILED</span>
                                         <!--All the other situation will be incomplete-->
                                         <span th:if="${user.entraUser.invitationStatus?.name() == 'INVITE_SENT' || user.entraUser.invitationStatus?.name() == 'AWAITING_MFA'}"
                                               class="govuk-tag govuk-tag--blue govuk-!-font-weight-bold govuk-!-margin-top-1">INCOMPLETE</span>
