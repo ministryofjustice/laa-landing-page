@@ -10,10 +10,12 @@ import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -25,12 +27,19 @@ import java.util.List;
 public class ExternalUserReportingService {
 
     private final FirmRepository firmRepository;
+    private final ReportUploadService reportUploadService;
+    private final String folderPath = "external_user_reports";
     private final DateTimeFormatter fileTimestamp = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmm");
 
     public void downloadExternalUserCsv() {
         List<Object[]> reportRows = new ArrayList<>(firmRepository.findAllFirmExternalUserCount());
         File csv = writeToCsv(reportRows);
-        //TODO: Output path code
+
+        try {
+            reportUploadService.uploadCsvToSharePoint(csv, folderPath);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
 
         log.info("External user report written to CSV successfully");
     }
@@ -38,7 +47,7 @@ public class ExternalUserReportingService {
     private File writeToCsv(List<Object[]> rows) {
 
         String timestamp = LocalDateTime.now().format(fileTimestamp);
-        String filename = "SiLAS-external-user-report-" + timestamp;
+        String filename = "SiLAS-external-user-report-" + timestamp + ".csv";
 
         try {
             CsvMapper mapper = CsvMapper.builder().build();
@@ -55,7 +64,11 @@ public class ExternalUserReportingService {
                     .setUseHeader(true)
                     .build();
 
-            Path tempFile = Files.createTempFile(filename, ".csv");
+            Path tempFile = Paths.get(
+                    System.getProperty("java.io.tmpdir"),
+                    filename
+            );
+            Files.createFile(tempFile);
             try (BufferedWriter writer = Files.newBufferedWriter(tempFile);
                  SequenceWriter sequenceWriter = mapper
                          .writer(schema)

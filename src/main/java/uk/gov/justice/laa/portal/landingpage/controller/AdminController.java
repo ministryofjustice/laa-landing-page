@@ -131,7 +131,7 @@ public class AdminController {
         model.addAttribute("roles", roles);
         model.addAttribute("appFilter", appFilter);
         model.addAttribute("canTriggerAppSync", Boolean.parseBoolean(syncAppsFromEntra)
-                && accessControlService.authenticatedUserHasPermission(Permission.EDIT_LAA_APP_METADATA));
+                && accessControlService.authenticatedUserHasPermission(Permission.TRIGGER_LAA_APP_SYNC));
         session.setAttribute("appFilter", appFilter);
 
         // Get distinct app names for filter dropdown
@@ -463,7 +463,7 @@ public class AdminController {
 
         if (appName.isEmpty() || !StringUtils.hasText(appName.get())) {
             redirectAttributes.addFlashAttribute("appRolesErrorMessage", "Please select an application to reorder its roles");
-            return "redirect:/admin/silas-administration#roles";
+            return "redirect:/admin/silas-administration?tab=roles";
         }
 
         AppRolesOrderForm appRolesOrderForm = getObjectFromHttpSession(session, "appRolesOrderForm", AppRolesOrderForm.class).orElse(null);
@@ -542,7 +542,7 @@ public class AdminController {
 
         if (appNameOptional.isEmpty() || !StringUtils.hasText(appNameOptional.get())) {
             redirectAttributes.addFlashAttribute("appRolesErrorMessage", "Please select an application to delete its roles");
-            return "redirect:/admin/silas-administration#roles";
+            return "redirect:/admin/silas-administration?tab=roles";
         }
 
         String appName = appNameOptional.get();
@@ -877,7 +877,7 @@ public class AdminController {
             log.error("Error creating role: {}", e.getMessage(), e);
             redirectAttributes.addFlashAttribute("errorMessage",
                 "Failed to create role: " + e.getMessage());
-            return "redirect:/admin/silas-administration?tab=roles#roles";
+            return "redirect:/admin/silas-administration?tab=roles";
         }
 
         return "redirect:/admin/silas-administration/roles/create/confirmation";
