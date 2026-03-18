@@ -12,8 +12,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 
 /**
  * DTO for detailed User Access Audit drill-down view Contains complete user information including
@@ -117,11 +115,6 @@ public class AuditUserDetailDto implements Serializable {
      * Flag indicating if user has no role
      */
     private boolean hasNoRole;
-
-    /**
-     * Flag indicating if user has no office
-     */
-    private boolean hasNoOffice;
 
     /**
      * Flag indicating if user has status pending

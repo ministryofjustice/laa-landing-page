@@ -848,6 +848,8 @@
                                               class="moj-badge moj-badge--grey">ACTIVATION PENDING</span>
                                         <span th:if="${user.invitationStatus?.name() == 'VERIFICATION_SUCCESS'}"
                                               class="moj-badge moj-badge--green">COMPLETE</span>
+                                        <span th:if="${user.invitationStatus?.name() == 'VERIFICATION_FAILED' || user.invitationStatus?.name() == 'INVITE_SENT' || user.invitationStatus?.name() == 'AWAITING_MFA' }"
+                                              class="moj-badge moj-badge--blue">INCOMPLETE</span>
                                     </th:block>
                                     <!--user is pending-->
                                     <th:block th:unless="${user.userProfileStatus?.getValue() == 'COMPLETE'}">

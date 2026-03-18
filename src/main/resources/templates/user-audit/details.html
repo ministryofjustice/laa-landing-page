@@ -198,8 +198,8 @@
                                         <dd class="govuk-summary-list__value">
                                             <strong class="govuk-tag govuk-tag--purple" th:if="${entraUser != null && user.activationStatus == 'INVITE_SENT'}">Invite sent</strong>
                                             <strong class="govuk-tag govuk-tag--orange" th:if="${entraUser != null && user.activationStatus == 'AWAITING_MFA'}">Awaiting MFA</strong>
-                                            <strong class="govuk-tag govuk-tag--grey" th:if="${entraUser != null && user.activationStatus == 'AWAITING_VERIFICATION'}">Activation pending</strong>
-                                            <strong class="govuk-tag govuk-tag--green" th:if="${entraUser != null && user.activationStatus == 'VERIFICATION_SUCCESS'}">Verification success</strong>
+                                            <strong class="govuk-tag govuk-tag--grey" style="min-width: 200px" th:if="${entraUser != null && user.activationStatus == 'AWAITING_VERIFICATION'}">Activation pending</strong>
+                                            <strong class="govuk-tag govuk-tag--green" style="min-width: 200px" th:if="${entraUser != null && user.activationStatus == 'VERIFICATION_SUCCESS'}">Verification success</strong>
                                             <strong class="govuk-tag govuk-tag--red" th:if="${entraUser != null && user.activationStatus == 'VERIFICATION_FAILED'}">Verification failed</strong>
                                         </dd>
                                     </div>

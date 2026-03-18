@@ -7133,7 +7133,7 @@ class UserServiceTest {
         }
 
         @Test
-        void getAuditUserDetail_withPagination_returnsCorrectPage() {
+        void getAuditUserDetail_withPagination_returnsCorrectPage_withNoRoles() {
             // Given
             UUID profile1Id = UUID.randomUUID();
             Firm firm1 = Firm.builder().name("Firm 1").code("F001").build();
