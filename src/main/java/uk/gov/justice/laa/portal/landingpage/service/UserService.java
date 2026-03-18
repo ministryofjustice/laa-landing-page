@@ -1701,7 +1701,10 @@ public class UserService {
                 .anyMatch(profile -> profile.getUserProfileStatus() == UserProfileStatus.PENDING);
         // Check if user has roles assigned
         boolean noRolesAssigned = profiles.stream()
-                .anyMatch(profile -> profile.getAppRoles().isEmpty());
+                .anyMatch(userProfile ->
+                        userProfile.getAppRoles() == null || userProfile.getAppRoles().isEmpty()
+                );
+
         // user disable
         if (!user.isEnabled()) {
             return "Disabled";
@@ -1713,7 +1716,7 @@ public class UserService {
                 } else if (user.getInvitationStatus().name().equals("VERIFICATION_SUCCESS")) {
                     return "Complete";
                 } else if (user.getInvitationStatus().name().equals("VERIFICATION_FAILED")){
-                    return "Activation Failed";
+                    return "Activation failed";
                 }
             } else { // user is incomplete user hasn't roles assigned any roles
                 if (user.getInvitationStatus() == null || user.getInvitationStatus().name().equals("VERIFICATION_SUCCESS")) {
@@ -1722,7 +1725,7 @@ public class UserService {
                         return "No roles assigned";
                     }
                 } else if (user.getInvitationStatus().name().equals("VERIFICATION_FAILED")){
-                    return "Activation Failed";
+                    return "Activation failed";
                 }
             }
         }
