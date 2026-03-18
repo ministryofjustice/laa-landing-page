@@ -201,7 +201,7 @@ public class LiveTechServicesClientTest {
         liveTechServicesClient.updateRoleAssignment(userId);
 
         assertLogMessage(Level.INFO, "Sending update security groups request to tech services:");
-        assertLogMessage(Level.INFO, "Security Groups assigned successfully for firstName lastName");
+        assertLogMessage(Level.INFO, "Security Groups assigned successfully for entra user entraOid");
         verify(restClient, times(1)).patch();
     }
 
@@ -282,7 +282,7 @@ public class LiveTechServicesClientTest {
         liveTechServicesClient.deleteRoleAssignment(userId);
 
         assertLogMessage(Level.INFO, "Sending request to tech services to remove group memberships for deleting:");
-        assertLogMessage(Level.INFO, "Security Groups removed successfully for firstName lastName");
+        assertLogMessage(Level.INFO, String.format("Security Groups removed successfully for user: %s with entra oid: entraOid ", userId));
         verify(restClient, times(1)).patch();
     }
 
@@ -334,7 +334,8 @@ public class LiveTechServicesClientTest {
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> liveTechServicesClient.deleteRoleAssignment(userId));
         Assertions.assertThat(ex.getMessage()).contains("Error while sending security group removal to Tech Services.");
-        assertLogMessage(Level.ERROR, "Failed to remove security groups for user firstName lastName with error code 400 BAD_REQUEST");
+        assertLogMessage(Level.ERROR, String.format("Failed to remove security groups for user: %s with entra oid: entraOid with error code 400 BAD_REQUEST",
+                userId));
         verify(restClient, times(1)).patch();
     }
 
@@ -358,7 +359,7 @@ public class LiveTechServicesClientTest {
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> liveTechServicesClient.deleteRoleAssignment(userId));
         Assertions.assertThat(ex.getMessage()).contains("Error while sending security group removal to Tech Services.");
-        assertLogMessage(Level.ERROR, "Failed to remove security groups for user firstName lastName with error code 500 INTERNAL_SERVER_ERROR");
+        assertLogMessage(Level.ERROR, String.format("Failed to remove security groups for user: %s with entra oid: entraOid with error code 500 INTERNAL_SERVER_ERROR", userId));
         verify(restClient, times(1)).patch();
     }
 
@@ -428,10 +429,10 @@ public class LiveTechServicesClientTest {
 
         Assertions.assertThat(rtEx).isInstanceOf(BadRequestException.class);
         Assertions.assertThat(rtEx.getMessage())
-                .contains("Failed to assign security groups for user");
+                .contains("Failed to assign security groups for entra user entraOid");
         assertLogMessage(Level.INFO, "Sending update security groups request to tech services:");
         assertLogMessage(Level.INFO,
-                "Failed to assign security groups for user firstName lastName with error code 400 BAD_REQUEST");
+                "Failed to assign security groups for entra user entraOid with error code 400 BAD_REQUEST");
         verify(restClient, times(1)).patch();
     }
 
@@ -466,7 +467,7 @@ public class LiveTechServicesClientTest {
                 .contains("Error while sending security group changes to Tech Services.");
         assertLogMessage(Level.INFO, "Sending update security groups request to tech services:");
         assertLogMessage(Level.ERROR,
-                "Failed to assign security groups for user firstName lastName with error code 500 INTERNAL_SERVER_ERROR");
+                "Failed to assign security groups for entra user entraOid with error code 500 INTERNAL_SERVER_ERROR");
         verify(restClient, times(1)).patch();
     }
 
@@ -501,7 +502,7 @@ public class LiveTechServicesClientTest {
         assertThat(response.getData().getMessage()).isEqualTo("Activation code has been generated and sent successfully via email.");
 
         assertLogMessage(Level.INFO, "Sending Resend verification email request to tech services");
-        assertLogMessage(Level.INFO, "Resend user verification email by Tech Services is successful for firstName lastName and response is");
+        assertLogMessage(Level.INFO, "Resend user verification email by Tech Services is successful for entra user: entraOid");
 
         verify(restClient, times(1)).post();
     }
@@ -607,7 +608,7 @@ public class LiveTechServicesClientTest {
         liveTechServicesClient.sendEmailVerification(user);
 
         assertLogMessage(Level.INFO, "Sending Resend verification email request to tech services");
-        assertLogMessage(Level.INFO, "Failed to send verification email for firstName lastName");
+        assertLogMessage(Level.INFO, "Failed to send verification email for entra user: entraOid");
 
         verify(restClient, times(1)).post();
     }
@@ -681,7 +682,7 @@ public class LiveTechServicesClientTest {
         liveTechServicesClient.registerNewUser(user);
 
         assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
-        assertLogMessage(Level.INFO, "New User creation by Tech Services is successful for firstName lastName");
+        assertLogMessage(Level.INFO, "New User creation by Tech Services is successful for entra user: entraOid");
         verify(restClient, times(1)).post();
     }
 
@@ -719,7 +720,7 @@ public class LiveTechServicesClientTest {
         liveTechServicesClient.registerNewUser(user);
 
         assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
-        assertLogMessage(Level.INFO, "New User creation by Tech Services is successful for firstName lastName");
+        assertLogMessage(Level.INFO, "New User creation by Tech Services is successful for entra user: entraOid");
         verify(restClient, times(1)).post();
     }
 
@@ -740,7 +741,7 @@ public class LiveTechServicesClientTest {
         Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
         Assertions.assertThat(rtEx.getMessage()).contains("Unexpected error while sending new user creation request to Tech Services.");
         assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
-        assertLogMessage(Level.ERROR, "Unexpected error while sending new user creation request to Tech Services.");
+        assertLogMessage(Level.ERROR, "Unexpected error while sending new user creation request to Tech Services, for user entra oid: entraOid");
     }
 
     @Test
@@ -777,7 +778,7 @@ public class LiveTechServicesClientTest {
         Assertions.assertThat(result.getError().getMessage()).isEqualTo("A user with this email already exists");
         assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
         assertLogMessage(Level.INFO,
-                "Error while sending new user creation request to Tech Services for firstName lastName");
+                "Error while sending new user creation request to Tech Services for entra user: entraOid");
         verify(restClient, times(1)).post();
     }
 
@@ -814,7 +815,7 @@ public class LiveTechServicesClientTest {
         Assertions.assertThat(result.getError().getMessage()).isEqualTo("givenName is required and must be a non-empty string");
         assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
         assertLogMessage(Level.INFO,
-                "Error while sending new user creation request to Tech Services for firstName lastName");
+                "Error while sending new user creation request to Tech Services for entra user: entraOid");
         verify(restClient, times(1)).post();
     }
 
@@ -1286,7 +1287,7 @@ public class LiveTechServicesClientTest {
                 () -> liveTechServicesClient.getUsers("2024-01-01T00:00:00Z", "2024-01-15T23:59:59Z"));
 
         assertThat(ex.getMessage()).contains("Unexpected error while getting users from Tech Services");
-        assertLogMessage(Level.ERROR, "Unexpected error while getting users from Tech Services. Response body: Unknown");
+        assertLogMessage(Level.ERROR, "Unexpected error while getting users from Tech Services.");
     }
 
     @Test
@@ -1461,7 +1462,7 @@ public class LiveTechServicesClientTest {
         assertThat(response.getData()).isNotNull();
         assertThat(response.getData().getUser().getId()).isEqualTo(entraOid);
 
-        assertLogMessage(Level.INFO, "Successfully retrieved user from Tech Services");
+        assertLogMessage(Level.INFO, String.format("Successfully retrieved entra user: %s, from Tech Services", entraOid));
         verify(restClient, times(1)).get();
     }
 

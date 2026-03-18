@@ -455,9 +455,9 @@ public class UserController {
 
         EntraUser current = loginService.getCurrentEntraUser(authentication);
         try {
-            DeletedUser deletedUser = userService.deleteExternalUser(id, reason.trim(), current.getId());
+            DeletedUser deletedUser = userService.deleteExternalUser(id, reason.trim(), current.getEntraOid());
             DeleteUserSuccessAuditEvent deleteUserAuditEvent = new DeleteUserSuccessAuditEvent(
-                    reason.trim(), current.getId(), deletedUser);
+                    reason.trim(), UUID.fromString(current.getEntraOid()), deletedUser);
             eventService.logEvent(deleteUserAuditEvent);
         } catch (RuntimeException ex) {
             log.error("Failed to delete external user {}: {}", id, ex.getMessage(), ex);
@@ -883,7 +883,7 @@ public class UserController {
 
                 String firmDescription = Boolean.TRUE.equals(isMultiFirmUser)
                         ? "(Multi-firm user)"
-                        : selectedFirm.getName();
+                        : selectedFirm.getId().toString();
                 CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser,
                         firmDescription, userManager);
                 eventService.logEvent(createUserAuditEvent);
@@ -1763,7 +1763,7 @@ public class UserController {
             // Create audit event
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             EntraUserDto entraUserDto = mapper.map(user.getEntraUser(), EntraUserDto.class);
-            ConvertToMultiFirmAuditEvent auditEvent = new ConvertToMultiFirmAuditEvent(currentUserDto, entraUserDto);
+            ConvertToMultiFirmAuditEvent auditEvent = new ConvertToMultiFirmAuditEvent(currentUserDto, entraUserDto, id);
             eventService.logEvent(auditEvent);
 
             log.info("Successfully converted user {} to multi-firm status", id);
@@ -2840,7 +2840,7 @@ public class UserController {
                     id,
                     UUID.fromString(selectedFirmId),
                     reason.trim(),
-                    currentEntraUser.getId(),
+                    UUID.fromString(currentEntraUser.getEntraOid()),
                     currentUser.getName());
 
             return "redirect:/admin/users/reassign-firm/" + id + "/confirmation";
@@ -2930,7 +2930,7 @@ public class UserController {
                     id,
                     UUID.fromString(newFirmId),
                     reason.trim(),
-                    currentEntraUser.getId(),
+                    UUID.fromString(currentEntraUser.getEntraOid()),
                     currentUser.getName());
 
             return ResponseEntity.ok(Map.of(

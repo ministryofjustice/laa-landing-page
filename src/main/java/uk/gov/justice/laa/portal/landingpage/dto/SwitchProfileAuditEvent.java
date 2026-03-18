@@ -13,7 +13,7 @@ public class SwitchProfileAuditEvent extends AuditEvent implements Serializable 
     private final String newFirm;
 
     private static final String SWITCH_FIRM_TEMPLATE = """
-            User firm switched, user id %s, from firm %s to firm %s
+            User firm switched, user id %s, from firm id %s to firm id %s
             """;
 
     public SwitchProfileAuditEvent(UUID userId, String oldFirm, String newFirm) {

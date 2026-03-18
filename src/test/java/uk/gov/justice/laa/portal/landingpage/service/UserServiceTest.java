@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.Assertions;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
@@ -282,7 +283,7 @@ class UserServiceTest {
                 .thenReturn(true);
 
         // Act
-        userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID());
+        userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID().toString());
 
         // Assert
         verify(techServicesClient).deleteRoleAssignment(entraId);
@@ -323,7 +324,7 @@ class UserServiceTest {
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
 
         // Act
-        userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID());
+        userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID().toString());
 
         // Assert
         verify(techServicesClient).deleteRoleAssignment(entraId);
@@ -343,6 +344,7 @@ class UserServiceTest {
         EntraUser entraUser = EntraUser.builder()
                 .id(entraId)
                 .email("user@example.com")
+                .entraOid(entraId.toString())
                 .build();
 
         AppRole role1 = AppRole.builder().name("Role1").build();
@@ -363,7 +365,7 @@ class UserServiceTest {
         when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
 
         // Act
-        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID());
+        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID().toString());
 
         // Assert
         verify(techServicesClient).disableUser(entraUserDto, "Role Change / No Longer Required");
@@ -372,7 +374,7 @@ class UserServiceTest {
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
         verify(mockEntraUserRepository, times(1)).delete(entraUser);
         assertThat(result).isNotNull();
-        assertThat(result.getDeletedUserId()).isEqualTo(entraId);
+        assertEquals(result.getDeletedUserEntraOid(), entraId.toString());
     }
 
     @Test
@@ -395,7 +397,7 @@ class UserServiceTest {
 
         // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID()));
+                () -> userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID().toString()));
         assertThat(ex.getMessage()).contains("tech services down");
         verify(mockUserProfileRepository, never()).deleteAll(any());
         verify(mockEntraUserRepository, never()).delete(any());
@@ -417,7 +419,7 @@ class UserServiceTest {
 
         // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> userService.deleteExternalUser(profileId.toString(), "reason", UUID.randomUUID()));
+                () -> userService.deleteExternalUser(profileId.toString(), "reason", UUID.randomUUID().toString()));
         assertThat(ex.getMessage()).contains("Deletion is only permitted for external users");
         verify(techServicesClient, never()).deleteRoleAssignment(any());
     }
@@ -2921,7 +2923,7 @@ class UserServiceTest {
                     () -> userService.createUser(entraUserDto, firm, true, "admin", false),
                     "Expected Runtime Exception");
             assertThat(rtEx.getMessage())
-                    .isEqualTo("User Test User is not a multi-firm user, firm selection can not be skipped");
+                    .isEqualTo("User with entra oid: id is not a multi-firm user, firm selection can not be skipped");
             verify(mockEntraUserRepository, never()).saveAndFlush(any());
             verify(techServicesClient, times(1)).registerNewUser(any(EntraUserDto.class));
         }
@@ -4607,7 +4609,7 @@ class UserServiceTest {
             RuntimeException ex = assertThrows(RuntimeException.class,
                     () -> userService.addMultiFirmUserProfile(user, firmDto, null, null, "admin"));
 
-            assertThat(ex.getMessage()).contains("User not found for the given user user id");
+            assertThat(ex.getMessage()).contains("User not found for the given user entra oid:");
             verify(userProfileRepository, never()).save(any());
             verify(entraUserRepository, never()).save(any());
             verify(techServicesClient, never()).updateRoleAssignment(any(UUID.class));
@@ -5321,6 +5323,7 @@ class UserServiceTest {
         @Test
         void deleteFirmProfile_Success_ReturnsAuditEvent() {
             // Given
+            ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
             UUID userProfileId = UUID.randomUUID();
             UUID entraUserId = UUID.randomUUID();
             UUID firmId = UUID.randomUUID();
@@ -5418,6 +5421,12 @@ class UserServiceTest {
             // Then
             assertThat(result).isTrue();
 
+            List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
+            assertThat(infoLogs.size()).isEqualTo(1);
+            assertThat(infoLogs.getFirst().getFormattedMessage())
+                    .contains(String.format("Deleting firm profile for multi-firm user. actorId=%s, userProfileId=%s, entraUserId=%s,firm=%s",
+                            actorId, userProfileId, entraUser.getId(), firm.getName()));
+
             // Verify profile was cleared of roles and offices
             assertThat(profileToDelete.getAppRoles()).isEmpty();
             assertThat(profileToDelete.getOffices()).isEmpty();
@@ -5490,6 +5499,8 @@ class UserServiceTest {
 
         @Test
         void deleteFirmProfile_NonActiveProfile_DoesNotReassignActive() {
+            ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
+
             // Given
             UUID userProfileId = UUID.randomUUID();
             UUID entraUserId = UUID.randomUUID();
@@ -5533,6 +5544,7 @@ class UserServiceTest {
 
             // When
             var result = userService.deleteFirmProfile(userProfileId.toString(), actorId);
+            List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
 
             // Then
             assertThat(result).isNotNull();
@@ -5544,6 +5556,11 @@ class UserServiceTest {
             // The service still saves after clearing entra user ref, but shouldn't reassign
             // active
             assertThat(activeProfile.isActiveProfile()).isTrue();
+
+            assertThat(infoLogs.size()).isEqualTo(1);
+            assertThat(infoLogs.getFirst().getFormattedMessage())
+                    .contains(String.format("Deleting firm profile for multi-firm user. actorId=%s, userProfileId=%s, entraUserId=%s,firm=%s",
+                            actorId, userProfileId, entraUser.getId(), "Firm A"));
         }
 
         @Test
@@ -7426,9 +7443,10 @@ class UserServiceTest {
                     .thenReturn(Optional.empty());
 
             // When/Then
-            assertThrows(IllegalArgumentException.class, () -> {
+            RuntimeException ex = assertThrows(IllegalArgumentException.class, () -> {
                 userService.getAuditUserDetail(userId);
             });
+            assertThat(ex.getMessage()).contains("User profile not found with id: " + userId);
         }
 
         @Test
@@ -7811,6 +7829,36 @@ class UserServiceTest {
         }
 
         @Test
+        void convertToMultiFirmUser_failed() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .email("user@example.com")
+                    .multiFirmUser(false)
+                    .userProfiles(new HashSet<>())
+                    .build();
+
+            UserProfile profile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(user)
+                    .activeProfile(true)
+                    .userType(UserType.EXTERNAL)
+                    .build();
+            user.getUserProfiles().add(profile);
+
+            // When
+            when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+            when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class)))
+                    .thenThrow(new RuntimeException("Failed to convert user to multi-firm status"));
+
+            //Then
+            assertThatThrownBy(() -> userService.convertToMultiFirmUser(userId.toString()))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("Failed to convert user to multi-firm status");
+        }
+
+        @Test
         void convertToMultiFirmUser_userNotFound() {
             // Given
             UUID userId = UUID.randomUUID();
@@ -7933,6 +7981,51 @@ class UserServiceTest {
             assertThat(result).hasSize(1);
             assertThat(result).contains(profile1);
             verify(mockUserProfileRepository).findByEntraUserIdAndFirmSearch(entraUserId, search);
+        }
+
+        @Test
+        void getUserProfilesByEntraUserId() {
+            // Given
+            UUID entraUserId = UUID.randomUUID();
+            String search = "Law Firm";
+
+            UserProfile profile1 = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .activeProfile(true)
+                    .build();
+
+            EntraUser user = EntraUser.builder()
+                    .id(entraUserId)
+                    .email("user@example.com")
+                    .userProfiles(Set.of(profile1))
+                    .build();
+
+            when(mockEntraUserRepository.findById(entraUserId))
+                    .thenReturn(Optional.of(user));
+
+            // When
+            List<UserProfile> result = userService.getUserProfilesByEntraUserId(entraUserId);
+
+            // Then
+            assertThat(result).hasSize(1);
+            assertThat(result).contains(profile1);
+            verify(mockEntraUserRepository).findById(entraUserId);
+        }
+
+        @Test
+        void getUserProfilesByEntraUserId_returnEmpty() {
+            // Given
+            UUID entraUserId = UUID.randomUUID();
+
+            when(mockEntraUserRepository.findById(entraUserId))
+                    .thenReturn(Optional.empty());
+
+            // When
+            List<UserProfile> result = userService.getUserProfilesByEntraUserId(entraUserId);
+
+            // Then
+            assertThat(result).hasSize(0);
+            verify(mockEntraUserRepository).findById(entraUserId);
         }
     }
 
@@ -8255,9 +8348,6 @@ class UserServiceTest {
         ).isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("All app assignment must be removed");
     }
-
-
-
 
     @Test
     void getAuditUsers_csvExportTrueAndFalse() {
