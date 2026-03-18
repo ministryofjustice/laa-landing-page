@@ -522,7 +522,7 @@ class AdminControllerTest {
         String result = adminController.confirmCheckYourAnswers(session, redirectAttributes);
 
         // Assert
-        assertEquals("redirect:/admin/silas-administration?tab=roles#roles", result);
+        assertEquals("redirect:/admin/silas-administration?tab=roles", result);
         verify(appRoleService).createRole(roleCreationDto);
     }
 
@@ -726,7 +726,7 @@ class AdminControllerTest {
 
         String view = adminController.editAppRolesOrderGet(model, redirectAttributes, session);
 
-        assertEquals("redirect:/admin/silas-administration#roles", view);
+        assertEquals("redirect:/admin/silas-administration?tab=roles", view);
         verify(redirectAttributes).addFlashAttribute("appRolesErrorMessage", "Please select an application to reorder its roles");
     }
 
@@ -798,7 +798,7 @@ class AdminControllerTest {
 
         String view = adminController.editAppRolesOrderGet(model, redirectAttributes, session);
 
-        assertEquals("redirect:/admin/silas-administration#roles", view);
+        assertEquals("redirect:/admin/silas-administration?tab=roles", view);
         verify(redirectAttributes).addFlashAttribute("appRolesErrorMessage", "Please select an application to reorder its roles");
     }
 
@@ -1096,7 +1096,7 @@ class AdminControllerTest {
         String result = adminController.confirmCheckYourAnswers(session, redirectAttributes);
 
         // Assert
-        assertEquals("redirect:/admin/silas-administration?tab=roles#roles", result);
+        assertEquals("redirect:/admin/silas-administration?tab=roles", result);
         verify(appRoleService).createRole(roleCreationDto);
         assertThat(session.getAttribute("roleCreationDto")).isNotNull();
     }
@@ -1145,7 +1145,7 @@ class AdminControllerTest {
         String result = adminController.confirmCheckYourAnswers(session, redirectAttributes);
 
         // Assert
-        assertEquals("redirect:/admin/silas-administration?tab=roles#roles", result);
+        assertEquals("redirect:/admin/silas-administration?tab=roles", result);
         verify(appRoleService).createRole(roleCreationDto);
     }
 
@@ -1190,7 +1190,7 @@ class AdminControllerTest {
         String result = adminController.confirmCheckYourAnswers(session, redirectAttributes);
 
         // Assert
-        assertEquals("redirect:/admin/silas-administration?tab=roles#roles", result);
+        assertEquals("redirect:/admin/silas-administration?tab=roles", result);
         verify(appRoleService).createRole(roleCreationDto);
     }
 
@@ -1907,7 +1907,7 @@ class AdminControllerTest {
             String view = adminController.deleteAppRoleGet(model, redirectAttributes, mockHttpSession);
 
             // Assert
-            assertThat(view).isEqualTo("redirect:/admin/silas-administration#roles");
+            assertThat(view).isEqualTo("redirect:/admin/silas-administration?tab=roles");
             assertThat(redirectAttributes.getFlashAttributes().get("appRolesErrorMessage"))
                     .isEqualTo("Please select an application to delete its roles");
 
@@ -1961,7 +1961,7 @@ class AdminControllerTest {
             String view = adminController.deleteAppRoleGet(model, redirectAttributes, mockHttpSession);
 
             // Assert
-            assertThat(view).isEqualTo("redirect:/admin/silas-administration#roles");
+            assertThat(view).isEqualTo("redirect:/admin/silas-administration?tab=roles");
             assertThat(redirectAttributes.getFlashAttributes().get("appRolesErrorMessage"))
                     .isEqualTo("Please select an application to delete its roles");
             verifyNoInteractions(appRoleService);

@@ -29,6 +29,7 @@ import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.ColumnTransformer;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -66,6 +67,7 @@ public class AppRole extends BaseEntity {
 
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Enumerated(EnumType.STRING)
+    @ColumnTransformer(write = "?::firm_type_enum[]")
     @Column(name = "firm_type_restriction", nullable = true, columnDefinition = "firm_type_enum[]")
     private FirmType[] firmTypeRestriction;
 
