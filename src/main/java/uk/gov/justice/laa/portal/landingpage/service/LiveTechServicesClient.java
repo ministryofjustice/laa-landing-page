@@ -124,14 +124,14 @@ public class LiveTechServicesClient implements TechServicesClient {
             if (response.getStatusCode().is2xxSuccessful()) {
                 UpdateSecurityGroupsResponse responseBody = response.getBody();
                 assert responseBody != null;
-                logger.info("Security Groups assigned successfully for {} with security groups {} added and {} with security groups removed",
-                        entraUser.getFirstName() + " " + entraUser.getLastName(), responseBody.getGroupsAdded(), responseBody.getGroupsRemoved());
+                logger.info("Security Groups assigned successfully for entra user {} with security groups {} added and {} with security groups removed",
+                        entraUser.getEntraOid() + responseBody.getGroupsAdded(), responseBody.getGroupsRemoved());
             } else if (response.getStatusCode().is4xxClientError()) {
-                logger.info("Failed to assign security groups for user {} with error code {}", entraUser.getFirstName() + " " + entraUser.getLastName(), response.getStatusCode());
-                throw new BadRequestException("Failed to assign security groups for user " + entraUser.getFirstName() + " " + entraUser.getLastName() + " with error code " + response.getStatusCode());
+                logger.info("Failed to assign security groups for entra user {} with error code {}", entraUser.getEntraOid(), response.getStatusCode());
+                throw new BadRequestException("Failed to assign security groups for entra user " + entraUser.getEntraOid() + " with error code " + response.getStatusCode());
             } else {
-                logger.error("Failed to assign security groups for user {} with error code {}", entraUser.getFirstName() + " " + entraUser.getLastName(), response.getStatusCode());
-                throw new RuntimeException("Failed to assign security groups for user " + entraUser.getFirstName() + " " + entraUser.getLastName() + " with error code " + response.getStatusCode());
+                logger.error("Failed to assign security groups for entra user {} with error code {}", entraUser.getEntraOid(), response.getStatusCode());
+                throw new RuntimeException("Failed to assign security groups for entra user " + entraUser.getEntraOid() + " with error code " + response.getStatusCode());
             }
         } catch (BadRequestException e) {
             throw new BadRequestException(e);
@@ -171,11 +171,12 @@ public class LiveTechServicesClient implements TechServicesClient {
             if (response.getStatusCode().is2xxSuccessful()) {
                 UpdateSecurityGroupsResponse responseBody = response.getBody();
                 assert responseBody != null;
-                logger.info("Security Groups removed successfully for {} {} with security groups removed",
-                        entraUser.getFirstName() + " " + entraUser.getLastName(), responseBody.getGroupsRemoved());
+                logger.info("Security Groups removed successfully for user: {} with entra oid: {} with security groups removed {}",
+                        userId, entraUser.getEntraOid(), responseBody.getGroupsRemoved());
             } else {
-                logger.error("Failed to remove security groups for user {} with error code {}", entraUser.getFirstName() + " " + entraUser.getLastName(), response.getStatusCode());
-                throw new RuntimeException("Failed to remove security groups for user " + entraUser.getFirstName() + " " + entraUser.getLastName() + " with error code " + response.getStatusCode());
+                logger.error("Failed to remove security groups for user: {} with entra oid: {} with error code {}", userId, entraUser.getEntraOid(), response.getStatusCode());
+                throw new RuntimeException("Failed to remove security groups for user: " + userId + "with entra oid: " + entraUser.getEntraOid()
+                        + " with error code " + response.getStatusCode());
             }
         } catch (HttpClientErrorException | HttpServerErrorException httpEx) {
             String errorJson = httpEx.getResponseBodyAsString();
@@ -213,7 +214,7 @@ public class LiveTechServicesClient implements TechServicesClient {
                     .verificationMethod(techServicesVerificationMethod)
                     .groups(securityGroups).build();
 
-            logger.info("Sending create new user request with security groups to tech services: {}", request);
+            logger.info("Sending create new user request with security groups to tech services: entra oid: {}", user.getEntraOid());
 
             String uri = String.format(TECH_SERVICES_REGISTER_USER_ENDPOINT, laaBusinessUnit);
 
@@ -226,16 +227,16 @@ public class LiveTechServicesClient implements TechServicesClient {
                     .retrieve()
                     .toEntity(String.class);
 
-            logger.info("The create user response from TS: {}", response.getBody());
+            logger.info("The create user response from TS");
 
             if (response.getStatusCode().is2xxSuccessful()) {
                 RegisterUserResponse responseBody = objectMapper.readValue(response.getBody(), RegisterUserResponse.class);
-                logger.info("New User creation by Tech Services is successful for {} with security groups {} added",
-                        user.getFirstName() + " " + user.getLastName(), securityGroups);
+                logger.info("New User creation by Tech Services is successful for entra user: {} with security groups {} added",
+                        user.getEntraOid(), securityGroups);
                 return TechServicesApiResponse.success(responseBody);
             } else {
-                logger.error("Error while sending new user creation request to Tech Services, the response is {}.", response.getBody());
-                throw new RuntimeException(String.format("Error while sending verification email to Tech Services, the response is %s.", response.getBody()));
+                logger.error("Error while sending new user creation request to Tech Services, for user entra oid: {}", user.getEntraOid());
+                throw new RuntimeException(String.format("Error while sending verification email to Tech Services, for user entra oid: %s.", user.getEntraOid()));
             }
         } catch (HttpClientErrorException | HttpServerErrorException httpEx) {
             String errorJson = httpEx.getResponseBodyAsString();
@@ -243,21 +244,20 @@ public class LiveTechServicesClient implements TechServicesClient {
             try {
                 TechServicesErrorResponse errorResponse = objectMapper.readValue(errorJson, TechServicesErrorResponse.class);
                 if (httpEx.getStatusCode().is4xxClientError()) {
-                    logger.info("Error while sending new user creation request to Tech Services for {}, the root cause is {} ({}) ",
-                            user.getFirstName() + " " + user.getLastName(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
+                    logger.info("Error while sending new user creation request to Tech Services for entra user: {}, the root cause is {} ({}) ",
+                            user.getEntraOid(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
                     return TechServicesApiResponse.error(errorResponse);
                 }
-                logger.error("Error while sending new user creation request to Tech Services for {}, the root cause is {} ({}) ",
-                        user.getFirstName() + " " + user.getLastName(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
+                logger.error("Error while sending new user creation request to Tech Services for entra user: {}, the root cause is {} ({}) ",
+                        user.getEntraOid(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
                 throw httpEx;
             } catch (Exception ex) {
-                String responseBody = response != null ? response.getBody() : "Unknown";
-                logger.error("Error while sending new user creation request to Tech Services. The response body is {}", responseBody, ex);
+                logger.error("Error while sending new user creation request to Tech Services for entra user: ", user.getEntraOid(), ex);
                 throw new RuntimeException("Error while sending new user creation request to Tech Services.", ex);
             }
         } catch (Exception ex) {
             String responseBody = response != null ? response.getBody() : "Unknown";
-            logger.error("Unexpected error while sending new user creation request to Tech Services. The response is {}", responseBody, ex);
+            logger.error("Unexpected error while sending new user creation request to Tech Services, for user entra oid: {}", user.getEntraOid(), ex);
             throw new RuntimeException("Unexpected error while sending new user creation request to Tech Services.", ex);
         }
     }
@@ -288,15 +288,15 @@ public class LiveTechServicesClient implements TechServicesClient {
                     .toEntity(String.class);
 
             if (response.getStatusCode().is2xxSuccessful()) {
-                logger.info("Resend user verification email by Tech Services is successful for {} and response is {}",
-                        user.getFirstName() + " " + user.getLastName(), response);
+                logger.info("Resend user verification email by Tech Services is successful for entra user: {}",
+                        user.getEntraOid());
                 ObjectMapper mapper = new ObjectMapper();
                 SendUserVerificationEmailResponse successResponse = mapper.readValue(response.getBody(), SendUserVerificationEmailResponse.class);
                 return TechServicesApiResponse.success(successResponse);
             } else {
                 ObjectMapper mapper = new ObjectMapper();
                 TechServicesErrorResponse errorResponse = mapper.readValue(response.getBody(), TechServicesErrorResponse.class);
-                logger.error("Failed to send verification email for {}", user.getFirstName() + " " + user.getLastName());
+                logger.error("Failed to send verification email for entra user: {}", user.getEntraOid());
                 return TechServicesApiResponse.error(errorResponse);
             }
 
@@ -306,12 +306,12 @@ public class LiveTechServicesClient implements TechServicesClient {
             try {
                 TechServicesErrorResponse errorResponse = mapper.readValue(errorJson, TechServicesErrorResponse.class);
                 if (HttpStatus.TOO_EARLY.equals(httpEx.getStatusCode())) {
-                    logger.info("Failed to send verification email for {}, the root cause is {} ({}) ",
-                            user.getFirstName() + " " + user.getLastName(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
+                    logger.info("Failed to send verification email for entra user: {}, the root cause is {} ({}) ",
+                            user.getEntraOid(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
                     return TechServicesApiResponse.error(errorResponse);
                 }
-                logger.error("Failed to send verification email for {}, the root cause is {} ({}) ",
-                        user.getFirstName() + " " + user.getLastName(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
+                logger.error("Failed to send verification email for entra user: {}, the root cause is {} ({}) ",
+                        user.getEntraOid(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
                 return TechServicesApiResponse.error(errorResponse);
             } catch (Exception ex) {
                 logger.error("Error while sending verification email request to Tech Services.", ex);
@@ -348,15 +348,15 @@ public class LiveTechServicesClient implements TechServicesClient {
                     .toEntity(String.class);
 
             if (response.getStatusCode().is2xxSuccessful()) {
-                logger.info("Disable user request by Tech Services is successful for {} and response is {}",
-                        user.getFirstName() + " " + user.getLastName(), response);
+                logger.info("Disable user request by Tech Services is successful for entra user{} ",
+                        user.getEntraOid());
                 ObjectMapper mapper = new ObjectMapper();
                 ChangeAccountEnabledResponse successResponse = mapper.readValue(response.getBody(), ChangeAccountEnabledResponse.class);
                 return TechServicesApiResponse.success(successResponse);
             } else {
                 ObjectMapper mapper = new ObjectMapper();
                 TechServicesErrorResponse errorResponse = mapper.readValue(response.getBody(), TechServicesErrorResponse.class);
-                logger.error("Failed to disable user {}", user.getFirstName() + " " + user.getLastName());
+                logger.error("Failed to disable entra user: {}", user.getEntraOid());
                 return TechServicesApiResponse.error(errorResponse);
             }
 
@@ -366,12 +366,12 @@ public class LiveTechServicesClient implements TechServicesClient {
             try {
                 TechServicesErrorResponse errorResponse = mapper.readValue(errorJson, TechServicesErrorResponse.class);
                 if (HttpStatus.TOO_EARLY.equals(httpEx.getStatusCode())) {
-                    logger.info("Failed to disable user {}, the root cause is {} ({}) ",
-                            user.getFirstName() + " " + user.getLastName(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
+                    logger.info("Failed to disable entra user: {}, the root cause is {} ({}) ",
+                            user.getEntraOid(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
                     return TechServicesApiResponse.error(errorResponse);
                 }
                 logger.error("Failed to disable user {}, the root cause is {} ({}) ",
-                        user.getFirstName() + " " + user.getLastName(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
+                        user.getEntraOid(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
                 return TechServicesApiResponse.error(errorResponse);
             } catch (Exception ex) {
                 logger.error("Error while sending disable user request to Tech Services.", ex);
@@ -408,15 +408,15 @@ public class LiveTechServicesClient implements TechServicesClient {
                     .toEntity(String.class);
 
             if (response.getStatusCode().is2xxSuccessful()) {
-                logger.info("Enable user request by Tech Services is successful for {} and response is {}",
-                        user.getFirstName() + " " + user.getLastName(), response);
+                logger.info("Enable user request by Tech Services is successful for entra user {}",
+                        user.getEntraOid());
                 ObjectMapper mapper = new ObjectMapper();
                 ChangeAccountEnabledResponse successResponse = mapper.readValue(response.getBody(), ChangeAccountEnabledResponse.class);
                 return TechServicesApiResponse.success(successResponse);
             } else {
                 ObjectMapper mapper = new ObjectMapper();
                 TechServicesErrorResponse errorResponse = mapper.readValue(response.getBody(), TechServicesErrorResponse.class);
-                logger.error("Failed to enable user {}", user.getFirstName() + " " + user.getLastName());
+                logger.error("Failed to enable entra user: {}", user.getEntraOid());
                 return TechServicesApiResponse.error(errorResponse);
             }
 
@@ -426,8 +426,8 @@ public class LiveTechServicesClient implements TechServicesClient {
             try {
                 TechServicesErrorResponse errorResponse = mapper.readValue(errorJson, TechServicesErrorResponse.class);
                 if (HttpStatus.TOO_EARLY.equals(httpEx.getStatusCode())) {
-                    logger.info("Failed to enable user {}, the root cause is {} ({}) ",
-                            user.getFirstName() + " " + user.getLastName(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
+                    logger.info("Failed to enable entra user {}, the root cause is {} ({}) ",
+                            user.getEntraOid(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
                     return TechServicesApiResponse.error(errorResponse);
                 }
                 logger.error("Failed to enable user {}, the root cause is {} ({}) ",
@@ -491,8 +491,8 @@ public class LiveTechServicesClient implements TechServicesClient {
                 logger.info("Successfully retrieved users from Tech Services for business unit: {}", laaBusinessUnit);
                 return TechServicesApiResponse.success(response.getBody());
             } else {
-                logger.warn("Unexpected response from Tech Services GET users endpoint: status={}, body={}",
-                        response.getStatusCode(), response.getBody());
+                logger.warn("Unexpected response from Tech Services GET users endpoint: status={}",
+                        response.getStatusCode());
                 return TechServicesApiResponse.error(TechServicesErrorResponse.builder()
                         .success(false)
                         .code("UNEXPECTED_RESPONSE")
@@ -525,9 +525,7 @@ public class LiveTechServicesClient implements TechServicesClient {
                 throw new RuntimeException("Error while getting users from Tech Services.", ex);
             }
         } catch (Exception ex) {
-            String responseBody = response != null && response.getBody() != null ? response.getBody().toString() : "Unknown";
-            logger.error("Unexpected error while getting users from Tech Services. Response body: {}",
-                    responseBody, ex);
+            logger.error("Unexpected error while getting users from Tech Services.", ex);
             throw new RuntimeException("Unexpected error while getting users from Tech Services.", ex);
         }
     }
@@ -550,7 +548,7 @@ public class LiveTechServicesClient implements TechServicesClient {
                     .toEntity(GetUserResponse.class);
 
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                logger.info("Successfully retrieved user from Tech Services for business unit: {}", laaBusinessUnit);
+                logger.info("Successfully retrieved entra user: {}, from Tech Services for business unit: {}", entraOid, laaBusinessUnit);
                 return TechServicesApiResponse.success(response.getBody());
             } else {
                 throw new TechServicesClientException(response);
@@ -603,8 +601,8 @@ public class LiveTechServicesClient implements TechServicesClient {
                 GetAllApplicationsResponse getAllApplicationsResponse = GetAllApplicationsResponse.builder().apps(responseBody).build();
                 return TechServicesApiResponse.success(getAllApplicationsResponse);
             } else {
-                logger.error("Unexpected response from Tech Services GET applications endpoint: status={}, body={}",
-                        response.getStatusCode(), response.getBody());
+                logger.error("Unexpected response from Tech Services GET applications endpoint: status={}",
+                        response.getStatusCode());
                 return TechServicesApiResponse.error(TechServicesErrorResponse.builder()
                         .success(false)
                         .code("UNEXPECTED_RESPONSE")
@@ -651,7 +649,7 @@ public class LiveTechServicesClient implements TechServicesClient {
 
             UpdateUserDetailsRequest request = new UpdateUserDetailsRequest(firstName, lastName, email);
             String uri = String.format(TECH_SERVICES_UPDATE_USER_GRP_ENDPOINT, laaBusinessUnit, entraOid);
-            logger.info("Sending request to tech services to update user details: {}", request);
+            logger.info("Sending request to tech services to update user details for entra user: {}", entraOid);
             String accessToken = getAccessToken();
             response = restClient
                     .patch()
@@ -667,8 +665,8 @@ public class LiveTechServicesClient implements TechServicesClient {
                 return TechServicesApiResponse.success(response.getBody());
 
             } else {
-                logger.warn("Unexpected response from Tech Services Patch users details endpoint: status={}, body={}",
-                        response.getStatusCode(), response.getBody());
+                logger.warn("Unexpected response from Tech Services Patch users details endpoint: status={}",
+                        response.getStatusCode());
                 return TechServicesApiResponse.error(TechServicesErrorResponse.builder()
                         .success(false)
                         .code("UNEXPECTED_RESPONSE")
