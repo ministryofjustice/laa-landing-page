@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.repository;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -19,6 +20,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -311,6 +313,122 @@ class EntraUserRepositoryAuditIntegrationTest extends BaseRepositoryTest {
         // Then
         assertThat(result.getTotalElements()).isEqualTo(1);
         assertThat(result.getContent().get(0).isMultiFirmUser()).isTrue();
+    }
+
+    @Test
+    void findAllUsersForAudit_withInactiveSinceDate_returnsOnlyUsersWhoseLastLoginIsBeforeThatDate() {
+        // Given
+        LocalDateTime cutoff = LocalDateTime.of(2025, 1, 1, 0, 0);
+
+        // login before cutoff — should be included
+        EntraUser staleUser = createTestUserWithLoginAndInvitation(
+                "Stale", "User", "stale@example.com",
+                LocalDateTime.of(2024, 6, 1, 0, 0), InvitationStatus.VERIFICATION_SUCCESS);
+
+        // login after cutoff — should be excluded
+        createTestUserWithLoginAndInvitation(
+                "Recent", "User", "recent@example.com",
+                LocalDateTime.of(2025, 6, 1, 0, 0), InvitationStatus.VERIFICATION_SUCCESS);
+
+        // no login date at all — should be excluded (null < date is false in SQL)
+        createTestUserWithLoginAndInvitation(
+                "Never", "Logged", "neverlogged@example.com",
+                null, InvitationStatus.VERIFICATION_SUCCESS);
+
+        PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("firstName"));
+
+        // When
+        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit(
+                null, null, null, null, null, null, "active", cutoff, null, pageRequest);
+
+        // Then
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent().get(0).getId()).isEqualTo(staleUser.getId());
+    }
+
+    @Test
+    void findAllUsersForAudit_withNeverActivated_returnsOnlyUsersWhoseInvitationStatusIsNotVerified() {
+        // Given
+        // invitation not yet successful — should be included
+        EntraUser neverActivated = createTestUserWithLoginAndInvitation(
+                "Never", "Activated", "never@example.com",
+                null, InvitationStatus.INVITE_SENT);
+
+        // verified — should be excluded
+        createTestUserWithLoginAndInvitation(
+                "Verified", "User", "verified@example.com",
+                LocalDateTime.now(), InvitationStatus.VERIFICATION_SUCCESS);
+
+        PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("firstName"));
+
+        // When
+        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit(
+                null, null, null, null, null, null, null, null, "true", pageRequest);
+
+        // Then
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent().get(0).getId()).isEqualTo(neverActivated.getId());
+    }
+
+    @Test
+    void findAllUsersForAudit_withBothFilters_returnsUnionOfMatchingUsers() {
+        // Given
+        LocalDateTime cutoff = LocalDateTime.of(2025, 1, 1, 0, 0);
+
+        // matches date filter only (logged in before cutoff, but is verified)
+        EntraUser staleButVerified = createTestUserWithLoginAndInvitation(
+                "Stale", "Verified", "staleverified@example.com",
+                LocalDateTime.of(2024, 3, 1, 0, 0), InvitationStatus.VERIFICATION_SUCCESS);
+
+        // matches neverActivated filter only (recent login, but not verified)
+        EntraUser recentButUnverified = createTestUserWithLoginAndInvitation(
+                "Recent", "Unverified", "recentunverified@example.com",
+                LocalDateTime.of(2025, 6, 1, 0, 0), InvitationStatus.INVITE_SENT);
+
+        // matches neither — recent login AND verified
+        createTestUserWithLoginAndInvitation(
+                "Active", "Verified", "activeverified@example.com",
+                LocalDateTime.of(2025, 6, 1, 0, 0), InvitationStatus.VERIFICATION_SUCCESS);
+
+        PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("firstName"));
+
+        // When — both filters active, expect OR union
+        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit(
+                null, null, null, null, null, null, "active", cutoff, "true", pageRequest);
+
+        // Then
+        assertThat(result.getTotalElements()).isEqualTo(2);
+        assertThat(result.getContent())
+                .extracting("id")
+                .containsExactlyInAnyOrder(staleButVerified.getId(), recentButUnverified.getId());
+    }
+
+    @Test
+    void findAllUsersForAudit_withNoFilters_includesUsersWithAnyLoginDateOrInvitationStatus() {
+        // Given
+        createTestUserWithLoginAndInvitation("A", "User", "a@example.com",
+                LocalDateTime.of(2020, 1, 1, 0, 0), InvitationStatus.VERIFICATION_SUCCESS);
+        createTestUserWithLoginAndInvitation("B", "User", "b@example.com",
+                null, InvitationStatus.INVITE_SENT);
+        createTestUserWithLoginAndInvitation("C", "User", "c@example.com",
+                LocalDateTime.now(), InvitationStatus.AWAITING_VERIFICATION);
+
+        PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("firstName"));
+
+        // When — no dormant filters
+        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit(
+                null, null, null, null, null, null, null, null, null, pageRequest);
+
+        // Then — all users returned regardless
+        assertThat(result.getTotalElements()).isEqualTo(3);
+    }
+
+    private EntraUser createTestUserWithLoginAndInvitation(String firstName, String lastName, String email,
+            LocalDateTime lastLoginDate, InvitationStatus invitationStatus) {
+        EntraUser user = buildEntraUser(UUID.randomUUID().toString(), email, firstName, lastName);
+        user.setLastLoginDate(lastLoginDate);
+        user.setInvitationStatus(invitationStatus);
+        return entraUserRepository.save(user);
     }
 
     private EntraUser createTestUser(String firstName, String lastName, String email,
