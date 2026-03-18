@@ -161,35 +161,30 @@
                                                     <th:block th:if="${user.activationStatus == 'VERIFICATION_SUCCESS'}">
                                                         <!--user hasn't assigned any roles-->
                                                         <strong th:if="${user.isNoRole}"
-                                                              class="govuk-tag govuk-tag--purple govuk-!-font-weight-bold govuk-!-margin-top-1"
-                                                              style="min-width: 200px">NO ROLES ASSIGNED</strong>
+                                                              class="govuk-tag govuk-tag--purple govuk-!-margin-top-1">No roles assigned</strong>
                                                         <!--user has roles and no office assigned -->
                                                         <strong th:unless="${user.isNoRole}"
-                                                              class="govuk-tag govuk-tag--blue govuk-!-font-weight-bold govuk-!-margin-top-1">INCOMPLETE</strong>
+                                                              class="govuk-tag govuk-tag--blue govuk-!-margin-top-1">Incomplete</strong>
                                                     </th:block>
                                                     <!--entra verification still going-->
                                                     <th:block th:unless="${user.activationStatus == 'VERIFICATION_SUCCESS'}">
-
                                                         <strong th:if="${user.activationStatus == 'VERIFICATION_FAILED'}"
-                                                                class="govuk-tag govuk-tag--red govuk-!-font-weight-bold govuk-!-margin-top-1"
-                                                                style="min-width: 200px">ACTIVATION FAILED</strong>
+                                                                class="govuk-tag govuk-tag--red govuk-!-margin-top-1">Activation failed</strong>
                                                         <!--All the other situation will be incomplete-->
                                                         <strong th:if="${user.activationStatus == 'INVITE_SENT' || user.activationStatus == 'AWAITING_MFA'}"
-                                                                class="govuk-tag govuk-tag--blue govuk-!-font-weight-bold govuk-!-margin-top-1">INCOMPLETE</strong>
+                                                                class="govuk-tag govuk-tag--blue govuk-!-margin-top-1">Incomplete</strong>
                                                     </th:block>
                                                 </th:block>
                                                 <!--user is complete-->
                                                 <th:block th:unless="${user.isPending}">
                                                     <strong th:if="${user.activationStatus == 'AWAITING_VERIFICATION'}"
-                                                            class="govuk-tag govuk-tag--grey govuk-!-font-weight-bold govuk-!-margin-top-1"
-                                                            style="min-width: 200px">ACTIVATION PENDING</strong>
+                                                            class="govuk-tag govuk-tag--grey govuk-!-margin-top-1">Activation pending</strong>
                                                     <strong th:if="${user.activationStatus == 'VERIFICATION_SUCCESS'}"
-                                                            class="govuk-tag govuk-tag--green govuk-!-font-weight-bold govuk-!-margin-top-1">COMPLETE</strong>
+                                                            class="govuk-tag govuk-tag--green govuk-!-margin-top-1">Complete</strong>
                                                     <strong th:if="${user.activationStatus == 'VERIFICATION_FAILED'}"
-                                                            class="govuk-tag govuk-tag--red govuk-!-font-weight-bold govuk-!-margin-top-1"
-                                                            style="min-width: 200px">ACTIVATION FAILED</strong>
+                                                            class="govuk-tag govuk-tag--red govuk-!-margin-top-1">Activation failed</strong>
                                                     <strong th:if="${user.activationStatus == 'INVITE_SENT' || user.activationStatus == 'AWAITING_MFA'}"
-                                                            class="govuk-tag govuk-tag--blue govuk-!-font-weight-bold govuk-!-margin-top-1">INCOMPLETE</strong>
+                                                            class="govuk-tag govuk-tag--blue govuk-!-margin-top-1">Incomplete</strong>
                                                 </th:block>
                                             </th:block>
                                         </dd>
@@ -216,16 +211,6 @@
                                             <strong class="govuk-tag govuk-tag--green" th:if="${entraUser != null && entraUser.accountEnabled}">Active</strong>
                                             <strong class="govuk-tag govuk-tag--red" th:if="${entraUser != null && !entraUser.accountEnabled}">Disabled</strong>
                                             <strong class="govuk-tag govuk-tag--grey" th:if="${entraUser == null}">Unknown</strong>
-                                        </dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Activation Status</dt>
-                                        <dd class="govuk-summary-list__value">
-                                            <strong class="govuk-tag govuk-tag--purple" th:if="${entraUser != null && user.activationStatus == 'INVITE_SENT'}">Invite sent</strong>
-                                            <strong class="govuk-tag govuk-tag--orange" th:if="${entraUser != null && user.activationStatus == 'AWAITING_MFA'}">Awaiting MFA</strong>
-                                            <strong class="govuk-tag govuk-tag--grey" style="min-width: 200px" th:if="${entraUser != null && user.activationStatus == 'AWAITING_VERIFICATION'}">Activation pending</strong>
-                                            <strong class="govuk-tag govuk-tag--green" style="min-width: 200px" th:if="${entraUser != null && user.activationStatus == 'VERIFICATION_SUCCESS'}">Verification success</strong>
-                                            <strong class="govuk-tag govuk-tag--red" th:if="${entraUser != null && user.activationStatus == 'VERIFICATION_FAILED'}">Activation failed</strong>
                                         </dd>
                                     </div>
                                     <div class="govuk-summary-list__row" th:if="${entraUser != null && !entraUser.accountEnabled}">
