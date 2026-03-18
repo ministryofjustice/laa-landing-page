@@ -374,11 +374,15 @@ public class UserService {
                     "Associated Entra user not found for profile: " + userProfileId);
         }
 
+        EntraUserDto entraUserDto = mapper.map(entraUser, EntraUserDto.class);
+
         logger.info(
                 "Deleting external user. actorId={}, userProfileId={}, entraUserId={}, email={}, reason=\"{}\"",
                 actorId, userProfileId, entraUser.getId(), entraUser.getEmail(), reason);
 
+
         // first send update to tech services
+        techServicesClient.disableUser(entraUserDto, "Role Change / No Longer Required");
         techServicesClient.deleteRoleAssignment(userProfile.getEntraUser().getId());
 
         // Clean up UserAccountStatusAudit records first to avoid foreign key constraint violations
@@ -533,6 +537,8 @@ public class UserService {
         EntraUser entraUser = entraUserRepository.findById(UUID.fromString(entraUserId))
                 .orElseThrow(() -> new RuntimeException("Entra user not found: " + entraUserId));
 
+        EntraUserDto entraUserDto = mapper.map(entraUser, EntraUserDto.class);
+
         // Check if user has any profiles - this method is only for users without
         // profiles
         List<UserProfile> profiles = userProfileRepository.findAllByEntraUser(entraUser);
@@ -553,6 +559,7 @@ public class UserService {
 
         // Notify Tech Services to remove Entra group memberships
         try {
+            techServicesClient.disableUser(entraUserDto, "Role Change / No Longer Required");
             techServicesClient.deleteRoleAssignment(entraUser.getId());
         } catch (Exception ex) {
             logger.error("Failed to notify Tech Services during user deletion: {}", ex.getMessage(),
