@@ -7,6 +7,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serial;
+import java.io.Serializable;
+
 /**
  * Form object for capturing app role deletion reason.
  */
@@ -14,7 +17,10 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class DeleteAppRoleReasonForm {
+public class DeleteAppRoleReasonForm implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     @NotBlank(message = "Please provide a reason for the role deletion")
     @Size(min = 10, max = 1000, message = "Reason must be between 10 and 1000 characters")
