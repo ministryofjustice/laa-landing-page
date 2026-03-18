@@ -1710,7 +1710,7 @@ public class UserService {
                     return "Activation pending";
                 } else if (user.getInvitationStatus().name().equals("VERIFICATION_SUCCESS")) {
                     return "Complete";
-                } else if (user.getInvitationStatus().name().equals("VERIFICATION_FAILED")){
+                } else if (user.getInvitationStatus().name().equals("VERIFICATION_FAILED")) {
                     return "Activation failed";
                 }
             } else { // user is incomplete user hasn't roles assigned any roles
@@ -1719,7 +1719,7 @@ public class UserService {
                     if (noRolesAssigned) {
                         return "No roles assigned";
                     }
-                } else if (user.getInvitationStatus().name().equals("VERIFICATION_FAILED")){
+                } else if (user.getInvitationStatus().name().equals("VERIFICATION_FAILED")) {
                     return "Activation failed";
                 }
             }
@@ -1901,7 +1901,7 @@ public class UserService {
                 .createdDate(entraUser.getCreatedDate()).createdBy(entraUser.getCreatedBy())
                 // TODO: Fetch lastLoginDate from Microsoft Graph API
                 .lastLoginDate(null)
-                .activationStatus(entraUser.getInvitationStatus() != null? entraUser.getInvitationStatus().name(): null)
+                .activationStatus(entraUser.getInvitationStatus() != null ? entraUser.getInvitationStatus().name() : null)
                 .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
                         : "UNKNOWN")
                 .profiles(profileDtos).totalProfiles(totalProfiles).totalProfilePages(totalPages)
