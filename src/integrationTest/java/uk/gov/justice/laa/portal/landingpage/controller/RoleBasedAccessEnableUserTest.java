@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.ResultMatcher;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -23,10 +24,13 @@ public class RoleBasedAccessEnableUserTest extends RoleBasedAccessIntegrationTes
 
     @Test
     public void testExternalUserAdminCanEnableUser() throws Exception {
-        EntraUser loggedInUser = externalUserAdmins.getFirst();
         EntraUser accessedUser = externalUsersNoRoles.getFirst();
         accessedUser.setEnabled(false);
+        UserProfile disabledByProfile = externalUserAdmins.getLast().getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
+        accessedUser.setDisabledBy(disabledByProfile.getId());
         entraUserRepository.saveAndFlush(accessedUser);
+        EntraUser loggedInUser = externalUserAdmins.getFirst();
         sendEnableUserPost(loggedInUser, accessedUser, status().isOk());
         accessedUser = entraUserRepository.findById(accessedUser.getId()).orElseThrow();
         assertThat(accessedUser.isEnabled()).isTrue();
@@ -59,7 +63,7 @@ public class RoleBasedAccessEnableUserTest extends RoleBasedAccessIntegrationTes
 
     @Test
     public void testExternalUserManagerCanEnableUser() throws Exception {
-        EntraUser loggedInUser = externalOnlyUserManagers.getFirst();
+        EntraUser loggedInUser = internalAndExternalUserManagers.getFirst();
         EntraUser accessedUser = externalUsersNoRoles.getFirst();
         accessedUser.setEnabled(false);
         entraUserRepository.saveAndFlush(accessedUser);
@@ -70,10 +74,13 @@ public class RoleBasedAccessEnableUserTest extends RoleBasedAccessIntegrationTes
 
     @Test
     public void testFirmUserManagerCanEnableUser() throws Exception {
-        EntraUser loggedInUser = firmUserManagers.getFirst();
         EntraUser accessedUser = externalUsersNoRoles.getLast();
         accessedUser.setEnabled(false);
+        UserProfile disabledByProfile = firmUserManagers.getLast().getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
+        accessedUser.setDisabledBy(disabledByProfile.getId());
         entraUserRepository.saveAndFlush(accessedUser);
+        EntraUser loggedInUser = firmUserManagers.getFirst();
         sendEnableUserPost(loggedInUser, accessedUser, status().isOk());
         accessedUser = entraUserRepository.findById(accessedUser.getId()).orElseThrow();
         assertThat(accessedUser.isEnabled()).isTrue();

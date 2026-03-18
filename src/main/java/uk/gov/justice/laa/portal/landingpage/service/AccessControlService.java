@@ -14,6 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
@@ -21,11 +22,18 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import org.springframework.beans.factory.annotation.Value;
+
+import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.EXTERNAL_USER_ADMIN;
+import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.EXTERNAL_USER_MANAGER;
+import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.FIRM_USER_MANAGER;
+import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.GLOBAL_ADMIN;
 
 @Service
 public class AccessControlService {
@@ -37,6 +45,9 @@ public class AccessControlService {
     private final LoginService loginService;
 
     private final EntraUserRepository entraUserRepository;
+
+    @Value("${feature.flag.bulk.disable.user}")
+    private boolean bulkUserDisableFeatureEnabled;
 
     private static final Logger log = LoggerFactory.getLogger(AccessControlService.class);
 
@@ -189,6 +200,10 @@ public class AccessControlService {
         }
 
         EntraUserDto accessedUser = accessedUserOptional.get();
+        if (!accessedUser.isEnabled()) {
+            return false;
+        }
+
         boolean isAccessedUserInternal = userService.isInternal(entraUserId);
         if (isAccessedUserInternal) {
             return false;
@@ -221,6 +236,89 @@ public class AccessControlService {
 
         return !accessedUser.getId().equals(authenticatedUser.getId().toString())
                 && userHasPermission(authenticatedUser, Permission.DISABLE_EXTERNAL_USER);
+    }
+
+    public boolean canEnableUser(String entraUserId) {
+        Optional<EntraUserDto> accessedUserOptional = userService.getEntraUserById(entraUserId);
+        if (accessedUserOptional.isEmpty()) {
+            return false;
+        }
+
+        EntraUserDto accessedUser = accessedUserOptional.get();
+        if (accessedUser.isEnabled()) {
+            return false;
+        }
+
+        boolean isAccessedUserInternal = userService.isInternal(entraUserId);
+        if (isAccessedUserInternal) {
+            return false;
+        }
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
+        EntraUser targetUser = entraUserRepository.findById(UUID.fromString(entraUserId)).orElse(null);
+
+        if (targetUser == null) {
+            return false;
+        }
+
+        boolean isInternalUser = userService.isInternal(authenticatedUser.getId());
+        if (!isInternalUser && accessedUser.isMultiFirmUser()) {
+            return false;
+        }
+
+        UserProfile actorUserProfile = authenticatedUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
+                .orElse(null);
+        if (actorUserProfile == null) {
+            return false;
+        }
+
+        UUID disabledByUserProfileId = targetUser.getDisabledBy();
+
+        List<String> actingUserRoles = actorUserProfile.getAppRoles().stream().map(AppRole::getName).toList();
+
+        UserProfileDto disabledByProfile = disabledByUserProfileId == null ? null :
+                userService.getUserProfileById(disabledByUserProfileId.toString()).orElse(null);
+        List<AppRoleDto> disabledByUserRoles = disabledByProfile == null ? List.of() : disabledByProfile.getAppRoles();
+
+        String disabledByUserRole = disabledByUserRoles.stream()
+                .map(AppRoleDto::getName)
+                .filter(name ->
+                        name.equals(EXTERNAL_USER_ADMIN.getRoleName())
+                                || name.equals(FIRM_USER_MANAGER.getRoleName())
+                )
+                .findFirst()
+                .orElse("NONE");
+
+        if (actingUserRoles.contains(GLOBAL_ADMIN.getRoleName())
+                || actingUserRoles.contains(EXTERNAL_USER_MANAGER.getRoleName())
+                || actingUserRoles.contains(AuthzRole.SECURITY_RESPONSE.getRoleName())) {
+            return userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER);
+        }
+
+        if (actingUserRoles.contains(FIRM_USER_MANAGER.getRoleName())) {
+            if (!disabledByUserRole.equals(FIRM_USER_MANAGER.getRoleName())) {
+                return false;
+            }
+            Firm enabledByUserFirm = actorUserProfile.getFirm();
+            Firm enabledUserFirm = targetUser.getUserProfiles().stream()
+                    .filter(UserProfile::isActiveProfile)
+                    .findFirst()
+                    .map(UserProfile::getFirm).orElse(null);
+
+
+            return enabledUserFirm != null && enabledByUserFirm != null
+                    && enabledByUserFirm.getId().equals(enabledUserFirm.getId())
+                    && userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER);
+        }
+
+        if (actingUserRoles.contains(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())) {
+            return disabledByUserRole.equals(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())
+                    && userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER);
+        }
+
+
+        return userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER);
     }
 
     /**
@@ -326,7 +424,7 @@ public class AccessControlService {
                         .anyMatch(r ->
                                 r != null
                                         && r.getName() != null
-                                        && AuthzRole.FIRM_USER_MANAGER.getRoleName().equals(r.getName())
+                                        && FIRM_USER_MANAGER.getRoleName().equals(r.getName())
                         )
                 )
                 .orElse(false);
@@ -400,6 +498,10 @@ public class AccessControlService {
                 && !userService.isInternal(accessedUser.getId())
                 && userHasAnyGivenPermissions(authenticatedUser, Permission.CREATE_EXTERNAL_USER,
                         Permission.EDIT_EXTERNAL_USER);
+    }
+
+    public boolean canBulkDisableFirmUsers() {
+        return bulkUserDisableFeatureEnabled && authenticatedUserHasAnyGivenPermissions(Permission.BULK_DISABLE_FIRM_USERS);
     }
 
 }

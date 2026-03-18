@@ -138,26 +138,6 @@
                                         <dd class="govuk-summary-list__value" th:text="${user.userType}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Last login date</dt>
-                                        <dd class="govuk-summary-list__value"
-                                            th:text="${user.lastLoginDate != null ? #temporals.format(user.lastLoginDate, 'dd MMM yyyy HH:mm') : ''}">
-                                        </dd>
-                                    </div>
-
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Entra status</dt>
-                                        <dd class="govuk-summary-list__value">
-                                            <strong class="govuk-tag govuk-tag--green" th:if="${user.entraStatus == 'ACTIVE'}">Active</strong>
-                                            <strong class="govuk-tag govuk-tag--red" th:if="${user.entraStatus == 'DEACTIVE'}">Deactive</strong>
-                                            <strong class="govuk-tag govuk-tag--grey" th:if="${user.entraStatus == 'AWAITING_USER_APPROVAL'}">Awaiting user approval</strong>
-                                            <strong class="govuk-tag govuk-tag--grey" th:if="${user.entraStatus == 'UNKNOWN'}">Unknown</strong>
-                                        </dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Activation status</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${user.activationStatus}"></dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Created date</dt>
                                         <dd class="govuk-summary-list__value"
                                             th:text="${user.createdDate != null ? #temporals.format(user.createdDate, 'dd MMM yyyy HH:mm') : ''}">
@@ -191,6 +171,11 @@
                                             <strong class="govuk-tag govuk-tag--grey" th:if="${entraUser == null}">Unknown</strong>
                                         </dd>
                                     </div>
+                                    <div class="govuk-summary-list__row" th:if="${entraUser != null && !entraUser.accountEnabled}">
+                                        <dt class="govuk-summary-list__key">Disable Reason</dt>
+                                        <dd class="govuk-summary-list__value" th:if="${entraUser.customSecurityAttributes == null || entraUser.customSecurityAttributes.guestUserStatus == null || entraUser.customSecurityAttributes.guestUserStatus.disabledReason == null}">Unknown</dd>
+                                        <dd class="govuk-summary-list__value" th:if="${entraUser.customSecurityAttributes != null && entraUser.customSecurityAttributes.guestUserStatus != null && entraUser.customSecurityAttributes.guestUserStatus.disabledReason != null}" th:text="${entraUser.customSecurityAttributes.guestUserStatus.disabledReason}"></dd>
+                                    </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Invitation State</dt>
                                         <dd class="govuk-summary-list__value" th:if="${entraUser == null || entraUser.customSecurityAttributes == null || entraUser.customSecurityAttributes.guestUserStatus == null || entraUser.customSecurityAttributes.guestUserStatus.invitationProgress == null}">Unknown</dd>
@@ -204,7 +189,7 @@
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Created Date/Time</dt>
                                         <dd class="govuk-summary-list__value" th:if="${entraUser == null}">Unknown</dd>
-                                        <dd class="govuk-summary-list__value" th:if="${entraUser != null}" th:text="${entraUser.createdDateTime}"></dd>
+                                        <dd class="govuk-summary-list__value" th:if="${entraUser != null}" th:text="${entraUser.createdDateTime != null ? #temporals.format(entraUser.createdDateTime, 'dd MMM yyyy HH:mm') : 'Unknown'}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Email</dt>
