@@ -1692,10 +1692,10 @@ public class UserService {
     private String determineAccountStatus(EntraUser user, List<UserProfile> profiles) {
 
         // Check if user has any pending profiles
-        boolean hasPending = profiles.stream()
+        boolean hasPending = profiles.isEmpty() || profiles.stream()
                 .anyMatch(profile -> profile.getUserProfileStatus() == null || profile.getUserProfileStatus() == UserProfileStatus.PENDING);
         // Check if user has roles assigned
-        boolean noRolesAssigned = profiles.stream()
+        boolean noRolesAssigned = profiles.isEmpty() || profiles.stream()
                 .anyMatch(userProfile ->
                         userProfile.getAppRoles() == null || userProfile.getAppRoles().isEmpty()
                 );
@@ -1726,10 +1726,7 @@ public class UserService {
                         if (noRolesAssigned) {
                             return "No roles assigned";
                         }
-                    } else if (user.getInvitationStatus().name().equals("VERIFICATION_FAILED")) {
-                        return "Activation failed";
                     }
-
                 }
             }
         }
@@ -1939,11 +1936,11 @@ public class UserService {
                 : Collections.emptyList();
 
         //check if user is pending
-        boolean hasPending = allProfiles.stream()
+        boolean hasPending = allProfiles.isEmpty() || allProfiles.stream()
                 .anyMatch(profile -> profile.getUserProfileStatus() == UserProfileStatus.PENDING);
 
         //Check if user haven't assigned any roles
-        boolean noRolesAssigned = allProfiles.stream()
+        boolean noRolesAssigned =  allProfiles.isEmpty() || allProfiles.stream()
                 .anyMatch(profile ->  profile.getAppRoles() == null || profile.getAppRoles().isEmpty());
 
         // Determine user type using shared method

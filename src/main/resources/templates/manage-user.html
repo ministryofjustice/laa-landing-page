@@ -99,7 +99,11 @@
                                           class="govuk-tag govuk-tag--green govuk-!-font-weight-bold govuk-!-margin-top-1">COMPLETE</span>
                                     <span th:if="${user.entraUser.invitationStatus?.name() == 'VERIFICATION_FAILED'}"
                                           class="govuk-tag govuk-tag--red govuk-!-font-weight-bold govuk-!-margin-top-1"  style="min-width: 200px">ACTIVATION FAILED</span>
-                                    <span th:if="${user.entraUser.invitationStatus?.name() == 'INVITE_SENT' || user.entraUser.invitationStatus?.name() == 'AWAITING_MFA'}"
+                                    <span th:if="${user.entraUser.invitationStatus == null
+                                    || user.entraUser.invitationStatus?.name() == 'INVITE_SENT'
+                                    || user.entraUser.invitationStatus?.name() == 'AWAITING_MFA'
+                                    || user.entraUser.invitationStatus?.name() == 'CODE_EXPIRED'
+                                    || user.entraUser.invitationStatus?.name() == 'MAX_VERIFICATION_ATTEMPTS'}"
                                           class="govuk-tag govuk-tag--blue govuk-!-font-weight-bold govuk-!-margin-top-1">INCOMPLETE</span>
                                 </th:block>
                                 <!--user is pending-->
@@ -113,19 +117,10 @@
                                         <span th:unless="${user.appRoles.isEmpty()}"
                                               class="govuk-tag govuk-tag--blue govuk-!-font-weight-bold govuk-!-margin-top-1">INCOMPLETE</span>
                                     </th:block>
-                                    <!--entra verification still going-->
+                                    <!--user is pending and entra verification still going-->
                                     <th:block th:unless="${user.entraUser.invitationStatus?.name() == 'VERIFICATION_SUCCESS'}">
-
-                                        <span th:if="${user.entraUser.invitationStatus?.name() == 'VERIFICATION_FAILED'}"
-                                              class="govuk-tag govuk-tag--red govuk-!-font-weight-bold govuk-!-margin-top-1"  style="min-width: 200px">ACTIVATION FAILED</span>
                                         <!--All the other situation will be incomplete-->
-                                        <span th:if="${user.entraUser.invitationStatus == null
-                                        || user.entraUser.invitationStatus?.name() == 'INVITE_SENT'
-                                        || user.entraUser.invitationStatus?.name() == 'AWAITING_VERIFICATION'
-                                        || user.entraUser.invitationStatus?.name() == 'AWAITING_MFA'
-                                        || user.entraUser.invitationStatus?.name() == 'CODE_EXPIRED'
-                                        || user.entraUser.invitationStatus?.name() == 'MAX_VERIFICATION_ATTEMPTS'}"
-                                              class="govuk-tag govuk-tag--blue govuk-!-font-weight-bold govuk-!-margin-top-1">INCOMPLETE</span>
+                                        <span class="govuk-tag govuk-tag--blue govuk-!-font-weight-bold govuk-!-margin-top-1">INCOMPLETE</span>
                                     </th:block>
                                 </th:block>
                             </th:block>

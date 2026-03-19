@@ -3,8 +3,6 @@ package uk.gov.justice.laa.portal.landingpage.dto;
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -54,7 +52,7 @@ public class AuditUserDto implements Serializable {
     private String firmCode;
 
     /**
-     * Account status: Active, Inactive, Pending, or Disabled
+     * Account status: Complete, Incomplete, No roles assigned, or Disabled
      */
     private String accountStatus;
 
