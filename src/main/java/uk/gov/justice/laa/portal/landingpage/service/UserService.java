@@ -1717,6 +1717,9 @@ public class UserService {
                         case "VERIFICATION_FAILED" -> {
                             return "Activation failed";
                         }
+                        default -> {
+                            return "Incomplete";
+                        }
                     }
                 }
             } else { // user is incomplete user hasn't roles assigned any roles
