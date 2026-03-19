@@ -61,7 +61,6 @@ import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
-import uk.gov.justice.laa.portal.landingpage.validation.RoleCreationValidator;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
@@ -91,7 +90,6 @@ public class AdminController {
     private final AppRoleService appRoleService;
     private final AccessControlService accessControlService;
     private final RoleAssignmentService roleAssignmentService;
-    private final RoleCreationValidator roleCreationValidator;
 
     /**
      * Display SiLAS Administration landing page with Admin Services tab by default
