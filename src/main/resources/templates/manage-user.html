@@ -119,7 +119,12 @@
                                         <span th:if="${user.entraUser.invitationStatus?.name() == 'VERIFICATION_FAILED'}"
                                               class="govuk-tag govuk-tag--red govuk-!-font-weight-bold govuk-!-margin-top-1"  style="min-width: 200px">ACTIVATION FAILED</span>
                                         <!--All the other situation will be incomplete-->
-                                        <span th:if="${user.entraUser.invitationStatus?.name() == 'INVITE_SENT' || user.entraUser.invitationStatus?.name() == 'AWAITING_MFA'}"
+                                        <span th:if="${user.entraUser.invitationStatus == null
+                                        || user.entraUser.invitationStatus?.name() == 'INVITE_SENT'
+                                        || user.entraUser.invitationStatus?.name() == 'AWAITING_VERIFICATION'
+                                        || user.entraUser.invitationStatus?.name() == 'AWAITING_MFA'
+                                        || user.entraUser.invitationStatus?.name() == 'CODE_EXPIRED'
+                                        || user.entraUser.invitationStatus?.name() == 'MAX_VERIFICATION_ATTEMPTS'}"
                                               class="govuk-tag govuk-tag--blue govuk-!-font-weight-bold govuk-!-margin-top-1">INCOMPLETE</span>
                                     </th:block>
                                 </th:block>

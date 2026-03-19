@@ -171,7 +171,12 @@
                                                         <strong th:if="${user.activationStatus == 'VERIFICATION_FAILED'}"
                                                                 class="govuk-tag govuk-tag--red govuk-!-margin-top-1">Activation failed</strong>
                                                         <!--All the other situation will be incomplete-->
-                                                        <strong th:if="${user.activationStatus == 'INVITE_SENT' || user.activationStatus == 'AWAITING_MFA'}"
+                                                        <strong th:if="${user.activationStatus == null
+                                                        || user.activationStatus == 'INVITE_SENT'
+                                                        || user.activationStatus == 'AWAITING_VERIFICATION'
+                                                        || user.activationStatus == 'AWAITING_MFA'
+                                                        || user.activationStatus == 'CODE_EXPIRED'
+                                                        || user.activationStatus == 'MAX_VERIFICATION_ATTEMPTS'}"
                                                                 class="govuk-tag govuk-tag--blue govuk-!-margin-top-1">Incomplete</strong>
                                                     </th:block>
                                                 </th:block>
@@ -183,7 +188,12 @@
                                                             class="govuk-tag govuk-tag--green govuk-!-margin-top-1">Complete</strong>
                                                     <strong th:if="${user.activationStatus == 'VERIFICATION_FAILED'}"
                                                             class="govuk-tag govuk-tag--red govuk-!-margin-top-1">Activation failed</strong>
-                                                    <strong th:if="${user.activationStatus == 'INVITE_SENT' || user.activationStatus == 'AWAITING_MFA'}"
+                                                    <strong th:if="${user.activationStatus == null
+                                                    || user.activationStatus == 'INVITE_SENT'
+                                                    || user.activationStatus == 'AWAITING_VERIFICATION'
+                                                    || user.activationStatus == 'AWAITING_MFA'
+                                                    || user.activationStatus == 'CODE_EXPIRED'
+                                                    || user.activationStatus == 'MAX_VERIFICATION_ATTEMPTS'}"
                                                             class="govuk-tag govuk-tag--blue govuk-!-margin-top-1">Incomplete</strong>
                                                 </th:block>
                                             </th:block>

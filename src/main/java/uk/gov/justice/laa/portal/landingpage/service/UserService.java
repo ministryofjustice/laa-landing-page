@@ -1693,7 +1693,7 @@ public class UserService {
 
         // Check if user has any pending profiles
         boolean hasPending = profiles.stream()
-                .anyMatch(profile -> profile.getUserProfileStatus() == UserProfileStatus.PENDING);
+                .anyMatch(profile -> profile.getUserProfileStatus() == null || profile.getUserProfileStatus() == UserProfileStatus.PENDING);
         // Check if user has roles assigned
         boolean noRolesAssigned = profiles.stream()
                 .anyMatch(userProfile ->
@@ -1706,21 +1706,30 @@ public class UserService {
         } else { //user active
             // user is complete
             if (!hasPending) {
-                if (user.getInvitationStatus() == null || user.getInvitationStatus().name().equals("AWAITING_VERIFICATION")) {
-                    return "Activation pending";
-                } else if (user.getInvitationStatus().name().equals("VERIFICATION_SUCCESS")) {
-                    return "Complete";
-                } else if (user.getInvitationStatus().name().equals("VERIFICATION_FAILED")) {
-                    return "Activation failed";
+                if (user.getInvitationStatus() != null) {
+                    switch (user.getInvitationStatus().name()) {
+                        case "AWAITING_VERIFICATION" -> {
+                            return "Activation pending";
+                        }
+                        case "VERIFICATION_SUCCESS" -> {
+                            return "Complete";
+                        }
+                        case "VERIFICATION_FAILED" -> {
+                            return "Activation failed";
+                        }
+                    }
                 }
             } else { // user is incomplete user hasn't roles assigned any roles
-                if (user.getInvitationStatus() == null || user.getInvitationStatus().name().equals("VERIFICATION_SUCCESS")) {
-                    //check if user has roles assigned
-                    if (noRolesAssigned) {
-                        return "No roles assigned";
+                if (user.getInvitationStatus() != null) {
+                    if (user.getInvitationStatus().name().equals("VERIFICATION_SUCCESS")) {
+                        //check if user has roles assigned
+                        if (noRolesAssigned) {
+                            return "No roles assigned";
+                        }
+                    } else if (user.getInvitationStatus().name().equals("VERIFICATION_FAILED")) {
+                        return "Activation failed";
                     }
-                } else if (user.getInvitationStatus().name().equals("VERIFICATION_FAILED")) {
-                    return "Activation failed";
+
                 }
             }
         }
@@ -1867,7 +1876,7 @@ public class UserService {
 
         // Check if user has any pending profiles
         boolean hasPending = allProfiles.stream()
-                .anyMatch(up -> UserProfileStatus.PENDING.equals(up.getUserProfileStatus()));
+                .anyMatch(up -> up.getUserProfileStatus() == null || UserProfileStatus.PENDING.equals(up.getUserProfileStatus()));
 
         //Check if user haven't assigned any roles
         boolean noRolesAssigned = allProfiles.stream()
@@ -1950,7 +1959,7 @@ public class UserService {
                 .createdDate(entraUser.getCreatedDate()).createdBy(entraUser.getCreatedBy())
                 // TODO: Fetch lastLoginDate from Microsoft Graph API
                 .lastLoginDate(null)
-                .activationStatus(entraUser.getInvitationStatus().name())
+                .activationStatus(entraUser.getInvitationStatus() != null ? entraUser.getInvitationStatus().name() : null)
                 .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
                         : "UNKNOWN")
                 .profiles(Collections.emptyList()).totalProfiles(0).totalProfilePages(0)
