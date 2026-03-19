@@ -210,7 +210,6 @@ public class AppRoleService {
 
     @Transactional
     public void createRole(RoleCreationDto dto) {
-        // Validate interdependent fields first (Rule A and Rule B)
         validateLegacySyncAndCcmsCode(dto);
 
         // Validate unique role name within app
