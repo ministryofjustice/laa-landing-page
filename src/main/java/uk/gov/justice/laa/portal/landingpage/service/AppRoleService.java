@@ -298,12 +298,10 @@ public class AppRoleService {
         String ccmsCode = dto.getCcmsCode();
         boolean ccmsCodeProvided = ccmsCode != null && !ccmsCode.trim().isEmpty();
 
-        // Rule A: Legacy Sync → CCMS Code required
         if (legacySyncEnabled && !ccmsCodeProvided) {
             throw new IllegalArgumentException("CCMS code is required when legacy sync is enabled");
         }
 
-        // Rule B: CCMS Code → Legacy Sync must be true
         if (ccmsCodeProvided && !legacySyncEnabled) {
             throw new IllegalArgumentException("Legacy sync must be enabled when a CCMS code is provided");
         }
