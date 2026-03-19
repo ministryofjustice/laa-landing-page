@@ -868,16 +868,11 @@
                                             <span th:unless="${!user.hasAppRoles()}"
                                                   class="moj-badge moj-badge--blue">INCOMPLETE</span>
                                         </th:block>
-                                        <!--entra verification still going-->
-                                        <span th:if="${user.invitationStatus?.name() == 'VERIFICATION_FAILED'}"
-                                              class="moj-badge moj-badge--red">ACTIVATION FAILED</span>
-                                        <span th:if="${user.invitationStatus == null
-                                                        || user.invitationStatus?.name() == 'INVITE_SENT'
-                                                        || user.invitationStatus?.name() == 'AWAITING_VERIFICATION'
-                                                        || user.invitationStatus?.name() == 'AWAITING_MFA'
-                                                        || user.invitationStatus?.name() == 'CODE_EXPIRED'
-                                                        || user.invitationStatus?.name() == 'MAX_VERIFICATION_ATTEMPTS' }"
-                                              class="moj-badge moj-badge--blue">INCOMPLETE</span>
+                                        <th:block th:unless="${user.invitationStatus?.name() == 'VERIFICATION_SUCCESS'}">
+                                            <!--entra verification still going-->
+                                            <span class="moj-badge moj-badge--blue">INCOMPLETE</span>
+                                        </th:block>
+
 
                                     </th:block>
                             </td>
