@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.techservices;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,6 +16,7 @@ import java.util.List;
 @AllArgsConstructor
 public class GetAllApplicationsResponse implements Serializable {
 
+    @JsonProperty("applications")
     private List<TechServicesApplication> apps;
 
     @Data
@@ -25,6 +27,9 @@ public class GetAllApplicationsResponse implements Serializable {
 
         @JsonProperty("id")
         private String id;
+
+        @JsonAlias({"app_id", "appid"})
+        private String appId;
 
         @JsonProperty("application_name")
         private String name;

@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -1441,10 +1442,14 @@ public class UserService {
      */
     public PaginatedAuditUsers getAuditUsers(
             String searchTerm, UUID firmId, String silasRole, UUID appId, UserTypeForm userTypeForm,
-            int page, int pageSize, String sort, String direction, boolean csvExport) {
+            int page, int pageSize, String sort, String direction, boolean csvExport,
+            LocalDate inactiveSinceDate, Boolean neverActivated) {
         Boolean multiFirm = userTypeForm == null ? null : userTypeForm.getMultiFirm();
         UserType userType = userTypeForm == null ? null : userTypeForm.getUserType();
         String userTypeStr = userType == null ? null : userType.name();
+        String neverActivatedFlag = Boolean.TRUE.equals(neverActivated) ? "true" : null;
+        String inactiveSinceDateFlag = inactiveSinceDate != null ? "active" : null;
+        LocalDateTime inactiveSinceDateDt = inactiveSinceDate != null ? inactiveSinceDate.atStartOfDay() : null;
 
         // Check if sorting by profile count, firm, or account status (special cases -
         // require different queries)
@@ -1474,13 +1479,16 @@ public class UserService {
             Page<? extends UserAuditProjection> resultPage;
             if (sortByProfileCount) {
                 resultPage = entraUserRepository.findAllUsersForAuditWithProfileCount(
-                        searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm, pageRequest);
+                        searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm,
+                        inactiveSinceDateFlag, inactiveSinceDateDt, neverActivatedFlag, pageRequest);
             } else if (sortByFirm) {
                 resultPage = entraUserRepository.findAllUsersForAuditWithFirm(
-                        searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm, pageRequest);
+                        searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm,
+                        inactiveSinceDateFlag, inactiveSinceDateDt, neverActivatedFlag, pageRequest);
             } else {
                 resultPage = entraUserRepository.findAllUsersForAuditWithAccountStatus(
-                        searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm, pageRequest);
+                        searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm,
+                        inactiveSinceDateFlag, inactiveSinceDateDt, neverActivatedFlag, pageRequest);
             }
 
             // Extract user IDs in order
@@ -1511,7 +1519,8 @@ public class UserService {
             PageRequest pageRequest = PageRequest.of(page - 1, pageSize, sortObj);
 
             userPage = entraUserRepository.findAllUsersForAudit(
-                    searchTerm, firmId, silasRole, appId, userType, multiFirm, pageRequest);
+                    searchTerm, firmId, silasRole, appId, userType, multiFirm,
+                    inactiveSinceDateFlag, inactiveSinceDateDt, neverActivatedFlag, pageRequest);
 
             // Second query: Batch fetch relationships for the paginated users
             if (!userPage.getContent().isEmpty()) {

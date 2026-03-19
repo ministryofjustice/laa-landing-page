@@ -137,7 +137,7 @@ public class AppService {
 
         Map<String, GetAllApplicationsResponse.TechServicesApplication> remoteById = remoteApps.stream()
                 .filter(Objects::nonNull)
-                .collect(Collectors.toMap(GetAllApplicationsResponse.TechServicesApplication::getId,
+                .collect(Collectors.toMap(GetAllApplicationsResponse.TechServicesApplication::getAppId,
                         a -> a, (a, b) -> a));
 
         Map<String, App> localById = localApps.stream()
@@ -207,7 +207,7 @@ public class AppService {
                 syncedApp = toDtoWithChangeType(newApp, AppDto.ChangeType.ADDED);
                 newApps++;
                 totalProcessed++;
-                log.info("ADDED: New app added to DB (id={}, name={})", remote.getId(), safe(remote.getName()));
+                log.info("ADDED: New app added to DB (oid={}, app id={} and name={})", remote.getId(), remote.getAppId(), safe(remote.getName()));
 
             } else {
                 assert local != null;
@@ -300,7 +300,8 @@ public class AppService {
         }
 
         return App.builder()
-                .entraAppId(remote.getId())
+                .entraAppId(remote.getAppId())
+                .entraOid(remote.getId())
                 .title(remote.getName())
                 .name(remote.getName())
                 .description(remote.getName())
