@@ -6261,7 +6261,7 @@ class UserServiceTest {
             assertThat(result.getUsers()).hasSize(1);
             assertThat(result.getUsers().get(0).getUserType()).isEqualTo("External");
             assertThat(result.getUsers().get(0).getFirmAssociation()).isEqualTo("Unknown");
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Activation pending");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Incomplete");
         }
 
         @Test
@@ -6510,7 +6510,7 @@ class UserServiceTest {
                     .appRoles(Set.of(AppRole.builder()
                                     .id(UUID.randomUUID())
                             .build()))
-                    .userProfileStatus(UserProfileStatus.PENDING)
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
                     .build();
 
             user.setUserProfiles(Set.of(profile));
@@ -6592,7 +6592,7 @@ class UserServiceTest {
         }
 
         @Test
-        void getAuditUsers_whenUserHasPendingProfile_displaysActivationNoRoleAssigned() {
+        void getAuditUsers_whenUserIsComplete_displaysActivationNoRoleAssigned() {
             // Given
             UUID userId = UUID.randomUUID();
 
@@ -6603,6 +6603,7 @@ class UserServiceTest {
                     .email("pending@example.com")
                     .userStatus(UserStatus.ACTIVE)
                     .multiFirmUser(false)
+                    .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .build();
 
             Firm firm = Firm.builder()
@@ -7379,7 +7380,9 @@ class UserServiceTest {
 
             // act
             AuditUserDetailDto result = userService.getAuditUserDetailByEntraId(userId);
-            assertThat(result).isNull();
+            assertThat(result.isNoRole()).isTrue();
+            assertThat(result.isPending()).isTrue();
+
 
         }
 
