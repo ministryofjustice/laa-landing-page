@@ -1,5 +1,8 @@
 package uk.gov.justice.laa.portal.landingpage.dto;
 
+import java.time.LocalDate;
+import java.util.UUID;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -7,8 +10,6 @@ import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
-
-import java.util.UUID;
 
 @Slf4j
 @Getter
@@ -25,6 +26,8 @@ public class AuditTableSearchCriteria {
     private UUID selectedAppId;
     private UserTypeForm selectedUserType;
     private String selectedFirmName;
+    private LocalDate inactiveSinceDate;
+    private Boolean neverActivated;
     // Defaulted
     private String search = "";
     private int size = 10;
