@@ -426,8 +426,8 @@ public class UserController {
         Map<String, Object> filters = (Map<String, Object>) session.getAttribute("userListFilters");
         boolean hasFilters = hasActiveFilters(filters);
         model.addAttribute("hasFilters", hasFilters);
-        boolean loggedUserIsExternalAdmin = accessControlService.userHasAuthzRole(authentication, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName());
-        if (editUserDetailFeatureEnabled && externalUser && loggedUserIsExternalAdmin) {
+        boolean loggedUserCanEditUserDetails = accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_DETAILS);
+        if (editUserDetailFeatureEnabled && externalUser && loggedUserCanEditUserDetails) {
             model.addAttribute("showEditButton", true);
         }
 
@@ -982,7 +982,7 @@ public class UserController {
      */
 
     @GetMapping("/users/edit/{id}/details")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_DETAILS)")
     public String editUserDetails(@PathVariable String id, Model model, HttpSession session) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();;
         EditUserDetailsForm editUserDetailsForm = new EditUserDetailsForm();
@@ -1008,7 +1008,7 @@ public class UserController {
      * @throws IllegalArgumentException If the user ID is invalid or not found
      */
     @PostMapping("/users/edit/{id}/details")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_DETAILS)")
     public String updateUserDetails(@PathVariable String id,
                                     @Valid EditUserDetailsForm editUserDetailsForm,
                                     BindingResult result,

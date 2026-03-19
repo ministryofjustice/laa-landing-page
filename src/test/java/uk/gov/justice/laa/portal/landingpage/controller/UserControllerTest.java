@@ -36,6 +36,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -633,7 +634,8 @@ class UserControllerTest {
 
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
-        when(accessControlService.userHasAuthzRole(authentication, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())).thenReturn(true);
+        when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(false);
+        when(accessControlService.authenticatedUserHasPermission(eq(Permission.EDIT_USER_DETAILS))).thenReturn(true);
         userController.editUserDetailFeatureEnabled = true;
         // Act
         String view = userController.manageUser(userId, false, model, session, authentication);
