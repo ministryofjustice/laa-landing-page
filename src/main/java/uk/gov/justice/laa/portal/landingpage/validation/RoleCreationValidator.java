@@ -15,9 +15,8 @@ import uk.gov.justice.laa.portal.landingpage.dto.RoleCreationDto;
  */
 @Slf4j
 @Component
-public class RoleCreationValidator implements ConstraintValidator<ValidRoleCreation, RoleCreationDto>
+public class RoleCreationValidator implements ConstraintValidator<ValidRoleCreation, RoleCreationDto> {
 
-{
     @Override
     public boolean isValid(RoleCreationDto dto, ConstraintValidatorContext ctx) {
         boolean valid = true;

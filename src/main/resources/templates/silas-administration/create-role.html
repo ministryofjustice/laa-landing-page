@@ -38,6 +38,14 @@
                             </h2>
                             <div class="govuk-error-summary__body" id="error-summary-description">
                                 <ul class="govuk-list govuk-error-summary__list">
+                                    <li th:each="err : ${#fields.errors('name')}"
+                                        th:if="${#fields.hasErrors('name')}">
+                                        <a href="#name" th:text="${err}"></a>
+                                    </li>
+                                    <li th:each="err : ${#fields.errors('description')}"
+                                        th:if="${#fields.hasErrors('description')}">
+                                        <a href="#description" th:text="${err}"></a>
+                                    </li>
                                     <li th:each="err : ${#fields.errors('legacySync')}"
                                         th:if="${#fields.hasErrors('legacySync')}">
                                         <a href="#legacySync-true" th:text="${err}"></a>
