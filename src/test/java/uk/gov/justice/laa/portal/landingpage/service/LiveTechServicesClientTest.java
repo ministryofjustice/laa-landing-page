@@ -93,7 +93,7 @@ public class LiveTechServicesClientTest {
                     "id": "00000000-0000-0000-0000-000000000001",
                     "application_name": "Service A",
                     "homepage_url": "https:/xxx.service.justice.gov.uk/1",
-                    "appId": "00000000-0000-0000-0000-00000000000a",
+                    "appid": "00000000-0000-0000-0000-00000000000a",
                     "security_groups": [
                       {
                         "id": "00000000-0000-0000-0000-000000000004",
