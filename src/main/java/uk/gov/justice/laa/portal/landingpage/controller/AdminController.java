@@ -841,9 +841,6 @@ public class AdminController {
             }
         }
 
-        // Apply custom validator for interdependent fields (Legacy Sync and CCMS Code)
-        roleCreationValidator.validate(roleCreationDto, bindingResult);
-
         if (bindingResult.hasErrors()) {
             model.addAttribute("apps", appService.getAllLaaApps());
             model.addAttribute("userTypes", UserType.values());

@@ -1373,7 +1373,6 @@ class AdminControllerTest {
 
         when(appRoleService.isRoleNameExistsInApp("Test Role", appId)).thenReturn(false);
         // The validator should add the error
-        doNothing().when(roleCreationValidator).validate(roleCreationDto, bindingResult);
         bindingResult.rejectValue("ccmsCode", "role.ccmsCode.required.when.legacy.sync",
                 "Enter a CCMS code for roles that sync with CCMS.");
         List<AppDto> apps = createMockApps();
@@ -1407,7 +1406,6 @@ class AdminControllerTest {
 
         when(appRoleService.isRoleNameExistsInApp("Test Role", appId)).thenReturn(false);
         // The validator should add the error
-        doNothing().when(roleCreationValidator).validate(roleCreationDto, bindingResult);
         bindingResult.rejectValue("legacySync", "role.legacy.sync.required.when.ccms.code",
                 "This role must have legacy sync enabled when a CCMS code is provided.");
 
@@ -1454,7 +1452,6 @@ class AdminControllerTest {
 
         when(appRoleService.isRoleNameExistsInApp("Test Role", appId)).thenReturn(false);
         // Validator finds no errors
-        doNothing().when(roleCreationValidator).validate(roleCreationDto, bindingResult);
         when(appRoleService.enrichRoleCreationDto(roleCreationDto)).thenReturn(enrichedDto);
 
         // Act
