@@ -1,142 +1,141 @@
-# name: Trivy Vulnerability Scan
-# on:
-#   pull_request:
-#     types:
-#       - opened
-#       - reopened
-#       - edited
-#       - synchronize
-#       - closed
-#   schedule:
-#     - cron: '0 0 * * *'  # Run daily at midnight UTC
-#   workflow_dispatch:  # Allow manual triggering
+name: Trivy Vulnerability Scan
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - edited
+      - synchronize
+      - closed
+  schedule:
+    - cron: '0 0 * * *'  # Run daily at midnight UTC
+  workflow_dispatch:  # Allow manual triggering
 
-# jobs:
-#   trivy_app:
-#     runs-on: ubuntu-latest
-#     env:
-#       MY_GITHUB_ACTOR: ${{ secrets.MY_GITHUB_ACTOR }}
-#       MY_GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
+jobs:
+  trivy_app:
+    runs-on: ubuntu-latest
+    env:
+      MY_GITHUB_ACTOR: ${{ secrets.MY_GITHUB_ACTOR }}
+      MY_GITHUB_TOKEN: ${{ secrets.MY_GITHUB_TOKEN }}
 
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v6
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
 
-#       # enable vulnerability and secret detection as well as misconfiguration detection
-#       - name: Run Trivy Vulnerability Scanner in Repo Mode
-#         uses: aquasecurity/trivy-action@97e0b3872f55f89b95b2f65b3dbab56962816478
-#         with:
-#           scan-type: 'fs'
-#           scanners: misconfig,vuln,secret
-#           scan-ref: '.'
-#           format: 'sarif'
-#           output: 'fs-trivy-results.sarif'
-#           severity: 'CRITICAL,HIGH,MEDIUM,LOW'
+      - name: Run Trivy Vulnerability Scanner in Repo Mode
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          scan-type: 'fs'
+          scanners: misconfig,vuln,secret
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'fs-trivy-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
 
-#       - name: Create SARIF directory and move SARIF files
-#         run: |
-#           mkdir trivy_sarif_files &&
-#           mv fs-trivy-results.sarif trivy_sarif_files/
+      - name: Create SARIF directory and move SARIF files
+        run: |
+          mkdir trivy_sarif_files &&
+          mv fs-trivy-results.sarif trivy_sarif_files/
 
-#       - name: Upload Trivy scan results to GitHub Security tab
-#         uses: github/codeql-action/upload-sarif@v4
-#         with:
-#           sarif_file: trivy_sarif_files
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy_sarif_files
 
-#       # post vulns to slack
-#       - name: Vulnerability Description Extraction and Print (Multiple Files)
-#         run: |
-#           # Extract and concatenate vulnerability descriptions from both SARIF files
-#           SCAN_RESULTS=$(jq -r '.runs[0].tool.driver.rules | map(.help.text) | join("\\n")' trivy_sarif_files/fs-trivy-results.sarif)
+      # post vulns to slack
+      - name: Vulnerability Description Extraction and Print (Multiple Files)
+        run: |
+          # Extract and concatenate vulnerability descriptions from both SARIF files
+          SCAN_RESULTS=$(jq -r '.runs[0].tool.driver.rules | map(.help.text) | join("\\n")' trivy_sarif_files/fs-trivy-results.sarif)
 
-#           # Export severity counts to GitHub environment
-#           {
-#             echo "CRITICAL=$(echo -e "$SCAN_RESULTS" | grep -o CRITICAL | wc -l)"
-#             echo "HIGH=$(echo -e "$SCAN_RESULTS" | grep -o HIGH | wc -l)"
-#             echo "MEDIUM=$(echo -e "$SCAN_RESULTS" | grep -o MEDIUM | wc -l)"
-#             echo "LOW=$(echo -e "$SCAN_RESULTS" | grep -o LOW | wc -l)"
-#           } >> "$GITHUB_ENV"
+          # Export severity counts to GitHub environment
+          {
+            echo "CRITICAL=$(echo -e "$SCAN_RESULTS" | grep -o CRITICAL | wc -l)"
+            echo "HIGH=$(echo -e "$SCAN_RESULTS" | grep -o HIGH | wc -l)"
+            echo "MEDIUM=$(echo -e "$SCAN_RESULTS" | grep -o MEDIUM | wc -l)"
+            echo "LOW=$(echo -e "$SCAN_RESULTS" | grep -o LOW | wc -l)"
+          } >> "$GITHUB_ENV"
 
-#           # Print results for visibility in workflow logs
-#           echo -e "$SCAN_RESULTS"
+          # Print results for visibility in workflow logs
+          echo -e "$SCAN_RESULTS"
       
-#       - name: Set SHOULD_NOTIFY
-#         run: |
-#           if [ "$CRITICAL" -ne 0 ] || [ "$HIGH" -ne 0 ] || [ "$MEDIUM" -ne 0 ] || [ "$LOW" -ne 0 ]; then
-#             echo "SHOULD_NOTIFY=true" >> $GITHUB_ENV
-#           else
-#             echo "SHOULD_NOTIFY=false" >> $GITHUB_ENV
-#           fi
+      - name: Set SHOULD_NOTIFY
+        run: |
+          if [ "$CRITICAL" -ne 0 ] || [ "$HIGH" -ne 0 ] || [ "$MEDIUM" -ne 0 ] || [ "$LOW" -ne 0 ]; then
+            echo "SHOULD_NOTIFY=true" >> $GITHUB_ENV
+          else
+            echo "SHOULD_NOTIFY=false" >> $GITHUB_ENV
+          fi
 
-#       - name: Send notification to Slack
-#         id: slack
-#         if: always() && env.SHOULD_NOTIFY == 'true' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-#         uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a #v2.1.1
-#         with:
-#           payload: |
-#             {
-#               "blocks": [
-#                 {
-#                   "type": "header",
-#                   "text": {
-#                     "type": "plain_text",
-#                     "text": "Trivy Vulnerability Scan Report: ${{ github.event.repository.name }}"
-#                   }
-#                 },
-#                 {
-#                   "type": "section",
-#                   "text": {
-#                     "type": "mrkdwn",
-#                     "text": "*Scan Summary:*"
-#                   }
-#                 },
-#                 {
-#                   "type": "section",
-#                   "text": {
-#                     "type": "mrkdwn",
-#                     "text": ":rotating_light: *CRITICAL:* ${{ env.CRITICAL }}"
-#                   }
-#                 },
-#                 {
-#                   "type": "section",
-#                   "text": {
-#                     "type": "mrkdwn",
-#                     "text": ":sign-warning: *HIGH:* ${{ env.HIGH }}"
-#                   }
-#                 },
-#                 {
-#                   "type": "section",
-#                   "text": {
-#                     "type": "mrkdwn",
-#                     "text": ":orange_heart: *MEDIUM:* ${{ env.MEDIUM }}"
-#                   }
-#                 },
-#                 {
-#                   "type": "section",
-#                   "text": {
-#                     "type": "mrkdwn",
-#                     "text": ":yellow_heart: *LOW:* ${{ env.LOW }}"
-#                   }
-#                 },
-#                 {
-#                   "type": "section",
-#                   "text": {
-#                     "type": "mrkdwn",
-#                     "text": "Please review the detailed scan results and take necessary actions. \n\n View Details on GitHub: https://github.com/${{ github.repository }}/security/code-scanning \n\n This scan was run from ${{ github.ref }}."
-#                   }
-#                 }
-#               ]
-#             }
-#           webhook-type: incoming-webhook
+      - name: Send notification to Slack
+        id: slack
+        if: always() && env.SHOULD_NOTIFY == 'true' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a #v2.1.1
+        with:
+          payload: |
+            {
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "Trivy Vulnerability Scan Report: ${{ github.event.repository.name }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Scan Summary:*"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":rotating_light: *CRITICAL:* ${{ env.CRITICAL }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":sign-warning: *HIGH:* ${{ env.HIGH }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":orange_heart: *MEDIUM:* ${{ env.MEDIUM }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":yellow_heart: *LOW:* ${{ env.LOW }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "Please review the detailed scan results and take necessary actions. \n\n View Details on GitHub: https://github.com/${{ github.repository }}/security/code-scanning \n\n This scan was run from ${{ github.ref }}."
+                  }
+                }
+              ]
+            }
+          webhook-type: incoming-webhook
 
-#         env:
-#           SLACK_WEBHOOK_URL: ${{ secrets.TRIVY_SLACK_WEBHOOK_URL }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.TRIVY_SLACK_WEBHOOK_URL }}
       
-#       - name: Fail Pipeline if Vulnerability Found
-#         run: |
-#           if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ] || [ "$MEDIUM" -gt 0 ] || [ "$LOW" -gt 0 ]; then
-#             echo "Vulnerabilities detected — failing the job"
-#             exit 1
-#           else
-#             echo "No vulnerabilities found."
-#           fi
+      - name: Fail Pipeline if Vulnerability Found
+        run: |
+          if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ] || [ "$MEDIUM" -gt 0 ] || [ "$LOW" -gt 0 ]; then
+            echo "Vulnerabilities detected — failing the job"
+            exit 1
+          else
+            echo "No vulnerabilities found."
+          fi
