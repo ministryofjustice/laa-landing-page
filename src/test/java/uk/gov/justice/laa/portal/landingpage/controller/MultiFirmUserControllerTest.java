@@ -372,6 +372,31 @@ public class MultiFirmUserControllerTest {
     }
 
     @Test
+    public void addUserProfilePost_validMultiFirmUserSelectUser() {
+        MultiFirmUserForm form = createForm();
+        BindingResult bindingResult = mockBindingResult(false);
+        UUID firmId = UUID.randomUUID();
+
+        Firm userFirm = Firm.builder().id(firmId).name("test").build();
+        UserProfile userProfile = UserProfile.builder().firm(userFirm).build();
+        EntraUser entraUser = EntraUser.builder().email(form.getEmail())
+                .multiFirmUser(true).userProfiles(Set.of(userProfile)).build();
+        when(userService.findEntraUserByEmail(form.getEmail())).thenReturn(Optional.of(entraUser));
+
+        Firm adminFirm = Firm.builder().id(firmId).name("admin firm").parentFirm(userFirm).build();
+        UserProfile adminUserProfile = UserProfile.builder()
+                .firm(adminFirm)
+                .userType(UserType.INTERNAL)
+                .build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(adminUserProfile);
+
+        String result = controller.addUserProfilePost(form, bindingResult, model, session, authentication);
+
+        assertThat(result).isEqualTo("multi-firm-user/select-user");
+        assertThat(model.getAttribute("backUrl")).isNotNull();
+    }
+
+    @Test
     public void addUserProfilePost_notMultiFirmUser() {
         MultiFirmUserForm form = createForm();
         BindingResult bindingResult = mockBindingResult(false);
