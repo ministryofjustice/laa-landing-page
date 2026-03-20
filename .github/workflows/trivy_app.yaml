@@ -22,9 +22,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      # enable vulnerability and secret detection as well as misconfiguration detection
       - name: Run Trivy Vulnerability Scanner in Repo Mode
-        uses: aquasecurity/trivy-action@97e0b3872f55f89b95b2f65b3dbab56962816478
+        uses: aquasecurity/trivy-action@0.35.0
         with:
           scan-type: 'fs'
           scanners: misconfig,vuln,secret
