@@ -75,7 +75,6 @@ import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
-import uk.gov.justice.laa.portal.landingpage.validation.RoleCreationValidator;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
 @ExtendWith(MockitoExtension.class)
@@ -98,8 +97,6 @@ class AdminControllerTest {
     private ModelMapper mapper;
     @Mock
     private RoleAssignmentService roleAssignmentService;
-    @Mock
-    private RoleCreationValidator roleCreationValidator;
 
     private AdminController adminController;
     private Model model;
@@ -110,7 +107,7 @@ class AdminControllerTest {
     void setUp() {
         mapper = new ModelMapper();
         adminController = new AdminController(mapper, loginService, eventService, adminService,
-                appService, appRoleService, accessControlService, roleAssignmentService, roleCreationValidator);
+                appService, appRoleService, accessControlService, roleAssignmentService);
         model = new ExtendedModelMap();
     }
 
