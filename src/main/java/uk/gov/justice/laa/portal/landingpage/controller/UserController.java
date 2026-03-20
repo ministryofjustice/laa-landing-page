@@ -65,7 +65,6 @@ import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
-import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
@@ -456,6 +455,16 @@ public class UserController {
         EntraUser current = loginService.getCurrentEntraUser(authentication);
         try {
             DeletedUser deletedUser = userService.deleteExternalUser(id, reason.trim(), current.getEntraOid());
+
+            if (deletedUser.isEncounteredTsErrors()) {
+                DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(
+                        optionalUser.get().getEntraUser().getId(),
+                        reason.trim(), current.getId(), "The user account has been deleted but there were some issues during the deletion process. Please contact support.");
+                eventService.logEvent(deleteUserAttemptAuditEvent);
+                model.addAttribute("errorMessage", "An unexpected error occurred while deleting user. Please contact support.");
+                return "errors/error-generic";
+            }
+
             DeleteUserSuccessAuditEvent deleteUserAuditEvent = new DeleteUserSuccessAuditEvent(
                     reason.trim(), UUID.fromString(current.getEntraOid()), deletedUser);
             eventService.logEvent(deleteUserAuditEvent);
