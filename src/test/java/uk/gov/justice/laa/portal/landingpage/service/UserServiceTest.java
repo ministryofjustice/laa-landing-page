@@ -6700,6 +6700,40 @@ class UserServiceTest {
         }
 
         @Test
+        void getAuditUsers_whenUserIncompleteWhenNoProfile() {
+            // Given
+            UUID userId = UUID.randomUUID();
+
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("Pending")
+                    .lastName("User")
+                    .email("pending@example.com")
+                    .multiFirmUser(false)
+                    .build();
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
+                    PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(userPage);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, null,  1, 10, "name", "asc", false, null, null);
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getUsers()).hasSize(1);
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Incomplete");
+            assertThat(result.getUsers().get(0).getEntraStatus()).isEqualTo("UNKNOWN");
+        }
+
+        @Test
         void getAuditUsers_whenUserIsComplete_displaysActivationPending() {
             // Given
             UUID userId = UUID.randomUUID();
