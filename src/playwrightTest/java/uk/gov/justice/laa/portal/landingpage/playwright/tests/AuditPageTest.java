@@ -43,7 +43,7 @@ public class AuditPageTest extends BaseFrontEndTest {
                         "Email",
                         "Type",
                         "Firm",
-                        "Status",
+                        "SILAS Status",
                         "Multi-firm",
                         "Profiles"
                 ),
