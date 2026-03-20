@@ -6647,6 +6647,112 @@ class UserServiceTest {
         }
 
         @Test
+        void getAuditUsers_whenUserIsComplete_displaysIncomplete() {
+            // Given
+            UUID userId = UUID.randomUUID();
+
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("Pending")
+                    .lastName("User")
+                    .email("pending@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .invitationStatus(InvitationStatus.INVITE_SENT)
+                    .build();
+
+            Firm firm = Firm.builder()
+                    .id(UUID.randomUUID())
+                    .name("Test Firm")
+                    .code("TF001")
+                    .build();
+
+            UserProfile profile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(user)
+                    .firm(firm)
+                    .userType(UserType.EXTERNAL)
+                    .activeProfile(true)
+                    .appRoles(new HashSet<>())
+                    .userProfileStatus(UserProfileStatus.PENDING)
+                    .build();
+
+            user.setUserProfiles(Set.of(profile));
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
+                    PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(userPage);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, null,  1, 10, "name", "asc", false, null, null);
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getUsers()).hasSize(1);
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Incomplete");
+        }
+
+        @Test
+        void getAuditUsers_whenUserIsComplete_displaysActivationPending() {
+            // Given
+            UUID userId = UUID.randomUUID();
+
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("Pending")
+                    .lastName("User")
+                    .email("pending@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .invitationStatus(InvitationStatus.AWAITING_VERIFICATION)
+                    .build();
+
+            Firm firm = Firm.builder()
+                    .id(UUID.randomUUID())
+                    .name("Test Firm")
+                    .code("TF001")
+                    .build();
+
+            UserProfile profile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(user)
+                    .firm(firm)
+                    .userType(UserType.EXTERNAL)
+                    .activeProfile(true)
+                    .appRoles(new HashSet<>())
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .build();
+
+            user.setUserProfiles(Set.of(profile));
+
+            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
+                    PageRequest.of(0, 10), 1);
+
+            when(mockEntraUserRepository.findAllUsersForAudit(
+                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
+                    .thenReturn(userPage);
+
+            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
+                    .thenReturn(List.of(user));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+                    null, null, null,  1, 10, "name", "asc", false, null, null);
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getUsers()).hasSize(1);
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Activation pending");
+        }
+
+        @Test
         void getAllSilasRoles_returnsAuthzRoles() {
             // Given
             AppRole role1 = AppRole.builder()
