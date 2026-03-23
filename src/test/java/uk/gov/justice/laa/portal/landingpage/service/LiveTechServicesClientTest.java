@@ -87,30 +87,34 @@ public class LiveTechServicesClientTest {
             .lastName("LastName")
             .build();
     public static final String APP_LIST_TS_RESPONSE_BODY = """
-            [
-              {
-                "id": "00000000-0000-0000-0000-000000000001",
-                "application_name": "Service A",
-                "homepage_url": "https:/xxx.service.justice.gov.uk/1",
-                "security_groups": [
+            {
+                "applications":[
                   {
-                    "id": "00000000-0000-0000-0000-000000000004",
-                    "name": "APPREG-User-Access-LAAD-Service-A"
+                    "id": "00000000-0000-0000-0000-000000000001",
+                    "application_name": "Service A",
+                    "homepage_url": "https:/xxx.service.justice.gov.uk/1",
+                    "appid": "00000000-0000-0000-0000-00000000000a",
+                    "security_groups": [
+                      {
+                        "id": "00000000-0000-0000-0000-000000000004",
+                        "name": "APPREG-User-Access-LAAD-Service-A"
+                      }
+                    ]
+                  },
+                  {
+                    "id": "00000000-0000-0000-0000-000000000002",
+                    "application_name": "Service A",
+                    "homepage_url": "https:/xxx.service.justice.gov.uk/2",
+                    "app_id": "00000000-0000-0000-0000-00000000000b",
+                    "security_groups": [
+                      {
+                        "id": "00000000-0000-0000-0000-000000000005",
+                        "name": "APPREG-User-Access-LAAD-Service-b"
+                      }
+                    ]
                   }
                 ]
-              },
-              {
-                "id": "00000000-0000-0000-0000-000000000002",
-                "application_name": "Service A",
-                "homepage_url": "https:/xxx.service.justice.gov.uk/2",
-                "security_groups": [
-                  {
-                    "id": "00000000-0000-0000-0000-000000000005",
-                    "name": "APPREG-User-Access-LAAD-Service-b"
-                  }
-                ]
-              }
-            ]
+            }
             """;
     private ListAppender<ILoggingEvent> logAppender;
     @Mock

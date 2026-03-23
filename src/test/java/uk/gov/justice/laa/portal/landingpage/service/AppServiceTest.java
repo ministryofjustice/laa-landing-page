@@ -33,7 +33,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -450,28 +449,32 @@ class AppServiceTest {
     }
 
     private GetAllApplicationsResponse.TechServicesApplication remoteApp(
-            String id, String name, String url, String sgId, String sgName
+            String appId, String oid, String name, String url, String sgId, String sgName
     ) {
-        GetAllApplicationsResponse.TechServicesApplication app = mock(GetAllApplicationsResponse.TechServicesApplication.class);
-        when(app.getId()).thenReturn(id);
-        when(app.getName()).thenReturn(name);
-        when(app.getUrl()).thenReturn(url);
-        if (sgId == null && sgName == null) {
-            when(app.getSecurityGroups()).thenReturn(null); // exercise null path
-        } else {
-            GetAllApplicationsResponse.TechServicesApplication.AppSecurityGroup sg = mock(GetAllApplicationsResponse.TechServicesApplication.AppSecurityGroup.class);
-            when(sg.getId()).thenReturn(sgId);
-            when(sg.getName()).thenReturn(sgName);
-            when(app.getSecurityGroups()).thenReturn(List.of(sg));
+        GetAllApplicationsResponse.TechServicesApplication app = GetAllApplicationsResponse.TechServicesApplication.builder()
+                .id(oid)
+                .appId(appId)
+                .name(name)
+                .url(url)
+                .build();
+
+        if (sgId != null && sgName != null) {
+            GetAllApplicationsResponse.TechServicesApplication.AppSecurityGroup sg = GetAllApplicationsResponse.TechServicesApplication.AppSecurityGroup.builder()
+                    .id(sgId)
+                    .name(sgName)
+                    .build();
+            app.setSecurityGroups(List.of(sg));
         }
         return app;
     }
 
     private App localApp(
-            String id, String name, String url, String sgId, String sgName, boolean enabled
+            String appId, String oid, String name, String url, String sgId, String sgName, boolean enabled
     ) {
         return App.builder()
-                .entraAppId(id)
+                .id(UUID.randomUUID())
+                .entraAppId(appId)
+                .entraOid(oid)
                 .name(name)
                 .url(url)
                 .securityGroupOid(sgId)
@@ -493,7 +496,7 @@ class AppServiceTest {
     @Test
     @DisplayName("ADDED: present only in remote → new local app (disabled), saved and returned with changeType=ADDED")
     void added_whenOnlyRemote() throws Exception {
-        GetAllApplicationsResponse.TechServicesApplication r1 = remoteApp("R1", "Remote One", "https://r1", "SG1", "Group 1");
+        GetAllApplicationsResponse.TechServicesApplication r1 = remoteApp("AR1", "OR1", "Remote One", "https://r1", "SG1", "Group 1");
         when(techServicesClient.getAllApplications())
                 .thenReturn(successResponseWithApps(List.of(r1)));
 
@@ -502,7 +505,7 @@ class AppServiceTest {
         List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
 
         assertThat(out).hasSize(1);
-        assertThat(out.get(0).getId()).isEqualTo("R1");
+        assertThat(out.get(0).getId()).isEqualTo("AR1");
         assertThat(out.get(0).getName()).isEqualTo("Remote One");
         assertThat(out.get(0).getChangeType()).isEqualTo(AppDto.ChangeType.ADDED);
 
@@ -520,7 +523,7 @@ class AppServiceTest {
     @Test
     @DisplayName("DELETED: present only in local (enabled) → disabled and returned with changeType=DELETED")
     void deleted_whenOnlyLocal_enabledGetsDisabledAndSaved() throws Exception {
-        App l1 = localApp("L1", "Local One", "https://l1", "SG1", "Group 1", true);
+        App l1 = localApp("L1", "OID", "Local One", "https://l1", "SG1", "Group 1", true);
         when(techServicesClient.getAllApplications())
                 .thenReturn(successResponseWithApps(List.of()));
 
@@ -545,7 +548,7 @@ class AppServiceTest {
     @DisplayName("NONE: present only in local (already disabled) → no DB write, still returned as NONE")
     void deleted_whenOnlyLocal_alreadyDisabled_noSave() throws Exception {
 
-        App l1 = localApp("L1", "Local One", "https://l1", "SG1", "Group 1", false);
+        App l1 = localApp("L1", "OID", "Local One", "https://l1", "SG1", "Group 1", false);
         when(techServicesClient.getAllApplications())
                 .thenReturn(successResponseWithApps(List.of()));
 
@@ -563,8 +566,8 @@ class AppServiceTest {
     @DisplayName("NONE: present in both, enabled, and identical fields (including null/empty SG) → no save")
     void none_whenNoDifferences() throws Exception {
 
-        GetAllApplicationsResponse.TechServicesApplication r1 = remoteApp("ID", "Same", "https://same", null, null); // SG list null
-        App l1 = localApp("ID", "Same", "https://same", null, null, true);
+        GetAllApplicationsResponse.TechServicesApplication r1 = remoteApp("AID", "OID", "Same", "https://same", null, null); // SG list null
+        App l1 = localApp("AID", "OID", "Same", "https://same", null, null, true);
 
         when(techServicesClient.getAllApplications())
                 .thenReturn(successResponseWithApps(List.of(r1)));
@@ -584,8 +587,8 @@ class AppServiceTest {
     @DisplayName("REVIEW: present in both but local is disabled → metadata updated, saved; changeType=REVIEW")
     void review_whenLocalDisabled() throws Exception {
 
-        GetAllApplicationsResponse.TechServicesApplication r1 = remoteApp("ID", "RemoteName", "https://remote", "SGX", "RemoteSG");
-        App l1 = localApp("ID", "OldName", "https://old", "SG0", "OldSG", false);
+        GetAllApplicationsResponse.TechServicesApplication r1 = remoteApp("AID", "OID", "RemoteName", "https://remote", "SGX", "RemoteSG");
+        App l1 = localApp("AID", "OID", "OldName", "https://old", "SG0", "OldSG", false);
 
         when(techServicesClient.getAllApplications())
                 .thenReturn(successResponseWithApps(List.of(r1)));
@@ -618,8 +621,8 @@ class AppServiceTest {
     @DisplayName("UPDATED: present in both, enabled, field differences → saved and returned as UPDATED")
     void updated_whenDifferencesAndEnabled() throws Exception {
 
-        GetAllApplicationsResponse.TechServicesApplication r1 = remoteApp("ID", "NewName", "https://new", "SG2", "SG Two");
-        App l1 = localApp("ID", "OldName", "https://old", "SG1", "SG One", true);
+        GetAllApplicationsResponse.TechServicesApplication r1 = remoteApp("AID", "OID", "NewName", "https://new", "SG2", "SG Two");
+        App l1 = localApp("AID", "OID", "OldName", "https://old", "SG1", "SG One", true);
         when(techServicesClient.getAllApplications())
                 .thenReturn(successResponseWithApps(List.of(r1)));
         stubLocalApps(List.of(l1));
@@ -642,7 +645,7 @@ class AppServiceTest {
         when(techServicesClient.getAllApplications()).thenReturn(resp);
 
 
-        App l1 = localApp("L1", "Local One", "https://l1", null, null, true);
+        App l1 = localApp("L1", "OID", "Local One", "https://l1", null, null, true);
         stubLocalApps(List.of(l1));
 
         List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
@@ -669,13 +672,10 @@ class AppServiceTest {
     @Test
     @DisplayName("Security group comparison: empty list on remote equals null local fields → NONE")
     void sgEmptyEqualsNullLocal() throws Exception {
-        GetAllApplicationsResponse.TechServicesApplication r = mock(GetAllApplicationsResponse.TechServicesApplication.class);
-        when(r.getId()).thenReturn("ID");
-        when(r.getName()).thenReturn("Same");
-        when(r.getUrl()).thenReturn("https://same");
-        when(r.getSecurityGroups()).thenReturn(Collections.emptyList()); // empty
+        GetAllApplicationsResponse.TechServicesApplication r = remoteApp("AID", "OID", "Same", "https://same", null, null);
+        r.setSecurityGroups(List.of());
 
-        App l = localApp("ID", "Same", "https://same", null, null, true);
+        App l = localApp("AID", "OID", "Same", "https://same", null, null, true);
 
         when(techServicesClient.getAllApplications())
                 .thenReturn(successResponseWithApps(List.of(r)));

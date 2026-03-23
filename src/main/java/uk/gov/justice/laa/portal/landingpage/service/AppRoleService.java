@@ -210,6 +210,8 @@ public class AppRoleService {
 
     @Transactional
     public void createRole(RoleCreationDto dto) {
+        validateLegacySyncAndCcmsCode(dto);
+
         // Validate unique role name within app
         validateUniqueRoleName(dto.getName(), dto.getParentAppId());
 
@@ -279,6 +281,28 @@ public class AppRoleService {
         Optional<AppRole> existingRole = appRoleRepository.findByName(roleName);
         if (existingRole.isPresent() && existingRole.get().getApp().getId().equals(appId)) {
             throw new IllegalArgumentException("Role name '" + roleName + "' already exists in this application");
+        }
+    }
+
+    /**
+     * Validates interdependent rules between Legacy Sync and CCMS Code fields.
+     * Rule A: If legacy_sync = true, CCMS Code is required
+     * Rule B: If CCMS Code is provided, legacy_sync must be true
+     *
+     * @param dto the RoleCreationDto to validate
+     * @throws IllegalArgumentException if validation fails
+     */
+    private void validateLegacySyncAndCcmsCode(RoleCreationDto dto) {
+        boolean legacySyncEnabled = dto.getLegacySync() != null && dto.getLegacySync();
+        String ccmsCode = dto.getCcmsCode();
+        boolean ccmsCodeProvided = ccmsCode != null && !ccmsCode.trim().isEmpty();
+
+        if (legacySyncEnabled && !ccmsCodeProvided) {
+            throw new IllegalArgumentException("CCMS code is required when legacy sync is enabled");
+        }
+
+        if (ccmsCodeProvided && !legacySyncEnabled) {
+            throw new IllegalArgumentException("Legacy sync must be enabled when a CCMS code is provided");
         }
     }
 

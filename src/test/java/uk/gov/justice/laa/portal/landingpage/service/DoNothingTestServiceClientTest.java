@@ -169,8 +169,8 @@ public class DoNothingTestServiceClientTest {
     @DisplayName("getAllApplications: maps repository LAA apps into response with success=true")
     void getAllApplications_mapsFieldsCorrectly() {
         // Given repository returns two apps
-        App a1 = app("A-1", "Alpha", "https://alpha.example", "SG-1", "Group One");
-        App a2 = app("A-2", "Beta", "https://beta.example", "SG-2", "Group Two");
+        App a1 = app("A-1", "O-1", "Alpha", "https://alpha.example", "SG-1", "Group One");
+        App a2 = app("A-2", "O-2", "Beta", "https://beta.example", "SG-2", "Group Two");
 
         when(appRepository.findAppsByAppType(AppType.LAA)).thenReturn(List.of(a1, a2));
 
@@ -193,7 +193,8 @@ public class DoNothingTestServiceClientTest {
 
         // Validate first app mapping
         var t1 = payload.getApps().getFirst();
-        assertThat(t1.getId()).isEqualTo("A-1");
+        assertThat(t1.getId()).isEqualTo("O-1");
+        assertThat(t1.getAppId()).isEqualTo("A-1");
         assertThat(t1.getName()).isEqualTo("Alpha");
         assertThat(t1.getUrl()).isEqualTo("https://alpha.example");
         assertThat(t1.getSecurityGroups()).hasSize(1);
@@ -202,7 +203,8 @@ public class DoNothingTestServiceClientTest {
 
         // Validate second app mapping
         var t2 = payload.getApps().get(1);
-        assertThat(t2.getId()).isEqualTo("A-2");
+        assertThat(t2.getId()).isEqualTo("O-2");
+        assertThat(t2.getAppId()).isEqualTo("A-2");
         assertThat(t2.getName()).isEqualTo("Beta");
         assertThat(t2.getUrl()).isEqualTo("https://beta.example");
         assertThat(t2.getSecurityGroups()).hasSize(1);
@@ -227,7 +229,7 @@ public class DoNothingTestServiceClientTest {
     @Test
     @DisplayName("getAllApplications: mapping tolerates null fields (e.g., null SG id/name)")
     void getAllApplications_nullFields() {
-        App a1 = app("A-1", null, null, null, null); // null name/url/security group fields
+        App a1 = app("A-1", "O-1", null, null, null, null); // null name/url/security group fields
         when(appRepository.findAppsByAppType(AppType.LAA)).thenReturn(List.of(a1));
 
         TechServicesApiResponse<GetAllApplicationsResponse> resp = techServicesClient.getAllApplications();
@@ -237,7 +239,8 @@ public class DoNothingTestServiceClientTest {
         assertThat(apps).hasSize(1);
 
         var t1 = apps.getFirst();
-        assertThat(t1.getId()).isEqualTo("A-1");
+        assertThat(t1.getId()).isEqualTo("O-1");
+        assertThat(t1.getAppId()).isEqualTo("A-1");
         assertThat(t1.getName()).isNull();
         assertThat(t1.getUrl()).isNull();
         assertThat(t1.getSecurityGroups()).hasSize(1);
@@ -249,7 +252,7 @@ public class DoNothingTestServiceClientTest {
     @Test
     @DisplayName("mapAppToTechServicesApp: direct invocation via reflection (optional explicit coverage)")
     void mapAppToTechServicesApp_reflection() throws Exception {
-        App a = app("ID-9", "Display", "https://u", "SGX", "SG Name");
+        App a = app("AID-9", "OID-9", "Display", "https://u", "SGX", "SG Name");
 
         Method mapper = DoNothingTechServicesClient.class
                 .getDeclaredMethod("mapAppToTechServicesApp", App.class);
@@ -258,7 +261,8 @@ public class DoNothingTestServiceClientTest {
         GetAllApplicationsResponse.TechServicesApplication mapped =
                 (GetAllApplicationsResponse.TechServicesApplication) mapper.invoke(techServicesClient, a);
 
-        assertThat(mapped.getId()).isEqualTo("ID-9");
+        assertThat(mapped.getId()).isEqualTo("OID-9");
+        assertThat(mapped.getAppId()).isEqualTo("AID-9");
         assertThat(mapped.getName()).isEqualTo("Display");
         assertThat(mapped.getUrl()).isEqualTo("https://u");
         assertThat(mapped.getSecurityGroups()).hasSize(1);
@@ -296,9 +300,10 @@ public class DoNothingTestServiceClientTest {
     }
 
     // Helper builder for App entity in tests
-    private App app(String id, String name, String url, String sgId, String sgName) {
+    private App app(String appId, String oid, String name, String url, String sgId, String sgName) {
         return App.builder()
-                .entraAppId(id)
+                .entraAppId(appId)
+                .entraOid(oid)
                 .name(name)
                 .url(url)
                 .securityGroupOid(sgId)

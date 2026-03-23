@@ -2,7 +2,6 @@ package uk.gov.justice.laa.portal.landingpage.service;
 
 import com.azure.core.credential.TokenRequestContext;
 import com.azure.identity.ClientSecretCredential;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -125,7 +124,7 @@ public class LiveTechServicesClient implements TechServicesClient {
                 UpdateSecurityGroupsResponse responseBody = response.getBody();
                 assert responseBody != null;
                 logger.info("Security Groups assigned successfully for entra user {} with security groups {} added and {} with security groups removed",
-                        entraUser.getEntraOid() + responseBody.getGroupsAdded(), responseBody.getGroupsRemoved());
+                        entraUser.getEntraOid(), responseBody.getGroupsAdded(), responseBody.getGroupsRemoved());
             } else if (response.getStatusCode().is4xxClientError()) {
                 logger.info("Failed to assign security groups for entra user {} with error code {}", entraUser.getEntraOid(), response.getStatusCode());
                 throw new BadRequestException("Failed to assign security groups for entra user " + entraUser.getEntraOid() + " with error code " + response.getStatusCode());
@@ -252,7 +251,7 @@ public class LiveTechServicesClient implements TechServicesClient {
                         user.getEntraOid(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
                 throw httpEx;
             } catch (Exception ex) {
-                logger.error("Error while sending new user creation request to Tech Services for entra user: ", user.getEntraOid(), ex);
+                logger.error("Error while sending new user creation request to Tech Services for entra user: {}", user.getEntraOid(), ex);
                 throw new RuntimeException("Error while sending new user creation request to Tech Services.", ex);
             }
         } catch (Exception ex) {
@@ -596,10 +595,8 @@ public class LiveTechServicesClient implements TechServicesClient {
 
             if (response.getStatusCode().is2xxSuccessful()) {
                 logger.info("Successfully retrieved applications from Tech Services for business unit: {}", laaBusinessUnit);
-                List<GetAllApplicationsResponse.TechServicesApplication> responseBody = objectMapper.readValue(response.getBody(),
-                        new TypeReference<List<GetAllApplicationsResponse.TechServicesApplication>>(){});
-                GetAllApplicationsResponse getAllApplicationsResponse = GetAllApplicationsResponse.builder().apps(responseBody).build();
-                return TechServicesApiResponse.success(getAllApplicationsResponse);
+                GetAllApplicationsResponse responseBody = objectMapper.readValue(response.getBody(), GetAllApplicationsResponse.class);
+                return TechServicesApiResponse.success(responseBody);
             } else {
                 logger.error("Unexpected response from Tech Services GET applications endpoint: status={}",
                         response.getStatusCode());
@@ -629,13 +626,13 @@ public class LiveTechServicesClient implements TechServicesClient {
                         errorResponse.getMessage(), errorResponse.getCode(), httpEx);
                 throw httpEx;
             } catch (Exception ex) {
-                String responseBody = response != null && response.getBody() != null ? response.getBody().toString() : "Unknown";
+                String responseBody = response != null && response.getBody() != null ? response.getBody() : "Unknown";
                 logger.warn("Error while getting applications from Tech Services. The response body is {}",
                         responseBody, ex);
                 throw new RuntimeException("Error while getting applications from Tech Services.", ex);
             }
         } catch (Exception ex) {
-            String responseBody = response != null && response.getBody() != null ? response.getBody().toString() : "Unknown";
+            String responseBody = response != null && response.getBody() != null ? response.getBody() : "Unknown";
             logger.error("Unexpected error while getting applications from Tech Services. Response body: {}",
                     responseBody, ex);
             throw new RuntimeException("Unexpected error while getting applications from Tech Services.", ex);

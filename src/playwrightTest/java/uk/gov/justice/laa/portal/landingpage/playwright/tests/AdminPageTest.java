@@ -234,6 +234,8 @@ public class AdminPageTest extends BaseFrontEndTest {
 
         page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Sync Apps")).click();
 
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
         assertSuccessBanner(page, "App Syncing successful");
 
     }

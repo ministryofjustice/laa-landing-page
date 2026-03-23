@@ -142,7 +142,8 @@ public class DoNothingTechServicesClient implements TechServicesClient {
 
     private GetAllApplicationsResponse.TechServicesApplication mapAppToTechServicesApp(App app) {
         return GetAllApplicationsResponse.TechServicesApplication.builder()
-                .id(app.getEntraAppId())
+                .id(app.getEntraOid())
+                .appId(app.getEntraAppId())
                 .name(app.getName())
                 .url(app.getUrl())
                 .securityGroups(List.of(GetAllApplicationsResponse.TechServicesApplication.AppSecurityGroup.builder()

@@ -1,0 +1,23 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-app-oid-from-entra
+      author: Suresh Kavali
+      changes:
+        - addColumn:
+            tableName: app
+            columns:
+              - column:
+                  name: entra_oid
+                  type: varchar(255)
+                  constraints:
+                    nullable: true
+
+        - addUniqueConstraint:
+            tableName: app
+            columnNames: entra_oid
+            constraintName: app_entra_oid_unique_key
+
+      rollback:
+        - dropColumn:
+            tableName: app
+            columnName: entra_oid
