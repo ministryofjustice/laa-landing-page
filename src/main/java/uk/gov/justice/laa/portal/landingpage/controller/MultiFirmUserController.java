@@ -50,7 +50,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.exception.UserAlreadyAssignedToFirm;
+import uk.gov.justice.laa.portal.landingpage.exception.UserAlreadyAssignedToFirmException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmUserForm;
@@ -851,7 +851,8 @@ public class MultiFirmUserController {
                     "roles",
                     rolesAdded);
             eventService.logEvent(addUserProfileAuditEvent);
-        } catch (UserAlreadyAssignedToFirm e) {
+        } catch (UserAlreadyAssignedToFirmException e) {
+            clearSessionAttributes(session);
             //show information banner
             redirectAttributes.addFlashAttribute("userAlreadyAssignedFirmMessage",
                     user.getEmail() + " is Already assigned to the firm " + firmDto.getName());

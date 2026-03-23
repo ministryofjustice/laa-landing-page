@@ -99,7 +99,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
-import uk.gov.justice.laa.portal.landingpage.exception.UserAlreadyAssignedToFirm;
+import uk.gov.justice.laa.portal.landingpage.exception.UserAlreadyAssignedToFirmException;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
@@ -4653,7 +4653,7 @@ class UserServiceTest {
 
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
 
-            UserAlreadyAssignedToFirm ex = assertThrows(UserAlreadyAssignedToFirm.class,
+            UserAlreadyAssignedToFirmException ex = assertThrows(UserAlreadyAssignedToFirmException.class,
                     () -> userService.addMultiFirmUserProfile(user, firmDto, null, List.of(), "admin"));
 
             assertThat(ex.getMessage()).isNull();

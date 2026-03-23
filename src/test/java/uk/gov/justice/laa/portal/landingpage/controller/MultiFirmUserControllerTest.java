@@ -59,7 +59,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.exception.UserAlreadyAssignedToFirm;
+import uk.gov.justice.laa.portal.landingpage.exception.UserAlreadyAssignedToFirmException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmUserForm;
@@ -1519,7 +1519,7 @@ public class MultiFirmUserControllerTest {
         when(loginService.getCurrentProfile(authentication)).thenReturn(profile);
         when(roleAssignmentService.canAssignRole(any(), any())).thenReturn(true);
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
-        when(userService.addMultiFirmUserProfile(any(), any(), any(), any(), any())).thenThrow(new UserAlreadyAssignedToFirm());
+        when(userService.addMultiFirmUserProfile(any(), any(), any(), any(), any())).thenThrow(new UserAlreadyAssignedToFirmException());
         RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
         String view = controller.checkAnswerAndAddProfilePost(authentication, redirectAttributes, session, model);
         assertThat(view).isEqualTo("redirect:/admin/users");
