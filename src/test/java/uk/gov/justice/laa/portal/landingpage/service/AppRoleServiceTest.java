@@ -553,6 +553,7 @@ class AppRoleServiceTest {
                 .parentAppId(appId)
                 .userTypeRestriction(List.of(UserType.INTERNAL))
                 .legacySync(true)
+                .ccmsCode("CCMS001")
                 .build();
         // Act
         appRoleService.createRole(dto);
@@ -802,6 +803,7 @@ class AppRoleServiceTest {
                 .parentAppId(appId)
                 .userTypeRestriction(List.of(UserType.INTERNAL, UserType.EXTERNAL))
                 .legacySync(true)
+                .ccmsCode("CCMS002")
                 .build();
         appRoleService.createRole(dto);
 
@@ -865,6 +867,90 @@ class AppRoleServiceTest {
         // Assert
         verify(appRoleRepository).save(any(AppRole.class));
         verify(eventService).logEvent(any(RoleCreationAuditEvent.class));
+    }
+
+    @Test
+    void testCreateRole_WithLegacySyncTrueAndNoCcmsCode_ThrowsException() {
+        // Arrange
+        UUID appId = UUID.randomUUID();
+
+        RoleCreationDto dto = RoleCreationDto.builder()
+                .name("Test Role")
+                .description("Test Description")
+                .parentAppId(appId)
+                .userTypeRestriction(List.of(UserType.INTERNAL))
+                .legacySync(true)
+                .ccmsCode(null)
+                .build();
+
+        // Act & Assert
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> appRoleService.createRole(dto));
+
+        assertEquals("CCMS code is required when legacy sync is enabled", exception.getMessage());
+    }
+
+    @Test
+    void testCreateRole_WithLegacySyncTrueAndEmptyCcmsCode_ThrowsException() {
+        // Arrange
+        UUID appId = UUID.randomUUID();
+
+        RoleCreationDto dto = RoleCreationDto.builder()
+                .name("Test Role")
+                .description("Test Description")
+                .parentAppId(appId)
+                .userTypeRestriction(List.of(UserType.INTERNAL))
+                .legacySync(true)
+                .ccmsCode("   ")
+                .build();
+
+        // Act & Assert
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> appRoleService.createRole(dto));
+
+        assertEquals("CCMS code is required when legacy sync is enabled", exception.getMessage());
+    }
+
+    @Test
+    void testCreateRole_WithCcmsCodeAndLegacySyncFalse_ThrowsException() {
+        // Arrange
+        UUID appId = UUID.randomUUID();
+
+        RoleCreationDto dto = RoleCreationDto.builder()
+                .name("Test Role")
+                .description("Test Description")
+                .parentAppId(appId)
+                .userTypeRestriction(List.of(UserType.INTERNAL))
+                .legacySync(false)
+                .ccmsCode("CCMS001")
+                .build();
+
+        // Act & Assert
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> appRoleService.createRole(dto));
+
+        assertEquals("Legacy sync must be enabled when a CCMS code is provided", exception.getMessage());
+    }
+
+    @Test
+    void testCreateRole_WithCcmsCodeAndLegacySyncNull_ThrowsException() {
+        // Arrange
+        UUID appId = UUID.randomUUID();
+
+        RoleCreationDto dto = RoleCreationDto.builder()
+                .name("Test Role")
+                .description("Test Description")
+                .parentAppId(appId)
+                .userTypeRestriction(List.of(UserType.INTERNAL))
+                .legacySync(null)
+                .ccmsCode("CCMS001")
+                .build();
+
+        // Act & Assert
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> appRoleService.createRole(dto));
+
+        assertEquals("Legacy sync must be enabled when a CCMS code is provided", exception.getMessage());
     }
 
     @Test
