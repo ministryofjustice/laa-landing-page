@@ -69,6 +69,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
+import uk.gov.justice.laa.portal.landingpage.exception.UserAlreadyAssignedToFirm;
 import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
@@ -823,9 +824,8 @@ public class UserService {
                             && profile.getFirm().getId().equals(firmDto.getId()));
 
             if (firmAlreadyAssigned) {
-                logger.error("The user is already got a profile for the firm: {}", firmDto);
-                throw new RuntimeException(
-                        String.format("User profile already exists for this firm %s", firmDto));
+                logger.info("The user is already got a profile for the firm: {}", firmDto);
+                throw new UserAlreadyAssignedToFirm();
             }
         }
 
