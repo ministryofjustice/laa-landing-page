@@ -383,8 +383,19 @@ public class UserService {
 
 
         // first send update to tech services
-        techServicesClient.disableUser(entraUserDto, "Role Change / No Longer Required");
-        techServicesClient.deleteRoleAssignment(userProfile.getEntraUser().getId());
+        boolean encounteredTsError = false;
+        TechServicesApiResponse<ChangeAccountEnabledResponse> roleChangeorNoLongerRequired = techServicesClient.disableUser(entraUserDto, "RoleChangeorNoLongerRequired");
+        if (!roleChangeorNoLongerRequired.isSuccess()) {
+            encounteredTsError = true;
+            logger.warn("Failed to disable user in tech services: {}, but continuing to delete user", roleChangeorNoLongerRequired.getError());
+        }
+
+        try {
+            techServicesClient.deleteRoleAssignment(userProfile.getEntraUser().getId());
+        } catch (Exception ex) {
+            encounteredTsError = true;
+            logger.warn("Failed to delete role assignment in tech services: {}, but continuing to delete user", ex.getMessage());
+        }
 
         // Clean up UserAccountStatusAudit records first to avoid foreign key constraint violations
         List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
@@ -399,7 +410,7 @@ public class UserService {
         List<UserProfile> profiles = userProfileRepository.findAllByEntraUser(entraUser);
         DeletedUser.DeletedUserBuilder builder = new DeletedUser().toBuilder()
                 .deletedUserEntraOid(userProfile.getEntraUser().getEntraOid())
-                .deletedUserId(userProfile.getId());
+                .deletedUserId(userProfile.getId()).encounteredTsErrors(encounteredTsError);
         if (profiles != null && !profiles.isEmpty()) {
             for (UserProfile up : profiles) {
                 Set<String> puiRoles = new HashSet<>();
@@ -561,7 +572,7 @@ public class UserService {
 
         // Notify Tech Services to remove Entra group memberships
         try {
-            techServicesClient.disableUser(entraUserDto, "Role Change / No Longer Required");
+            techServicesClient.disableUser(entraUserDto, "RoleChangeorNoLongerRequired");
             techServicesClient.deleteRoleAssignment(entraUser.getId());
         } catch (Exception ex) {
             logger.error("Failed to notify Tech Services during user deletion: {}", ex.getMessage(),
