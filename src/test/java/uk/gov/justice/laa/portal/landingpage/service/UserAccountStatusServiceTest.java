@@ -64,6 +64,8 @@ public class UserAccountStatusServiceTest {
     private UserService userService;
     @Mock
     private UserProfileRepository userProfileRepository;
+    @Mock
+    private EventService eventService;
 
     @InjectMocks
     private UserAccountStatusService userAccountStatusService;
@@ -77,7 +79,7 @@ public class UserAccountStatusServiceTest {
                 entraUserRepository,
                 techServicesClient,
                 userService,
-                userProfileRepository);
+                userProfileRepository, eventService);
     }
 
     @Test
