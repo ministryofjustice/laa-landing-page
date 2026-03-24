@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.BulkDisableUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.DisableUserReasonDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
@@ -49,6 +50,7 @@ public class UserAccountStatusService {
     private final TechServicesClient techServicesClient;
     private final UserService userService;
     private final UserProfileRepository userProfileRepository;
+    private final EventService eventService;
 
     public List<DisableUserReasonDto> getDisableUserReasons(UserTypeReasonDisable userTypeReasonDisable) {
         List<DisableUserReason> reasons = disableUserReasonRepository.findAll();
@@ -154,6 +156,14 @@ public class UserAccountStatusService {
         return userProfileRepository.hasActiveUserByFirmId(UUID.fromString(firmId));
     }
 
+    public void disableUserAllUserByFirmIdWithCyberRisk(String firmId, UUID disabledById) {
+        log.info("Started Bulk disable users with cyber risk reason");
+        DisableUserReason reason = disableUserReasonRepository.findByName("Cyber Risk")
+                .orElseThrow(() -> new RuntimeException("Could not find 'Cyber Risk' disable user reason"));
+
+        disableUserAllUserByFirmId(firmId, reason.getId(), disabledById);
+    }
+
     public void disableUserAllUserByFirmId(String firmId, UUID disableReasonId, UUID disabledById) {
         log.info("Started Bulk disable users");
         // Fetch entities
@@ -180,27 +190,27 @@ public class UserAccountStatusService {
             entraUser.setEnabled(false);
             entraUserRepository.saveAndFlush(entraUser);
             totalOfUsersDisabled++;
-            log.info("User with entraID: {} has been disabled successfully with reason: {} By: {}",
+            log.info("User with entra oid: {} has been disabled successfully with reason: {} By actor entra oid: {}",
                     entraUser.getEntraOid(),
                     reason.getEntraDescription(),
                     disabledByUser.getEntraOid());
 
+            UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
+                    .entraUser(entraUser)
+                    .disableUserReason(reason)
+                    .statusChange(UserAccountStatus.DISABLED)
+                    .statusChangedBy(disabledByUser.getFirstName() + " " + disabledByUser.getLastName())
+                    .statusChangedDate(LocalDateTime.now())
+                    .build();
+
+            userAccountStatusAuditRepository.saveAndFlush(userAccountStatusAudit);
         }
 
-        UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
-                .entraUser(disabledByUser)
-                .disableUserReason(reason)
-                .statusChange(UserAccountStatus.DISABLED)
-                .statusChangedBy(disabledByUser.getFirstName() + " " + disabledByUser.getLastName())
-                .statusChangedDate(LocalDateTime.now())
-                .firmId(firmId)
-                .numberOfUsersDisabled(totalOfUsersDisabled)
-                .build();
-        userAccountStatusAuditRepository.saveAndFlush(userAccountStatusAudit);
-        log.info("Bulk disable user complete successfully : {} Total user disabled : {}",
-                userAccountStatusAudit,
+        BulkDisableUserAuditEvent auditEvent = new BulkDisableUserAuditEvent(
+                disabledById,
+                UUID.fromString(firmId),
                 totalOfUsersDisabled);
-
+        eventService.logEvent(auditEvent);
     }
 
     @SuppressWarnings("checkstyle:VariableDeclarationUsageDistance")

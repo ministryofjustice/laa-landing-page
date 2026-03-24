@@ -1,0 +1,29 @@
+databaseChangeLog:
+  - changeSet:
+      id: 2026032411150001
+      author: sankavi.mohanraj
+      comment: "Drop firm_id and number_of_users_disabled columns from user_account_status_audit table"
+      changes:
+        - dropColumn:
+            tableName: user_account_status_audit
+            columnName: firm_id
+        - dropColumn:
+            tableName: user_account_status_audit
+            columnName: number_of_users_disabled
+      rollback:
+        - addColumn:
+            tableName: user_account_status_audit
+            columns:
+              - column:
+                  name: firm_id
+                  type: varchar(255)
+                  constraints:
+                    nullable: true
+        - addColumn:
+            tableName: user_account_status_audit
+            columns:
+              - column:
+                  name: number_of_users_disabled
+                  type: integer
+                  constraints:
+                    nullable: true
