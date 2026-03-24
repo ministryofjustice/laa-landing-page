@@ -1,0 +1,144 @@
+databaseChangeLog:
+  # Migrate admin_app entries to app table with AppType.AUTHZ
+  - changeSet:
+      id: 1739293200001-1
+      author: leonardopalmeiro
+      preconditions:
+        - tableExists:
+            tableName: admin_app
+      changes:
+        # Insert admin_app entries into app table with AppType.AUTHZ
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO app (
+                id, 
+                name, 
+                title, 
+                description, 
+                oid_group_name, 
+                app_type, 
+                ordinal, 
+                url, 
+                enabled, 
+                entra_app_id, 
+                security_group_oid, 
+                security_group_name
+              )
+              SELECT 
+                aa.id,
+                aa.name,
+                aa.name as title,
+                aa.description,
+                aa.name as oid_group_name,
+                'AUTHZ' as app_type,
+                aa.ordinal,
+                '#' as url,
+                aa.enabled,
+                null as entra_app_id,
+                aa.name as security_group_oid,
+                aa.name as security_group_name
+              FROM admin_app aa
+              WHERE NOT EXISTS (
+                SELECT 1 FROM app a WHERE a.name = aa.name
+              );
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM app WHERE app_type = 'AUTHZ' AND id IN (SELECT id FROM admin_app)"
+
+  # Drop admin_app table after successful migration
+  - changeSet:
+      id: 1739293200001-2
+      author: leonardopalmeiro
+      preconditions:
+        - onFail: MARK_RAN
+        - tableExists:
+            tableName: admin_app
+      changes:
+        - dropTable:
+            tableName: admin_app
+      rollback:
+        # Recreate admin_app table structure if rollback needed
+        - createTable:
+            tableName: admin_app
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: description
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: ordinal
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: enabled
+                  type: boolean
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+        - createIndex:
+            indexName: AdminAppNameIdx
+            tableName: admin_app
+            columns:
+              - column:
+                  name: name
+        # Restore admin_app data from app table if rollback needed
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO admin_app (id, name, description, ordinal, enabled, created_at, updated_at)
+              SELECT id, name, description, ordinal, enabled, created_at, updated_at
+              FROM app 
+              WHERE app_type = 'AUTHZ' AND oid_group_name = name AND security_group_oid = name AND security_group_name = name
+
+  - changeSet:
+      id: 1739293200001-3-create-app-roles
+      author: leonardopalmeiro
+      changes:
+        # Add global admin as an assigning role for Firm Directory.
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO public.app_role (authz_role, app_id, id, description, name, user_type_restriction, ccms_code, legacy_sync, ordinal, firm_type_restriction) VALUES (true, (SELECT id FROM app WHERE name = 'Firm Directory'), gen_random_uuid(), 'Show Firm Directory in the main screen', 'Firm Directory', '{INTERNAL}', NULL, false, 0, NULL)"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'Firm Directory'), (SELECT id FROM app_role WHERE name = 'Global Admin'))"
+        # Add global admin as an assigning role for Access SiLAS Administration.
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO public.app_role (authz_role, app_id, id, description, name, user_type_restriction, ccms_code, legacy_sync, ordinal, firm_type_restriction) VALUES (true, (SELECT id FROM app WHERE name = 'SiLAS Administration'), gen_random_uuid(), 'Show SiLAS Administration in the main screen', 'SiLAS Administration', '{INTERNAL}', NULL, false, 0, NULL)"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'SiLAS Administration'), (SELECT id FROM app_role WHERE name = 'Global Admin'))"
+        # Add global admin as an assigning role for Access User Access Audit Table.
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO public.app_role (authz_role, app_id, id, description, name, user_type_restriction, ccms_code, legacy_sync, ordinal, firm_type_restriction) VALUES (true, (SELECT id FROM app WHERE name = 'User Access Audit Table'), gen_random_uuid(), 'Show User Access Audit Table in the main screen', 'User Access Audit Table', '{INTERNAL}', NULL, false, 0, NULL)"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'User Access Audit Table'), (SELECT id FROM app_role WHERE name = 'Global Admin'))"

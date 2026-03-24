@@ -9,9 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.AdminAppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppAdminDto;
-import uk.gov.justice.laa.portal.landingpage.entity.AdminApp;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
-import uk.gov.justice.laa.portal.landingpage.repository.AdminAppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 
 /**
