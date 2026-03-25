@@ -21,6 +21,7 @@ import uk.gov.justice.laa.portal.landingpage.techservices.GetAllApplicationsResp
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -84,6 +85,14 @@ public class AppService {
         return appRepository.findAppsByAppTypeAndEnabled(AppType.LAA, true)
                 .stream()
                 .map(app -> mapper.map(app, AppDto.class))
+                .toList();
+    }
+
+    public List<AppDto> getAllActiveAuthzApps() {
+        return appRepository.findAppsByAppTypeAndEnabled(AppType.AUTHZ, true)
+                .stream()
+                .map(app -> mapper.map(app, AppDto.class))
+                .sorted(Comparator.comparingInt(AppDto::getOrdinal))
                 .toList();
     }
 

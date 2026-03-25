@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import java.util.List;
 import java.util.Set;
 
 import org.slf4j.Logger;
@@ -17,11 +18,13 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 
 import jakarta.servlet.http.HttpSession;
+import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
+import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
@@ -34,10 +37,12 @@ public class LoginController {
     private static final Logger logger = LoggerFactory.getLogger(LoginController.class);
     private final LoginService loginService;
     private final UserService userService;
+    private final AppService appService;
 
-    public LoginController(LoginService loginService, UserService userService) {
+    public LoginController(LoginService loginService, UserService userService, AppService appService) {
         this.loginService = loginService;
         this.userService = userService;
+        this.appService = appService;
     }
 
     @GetMapping("/")
@@ -107,6 +112,8 @@ public class LoginController {
                             AuthzRole.FIRM_USER_MANAGER.getRoleName());
 
                 }
+                List<AppDto> apps = appService.getAllActiveAuthzApps();
+                model.addAttribute("apps", apps);
                 model.addAttribute("isAdminUser", isAdmin);
                 model.addAttribute("canViewAuditTable", canViewAuditTable);
                 model.addAttribute("canViewFirmDirectory", canViewFirmDirectory);

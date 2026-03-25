@@ -109,6 +109,17 @@
                     </div>
                 </div>
 
+                <div th:each="app : ${apps}" class="govuk-grid-row govuk-!-margin-top-4">
+                    <div class="govuk-grid-column-full">
+                        <div class="moj-ticket-panel__content moj-ticket-panel__content--blue">
+                            <h3 class="govuk-heading-m">
+                                <a th:href="${app.getUrl()}" th:text="${app.getTitle()}" class="govuk-link govuk-link--no-visited-state"/>
+                            </h3>
+                            <p th:text="${app.getDescription()}" class="govuk-body" />
+                        </div>
+                    </div>
+                </div>
+
                 <h2 class="govuk-heading-l">Legal aid services</h2>
 
                 <div th:if="${userHasNoRoles}" class="govuk-grid-row">
@@ -166,7 +177,6 @@
             </div>
         </div>
     </main>
-    </div>
 </body>
 
 </html>
