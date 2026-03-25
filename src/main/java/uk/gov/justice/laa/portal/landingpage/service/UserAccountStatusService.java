@@ -207,7 +207,7 @@ public class UserAccountStatusService {
         }
 
         BulkDisableUserAuditEvent auditEvent = new BulkDisableUserAuditEvent(
-                disabledById,
+                UUID.fromString(disabledByUser.getEntraOid()),
                 UUID.fromString(firmId),
                 totalOfUsersDisabled);
         eventService.logEvent(auditEvent);
