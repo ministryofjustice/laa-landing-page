@@ -22,10 +22,12 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
+import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
 /***
@@ -38,11 +40,13 @@ public class LoginController {
     private final LoginService loginService;
     private final UserService userService;
     private final AppService appService;
+    private final RoleAssignmentService roleAssignmentService;
 
-    public LoginController(LoginService loginService, UserService userService, AppService appService) {
+    public LoginController(LoginService loginService, UserService userService, AppService appService, RoleAssignmentService roleAssignmentService) {
         this.loginService = loginService;
         this.userService = userService;
         this.appService = appService;
+        this.roleAssignmentService = roleAssignmentService;
     }
 
     @GetMapping("/")
@@ -113,7 +117,14 @@ public class LoginController {
 
                 }
                 List<AppDto> apps = appService.getAllActiveAuthzApps();
-                model.addAttribute("apps", apps);
+                UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
+
+                List<AppDto> editableApps = apps.stream()
+                        .filter(AppDto::isEnabled)
+                        .filter(app -> roleAssignmentService.canUserSeeRolesForApp(currentUserProfile, app))
+                        .toList();
+
+                model.addAttribute("apps", editableApps);
                 model.addAttribute("isAdminUser", isAdmin);
                 model.addAttribute("canViewAuditTable", canViewAuditTable);
                 model.addAttribute("canViewFirmDirectory", canViewFirmDirectory);

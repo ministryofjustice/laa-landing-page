@@ -103,6 +103,30 @@ public class RoleAssignmentService {
         }
     }
 
+    public boolean canUserSeeRolesForApp(UserProfile userProfile, AppDto appDto) {
+        Optional<App> appOptional = appRepository.findById(UUID.fromString(appDto.getId()));
+        if (appOptional.isPresent()) {
+            App app = appOptional.get();
+
+            Set<AppRole> editorRoles = new HashSet<>(userProfile.getAppRoles()
+                    .stream()
+                    .filter(AppRole::isAuthzRole)
+                    .toList());
+
+
+            boolean hasAnyEditorRole =
+                    app.getAppRoles().stream()
+                            .anyMatch(role ->
+                                    editorRoles.stream().anyMatch(er -> er.getId().equals(role.getId()))
+                            );
+            return  hasAnyEditorRole;
+
+        } else {
+            log.warn("App not found : {}", appDto.getId());
+            return false;
+        }
+    }
+
     private boolean isAuthzApp(App app) {
         return app.getAppRoles().stream().anyMatch(AppRole::isAuthzRole);
     }

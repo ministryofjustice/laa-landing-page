@@ -40,7 +40,7 @@ databaseChangeLog:
                 aa.name as security_group_name
               FROM admin_app aa
               WHERE NOT EXISTS (
-                SELECT 1 FROM app a WHERE a.name = aa.name
+                SELECT 1 FROM app a WHERE UPPER(a.name) = UPPER(aa.name)
               );
       rollback:
         - sql:
@@ -118,7 +118,25 @@ databaseChangeLog:
               WHERE app_type = 'AUTHZ' AND oid_group_name = name AND security_group_oid = name AND security_group_name = name
 
   - changeSet:
-      id: 1739293200001-3-create-app-roles
+      id: 1739293200001-3-add-urls
+      author: leonardopalmeiro
+      changes:
+        # update the urls
+        - sql:
+            dbms: postgresql
+            sql: "UPDATE app set url = '/admin/firmDirectory' WHERE name = 'Firm Directory'"
+        - sql:
+            dbms: postgresql
+            sql: "UPDATE app set url = '/admin/users/audit' WHERE name = 'User Access Audit Table'"
+        - sql:
+            dbms: postgresql
+            sql: "UPDATE app set url = '/admin/silas-administration' WHERE name = 'SiLAS Administration'"
+        - sql:
+            dbms: postgresql
+            sql: "UPDATE app set url = '/admin/users' WHERE name = 'Manage Your Users'"
+
+  - changeSet:
+      id: 1739293200001-4-create-app-roles
       author: leonardopalmeiro
       changes:
         # Add global admin as an assigning role for Firm Directory.
@@ -142,3 +160,11 @@ databaseChangeLog:
         - sql:
             dbms: postgresql
             sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'User Access Audit Table'), (SELECT id FROM app_role WHERE name = 'Global Admin'))"
+
+        # Add global admin as an assigning role for manage your user.
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO public.app_role (authz_role, app_id, id, description, name, user_type_restriction, ccms_code, legacy_sync, ordinal, firm_type_restriction) VALUES (true, (SELECT id FROM app WHERE name = 'Manage Your Users'), gen_random_uuid(), 'Show Manage Your Users in the main screen', 'Manage Your Users', '{INTERNAL}', NULL, false, 0, NULL)"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'Manage Your Users'), (SELECT id FROM app_role WHERE name = 'Global Admin'))"

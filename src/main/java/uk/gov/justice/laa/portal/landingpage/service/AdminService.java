@@ -7,8 +7,8 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import uk.gov.justice.laa.portal.landingpage.dto.AdminAppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppAdminDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 
@@ -21,15 +21,15 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 public class AdminService {
 
     private final AppRepository appRepository;
-    private final AdminAppRepository adminAppRepository;
+
 
     /**
      * Get all admin apps for administration display
      */
-    public List<AdminAppDto> getAllAdminApps() {
-        return adminAppRepository.findAll().stream()
-                .filter(AdminApp::isEnabled)
-                .map(this::mapToAdminAppDto)
+    public List<AppDto> getAllAdminApps() {
+        return appRepository.findAll().stream()
+                .filter(App::isEnabled)
+                .map(this::mapToAppDto)
                 .sorted((a, b) -> Integer.compare(a.getOrdinal(), b.getOrdinal()))
                 .collect(Collectors.toList());
     }
@@ -63,8 +63,8 @@ public class AdminService {
     /**
      * Map AdminApp entity to AdminAppDto
      */
-    private AdminAppDto mapToAdminAppDto(AdminApp adminApp) {
-        return AdminAppDto.builder()
+    private AppDto mapToAppDto(App adminApp) {
+        return AppDto.builder()
                 .id(adminApp.getId().toString())
                 .name(adminApp.getName())
                 .description(adminApp.getDescription())
