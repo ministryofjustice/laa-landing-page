@@ -107,15 +107,17 @@ public class RoleAssignmentService {
         Optional<App> appOptional = appRepository.findById(UUID.fromString(appDto.getId()));
         if (appOptional.isPresent()) {
             App app = appOptional.get();
-
             Set<AppRole> editorRoles = new HashSet<>(userProfile.getAppRoles()
                     .stream()
                     .filter(AppRole::isAuthzRole)
                     .toList());
 
-
             boolean hasAnyEditorRole =
                     app.getAppRoles().stream()
+/*                            .filter( role -> role.getName().equals("Manage Your Users") ||
+                                    role.getName().equals("User Access Audit Table") ||
+                                    role.getName().equals("SiLAS Administration") ||
+                                    role.getName().equals("Firm Directory"))*/
                             .anyMatch(role ->
                                     editorRoles.stream().anyMatch(er -> er.getId().equals(role.getId()))
                             );
