@@ -157,6 +157,7 @@ public class ManageUsersPage {
 
     public void clickManageUser() {
         userFullNameLink.click();
+        page.waitForURL(url -> url.contains("/admin/users/manage/"));
     }
 
     public void confirmAndDeleteUser() {
@@ -371,7 +372,8 @@ public class ManageUsersPage {
 
 
     public boolean searchAndVerifyUser(String email) {
-        searchForUser(email);
+        page.navigate(String.format("http://localhost:%d/admin/users?search=%s", port,
+                email.replace("@", "%40")));
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
         Locator row = page.locator("tbody tr").filter(
@@ -465,6 +467,7 @@ public class ManageUsersPage {
     public void clickGoBackToManageUsers() {
         assertThat(goBackToManageYourUsersButton).isVisible();
         goBackToManageYourUsersButton.click();
+        page.waitForURL(url -> url.contains("/admin/users") && !url.contains("/manage/"));
     }
 
     // Firm selection
