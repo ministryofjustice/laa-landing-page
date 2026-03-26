@@ -78,8 +78,7 @@ public class AuditController {
      * Shows all registered users including those without firm profiles
      */
     @GetMapping("/users/audit")
-    @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions("
-            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_AUDIT_TABLE)")
+    @PreAuthorize("@accessControlService.userHasAuthzRole(authentication, T(uk.gov.justice.laa.portal.landingpage.entity.AuthzRole).USER_ACCESS_AUDIT_TABLE.roleName)")
     public String displayAuditTable(
             @ModelAttribute AuditTableSearchCriteria criteria,
             Model model) {
