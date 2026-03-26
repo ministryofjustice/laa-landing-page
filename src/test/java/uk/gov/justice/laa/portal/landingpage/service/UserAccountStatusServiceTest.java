@@ -1529,6 +1529,7 @@ public class UserAccountStatusServiceTest {
                     .id(UUID.randomUUID())
                     .firstName("Enabled")
                     .lastName("User")
+                    .entraOid(UUID.randomUUID().toString())
                     .build();
 
             DisableUserReason reason = DisableUserReason.builder()
@@ -1540,6 +1541,7 @@ public class UserAccountStatusServiceTest {
                     UserProfile.builder()
                             .entraUser(EntraUser.builder()
                                     .enabled(true)
+                                    .entraOid(UUID.randomUUID().toString())
                                     .build())
                             .id(UUID.randomUUID())
                             .build()
