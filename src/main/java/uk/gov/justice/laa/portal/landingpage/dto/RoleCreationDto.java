@@ -10,6 +10,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.validation.ValidRoleCreation;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -20,6 +21,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ValidRoleCreation
 public class RoleCreationDto implements Serializable {
 
     @Serial

@@ -60,9 +60,4 @@ public class UserAccountStatusAudit extends BaseEntity {
     @JsonIgnore
     private DisableUserReason disableUserReason;
 
-    @Column(name = "firm_id")
-    private String firmId;
-
-    @Column(name = "number_of_users_disabled")
-    private Integer numberOfUsersDisabled;
 }
