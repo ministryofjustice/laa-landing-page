@@ -121,8 +121,10 @@ public class LoginController {
                     boolean isInternal = userService.isInternal(userSessionData.getUser().getId());
                     model.addAttribute("userHasNoRoles", true);
                     model.addAttribute("isInternalUser", isInternal);
+                    model.addAttribute("showAccountActivationMsg", !isInternal && !isProviderAdmin);
                 } else {
                     model.addAttribute("userHasNoRoles", false);
+                    model.addAttribute("showAccountActivationMsg", false);
                 }
             } else {
                 logger.info("No access token found");

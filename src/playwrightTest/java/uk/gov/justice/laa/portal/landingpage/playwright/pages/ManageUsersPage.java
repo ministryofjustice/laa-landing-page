@@ -378,7 +378,14 @@ public class ManageUsersPage {
                 new Locator.FilterOptions().setHasText(email)
         );
 
-        return row.isVisible();
+        try {
+            row.waitFor(new Locator.WaitForOptions()
+                    .setState(WaitForSelectorState.VISIBLE)
+                    .setTimeout(5000));
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public void searchForCurrentUser(TestUser currentUser) {

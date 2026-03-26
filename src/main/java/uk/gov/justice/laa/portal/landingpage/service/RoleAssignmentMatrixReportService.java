@@ -13,11 +13,13 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -33,6 +35,8 @@ public class RoleAssignmentMatrixReportService {
 
     private final FirmRepository firmRepository;
     private final AppRoleRepository appRoleRepository;
+    private final ReportUploadService reportUploadService;
+    private final String folderPath = "role_assignment_matrix_reports";
     private final DateTimeFormatter fileTimestamp = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmm");
 
     public void getRoleAssignmentMatrixReport() {
@@ -41,6 +45,12 @@ public class RoleAssignmentMatrixReportService {
         List<Tuple> rows = firmRepository.findRoleCountsByFirm();
         Map<FirmDto, Map<String, Integer>> matrix = buildRoleMatrix(rows);
         File matrixCsv = writeToCsv(allRoles, matrix);
+
+        try {
+            reportUploadService.uploadCsvToSharePoint(matrixCsv, folderPath);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
         // Upload code goes here
         log.info("Role assignment matrix report successfully written to file");
     }
@@ -70,7 +80,7 @@ public class RoleAssignmentMatrixReportService {
     public File writeToCsv(List<String> allRoles, Map<FirmDto, Map<String, Integer>> matrix) {
 
         String timestamp = LocalDateTime.now().format(fileTimestamp);
-        String fileName = "SiLAS-role-assignment-matrix-report-" + timestamp;
+        String fileName = "SiLAS-role-assignment-matrix-report-" + timestamp + ".csv";
 
         try {
 
@@ -88,7 +98,11 @@ public class RoleAssignmentMatrixReportService {
 
             CsvMapper csvMapper = CsvMapper.builder().build();
 
-            Path tempFile = Files.createTempFile(fileName, ".csv");
+            Path tempFile = Paths.get(
+                    System.getProperty("java.io.tmpdir"),
+                    fileName
+            );
+            Files.createFile(tempFile);
 
             try (Writer writer = Files.newBufferedWriter(tempFile);
                  SequenceWriter sequenceWriter = csvMapper.writer(schema).writeValues(writer)) {

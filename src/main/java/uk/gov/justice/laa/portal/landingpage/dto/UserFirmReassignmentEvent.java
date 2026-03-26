@@ -7,21 +7,19 @@ import uk.gov.justice.laa.portal.landingpage.entity.EventType;
 public class UserFirmReassignmentEvent extends AuditEvent {
     
     private final String targetUserId;
-    private final String targetUserName;
-    private final String previousFirmName;
-    private final String newFirmName;
+    private final String targetUserEntraOid;
+    private final UUID oldFirmId;
+    private final UUID newFirmId;
     private final String reason;
 
-    public UserFirmReassignmentEvent(UUID modifierUserId, String modifierUserName, 
-                                   String targetUserId, String targetUserName,
-                                   String previousFirmName, String newFirmName, String reason) {
+    public UserFirmReassignmentEvent(UUID modifierUserId,
+                                     String targetUserId, String targetUserEntraOid, UUID oldFirmId, UUID newFirmId, String reason) {
         super();
+        this.oldFirmId = oldFirmId;
+        this.newFirmId = newFirmId;
         this.userId = modifierUserId;
-        this.userName = modifierUserName;
         this.targetUserId = targetUserId;
-        this.targetUserName = targetUserName;
-        this.previousFirmName = previousFirmName;
-        this.newFirmName = newFirmName;
+        this.targetUserEntraOid = targetUserEntraOid;
         this.reason = reason;
     }
 
@@ -32,7 +30,7 @@ public class UserFirmReassignmentEvent extends AuditEvent {
 
     @Override
     public String getDescription() {
-        return String.format("User '%s' (ID: %s) was reassigned from firm '%s' to firm '%s'. Reason: %s", 
-            targetUserName, targetUserId, previousFirmName, newFirmName, reason);
+        return String.format("User %s and entraOid %s, was reassigned from firmID '%s' to firmID '%s'. Reason: %s",
+             targetUserId, targetUserEntraOid, oldFirmId, newFirmId, reason);
     }
 }

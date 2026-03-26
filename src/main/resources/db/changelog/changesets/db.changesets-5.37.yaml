@@ -1,0 +1,15 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-edit-user-details-permissions
+      author: Niall McMahon
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Admin' AND authz_role = true), 'EDIT_USER_DETAILS')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin' AND authz_role = true), 'EDIT_USER_DETAILS')"
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'EDIT_USER_DETAILS' AND (app_role_id = (SELECT id FROM app_role WHERE name = 'External User Admin' AND authz_role = true) OR app_role_id = (SELECT id FROM app_role WHERE name = 'Global Admin' AND authz_role = true))"

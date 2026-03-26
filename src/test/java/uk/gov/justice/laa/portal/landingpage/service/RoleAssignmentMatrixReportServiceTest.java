@@ -39,10 +39,14 @@ public class RoleAssignmentMatrixReportServiceTest {
     @Mock
     private AppRoleRepository appRoleRepository;
 
+    @Mock
+    private ReportUploadService reportUploadService;
+
     @BeforeEach
     void setUp() {
-        // Use a spy so we can capture the File returned by writeToCsv()
-        matrixReportService = Mockito.spy(new RoleAssignmentMatrixReportService(firmRepository, appRoleRepository));
+
+        matrixReportService = Mockito.spy(new RoleAssignmentMatrixReportService(firmRepository, appRoleRepository,
+                reportUploadService));
     }
 
     private Tuple mockResponse(

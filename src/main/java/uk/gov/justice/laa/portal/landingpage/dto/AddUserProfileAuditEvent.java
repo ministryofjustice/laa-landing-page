@@ -24,7 +24,6 @@ public class AddUserProfileAuditEvent extends AuditEvent implements Serializable
                                     UUID firmId, String field, String changeString) {
         this.newUserProfileId = newUserProfileId;
         this.userId = currentUserDto.getUserId();
-        this.userName = currentUserDto.getName();
         this.user = user;
         this.firmId = firmId;
         this.field = field;
@@ -38,6 +37,6 @@ public class AddUserProfileAuditEvent extends AuditEvent implements Serializable
 
     @Override
     public String getDescription() {
-        return String.format(UPDATE_USER_ROLE_TEMPLATE, newUserProfileId, user.getId(), firmId, userId, field, changeString);
+        return String.format(UPDATE_USER_ROLE_TEMPLATE, newUserProfileId, user.getEntraOid(), firmId, userId, field, changeString);
     }
 }

@@ -65,7 +65,6 @@ import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
-import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
@@ -426,8 +425,8 @@ public class UserController {
         Map<String, Object> filters = (Map<String, Object>) session.getAttribute("userListFilters");
         boolean hasFilters = hasActiveFilters(filters);
         model.addAttribute("hasFilters", hasFilters);
-        boolean loggedUserIsExternalAdmin = accessControlService.userHasAuthzRole(authentication, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName());
-        if (editUserDetailFeatureEnabled && externalUser && loggedUserIsExternalAdmin) {
+        boolean loggedUserCanEditUserDetails = accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_DETAILS);
+        if (editUserDetailFeatureEnabled && externalUser && loggedUserCanEditUserDetails) {
             model.addAttribute("showEditButton", true);
         }
 
@@ -455,9 +454,19 @@ public class UserController {
 
         EntraUser current = loginService.getCurrentEntraUser(authentication);
         try {
-            DeletedUser deletedUser = userService.deleteExternalUser(id, reason.trim(), current.getId());
+            DeletedUser deletedUser = userService.deleteExternalUser(id, reason.trim(), current.getEntraOid());
+
+            if (deletedUser.isEncounteredTsErrors()) {
+                DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(
+                        optionalUser.get().getEntraUser().getId(),
+                        reason.trim(), current.getId(), "The user account has been deleted but there were some issues during the deletion process. Please contact support.");
+                eventService.logEvent(deleteUserAttemptAuditEvent);
+                model.addAttribute("errorMessage", "An unexpected error occurred while deleting user. Please contact support.");
+                return "errors/error-generic";
+            }
+
             DeleteUserSuccessAuditEvent deleteUserAuditEvent = new DeleteUserSuccessAuditEvent(
-                    reason.trim(), current.getId(), deletedUser);
+                    reason.trim(), UUID.fromString(current.getEntraOid()), deletedUser);
             eventService.logEvent(deleteUserAuditEvent);
         } catch (RuntimeException ex) {
             log.error("Failed to delete external user {}: {}", id, ex.getMessage(), ex);
@@ -883,7 +892,7 @@ public class UserController {
 
                 String firmDescription = Boolean.TRUE.equals(isMultiFirmUser)
                         ? "(Multi-firm user)"
-                        : selectedFirm.getName();
+                        : selectedFirm.getId().toString();
                 CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser,
                         firmDescription, userManager);
                 eventService.logEvent(createUserAuditEvent);
@@ -982,7 +991,7 @@ public class UserController {
      */
 
     @GetMapping("/users/edit/{id}/details")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_DETAILS)")
     public String editUserDetails(@PathVariable String id, Model model, HttpSession session) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();;
         EditUserDetailsForm editUserDetailsForm = new EditUserDetailsForm();
@@ -1008,7 +1017,7 @@ public class UserController {
      * @throws IllegalArgumentException If the user ID is invalid or not found
      */
     @PostMapping("/users/edit/{id}/details")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_DETAILS)")
     public String updateUserDetails(@PathVariable String id,
                                     @Valid EditUserDetailsForm editUserDetailsForm,
                                     BindingResult result,
@@ -1763,7 +1772,7 @@ public class UserController {
             // Create audit event
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             EntraUserDto entraUserDto = mapper.map(user.getEntraUser(), EntraUserDto.class);
-            ConvertToMultiFirmAuditEvent auditEvent = new ConvertToMultiFirmAuditEvent(currentUserDto, entraUserDto);
+            ConvertToMultiFirmAuditEvent auditEvent = new ConvertToMultiFirmAuditEvent(currentUserDto, entraUserDto, id);
             eventService.logEvent(auditEvent);
 
             log.info("Successfully converted user {} to multi-firm status", id);
@@ -2840,7 +2849,7 @@ public class UserController {
                     id,
                     UUID.fromString(selectedFirmId),
                     reason.trim(),
-                    currentEntraUser.getId(),
+                    UUID.fromString(currentEntraUser.getEntraOid()),
                     currentUser.getName());
 
             return "redirect:/admin/users/reassign-firm/" + id + "/confirmation";
@@ -2930,7 +2939,7 @@ public class UserController {
                     id,
                     UUID.fromString(newFirmId),
                     reason.trim(),
-                    currentEntraUser.getId(),
+                    UUID.fromString(currentEntraUser.getEntraOid()),
                     currentUser.getName());
 
             return ResponseEntity.ok(Map.of(

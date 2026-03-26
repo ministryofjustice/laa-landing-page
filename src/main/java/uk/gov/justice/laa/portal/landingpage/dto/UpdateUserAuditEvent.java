@@ -17,13 +17,12 @@ public class UpdateUserAuditEvent extends AuditEvent implements Serializable {
     private final String changeString;
     private final UUID profileId;
     private static final String UPDATE_USER_ROLE_TEMPLATE = """
-            Existing user id %s updated, profile id %s, with %s %s
+            Existing entra oid %s, user profile id %s updated, with %s %s
             """;
 
     public UpdateUserAuditEvent(UUID profileId, CurrentUserDto currentUserDto, EntraUserDto user, String changeString, String field) {
         this.profileId = profileId;
         this.userId = currentUserDto.getUserId();
-        this.userName = currentUserDto.getName();
         this.user = user;
         this.field = field;
         this.changeString = changeString;
@@ -36,6 +35,6 @@ public class UpdateUserAuditEvent extends AuditEvent implements Serializable {
 
     @Override
     public String getDescription() {
-        return String.format(UPDATE_USER_ROLE_TEMPLATE, user.getId(), profileId, field, changeString);
+        return String.format(UPDATE_USER_ROLE_TEMPLATE, user.getEntraOid(), profileId, field, changeString);
     }
 }

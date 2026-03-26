@@ -45,11 +45,12 @@ public class NotificationServiceTest {
         String username = "testUser";
         String email = "test@test.com";
         String userId = "testUserId";
+        String url = "url.com";
         // Add list appender to logger to capture and verify logs
         ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(NotificationService.class);
 
         // When
-        notificationService.notifyCreateUser(username, email, userId);
+        notificationService.notifyCreateUser(username, userId, email, url);
 
         // Then
         // Check send mail was invoked and two info logs were generated.
@@ -64,11 +65,12 @@ public class NotificationServiceTest {
         String username = "testUser";
         String email = null;
         String userId = "testUserId";
+        String url = "url.com";
         // Add list appender to logger to capture and verify logs
         ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(NotificationService.class);
 
         // When
-        notificationService.notifyCreateUser(username, email, userId);
+        notificationService.notifyCreateUser(username, userId, email, userId);
 
         // Then
         // Check send mail was not invoked and only one info log was generated.
@@ -165,7 +167,7 @@ public class NotificationServiceTest {
                 .extracting(ILoggingEvent::getFormattedMessage)
                 .containsExactly(
                         String.format("Sending revoke firm access notification for User: %s", userProfileId),
-                        String.format("Revoke firm access notification sent to: alice@example.com for User ID: %s", userProfileId));
+                        String.format("Revoke firm access notification sent for User ID: %s", userProfileId));
     }
 
     @Test
@@ -341,6 +343,6 @@ public class NotificationServiceTest {
                 .extracting(ILoggingEvent::getFormattedMessage)
                 .containsExactly(
                         String.format("Sending user access change notification for User: %s (change type: %s)", userProfileId, changeType),
-                        String.format("User access change notification sent to: null for User ID: %s", userProfileId));
+                        String.format("User access change notification sent for User ID: %s", userProfileId));
     }
 }

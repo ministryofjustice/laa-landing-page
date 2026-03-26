@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.test.util.ReflectionTestUtils;
 import uk.gov.justice.laa.portal.landingpage.auth.TokenCredentialFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,6 +35,17 @@ class GraphClientConfigTest {
 
         assertThat(client).isNotNull();
         verify(credentialFactory).createCredential();
+    }
+
+    @Test
+    void graphUploadClient_shouldReturnGraphServiceClientInstance() {
+        ReflectionTestUtils.setField(graphClientConfig, "reportClientId", "test-client-id");
+        ReflectionTestUtils.setField(graphClientConfig, "reportTenantId", "test-tenant-id");
+        ReflectionTestUtils.setField(graphClientConfig, "reportSecret", "test-secret");
+
+        GraphServiceClient client = graphClientConfig.graphUploadClient();
+
+        assertThat(client).isNotNull();
     }
 
 }

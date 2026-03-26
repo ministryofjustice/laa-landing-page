@@ -522,7 +522,7 @@ class AdminControllerTest {
         String result = adminController.confirmCheckYourAnswers(session, redirectAttributes);
 
         // Assert
-        assertEquals("redirect:/admin/silas-administration?tab=roles#roles", result);
+        assertEquals("redirect:/admin/silas-administration?tab=roles", result);
         verify(appRoleService).createRole(roleCreationDto);
     }
 
@@ -726,7 +726,7 @@ class AdminControllerTest {
 
         String view = adminController.editAppRolesOrderGet(model, redirectAttributes, session);
 
-        assertEquals("redirect:/admin/silas-administration#roles", view);
+        assertEquals("redirect:/admin/silas-administration?tab=roles", view);
         verify(redirectAttributes).addFlashAttribute("appRolesErrorMessage", "Please select an application to reorder its roles");
     }
 
@@ -798,7 +798,7 @@ class AdminControllerTest {
 
         String view = adminController.editAppRolesOrderGet(model, redirectAttributes, session);
 
-        assertEquals("redirect:/admin/silas-administration#roles", view);
+        assertEquals("redirect:/admin/silas-administration?tab=roles", view);
         verify(redirectAttributes).addFlashAttribute("appRolesErrorMessage", "Please select an application to reorder its roles");
     }
 
@@ -1096,7 +1096,7 @@ class AdminControllerTest {
         String result = adminController.confirmCheckYourAnswers(session, redirectAttributes);
 
         // Assert
-        assertEquals("redirect:/admin/silas-administration?tab=roles#roles", result);
+        assertEquals("redirect:/admin/silas-administration?tab=roles", result);
         verify(appRoleService).createRole(roleCreationDto);
         assertThat(session.getAttribute("roleCreationDto")).isNotNull();
     }
@@ -1145,7 +1145,7 @@ class AdminControllerTest {
         String result = adminController.confirmCheckYourAnswers(session, redirectAttributes);
 
         // Assert
-        assertEquals("redirect:/admin/silas-administration?tab=roles#roles", result);
+        assertEquals("redirect:/admin/silas-administration?tab=roles", result);
         verify(appRoleService).createRole(roleCreationDto);
     }
 
@@ -1190,7 +1190,7 @@ class AdminControllerTest {
         String result = adminController.confirmCheckYourAnswers(session, redirectAttributes);
 
         // Assert
-        assertEquals("redirect:/admin/silas-administration?tab=roles#roles", result);
+        assertEquals("redirect:/admin/silas-administration?tab=roles", result);
         verify(appRoleService).createRole(roleCreationDto);
     }
 
@@ -1354,25 +1354,101 @@ class AdminControllerTest {
     }
 
     @Test
-    void testProcessRoleCreation_WithNullRoleName_SkipsValidation() {
+    void testProcessRoleCreation_WithLegacySyncTrueAndNoCcmsCode_ValidationFails() {
+        // Arrange
+        UUID appId = UUID.randomUUID();
+        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
+                .name("Test Role")
+                .description("Test Description")
+                .parentAppId(appId)
+                .userTypeRestriction(List.of(UserType.INTERNAL))
+                .legacySync(true)
+                .ccmsCode(null)  // Missing CCMS code when legacy sync is true
+                .build();
+
+        BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
+
+        when(appRoleService.isRoleNameExistsInApp("Test Role", appId)).thenReturn(false);
+        // The validator should add the error
+        bindingResult.rejectValue("ccmsCode", "role.ccmsCode.required.when.legacy.sync",
+                "Enter a CCMS code for roles that sync with CCMS.");
+        List<AppDto> apps = createMockApps();
+        when(appService.getAllLaaApps()).thenReturn(apps);
+
+        // Act
+        MockHttpSession session = new MockHttpSession();
+        String result = adminController.processRoleCreation(roleCreationDto, bindingResult, model, session);
+
+        // Assert
+        assertEquals("silas-administration/create-role", result);
+        assertThat(bindingResult.hasErrors()).isTrue();
+        assertThat(bindingResult.hasFieldErrors("ccmsCode")).isTrue();
+        assertThat(model.getAttribute("apps")).isEqualTo(apps);
+    }
+
+    @Test
+    void testProcessRoleCreation_WithCcmsCodeAndLegacySyncFalse_ValidationFails() {
+        // Arrange
+        UUID appId = UUID.randomUUID();
+        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
+                .name("Test Role")
+                .description("Test Description")
+                .parentAppId(appId)
+                .userTypeRestriction(List.of(UserType.INTERNAL))
+                .legacySync(false)  // Legacy sync is false
+                .ccmsCode("CCMS001")  // But CCMS code is provided
+                .build();
+
+        BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
+
+        when(appRoleService.isRoleNameExistsInApp("Test Role", appId)).thenReturn(false);
+        // The validator should add the error
+        bindingResult.rejectValue("legacySync", "role.legacy.sync.required.when.ccms.code",
+                "This role must have legacy sync enabled when a CCMS code is provided.");
+
+        List<AppDto> apps = createMockApps();
+        when(appService.getAllLaaApps()).thenReturn(apps);
+
+        // Act
+        MockHttpSession session = new MockHttpSession();
+        String result = adminController.processRoleCreation(roleCreationDto, bindingResult, model, session);
+
+        // Assert
+        assertEquals("silas-administration/create-role", result);
+        assertThat(bindingResult.hasErrors()).isTrue();
+        assertThat(bindingResult.hasFieldErrors("legacySync")).isTrue();
+        assertThat(model.getAttribute("apps")).isEqualTo(apps);
+    }
+
+    @Test
+    void testProcessRoleCreation_WithLegacySyncTrueAndCcmsCodeProvided_Succeeds() {
         // Arrange
         MockHttpSession session = new MockHttpSession();
         UUID appId = UUID.randomUUID();
         RoleCreationDto roleCreationDto = RoleCreationDto.builder()
-                .name(null)  // Null role name
-                .description("Valid Description")
+                .name("Test Role")
+                .description("Test Description")
                 .parentAppId(appId)
+                .userTypeRestriction(List.of(UserType.INTERNAL))
+                .legacySync(true)
+                .ccmsCode("CCMS001")
                 .build();
 
         BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
 
         RoleCreationDto enrichedDto = RoleCreationDto.builder()
-                .name(null)
-                .description("Valid Description")
+                .name("Test Role")
+                .description("Test Description")
                 .parentAppId(appId)
+                .userTypeRestriction(List.of(UserType.INTERNAL))
+                .legacySync(true)
+                .ccmsCode("CCMS001")
                 .ordinal(1)
+                .authzRole(false)
                 .build();
 
+        when(appRoleService.isRoleNameExistsInApp("Test Role", appId)).thenReturn(false);
+        // Validator finds no errors
         when(appRoleService.enrichRoleCreationDto(roleCreationDto)).thenReturn(enrichedDto);
 
         // Act
@@ -1380,6 +1456,7 @@ class AdminControllerTest {
 
         // Assert
         assertEquals("redirect:/admin/silas-administration/roles/create/check-your-answers", result);
+        assertThat(bindingResult.hasErrors()).isFalse();
         assertThat(session.getAttribute("roleCreationDto")).isEqualTo(enrichedDto);
     }
 
@@ -1907,7 +1984,7 @@ class AdminControllerTest {
             String view = adminController.deleteAppRoleGet(model, redirectAttributes, mockHttpSession);
 
             // Assert
-            assertThat(view).isEqualTo("redirect:/admin/silas-administration#roles");
+            assertThat(view).isEqualTo("redirect:/admin/silas-administration?tab=roles");
             assertThat(redirectAttributes.getFlashAttributes().get("appRolesErrorMessage"))
                     .isEqualTo("Please select an application to delete its roles");
 
@@ -1961,7 +2038,7 @@ class AdminControllerTest {
             String view = adminController.deleteAppRoleGet(model, redirectAttributes, mockHttpSession);
 
             // Assert
-            assertThat(view).isEqualTo("redirect:/admin/silas-administration#roles");
+            assertThat(view).isEqualTo("redirect:/admin/silas-administration?tab=roles");
             assertThat(redirectAttributes.getFlashAttributes().get("appRolesErrorMessage"))
                     .isEqualTo("Please select an application to delete its roles");
             verifyNoInteractions(appRoleService);

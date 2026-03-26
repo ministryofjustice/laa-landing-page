@@ -14,8 +14,6 @@ class ConvertToMultiFirmAuditEventTest {
         // Given
         UUID adminUserId = UUID.randomUUID();
         UUID convertedUserId = UUID.randomUUID();
-        final String convertedUserEmail = "user@example.com";
-        final String convertedUserName = "John Doe";
 
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("Admin User");
@@ -23,23 +21,18 @@ class ConvertToMultiFirmAuditEventTest {
 
         EntraUserDto convertedUser = new EntraUserDto();
         convertedUser.setId(convertedUserId.toString());
-        convertedUser.setEmail(convertedUserEmail);
-        convertedUser.setFullName(convertedUserName);
+        String entraOid = UUID.randomUUID().toString();
+        convertedUser.setEntraOid(entraOid);
 
         // When
-        ConvertToMultiFirmAuditEvent event = new ConvertToMultiFirmAuditEvent(currentUserDto, convertedUser);
+        ConvertToMultiFirmAuditEvent event = new ConvertToMultiFirmAuditEvent(currentUserDto, convertedUser, adminUserId.toString());
 
         // Then
         assertThat(event.getUserId()).isEqualTo(adminUserId);
-        assertThat(event.getUserName()).isEqualTo("Admin User");
-        assertThat(event.getConvertedUserId()).isEqualTo(convertedUserId);
-        assertThat(event.getConvertedUserEmail()).isEqualTo(convertedUserEmail);
-        assertThat(event.getConvertedUserName()).isEqualTo(convertedUserName);
+        assertThat(event.getConvertedUserId()).isEqualTo(adminUserId.toString());
         assertThat(event.getEventType()).isEqualTo(EventType.UPDATE_USER);
-        assertThat(event.getDescription()).contains("User converted to multi-firm by Admin User");
-        assertThat(event.getDescription()).contains("converted user id " + convertedUserId.toString());
-        assertThat(event.getDescription()).contains(convertedUserEmail);
-        assertThat(event.getDescription()).contains(convertedUserName);
+        assertThat(event.getDescription()).contains("converted user entra oid " + entraOid);
+        assertThat(event.getDescription()).contains("user id " + adminUserId);
         assertThat(event.getCreatedDate()).isNotNull();
     }
 }

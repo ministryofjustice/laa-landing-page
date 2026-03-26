@@ -18,11 +18,12 @@ class AddUserProfileAuditEventTest {
         UUID firmId = UUID.randomUUID();
         String field = "role";
         String changeString = "Admin";
+        String entraOid = UUID.randomUUID().toString();
 
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setUserId(userId);
         currentUserDto.setName(userName);
-        EntraUserDto entraUserDto = EntraUserDto.builder().id(UUID.randomUUID().toString()).email("test.user@example.com").build();
+        EntraUserDto entraUserDto = EntraUserDto.builder().id(UUID.randomUUID().toString()).entraOid(entraOid).email("test.user@example.com").build();
 
         // Act
         AddUserProfileAuditEvent event = new AddUserProfileAuditEvent(
@@ -39,7 +40,7 @@ class AddUserProfileAuditEventTest {
 
         String expectedDescription = String.format(
                 "New user profile with id %s added to user id %s, for the firm %s, added by %s and added %s (%s)",
-                newUserProfileId, entraUserDto.getId(), firmId, userId, field, changeString
+                newUserProfileId, entraUserDto.getEntraOid(), firmId, userId, field, changeString
         );
         assertThat(event.getDescription()).isEqualTo(expectedDescription);
     }

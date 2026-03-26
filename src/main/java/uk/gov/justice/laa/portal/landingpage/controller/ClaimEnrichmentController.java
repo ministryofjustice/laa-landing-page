@@ -72,10 +72,10 @@ public class ClaimEnrichmentController {
     public ResponseEntity<ClaimEnrichmentResponse> enrichClaims(
             @Valid @RequestBody ClaimEnrichmentRequest request) {
         String userId = request.getData().getAuthenticationContext().getUser().getId();
-        log.info("Received claim enrichment request for user: {}", userId);
+        log.info("Received claim enrichment request for user with entra oid: {}", userId);
 
         ClaimEnrichmentResponse response = claimEnrichmentService.enrichClaim(request);
-        log.info("Successfully processed claim enrichment, response data: {}", response);
+        log.info("Successfully processed claim enrichment for user with entra oid: {}", userId);
 
         return ResponseEntity.ok(response);
     }
