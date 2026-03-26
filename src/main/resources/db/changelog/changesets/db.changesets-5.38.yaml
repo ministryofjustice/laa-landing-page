@@ -168,3 +168,47 @@ databaseChangeLog:
         - sql:
             dbms: postgresql
             sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'Manage Your Users'), (SELECT id FROM app_role WHERE name = 'Global Admin'))"
+  - changeSet:
+      id: 1739293200001-5-update-silas-admin-roles
+      author: leonardopalmeiro
+      changes:
+        # update SiLAS Administration on role_permission table
+        - sql:
+            dbms: postgresql
+            sql: "UPDATE role_permission set app_role_id = (SELECT id FROM app_role WHERE name = 'SiLAS Administration') where app_role_id = (SELECT id FROM app_role WHERE name = 'SILAS System Administration')"
+        # update SILAS System Administration to SiLAS Administration
+        - sql:
+            dbms: postgresql
+            sql: "UPDATE user_profile_app_role set app_role_id = (SELECT id FROM app_role WHERE name = 'SiLAS Administration') where app_role_id = (SELECT id FROM app_role WHERE name = 'SILAS System Administration')"
+        # remove role assignment of SILAS System Administration
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_assignment WHERE assignable_role_id = (SELECT id FROM app_role WHERE name = 'SILAS System Administration')"
+        # remove unused role
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM app_role where name = 'SILAS System Administration'"
+  - changeSet:
+      id: 1739293200001-5-assign-view-firm-directory-to-new-role-created
+      author: leonardopalmeiro
+      changes:
+        # Insert the VIEW_FIRM_DIRECTORY permission into all user profiles that already have the VIEW_FIRM_DIRECTORY permission.
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO user_profile_app_role (app_role_id, user_profile_id) SELECT rp.app_role_id, upar.user_profile_id FROM user_profile_app_role upar JOIN role_permission rp ON rp.permission = 'VIEW_FIRM_DIRECTORY' WHERE upar.app_role_id = rp.app_role_id AND upar.user_profile_id IS NOT NULL;"
+        # remove the VIEW_FIRM_DIRECTORY PERMISSION
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'VIEW_FIRM_DIRECTORY'"
+  - changeSet:
+      id: 1739293200001-6-assign-view-audit-table-to-new-role-created
+      author: leonardopalmeiro
+      changes:
+        # Insert the VIEW_AUDIT_TABLE permission into all user profiles that already have the VIEW_FIRM_DIRECTORY permission.
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO user_profile_app_role (app_role_id, user_profile_id) SELECT rp.app_role_id, upar.user_profile_id FROM user_profile_app_role upar JOIN role_permission rp ON rp.permission = 'VIEW_AUDIT_TABLE' WHERE upar.app_role_id = rp.app_role_id AND upar.user_profile_id IS NOT NULL;"
+        # remove the VIEW_AUDIT_TABLE PERMISSION
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'VIEW_AUDIT_TABLE'"

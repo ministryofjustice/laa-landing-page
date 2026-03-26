@@ -96,9 +96,8 @@ public class LoginController {
                 model.addAttribute("lastLogin", "N/A");
                 model.addAttribute("laaApplications", userSessionData.getLaaApplications());
                 boolean isAdmin = false;
-                boolean canViewAuditTable = false;
-                boolean hasSilasAdminRole = false;
-                boolean canViewFirmDirectory = false;
+
+
                 boolean isProviderAdmin = false;
                 List<AppDto> editableApps = new ArrayList<>();
                 if (userSessionData.getUser() != null) {
@@ -106,13 +105,8 @@ public class LoginController {
                             .getUserPermissionsByUserId(userSessionData.getUser().getId());
                     isAdmin = permissions.contains(Permission.VIEW_EXTERNAL_USER)
                             || permissions.contains(Permission.VIEW_INTERNAL_USER);
-                    canViewAuditTable = permissions.contains(Permission.VIEW_AUDIT_TABLE);
                     // Check if user has SiLAS Administration role
                     EntraUser currentUser = loginService.getCurrentEntraUser(authentication);
-                    hasSilasAdminRole = currentUser != null
-                            && AccessControlService.userHasAuthzRole(currentUser, AuthzRole.SILAS_ADMINISTRATION.getRoleName());
-                    canViewFirmDirectory = currentUser != null
-                            && AccessControlService.userHasAnyGivenPermissions(currentUser, Permission.VIEW_FIRM_DIRECTORY);
                     isProviderAdmin = currentUser != null
                             && AccessControlService.userHasAuthzRole(currentUser,
                             AuthzRole.FIRM_USER_MANAGER.getRoleName());
@@ -128,9 +122,6 @@ public class LoginController {
                 }
                 model.addAttribute("apps", editableApps);
                 model.addAttribute("isAdminUser", isAdmin);
-                model.addAttribute("canViewAuditTable", canViewAuditTable);
-                model.addAttribute("canViewFirmDirectory", canViewFirmDirectory);
-                model.addAttribute("hasSilasAdminRole", hasSilasAdminRole);
                 model.addAttribute("isProviderAdmin", isProviderAdmin);
 
                 // Check if user has no roles assigned and determine user type for custom
