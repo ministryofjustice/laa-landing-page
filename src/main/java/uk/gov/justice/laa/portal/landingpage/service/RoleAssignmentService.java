@@ -103,7 +103,7 @@ public class RoleAssignmentService {
         }
     }
 
-    public boolean canUserSeeRolesForApp(UserProfile userProfile, AppDto appDto) {
+    public boolean canUserMainScreenApps(UserProfile userProfile, AppDto appDto) {
         Optional<App> appOptional = appRepository.findById(UUID.fromString(appDto.getId()));
         if (appOptional.isPresent()) {
             App app = appOptional.get();

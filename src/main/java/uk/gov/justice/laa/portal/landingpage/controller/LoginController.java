@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -99,6 +100,7 @@ public class LoginController {
                 boolean hasSilasAdminRole = false;
                 boolean canViewFirmDirectory = false;
                 boolean isProviderAdmin = false;
+                List<AppDto> editableApps = new ArrayList<>();
                 if (userSessionData.getUser() != null) {
                     Set<Permission> permissions = userService
                             .getUserPermissionsByUserId(userSessionData.getUser().getId());
@@ -115,15 +117,15 @@ public class LoginController {
                             && AccessControlService.userHasAuthzRole(currentUser,
                             AuthzRole.FIRM_USER_MANAGER.getRoleName());
 
+                    List<AppDto> apps = appService.getAllActiveAuthzApps();
+                    UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
+
+                    editableApps = apps.stream()
+                            .filter(AppDto::isEnabled)
+                            .filter(app -> roleAssignmentService.canUserMainScreenApps(currentUserProfile, app))
+                            .toList();
+
                 }
-                List<AppDto> apps = appService.getAllActiveAuthzApps();
-                UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
-
-                List<AppDto> editableApps = apps.stream()
-                        .filter(AppDto::isEnabled)
-                        .filter(app -> roleAssignmentService.canUserSeeRolesForApp(currentUserProfile, app))
-                        .toList();
-
                 model.addAttribute("apps", editableApps);
                 model.addAttribute("isAdminUser", isAdmin);
                 model.addAttribute("canViewAuditTable", canViewAuditTable);
