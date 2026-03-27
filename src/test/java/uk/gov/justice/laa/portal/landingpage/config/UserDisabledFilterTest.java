@@ -57,7 +57,7 @@ class UserDisabledFilterTest {
         SecurityContextHolder.setContext(securityContext);
     }
 
-    private OAuth2AuthenticationToken buildOAuth2Token(String userId) {
+    private OAuth2AuthenticationToken buildAuthToken(String userId) {
         OAuth2User oauth2User = new DefaultOAuth2User(
             Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")),
             Collections.singletonMap("sub", userId),
@@ -110,7 +110,7 @@ class UserDisabledFilterTest {
         @Test
         void shouldBlockAccessForDisabledUser() throws Exception {
             UUID userId = UUID.randomUUID();
-            OAuth2AuthenticationToken auth = buildOAuth2Token(userId.toString());
+            OAuth2AuthenticationToken auth = buildAuthToken(userId.toString());
             when(securityContext.getAuthentication()).thenReturn(auth);
 
             CurrentUserDto currentUser = new CurrentUserDto();
@@ -128,7 +128,7 @@ class UserDisabledFilterTest {
         @Test
         void shouldAllowAccessForEnabledUser() throws Exception {
             UUID userId = UUID.randomUUID();
-            OAuth2AuthenticationToken auth = buildOAuth2Token(userId.toString());
+            OAuth2AuthenticationToken auth = buildAuthToken(userId.toString());
             when(securityContext.getAuthentication()).thenReturn(auth);
 
             CurrentUserDto currentUser = new CurrentUserDto();
@@ -148,7 +148,7 @@ class UserDisabledFilterTest {
 
         @Test
         void shouldAllowAccessWhenCurrentUserDtoIsNull() throws Exception {
-            OAuth2AuthenticationToken auth = buildOAuth2Token("some-user");
+            OAuth2AuthenticationToken auth = buildAuthToken("some-user");
             when(securityContext.getAuthentication()).thenReturn(auth);
             when(loginService.getCurrentUser(auth)).thenReturn(null);
 
