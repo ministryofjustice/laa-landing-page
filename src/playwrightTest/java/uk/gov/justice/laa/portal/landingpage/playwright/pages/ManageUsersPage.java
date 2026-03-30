@@ -3,7 +3,6 @@ package uk.gov.justice.laa.portal.landingpage.playwright.pages;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -151,8 +150,11 @@ public class ManageUsersPage {
     public void clickAndConfirmSignOut() {
         signOutLink.click();
         signOutConfirmButton.click();
-        var signedOutPage = page.getByText("You're now signed out of your account");
-        assertNotNull(signedOutPage, "Failed to find signed out page");
+        page.waitForURL("**/logout-success");
+        page.getByText("You're now signed out of your account")
+                .waitFor(new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.VISIBLE)
+                        .setTimeout(5000));
     }
 
     public void clickManageUser() {
@@ -196,6 +198,7 @@ public class ManageUsersPage {
         Locator next = page.locator("a.govuk-link:has-text('Next page')");
         if (next.isVisible()) {
             next.click();
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         }
     }
 

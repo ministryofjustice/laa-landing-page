@@ -128,9 +128,8 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPageReLogin.clickAndConfirmSignOut();
 
         //Failed Login with deleted user
-        ManageUsersPage manageUsersPageDeletedUser = loginAndGetManageUsersPage(email);
-        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-        manageUsersPageDeletedUser.verifySignInError();
+        loginAs(email);
+        assertThat(page.getByText("Sorry, but we're having trouble signing you in.")).isVisible();
     }
 
     @Test

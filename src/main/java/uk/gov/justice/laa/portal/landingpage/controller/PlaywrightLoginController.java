@@ -1,15 +1,18 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.io.IOException;
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.parameters.P;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
@@ -18,23 +21,17 @@ import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.oidc.OidcIdToken;
 import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
-import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
-import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.servlet.view.RedirectView;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
-
-import java.time.Instant;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -48,16 +45,24 @@ public class PlaywrightLoginController {
     private final HttpSessionOAuth2AuthorizedClientRepository authorizedClientRepository;
 
     @GetMapping("/playwright/login")
-    public RedirectView playwrightLogin(String email, HttpServletRequest request, HttpServletResponse response) {
+    public void playwrightLogin(String email, HttpServletRequest request, HttpServletResponse response) throws IOException {
         String environmentName = System.getenv("ENV_NAME");
         // This authentication should only happen during playwright testing (local or in the build pipeline)
         // So if an environment name is set, don't do anything.
         if (environmentName == null) {
-            authenticateTestUser(email, request, response);
+            try {
+                authenticateTestUser(email, request, response);
+                response.sendRedirect("/home");
+            } catch (NoSuchElementException e) {
+                log.info("Playwright login: user not found for email {}", email);
+                response.setContentType("text/html;charset=UTF-8");
+                response.setStatus(HttpServletResponse.SC_OK);
+                response.getWriter().write("<html><body><p>Sorry, but we're having trouble signing you in.</p></body></html>");
+            }
         } else {
             log.warn("There was an attempt to access playwright authentication in a deployed environment. This should not be possible, please review.");
+            response.sendRedirect("/home");
         }
-        return new RedirectView("/home");
     }
 
     public void authenticateTestUser(String email, HttpServletRequest request, HttpServletResponse response) {
