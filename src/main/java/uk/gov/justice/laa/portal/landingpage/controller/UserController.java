@@ -1267,7 +1267,9 @@ public class UserController {
 
         Model modelFromSession = (Model) session.getAttribute("editProfileUserRolesModel");
         @SuppressWarnings("unchecked")
-        List<AppRoleViewModel> rolesFromSession = (List<AppRoleViewModel>) modelFromSession.getAttribute("roles");
+        List<AppRoleViewModel> rolesFromSession = modelFromSession != null
+                ? (List<AppRoleViewModel>) modelFromSession.getAttribute("roles")
+                : null;
         boolean noRolesAvailable = rolesFromSession == null || rolesFromSession.isEmpty();
         if (result.hasErrors() && !noRolesAvailable) {
             final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
