@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.springframework.security.core.Authentication;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,6 +18,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import org.mockito.Mock;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -42,6 +45,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AuditExportService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
+import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.TechServicesClient;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
@@ -79,6 +83,12 @@ class AuditControllerTest {
     @Mock
     private TechServicesClient techServicesClient;
 
+    @Mock
+    private FirmService firmService;
+
+    @Mock
+    private Authentication mockAuthentication;
+
     private PaginatedAuditUsers mockPaginatedUsers;
     private List<AppRoleDto> mockSilasRoles;
     private Model model;
@@ -86,8 +96,11 @@ class AuditControllerTest {
     @BeforeEach
     void setUp() {
         auditController = new AuditController(userService, loginService, eventService, accessControlService,
-                auditExportService, firmRepository, authenticatedUser, techServicesClient);
+                auditExportService, firmRepository, firmService, authenticatedUser, techServicesClient);
         model = new ExtendedModelMap();
+        
+        // Setup default security mocks for all tests - assume user can see all users
+        lenient().when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
 
         // Setup mock audit users
         AuditUserDto user1 = AuditUserDto.builder()
@@ -128,7 +141,7 @@ class AuditControllerTest {
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
 
         // When
-        String viewName = auditController.displayAuditTable(criteria, model);
+        String viewName = auditController.displayAuditTable(criteria, model, mockAuthentication);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
@@ -158,7 +171,7 @@ class AuditControllerTest {
         criteria.setSearch("john");
 
         // When
-        String viewName = auditController.displayAuditTable(criteria, model);
+        String viewName = auditController.displayAuditTable(criteria, model, mockAuthentication);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
@@ -178,7 +191,7 @@ class AuditControllerTest {
         criteria.setSelectedFirmId(firmId.toString());
 
         // When
-        String viewName = auditController.displayAuditTable(criteria, model);
+        String viewName = auditController.displayAuditTable(criteria, model, mockAuthentication);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
@@ -196,7 +209,7 @@ class AuditControllerTest {
         criteria.setSelectedFirmId("invalid-uuid");
 
         // When
-        String viewName = auditController.displayAuditTable(criteria, model);
+        String viewName = auditController.displayAuditTable(criteria, model, mockAuthentication);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
@@ -214,7 +227,7 @@ class AuditControllerTest {
         criteria.setSilasRole("Global Admin");
 
         // When
-        String viewName = auditController.displayAuditTable(criteria, model);
+        String viewName = auditController.displayAuditTable(criteria, model, mockAuthentication);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
@@ -233,7 +246,7 @@ class AuditControllerTest {
         criteria.setSize(25);
 
         // When
-        String viewName = auditController.displayAuditTable(criteria, model);
+        String viewName = auditController.displayAuditTable(criteria, model, mockAuthentication);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
@@ -252,7 +265,7 @@ class AuditControllerTest {
         criteria.setPage(2);
 
         // When
-        String viewName = auditController.displayAuditTable(criteria, model);
+        String viewName = auditController.displayAuditTable(criteria, model, mockAuthentication);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
@@ -273,7 +286,7 @@ class AuditControllerTest {
         criteria.setDirection("desc");
 
         // When
-        String viewName = auditController.displayAuditTable(criteria, model);
+        String viewName = auditController.displayAuditTable(criteria, model, mockAuthentication);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
@@ -300,7 +313,7 @@ class AuditControllerTest {
         criteria.setDirection("desc");
 
         // When
-        String viewName = auditController.displayAuditTable(criteria, model);
+        String viewName = auditController.displayAuditTable(criteria, model, mockAuthentication);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
@@ -333,7 +346,7 @@ class AuditControllerTest {
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
 
         // When
-        String viewName = auditController.displayAuditTable(criteria, model);
+        String viewName = auditController.displayAuditTable(criteria, model, mockAuthentication);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
@@ -353,7 +366,7 @@ class AuditControllerTest {
         criteria.setFirmSearch("Test Firm");
 
         // When
-        String viewName = auditController.displayAuditTable(criteria, model);
+        String viewName = auditController.displayAuditTable(criteria, model, mockAuthentication);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
@@ -371,7 +384,7 @@ class AuditControllerTest {
         criteria.setSelectedAppId(appId.toString());
 
         // When
-        String viewName = auditController.displayAuditTable(criteria, model);
+        String viewName = auditController.displayAuditTable(criteria, model, mockAuthentication);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
@@ -392,7 +405,7 @@ class AuditControllerTest {
         criteria.setSelectedAppId(selectedAppId);
 
         // When
-        String viewName = auditController.displayAuditTable(criteria, model);
+        String viewName = auditController.displayAuditTable(criteria, model, mockAuthentication);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
@@ -417,7 +430,7 @@ class AuditControllerTest {
         criteria.setSelectedUserType(userType);
 
         // When
-        String viewName = auditController.displayAuditTable(criteria, model);
+        String viewName = auditController.displayAuditTable(criteria, model, mockAuthentication);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
@@ -440,7 +453,7 @@ class AuditControllerTest {
         criteria.setSelectedUserType(null);
 
         // When
-        String viewName = auditController.displayAuditTable(criteria, model);
+        String viewName = auditController.displayAuditTable(criteria, model, mockAuthentication);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
@@ -459,7 +472,7 @@ class AuditControllerTest {
         criteria.setSelectedUserType(UserTypeForm.INTERNAL.name());
 
         // When
-        String viewName = auditController.displayAuditTable(criteria, model);
+        String viewName = auditController.displayAuditTable(criteria, model, mockAuthentication);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
@@ -480,7 +493,7 @@ class AuditControllerTest {
         criteria.setSelectedUserType(UserTypeForm.MULTI_FIRM.name());
 
         // When
-        String viewName = auditController.displayAuditTable(criteria, model);
+        String viewName = auditController.displayAuditTable(criteria, model, mockAuthentication);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
@@ -501,7 +514,7 @@ class AuditControllerTest {
         criteria.setSelectedAppId(selectedAppId);
 
         // When
-        String viewName = auditController.displayAuditTable(criteria, model);
+        String viewName = auditController.displayAuditTable(criteria, model, mockAuthentication);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
