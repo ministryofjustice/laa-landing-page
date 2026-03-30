@@ -1266,10 +1266,11 @@ public class UserController {
             HttpSession session, Model model) {
 
         Model modelFromSession = (Model) session.getAttribute("editProfileUserRolesModel");
+        if (modelFromSession == null) {
+            return "redirect:/admin/users/edit/" + id + "/roles?selectedAppIndex=" + selectedAppIndex;
+        }
         @SuppressWarnings("unchecked")
-        List<AppRoleViewModel> rolesFromSession = modelFromSession != null
-                ? (List<AppRoleViewModel>) modelFromSession.getAttribute("roles")
-                : null;
+        List<AppRoleViewModel> rolesFromSession = (List<AppRoleViewModel>) modelFromSession.getAttribute("roles");
         boolean noRolesAvailable = rolesFromSession == null || rolesFromSession.isEmpty();
         if (result.hasErrors() && !noRolesAvailable) {
             final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();

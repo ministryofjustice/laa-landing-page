@@ -17,9 +17,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
-
 import org.junit.jupiter.api.Assertions;
-
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -42,10 +40,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static uk.gov.justice.laa.portal.landingpage.utils.UserRoleType.EXTERNAL_USER_ADMIN;
-import static uk.gov.justice.laa.portal.landingpage.utils.UserRoleType.FIRM_USER_MANAGER;
-import static uk.gov.justice.laa.portal.landingpage.utils.UserRoleType.GLOBAL_ADMIN;
-
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -112,18 +106,21 @@ import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
-import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
+import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
+import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
-import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
+import static uk.gov.justice.laa.portal.landingpage.utils.UserRoleType.EXTERNAL_USER_ADMIN;
+import static uk.gov.justice.laa.portal.landingpage.utils.UserRoleType.FIRM_USER_MANAGER;
+import static uk.gov.justice.laa.portal.landingpage.utils.UserRoleType.GLOBAL_ADMIN;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.DisableUserReasonViewModel;
 
@@ -2868,6 +2865,68 @@ class UserControllerTest {
                 .getAttribute("editUserAllSelectedRoles");
         assertThat(allSelectedRolesByPage).hasSize(2);
         assertThat(allSelectedRolesByPage.get(1).getFirst()).isEqualTo("role3");
+    }
+
+    @Test
+    void updateUserRoles_whenNoRolesAvailableAndValidationErrors_shouldProceedToNextApp() {
+        // Given - no roles available for this app (empty list in session)
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(true);
+
+        Model modelFromSession = new ExtendedModelMap();
+        modelFromSession.addAttribute("roles", Collections.emptyList());
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("editProfileUserRolesModel", modelFromSession);
+        testSession.setAttribute("selectedApps", List.of("app1", "app2"));
+
+        String userId = "550e8400-e29b-41d4-a716-446655440000";
+        RolesForm rolesForm = new RolesForm();
+
+        // When
+        String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 0, testSession, model);
+
+        // Then - should skip validation and proceed to next app rather than re-rendering the empty form
+        assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/roles?selectedAppIndex=1");
+    }
+
+    @Test
+    void updateUserRoles_whenNoRolesAvailableOnLastApp_shouldRedirectToCheckAnswer() {
+        // Given - no roles available for last app (empty list in session)
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+        when(bindingResult.hasErrors()).thenReturn(true);
+
+        Model modelFromSession = new ExtendedModelMap();
+        modelFromSession.addAttribute("roles", Collections.emptyList());
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("editProfileUserRolesModel", modelFromSession);
+        testSession.setAttribute("selectedApps", List.of("app1"));
+
+        String userId = "550e8400-e29b-41d4-a716-446655440000";
+        RolesForm rolesForm = new RolesForm();
+
+        // When
+        String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 0, testSession, model);
+
+        // Then - last app, so should redirect to check-answer
+        assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/roles-check-answer");
+    }
+
+    @Test
+    void updateUserRoles_whenSessionModelMissingAndValidationErrors_shouldProceedRatherThanThrow() {
+        // Given - session model is absent entirely (e.g. session expired or user posted directly)
+        String userId = "550e8400-e29b-41d4-a716-446655440000";
+        RolesForm rolesForm = new RolesForm();
+
+        BindingResult bindingResult = Mockito.mock(BindingResult.class);
+
+        MockHttpSession testSession = new MockHttpSession(); // no editProfileUserRolesModel in session
+        testSession.setAttribute("selectedApps", List.of("app1", "app2"));
+
+        // When
+        String view = userController.updateUserRoles(userId, rolesForm, bindingResult, 0, testSession, model);
+
+        // Then - redirects back to GET to rebuild the session model safely
+        assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/roles?selectedAppIndex=0");
     }
 
     @Test
