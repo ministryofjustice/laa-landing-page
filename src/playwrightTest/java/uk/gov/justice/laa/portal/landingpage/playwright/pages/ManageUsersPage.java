@@ -200,6 +200,7 @@ public class ManageUsersPage {
     }
 
     public void clickExternalUserLink(String user) {
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         Locator externalUserLink = page
                 .locator("a.govuk-link[href*='/admin/users/manage/']")
                 .getByText(user);
@@ -260,6 +261,10 @@ public class ManageUsersPage {
     }
 
     public void verifyUserDetailsPopulated(String email, String firstName, String lastName, String firmName, String multiFirmAccess) {
+        page.locator(".govuk-summary-list__row:has-text(\"Email\") .govuk-summary-list__value")
+                .waitFor(new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.VISIBLE)
+                        .setTimeout(5000));
         assertRow("Email", email);
         assertRow("First name", firstName);
         assertRow("Last name", lastName);
@@ -360,7 +365,11 @@ public class ManageUsersPage {
 
     // SignIn Error
     public void verifySignInError() {
-        assertTrue(page.getByText("Sorry, but we’re having trouble signing you in.").isVisible());
+        Locator errorText = page.getByText("Sorry, but we're having trouble signing you in.");
+        errorText.waitFor(new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.VISIBLE)
+                .setTimeout(10000));
+        assertTrue(errorText.isVisible());
     }
 
     // Search
