@@ -7808,6 +7808,7 @@ class UserServiceTest {
 
 
         }
+
         @Test
         void getAuditUserDetail_withUserNotFound_throwsException() {
             // Given
