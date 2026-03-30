@@ -2818,8 +2818,14 @@ class UserControllerTest {
         RolesForm rolesForm = new RolesForm();
         rolesForm.setRoles(List.of("role1", "role2"));
 
+        Model sessionModel = new ExtendedModelMap();
+        AppRoleViewModel role = new AppRoleViewModel();
+        role.setId("role1");
+        sessionModel.addAttribute("roles", List.of(role));
+
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("selectedApps", List.of("app1", "app2"));
+        testSession.setAttribute("editProfileUserRolesModel", sessionModel);
 
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
 
@@ -2844,8 +2850,14 @@ class UserControllerTest {
         RolesForm rolesForm = new RolesForm();
         rolesForm.setRoles(List.of("role3"));
 
+        Model sessionModel = new ExtendedModelMap();
+        AppRoleViewModel role = new AppRoleViewModel();
+        role.setId("role3");
+        sessionModel.addAttribute("roles", List.of(role));
+
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("selectedApps", List.of("app1", "app2"));
+        testSession.setAttribute("editProfileUserRolesModel", sessionModel);
 
         // Simulate roles for previous apps already selected
         Map<Integer, List<String>> existingRoles = new HashMap<>();
