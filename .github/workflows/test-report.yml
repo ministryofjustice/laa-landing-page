@@ -44,16 +44,50 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           AZURE_TENANT_ID: ${{ secrets.TEST_TENANT_ID }}
 
-      - name: Add coverage to PR
-        id: jacoco
-        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # 3.0
-        with:
-          path: |
-            ${{ github.workspace }}/**/build/reports/jacoco/**/jacocoTestReport.xml
-          token: ${{ secrets.GITHUB_TOKEN }}
-          report-title: Code Coverage
-          reporter: java-junit
-          name: Code Coverage
+      - name: Parse JaCoCo and Comment on PR
+        env:
+          # The gh CLI automatically looks for this token to authenticate
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # We grab the PR number directly from the webhook payload
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # 1. Parse the XML and generate a markdown file using built-in Python
+          python3 -c "
+          import xml.etree.ElementTree as ET, os
+          
+          # Adjust this path if your xml is located elsewhere
+          tree = ET.parse('build/reports/jacoco/test/jacocoTestReport.xml')
+          counters = [c for c in tree.getroot().findall('counter') if c.get('type') == 'INSTRUCTION']
+          
+          if counters:
+              missed = int(counters[0].get('missed'))
+              covered = int(counters[0].get('covered'))
+              total = missed + covered
+              pct = (covered / total) * 100 if total > 0 else 0
+              
+              comment_body = f'### 📊 JaCoCo Code Coverage: **{pct:.2f}%**\n'
+              
+              # Write to the native GitHub Job Summary UI as a backup
+              with open(os.environ.get('GITHUB_STEP_SUMMARY', 'summary.md'), 'a') as f:
+                  f.write(comment_body)
+                  
+              # Save it to a temporary text file for the GitHub CLI to read
+              with open('coverage_comment.md', 'w') as f:
+                  f.write(comment_body)
+                  
+              # Fail the pipeline if coverage drops below your threshold (e.g., 80%)
+              if pct < 80.0:
+                  print(f'::error::Coverage ({pct:.2f}%) is below the 80% threshold.')
+                  exit(1)
+          "
+
+          # 2. Use the native GitHub CLI to post the comment to the PR
+          if [ -n "$PR_NUMBER" ]; then
+            echo "Posting comment to PR #$PR_NUMBER..."
+            gh pr comment "$PR_NUMBER" --body-file coverage_comment.md
+          else
+            echo "Not running on a Pull Request. Skipping PR comment."
+          fi
         
       - name: Fail PR if overall coverage is less than 85%
         if: ${{ steps.jacoco.outputs.coverage-overall < 85 }}
