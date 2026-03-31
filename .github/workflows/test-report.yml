@@ -48,43 +48,88 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_REF: ${{ github.base_ref }}
         run: |
-          # 1. Parse the XML and generate a markdown file using built-in Python
+          # 1. Fetch the base branch so we can calculate which files changed
+          git fetch origin "$BASE_REF" --depth=1
+          
+          # 2. Get a list of changed Java/Kotlin files
+          export CHANGED_FILES=$(git diff --name-only origin/$BASE_REF HEAD | grep -E '\.(java|kt)$' || true)
+
+          # 3. Parse the XML and generate a rich markdown report
           python3 -c "
           import xml.etree.ElementTree as ET, os
           
           tree = ET.parse('build/reports/jacoco/test/jacocoTestReport.xml')
-          counters = [c for c in tree.getroot().findall('counter') if c.get('type') == 'INSTRUCTION']
+          root = tree.getroot()
           
-          if counters:
-              missed = int(counters[0].get('missed'))
-              covered = int(counters[0].get('covered'))
+          # --- OVERALL COVERAGE ---
+          overall_counters = [c for c in root.findall('counter') if c.get('type') == 'INSTRUCTION']
+          if overall_counters:
+              missed = int(overall_counters[0].get('missed'))
+              covered = int(overall_counters[0].get('covered'))
               total = missed + covered
-              pct = (covered / total) * 100 if total > 0 else 0
+              overall_pct = (covered / total) * 100 if total > 0 else 0
+          else:
+              overall_pct = 0.0
+
+          overall_icon = '🟢' if overall_pct >= 85 else ('🟡' if overall_pct >= 70 else '🔴')
+          markdown = f'### {overall_icon} JaCoCo Code Coverage: **{overall_pct:.2f}%**\n\n'
+
+          # --- CHANGED FILES COVERAGE ---
+          changed_files_raw = os.environ.get('CHANGED_FILES', '').split()
+          # Clean paths to match JaCoCo's internal package/file structure
+          changed_files = [f.split('/java/')[-1].split('/kotlin/')[-1] for f in changed_files_raw if '/java/' in f or '/kotlin/' in f]
+          
+          if changed_files:
+              markdown += '#### Changed Files\n'
+              markdown += '| File | Coverage | Missed Instructions |\n'
+              markdown += '|------|----------|---------------------|\n'
               
-              comment_body = f'### 📊 JaCoCo Code Coverage: **{pct:.2f}%**\n'
+              file_found = False
+              for pkg in root.findall('package'):
+                  pkg_name = pkg.get('name')
+                  for sf in pkg.findall('sourcefile'):
+                      sf_name = sf.get('name')
+                      full_path = f'{pkg_name}/{sf_name}'
+                      
+                      # If this file was modified in the PR
+                      if any(cf.endswith(full_path) for cf in changed_files):
+                          file_found = True
+                          counters = [c for c in sf.findall('counter') if c.get('type') == 'INSTRUCTION']
+                          if counters:
+                              f_missed = int(counters[0].get('missed'))
+                              f_covered = int(counters[0].get('covered'))
+                              f_total = f_missed + f_covered
+                              f_pct = (f_covered / f_total) * 100 if f_total > 0 else 0
+                              f_icon = '🟢' if f_pct >= 80 else ('🟡' if f_pct >= 50 else '🔴')
+                              
+                              markdown += f'| `{sf_name}` | {f_icon} {f_pct:.2f}% | {f_missed} |\n'
               
-              # Write to the native GitHub Job Summary UI as a backup
-              with open(os.environ.get('GITHUB_STEP_SUMMARY', 'summary.md'), 'a') as f:
-                  f.write(comment_body)
-                  
-              # Save it to a temporary text file for the GitHub CLI to read
-              with open('coverage_comment.md', 'w') as f:
-                  f.write(comment_body)
-                  
-              # Fail the pipeline if coverage drops below the 85% threshold
-              if pct < 85.0:
-                  print(f'::error::Overall unit test coverage ({pct:.2f}%) is less than 85%!')
-                  exit(1)
+              if not file_found:
+                  markdown += '| _No coverage data found for changed files_ | - | - |\n'
+          else:
+              markdown += '_No Java or Kotlin files were changed in this PR._\n'
+
+          # --- OUTPUT ---
+          with open(os.environ.get('GITHUB_STEP_SUMMARY', 'summary.md'), 'a') as f:
+              f.write(markdown)
+              
+          with open('coverage_comment.md', 'w') as f:
+              f.write(markdown)
+
+          if overall_pct < 85.0:
+              print(f'::error::Overall unit test coverage ({overall_pct:.2f}%) is less than 85%!')
+              exit(1)
           "
 
-          # 2. Use the native GitHub CLI to post the comment to the PR
+          # 4. Post the comment to the PR
           if [ -n "$PR_NUMBER" ]; then
             echo "Posting comment to PR #$PR_NUMBER..."
             gh pr comment "$PR_NUMBER" --body-file coverage_comment.md
           else
             echo "Not running on a Pull Request. Skipping PR comment."
-          fi
+          fi     
         
       - name: Run IntegrationTest
         run: |
