@@ -3720,6 +3720,47 @@ class UserServiceTest {
     }
 
     @Test
+    void testCreateInternalPolledUser_SkipsExistingExternalUsers() {
+        // Given
+        String entraOid1 = UUID.randomUUID().toString();
+        String entraOid2 = UUID.randomUUID().toString();
+
+        EntraUserDto dto1 = EntraUserDto.builder()
+                .entraOid(entraOid1)
+                .email("external.user@example.com")
+                .firstName("External")
+                .lastName("User")
+                .build();
+
+        EntraUserDto dto2 = EntraUserDto.builder()
+                .entraOid(entraOid2)
+                .email("new.user@example.com")
+                .firstName("New")
+                .lastName("User")
+                .build();
+
+        // Mock existing external user
+        EntraUser existingExternalUser = mock(EntraUser.class);
+        UserProfile externalProfile = mock(UserProfile.class);
+        when(externalProfile.getUserType()).thenReturn(UserType.EXTERNAL);
+        when(existingExternalUser.getUserProfiles()).thenReturn(Set.of(externalProfile));
+
+        when(mockEntraUserRepository.findByEmailIgnoreCase("external.user@example.com"))
+                .thenReturn(Optional.of(existingExternalUser));
+        when(mockEntraUserRepository.findByEmailIgnoreCase("new.user@example.com"))
+                .thenReturn(Optional.empty());
+        when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class)))
+                .thenReturn(mock(EntraUser.class));
+
+        // When
+        int result = userService.createInternalPolledUser(List.of(dto1, dto2));
+
+        // Then
+        assertEquals(1, result, "Should process only the new user, skipping the existing external user");
+        verify(mockEntraUserRepository, times(1)).saveAndFlush(any(EntraUser.class));
+    }
+
+    @Test
     void removeUserAppRole_shouldSuccessfullyRemoveRole() {
         // Arrange
         UUID userProfileId = UUID.randomUUID();

@@ -14,8 +14,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
-import org.springframework.beans.factory.annotation.Value;
-
 import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -42,9 +40,6 @@ public class HomeController {
     private final UserService userService;
     private final AppService appService;
     private final ModelMapper mapper;
-
-    @Value("${app.pui.url}")
-    private String puiUrl;
 
     public HomeController(LoginService loginService, UserService userService,
             AppService appService, ModelMapper mapper) {
@@ -102,13 +97,6 @@ public class HomeController {
         model.addAttribute(ModelAttributes.PAGE_TITLE, "My Account - " + user.getFullName());
 
         return "home/my-account-details";
-    }
-
-    @GetMapping("/pui-interstitial")
-    public String puiInterstitial(Model model) {
-        model.addAttribute("puiUrl", puiUrl);
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Sign in again to access CCMS PUI");
-        return "pui-interstitial";
     }
 
 }
