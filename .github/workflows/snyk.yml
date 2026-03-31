@@ -36,7 +36,7 @@ jobs:
 
       # Using the Snyk Docker Action to check the container for vulnerabilities
       - name: Docker Vulnerabilities
-        uses: snyk/actions/docker@master
+        uses: snyk/actions/docker@9adf32b1121593767fc3c057af55b55db032dc04 # master
         continue-on-error: true
         with:
           image: laa-landing-page:latest
@@ -48,7 +48,7 @@ jobs:
           sed -i 's/"null"/"0"/g' snyk_docker_test.sarif
 
       - name: Run Snyk to Check for Vulnerabilities
-        uses: snyk/actions/gradle@master
+        uses: snyk/actions/gradle@9adf32b1121593767fc3c057af55b55db032dc04 # master
         continue-on-error: true
         with:
           command: test --sarif
@@ -61,7 +61,7 @@ jobs:
 
       # Provides static code analysis for your source code to identify security flaws directly in your proprietary code
       - name: Run Snyk Code Test
-        uses: snyk/actions/gradle@master
+        uses: snyk/actions/gradle@9adf32b1121593767fc3c057af55b55db032dc04 # master
         continue-on-error: true
         with:
           command: code test --sarif
@@ -69,7 +69,7 @@ jobs:
 
       # Scans configuration files for Infrastructure as Code (IaC) projects, such as Terraform, Kubernetes, and AWS CloudFormation.
       - name: Snyk Infrastructure-as-Code Scanning
-        uses: snyk/actions/gradle@master
+        uses: snyk/actions/gradle@9adf32b1121593767fc3c057af55b55db032dc04 # master
         continue-on-error: true
         with:
           command: iac test --sarif
@@ -82,7 +82,7 @@ jobs:
 
       # A snyk.sarif file is generated in the above steps, which is uploaded to GitHub Code Scanning
       - name: Upload result to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@c10b8064de6f491fea524254123dbe5e09572f13 # v4
         with:
           sarif_file: sarif_files
 
@@ -108,7 +108,7 @@ jobs:
       - name: Send notification to Slack
         id: slack
         if: always() && env.SHOULD_NOTIFY == 'true' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-        uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a #v2.1.1
+        uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a # v2.1.1
         with:
           payload: |
             {
