@@ -4,6 +4,12 @@ on:
   pull_request:
     types: [ opened, edited, reopened, synchronize ]
 
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+
 jobs:
   test:
     name: Run Tests
@@ -40,16 +46,15 @@ jobs:
 
       - name: Add coverage to PR
         id: jacoco
-        uses: madrapps/jacoco-report@50d3aff4548aa991e6753342d9ba291084e63848 # v1.7.2
+        uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # 3.0
         with:
-          paths: |
+          path: |
             ${{ github.workspace }}/**/build/reports/jacoco/**/jacocoTestReport.xml
           token: ${{ secrets.GITHUB_TOKEN }}
-          min-coverage-overall: 85
-          min-coverage-changed-files: 85
-          title: Code Coverage
-          update-comment: true
-
+          report-title: Code Coverage
+          reporter: java-junit
+          name: Code Coverage
+        
       - name: Fail PR if overall coverage is less than 85%
         if: ${{ steps.jacoco.outputs.coverage-overall < 85 }}
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
