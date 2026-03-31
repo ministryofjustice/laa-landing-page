@@ -149,7 +149,7 @@
                                     </div>
                                     <div th:if="${!user.enabled}" class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Disabled by</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${user.disabledBy == 'null' ? 'Poller' : user.disabledBy}"></dd>
+                                        <dd class="govuk-summary-list__value" th:text="${user.disabledBy == 'null' ? 'User sync' : user.disabledBy}"></dd>
                                     </div>
                                 </dl>
                             </div>
