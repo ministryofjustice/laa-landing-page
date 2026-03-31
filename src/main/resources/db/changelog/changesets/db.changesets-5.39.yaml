@@ -1,0 +1,38 @@
+databaseChangeLog:
+    - changeSet:
+          id: add-add-and-remove-role-permissions-external-internal
+          author: suresh.kavali
+          changes:
+              - sql: |
+                    INSERT INTO role_permission (app_role_id, permission) VALUES
+                    ((SELECT id FROM app_role WHERE name='Firm User Manager'), 'ASSIGN_EXTERNAL_USER_ROLES'),
+                    ((SELECT id FROM app_role WHERE name='Firm User Manager'), 'REMOVE_EXTERNAL_USER_ROLES'),
+                    ((SELECT id FROM app_role WHERE name='External User Manager'), 'ASSIGN_EXTERNAL_USER_ROLES'),
+                    ((SELECT id FROM app_role WHERE name='External User Manager'), 'REMOVE_EXTERNAL_USER_ROLES'),
+                    ((SELECT id FROM app_role WHERE name='External User Admin'), 'ASSIGN_EXTERNAL_USER_ROLES'),
+                    ((SELECT id FROM app_role WHERE name='External User Admin'), 'REMOVE_EXTERNAL_USER_ROLES'),
+                    ((SELECT id FROM app_role WHERE name='Global Admin'), 'ASSIGN_INTERNAL_USER_ROLES'),
+                    ((SELECT id FROM app_role WHERE name='Global Admin'), 'REMOVE_INTERNAL_USER_ROLES'),
+                    ((SELECT id FROM app_role WHERE name='Global Admin'), 'ASSIGN_EXTERNAL_USER_ROLES'),
+                    ((SELECT id FROM app_role WHERE name='Global Admin'), 'REMOVE_EXTERNAL_USER_ROLES'),
+                    ((SELECT id FROM app_role WHERE name='Internal User Manager'), 'ASSIGN_INTERNAL_USER_ROLES'),
+                    ((SELECT id FROM app_role WHERE name='Internal User Manager'), 'REMOVE_INTERNAL_USER_ROLES'),
+                    ((SELECT id FROM app_role WHERE name='Security Response'), 'REMOVE_INTERNAL_USER_ROLES'),
+                    ((SELECT id FROM app_role WHERE name='Security Response'), 'REMOVE_EXTERNAL_USER_ROLES');
+
+          rollback:
+              - sql: |
+                    DELETE FROM role_permission
+                    WHERE (app_role_id = (SELECT id FROM app_role WHERE name='Firm User Manager')
+                           AND permission IN ('ASSIGN_EXTERNAL_USER_ROLES', 'REMOVE_EXTERNAL_USER_ROLES'))
+                       OR (app_role_id = (SELECT id FROM app_role WHERE name='External User Manager')
+                           AND permission IN ('ASSIGN_EXTERNAL_USER_ROLES', 'REMOVE_EXTERNAL_USER_ROLES'))
+                       OR (app_role_id = (SELECT id FROM app_role WHERE name='External User Admin')
+                           AND permission IN ('ASSIGN_EXTERNAL_USER_ROLES', 'REMOVE_EXTERNAL_USER_ROLES'))
+                       OR (app_role_id = (SELECT id FROM app_role WHERE name='Global Admin')
+                           AND permission IN ('ASSIGN_INTERNAL_USER_ROLES', 'REMOVE_INTERNAL_USER_ROLES',
+                                              'ASSIGN_EXTERNAL_USER_ROLES', 'REMOVE_EXTERNAL_USER_ROLES'))
+                       OR (app_role_id = (SELECT id FROM app_role WHERE name='Internal User Manager')
+                           AND permission IN ('ASSIGN_INTERNAL_USER_ROLES', 'REMOVE_INTERNAL_USER_ROLES'))
+                       OR (app_role_id = (SELECT id FROM app_role WHERE name='Security Response')
+                           AND permission IN ('REMOVE_INTERNAL_USER_ROLES', 'REMOVE_EXTERNAL_USER_ROLES'));
