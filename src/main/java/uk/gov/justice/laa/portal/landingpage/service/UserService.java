@@ -1311,7 +1311,18 @@ public class UserService {
     public int createInternalPolledUser(List<EntraUserDto> entraUserDtos) {
         List<EntraUser> entraUsers = new ArrayList<>();
         String createdBy = "INTERNAL_USER_SYNC";
+        int skippedUsers = 0;
+        
         for (EntraUserDto user : entraUserDtos) {
+            Optional<EntraUser> existingUser = entraUserRepository.findByEmailIgnoreCase(user.getEmail());
+            
+            // Skip if user already exists and has external user profile
+            if (existingUser.isPresent() && hasExternalUserProfile(existingUser.get())) {
+                skippedUsers++;
+                logger.info("Skipping user {} - already exists as external user", user.getEntraOid());
+                continue;
+            }
+            
             EntraUser entraUser = mapper.map(user, EntraUser.class);
             UserProfile userProfile = UserProfile.builder().activeProfile(true)
                     .userProfileStatus(UserProfileStatus.COMPLETE).userType(UserType.INTERNAL)
@@ -1325,6 +1336,10 @@ public class UserService {
             entraUser.setCreatedDate(LocalDateTime.now());
             entraUsers.add(entraUser);
             // todo: security group to access authz app
+        }
+        
+        if (skippedUsers > 0) {
+            logger.info("{} users skipped - already exist as external users", skippedUsers);
         }
         return persistNewInternalUser(entraUsers);
     }
@@ -1343,6 +1358,13 @@ public class UserService {
             }
         }
         return usersPersisted;
+    }
+
+    private boolean hasExternalUserProfile(EntraUser entraUser) {
+        Set<UserProfile> profiles = entraUser.getUserProfiles();
+
+        return (profiles == null || profiles.isEmpty()) || profiles.stream()
+                .anyMatch(profile -> profile.getUserType() == UserType.EXTERNAL);
     }
 
     public Set<Permission> getUserPermissionsByUserId(String userId) {

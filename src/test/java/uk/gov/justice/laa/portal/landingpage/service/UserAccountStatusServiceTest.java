@@ -64,6 +64,8 @@ public class UserAccountStatusServiceTest {
     private UserService userService;
     @Mock
     private UserProfileRepository userProfileRepository;
+    @Mock
+    private EventService eventService;
 
     @InjectMocks
     private UserAccountStatusService userAccountStatusService;
@@ -77,7 +79,7 @@ public class UserAccountStatusServiceTest {
                 entraUserRepository,
                 techServicesClient,
                 userService,
-                userProfileRepository);
+                userProfileRepository, eventService);
     }
 
     @Test
@@ -1527,6 +1529,7 @@ public class UserAccountStatusServiceTest {
                     .id(UUID.randomUUID())
                     .firstName("Enabled")
                     .lastName("User")
+                    .entraOid(UUID.randomUUID().toString())
                     .build();
 
             DisableUserReason reason = DisableUserReason.builder()
@@ -1538,6 +1541,7 @@ public class UserAccountStatusServiceTest {
                     UserProfile.builder()
                             .entraUser(EntraUser.builder()
                                     .enabled(true)
+                                    .entraOid(UUID.randomUUID().toString())
                                     .build())
                             .id(UUID.randomUUID())
                             .build()
