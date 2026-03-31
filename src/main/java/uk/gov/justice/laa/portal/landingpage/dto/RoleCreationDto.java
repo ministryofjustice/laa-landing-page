@@ -1,7 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -41,7 +40,8 @@ public class RoleCreationDto implements Serializable {
     @NotNull(message = "Parent app is required")
     private UUID parentAppId;
 
-    @NotEmpty(message = "At least one user type must be selected")
+    @NotNull(message = "Select whether this role is for internal or external users")
+    @Size(min = 1, max = 1, message = "Select whether this role is for internal or external users")
     private List<UserType> userTypeRestriction;
 
     private List<FirmType> firmTypeRestriction;
