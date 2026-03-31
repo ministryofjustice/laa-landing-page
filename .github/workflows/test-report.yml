@@ -4,11 +4,11 @@ on:
   pull_request:
     types: [ opened, edited, reopened, synchronize ]
 
-
 permissions:
   contents: read
   actions: read
   checks: write
+  pull-requests: write
 
 jobs:
   test:
@@ -46,16 +46,13 @@ jobs:
 
       - name: Parse JaCoCo and Comment on PR
         env:
-          # The gh CLI automatically looks for this token to authenticate
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # We grab the PR number directly from the webhook payload
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           # 1. Parse the XML and generate a markdown file using built-in Python
           python3 -c "
           import xml.etree.ElementTree as ET, os
           
-          # Adjust this path if your xml is located elsewhere
           tree = ET.parse('build/reports/jacoco/test/jacocoTestReport.xml')
           counters = [c for c in tree.getroot().findall('counter') if c.get('type') == 'INSTRUCTION']
           
@@ -75,9 +72,9 @@ jobs:
               with open('coverage_comment.md', 'w') as f:
                   f.write(comment_body)
                   
-              # Fail the pipeline if coverage drops below your threshold (e.g., 80%)
-              if pct < 80.0:
-                  print(f'::error::Coverage ({pct:.2f}%) is below the 80% threshold.')
+              # Fail the pipeline if coverage drops below the 85% threshold
+              if pct < 85.0:
+                  print(f'::error::Overall unit test coverage ({pct:.2f}%) is less than 85%!')
                   exit(1)
           "
 
@@ -89,13 +86,6 @@ jobs:
             echo "Not running on a Pull Request. Skipping PR comment."
           fi
         
-      - name: Fail PR if overall coverage is less than 85%
-        if: ${{ steps.jacoco.outputs.coverage-overall < 85 }}
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
-        with:
-          script: |
-            core.setFailed('Overall unit test coverage is less than 85%!')    
-
       - name: Run IntegrationTest
         run: |
           ./gradlew integrationTest
