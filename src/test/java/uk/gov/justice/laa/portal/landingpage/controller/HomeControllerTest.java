@@ -16,7 +16,6 @@ import org.mockito.Mock;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 
@@ -58,21 +57,6 @@ class HomeControllerTest {
     void setUp() {
         model = new ExtendedModelMap();
         homeController = new HomeController(loginService, userService, appService, new MapperConfig().modelMapper());
-        ReflectionTestUtils.setField(homeController, "puiUrl", "https://test-pui-url.com");
-    }
-
-    @Test
-    void testPuiInterstitial_ReturnsCorrectViewAndModelAttributes() {
-        // Act
-        String viewName = homeController.puiInterstitial(model);
-
-        // Assert: Verify view name
-        assertEquals("pui-interstitial", viewName);
-
-        // Assert: Verify model attributes
-        assertThat(model.getAttribute("puiUrl")).isEqualTo("https://test-pui-url.com");
-        assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE))
-                .isEqualTo("Sign in again to access CCMS PUI");
     }
 
     @Test

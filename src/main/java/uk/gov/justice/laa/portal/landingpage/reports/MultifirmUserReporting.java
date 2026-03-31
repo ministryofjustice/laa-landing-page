@@ -32,7 +32,7 @@ public class MultifirmUserReporting {
     @Value("${app.distributed.db.locking.period}")
     private int distributedDbLockingPeriod;
 
-    @Scheduled(fixedRateString = "${multifirm.user.reporting.interval}")
+    @Scheduled(cron = "${multifirm.user.reporting.interval}")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void getReport() {
         if (reportingEnabled) {

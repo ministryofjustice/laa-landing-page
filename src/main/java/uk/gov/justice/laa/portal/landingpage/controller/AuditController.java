@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -36,6 +37,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.AuditTableSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
@@ -43,12 +45,14 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
+import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AuditExportService;
 import uk.gov.justice.laa.portal.landingpage.service.AuditExportService.AuditCsvExport;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
+import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.TechServicesClient;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
@@ -67,6 +71,7 @@ public class AuditController {
     private final AccessControlService accessControlService;
     private final AuditExportService auditExportService;
     private final FirmRepository firmRepository;
+    private final FirmService firmService;
     private final AuthenticatedUser authenticatedUser;
     private final TechServicesClient techServicesClient;
 
@@ -81,13 +86,34 @@ public class AuditController {
     @PreAuthorize("@accessControlService.userHasAuthzRole(authentication, T(uk.gov.justice.laa.portal.landingpage.entity.AuthzRole).USER_ACCESS_AUDIT_TABLE.roleName)")
     public String displayAuditTable(
             @ModelAttribute AuditTableSearchCriteria criteria,
-            Model model) {
+            Model model, Authentication authentication) {
 
         log.debug("AuditController.displayAuditTable - {}", criteria);
-        // Get audit users
+        
+        // Apply user type filtering based on authenticated user's permissions (same logic as UserController)
+        EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
+        boolean canSeeAllUsers = accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)
+                && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
+        
+        UserTypeForm filteredUserType = criteria.getSelectedUserType();
+        UUID filteredFirmId = criteria.getSelectedFirmId();
+        
+        if (!canSeeAllUsers) {
+            if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)) {
+                filteredUserType = UserTypeForm.INTERNAL;
+            } else {
+                filteredUserType = UserTypeForm.EXTERNAL;
+                Optional<FirmDto> optionalFirm = firmService.getUserFirm(entraUser);
+                if (optionalFirm.isPresent()) {
+                    filteredFirmId = optionalFirm.get().getId();
+                }
+            }
+        }
+        
+        // Get audit users with security-filtered user type and firm restriction
         PaginatedAuditUsers paginatedUsers = userService.getAuditUsers(
-                criteria.getSearch(), criteria.getSelectedFirmId(), criteria.getSilasRole(),
-                criteria.getSelectedAppId(), criteria.getSelectedUserType(),
+                criteria.getSearch(), filteredFirmId, 
+                criteria.getSilasRole(), criteria.getSelectedAppId(), filteredUserType,
                 criteria.getPage(), criteria.getSize(), criteria.getSort(), criteria.getDirection(), false,
                 criteria.getInactiveSinceDate(), criteria.getNeverActivated());
         // Build firm search form
