@@ -4123,12 +4123,13 @@ class UserControllerTest {
         when(userService.getUserAppsByUserId(userId)).thenReturn(userApps);
         when(userService.getAppsByUserType(UserType.EXTERNAL)).thenReturn(availableApps);
         when(loginService.getCurrentProfile(authentication))
-                .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+                .thenReturn(UserProfile.builder().id(UUID.randomUUID()).appRoles(new HashSet<>()).build());
         when(roleAssignmentService.canUserAssignRolesForApp(any(), any())).thenReturn(true);
+        when(accessControlService.canAssignExternalAppRoles(any())).thenReturn(true);
 
         // When
         String view = userController.grantAccessEditUserApps(userId, new ApplicationsForm(), model,
-                new MockHttpSession(), authentication);
+                redirectAttributes, new MockHttpSession(), authentication);
 
         // Then
         assertThat(view).isEqualTo("grant-access-user-apps");
@@ -4318,6 +4319,7 @@ class UserControllerTest {
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
+        when(accessControlService.canAssignExternalAppRoles(userId)).thenReturn(true);
         // When
         String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
                 testSession, redirectAttributes);
@@ -5059,7 +5061,7 @@ class UserControllerTest {
         when(userService.getAppRolesByAppIdAndUserType(eq("app1"), any(), eq(null))).thenReturn(roles);
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
         when(loginService.getCurrentProfile(authentication))
-                .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+                .thenReturn(UserProfile.builder().id(UUID.randomUUID()).appRoles(new HashSet<>()).build());
         when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
 
         // When
@@ -5761,7 +5763,7 @@ class UserControllerTest {
         when(roleAssignmentService.canAssignRole(any(), anyCollection())).thenReturn(true);
 
         // When
-        String view = userController.grantAccessProcessCheckAnswers(userId, authentication, testSession);
+        String view = userController.grantAccessProcessCheckAnswers(userId, authentication, redirectAttributes, testSession);
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/confirmation");
@@ -5798,7 +5800,7 @@ class UserControllerTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
 
         // When
-        String view = userController.grantAccessProcessCheckAnswers(userId, authentication, testSession);
+        String view = userController.grantAccessProcessCheckAnswers(userId, authentication, redirectAttributes, testSession);
 
         // then
         assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/confirmation");
@@ -5836,7 +5838,7 @@ class UserControllerTest {
         when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().build());
         when(roleAssignmentService.canAssignRole(any(), anyList())).thenReturn(false);
         // When
-        String view = userController.grantAccessProcessCheckAnswers(userId, authentication, testSession);
+        String view = userController.grantAccessProcessCheckAnswers(userId, authentication, redirectAttributes, testSession);
 
         // then
         assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/confirmation");
@@ -6767,8 +6769,11 @@ class UserControllerTest {
         for (Method method : methods) {
             if (canEditMethods.contains(method.getName())) {
                 PreAuthorize anno = method.getAnnotation(PreAuthorize.class);
-                assertThat(anno.value().equals("@accessControlService.canEditUser(#id)")
-                        || anno.value().equals("@accessControlService.canEditUser(#userId)")).isTrue();
+                System.out.println(anno.value());
+                assertThat(anno.value().equals("@accessControlService.canEditUserAppRoleAssignments(#id)")
+                        || anno.value().equals("@accessControlService.canEditUser(#id)")
+                        || anno.value().equals("@accessControlService.canGrantUserAccess(#id)")
+                        || anno.value().equals("@accessControlService.canGrantUserAccess(#id) && @accessControlService.canRemoveAppRoles(#id)")).isTrue();
                 continue;
             }
             if (canAcessMethods.contains(method.getName())) {
@@ -6777,8 +6782,14 @@ class UserControllerTest {
                 continue;
             }
             // Methods with more complicated permissions
-            if (List.of("updateUserOffices", "grantAccessEditUserOffices", "grantAccessUpdateUserOffices",
-                    "editUserOffices",
+            if (List.of("grantAccessEditUserOffices", "grantAccessUpdateUserOffices").contains(method.getName())) {
+                PreAuthorize anno = method.getAnnotation(PreAuthorize.class);
+                assertThat(anno.value()).isEqualTo(
+                        "@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE)"
+                                + " && @accessControlService.canGrantUserAccess(#id)");
+            }
+
+            if (List.of("updateUserOffices", "editUserOffices",
                     "updateUserOfficesSubmit", "updateUserOfficesCheck").contains(method.getName())) {
                 PreAuthorize anno = method.getAnnotation(PreAuthorize.class);
                 assertThat(anno.value()).isEqualTo(
@@ -7321,10 +7332,11 @@ class UserControllerTest {
             when(userService.getAppRolesByAppIdAndUserType("app-id-1", UserType.EXTERNAL, FirmType.LEGAL_SERVICES_PROVIDER))
                     .thenReturn(List.of(lspRole));
             when(loginService.getCurrentProfile(authentication))
-                    .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+                    .thenReturn(UserProfile.builder().id(UUID.randomUUID()).appRoles(new HashSet<>()).build());
             when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(lspRole));
             when(userService.getUserAppRolesByUserId(userId.toString())).thenReturn(List.of());
             when(userService.getAppByAppId("app-id-1")).thenReturn(Optional.of(appDto));
+            when(accessControlService.canAssignExternalAppRoles(userId.toString())).thenReturn(true);
 
             String view = userController.grantAccessEditUserRoles(userId.toString(), 0, new RolesForm(), authentication, model, testSession, redirectAttributes);
 
@@ -7355,10 +7367,11 @@ class UserControllerTest {
             when(userService.getAppRolesByAppIdAndUserType("app-id-1", UserType.INTERNAL, null))
                     .thenReturn(List.of(internalRole));
             when(loginService.getCurrentProfile(authentication))
-                    .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+                    .thenReturn(UserProfile.builder().id(UUID.randomUUID()).appRoles(new HashSet<>()).build());
             when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(internalRole));
             when(userService.getUserAppRolesByUserId(userId.toString())).thenReturn(List.of());
             when(userService.getAppByAppId("app-id-1")).thenReturn(Optional.of(appDto));
+            when(accessControlService.canAssignInternalAppRoles(userId.toString())).thenReturn(true);
 
             String view = userController.grantAccessEditUserRoles(userId.toString(), 0, new RolesForm(), authentication, model, testSession, redirectAttributes);
 

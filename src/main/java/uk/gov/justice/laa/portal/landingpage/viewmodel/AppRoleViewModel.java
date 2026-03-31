@@ -20,6 +20,9 @@ public class AppRoleViewModel implements Comparable<AppRoleViewModel>, Serializa
     private int appOrdinal;
     private String description;
     private boolean selected;
+    private boolean changeNotAllowed;
+    private boolean hiddenFromSelection;
+
 
     @Override
     public int compareTo(@NotNull AppRoleViewModel o) {

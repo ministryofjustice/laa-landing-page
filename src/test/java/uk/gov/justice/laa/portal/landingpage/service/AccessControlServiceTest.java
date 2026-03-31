@@ -44,6 +44,7 @@ import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
 import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.EXTERNAL_USER_ADMIN;
 import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.EXTERNAL_USER_MANAGER;
 import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.FIRM_USER_MANAGER;
@@ -74,7 +75,7 @@ public class AccessControlServiceTest {
     public void testCanAccessUserInternalUser() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -89,9 +90,9 @@ public class AccessControlServiceTest {
                 .entraUser(entraUser).appRoles(Set.of(appRole)).userType(UserType.INTERNAL).build();
         entraUser.getUserProfiles().add(userProfile);
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
-        Mockito.when(userService.isInternal(accessedUserId.toString())).thenReturn(Boolean.TRUE);
-        Mockito.when(userService.getUserProfileById(any())).thenReturn(Optional.of(accessedUserProfile));
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(userService.isInternal(accessedUserId.toString())).thenReturn(Boolean.TRUE);
+        when(userService.getUserProfileById(any())).thenReturn(Optional.of(accessedUserProfile));
 
         boolean result = accessControlService.canAccessUser(accessedUserId.toString());
         Assertions.assertThat(result).isTrue();
@@ -101,12 +102,12 @@ public class AccessControlServiceTest {
     public void testCannotAccessUserWithNoProfiles() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID accessedUserId = UUID.randomUUID();
 
-        Mockito.when(userService.getUserProfileById(any())).thenReturn(Optional.empty());
+        when(userService.getUserProfileById(any())).thenReturn(Optional.empty());
 
         boolean result = accessControlService.canAccessUser(accessedUserId.toString());
         Assertions.assertThat(result).isFalse();
@@ -116,7 +117,7 @@ public class AccessControlServiceTest {
     public void testCanAccessUserExternalSameFirm() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -134,10 +135,10 @@ public class AccessControlServiceTest {
 
         UUID firmId = UUID.randomUUID();
         FirmDto firmDto = FirmDto.builder().id(firmId).build();
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
-        Mockito.when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firmDto));
-        Mockito.when(firmService.getUserFirmsByUserId(any())).thenReturn(List.of(firmDto));
-        Mockito.when(userService.getUserProfileById(any())).thenReturn(Optional.of(accessedUserProfile));
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firmDto));
+        when(firmService.getUserFirmsByUserId(any())).thenReturn(List.of(firmDto));
+        when(userService.getUserProfileById(any())).thenReturn(Optional.of(accessedUserProfile));
 
         boolean result = accessControlService.canAccessUser(userId.toString());
         Assertions.assertThat(result).isTrue();
@@ -147,7 +148,7 @@ public class AccessControlServiceTest {
     public void testInternalUserWithExternalUserManagerRoleCanAccessExternalUser() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -173,11 +174,11 @@ public class AccessControlServiceTest {
                 .build();
         authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
-        Mockito.when(userService.getUserProfileById(accessedUserId.toString()))
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        when(userService.getUserProfileById(accessedUserId.toString()))
                 .thenReturn(Optional.of(accessedUserProfile));
-        Mockito.when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
-        Mockito.when(userService.isInternal(userId)).thenReturn(true);
+        when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
+        when(userService.isInternal(userId)).thenReturn(true);
 
         boolean result = accessControlService.canAccessUser(accessedUserId.toString());
         Assertions.assertThat(result).isTrue();
@@ -187,7 +188,7 @@ public class AccessControlServiceTest {
     public void testInternalUserWithExternalUserManagerRoleCanEditExternalUser() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -213,11 +214,11 @@ public class AccessControlServiceTest {
                 .build();
         authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
-        Mockito.when(userService.getUserProfileById(accessedUserId.toString()))
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        when(userService.getUserProfileById(accessedUserId.toString()))
                 .thenReturn(Optional.of(accessedUserProfile));
-        Mockito.when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
-        Mockito.when(userService.isInternal(userId)).thenReturn(true);
+        when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
+        when(userService.isInternal(userId)).thenReturn(true);
 
         boolean result = accessControlService.canEditUser(accessedUserId.toString());
         Assertions.assertThat(result).isTrue();
@@ -227,7 +228,7 @@ public class AccessControlServiceTest {
     public void testCanAccessUserFalseExternalDifferentFirm() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -243,15 +244,15 @@ public class AccessControlServiceTest {
         entraUserDto.setName("test");
 
         FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
-        Mockito.when(loginService.getCurrentUser(authentication)).thenReturn(entraUserDto);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(loginService.getCurrentUser(authentication)).thenReturn(entraUserDto);
         UUID accessedUserId = UUID.randomUUID();
-        Mockito.when(firmService.getUserFirmsByUserId(any())).thenReturn(List.of(firmDto));
+        when(firmService.getUserFirmsByUserId(any())).thenReturn(List.of(firmDto));
         EntraUserDto accessedUser = EntraUserDto.builder().id(accessedUserId.toString()).email("test2@email.com")
                 .build();
         UserProfileDto accessedUserProfile = UserProfileDto.builder().activeProfile(true).entraUser(accessedUser)
                 .build();
-        Mockito.when(userService.getUserProfileById(any())).thenReturn(Optional.of(accessedUserProfile));
+        when(userService.getUserProfileById(any())).thenReturn(Optional.of(accessedUserProfile));
 
         boolean result = accessControlService.canAccessUser(userId.toString());
         Assertions.assertThat(result).isFalse();
@@ -261,7 +262,7 @@ public class AccessControlServiceTest {
     public void testCanAccessUserFalseUserFirmsEmpty() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -274,16 +275,16 @@ public class AccessControlServiceTest {
         entraUser.getUserProfiles().add(userProfile);
 
         FirmDto firmDto = FirmDto.builder().id(UUID.randomUUID()).build();
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
-        Mockito.when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firmDto));
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firmDto));
         CurrentUserDto entraUserDto = new CurrentUserDto();
         entraUserDto.setName("test");
         UUID accessedUserId = UUID.randomUUID();
-        Mockito.when(loginService.getCurrentUser(authentication)).thenReturn(entraUserDto);
+        when(loginService.getCurrentUser(authentication)).thenReturn(entraUserDto);
         EntraUserDto accessedUser = EntraUserDto.builder().id(accessedUserId.toString()).build();
         UserProfileDto accessedUserProfile = UserProfileDto.builder().activeProfile(true).entraUser(accessedUser)
                 .build();
-        Mockito.when(userService.getUserProfileById(any())).thenReturn(Optional.of(accessedUserProfile));
+        when(userService.getUserProfileById(any())).thenReturn(Optional.of(accessedUserProfile));
 
         boolean result = accessControlService.canAccessUser(userId.toString());
         Assertions.assertThat(result).isFalse();
@@ -293,7 +294,7 @@ public class AccessControlServiceTest {
     public void testCanEditUserInternalUser() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID authenticatedUserId = UUID.randomUUID();
@@ -310,9 +311,9 @@ public class AccessControlServiceTest {
                 .entraUser(entraUser).userType(UserType.INTERNAL).appRoles(Set.of(appRole)).build();
         entraUser.getUserProfiles().add(userProfile);
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
-        Mockito.when(userService.getUserProfileById(any())).thenReturn(Optional.of(accessedUserProfile));
-        Mockito.when(userService.isInternal(anyString())).thenReturn(true);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(userService.getUserProfileById(any())).thenReturn(Optional.of(accessedUserProfile));
+        when(userService.isInternal(anyString())).thenReturn(true);
 
         boolean result = accessControlService.canEditUser(accessedUserProfile.getId().toString());
         Assertions.assertThat(result).isTrue();
@@ -322,7 +323,7 @@ public class AccessControlServiceTest {
     public void testCanEditUserExternalSameFirm() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -340,10 +341,10 @@ public class AccessControlServiceTest {
 
         UUID firmId = UUID.randomUUID();
         FirmDto firmDto = FirmDto.builder().id(firmId).build();
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
-        Mockito.when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firmDto));
-        Mockito.when(firmService.getUserFirmsByUserId(accessedUserId.toString())).thenReturn(List.of(firmDto));
-        Mockito.when(userService.getUserProfileById(accessedUserId.toString()))
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firmDto));
+        when(firmService.getUserFirmsByUserId(accessedUserId.toString())).thenReturn(List.of(firmDto));
+        when(userService.getUserProfileById(accessedUserId.toString()))
                 .thenReturn(Optional.of(accessedUserProfile));
 
         boolean result = accessControlService.canEditUser(accessedUserId.toString());
@@ -354,7 +355,7 @@ public class AccessControlServiceTest {
     public void testCanEditUserFalseExternalDifferentFirmAndLog() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -372,13 +373,13 @@ public class AccessControlServiceTest {
 
         CurrentUserDto entraUserDto = new CurrentUserDto();
         entraUserDto.setName("test");
-        Mockito.when(userService.getUserProfileById(accessedUserId.toString()))
+        when(userService.getUserProfileById(accessedUserId.toString()))
                 .thenReturn(Optional.of(accessedUserProfile));
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         FirmDto firmDto1 = FirmDto.builder().id(UUID.randomUUID()).build();
-        Mockito.when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firmDto1));
+        when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firmDto1));
         FirmDto firmDto2 = FirmDto.builder().id(UUID.randomUUID()).build();
-        Mockito.when(firmService.getUserFirmsByUserId(accessedUserId.toString())).thenReturn(List.of(firmDto2));
+        when(firmService.getUserFirmsByUserId(accessedUserId.toString())).thenReturn(List.of(firmDto2));
         ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(AccessControlService.class);
 
         boolean result = accessControlService.canEditUser(accessedUserId.toString());
@@ -389,10 +390,134 @@ public class AccessControlServiceTest {
     }
 
     @Test
+    public void testCanGrantUserAccess_UserProfileNotFound_ReturnsFalse() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        String userProfileId = UUID.randomUUID().toString();
+        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.empty());
+
+        boolean result = accessControlService.canGrantUserAccess(userProfileId);
+        Assertions.assertThat(result).isFalse();
+    }
+
+    @Test
+    public void testCanGrantUserAccess_GlobalAdmin_ReturnsTrue() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID userId = UUID.randomUUID();
+        UUID accessedUserId = UUID.randomUUID();
+        EntraUserDto accessedUser = EntraUserDto.builder().id(accessedUserId.toString()).build();
+        UserProfileDto accessedUserProfile = UserProfileDto.builder().entraUser(accessedUser).build();
+
+        AppRole appRole = AppRole.builder().authzRole(true).name("Global Admin").build();
+        EntraUser entraUser = EntraUser.builder().id(userId).email("admin@email.com")
+                .userProfiles(HashSet.newHashSet(1)).build();
+        UserProfile userProfile = UserProfile.builder().activeProfile(true)
+                .entraUser(entraUser).appRoles(Set.of(appRole)).build();
+        entraUser.getUserProfiles().add(userProfile);
+
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(userService.getUserProfileById(accessedUserId.toString())).thenReturn(Optional.of(accessedUserProfile));
+
+        boolean result = accessControlService.canGrantUserAccess(accessedUserId.toString());
+        Assertions.assertThat(result).isTrue();
+    }
+
+    @Test
+    public void testCanGrantUserAccess_InternalUserManagerEditingInternalUser_ReturnsTrue() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID userId = UUID.randomUUID();
+        UUID accessedUserId = UUID.randomUUID();
+        EntraUserDto accessedUser = EntraUserDto.builder().id(accessedUserId.toString()).build();
+        UserProfileDto accessedUserProfile = UserProfileDto.builder().entraUser(accessedUser).build();
+
+        Permission permission = Permission.ASSIGN_INTERNAL_USER_ROLES;
+        AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(permission)).build();
+        EntraUser entraUser = EntraUser.builder().id(userId).email("internal@email.com")
+                .userProfiles(HashSet.newHashSet(1)).build();
+        UserProfile userProfile = UserProfile.builder().activeProfile(true)
+                .entraUser(entraUser).appRoles(Set.of(appRole)).userType(UserType.INTERNAL).build();
+        entraUser.getUserProfiles().add(userProfile);
+
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(userService.getUserProfileById(accessedUserId.toString())).thenReturn(Optional.of(accessedUserProfile));
+        when(userService.isInternal(accessedUserId.toString())).thenReturn(true);
+
+        boolean result = accessControlService.canGrantUserAccess(accessedUserId.toString());
+        Assertions.assertThat(result).isTrue();
+    }
+
+    @Test
+    public void testCanGrantUserAccess_InternalUserWithExternalRolesEditingExternalUser_ReturnsTrue() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID userId = UUID.randomUUID();
+        UUID accessedUserId = UUID.randomUUID();
+        EntraUserDto accessedUser = EntraUserDto.builder().id(accessedUserId.toString()).build();
+        UserProfileDto accessedUserProfile = UserProfileDto.builder().entraUser(accessedUser).build();
+
+        Permission assignPermission = Permission.ASSIGN_EXTERNAL_USER_ROLES;
+        Permission editPermission = Permission.EDIT_USER_OFFICE;
+        AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(assignPermission, editPermission)).build();
+        EntraUser entraUser = EntraUser.builder().id(userId).email("internal@email.com")
+                .userProfiles(HashSet.newHashSet(1)).build();
+        UserProfile userProfile = UserProfile.builder().activeProfile(true)
+                .entraUser(entraUser).appRoles(Set.of(appRole)).userType(UserType.INTERNAL).build();
+        entraUser.getUserProfiles().add(userProfile);
+
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(userService.getUserProfileById(accessedUserId.toString())).thenReturn(Optional.of(accessedUserProfile));
+        when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
+        when(userService.isInternal(userId)).thenReturn(true);
+
+        boolean result = accessControlService.canGrantUserAccess(accessedUserId.toString());
+        Assertions.assertThat(result).isTrue();
+    }
+
+    @Test
+    public void testCanGrantUserAccess_NoPermissions_ReturnsFalse() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID userId = UUID.randomUUID();
+        UUID accessedUserId = UUID.randomUUID();
+        EntraUserDto accessedUser = EntraUserDto.builder().id(accessedUserId.toString()).build();
+        UserProfileDto accessedUserProfile = UserProfileDto.builder().entraUser(accessedUser).build();
+
+        AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of()).build();
+        EntraUser entraUser = EntraUser.builder().id(userId).email("user@email.com")
+                .userProfiles(HashSet.newHashSet(1)).build();
+        UserProfile userProfile = UserProfile.builder().activeProfile(true)
+                .entraUser(entraUser).appRoles(Set.of(appRole)).userType(UserType.INTERNAL).build();
+        entraUser.getUserProfiles().add(userProfile);
+
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(userService.getUserProfileById(accessedUserId.toString())).thenReturn(Optional.of(accessedUserProfile));
+
+        boolean result = accessControlService.canGrantUserAccess(accessedUserId.toString());
+        Assertions.assertThat(result).isFalse();
+    }
+
+    @Test
     public void testExternalParentFirmUserCanAccessChildFirmUser() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID parentFirmId = UUID.randomUUID();
@@ -419,16 +544,16 @@ public class AccessControlServiceTest {
         UserProfileDto accessedProfile = UserProfileDto.builder().id(accessedProfileId).userType(UserType.EXTERNAL)
                 .entraUser(accessedEntra).build();
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authUser);
-        Mockito.when(firmService.getUserActiveAllFirms(authUser)).thenReturn(List.of(
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(authUser);
+        when(firmService.getUserActiveAllFirms(authUser)).thenReturn(List.of(
                 FirmDto.builder().id(parentFirmId).build(),
                 FirmDto.builder().id(childFirmId).build()));
-        Mockito.when(userService.getUserProfileById(accessedProfileId.toString()))
+        when(userService.getUserProfileById(accessedProfileId.toString()))
                 .thenReturn(Optional.of(accessedProfile));
-        Mockito.when(userService.isInternal(accessedEntra.getId())).thenReturn(false);
-        Mockito.when(userService.isInternal(authUser.getId())).thenReturn(false);
+        when(userService.isInternal(accessedEntra.getId())).thenReturn(false);
+        when(userService.isInternal(authUser.getId())).thenReturn(false);
 
-        Mockito.when(firmService.getUserFirmsByUserId(accessedProfileId.toString()))
+        when(firmService.getUserFirmsByUserId(accessedProfileId.toString()))
                 .thenReturn(List.of(FirmDto.builder().id(childFirmId).build()));
 
         boolean canAccess = accessControlService.canAccessUser(accessedProfileId.toString());
@@ -439,7 +564,7 @@ public class AccessControlServiceTest {
     public void testExternalChildFirmUserCannotAccessParentFirmUser() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID parentFirmId = UUID.randomUUID();
@@ -465,19 +590,19 @@ public class AccessControlServiceTest {
         UserProfileDto accessedProfile = UserProfileDto.builder().id(accessedProfileId).userType(UserType.EXTERNAL)
                 .entraUser(accessedEntra).build();
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authUser);
-        Mockito.when(userService.getUserProfileById(accessedProfileId.toString()))
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(authUser);
+        when(userService.getUserProfileById(accessedProfileId.toString()))
                 .thenReturn(Optional.of(accessedProfile));
-        Mockito.when(userService.isInternal(accessedEntra.getId())).thenReturn(false);
-        Mockito.when(userService.isInternal(authUser.getId())).thenReturn(false);
+        when(userService.isInternal(accessedEntra.getId())).thenReturn(false);
+        when(userService.isInternal(authUser.getId())).thenReturn(false);
 
         // Ensure logging path has a non-null CurrentUserDto to prevent NPE when access
         // is denied
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("test");
-        Mockito.when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
 
-        Mockito.when(firmService.getUserFirmsByUserId(accessedProfileId.toString()))
+        when(firmService.getUserFirmsByUserId(accessedProfileId.toString()))
                 .thenReturn(List.of(FirmDto.builder().id(parentFirmId).build()));
 
         boolean canAccess = accessControlService.canAccessUser(accessedProfileId.toString());
@@ -488,7 +613,7 @@ public class AccessControlServiceTest {
     public void testCanSendVerificationEmail() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -514,11 +639,11 @@ public class AccessControlServiceTest {
                 .build();
         authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
-        Mockito.when(userService.getUserProfileById(accessedUserId.toString()))
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        when(userService.getUserProfileById(accessedUserId.toString()))
                 .thenReturn(Optional.of(accessedUserProfile));
-        Mockito.when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
-        Mockito.when(userService.isInternal(userId)).thenReturn(true);
+        when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
+        when(userService.isInternal(userId)).thenReturn(true);
 
         boolean result = accessControlService.canSendVerificationEmail(accessedUserId.toString());
         Assertions.assertThat(result).isTrue();
@@ -528,7 +653,7 @@ public class AccessControlServiceTest {
     public void testFirmAdminCannotSendVerificationEmail() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -554,10 +679,10 @@ public class AccessControlServiceTest {
                 .build();
         authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
-        Mockito.when(userService.getUserProfileById(accessedUserId.toString()))
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        when(userService.getUserProfileById(accessedUserId.toString()))
                 .thenReturn(Optional.of(accessedUserProfile));
-        Mockito.when(userService.isInternal(userId)).thenReturn(false);
+        when(userService.isInternal(userId)).thenReturn(false);
 
         boolean result = accessControlService.canSendVerificationEmail(accessedUserId.toString());
         Assertions.assertThat(result).isFalse();
@@ -567,7 +692,7 @@ public class AccessControlServiceTest {
     public void isUserManager_userNotProviderAdmin() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -585,7 +710,7 @@ public class AccessControlServiceTest {
                 .userType(UserType.EXTERNAL) // External user type
                 .build();
         authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
 
         boolean result = accessControlService
                 .authenticatedUserHasAnyGivenPermissions(Permission.DELEGATE_EXTERNAL_USER_ACCESS);
@@ -596,7 +721,7 @@ public class AccessControlServiceTest {
     public void isUserManager() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -614,7 +739,7 @@ public class AccessControlServiceTest {
                 .userType(UserType.EXTERNAL) // External user type
                 .build();
         authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
 
         boolean result = accessControlService
                 .authenticatedUserHasAnyGivenPermissions(Permission.DELEGATE_EXTERNAL_USER_ACCESS);
@@ -625,12 +750,12 @@ public class AccessControlServiceTest {
     public void testCannotDeleteUserWithNoProfiles() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID accessedUserId = UUID.randomUUID();
 
-        Mockito.when(userService.getUserProfileById(any())).thenReturn(Optional.empty());
+        when(userService.getUserProfileById(any())).thenReturn(Optional.empty());
 
         boolean result = accessControlService.canDeleteUser(accessedUserId.toString());
         Assertions.assertThat(result).isFalse();
@@ -640,7 +765,7 @@ public class AccessControlServiceTest {
     public void testGlobalAdminCanDeleteExternalUser() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID adminId = UUID.randomUUID();
@@ -663,8 +788,8 @@ public class AccessControlServiceTest {
                 .entraUser(targetEntra)
                 .build();
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(admin);
-        Mockito.when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(admin);
+        when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
 
         boolean canDelete = accessControlService.canDeleteUser(targetProfileId.toString());
         Assertions.assertThat(canDelete).isTrue();
@@ -674,7 +799,7 @@ public class AccessControlServiceTest {
     public void testGlobalAdminCanDeleteMultiFirmExternalUser() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID adminId = UUID.randomUUID();
@@ -698,9 +823,9 @@ public class AccessControlServiceTest {
                 .entraUser(targetEntra)
                 .build();
 
-        Mockito.when(userService.isInternal(adminId)).thenReturn(true);
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(admin);
-        Mockito.when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
+        when(userService.isInternal(adminId)).thenReturn(true);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(admin);
+        when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
 
         boolean canDelete = accessControlService.canDeleteUser(targetProfileId.toString());
         Assertions.assertThat(canDelete).isTrue();
@@ -710,7 +835,7 @@ public class AccessControlServiceTest {
     public void testInternalUserCanDeleteMultiFirmUser() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID adminId = UUID.randomUUID();
@@ -733,9 +858,9 @@ public class AccessControlServiceTest {
                 .entraUser(targetEntra)
                 .build();
 
-        Mockito.when(userService.isInternal(adminId)).thenReturn(true);
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(admin);
-        Mockito.when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
+        when(userService.isInternal(adminId)).thenReturn(true);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(admin);
+        when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
 
         boolean canDelete = accessControlService.canDeleteUser(targetProfileId.toString());
         Assertions.assertThat(canDelete).isTrue();
@@ -745,7 +870,7 @@ public class AccessControlServiceTest {
     public void testFirmUserManagerCannotDeleteMultiFirmUser() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID adminId = UUID.randomUUID();
@@ -768,9 +893,9 @@ public class AccessControlServiceTest {
                 .entraUser(targetEntra)
                 .build();
 
-        Mockito.when(userService.isInternal(adminId)).thenReturn(false);
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(admin);
-        Mockito.when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
+        when(userService.isInternal(adminId)).thenReturn(false);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(admin);
+        when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
 
         boolean canDelete = accessControlService.canDeleteUser(targetProfileId.toString());
         Assertions.assertThat(canDelete).isFalse();
@@ -780,7 +905,7 @@ public class AccessControlServiceTest {
     public void testFirmUserManagerCannotDeleteDifferentFirmUser() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID adminId = UUID.randomUUID();
@@ -807,9 +932,9 @@ public class AccessControlServiceTest {
                 .firm(userFirm)
                 .build();
 
-        Mockito.when(userService.isInternal(adminId)).thenReturn(false);
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(admin);
-        Mockito.when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
+        when(userService.isInternal(adminId)).thenReturn(false);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(admin);
+        when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
 
         boolean canDelete = accessControlService.canDeleteUser(targetProfileId.toString());
         Assertions.assertThat(canDelete).isFalse();
@@ -819,7 +944,7 @@ public class AccessControlServiceTest {
     public void testFirmUserManagerCanDeleteSameFirmUser() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID adminId = UUID.randomUUID();
@@ -846,11 +971,11 @@ public class AccessControlServiceTest {
                 .firm(userFirm)
                 .build();
 
-        Mockito.when(userService.isInternal(adminId)).thenReturn(false);
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(admin);
-        Mockito.when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
-        Mockito.when(firmService.getUserActiveAllFirms(any(EntraUser.class))).thenReturn(List.of(userFirm));
-        Mockito.when(firmService.getUserFirmsByUserId(anyString())).thenReturn(List.of(userFirm));
+        when(userService.isInternal(adminId)).thenReturn(false);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(admin);
+        when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
+        when(firmService.getUserActiveAllFirms(any(EntraUser.class))).thenReturn(List.of(userFirm));
+        when(firmService.getUserFirmsByUserId(anyString())).thenReturn(List.of(userFirm));
 
         boolean canDelete = accessControlService.canDeleteUser(targetProfileId.toString());
         Assertions.assertThat(canDelete).isTrue();
@@ -860,7 +985,7 @@ public class AccessControlServiceTest {
     public void testInternalUserCannotDeleteInternalUser() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -883,8 +1008,8 @@ public class AccessControlServiceTest {
                 .entraUser(internalTargetEntra)
                 .build();
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(user);
-        Mockito.when(userService.getUserProfileById(internalTargetId.toString()))
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(user);
+        when(userService.getUserProfileById(internalTargetId.toString()))
                 .thenReturn(Optional.of(internalTarget));
 
         boolean canDeleteInternal = accessControlService.canDeleteUser(internalTargetId.toString());
@@ -896,7 +1021,7 @@ public class AccessControlServiceTest {
 
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID fumId = UUID.randomUUID();
@@ -934,11 +1059,11 @@ public class AccessControlServiceTest {
 
         FirmDto firmDto = FirmDto.builder().id(firmId).build();
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(firmUserManager);
-        Mockito.when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
-        Mockito.when(userService.isInternal(fumId)).thenReturn(false);
-        Mockito.when(firmService.getUserActiveAllFirms(firmUserManager)).thenReturn(List.of(firmDto));
-        Mockito.when(firmService.getUserFirmsByUserId(targetProfileId.toString())).thenReturn(List.of(firmDto));
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(firmUserManager);
+        when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
+        when(userService.isInternal(fumId)).thenReturn(false);
+        when(firmService.getUserActiveAllFirms(firmUserManager)).thenReturn(List.of(firmDto));
+        when(firmService.getUserFirmsByUserId(targetProfileId.toString())).thenReturn(List.of(firmDto));
 
         boolean canDelete = accessControlService.canDeleteUser(targetProfileId.toString());
         assertThat(canDelete).isTrue();
@@ -949,7 +1074,7 @@ public class AccessControlServiceTest {
 
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID fumId = UUID.randomUUID();
@@ -984,9 +1109,9 @@ public class AccessControlServiceTest {
                 .entraUser(targetEntra)
                 .build();
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(firmUserManager);
-        Mockito.when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
-        Mockito.when(userService.isInternal(fumId)).thenReturn(false);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(firmUserManager);
+        when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
+        when(userService.isInternal(fumId)).thenReturn(false);
 
 
         boolean canDelete = accessControlService.canDeleteUser(targetProfileId.toString());
@@ -998,7 +1123,7 @@ public class AccessControlServiceTest {
 
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID fumId = UUID.randomUUID();
@@ -1038,11 +1163,11 @@ public class AccessControlServiceTest {
         FirmDto fumFirmDto = FirmDto.builder().id(fumFirmId).build();
         FirmDto targetFirmDto = FirmDto.builder().id(targetFirmId).build();
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(firmUserManager);
-        Mockito.when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
-        Mockito.when(userService.isInternal(fumId)).thenReturn(false);
-        Mockito.when(firmService.getUserActiveAllFirms(firmUserManager)).thenReturn(List.of(fumFirmDto));
-        Mockito.when(firmService.getUserFirmsByUserId(targetProfileId.toString())).thenReturn(List.of(targetFirmDto));
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(firmUserManager);
+        when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
+        when(userService.isInternal(fumId)).thenReturn(false);
+        when(firmService.getUserActiveAllFirms(firmUserManager)).thenReturn(List.of(fumFirmDto));
+        when(firmService.getUserFirmsByUserId(targetProfileId.toString())).thenReturn(List.of(targetFirmDto));
 
         boolean canDelete = accessControlService.canDeleteUser(targetProfileId.toString());
         assertThat(canDelete).isFalse();
@@ -1053,7 +1178,7 @@ public class AccessControlServiceTest {
         // Setup authentication
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         // Internal user with DELETE_EXTERNAL_USER permission
@@ -1084,9 +1209,9 @@ public class AccessControlServiceTest {
                 .entraUser(targetEntra)
                 .build();
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(internalUser);
-        Mockito.when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
-        Mockito.when(userService.isInternal(userId)).thenReturn(true);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(internalUser);
+        when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
+        when(userService.isInternal(userId)).thenReturn(true);
 
         boolean result = accessControlService.canDeleteFirmProfile(targetProfileId.toString());
         Assertions.assertThat(result).isFalse();
@@ -1097,7 +1222,7 @@ public class AccessControlServiceTest {
         // Setup authentication
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         // External firm admin with DELEGATE_EXTERNAL_USER_ACCESS permission
@@ -1129,11 +1254,11 @@ public class AccessControlServiceTest {
 
         FirmDto firmDto = FirmDto.builder().id(firmId).build();
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(externalUser);
-        Mockito.when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
-        Mockito.when(userService.isInternal(userId)).thenReturn(false);
-        Mockito.when(firmService.getUserActiveAllFirms(externalUser)).thenReturn(List.of(firmDto));
-        Mockito.when(firmService.getUserFirmsByUserId(targetProfileId.toString())).thenReturn(List.of(firmDto));
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(externalUser);
+        when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
+        when(userService.isInternal(userId)).thenReturn(false);
+        when(firmService.getUserActiveAllFirms(externalUser)).thenReturn(List.of(firmDto));
+        when(firmService.getUserFirmsByUserId(targetProfileId.toString())).thenReturn(List.of(firmDto));
 
         boolean result = accessControlService.canDeleteFirmProfile(targetProfileId.toString());
         Assertions.assertThat(result).isTrue();
@@ -1143,13 +1268,13 @@ public class AccessControlServiceTest {
     public void testCanDeleteFirmProfile_ProfileNotFound_ReturnsFalse() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
         EntraUser user = EntraUser.builder().id(userId).userProfiles(HashSet.newHashSet(1)).build();
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(user);
-        Mockito.when(userService.getUserProfileById(any())).thenReturn(Optional.empty());
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(user);
+        when(userService.getUserProfileById(any())).thenReturn(Optional.empty());
 
         boolean result = accessControlService.canDeleteFirmProfile("non-existent-id");
         Assertions.assertThat(result).isFalse();
@@ -1159,7 +1284,7 @@ public class AccessControlServiceTest {
     public void testCanDeleteFirmProfile_InternalUserProfile_ReturnsFalse() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -1173,8 +1298,8 @@ public class AccessControlServiceTest {
                 .entraUser(targetEntra)
                 .build();
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(user);
-        Mockito.when(userService.getUserProfileById(targetProfileId.toString()))
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(user);
+        when(userService.getUserProfileById(targetProfileId.toString()))
                 .thenReturn(Optional.of(internalProfile));
 
         boolean result = accessControlService.canDeleteFirmProfile(targetProfileId.toString());
@@ -1185,7 +1310,7 @@ public class AccessControlServiceTest {
     public void testCanDeleteFirmProfile_NotMultiFirmUser_ReturnsFalse() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -1202,8 +1327,8 @@ public class AccessControlServiceTest {
                 .entraUser(targetEntra)
                 .build();
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(user);
-        Mockito.when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(user);
+        when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
 
         boolean result = accessControlService.canDeleteFirmProfile(targetProfileId.toString());
         Assertions.assertThat(result).isFalse();
@@ -1213,7 +1338,7 @@ public class AccessControlServiceTest {
     public void testCanDeleteFirmProfile_ExternalUserDifferentFirm_ReturnsFalse() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -1245,11 +1370,11 @@ public class AccessControlServiceTest {
         FirmDto firmDto1 = FirmDto.builder().id(firmId1).build();
         FirmDto firmDto2 = FirmDto.builder().id(firmId2).build();
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(externalUser);
-        Mockito.when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
-        Mockito.when(userService.isInternal(userId)).thenReturn(false);
-        Mockito.when(firmService.getUserActiveAllFirms(externalUser)).thenReturn(List.of(firmDto1));
-        Mockito.when(firmService.getUserFirmsByUserId(targetProfileId.toString())).thenReturn(List.of(firmDto2));
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(externalUser);
+        when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
+        when(userService.isInternal(userId)).thenReturn(false);
+        when(firmService.getUserActiveAllFirms(externalUser)).thenReturn(List.of(firmDto1));
+        when(firmService.getUserFirmsByUserId(targetProfileId.toString())).thenReturn(List.of(firmDto2));
 
         boolean result = accessControlService.canDeleteFirmProfile(targetProfileId.toString());
         Assertions.assertThat(result).isFalse();
@@ -1259,7 +1384,7 @@ public class AccessControlServiceTest {
     public void testCanDeleteFirmProfile_ExternalUserNoPermission_ReturnsFalse() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -1289,11 +1414,11 @@ public class AccessControlServiceTest {
 
         FirmDto firmDto = FirmDto.builder().id(firmId).build();
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(externalUser);
-        Mockito.when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
-        Mockito.when(userService.isInternal(userId)).thenReturn(false);
-        Mockito.when(firmService.getUserActiveAllFirms(externalUser)).thenReturn(List.of(firmDto));
-        Mockito.when(firmService.getUserFirmsByUserId(targetProfileId.toString())).thenReturn(List.of(firmDto));
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(externalUser);
+        when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
+        when(userService.isInternal(userId)).thenReturn(false);
+        when(firmService.getUserActiveAllFirms(externalUser)).thenReturn(List.of(firmDto));
+        when(firmService.getUserFirmsByUserId(targetProfileId.toString())).thenReturn(List.of(firmDto));
 
         boolean result = accessControlService.canDeleteFirmProfile(targetProfileId.toString());
         Assertions.assertThat(result).isFalse();
@@ -1303,10 +1428,10 @@ public class AccessControlServiceTest {
     public void testCanDeleteFirmProfile_NullAuthenticatedUser_ReturnsFalse() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(null);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(null);
 
         boolean result = accessControlService.canDeleteFirmProfile("some-profile-id");
         Assertions.assertThat(result).isFalse();
@@ -1316,7 +1441,7 @@ public class AccessControlServiceTest {
     public void testCanDeleteFirmProfile_TargetEntraUserNull_ReturnsFalse() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -1329,8 +1454,8 @@ public class AccessControlServiceTest {
                 .entraUser(null) // Target's EntraUser is null
                 .build();
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(user);
-        Mockito.when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(user);
+        when(userService.getUserProfileById(targetProfileId.toString())).thenReturn(Optional.of(targetProfile));
 
         boolean result = accessControlService.canDeleteFirmProfile(targetProfileId.toString());
         Assertions.assertThat(result).isFalse();
@@ -1340,7 +1465,7 @@ public class AccessControlServiceTest {
     public void testCanViewAllFirmsOfMultiFirmUser_WithPermission() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -1362,7 +1487,7 @@ public class AccessControlServiceTest {
                 .build();
         user.getUserProfiles().add(userProfile);
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(user);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(user);
 
         boolean result = accessControlService.canViewAllFirmsOfMultiFirmUser();
         Assertions.assertThat(result).isTrue();
@@ -1372,7 +1497,7 @@ public class AccessControlServiceTest {
     public void testCanViewAllFirmsOfMultiFirmUser_WithoutPermission() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -1394,7 +1519,7 @@ public class AccessControlServiceTest {
                 .build();
         user.getUserProfiles().add(userProfile);
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(user);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(user);
 
         boolean result = accessControlService.canViewAllFirmsOfMultiFirmUser();
         Assertions.assertThat(result).isFalse();
@@ -1579,7 +1704,7 @@ public class AccessControlServiceTest {
     public void testAuthenticatedUserIsInternalReturnsTrueWhenUserIsInternal() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -1595,8 +1720,8 @@ public class AccessControlServiceTest {
                 .build();
         user.getUserProfiles().add(userProfile);
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(user);
-        Mockito.when(userService.isInternal(userId)).thenReturn(true);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(user);
+        when(userService.isInternal(userId)).thenReturn(true);
         boolean internal = accessControlService.authenticatedUserIsInternal();
         Assertions.assertThat(internal).isTrue();
     }
@@ -1605,7 +1730,7 @@ public class AccessControlServiceTest {
     public void testAuthenticatedUserIsExternalReturnsFalseWhenUserIsExternal() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -1621,15 +1746,15 @@ public class AccessControlServiceTest {
                 .build();
         user.getUserProfiles().add(userProfile);
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(user);
-        Mockito.when(userService.isInternal(userId)).thenReturn(false);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(user);
+        when(userService.isInternal(userId)).thenReturn(false);
         boolean internal = accessControlService.authenticatedUserIsInternal();
         Assertions.assertThat(internal).isFalse();
     }
 
     @Test
     void canDisableUser_returnsFalse_whenUserNotFound() {
-        Mockito.when(userService.getEntraUserById(any(String.class))).thenReturn(Optional.empty());
+        when(userService.getEntraUserById(any(String.class))).thenReturn(Optional.empty());
 
         boolean result = accessControlService.canDisableUser("entraUserId");
 
@@ -1655,7 +1780,7 @@ public class AccessControlServiceTest {
                 .email("user@example.com")
                 .multiFirmUser(true)
                 .build();
-        Mockito.when(userService.getEntraUserById(userId)).thenReturn(Optional.of(userDto));
+        when(userService.getEntraUserById(userId)).thenReturn(Optional.of(userDto));
 
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -1673,8 +1798,8 @@ public class AccessControlServiceTest {
                 .email("user@example.com")
                 .multiFirmUser(false)
                 .build();
-        Mockito.when(userService.getEntraUserById(userId)).thenReturn(Optional.of(userDto));
-        Mockito.when(userService.isInternal(userId)).thenReturn(true);
+        when(userService.getEntraUserById(userId)).thenReturn(Optional.of(userDto));
+        when(userService.isInternal(userId)).thenReturn(true);
 
         boolean result = accessControlService.canDisableUser(userId);
 
@@ -1685,7 +1810,7 @@ public class AccessControlServiceTest {
     void canDisableUser_returnsFalse_whenSameUser() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -1699,12 +1824,12 @@ public class AccessControlServiceTest {
 
         EntraUserDto entraUserDto = EntraUserDto.builder().id(userId.toString()).build();
 
-        Mockito.when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(entraUserDto));
-        Mockito.when(userService.isInternal(userId.toString())).thenReturn(false);
+        when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(entraUserDto));
+        when(userService.isInternal(userId.toString())).thenReturn(false);
 
         EntraUser authenticatedUser = EntraUser.builder().id(userId).build();
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         boolean result = accessControlService.canDisableUser(entraUserDto.getId());
@@ -1716,7 +1841,7 @@ public class AccessControlServiceTest {
     void canDisableUser_returnsFalse_whenUserLacksPermission() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -1730,10 +1855,10 @@ public class AccessControlServiceTest {
 
         EntraUserDto entraUserDto = EntraUserDto.builder().id("accessedUser").build();
 
-        Mockito.when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(entraUserDto));
-        Mockito.when(userService.isInternal(userId.toString())).thenReturn(false);
+        when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(entraUserDto));
+        when(userService.isInternal(userId.toString())).thenReturn(false);
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         boolean result = accessControlService.canDisableUser(userId.toString());
@@ -1745,7 +1870,7 @@ public class AccessControlServiceTest {
     void canDisableUser_returnsTrue_whenAllConditionsMet() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -1759,11 +1884,11 @@ public class AccessControlServiceTest {
 
         EntraUserDto entraUserDto = EntraUserDto.builder().id("accessedUser").build();
 
-        Mockito.when(entraUserRepository.findByIdWithAssociations(userId)).thenReturn(Optional.of(entraUser));
-        Mockito.when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(entraUserDto));
-        Mockito.when(userService.isInternal(userId.toString())).thenReturn(false);
+        when(entraUserRepository.findByIdWithAssociations(userId)).thenReturn(Optional.of(entraUser));
+        when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(entraUserDto));
+        when(userService.isInternal(userId.toString())).thenReturn(false);
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         boolean result = accessControlService.canDisableUser(userId.toString());
@@ -1788,8 +1913,8 @@ public class AccessControlServiceTest {
         UUID accessedUserId = UUID.randomUUID();
         EntraUserDto accessedEntraUserDto = EntraUserDto.builder().id(accessedUserId.toString()).multiFirmUser(true).build();
 
-        Mockito.when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedEntraUserDto));
-        Mockito.when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
+        when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedEntraUserDto));
+        when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
@@ -1802,7 +1927,7 @@ public class AccessControlServiceTest {
     void cannotDisableUser_firmUserManager_differentFirm() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -1825,14 +1950,14 @@ public class AccessControlServiceTest {
         accessedEntraUser.setUserProfiles(Set.of(accessedUserProfile));
         EntraUserDto accessedEntraUserDto = EntraUserDto.builder().id(accessedUserId.toString()).build();
 
-        Mockito.when(entraUserRepository.findByIdWithAssociations(accessedUserId)).thenReturn(Optional.of(accessedEntraUser));
-        Mockito.when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedEntraUserDto));
-        Mockito.when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
-        Mockito.when(userService.isInternal(userId)).thenReturn(false);
-        Mockito.when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firm1Dto));
-        Mockito.when(firmService.getUserFirmsByUserId(accessedUserProfile.getId().toString())).thenReturn(List.of(accessedFirmDto));
+        when(entraUserRepository.findByIdWithAssociations(accessedUserId)).thenReturn(Optional.of(accessedEntraUser));
+        when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedEntraUserDto));
+        when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
+        when(userService.isInternal(userId)).thenReturn(false);
+        when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firm1Dto));
+        when(firmService.getUserFirmsByUserId(accessedUserProfile.getId().toString())).thenReturn(List.of(accessedFirmDto));
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         boolean result = accessControlService.canDisableUser(accessedUserId.toString());
@@ -1844,7 +1969,7 @@ public class AccessControlServiceTest {
     void canDisableUser_firmUserManager_sameFirm() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -1865,14 +1990,14 @@ public class AccessControlServiceTest {
         accessedEntraUser.setUserProfiles(Set.of(accessedUserProfile));
         EntraUserDto accessedEntraUserDto = EntraUserDto.builder().id(accessedUserId.toString()).build();
 
-        Mockito.when(entraUserRepository.findByIdWithAssociations(accessedUserId)).thenReturn(Optional.of(accessedEntraUser));
-        Mockito.when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedEntraUserDto));
-        Mockito.when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
-        Mockito.when(userService.isInternal(userId)).thenReturn(false);
-        Mockito.when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firm1Dto));
-        Mockito.when(firmService.getUserFirmsByUserId(accessedUserProfile.getId().toString())).thenReturn(List.of(firm1Dto));
+        when(entraUserRepository.findByIdWithAssociations(accessedUserId)).thenReturn(Optional.of(accessedEntraUser));
+        when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedEntraUserDto));
+        when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
+        when(userService.isInternal(userId)).thenReturn(false);
+        when(firmService.getUserActiveAllFirms(entraUser)).thenReturn(List.of(firm1Dto));
+        when(firmService.getUserFirmsByUserId(accessedUserProfile.getId().toString())).thenReturn(List.of(firm1Dto));
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         boolean result = accessControlService.canDisableUser(accessedUserId.toString());
@@ -1884,7 +2009,7 @@ public class AccessControlServiceTest {
     public void canConvertUserToMultiFirmReturnsTrueWhenAllConditionsMet() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -1914,9 +2039,9 @@ public class AccessControlServiceTest {
                 .build();
         authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
-        Mockito.when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedUser));
-        Mockito.when(userService.isInternal(userId)).thenReturn(true);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedUser));
+        when(userService.isInternal(userId)).thenReturn(true);
 
         boolean result = accessControlService.canConvertUserToMultiFirm(accessedUserId.toString());
         Assertions.assertThat(result).isTrue();
@@ -1931,7 +2056,7 @@ public class AccessControlServiceTest {
                 .multiFirmUser(true)
                 .build();
 
-        Mockito.when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedUser));
+        when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedUser));
 
         boolean result = accessControlService.canConvertUserToMultiFirm(accessedUserId.toString());
         Assertions.assertThat(result).isFalse();
@@ -1941,7 +2066,7 @@ public class AccessControlServiceTest {
     public void canConvertUserToMultiFirmReturnsFalseWhenAuthenticatedUserIsNotInternal() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -1971,9 +2096,9 @@ public class AccessControlServiceTest {
                 .build();
         authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
-        Mockito.when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedUser));
-        Mockito.when(userService.isInternal(userId)).thenReturn(false);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedUser));
+        when(userService.isInternal(userId)).thenReturn(false);
 
         boolean result = accessControlService.canConvertUserToMultiFirm(accessedUserId.toString());
         Assertions.assertThat(result).isFalse();
@@ -1983,7 +2108,7 @@ public class AccessControlServiceTest {
     public void canConvertUserToMultiFirmReturnsFalseWhenMissingEditExternalUserPermission() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -2012,9 +2137,9 @@ public class AccessControlServiceTest {
                 .build();
         authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
-        Mockito.when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedUser));
-        Mockito.when(userService.isInternal(userId)).thenReturn(true);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedUser));
+        when(userService.isInternal(userId)).thenReturn(true);
 
         boolean result = accessControlService.canConvertUserToMultiFirm(accessedUserId.toString());
         Assertions.assertThat(result).isFalse();
@@ -2024,7 +2149,7 @@ public class AccessControlServiceTest {
     public void canConvertUserToMultiFirmReturnsFalseWhenMissingConvertUserToMultiFirmPermission() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -2053,9 +2178,9 @@ public class AccessControlServiceTest {
                 .build();
         authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
-        Mockito.when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedUser));
-        Mockito.when(userService.isInternal(userId)).thenReturn(true);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedUser));
+        when(userService.isInternal(userId)).thenReturn(true);
 
         boolean result = accessControlService.canConvertUserToMultiFirm(accessedUserId.toString());
         Assertions.assertThat(result).isFalse();
@@ -2065,7 +2190,7 @@ public class AccessControlServiceTest {
     public void canConvertUserToMultiFirmThrowsUserNotFoundExceptionWhenUserDoesNotExist() {
         UUID accessedUserId = UUID.randomUUID();
 
-        Mockito.when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.empty());
+        when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.empty());
 
         Assertions.assertThatThrownBy(() -> accessControlService.canConvertUserToMultiFirm(accessedUserId.toString()))
                 .isInstanceOf(uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException.class)
@@ -2076,7 +2201,7 @@ public class AccessControlServiceTest {
     public void canConvertUserToMultiFirmReturnsFalseWhenAuthenticatedUserHasNoPermissions() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -2104,9 +2229,9 @@ public class AccessControlServiceTest {
                 .build();
         authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
-        Mockito.when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedUser));
-        Mockito.when(userService.isInternal(userId)).thenReturn(true);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedUser));
+        when(userService.isInternal(userId)).thenReturn(true);
 
         boolean result = accessControlService.canConvertUserToMultiFirm(accessedUserId.toString());
         Assertions.assertThat(result).isFalse();
@@ -2116,7 +2241,7 @@ public class AccessControlServiceTest {
     public void canConvertUserToMultiFirmReturnsFalseWhenAuthenticatedUserHasNoActiveProfile() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -2146,14 +2271,14 @@ public class AccessControlServiceTest {
                 .build();
         authenticatedUser.getUserProfiles().add(inactiveUserProfile);
 
-        Mockito.when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
-        Mockito.when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedUser));
-        Mockito.when(userService.isInternal(userId)).thenReturn(true);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedUser));
+        when(userService.isInternal(userId)).thenReturn(true);
 
         boolean result = accessControlService.canConvertUserToMultiFirm(accessedUserId.toString());
         Assertions.assertThat(result).isFalse();
     }
-    
+
     @Nested
     class CanEnableUserUpdatedLogicTest {
 
@@ -2163,22 +2288,22 @@ public class AccessControlServiceTest {
 
         @Test
         void shouldReturnFalse_whenAccessedUserMissing() {
-            Mockito.when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.empty());
+            when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.empty());
             assertThat(accessControlService.canEnableUser(targetUserId.toString())).isFalse();
         }
 
         @Test
         void shouldReturnFalse_whenUserAlreadyEnabled() {
             EntraUserDto dto = EntraUserDto.builder().enabled(true).build();
-            Mockito.when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(dto));
+            when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(dto));
             assertThat(accessControlService.canEnableUser(targetUserId.toString())).isFalse();
         }
 
         @Test
         void shouldReturnFalse_whenAccessedUserInternal() {
             EntraUserDto dto = EntraUserDto.builder().enabled(false).build();
-            Mockito.when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(dto));
-            Mockito.when(userService.isInternal(targetUserId.toString())).thenReturn(true);
+            when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(dto));
+            when(userService.isInternal(targetUserId.toString())).thenReturn(true);
             assertThat(accessControlService.canEnableUser(targetUserId.toString())).isFalse();
         }
 
@@ -2189,10 +2314,10 @@ public class AccessControlServiceTest {
 
             EntraUserDto targetEntraUserDto = EntraUserDto.builder().id(targetUserId.toString()).enabled(false).build();
 
-            Mockito.when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-            Mockito.when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.empty());
-            Mockito.when(userService.isInternal(any(String.class))).thenReturn(false);
-            Mockito.when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
+            when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
+            when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.empty());
+            when(userService.isInternal(any(String.class))).thenReturn(false);
+            when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
 
             assertThat(accessControlService.canEnableUser(targetUserId.toString())).isFalse();
         }
@@ -2204,11 +2329,11 @@ public class AccessControlServiceTest {
             EntraUserDto targetEntraUserDto = EntraUserDto.builder().id(targetUserId.toString()).enabled(false).multiFirmUser(true).build();
             EntraUser target = createTargetUser(disabledBy, null);
 
-            Mockito.when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-            Mockito.when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
-            Mockito.when(userService.isInternal(any(String.class))).thenReturn(false);
-            Mockito.when(userService.isInternal(any(UUID.class))).thenReturn(false);
-            Mockito.when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
+            when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
+            when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+            when(userService.isInternal(any(String.class))).thenReturn(false);
+            when(userService.isInternal(any(UUID.class))).thenReturn(false);
+            when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
 
             assertThat(accessControlService.canEnableUser(targetUserId.toString())).isFalse();
 
@@ -2223,11 +2348,11 @@ public class AccessControlServiceTest {
 
             EntraUser target = createTargetUser(disabledBy, null);
 
-            Mockito.when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-            Mockito.when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
-            Mockito.when(userService.isInternal(any(String.class))).thenReturn(false);
-            Mockito.when(userService.isInternal(any(UUID.class))).thenReturn(true);
-            Mockito.when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
+            when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
+            when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+            when(userService.isInternal(any(String.class))).thenReturn(false);
+            when(userService.isInternal(any(UUID.class))).thenReturn(true);
+            when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
 
             assertThat(accessControlService.canEnableUser(targetUserId.toString())).isFalse();
         }
@@ -2244,16 +2369,16 @@ public class AccessControlServiceTest {
                     .appRoles(List.of(AppRoleDto.builder()
                             .name(EXTERNAL_USER_ADMIN.getRoleName()).build()))
                     .build();
-            Mockito.when(userService.getUserProfileById(disabledBy.toString()))
+            when(userService.getUserProfileById(disabledBy.toString()))
                     .thenReturn(Optional.of(disabledByDto));
 
             EntraUser target = createTargetUser(disabledBy, null);
 
-            Mockito.when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-            Mockito.when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
-            Mockito.when(userService.isInternal(any(String.class))).thenReturn(false);
-            Mockito.when(userService.isInternal(any(UUID.class))).thenReturn(true);
-            Mockito.when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
+            when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
+            when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+            when(userService.isInternal(any(String.class))).thenReturn(false);
+            when(userService.isInternal(any(UUID.class))).thenReturn(true);
+            when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
 
             try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                 mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER)).thenReturn(true);
@@ -2274,16 +2399,16 @@ public class AccessControlServiceTest {
                     .appRoles(List.of(AppRoleDto.builder()
                             .name(GLOBAL_ADMIN.getRoleName()).build()))
                     .build();
-            Mockito.when(userService.getUserProfileById(disabledBy.toString()))
+            when(userService.getUserProfileById(disabledBy.toString()))
                     .thenReturn(Optional.of(disabledByDto));
 
             EntraUser target = createTargetUser(disabledBy, null);
 
-            Mockito.when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-            Mockito.when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
-            Mockito.when(userService.isInternal(any(String.class))).thenReturn(false);
-            Mockito.when(userService.isInternal(any(UUID.class))).thenReturn(true);
-            Mockito.when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
+            when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
+            when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+            when(userService.isInternal(any(String.class))).thenReturn(false);
+            when(userService.isInternal(any(UUID.class))).thenReturn(true);
+            when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
 
             try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                 mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER)).thenReturn(true);
@@ -2304,21 +2429,497 @@ public class AccessControlServiceTest {
                     .appRoles(List.of(AppRoleDto.builder()
                             .name(GLOBAL_ADMIN.getRoleName()).build()))
                     .build();
-            Mockito.when(userService.getUserProfileById(disabledBy.toString()))
+            when(userService.getUserProfileById(disabledBy.toString()))
                     .thenReturn(Optional.of(disabledByDto));
 
             EntraUser target = createTargetUser(disabledBy, null);
 
-            Mockito.when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-            Mockito.when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
-            Mockito.when(userService.isInternal(any(String.class))).thenReturn(false);
-            Mockito.when(userService.isInternal(any(UUID.class))).thenReturn(true);
-            Mockito.when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
+            when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
+            when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+            when(userService.isInternal(any(String.class))).thenReturn(false);
+            when(userService.isInternal(any(UUID.class))).thenReturn(true);
+            when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
 
             try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                 mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER)).thenReturn(true);
 
                 assertThat(accessControlService.canEnableUser(targetUserId.toString())).isTrue();
+            }
+        }
+
+        @Nested
+        class RoleAssignmentAndRemovalTests {
+
+            @Test
+            void canAssignAppRoles_returnsTrue_whenGlobalAdmin() {
+                // Arrange
+                String userProfileId = UUID.randomUUID().toString();
+                UUID authenticatedUserId = UUID.randomUUID();
+
+                EntraUser authenticatedUser = createAuthenticatedUserWithRole(authenticatedUserId, GLOBAL_ADMIN.getRoleName());
+                UserProfileDto accessedUserProfile = createUserProfileDto(UserType.EXTERNAL);
+
+                setupSecurityContext(authenticatedUser);
+                when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(accessedUserProfile));
+
+                // Act
+                boolean result = accessControlService.canAssignAppRoles(userProfileId);
+
+                // Assert
+                assertThat(result).isTrue();
+            }
+
+            @Test
+            void canAssignAppRoles_returnsFalse_whenUserProfileNotFound() {
+                // Arrange
+                String userProfileId = UUID.randomUUID().toString();
+                UUID authenticatedUserId = UUID.randomUUID();
+
+                EntraUser authenticatedUser = createAuthenticatedUserWithPermission(authenticatedUserId, Permission.ASSIGN_EXTERNAL_USER_ROLES);
+                setupSecurityContext(authenticatedUser);
+                when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.empty());
+
+                // Act
+                boolean result = accessControlService.canAssignAppRoles(userProfileId);
+
+                // Assert
+                assertThat(result).isFalse();
+            }
+
+            @Test
+            void canAssignInternalAppRoles_returnsTrue_whenInternalUserManagerAssigningToInternalUser() {
+                // Arrange
+                String userProfileId = UUID.randomUUID().toString();
+                UUID authenticatedUserId = UUID.randomUUID();
+
+                EntraUser authenticatedUser = createAuthenticatedUserWithPermission(authenticatedUserId, Permission.ASSIGN_INTERNAL_USER_ROLES);
+                UserProfileDto accessedUserProfile = createUserProfileDto(UserType.INTERNAL);
+
+                setupSecurityContext(authenticatedUser);
+                when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(accessedUserProfile));
+                when(userService.isInternal(accessedUserProfile.getEntraUser().getId())).thenReturn(true);
+
+                // Act
+                boolean result = accessControlService.canAssignInternalAppRoles(userProfileId);
+
+                // Assert
+                assertThat(result).isTrue();
+            }
+
+            @Test
+            void canAssignInternalAppRoles_returnsFalse_whenAssigningToExternalUser() {
+                // Arrange
+                String userProfileId = UUID.randomUUID().toString();
+                UUID authenticatedUserId = UUID.randomUUID();
+
+                EntraUser authenticatedUser = createAuthenticatedUserWithPermission(authenticatedUserId, Permission.ASSIGN_INTERNAL_USER_ROLES);
+                UserProfileDto accessedUserProfile = createUserProfileDto(UserType.EXTERNAL);
+
+                setupSecurityContext(authenticatedUser);
+                when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(accessedUserProfile));
+                when(userService.isInternal(accessedUserProfile.getEntraUser().getId())).thenReturn(false);
+
+                // Act
+                boolean result = accessControlService.canAssignInternalAppRoles(userProfileId);
+
+                // Assert
+                assertThat(result).isFalse();
+            }
+
+            @Test
+            void canAssignExternalAppRoles_returnsTrue_whenInternalUserWithPermissionAssigningToExternalUser() {
+                // Arrange
+                String userProfileId = UUID.randomUUID().toString();
+                UUID authenticatedUserId = UUID.randomUUID();
+
+                EntraUser authenticatedUser = createAuthenticatedUserWithPermission(authenticatedUserId, Permission.ASSIGN_EXTERNAL_USER_ROLES);
+                UserProfileDto accessedUserProfile = createUserProfileDto(UserType.EXTERNAL);
+
+                setupSecurityContext(authenticatedUser);
+                when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(accessedUserProfile));
+                when(userService.isInternal(accessedUserProfile.getEntraUser().getId())).thenReturn(false);
+
+                // Act
+                boolean result = accessControlService.canAssignExternalAppRoles(userProfileId);
+
+                // Assert
+                assertThat(result).isTrue();
+            }
+
+            @Test
+            void canAssignExternalAppRoles_returnsFalse_whenAssigningToInternalUser() {
+                // Arrange
+                String userProfileId = UUID.randomUUID().toString();
+                UUID authenticatedUserId = UUID.randomUUID();
+
+                EntraUser authenticatedUser = createAuthenticatedUserWithPermission(authenticatedUserId, Permission.ASSIGN_EXTERNAL_USER_ROLES);
+                UserProfileDto accessedUserProfile = createUserProfileDto(UserType.INTERNAL);
+
+                setupSecurityContext(authenticatedUser);
+                when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(accessedUserProfile));
+                when(userService.isInternal(accessedUserProfile.getEntraUser().getId())).thenReturn(true);
+
+                // Act
+                boolean result = accessControlService.canAssignExternalAppRoles(userProfileId);
+
+                // Assert
+                assertThat(result).isFalse();
+            }
+
+            @Test
+            void canAssignAppRoles_returnsFalse_whenNoPermissions() {
+                // Arrange
+                String userProfileId = UUID.randomUUID().toString();
+                UUID authenticatedUserId = UUID.randomUUID();
+
+                EntraUser authenticatedUser = createAuthenticatedUserWithPermission(authenticatedUserId, Permission.VIEW_EXTERNAL_USER); // Wrong permission
+                UserProfileDto accessedUserProfile = createUserProfileDto(UserType.EXTERNAL);
+
+                setupSecurityContext(authenticatedUser);
+                when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(accessedUserProfile));
+
+                // Act
+                boolean result = accessControlService.canAssignAppRoles(userProfileId);
+
+                // Assert
+                assertThat(result).isFalse();
+            }
+
+            @Test
+            void canRemoveAppRoles_returnsTrue_whenGlobalAdmin() {
+                // Arrange
+                String userProfileId = UUID.randomUUID().toString();
+                UUID authenticatedUserId = UUID.randomUUID();
+
+                EntraUser authenticatedUser = createAuthenticatedUserWithRole(authenticatedUserId, GLOBAL_ADMIN.getRoleName());
+                UserProfileDto accessedUserProfile = createUserProfileDto(UserType.EXTERNAL);
+
+                setupSecurityContext(authenticatedUser);
+                when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(accessedUserProfile));
+
+                // Act
+                boolean result = accessControlService.canRemoveAppRoles(userProfileId);
+
+                // Assert
+                assertThat(result).isTrue();
+            }
+
+            @Test
+            void canRemoveAppRoles_returnsFalse_whenUserProfileNotFound() {
+                // Arrange
+                String userProfileId = UUID.randomUUID().toString();
+                UUID authenticatedUserId = UUID.randomUUID();
+
+                EntraUser authenticatedUser = createAuthenticatedUserWithPermission(authenticatedUserId, Permission.REMOVE_EXTERNAL_USER_ROLES);
+                setupSecurityContext(authenticatedUser);
+                when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.empty());
+
+                // Act
+                boolean result = accessControlService.canRemoveAppRoles(userProfileId);
+
+                // Assert
+                assertThat(result).isFalse();
+            }
+
+            @Test
+            void canRemoveInternalAppRoles_returnsTrue_whenInternalUserManagerRemovingFromInternalUser() {
+                // Arrange
+                String userProfileId = UUID.randomUUID().toString();
+                UUID authenticatedUserId = UUID.randomUUID();
+
+                EntraUser authenticatedUser = createAuthenticatedUserWithPermission(authenticatedUserId, Permission.REMOVE_INTERNAL_USER_ROLES);
+                UserProfileDto accessedUserProfile = createUserProfileDto(UserType.INTERNAL);
+
+                setupSecurityContext(authenticatedUser);
+                when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(accessedUserProfile));
+                when(userService.isInternal(accessedUserProfile.getEntraUser().getId())).thenReturn(true);
+
+                // Act
+                boolean result = accessControlService.canRemoveInternalAppRoles(userProfileId);
+
+                // Assert
+                assertThat(result).isTrue();
+            }
+
+            @Test
+            void canRemoveInternalAppRoles_returnsFalse_whenRemovingFromExternalUser() {
+                // Arrange
+                String userProfileId = UUID.randomUUID().toString();
+                UUID authenticatedUserId = UUID.randomUUID();
+
+                EntraUser authenticatedUser = createAuthenticatedUserWithPermission(authenticatedUserId, Permission.REMOVE_INTERNAL_USER_ROLES);
+                UserProfileDto accessedUserProfile = createUserProfileDto(UserType.EXTERNAL);
+
+                setupSecurityContext(authenticatedUser);
+                when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(accessedUserProfile));
+                when(userService.isInternal(accessedUserProfile.getEntraUser().getId())).thenReturn(false);
+
+                // Act
+                boolean result = accessControlService.canRemoveInternalAppRoles(userProfileId);
+
+                // Assert
+                assertThat(result).isFalse();
+            }
+
+            @Test
+            void canRemoveExternalAppRoles_returnsTrue_whenInternalUserWithPermissionRemovingFromExternalUser() {
+                // Arrange
+                String userProfileId = UUID.randomUUID().toString();
+                UUID authenticatedUserId = UUID.randomUUID();
+
+                EntraUser authenticatedUser = createAuthenticatedUserWithPermission(authenticatedUserId, Permission.REMOVE_EXTERNAL_USER_ROLES);
+                UserProfileDto accessedUserProfile = createUserProfileDto(UserType.EXTERNAL);
+
+                setupSecurityContext(authenticatedUser);
+                when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(accessedUserProfile));
+                when(userService.isInternal(accessedUserProfile.getEntraUser().getId())).thenReturn(false);
+                when(userService.isInternal(authenticatedUser.getId())).thenReturn(true);
+
+                // Act
+                boolean result = accessControlService.canRemoveExternalAppRoles(userProfileId);
+
+                // Assert
+                assertThat(result).isTrue();
+            }
+
+            @Test
+            void canRemoveExternalAppRoles_returnsFalse_whenAuthenticatedUserIsNotInternal() {
+                // Arrange
+                String userProfileId = UUID.randomUUID().toString();
+                UUID authenticatedUserId = UUID.randomUUID();
+
+                EntraUser authenticatedUser = createAuthenticatedUserWithPermission(authenticatedUserId, Permission.REMOVE_EXTERNAL_USER_ROLES);
+                UserProfileDto accessedUserProfile = createUserProfileDto(UserType.EXTERNAL);
+
+                setupSecurityContext(authenticatedUser);
+                when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(accessedUserProfile));
+                when(userService.isInternal(accessedUserProfile.getEntraUser().getId())).thenReturn(false);
+                when(userService.isInternal(authenticatedUser.getId())).thenReturn(false); // Authenticated user is external
+
+                // Act
+                boolean result = accessControlService.canRemoveExternalAppRoles(userProfileId);
+
+                // Assert
+                assertThat(result).isFalse();
+            }
+
+            @Test
+            void canRemoveExternalAppRoles_returnsFalse_whenRemovingFromInternalUser() {
+                // Arrange
+                String userProfileId = UUID.randomUUID().toString();
+                UUID authenticatedUserId = UUID.randomUUID();
+
+                EntraUser authenticatedUser = createAuthenticatedUserWithPermission(authenticatedUserId, Permission.REMOVE_EXTERNAL_USER_ROLES);
+                UserProfileDto accessedUserProfile = createUserProfileDto(UserType.INTERNAL);
+
+                setupSecurityContext(authenticatedUser);
+                when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(accessedUserProfile));
+                when(userService.isInternal(accessedUserProfile.getEntraUser().getId())).thenReturn(true);
+
+                // Act
+                boolean result = accessControlService.canRemoveExternalAppRoles(userProfileId);
+
+                // Assert
+                assertThat(result).isFalse();
+            }
+
+            @Test
+            void canRemoveAppRoles_returnsFalse_whenNoPermissions() {
+                // Arrange
+                String userProfileId = UUID.randomUUID().toString();
+                UUID authenticatedUserId = UUID.randomUUID();
+
+                EntraUser authenticatedUser = createAuthenticatedUserWithPermission(authenticatedUserId, Permission.VIEW_EXTERNAL_USER); // Wrong permission
+                UserProfileDto accessedUserProfile = createUserProfileDto(UserType.EXTERNAL);
+
+                setupSecurityContext(authenticatedUser);
+                when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(accessedUserProfile));
+
+                // Act
+                boolean result = accessControlService.canRemoveAppRoles(userProfileId);
+
+                // Assert
+                assertThat(result).isFalse();
+            }
+
+            @Test
+            void canAssignAppRoles_returnsTrue_whenBothInternalAndExternalPermissionsGranted() {
+                // Arrange
+                String userProfileId = UUID.randomUUID().toString();
+                UUID authenticatedUserId = UUID.randomUUID();
+
+                EntraUser authenticatedUser = createAuthenticatedUserWithPermissions(authenticatedUserId,
+                        Permission.ASSIGN_INTERNAL_USER_ROLES, Permission.ASSIGN_EXTERNAL_USER_ROLES);
+                UserProfileDto accessedUserProfile = createUserProfileDto(UserType.EXTERNAL);
+
+                setupSecurityContext(authenticatedUser);
+                when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(accessedUserProfile));
+                when(userService.isInternal(accessedUserProfile.getEntraUser().getId())).thenReturn(false);
+
+                // Act
+                boolean result = accessControlService.canAssignAppRoles(userProfileId);
+
+                // Assert
+                assertThat(result).isTrue();
+            }
+
+            @Test
+            void canRemoveAppRoles_returnsTrue_whenBothInternalAndExternalPermissionsGranted() {
+                // Arrange
+                String userProfileId = UUID.randomUUID().toString();
+                UUID authenticatedUserId = UUID.randomUUID();
+
+                EntraUser authenticatedUser = createAuthenticatedUserWithPermissions(authenticatedUserId,
+                        Permission.REMOVE_INTERNAL_USER_ROLES, Permission.REMOVE_EXTERNAL_USER_ROLES);
+                UserProfileDto accessedUserProfile = createUserProfileDto(UserType.EXTERNAL);
+
+                setupSecurityContext(authenticatedUser);
+                when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(accessedUserProfile));
+                when(userService.isInternal(accessedUserProfile.getEntraUser().getId())).thenReturn(false);
+                when(userService.isInternal(authenticatedUser.getId())).thenReturn(true);
+
+                // Act
+                boolean result = accessControlService.canRemoveAppRoles(userProfileId);
+
+                // Assert
+                assertThat(result).isTrue();
+            }
+
+            @Test
+            void canAssignAppRoles_returnsTrue_whenExternalUserTryingToAssignToExternalUser() {
+                // Arrange
+                String userProfileId = UUID.randomUUID().toString();
+                UUID authenticatedUserId = UUID.randomUUID();
+
+                // Create external authenticated user
+                EntraUser authenticatedUser = createAuthenticatedUserWithPermission(authenticatedUserId, Permission.ASSIGN_EXTERNAL_USER_ROLES);
+                UserProfileDto accessedUserProfile = createUserProfileDto(UserType.EXTERNAL);
+
+                setupSecurityContext(authenticatedUser);
+                when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(accessedUserProfile));
+                when(userService.isInternal(accessedUserProfile.getEntraUser().getId())).thenReturn(false);
+
+                // Act
+                boolean result = accessControlService.canAssignExternalAppRoles(userProfileId);
+
+                // Assert
+                assertThat(result).isTrue();
+            }
+
+            @Test
+            void canRemoveAppRoles_returnsFalse_whenExternalUserTryingToRemoveFromExternalUser() {
+                // Arrange
+                String userProfileId = UUID.randomUUID().toString();
+                UUID authenticatedUserId = UUID.randomUUID();
+
+                // Create external authenticated user
+                EntraUser authenticatedUser = createAuthenticatedUserWithPermission(authenticatedUserId, Permission.REMOVE_EXTERNAL_USER_ROLES);
+                UserProfileDto accessedUserProfile = createUserProfileDto(UserType.EXTERNAL);
+
+                setupSecurityContext(authenticatedUser);
+                when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(accessedUserProfile));
+                when(userService.isInternal(accessedUserProfile.getEntraUser().getId())).thenReturn(false);
+                when(userService.isInternal(authenticatedUser.getId())).thenReturn(false); // External user
+
+                // Act
+                boolean result = accessControlService.canRemoveExternalAppRoles(userProfileId);
+
+                // Assert
+                assertThat(result).isFalse();
+            }
+
+            // Helper methods for creating test data
+
+            private EntraUser createAuthenticatedUserWithRole(UUID userId, String roleName) {
+                AppRole appRole = AppRole.builder()
+                        .name(roleName)
+                        .authzRole(true)
+                        .build();
+
+                EntraUser authenticatedUser = EntraUser.builder()
+                        .id(userId)
+                        .email("test@email.com")
+                        .userProfiles(new HashSet<>())
+                        .build();
+
+                UserProfile userProfile = UserProfile.builder()
+                        .id(UUID.randomUUID())
+                        .activeProfile(true)
+                        .entraUser(authenticatedUser)
+                        .appRoles(Set.of(appRole))
+                        .userType(UserType.INTERNAL)
+                        .build();
+
+                authenticatedUser.getUserProfiles().add(userProfile);
+                return authenticatedUser;
+            }
+
+            private EntraUser createAuthenticatedUserWithPermission(UUID userId, Permission permission) {
+                AppRole appRole = AppRole.builder()
+                        .authzRole(true)
+                        .permissions(Set.of(permission))
+                        .build();
+
+                EntraUser authenticatedUser = EntraUser.builder()
+                        .id(userId)
+                        .email("test@email.com")
+                        .userProfiles(new HashSet<>())
+                        .build();
+
+                UserProfile userProfile = UserProfile.builder()
+                        .id(UUID.randomUUID())
+                        .activeProfile(true)
+                        .entraUser(authenticatedUser)
+                        .appRoles(Set.of(appRole))
+                        .userType(UserType.INTERNAL)
+                        .build();
+
+                authenticatedUser.getUserProfiles().add(userProfile);
+                return authenticatedUser;
+            }
+
+            private EntraUser createAuthenticatedUserWithPermissions(UUID userId, Permission... permissions) {
+                AppRole appRole = AppRole.builder()
+                        .authzRole(true)
+                        .permissions(Set.of(permissions))
+                        .build();
+
+                EntraUser authenticatedUser = EntraUser.builder()
+                        .id(userId)
+                        .email("test@email.com")
+                        .userProfiles(new HashSet<>())
+                        .build();
+
+                UserProfile userProfile = UserProfile.builder()
+                        .id(UUID.randomUUID())
+                        .activeProfile(true)
+                        .entraUser(authenticatedUser)
+                        .appRoles(Set.of(appRole))
+                        .userType(UserType.INTERNAL)
+                        .build();
+
+                authenticatedUser.getUserProfiles().add(userProfile);
+                return authenticatedUser;
+            }
+
+            private UserProfileDto createUserProfileDto(UserType userType) {
+                EntraUserDto entraUserDto = EntraUserDto.builder()
+                        .id(UUID.randomUUID().toString())
+                        .build();
+
+                return UserProfileDto.builder()
+                        .entraUser(entraUserDto)
+                        .userType(userType)
+                        .build();
+            }
+
+            private void setupSecurityContext(EntraUser authenticatedUser) {
+                AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+                SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+                when(securityContext.getAuthentication()).thenReturn(authentication);
+                SecurityContextHolder.setContext(securityContext);
+
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
             }
         }
 
@@ -2334,16 +2935,16 @@ public class AccessControlServiceTest {
                     .appRoles(List.of(AppRoleDto.builder()
                             .name(GLOBAL_ADMIN.getRoleName()).build()))
                     .build();
-            Mockito.when(userService.getUserProfileById(disabledBy.toString()))
+            when(userService.getUserProfileById(disabledBy.toString()))
                     .thenReturn(Optional.of(disabledByDto));
 
             EntraUser target = createTargetUser(disabledBy, null);
 
-            Mockito.when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-            Mockito.when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
-            Mockito.when(userService.isInternal(any(String.class))).thenReturn(false);
-            Mockito.when(userService.isInternal(any(UUID.class))).thenReturn(true);
-            Mockito.when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
+            when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
+            when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+            when(userService.isInternal(any(String.class))).thenReturn(false);
+            when(userService.isInternal(any(UUID.class))).thenReturn(true);
+            when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
 
             try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                 mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER)).thenReturn(true);
@@ -2364,16 +2965,16 @@ public class AccessControlServiceTest {
                     .appRoles(List.of(AppRoleDto.builder()
                             .name(FIRM_USER_MANAGER.getRoleName()).build()))
                     .build();
-            Mockito.when(userService.getUserProfileById(disabledBy.toString()))
+            when(userService.getUserProfileById(disabledBy.toString()))
                     .thenReturn(Optional.of(disabledByDto));
 
             EntraUser target = createTargetUser(disabledBy, firmA);
 
-            Mockito.when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-            Mockito.when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
-            Mockito.when(userService.isInternal(any(String.class))).thenReturn(false);
-            Mockito.when(userService.isInternal(any(UUID.class))).thenReturn(true);
-            Mockito.when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
+            when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
+            when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+            when(userService.isInternal(any(String.class))).thenReturn(false);
+            when(userService.isInternal(any(UUID.class))).thenReturn(true);
+            when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
 
             try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                 mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER)).thenReturn(true);
@@ -2394,17 +2995,17 @@ public class AccessControlServiceTest {
                     .appRoles(List.of(AppRoleDto.builder()
                             .name(EXTERNAL_USER_ADMIN.getRoleName()).build()))
                     .build();
-            Mockito.when(userService.getUserProfileById(disabledBy.toString()))
+            when(userService.getUserProfileById(disabledBy.toString()))
                     .thenReturn(Optional.of(disabledByDto));
 
             EntraUser target = createTargetUser(disabledBy, null);
             target.getUserProfiles().stream().findFirst().ifPresent(up -> up.setFirm(firmA));
 
-            Mockito.when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-            Mockito.when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
-            Mockito.when(userService.isInternal(any(String.class))).thenReturn(false);
-            Mockito.when(userService.isInternal(any(UUID.class))).thenReturn(true);
-            Mockito.when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
+            when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
+            when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+            when(userService.isInternal(any(String.class))).thenReturn(false);
+            when(userService.isInternal(any(UUID.class))).thenReturn(true);
+            when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
 
             try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                 mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER)).thenReturn(true);
@@ -2426,7 +3027,7 @@ public class AccessControlServiceTest {
                     .appRoles(List.of(AppRoleDto.builder()
                             .name(FIRM_USER_MANAGER.getRoleName()).build()))
                     .build();
-            Mockito.when(userService.getUserProfileById(disabledBy.toString()))
+            when(userService.getUserProfileById(disabledBy.toString()))
                     .thenReturn(Optional.of(disabledByDto));
 
             EntraUser target = createTargetUser(disabledBy, null);
@@ -2435,11 +3036,11 @@ public class AccessControlServiceTest {
             EntraUser actor = createActorWithRoles(FIRM_USER_MANAGER.getRoleName());
             actor.getUserProfiles().stream().findFirst().ifPresent(up -> up.setFirm(firmB));
 
-            Mockito.when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-            Mockito.when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
-            Mockito.when(userService.isInternal(any(String.class))).thenReturn(false);
-            Mockito.when(userService.isInternal(any(UUID.class))).thenReturn(true);
-            Mockito.when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
+            when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
+            when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+            when(userService.isInternal(any(String.class))).thenReturn(false);
+            when(userService.isInternal(any(UUID.class))).thenReturn(true);
+            when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
 
             assertThat(accessControlService.canEnableUser(targetUserId.toString())).isFalse();
         }
@@ -2456,16 +3057,16 @@ public class AccessControlServiceTest {
                     .appRoles(List.of(AppRoleDto.builder()
                             .name(EXTERNAL_USER_ADMIN.getRoleName()).build()))
                     .build();
-            Mockito.when(userService.getUserProfileById(disabledBy.toString()))
+            when(userService.getUserProfileById(disabledBy.toString()))
                     .thenReturn(Optional.of(disabledByDto));
 
             EntraUser target = createTargetUser(disabledBy, null);
 
-            Mockito.when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-            Mockito.when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
-            Mockito.when(userService.isInternal(any(String.class))).thenReturn(false);
-            Mockito.when(userService.isInternal(any(UUID.class))).thenReturn(true);
-            Mockito.when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
+            when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
+            when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+            when(userService.isInternal(any(String.class))).thenReturn(false);
+            when(userService.isInternal(any(UUID.class))).thenReturn(true);
+            when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
 
             try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                 mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER)).thenReturn(true);
@@ -2486,16 +3087,16 @@ public class AccessControlServiceTest {
                     .appRoles(List.of(AppRoleDto.builder()
                             .name(FIRM_USER_MANAGER.getRoleName()).build()))
                     .build();
-            Mockito.when(userService.getUserProfileById(disabledBy.toString()))
+            when(userService.getUserProfileById(disabledBy.toString()))
                     .thenReturn(Optional.of(disabledByDto));
 
             EntraUser target = createTargetUser(disabledBy, null);
 
-            Mockito.when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-            Mockito.when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
-            Mockito.when(userService.isInternal(any(String.class))).thenReturn(false);
-            Mockito.when(userService.isInternal(any(UUID.class))).thenReturn(true);
-            Mockito.when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
+            when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
+            when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+            when(userService.isInternal(any(String.class))).thenReturn(false);
+            when(userService.isInternal(any(UUID.class))).thenReturn(true);
+            when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
 
             assertThat(accessControlService.canEnableUser(targetUserId.toString())).isFalse();
         }
@@ -2512,16 +3113,16 @@ public class AccessControlServiceTest {
                     .appRoles(List.of(AppRoleDto.builder()
                             .name(EXTERNAL_USER_ADMIN.getRoleName()).build()))
                     .build();
-            Mockito.when(userService.getUserProfileById(disabledBy.toString()))
+            when(userService.getUserProfileById(disabledBy.toString()))
                     .thenReturn(Optional.of(disabledByDto));
 
             EntraUser target = createTargetUser(disabledBy, null);
 
-            Mockito.when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-            Mockito.when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
-            Mockito.when(userService.isInternal(any(String.class))).thenReturn(false);
-            Mockito.when(userService.isInternal(any(UUID.class))).thenReturn(true);
-            Mockito.when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
+            when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
+            when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+            when(userService.isInternal(any(String.class))).thenReturn(false);
+            when(userService.isInternal(any(UUID.class))).thenReturn(true);
+            when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
 
             try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                 mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER)).thenReturn(true);
@@ -2542,16 +3143,16 @@ public class AccessControlServiceTest {
                     .appRoles(List.of(AppRoleDto.builder()
                             .name(EXTERNAL_USER_ADMIN.getRoleName()).build()))
                     .build();
-            Mockito.when(userService.getUserProfileById(disabledBy.toString()))
+            when(userService.getUserProfileById(disabledBy.toString()))
                     .thenReturn(Optional.of(disabledByDto));
 
             EntraUser target = createTargetUser(disabledBy, null);
 
-            Mockito.when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-            Mockito.when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
-            Mockito.when(userService.isInternal(any(String.class))).thenReturn(false);
-            Mockito.when(userService.isInternal(any(UUID.class))).thenReturn(true);
-            Mockito.when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
+            when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
+            when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+            when(userService.isInternal(any(String.class))).thenReturn(false);
+            when(userService.isInternal(any(UUID.class))).thenReturn(true);
+            when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
 
             try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                 mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER)).thenReturn(false);
