@@ -4143,6 +4143,73 @@ class UserControllerTest {
     }
 
     @Test
+    void grantAccessEditUserApps_userNotPermittedToAddExternalRoles() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440001";
+        UserProfileDto user = new UserProfileDto();
+        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+        user.setUserType(UserType.EXTERNAL);
+
+        AppDto app1 = new AppDto();
+        app1.setId("app1");
+        app1.setName("App 1");
+        app1.setEnabled(true);
+        AppDto app2 = new AppDto();
+        app2.setId("app2");
+        app2.setName("App 2");
+        app2.setEnabled(true);
+
+        Set<AppDto> userApps = Set.of(app1);
+        List<AppDto> availableApps = List.of(app1, app2);
+
+        // When
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+        when(loginService.getCurrentProfile(authentication))
+                .thenReturn(UserProfile.builder().id(UUID.randomUUID()).appRoles(new HashSet<>()).build());
+        when(accessControlService.canAssignExternalAppRoles(any())).thenReturn(false);
+
+        // When
+        String view = userController.grantAccessEditUserApps(userId, new ApplicationsForm(), model,
+                redirectAttributes, new MockHttpSession(), authentication);
+
+        // Then
+        assertThat(view).startsWith("redirect:/admin/users/manage/");
+    }
+
+    @Test
+    void grantAccessEditUserApps_userNotPermittedToAddInternalRoles() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440001";
+        UserProfileDto user = new UserProfileDto();
+        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+        user.setUserType(UserType.INTERNAL);
+
+        AppDto app1 = new AppDto();
+        app1.setId("app1");
+        app1.setName("App 1");
+        app1.setEnabled(true);
+        AppDto app2 = new AppDto();
+        app2.setId("app2");
+        app2.setName("App 2");
+        app2.setEnabled(true);
+
+        Set<AppDto> userApps = Set.of(app1);
+        List<AppDto> availableApps = List.of(app1, app2);
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+        when(loginService.getCurrentProfile(authentication))
+                .thenReturn(UserProfile.builder().id(UUID.randomUUID()).appRoles(new HashSet<>()).build());
+        when(accessControlService.canAssignInternalAppRoles(any())).thenReturn(false);
+
+        // When
+        String view = userController.grantAccessEditUserApps(userId, new ApplicationsForm(), model,
+                redirectAttributes, new MockHttpSession(), authentication);
+
+        // Then
+        assertThat(view).startsWith("redirect:/admin/users/manage/");
+    }
+
+    @Test
     void grantAccessSetSelectedApps_shouldRedirectToRolesWhenAppsSelected() {
         // Given
         String userId = "550e8400-e29b-41d4-a716-446655440000";
@@ -5856,20 +5923,57 @@ class UserControllerTest {
     }
 
     @Test
-    void grantAccessConfirmation_shouldPopulateModelAndReturnView() {
+    void grantAccessProcessCheckAnswers_userCannotAssignExternalRoles() {
         // Given
-        final String userId = "550e8400-e29b-41d4-a716-446655440013";
-        UserProfileDto user = new UserProfileDto();
-        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+        final String userId = "550e8400-e29b-41d4-a716-446655440012";
+        UserProfileDto userProfileDto = UserProfileDto.builder().userType(UserType.EXTERNAL).build();
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setFullName("Test User");
+        userProfileDto.setEntraUser(entraUser);
 
-        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("admin user");
 
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("allSelectedRoles", Set.of("Role 1"));
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().build());
+        when(accessControlService.canAssignExternalAppRoles(userId)).thenReturn(false);
         // When
-        String view = userController.grantAccessConfirmation(userId, model);
+        String view = userController.grantAccessProcessCheckAnswers(userId, authentication, redirectAttributes, testSession);
 
-        // Then
-        assertThat(view).isEqualTo("grant-access-confirmation");
-        assertThat(model.getAttribute("user")).isEqualTo(user);
+        // then
+        assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
+    }
+
+    @Test
+    void grantAccessProcessCheckAnswers_userCannotAssignInternalRoles() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440012";
+        UserProfileDto userProfileDto = UserProfileDto.builder().userType(UserType.INTERNAL).build();
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setFullName("Test User");
+        userProfileDto.setEntraUser(entraUser);
+
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("admin user");
+
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("allSelectedRoles", Set.of("Role 1"));
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().build());
+        when(accessControlService.canAssignInternalAppRoles(userId)).thenReturn(false);
+        // When
+        String view = userController.grantAccessProcessCheckAnswers(userId, authentication, redirectAttributes, testSession);
+
+        // then
+        assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
     }
 
     @Test
@@ -7377,6 +7481,54 @@ class UserControllerTest {
 
             assertThat(view).isEqualTo("grant-access-user-roles");
             verify(userService).getAppRolesByAppIdAndUserType("app-id-1", UserType.INTERNAL, null);
+        }
+
+        @Test
+        void grantAccessEditUserRoles_userNotAllowedToAssignExternalRoles() {
+            // Given
+            String userId = "550e8400-e29b-41d4-a716-446655440003";
+            UserProfileDto user = UserProfileDto.builder().userType(UserType.EXTERNAL).build();
+            user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+
+            MockHttpSession testSession = new MockHttpSession();
+            // No apps in session, and user has no apps
+
+            when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+            when(loginService.getCurrentProfile(authentication))
+                    .thenReturn(UserProfile.builder().id(UUID.randomUUID()).appRoles(new HashSet<>()).build());
+            when(accessControlService.canAssignExternalAppRoles(any())).thenReturn(false);
+
+            // When
+            String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
+                    testSession, redirectAttributes);
+
+            // Then
+            assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
+
+        }
+
+        @Test
+        void grantAccessEditUserRoles_userNotAllowedToAssignInternalRoles() {
+            // Given
+            String userId = "550e8400-e29b-41d4-a716-446655440003";
+            UserProfileDto user = UserProfileDto.builder().userType(UserType.INTERNAL).build();
+            user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+
+            MockHttpSession testSession = new MockHttpSession();
+            // No apps in session, and user has no apps
+
+            when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+            when(loginService.getCurrentProfile(authentication))
+                    .thenReturn(UserProfile.builder().id(UUID.randomUUID()).appRoles(new HashSet<>()).build());
+            when(accessControlService.canAssignInternalAppRoles(any())).thenReturn(false);
+
+            // When
+            String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
+                    testSession, redirectAttributes);
+
+            // Then
+            assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
+
         }
     }
 
