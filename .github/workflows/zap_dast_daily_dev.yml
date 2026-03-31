@@ -12,14 +12,14 @@ jobs:
     steps:
       - name: Run ZAP Daily Baseline Scan
         id: baseline_run
-        uses: zaproxy/action-baseline@v0.15.0
+        uses: zaproxy/action-baseline@de8ad967d3548d44ef623df22cf95c3b0baf8b25 # v0.15.0
         with:
           target: 'https://dev.your-legal-aid-services.service.justice.gov.uk/'
           cmd_options: '-a -j'
           fail_action: false
           issue_title: ZAP Scan Baseline Report - dev
       - id: extract-summary
-        uses: sean0x42/markdown-extract@v2.1.0
+        uses: sean0x42/markdown-extract@7b185cbe85263116bbf741e739e7198ba86465dc # v2.1.0
         with:
           file: report_md.md
           pattern: "Summary.of.Alerts"  # Bug in Action with passing quoted string, so use regex any char instead of spaces
@@ -52,7 +52,7 @@ jobs:
           ZAP_SUMMARY: ${{ steps.extract-summary.outputs.markdown }}
       - name: Post to Slack
         if: env.ZAP_SHOULD_NOTIFY == 'true'
-        uses: slackapi/slack-github-action@v2.1.1
+        uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a # v2.1.1
         with:
           webhook: ${{ secrets.ZAP_SLACK_WEBHOOK_URL }}
           webhook-type: incoming-webhook

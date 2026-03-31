@@ -3042,12 +3042,12 @@ public class UserController {
                 && changeDetails != null
                 && !changeDetails.isEmpty()) {
 
+            String firmName = user.getFirm() != null ? user.getFirm().getName() : "";
             notificationService.notifyUserAccessChange(
                     user.getId(),
                     user.getEntraUser().getFirstName(),
                     user.getEntraUser().getEmail(),
-                    changeType,
-                    changeDetails
+                    firmName
             );
         }
     }
