@@ -5895,6 +5895,7 @@ class UserServiceTest {
             // Given
             UUID user1Id = UUID.randomUUID();
             UUID user2Id = UUID.randomUUID();
+            UUID user3Id = UUID.randomUUID();
 
             EntraUser user1 = EntraUser.builder()
                     .id(user1Id)
@@ -5910,6 +5911,15 @@ class UserServiceTest {
                     .firstName("Jane")
                     .lastName("Smith")
                     .email("jane.smith@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .build();
+
+            EntraUser internalUser = EntraUser.builder()
+                    .id(user3Id)
+                    .firstName("Jane")
+                    .lastName("Doe")
+                    .email("jane.doe@example.com")
                     .userStatus(UserStatus.ACTIVE)
                     .multiFirmUser(false)
                     .build();
@@ -5940,10 +5950,20 @@ class UserServiceTest {
                     .userProfileStatus(UserProfileStatus.COMPLETE)
                     .build();
 
+            UserProfile internalUserProfile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(internalUser)
+                    .userType(UserType.INTERNAL)
+                    .activeProfile(true)
+                    .appRoles(new HashSet<>())
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .build();
+
             user1.setUserProfiles(Set.of(profile1));
             user2.setUserProfiles(Set.of(profile2));
+            internalUser.setUserProfiles(Set.of(internalUserProfile));
 
-            Page<EntraUser> userPage = new PageImpl<>(Arrays.asList(user1, user2),
+            Page<EntraUser> userPage = new PageImpl<>(Arrays.asList(user1, user2, internalUser),
                     PageRequest.of(0, 10), 2);
 
             when(mockEntraUserRepository.findAllUsersForAudit(
@@ -5959,11 +5979,11 @@ class UserServiceTest {
 
             // Then
             assertThat(result).isNotNull();
-            assertThat(result.getTotalUsers()).isEqualTo(2);
+            assertThat(result.getTotalUsers()).isEqualTo(3);
             assertThat(result.getTotalPages()).isEqualTo(1);
             assertThat(result.getCurrentPage()).isEqualTo(1);
             assertThat(result.getPageSize()).isEqualTo(10);
-            assertThat(result.getUsers()).hasSize(2);
+            assertThat(result.getUsers()).hasSize(3);
 
             assertThat(result.getUsers().get(0).getName()).isEqualTo("John Doe");
             assertThat(result.getUsers().get(0).getEmail()).isEqualTo("john.doe@example.com");
@@ -5971,6 +5991,14 @@ class UserServiceTest {
             assertThat(result.getUsers().get(0).getFirmAssociation()).isEqualTo("Test Firm");
             assertThat(result.getUsers().get(0).isMultiFirmUser()).isFalse();
             assertThat(result.getUsers().get(0).getProfileCount()).isEqualTo(1);
+
+            assertThat(result.getUsers().get(1).getName()).isEqualTo("Jane Smith");
+            assertThat(result.getUsers().get(1).getEmail()).isEqualTo("jane.smith@example.com");
+            assertThat(result.getUsers().get(1).getUserType()).isEqualTo("External");
+
+            assertThat(result.getUsers().get(2).getName()).isEqualTo("Jane Doe");
+            assertThat(result.getUsers().get(2).getEmail()).isEqualTo("jane.doe@example.com");
+            assertThat(result.getUsers().get(2).getUserType()).isEqualTo("Internal");
 
             verify(mockEntraUserRepository).findAllUsersForAudit(
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class));

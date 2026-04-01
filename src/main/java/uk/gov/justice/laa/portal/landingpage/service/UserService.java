@@ -1688,7 +1688,9 @@ public class UserService {
             return "Unknown";
         }
 
-        Set<String> firmNames = profiles.stream().map(UserProfile::getFirm).filter(Objects::nonNull)
+        Set<String> firmNames = profiles.stream()
+                .filter(profile -> UserType.EXTERNAL.equals(profile.getUserType()))
+                .map(UserProfile::getFirm).filter(Objects::nonNull)
                 .map(Firm::getName).collect(Collectors.toCollection(TreeSet::new));
 
         if (firmNames.isEmpty()) {
@@ -1708,7 +1710,7 @@ public class UserService {
         Set<String> firmCodes = new HashSet<>();
 
         if (!csvExport) {
-            firmCodes = profiles.stream().map(profile -> profile.getFirm()).filter(Objects::nonNull)
+            firmCodes = profiles.stream().map(UserProfile::getFirm).filter(Objects::nonNull)
                 .map(Firm::getCode).collect(Collectors.toCollection(HashSet::new));
         } else {
             List<Firm> sortedFirms =
@@ -1763,6 +1765,7 @@ public class UserService {
      */
     public boolean determineIsProviderAdminForSelectedFirm(List<UserProfile> profiles, UUID firmId) {
         return profiles.stream()
+                .filter(p -> UserType.EXTERNAL.equals(p.getUserType()))
                 .filter(p -> firmId.equals(p.getFirm().getId()))
                 .anyMatch(profile ->
                         profile.getAppRoles().stream()
@@ -1775,7 +1778,8 @@ public class UserService {
      */
     public String determineAppAccess(List<UserProfile> profiles, UUID firmId) {
         return profiles.stream()
-                .filter(p -> firmId.equals(p.getFirm().getId()))
+                .filter(p -> UserType.INTERNAL.equals(p.getUserType())
+                        || firmId.equals(p.getFirm().getId()))
                 .flatMap(profile -> profile.getAppRoles().stream())
                 .map(AppRole::getApp)
                 .filter(Objects::nonNull)
