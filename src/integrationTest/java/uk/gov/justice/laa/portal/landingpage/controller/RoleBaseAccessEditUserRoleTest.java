@@ -247,7 +247,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     @Transactional
     public void testExternalUserRolesCannotBeAssignedToInternalUsers() throws Exception {
         // Build test app
-        App testExternalApp = buildLaaApp("Test External App", generateEntraId(), "TestExternalAppSecurityGroupOid", "TestExternalAppSecurityGroup");
+        App testExternalApp = buildLaaApp("Test External App", generateEntraId(), "TestExternalAppSecurityGroupOid");
 
         // Build test role
         AppRole testExternalAppRole = buildLaaAppRole(testExternalApp, "Test External App Role");
@@ -277,7 +277,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     @Transactional
     public void testInternalUserRolesCanBeAssignedToInternalUsers() throws Exception {
         // Build test app
-        App testInternalApp = buildLaaApp("Test Internal App", generateEntraId(), "TestExternalAppSecurityGroupOid", "TestExternalAppSecurityGroup");
+        App testInternalApp = buildLaaApp("Test Internal App", generateEntraId(), "TestExternalAppSecurityGroupOid");
 
         // Build test role
         AppRole testInternalAppRole = buildLaaAppRole(testInternalApp, "Test Internal App Role");
@@ -308,7 +308,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     @Transactional
     public void testExternalUserRolesCanBeAssignedToExternalUsers() throws Exception {
         // Build test app
-        App testExternalApp = buildLaaApp("Test External App", generateEntraId(), "TestExternalAppSecurityGroupOid", "TestExternalAppSecurityGroup");
+        App testExternalApp = buildLaaApp("Test External App", generateEntraId(), "TestExternalAppSecurityGroupOid");
 
         // Build test role
         AppRole testExternalAppRole = buildLaaAppRole(testExternalApp, "Test External App Role");
@@ -338,7 +338,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     @Transactional
     public void testInternalAndExternalUserRolesCanBeAssignedToExternalUsers() throws Exception {
         // Build test app
-        App testExternalApp = buildLaaApp("Test External App", generateEntraId(), "TestExternalAppSecurityGroupOid", "TestExternalAppSecurityGroup");
+        App testExternalApp = buildLaaApp("Test External App", generateEntraId(), "TestExternalAppSecurityGroupOid");
 
         // Build test role
         AppRole testInternalAndExternalAppRole = buildLaaAppRole(testExternalApp, "Test External App Role");
@@ -368,7 +368,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     @Transactional
     public void testInternalUserRolesCannotBeAssignedToExternalUsers() throws Exception {
         // Build test app
-        App testInternalApp = buildLaaApp("Test Internal App", generateEntraId(), "TestExternalAppSecurityGroupOid", "TestExternalAppSecurityGroup");
+        App testInternalApp = buildLaaApp("Test Internal App", generateEntraId(), "TestExternalAppSecurityGroupOid");
 
         // Build test role
         AppRole testInternalAppRole = buildLaaAppRole(testInternalApp, "Test Internal App Role");
@@ -398,7 +398,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     @Transactional
     public void testInternalAndExternalUserRolesCanBeAssignedToInternalUsers() throws Exception {
         // Build test app
-        App testInternalApp = buildLaaApp("Test Internal App", generateEntraId(), "TestExternalAppSecurityGroupOid", "TestExternalAppSecurityGroup");
+        App testInternalApp = buildLaaApp("Test Internal App", generateEntraId(), "TestExternalAppSecurityGroupOid");
 
         // Build test role
         AppRole testInternalAndExternalAppRole = buildLaaAppRole(testInternalApp, "Test Internal App Role");
@@ -428,7 +428,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     @Transactional
     public void testRestrictedAppRoleCanBeAssignedByValidUser() throws Exception {
         // Build test app
-        App testInternalApp = buildLaaApp("Test External App", generateEntraId(), "TestExternalAppSecurityGroupOid", "TestExternalAppSecurityGroup");
+        App testInternalApp = buildLaaApp("Test External App", generateEntraId(), "TestExternalAppSecurityGroupOid");
 
         // Build test role
         AppRole testExternalAppRole = buildLaaAppRole(testInternalApp, "Test External App Role");
@@ -463,7 +463,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     @Transactional
     public void testRestrictedAppRoleCannotBeAssignedByInvalidUser() throws Exception {
         // Build test app
-        App testInternalApp = buildLaaApp("Test External App", generateEntraId(), "TestExternalAppSecurityGroupOid", "TestExternalAppSecurityGroup");
+        App testInternalApp = buildLaaApp("Test External App", generateEntraId(), "TestExternalAppSecurityGroupOid");
 
         // Build test role
         AppRole testExternalAppRole = buildLaaAppRole(testInternalApp, "Test External App Role");

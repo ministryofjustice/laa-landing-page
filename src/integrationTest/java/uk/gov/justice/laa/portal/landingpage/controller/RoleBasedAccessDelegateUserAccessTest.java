@@ -171,7 +171,7 @@ public class RoleBasedAccessDelegateUserAccessTest extends RoleBasedAccessIntegr
 
     private MvcResult delegateFirmAccess(EntraUser loggedInUser, EntraUser editedUser) throws Exception {
         // Build test app
-        App testExternalApp = buildLaaApp("Test External App", generateEntraId(), "TestExternalAppSecurityGroupOid", "TestExternalAppSecurityGroup");
+        App testExternalApp = buildLaaApp("Test External App", generateEntraId(), "TestExternalAppSecurityGroupOid");
 
         // Build test role
         AppRole testExternalAppRole = buildLaaAppRole(testExternalApp, "Test External App Role");
@@ -270,7 +270,7 @@ public class RoleBasedAccessDelegateUserAccessTest extends RoleBasedAccessIntegr
 
     private MvcResult delegateFirmAccessInternalUser(EntraUser loggedInUser, EntraUser editedUser) throws Exception {
         // Build test app
-        App testExternalApp = buildLaaApp("Test Internal App", generateEntraId(), "TestInternalAppSecurityGroupOid", "TestInternalAppSecurityGroup");
+        App testExternalApp = buildLaaApp("Test Internal App", generateEntraId(), "TestInternalAppSecurityGroupOid");
 
         // Build test role
         AppRole testInternalAppRole = buildLaaAppRole(testExternalApp, "Test Internal App Role");

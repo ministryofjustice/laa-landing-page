@@ -3,8 +3,6 @@ package uk.gov.justice.laa.portal.landingpage.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
-import jakarta.persistence.Embeddable;
-import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -23,7 +21,6 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.ColumnDefault;
 
 import java.util.Set;
-import java.util.UUID;
 
 @Entity
 @Table(name = "app", indexes = {
@@ -41,23 +38,10 @@ public class App extends BaseEntity {
     @Size(min = 1, max = 255, message = "Application name must be between 1 and 255 characters")
     private String name;
 
-    @Column(name = "title", nullable = false, length = 255, unique = true)
-    @NotBlank(message = "Application title must be provided")
-    @Size(min = 1, max = 255, message = "Application title must be between 1 and 255 characters")
-    private String title;
-
     @Column(name = "description", nullable = false, length = 255, unique = true, columnDefinition = "TEXT")
     @NotBlank(message = "Application description must be provided")
     @Size(min = 1, max = 255, message = "Application description must be between 1 and 255 characters")
     private String description;
-
-    @Embedded
-    private AlternativeAppDescription alternativeAppDescription;
-
-    @Column(name = "oid_group_name", nullable = false, length = 255, unique = true)
-    @NotBlank(message = "Application OID Group Name must be provided")
-    @Size(min = 1, max = 255, message = "Application OID Group Name must be between 1 and 255 characters")
-    private String oidGroupName;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "app_type", nullable = false, length = 255, unique = false)
@@ -90,28 +74,9 @@ public class App extends BaseEntity {
     @Size(max = 255, message = "Security Group Oid must be less than 255 characters")
     private String securityGroupOid;
 
-    @Column(name = "security_group_name", nullable = false, length = 255, unique = true)
-    @NotBlank(message = "Security Group Name must be provided")
-    @Size(max = 255, message = "Security Group Name must be less than 255 characters")
-    private String securityGroupName;
-
     @OneToMany(mappedBy = "app", cascade = CascadeType.PERSIST)
     @ToString.Exclude
     @JsonIgnore
     private Set<AppRole> appRoles;
-
-    @Embeddable
-    @NoArgsConstructor
-    @SuperBuilder
-    @Getter
-    public static class AlternativeAppDescription {
-
-        @Column(name = "assigned_app_id", nullable = false, length = 255)
-        private UUID assignedAppId;
-
-        @Column(name = "alternative_description", nullable = true, columnDefinition = "TEXT")
-        private String alternativeDescription;
-
-    }
 
 }
