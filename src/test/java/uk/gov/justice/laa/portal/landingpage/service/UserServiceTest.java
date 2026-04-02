@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Assertions;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
@@ -70,6 +71,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
+import uk.gov.justice.laa.portal.landingpage.dto.AccountStatusHistoryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
@@ -86,6 +88,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
+import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.EventType;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -93,6 +96,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
@@ -7564,6 +7568,129 @@ class UserServiceTest {
             assertThat(result.getTotalProfilePages()).isEqualTo(2);
             assertThat(result.getCurrentProfilePage()).isEqualTo(2);
         }
+    }
+
+    @Test
+    void testGetAuditUserDetail_IncludesAccountStatusHistory() {
+        UUID userId = UUID.randomUUID();
+        UUID entraUserId = UUID.randomUUID();
+        UUID firmId = UUID.randomUUID();
+
+        Firm mockFirm = Firm.builder()
+                .id(firmId)
+                .name("Test Firm")
+                .code("TF")
+                .build();
+
+        EntraUser mockEntraUser = EntraUser.builder()
+                .id(entraUserId)
+                .entraOid("entra-oid-123")
+                .email("testuser@example.com")
+                .firstName("John")
+                .lastName("Doe")
+                .enabled(true)
+                .multiFirmUser(false)
+                .userStatus(UserStatus.ACTIVE)
+                .createdDate(LocalDateTime.now().minusDays(30))
+                .createdBy("ADMIN")
+                .build();
+
+        UserProfile mockUserProfile = UserProfile.builder()
+                .id(userId)
+                .entraUser(mockEntraUser)
+                .firm(mockFirm)
+                .userType(UserType.EXTERNAL)
+                .activeProfile(true)
+                .userProfileStatus(UserProfileStatus.COMPLETE)
+                .createdDate(LocalDateTime.now().minusDays(30))
+                .createdBy("ADMIN")
+                .appRoles(new HashSet<>())
+                .offices(new HashSet<>())
+                .build();
+
+        mockEntraUser.setUserProfiles(Set.of(mockUserProfile));
+
+        DisableUserReason mockReason = DisableUserReason.builder()
+                .id(UUID.randomUUID())
+                .name("Absence")
+                .build();
+
+        LocalDateTime statusChangeDate = LocalDateTime.now().minusDays(10);
+        UserAccountStatusAudit auditRecord = UserAccountStatusAudit.builder()
+                .id(UUID.randomUUID())
+                .entraUser(mockEntraUser)
+                .statusChange(UserAccountStatus.DISABLED)
+                .disableUserReason(mockReason)
+                .statusChangedBy("Admin User")
+                .statusChangedDate(statusChangeDate)
+                .build();
+
+        when(mockUserProfileRepository.findById(userId))
+                .thenReturn(Optional.of(mockUserProfile));
+        when(mockUserAccountStatusAuditRepository.findByEntraUserIdOrderByStatusChangedDateDesc(entraUserId))
+                .thenReturn(List.of(auditRecord));
+
+        AuditUserDetailDto result = userService.getAuditUserDetail(userId);
+
+        // Verify
+        assertNotNull(result);
+        assertEquals("testuser@example.com", result.getEmail());
+        assertEquals("John", result.getFirstName());
+        assertEquals("Doe", result.getLastName());
+        assertEquals(1, result.getAccountStatusHistory().size());
+
+        AccountStatusHistoryDto history = result.getAccountStatusHistory().get(0);
+        assertEquals("Disabled", history.getStatusChange());
+        assertEquals("Absence", history.getDisableReason());
+        assertEquals("Admin User", history.getStatusChangedBy());
+        assertEquals(statusChangeDate, history.getStatusChangedDate());
+    }
+
+    @Test
+    void testMapAccountStatusHistory_WithValidAuditRecords() {
+        // Arrange
+        LocalDateTime now = LocalDateTime.now();
+        UserAccountStatusAudit audit1 = UserAccountStatusAudit.builder()
+                .statusChangedDate(now.minusDays(1))
+                .statusChange(UserAccountStatus.DISABLED)
+                .statusChangedBy("John Doe")
+                .disableUserReason(DisableUserReason.builder()
+                        .name("Absence")
+                        .build())
+                .build();
+
+        UserAccountStatusAudit audit2 = UserAccountStatusAudit.builder()
+                .statusChangedDate(now)
+                .statusChange(UserAccountStatus.ENABLED)
+                .statusChangedBy("Jane Smith")
+                .disableUserReason(null)
+                .build();
+
+        List<UserAccountStatusAudit> auditRecords = List.of(audit1, audit2);
+
+        // Act
+        List<AccountStatusHistoryDto> result = userService.mapAccountStatusHistory(auditRecords);
+
+        // Assert
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0))
+                .extracting("statusChange", "statusChangedBy", "disableReason")
+                .containsExactly("Disabled", "John Doe", "Absence");
+        assertThat(result.get(1))
+                .extracting("statusChange", "statusChangedBy", "disableReason")
+                .containsExactly("Enabled", "Jane Smith", null);
+    }
+
+    @Test
+    void testMapAccountStatusHistory_WithEmptyList() {
+        // Arrange
+        List<UserAccountStatusAudit> auditRecords = Collections.emptyList();
+
+        // Act
+        List<AccountStatusHistoryDto> result = userService.mapAccountStatusHistory(auditRecords);
+
+        // Assert
+        assertThat(result).isEmpty();
     }
 
     @Nested

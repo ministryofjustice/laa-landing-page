@@ -122,6 +122,11 @@ public class AuditUserDetailDto implements Serializable {
     private String entraOid;
 
     /**
+     * Account status history records
+     */
+    private List<AccountStatusHistoryDto> accountStatusHistory;
+
+    /**
      * Profile DTO for the audit detail view
      */
     @Data
