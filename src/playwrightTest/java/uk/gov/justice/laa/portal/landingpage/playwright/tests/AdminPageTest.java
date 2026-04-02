@@ -65,7 +65,7 @@ public class AdminPageTest extends BaseFrontEndTest {
         AdminPage adminPage = loginAndGetAdminPage(TestUser.SILAS_ADMINISTRATION);
 
         adminPage.assertLegalAidServicesTableColumns()
-                .assertReorderLegalAidServicesButtonVisible();
+                .assertReorderLegalAidServicesLinkVisible();
 
         Assertions.assertTrue(
                 adminPage.getLegalAidServicesRowCount() > 0,
@@ -79,7 +79,7 @@ public class AdminPageTest extends BaseFrontEndTest {
         AdminPage adminPage = loginAndGetAdminPage(TestUser.SILAS_ADMINISTRATION);
 
         adminPage.assertLegalAidServicesTableColumns()
-                .assertReorderLegalAidServicesButtonVisible();
+                .assertReorderLegalAidServicesLinkVisible();
 
         Assertions.assertTrue(
                 adminPage.getLegalAidServicesRowCount() > 0,
@@ -137,14 +137,14 @@ public class AdminPageTest extends BaseFrontEndTest {
         AdminPage adminPage = loginAndGetAdminPage(TestUser.SILAS_ADMINISTRATION);
 
         adminPage.assertLegalAidServicesTableColumns()
-                .assertReorderLegalAidServicesButtonVisible();
+                .assertReorderLegalAidServicesLinkVisible();
 
         Assertions.assertTrue(
                 adminPage.getLegalAidServicesRowCount() > 0,
                 "Expected Legal Aid Services table to contain at least 1 row"
         );
 
-        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Reorder legal aid services")).click();
+        page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Reorder legal aid services")).click();
 
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
@@ -169,7 +169,7 @@ public class AdminPageTest extends BaseFrontEndTest {
         AdminPage adminPage = loginAndGetAdminPage(TestUser.SILAS_ADMINISTRATION);
         adminPage.assertRolesTableColumns()
                 .assertRolesActionButtonsVisible()
-                .assertReorderRolesButtonVisible();
+                .assertReorderRolesLinkVisible();
 
         Assertions.assertTrue(
                 adminPage.getRolesRowCount() == 3,
@@ -204,7 +204,7 @@ public class AdminPageTest extends BaseFrontEndTest {
         adminPage = loginAndGetAdminPage(TestUser.SILAS_ADMINISTRATION);
         adminPage.assertRolesTableColumns()
                 .assertRolesActionButtonsVisible()
-                .assertReorderRolesButtonVisible();
+                .assertReorderRolesLinkVisible();
 
         Assertions.assertTrue(
                 adminPage.getRolesRowCount() == 2,
@@ -319,7 +319,7 @@ public class AdminPageTest extends BaseFrontEndTest {
 
         adminPage.assertRolesTableColumns()
                 .assertRolesActionButtonsVisible()
-                .assertReorderRolesButtonVisible();
+                .assertReorderRolesLinkVisible();
 
         Assertions.assertTrue(
                 adminPage.getRolesRowCount() > 0,

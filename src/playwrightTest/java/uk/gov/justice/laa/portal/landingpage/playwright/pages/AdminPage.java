@@ -42,7 +42,7 @@ public class AdminPage {
     private final Locator legalAidServicesTable;
     private final Locator legalAidServicesHeaders;
     private final Locator legalAidServicesRows;
-    private final Locator reorderLegalAidServicesButton;
+    private final Locator reorderLegalAidServicesLink;
     private final Locator syncLegalAidServicesAppsLink;
 
     // --- Legal Aid Services tab content ---
@@ -59,7 +59,7 @@ public class AdminPage {
     private final Locator rolesTable;
     private final Locator rolesHeaders;
     private final Locator rolesRows;
-    private final Locator reorderRolesButton;
+    private final Locator reorderRolesLink;
 
     private final Locator accessForbiddenHeading;
     private final Locator accessForbiddenMessage;
@@ -99,7 +99,8 @@ public class AdminPage {
         this.legalAidServicesTable = legalAidServicesPanel.locator("table.govuk-table");
         this.legalAidServicesHeaders = legalAidServicesTable.locator("thead th.govuk-table__header");
         this.legalAidServicesRows = legalAidServicesTable.locator("tbody.govuk-table__body tr.govuk-table__row");
-        this.reorderLegalAidServicesButton = legalAidServicesPanel.locator("button.govuk-button:has-text('Reorder legal aid services')");
+        this.reorderLegalAidServicesLink = legalAidServicesPanel.locator("a.govuk-link:has-text('Reorder legal aid " +
+                "services')");
         this.syncLegalAidServicesAppsLink =
                 legalAidServicesPanel.locator("a.govuk-link.govuk-\\!-font-weight-regular:has-text('Sync Apps')");
 
@@ -119,7 +120,8 @@ public class AdminPage {
         this.rolesTable = rolesAndPermissionsPanel.locator("table.govuk-table");
         this.rolesHeaders = rolesTable.locator("thead th.govuk-table__header");
         this.rolesRows = rolesTable.locator("tbody.govuk-table__body tr.govuk-table__row");
-        this.reorderRolesButton = rolesAndPermissionsPanel.locator("button.govuk-button:has-text('Reorder application roles')");
+        this.reorderRolesLink = rolesAndPermissionsPanel.locator("a.govuk-link:has-text('Reorder application " +
+                "roles')");
 
         //Forbidden Access Page
         this.accessForbiddenHeading = page.locator("h1.govuk-heading-l:has-text('Access forbidden')");
@@ -240,9 +242,9 @@ public class AdminPage {
         return roleAssignRestrictionsRows.count();
     }
 
-    public AdminPage assertReorderLegalAidServicesButtonVisible() {
+    public AdminPage assertReorderLegalAidServicesLinkVisible() {
         goToLegalAidServicesTab();
-        assertThat(reorderLegalAidServicesButton).isVisible();
+        assertThat(reorderLegalAidServicesLink).isVisible();
         return this;
     }
 
@@ -291,9 +293,9 @@ public class AdminPage {
         return rolesRows.count();
     }
 
-    public AdminPage assertReorderRolesButtonVisible() {
+    public AdminPage assertReorderRolesLinkVisible() {
         goToRolesAndPermissionsTab();
-        assertThat(reorderRolesButton).isVisible();
+        assertThat(reorderRolesLink).isVisible();
         return this;
     }
 

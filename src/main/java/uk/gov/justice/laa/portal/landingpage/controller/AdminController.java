@@ -819,7 +819,6 @@ public class AdminController {
 
         if (appFilter != null) {
             List<AppDto> allApps = appService.getAllLaaApps();
-
             for (AppDto app : allApps) {
                 if (app.getName().equals(appFilter)) {
                     roleCreationDto.setParentAppId(UUID.fromString(app.getId()));
@@ -833,9 +832,6 @@ public class AdminController {
         model.addAttribute("userTypes", UserType.values());
         model.addAttribute("firmTypes", FirmType.values());
         model.addAttribute("appFilter", appFilter);
-
-        log.info("Showing role creation form for app {}", appFilter);
-
 
         return "silas-administration/create-role";
     }
