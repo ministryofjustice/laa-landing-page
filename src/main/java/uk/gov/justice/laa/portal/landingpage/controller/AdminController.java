@@ -811,19 +811,31 @@ public class AdminController {
 
     @GetMapping("/silas-administration/roles/create")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_LAA_APP_ROLE)")
-    public String showRoleCreationForm(Model model, HttpSession session, @ModelAttribute String selectedApp) {
+    public String showRoleCreationForm(Model model, HttpSession session, @RequestParam String appFilter) {
         RoleCreationDto roleCreationDto = (RoleCreationDto) session.getAttribute("roleCreationDto");
         if (roleCreationDto == null) {
             roleCreationDto = new RoleCreationDto();
+        }
+
+        if (appFilter != null) {
+            List<AppDto> allApps = appService.getAllLaaApps();
+
+            for (AppDto app : allApps) {
+                if (app.getName().equals(appFilter)) {
+                    roleCreationDto.setParentAppId(UUID.fromString(app.getId()));
+                    break;
+                }
+            }
         }
 
         model.addAttribute("roleCreationDto", roleCreationDto);
         model.addAttribute("apps", appService.getAllLaaApps());
         model.addAttribute("userTypes", UserType.values());
         model.addAttribute("firmTypes", FirmType.values());
-        model.addAttribute("selectedApp", selectedApp);
+        model.addAttribute("appFilter", appFilter);
 
-        log.info("Showing role creation form for app {}", selectedApp);
+        log.info("Showing role creation form for app {}", appFilter);
+
 
         return "silas-administration/create-role";
     }
@@ -847,6 +859,7 @@ public class AdminController {
             model.addAttribute("apps", appService.getAllLaaApps());
             model.addAttribute("userTypes", UserType.values());
             model.addAttribute("firmTypes", FirmType.values());
+
             return "silas-administration/create-role";
         }
 
