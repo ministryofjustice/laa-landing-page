@@ -157,6 +157,7 @@ public class BaseRepositoryTest {
                 .userProfiles(HashSet.newHashSet(11))
                 .firstName(firstName).lastName(lastName)
                 .userStatus(UserStatus.DEACTIVE)
+                .enabled(false)
                 .createdDate(LocalDateTime.now()).createdBy("Test").multiFirmUser(multiFirmUser).build();
     }
 
