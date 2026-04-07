@@ -131,9 +131,8 @@ public class AppSelectionTest extends BaseIntegrationTest {
 
     private void buildTestAppRole() {
         App app = buildLaaApp("Test App " + distinctIndex++, UUID.randomUUID().toString(),
-                "Security Group Id" + distinctIndex++, "Security Group Name" + distinctIndex++,
-                "Test App Title " + distinctIndex++, "Test App Description " + distinctIndex++,
-                "OID Group " + distinctIndex++, "http://localhost:8080/" + distinctIndex++);
+                "Security Group Id" + distinctIndex++, "Test App Description " + distinctIndex++,
+                "http://localhost:8080/" + distinctIndex++);
         app = appRepository.saveAndFlush(app);
         AppRole appRole = buildLaaAppRole(app, "Test App Role" + distinctIndex++);
         testAppRole = appRoleRepository.saveAndFlush(appRole);

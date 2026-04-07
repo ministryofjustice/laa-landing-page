@@ -300,14 +300,11 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
     private App buildTestApp(String name) {
         return App.builder()
                 .name(name)
-                .title(name + " Title")
                 .description(name + " Description")
-                .oidGroupName(name + " OID Group")
                 .appType(AppType.LAA)
                 .url("http://localhost/" + name)
                 .enabled(true)
                 .securityGroupOid(name + "_sg_oid")
-                .securityGroupName(name + "_sg_name")
                 .build();
     }
 
