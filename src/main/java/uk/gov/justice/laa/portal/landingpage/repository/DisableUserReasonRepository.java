@@ -9,5 +9,9 @@ import java.util.UUID;
 
 @Repository
 public interface DisableUserReasonRepository extends JpaRepository<DisableUserReason, UUID> {
+
     Optional<DisableUserReason> findByName(String name);
+
+    Optional<DisableUserReason> findDisableUserReasonByEntraDescription(String entraDescription);
+
 }
