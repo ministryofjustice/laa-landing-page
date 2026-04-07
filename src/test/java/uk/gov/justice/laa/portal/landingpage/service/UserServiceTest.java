@@ -153,6 +153,8 @@ class UserServiceTest {
     private NotificationService notificationService;
     @Mock
     private UserAccountStatusAuditRepository mockUserAccountStatusAuditRepository;
+    @Mock
+    private AccessControlService accessControlService;
 
     @BeforeEach
     void setUp() {
@@ -170,7 +172,8 @@ class UserServiceTest {
                 firmService,
                 mockFirmRepository,
                 mockEventService,
-                notificationService);
+                notificationService,
+                accessControlService);
     }
 
     @Test
@@ -1338,7 +1341,7 @@ class UserServiceTest {
         UUID entraOid = UUID.randomUUID();
         AppRole appRole = AppRole.builder().id(roleId)
                 .userTypeRestriction(new UserType[] { UserType.INTERNAL, UserType.EXTERNAL }).build();
-        UserProfile userProfile = UserProfile.builder().id(profileId).activeProfile(true)
+        UserProfile userProfile = UserProfile.builder().id(profileId).activeProfile(true).appRoles(Set.of(appRole))
                 .userProfileStatus(UserProfileStatus.COMPLETE).userType(UserType.EXTERNAL).build();
         EntraUser user = EntraUser.builder().id(userId).entraOid(entraOid.toString()).userProfiles(Set.of(userProfile))
                 .build();
@@ -1352,6 +1355,8 @@ class UserServiceTest {
                         .userType(UserType.EXTERNAL).build()))
                 .build();
         when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
+        when(accessControlService.canAssignExternalAppRoles(userProfile.getId().toString())).thenReturn(true);
+        when(accessControlService.canAssignInternalAppRoles(userProfile.getId().toString())).thenReturn(true);
         // Act
         userService.updateUserRoles(profileId.toString(), List.of(roleId.toString()), Collections.emptyList(),
                 modifierId);
@@ -1371,7 +1376,7 @@ class UserServiceTest {
         AppRole appRole = AppRole.builder().id(roleId).userTypeRestriction(new UserType[] { UserType.EXTERNAL })
                 .build();
         UserProfile userProfile = UserProfile.builder().id(userProfileId).activeProfile(true)
-                .userType(UserType.EXTERNAL).build();
+                .userType(UserType.EXTERNAL).appRoles(Set.of(appRole)).build();
         EntraUser user = EntraUser.builder().entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(user);
 
@@ -1383,6 +1388,8 @@ class UserServiceTest {
                         .userType(UserType.EXTERNAL).build()))
                 .build();
         when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
+        when(accessControlService.canAssignExternalAppRoles(userProfile.getId().toString())).thenReturn(true);
+        when(accessControlService.canAssignInternalAppRoles(userProfile.getId().toString())).thenReturn(true);
         // Act
         userService.updateUserRoles(userProfileId.toString(), List.of(roleId.toString()), Collections.emptyList(),
                 modifierId);
@@ -1400,19 +1407,22 @@ class UserServiceTest {
         AppRole appRole = AppRole.builder().id(roleId).userTypeRestriction(new UserType[] { UserType.INTERNAL })
                 .build();
         UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).userType(UserType.INTERNAL)
-                .build();
+                .appRoles(Set.of(appRole)).build();
         EntraUser user = EntraUser.builder().entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(user);
 
         UUID modifierId = UUID.randomUUID();
         EntraUser modifier = EntraUser.builder().entraOid(modifierId.toString())
                 .userProfiles(Set.of(UserProfile.builder().id(UUID.randomUUID()).activeProfile(true)
-                        .userType(UserType.EXTERNAL).build()))
+                        .userType(UserType.INTERNAL).build()))
                 .build();
 
         when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
         when(mockUserProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile));
         when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
+        when(accessControlService.canAssignExternalAppRoles(userProfile.getId().toString())).thenReturn(true);
+        when(accessControlService.canAssignInternalAppRoles(userProfile.getId().toString())).thenReturn(true);
+
         // Act
         userService.updateUserRoles(userId.toString(), List.of(roleId.toString()), Collections.emptyList(), modifierId);
 
@@ -1432,7 +1442,7 @@ class UserServiceTest {
         AppRole appRole2 = AppRole.builder().id(roleId2).ordinal(2)
                 .userTypeRestriction(new UserType[] { UserType.EXTERNAL }).build();
         UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).userType(UserType.EXTERNAL)
-                .build();
+                .appRoles(Set.of(appRole, appRole2)).build();
         EntraUser user = EntraUser.builder().entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(user);
 
@@ -1445,6 +1455,8 @@ class UserServiceTest {
         when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole, appRole2));
         when(mockUserProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile));
         when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
+        when(accessControlService.canAssignExternalAppRoles(userProfile.getId().toString())).thenReturn(true);
+        when(accessControlService.canAssignInternalAppRoles(userProfile.getId().toString())).thenReturn(true);
         // Act
         userService.updateUserRoles(userId.toString(), List.of(roleId.toString()), List.of(roleId2.toString()),
                 modifierId);
@@ -1464,7 +1476,7 @@ class UserServiceTest {
         AppRole appRole = AppRole.builder().id(roleId).userTypeRestriction(new UserType[] { UserType.INTERNAL })
                 .build();
         UserProfile userProfile = UserProfile.builder().id(userId).activeProfile(true).userType(UserType.EXTERNAL)
-                .build();
+                .appRoles(Set.of(appRole)).build();
         EntraUser user = EntraUser.builder().entraOid(entraOid.toString()).userProfiles(Set.of(userProfile)).build();
         userProfile.setEntraUser(user);
         UUID modifierId = UUID.randomUUID();
@@ -1475,6 +1487,8 @@ class UserServiceTest {
         when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
         when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(appRole));
         when(mockUserProfileRepository.findById(userId)).thenReturn(Optional.of(userProfile));
+        when(accessControlService.canAssignExternalAppRoles(userProfile.getId().toString())).thenReturn(true);
+        when(accessControlService.canAssignInternalAppRoles(userProfile.getId().toString())).thenReturn(true);
 
         // Act
         userService.updateUserRoles(userId.toString(), List.of(roleId.toString()), Collections.emptyList(), modifierId);
@@ -3162,6 +3176,10 @@ class UserServiceTest {
                     .userProfiles(Set.of(userProfile)).build();
             userProfile.setEntraUser(user);
 
+            when(accessControlService.canAssignExternalAppRoles(profileId.toString())).thenReturn(true);
+            when(accessControlService.canAssignInternalAppRoles(profileId.toString())).thenReturn(true);
+            when(accessControlService.canRemoveExternalAppRoles(profileId.toString())).thenReturn(true);
+            when(accessControlService.canRemoveInternalAppRoles(profileId.toString())).thenReturn(true);
             when(mockAppRoleRepository.findAllById(any())).thenReturn(Collections.emptyList());
             when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(userProfile));
             UUID modifierId = UUID.randomUUID();
@@ -3186,7 +3204,7 @@ class UserServiceTest {
             UUID userId = UUID.randomUUID();
             UUID profileId = UUID.randomUUID();
             UUID entraOid = UUID.randomUUID();
-            AppRole appRole = AppRole.builder().name("Global Admin").id(UUID.randomUUID()).build();
+            AppRole appRole = AppRole.builder().name("Global Admin").id(UUID.randomUUID()).userTypeRestriction(new UserType[]{UserType.EXTERNAL}).build();
             UserProfile userProfile = UserProfile.builder().id(profileId).activeProfile(true)
                     .userType(UserType.INTERNAL)
                     .appRoles(Set.of(appRole)).build();
@@ -3194,6 +3212,10 @@ class UserServiceTest {
                     .userProfiles(Set.of(userProfile)).build();
             userProfile.setEntraUser(user);
 
+            when(accessControlService.canAssignExternalAppRoles(profileId.toString())).thenReturn(true);
+            when(accessControlService.canAssignInternalAppRoles(profileId.toString())).thenReturn(true);
+            when(accessControlService.canRemoveExternalAppRoles(profileId.toString())).thenReturn(true);
+            when(accessControlService.canRemoveInternalAppRoles(profileId.toString())).thenReturn(true);
             when(mockAppRoleRepository.findAllById(any())).thenReturn(Collections.emptyList());
             when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(userProfile));
             when(mockAppRoleRepository.findByName("Global Admin")).thenReturn(Optional.of(appRole));
@@ -4004,6 +4026,10 @@ class UserServiceTest {
             entraUser.setUserProfiles(Set.of(userProfile));
             UUID modifierId = UUID.randomUUID();
 
+            when(accessControlService.canAssignExternalAppRoles(userProfileId)).thenReturn(true);
+            when(accessControlService.canAssignInternalAppRoles(userProfileId)).thenReturn(true);
+            when(accessControlService.canRemoveExternalAppRoles(userProfileId)).thenReturn(true);
+            when(accessControlService.canRemoveInternalAppRoles(userProfileId)).thenReturn(true);
             when(mockUserProfileRepository.findById(UUID.fromString(userProfileId)))
                     .thenReturn(Optional.of(userProfile));
             when(mockAppRoleRepository.findAllById(any()))
@@ -4064,6 +4090,10 @@ class UserServiceTest {
             userProfile.setAppRoles(Set.of());
             entraUser.setUserProfiles(Set.of(userProfile));
 
+            when(accessControlService.canAssignExternalAppRoles(userProfileId)).thenReturn(true);
+            when(accessControlService.canAssignInternalAppRoles(userProfileId)).thenReturn(true);
+            when(accessControlService.canRemoveExternalAppRoles(userProfileId)).thenReturn(true);
+            when(accessControlService.canRemoveInternalAppRoles(userProfileId)).thenReturn(true);
             when(mockUserProfileRepository.findById(UUID.fromString(userProfileId)))
                     .thenReturn(Optional.of(userProfile));
             when(mockAppRoleRepository.findAllById(any()))
@@ -4133,6 +4163,10 @@ class UserServiceTest {
             userProfile.setAppRoles(Set.of());
             entraUser.setUserProfiles(Set.of(userProfile));
 
+            when(accessControlService.canAssignExternalAppRoles(userProfileId)).thenReturn(true);
+            when(accessControlService.canAssignInternalAppRoles(userProfileId)).thenReturn(true);
+            when(accessControlService.canRemoveExternalAppRoles(userProfileId)).thenReturn(true);
+            when(accessControlService.canRemoveInternalAppRoles(userProfileId)).thenReturn(true);
             when(mockUserProfileRepository.findById(UUID.fromString(userProfileId)))
                     .thenReturn(Optional.of(userProfile));
             when(mockAppRoleRepository.findAllById(any()))
@@ -5766,6 +5800,7 @@ class UserServiceTest {
             // Given
             UUID user1Id = UUID.randomUUID();
             UUID user2Id = UUID.randomUUID();
+            UUID user3Id = UUID.randomUUID();
 
             EntraUser user1 = EntraUser.builder()
                     .id(user1Id)
@@ -5781,6 +5816,15 @@ class UserServiceTest {
                     .firstName("Jane")
                     .lastName("Smith")
                     .email("jane.smith@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .build();
+
+            EntraUser internalUser = EntraUser.builder()
+                    .id(user3Id)
+                    .firstName("Jane")
+                    .lastName("Doe")
+                    .email("jane.doe@example.com")
                     .userStatus(UserStatus.ACTIVE)
                     .multiFirmUser(false)
                     .build();
@@ -5811,10 +5855,20 @@ class UserServiceTest {
                     .userProfileStatus(UserProfileStatus.COMPLETE)
                     .build();
 
+            UserProfile internalUserProfile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(internalUser)
+                    .userType(UserType.INTERNAL)
+                    .activeProfile(true)
+                    .appRoles(new HashSet<>())
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .build();
+
             user1.setUserProfiles(Set.of(profile1));
             user2.setUserProfiles(Set.of(profile2));
+            internalUser.setUserProfiles(Set.of(internalUserProfile));
 
-            Page<EntraUser> userPage = new PageImpl<>(Arrays.asList(user1, user2),
+            Page<EntraUser> userPage = new PageImpl<>(Arrays.asList(user1, user2, internalUser),
                     PageRequest.of(0, 10), 2);
 
             when(mockEntraUserRepository.findAllUsersForAudit(
@@ -5830,11 +5884,11 @@ class UserServiceTest {
 
             // Then
             assertThat(result).isNotNull();
-            assertThat(result.getTotalUsers()).isEqualTo(2);
+            assertThat(result.getTotalUsers()).isEqualTo(3);
             assertThat(result.getTotalPages()).isEqualTo(1);
             assertThat(result.getCurrentPage()).isEqualTo(1);
             assertThat(result.getPageSize()).isEqualTo(10);
-            assertThat(result.getUsers()).hasSize(2);
+            assertThat(result.getUsers()).hasSize(3);
 
             assertThat(result.getUsers().get(0).getName()).isEqualTo("John Doe");
             assertThat(result.getUsers().get(0).getEmail()).isEqualTo("john.doe@example.com");
@@ -5842,6 +5896,14 @@ class UserServiceTest {
             assertThat(result.getUsers().get(0).getFirmAssociation()).isEqualTo("Test Firm");
             assertThat(result.getUsers().get(0).isMultiFirmUser()).isFalse();
             assertThat(result.getUsers().get(0).getProfileCount()).isEqualTo(1);
+
+            assertThat(result.getUsers().get(1).getName()).isEqualTo("Jane Smith");
+            assertThat(result.getUsers().get(1).getEmail()).isEqualTo("jane.smith@example.com");
+            assertThat(result.getUsers().get(1).getUserType()).isEqualTo("External");
+
+            assertThat(result.getUsers().get(2).getName()).isEqualTo("Jane Doe");
+            assertThat(result.getUsers().get(2).getEmail()).isEqualTo("jane.doe@example.com");
+            assertThat(result.getUsers().get(2).getUserType()).isEqualTo("Internal");
 
             verify(mockEntraUserRepository).findAllUsersForAudit(
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class));
@@ -8433,5 +8495,576 @@ class UserServiceTest {
         assertThat(normalDto.getFirmCode()).contains("D4");
         assertThat(normalDto.getFirmCode()).contains("Z9");
 
+    }
+
+
+    @Nested
+    class UpdateUserRolesAddingAndRemovingValidationTests {
+
+        @Test
+        void updateUserRoles_throwsError_whenAddingNewExternalRolesNotAllowed() {
+            // Arrange
+            UUID userProfileId = UUID.randomUUID();
+            UUID existingRoleId = UUID.randomUUID();
+            UUID newRoleId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            UUID entraOid = UUID.randomUUID();
+
+            // Existing external role that the user already has
+            AppRole existingExternalRole = AppRole.builder()
+                    .id(existingRoleId)
+                    .name("Existing External Role")
+                    .userTypeRestriction(new UserType[]{UserType.EXTERNAL})
+                    .build();
+
+            // New external role trying to add
+            AppRole newExternalRole = AppRole.builder()
+                    .id(newRoleId)
+                    .name("New External Role")
+                    .userTypeRestriction(new UserType[]{UserType.EXTERNAL})
+                    .build();
+
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .activeProfile(true)
+                    .userType(UserType.EXTERNAL)
+                    .appRoles(Set.of(existingExternalRole))
+                    .entraUser(EntraUser.builder().id(entraUserId).build())
+                    .build();
+
+            EntraUser user = EntraUser.builder()
+                    .id(entraUserId)
+                    .entraOid(entraOid.toString())
+                    .userProfiles(Set.of(userProfile))
+                    .build();
+            userProfile.setEntraUser(user);
+
+            UUID modifierId = UUID.randomUUID();
+
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+
+
+            // Mock accessControl to NOT allow adding external roles
+            when(accessControlService.canAssignExternalAppRoles(userProfileId.toString())).thenReturn(false);
+
+            // Act & Assert
+            assertThatThrownBy(() -> userService.updateUserRoles(
+                    userProfileId.toString(),
+                    List.of(newRoleId.toString()),
+                    Collections.emptyList(),
+                    modifierId))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("not allowed to add new roles");
+        }
+
+        @Test
+        void updateUserRoles_throwsError_whenRemovingExternalRolesNotAllowed() {
+            // Arrange
+            UUID userProfileId = UUID.randomUUID();
+            UUID roleId = UUID.randomUUID();
+            UUID entraOid = UUID.randomUUID();
+
+            AppRole externalRole = AppRole.builder()
+                    .id(roleId)
+                    .name("External Role")
+                    .userTypeRestriction(new UserType[]{UserType.EXTERNAL})
+                    .build();
+
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .activeProfile(true)
+                    .userType(UserType.EXTERNAL)
+                    .appRoles(Set.of(externalRole))
+                    .build();
+
+            EntraUser user = EntraUser.builder()
+                    .entraOid(entraOid.toString())
+                    .userProfiles(Set.of(userProfile))
+                    .build();
+            userProfile.setEntraUser(user);
+
+            UUID modifierId = UUID.randomUUID();
+            EntraUser modifier = EntraUser.builder()
+                    .entraOid(modifierId.toString())
+                    .userProfiles(Set.of(UserProfile.builder()
+                            .id(UUID.randomUUID())
+                            .activeProfile(true)
+                            .userType(UserType.EXTERNAL)
+                            .build()))
+                    .build();
+
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+
+            // Mock accessControl to NOT allow removing external roles
+            when(accessControlService.canAssignExternalAppRoles(userProfileId.toString())).thenReturn(true);
+            when(accessControlService.canAssignInternalAppRoles(userProfileId.toString())).thenReturn(true);
+            when(accessControlService.canRemoveExternalAppRoles(userProfileId.toString())).thenReturn(false);
+
+            // Act & Assert
+            assertThatThrownBy(() -> userService.updateUserRoles(
+                    userProfileId.toString(),
+                    Collections.emptyList(),
+                    Collections.emptyList(),
+                    modifierId))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("not allowed to remove existing roles");
+        }
+
+        @Test
+        void updateUserRoles_throwsError_whenAddingNewInternalRolesNotAllowed() {
+            // Arrange
+            UUID userProfileId = UUID.randomUUID();
+            UUID existingRoleId = UUID.randomUUID();
+            UUID newInternalRoleId = UUID.randomUUID();
+            UUID entraOid = UUID.randomUUID();
+
+            AppRole existingInternalRole = AppRole.builder()
+                    .id(existingRoleId)
+                    .name("Existing Internal Role")
+                    .userTypeRestriction(new UserType[]{UserType.INTERNAL})
+                    .build();
+
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .activeProfile(true)
+                    .userType(UserType.INTERNAL)
+                    .appRoles(Set.of(existingInternalRole))
+                    .build();
+
+            EntraUser user = EntraUser.builder()
+                    .entraOid(entraOid.toString())
+                    .userProfiles(Set.of(userProfile))
+                    .build();
+            userProfile.setEntraUser(user);
+
+            UUID modifierId = UUID.randomUUID();
+            EntraUser modifier = EntraUser.builder()
+                    .entraOid(modifierId.toString())
+                    .userProfiles(Set.of(UserProfile.builder()
+                            .id(UUID.randomUUID())
+                            .activeProfile(true)
+                            .userType(UserType.INTERNAL)
+                            .build()))
+                    .build();
+
+            AppRole newInternalRole = AppRole.builder()
+                    .id(newInternalRoleId)
+                    .name("New Internal Role")
+                    .userTypeRestriction(new UserType[]{UserType.INTERNAL})
+                    .build();
+
+
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+
+            // Mock accessControl to NOT allow adding internal roles
+            when(accessControlService.canAssignInternalAppRoles(userProfileId.toString())).thenReturn(false);
+            when(accessControlService.canAssignExternalAppRoles(userProfileId.toString())).thenReturn(true);
+
+            // Act & Assert
+            assertThatThrownBy(() -> userService.updateUserRoles(
+                    userProfileId.toString(),
+                    List.of(existingInternalRole.getId().toString(), newInternalRole.getId().toString()),
+                    Collections.emptyList(),
+                    modifierId))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("not allowed to add new roles");
+        }
+
+        @Test
+        void updateUserRoles_throwsError_whenRemovingInternalRolesNotAllowed() {
+            // Arrange
+            UUID userProfileId = UUID.randomUUID();
+            UUID roleId = UUID.randomUUID();
+            UUID entraOid = UUID.randomUUID();
+
+            AppRole internalRole = AppRole.builder()
+                    .id(roleId)
+                    .name("Internal Role")
+                    .userTypeRestriction(new UserType[]{UserType.INTERNAL})
+                    .build();
+
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .activeProfile(true)
+                    .userType(UserType.INTERNAL)
+                    .appRoles(Set.of(internalRole))
+                    .build();
+
+            EntraUser user = EntraUser.builder()
+                    .entraOid(entraOid.toString())
+                    .userProfiles(Set.of(userProfile))
+                    .build();
+            userProfile.setEntraUser(user);
+
+            UUID modifierId = UUID.randomUUID();
+            EntraUser modifier = EntraUser.builder()
+                    .entraOid(modifierId.toString())
+                    .userProfiles(Set.of(UserProfile.builder()
+                            .id(UUID.randomUUID())
+                            .activeProfile(true)
+                            .userType(UserType.INTERNAL)
+                            .build()))
+                    .build();
+
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+
+            // Mock accessControl to NOT allow removing internal roles
+            when(accessControlService.canAssignInternalAppRoles(userProfileId.toString())).thenReturn(true);
+            when(accessControlService.canAssignExternalAppRoles(userProfileId.toString())).thenReturn(true);
+            when(accessControlService.canRemoveInternalAppRoles(userProfileId.toString())).thenReturn(false);
+
+            // Act & Assert
+            assertThatThrownBy(() -> userService.updateUserRoles(
+                    userProfileId.toString(),
+                    Collections.emptyList(),
+                    Collections.emptyList(),
+                    modifierId))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("not allowed to remove existing roles");
+        }
+
+        @Test
+        void updateUserRoles_successfullyAddsRoles_whenPermissionGranted() {
+            // Arrange
+            UUID userProfileId = UUID.randomUUID();
+            UUID newRoleId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            UUID entraOid = UUID.randomUUID();
+
+            AppRole newRole = AppRole.builder()
+                    .id(newRoleId)
+                    .name("New Role")
+                    .ccmsCode("NEW_ROLE")
+                    .userTypeRestriction(new UserType[]{UserType.EXTERNAL})
+                    .build();
+
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .activeProfile(true)
+                    .userType(UserType.EXTERNAL)
+                    .appRoles(Set.of())
+                    .entraUser(EntraUser.builder().id(entraUserId).build())
+                    .build();
+
+            EntraUser user = EntraUser.builder()
+                    .id(entraUserId)
+                    .entraOid(entraOid.toString())
+                    .userProfiles(Set.of(userProfile))
+                    .build();
+            userProfile.setEntraUser(user);
+
+            UUID modifierId = UUID.randomUUID();
+            EntraUser modifier = EntraUser.builder()
+                    .entraOid(modifierId.toString())
+                    .userProfiles(Set.of(UserProfile.builder()
+                            .id(UUID.randomUUID())
+                            .activeProfile(true)
+                            .userType(UserType.INTERNAL)
+                            .build()))
+                    .build();
+
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+            when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(newRole));
+            when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
+            when(mockUserProfileRepository.save(any(UserProfile.class))).thenReturn(userProfile);
+
+            // Allow adding roles
+            when(accessControlService.canAssignExternalAppRoles(userProfileId.toString())).thenReturn(true);
+            when(accessControlService.canAssignInternalAppRoles(userProfileId.toString())).thenReturn(true);
+            when(accessControlService.canRemoveExternalAppRoles(userProfileId.toString())).thenReturn(true);
+            when(mockRoleChangeNotificationService.sendMessage(any(), any(), any())).thenReturn(true);
+
+            // Act
+            Map<String, String> result = userService.updateUserRoles(
+                    userProfileId.toString(),
+                    List.of(newRole.getId().toString()),
+                    Collections.emptyList(),
+                    modifierId);
+
+            // Assert
+            assertThat(result).doesNotContainKey("error");
+            assertThat(userProfile.getAppRoles()).contains(newRole);
+            verify(mockUserProfileRepository).save(userProfile);
+            verify(techServicesClient).updateRoleAssignment(entraUserId);
+        }
+
+        @Test
+        void updateUserRoles_successfullyRemovesRoles_whenPermissionGranted() {
+            // Arrange
+            UUID userProfileId = UUID.randomUUID();
+            UUID roleToRemoveId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            UUID entraOid = UUID.randomUUID();
+
+            AppRole roleToRemove = AppRole.builder()
+                    .id(roleToRemoveId)
+                    .name("Role To Remove")
+                    .ccmsCode("REMOVE_ROLE")
+                    .userTypeRestriction(new UserType[]{UserType.EXTERNAL})
+                    .build();
+
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .activeProfile(true)
+                    .userType(UserType.EXTERNAL)
+                    .appRoles(new HashSet<>(Set.of(roleToRemove)))
+                    .entraUser(EntraUser.builder().id(entraUserId).build())
+                    .build();
+
+            EntraUser user = EntraUser.builder()
+                    .id(entraUserId)
+                    .entraOid(entraOid.toString())
+                    .userProfiles(Set.of(userProfile))
+                    .build();
+            userProfile.setEntraUser(user);
+
+            UUID modifierId = UUID.randomUUID();
+            EntraUser modifier = EntraUser.builder()
+                    .entraOid(modifierId.toString())
+                    .userProfiles(Set.of(UserProfile.builder()
+                            .id(UUID.randomUUID())
+                            .activeProfile(true)
+                            .userType(UserType.INTERNAL)
+                            .build()))
+                    .build();
+
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+            when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of());
+            when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
+            when(mockUserProfileRepository.save(any(UserProfile.class))).thenReturn(userProfile);
+
+            // Allow removing roles
+            when(accessControlService.canAssignExternalAppRoles(userProfileId.toString())).thenReturn(true);
+            when(accessControlService.canRemoveExternalAppRoles(userProfileId.toString())).thenReturn(true);
+            when(mockRoleChangeNotificationService.sendMessage(any(), any(), any())).thenReturn(true);
+
+            // Act
+            Map<String, String> result = userService.updateUserRoles(
+                    userProfileId.toString(),
+                    Collections.emptyList(),
+                    Collections.emptyList(),
+                    modifierId);
+
+            // Assert
+            assertThat(result).doesNotContainKey("error");
+            assertThat(userProfile.getAppRoles()).isEmpty();
+            verify(mockUserProfileRepository).save(userProfile);
+            verify(techServicesClient).updateRoleAssignment(entraUserId);
+        }
+
+        @Test
+        void updateUserRoles_addsAndRemovesRoles_simultaneously() {
+            // Arrange
+            UUID userProfileId = UUID.randomUUID();
+            UUID existingRoleId = UUID.randomUUID();
+            UUID newRoleId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            UUID entraOid = UUID.randomUUID();
+
+            AppRole existingRole = AppRole.builder()
+                    .id(existingRoleId)
+                    .name("Existing Role")
+                    .ccmsCode("EXISTING_ROLE")
+                    .userTypeRestriction(new UserType[]{UserType.EXTERNAL})
+                    .build();
+
+            AppRole newRole = AppRole.builder()
+                    .id(newRoleId)
+                    .name("New Role")
+                    .ccmsCode("NEW_ROLE")
+                    .userTypeRestriction(new UserType[]{UserType.EXTERNAL})
+                    .build();
+
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .activeProfile(true)
+                    .userType(UserType.EXTERNAL)
+                    .appRoles(new HashSet<>(Set.of(existingRole)))
+                    .entraUser(EntraUser.builder().id(entraUserId).build())
+                    .build();
+
+            EntraUser user = EntraUser.builder()
+                    .id(entraUserId)
+                    .entraOid(entraOid.toString())
+                    .userProfiles(Set.of(userProfile))
+                    .build();
+            userProfile.setEntraUser(user);
+
+            UUID modifierId = UUID.randomUUID();
+            EntraUser modifier = EntraUser.builder()
+                    .entraOid(modifierId.toString())
+                    .userProfiles(Set.of(UserProfile.builder()
+                            .id(UUID.randomUUID())
+                            .activeProfile(true)
+                            .userType(UserType.INTERNAL)
+                            .build()))
+                    .build();
+
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+            when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(newRole));
+            when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
+            when(mockUserProfileRepository.save(any(UserProfile.class))).thenReturn(userProfile);
+
+            // Allow both adding and removing roles
+            when(accessControlService.canAssignExternalAppRoles(userProfileId.toString())).thenReturn(true);
+            when(accessControlService.canAssignInternalAppRoles(userProfileId.toString())).thenReturn(true);
+            when(accessControlService.canRemoveExternalAppRoles(userProfileId.toString())).thenReturn(true);
+            when(mockRoleChangeNotificationService.sendMessage(any(), any(), any())).thenReturn(true);
+
+            // Act
+            Map<String, String> result = userService.updateUserRoles(
+                    userProfileId.toString(),
+                    List.of(newRole.getId().toString()),
+                    Collections.emptyList(),
+                    modifierId);
+
+            // Assert
+            assertThat(result).doesNotContainKey("error");
+            assertThat(result.get("diff")).contains("Removed").contains("Added");
+            verify(mockUserProfileRepository).save(userProfile);
+            verify(techServicesClient).updateRoleAssignment(entraUserId);
+        }
+
+        @Test
+        void updateUserRoles_doesNotThrowError_whenModifyingOnlyNonEditableRoles() {
+            // Arrange
+            UUID userProfileId = UUID.randomUUID();
+            UUID nonEditableRoleId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            UUID entraOid = UUID.randomUUID();
+
+            AppRole nonEditableRole = AppRole.builder()
+                    .id(nonEditableRoleId)
+                    .name("Non-Editable Role")
+                    .ccmsCode("NON_EDITABLE")
+                    .userTypeRestriction(new UserType[]{UserType.EXTERNAL})
+                    .build();
+
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .activeProfile(true)
+                    .userType(UserType.EXTERNAL)
+                    .appRoles(Set.of(nonEditableRole))
+                    .entraUser(EntraUser.builder().id(entraUserId).build())
+                    .build();
+
+            EntraUser user = EntraUser.builder()
+                    .id(entraUserId)
+                    .entraOid(entraOid.toString())
+                    .userProfiles(Set.of(userProfile))
+                    .build();
+            userProfile.setEntraUser(user);
+
+            UUID modifierId = UUID.randomUUID();
+            EntraUser modifier = EntraUser.builder()
+                    .entraOid(modifierId.toString())
+                    .userProfiles(Set.of(UserProfile.builder()
+                            .id(UUID.randomUUID())
+                            .activeProfile(true)
+                            .userType(UserType.INTERNAL)
+                            .build()))
+                    .build();
+
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+            when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(nonEditableRole));
+            when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
+            when(mockUserProfileRepository.save(any(UserProfile.class))).thenReturn(userProfile);
+
+            // Cannot add new roles but only providing non-editable roles
+            when(accessControlService.canAssignExternalAppRoles(userProfileId.toString())).thenReturn(true);
+            when(accessControlService.canAssignInternalAppRoles(userProfileId.toString())).thenReturn(true);
+            when(mockRoleChangeNotificationService.sendMessage(any(), any(), any())).thenReturn(true);
+
+            // Act - should not throw error as we're only keeping existing roles
+            Map<String, String> result = userService.updateUserRoles(
+                    userProfileId.toString(),
+                    Collections.emptyList(),
+                    List.of(nonEditableRole.getId().toString()),
+                    modifierId);
+
+            // Assert
+            assertThat(result).doesNotContainKey("error");
+            verify(mockUserProfileRepository).save(userProfile);
+        }
+
+        @Test
+        void updateUserRoles_successfullyUpdates_withMixedInternalAndExternalRoles() {
+            // Arrange
+            UUID userProfileId = UUID.randomUUID();
+            UUID internalRoleId = UUID.randomUUID();
+            UUID externalRoleId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            UUID entraOid = UUID.randomUUID();
+
+            AppRole internalRole = AppRole.builder()
+                    .id(internalRoleId)
+                    .name("Internal Role")
+                    .ccmsCode("INTERNAL_ROLE")
+                    .userTypeRestriction(new UserType[]{UserType.INTERNAL})
+                    .build();
+
+            AppRole externalRole = AppRole.builder()
+                    .id(externalRoleId)
+                    .name("External Role")
+                    .ccmsCode("EXTERNAL_ROLE")
+                    .userTypeRestriction(new UserType[]{UserType.EXTERNAL})
+                    .build();
+
+            AppRole mixedRole = AppRole.builder()
+                    .id(UUID.randomUUID())
+                    .name("Mixed Role")
+                    .ccmsCode("MIXED_ROLE")
+                    .userTypeRestriction(new UserType[]{UserType.INTERNAL, UserType.EXTERNAL})
+                    .build();
+
+            UserProfile userProfile = UserProfile.builder()
+                    .id(userProfileId)
+                    .activeProfile(true)
+                    .userType(UserType.EXTERNAL)
+                    .appRoles(Set.of())
+                    .entraUser(EntraUser.builder().id(entraUserId).build())
+                    .build();
+
+            EntraUser user = EntraUser.builder()
+                    .id(entraUserId)
+                    .entraOid(entraOid.toString())
+                    .userProfiles(Set.of(userProfile))
+                    .build();
+            userProfile.setEntraUser(user);
+
+            UUID modifierId = UUID.randomUUID();
+            EntraUser modifier = EntraUser.builder()
+                    .entraOid(modifierId.toString())
+                    .userProfiles(Set.of(UserProfile.builder()
+                            .id(UUID.randomUUID())
+                            .activeProfile(true)
+                            .userType(UserType.INTERNAL)
+                            .build()))
+                    .build();
+
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+            // Roles are filtered by user type restriction, so for external user only external and mixed roles apply
+            when(mockAppRoleRepository.findAllById(any())).thenReturn(List.of(internalRole, externalRole, mixedRole));
+            when(mockEntraUserRepository.findByEntraOid(modifierId.toString())).thenReturn(Optional.of(modifier));
+            when(mockUserProfileRepository.save(any(UserProfile.class))).thenReturn(userProfile);
+
+            when(accessControlService.canAssignExternalAppRoles(userProfileId.toString())).thenReturn(true);
+            when(accessControlService.canAssignInternalAppRoles(userProfileId.toString())).thenReturn(true);
+            when(accessControlService.canRemoveExternalAppRoles(userProfileId.toString())).thenReturn(true);
+            when(accessControlService.canRemoveInternalAppRoles(userProfileId.toString())).thenReturn(true);
+            when(mockRoleChangeNotificationService.sendMessage(any(), any(), any())).thenReturn(true);
+
+            // Act
+            Map<String, String> result = userService.updateUserRoles(
+                    userProfileId.toString(),
+                    List.of(externalRoleId.toString(), mixedRole.getId().toString()),
+                    Collections.emptyList(),
+                    modifierId);
+
+            // Assert - internal role should be filtered out
+            assertThat(result).doesNotContainKey("error");
+            verify(mockUserProfileRepository).save(userProfile);
+            verify(techServicesClient).updateRoleAssignment(entraUserId);
+        }
     }
 }
