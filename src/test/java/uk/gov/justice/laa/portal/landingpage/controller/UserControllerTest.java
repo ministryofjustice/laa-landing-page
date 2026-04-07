@@ -1591,6 +1591,69 @@ class UserControllerTest {
     }
 
     @Test
+    public void testSetSelectedAppsEdit_shouldCleanUpRoleDataWhenAppsDeselected() {
+        // Given
+        String app1Id = "app1";
+        String app2Id = "app2";
+        String app3Id = "app3";
+        
+        MockHttpSession session = new MockHttpSession();
+        
+        // Setup initial state: 3 apps selected with role data
+        session.setAttribute("selectedApps", List.of(app1Id, app2Id, app3Id));
+        Map<Integer, List<String>> existingRoles = new HashMap<>();
+        existingRoles.put(0, List.of("role1", "role2")); // app1 roles
+        existingRoles.put(1, List.of("role3"));          // app2 roles  
+        existingRoles.put(2, List.of("role4", "role5")); // app3 roles
+        session.setAttribute("editUserAllSelectedRoles", existingRoles);
+        
+        // When - user deselects app2, keeping only app1 and app3
+        List<String> newApps = List.of(app1Id, app3Id);
+        UUID userId = UUID.randomUUID();
+        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), newApps, session);
+        
+        // Then
+        assertThat(redirectView.getUrl()).isEqualTo(String.format("/admin/users/edit/%s/roles", userId));
+        
+        @SuppressWarnings("unchecked")
+        List<String> updatedApps = (List<String>) session.getAttribute("selectedApps");
+        assertThat(updatedApps).containsExactly(app1Id, app3Id);
+        
+        @SuppressWarnings("unchecked")
+        Map<Integer, List<String>> updatedRoles = (Map<Integer, List<String>>) session.getAttribute("editUserAllSelectedRoles");
+        assertThat(updatedRoles).hasSize(2);
+        assertThat(updatedRoles.get(0)).containsExactly("role1", "role2"); // app1 roles preserved at index 0
+        assertThat(updatedRoles.get(1)).containsExactly("role4", "role5"); // app3 roles moved to index 1
+        assertThat(updatedRoles.get(2)).isNull(); // app2 roles removed
+    }
+
+    @Test
+    public void testSetSelectedAppsEdit_shouldHandleNoExistingRoleData() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        String app1Id = "app1";
+        String app2Id = "app2";
+        
+        MockHttpSession session = new MockHttpSession();
+        
+        // Setup initial state: no previous selectedApps or role data
+        List<String> newApps = List.of(app1Id, app2Id);
+        
+        // When
+        RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), newApps, session);
+        
+        // Then
+        assertThat(redirectView.getUrl()).isEqualTo(String.format("/admin/users/edit/%s/roles", userId));
+        
+        @SuppressWarnings("unchecked")
+        List<String> updatedApps = (List<String>) session.getAttribute("selectedApps");
+        assertThat(updatedApps).containsExactly(app1Id, app2Id);
+        
+        // Should not have created editUserAllSelectedRoles since there was no existing data to clean
+        assertThat(session.getAttribute("editUserAllSelectedRoles")).isNull();
+    }
+
+    @Test
     void editUserRolesCheckAnswer() {
         // Given
         final String userId = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID
