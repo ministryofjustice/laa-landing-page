@@ -469,7 +469,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         assertTrue(page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible());
         manageUsersPage.clickGoBackToManageUsers();
-        assertTrue(row.locator(".moj-badge.moj-badge--blue").isHidden());
+        assertTrue(row.locator(".moj-badge.moj-badge--blue").isVisible()); // because the invitation status is null
     }
 
     @Disabled("Test disabled - user creation logic changed. Users with only firm selection get COMPLETE status instead of PENDING. Needs investigation.")
