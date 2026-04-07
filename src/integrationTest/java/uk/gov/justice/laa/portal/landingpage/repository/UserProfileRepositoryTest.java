@@ -388,6 +388,10 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         assertThat(page.getTotalElements()).isEqualTo(1);
         assertThat(page.getContent()).extracting(UserSearchResultsDto::id)
                 .containsExactly(childProfile2.getId());
+        assertThat(page.getContent().get(0).hasAppRoles()).isTrue();
+        assertThat(page.getContent().get(0).enabled()).isTrue();
+        assertThat(page.getContent().get(0).invitationStatus()).isNull();
+
     }
 
     @Test
