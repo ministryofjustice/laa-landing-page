@@ -1593,7 +1593,6 @@ class UserControllerTest {
     @Test
     public void testSetSelectedAppsEdit_shouldCleanUpRoleDataWhenAppsDeselected() {
         // Given
-        UUID userId = UUID.randomUUID();
         String app1Id = "app1";
         String app2Id = "app2";
         String app3Id = "app3";
@@ -1610,6 +1609,7 @@ class UserControllerTest {
         
         // When - user deselects app2, keeping only app1 and app3
         List<String> newApps = List.of(app1Id, app3Id);
+        UUID userId = UUID.randomUUID();
         RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), newApps, session);
         
         // Then
