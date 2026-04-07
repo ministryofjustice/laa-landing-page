@@ -1086,15 +1086,15 @@
 
         <!-- Export CSV -->
         <div class="moj-button-group moj-button-group--inline moj-button-group--with-divider"
-             th:if="${exportCsv and firmSearch.getSelectedFirmId() == null}">
+             th:if="${exportCsv and firmSearch.getSelectedFirmId() == null and selectedUserType != 'INTERNAL'}">
             <a class="govuk-button" disabled=".govuk-button" title="Select a single firm to enable CSV export.">Export as CSV</a>
         </div>
 
         <div class="moj-nutton-group moj-button-group--inline moj-button-group--with-divider"
-             th:if="${exportCsv and firmSearch.getSelectedFirmId() != null and firmSearch.getSelectedFirmId() != ''}">
+             th:if="${exportCsv and (firmSearch.getSelectedFirmId() != null or selectedUserType == 'INTERNAL')}">
             <a class="govuk-button js-export-csv"
                th:attr="data-users-empty=${#lists.isEmpty(users)}"
-               th:href="@{/admin/users/audit/download(selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole},selectedAppId=${selectedAppId},selectedUserType=${selectedUserType}, selectedFirmName=${firmSearch.firmSearch})}">
+               th:href="@{/admin/users/audit/download(search=${search},selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole},selectedAppId=${selectedAppId},selectedUserType=${selectedUserType}, selectedFirmName=${firmSearch.firmSearch}, neverActivated=${neverActivated})}">
                 Export as CSV
             </a>
         </div>

@@ -27,6 +27,8 @@ public class AppDto implements Comparable<AppDto>, Serializable {
     private boolean selected;
     private AppType appType;
     private boolean enabled;
+    private boolean changeNotAllowed;
+    private boolean hiddenFromSelection;
     private AlternativeAppDescriptionDto alternativeAppDescription;
     private ChangeType changeType;
 

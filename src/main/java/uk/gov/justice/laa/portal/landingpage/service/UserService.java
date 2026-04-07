@@ -25,10 +25,12 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -41,6 +43,7 @@ import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 
 import jakarta.transaction.Transactional;
+import uk.gov.justice.laa.portal.landingpage.dto.AccountStatusHistoryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
@@ -109,18 +112,20 @@ public class UserService {
     private final FirmRepository firmRepository;
     private final EventService eventService;
     private final NotificationService notificationService;
+    private final AccessControlService accessControlService;
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
-            EntraUserRepository entraUserRepository, AppRepository appRepository,
-            AppRoleRepository appRoleRepository, ModelMapper mapper,
-            OfficeRepository officeRepository,
-            AppService appService,
-            TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
-            UserAccountStatusAuditRepository userAccountStatusAuditRepository,
-            RoleChangeNotificationService roleChangeNotificationService, FirmService firmService,
-            FirmRepository firmRepository, EventService eventService,
-            NotificationService notificationService) {
+                       EntraUserRepository entraUserRepository, AppRepository appRepository,
+                       AppRoleRepository appRoleRepository, ModelMapper mapper,
+                       OfficeRepository officeRepository,
+                       AppService appService,
+                       TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
+                       UserAccountStatusAuditRepository userAccountStatusAuditRepository,
+                       RoleChangeNotificationService roleChangeNotificationService, FirmService firmService,
+                       FirmRepository firmRepository, EventService eventService,
+                       NotificationService notificationService,
+                       @Lazy AccessControlService accessControlService) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -136,6 +141,7 @@ public class UserService {
         this.firmRepository = firmRepository;
         this.eventService = eventService;
         this.notificationService = notificationService;
+        this.accessControlService = accessControlService;
     }
 
     public boolean hasUserFirmAlreadyAssigned(String email, UUID firmId) {
@@ -174,58 +180,122 @@ public class UserService {
     @Transactional
     public Map<String, String> updateUserRoles(String userProfileId, Collection<String> selectedRoles,
             List<String> nonEditableRoles, UUID modifierId) {
-        Set<String> allAssignableRoles = new HashSet<>(selectedRoles);
-        allAssignableRoles.addAll(nonEditableRoles);
-        List<AppRole> roles = appRoleRepository.findAllById(
-                allAssignableRoles.stream().map(UUID::fromString).collect(Collectors.toList()));
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
-
-        String diff = "";
-        Map<String, String> result = new HashMap<>();
-        if (optionalUserProfile.isPresent()) {
-            UserProfile userProfile = optionalUserProfile.get();
-            boolean self = userProfile.getEntraUser().getEntraOid().equals(modifierId.toString());
-            List<UserType> modifierTypes = findUserTypeByUserEntraId(modifierId.toString());
-            boolean internal = modifierTypes.contains(UserType.INTERNAL);
-            int before = roles.size();
-            roles = roles.stream().filter(appRole -> Arrays.stream(appRole.getUserTypeRestriction())
-                    .anyMatch(userType -> userType == userProfile.getUserType())).toList();
-            int after = roles.size();
-            if (after < before) {
-                logger.warn("Attempt to assign internal role user entra ID {}.",
-                        userProfile.getEntraUser().getEntraOid());
-            }
-
-            Set<AppRole> newRoles = new HashSet<>(roles);
-            Set<AppRole> oldRoles = Objects.isNull(userProfile.getAppRoles()) ? new HashSet<>()
-                    : new HashSet<>(userProfile.getAppRoles());
-            String error = roleCoverage(oldRoles, newRoles, userProfile.getFirm(),
-                    userProfile.getId().toString(), self, internal);
-            if (!error.isEmpty()) {
-                result.put("error", error);
-                return result;
-            }
-
-            Set<String> oldPuiRoles = filterByPuiRoles(userProfile.getAppRoles());
-            Set<String> newPuiRoles = filterByPuiRoles(newRoles);
-
-            // Update roles
-            userProfile.setAppRoles(newRoles);
-            diff = diffRole(oldRoles, newRoles);
-
-            // Try to send role change notification with retry logic before saving
-            boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile,
-                    newPuiRoles, oldPuiRoles);
-            userProfile.setLastCcmsSyncSuccessful(notificationSuccess);
-
-            // Save user profile with ccms sync status
-            userProfileRepository.save(userProfile);
-            techServicesClient.updateRoleAssignment(userProfile.getEntraUser().getId());
-            result.put("diff", diff);
-        } else {
+        if (optionalUserProfile.isEmpty()) {
             logger.warn("User profile with id {} not found. Could not update roles.",
                     userProfileId);
+            return Collections.emptyMap();
         }
+
+        Set<String> allAssignableRoles = new HashSet<>(selectedRoles);
+        allAssignableRoles.addAll(nonEditableRoles);
+
+        List<AppRole> assignableAppRoles = appRoleRepository.findAllById(
+                allAssignableRoles.stream().map(UUID::fromString).collect(Collectors.toList()));
+
+        // Validate no new external roles allowed if modifier not allowed adding new roles
+        boolean addingExternalRolesAllowed = accessControlService.canAssignExternalAppRoles(userProfileId);
+
+        if (!allAssignableRoles.isEmpty() && !addingExternalRolesAllowed) {
+            Set<String> userCurrentExternalRoles = getUserAppRolesByUserId(userProfileId).stream()
+                    .filter(appRole -> Arrays.asList(appRole.getUserTypeRestriction()).contains(UserType.EXTERNAL))
+                    .map(AppRoleDto::getId).collect(Collectors.toSet());
+            Set<String> assignableExternalRoles = assignableAppRoles.stream()
+                    .filter(appRole -> appRole.getUserTypeRestriction() != null
+                            && Arrays.stream(appRole.getUserTypeRestriction())
+                                    .anyMatch(type -> type == UserType.EXTERNAL))
+                    .map(AppRole::getName)
+                    .collect(Collectors.toSet());
+
+            if (!CollectionUtils.isEqualCollection(assignableExternalRoles, userCurrentExternalRoles)) {
+                throw new RuntimeException("User is not allowed to add new roles");
+            }
+        }
+
+        // Validate no new internal roles allowed if modifier not allowed adding new roles
+        boolean addingInternalRolesAllowed = accessControlService.canAssignInternalAppRoles(userProfileId);
+
+        if (!allAssignableRoles.isEmpty() && !addingInternalRolesAllowed) {
+            Set<String> userCurrentInternalRoles = getUserAppRolesByUserId(userProfileId).stream()
+                    .filter(appRole -> Arrays.asList(appRole.getUserTypeRestriction()).contains(UserType.INTERNAL))
+                    .map(AppRoleDto::getId).collect(Collectors.toSet());
+            Set<String> assignableInternalRoles = assignableAppRoles.stream()
+                    .filter(appRole -> appRole.getUserTypeRestriction() != null
+                            && Arrays.stream(appRole.getUserTypeRestriction())
+                                    .anyMatch(type -> type == UserType.INTERNAL))
+                    .map(AppRole::getName)
+                    .collect(Collectors.toSet());
+
+            if (!CollectionUtils.isEqualCollection(assignableInternalRoles, userCurrentInternalRoles)) {
+                throw new RuntimeException("User is not allowed to add new roles");
+            }
+
+        }
+
+        // Validate no external roles removed if modifier not allowed to remove roles
+        boolean removingExternalRolesAllowed = accessControlService.canRemoveExternalAppRoles(userProfileId);
+        if (!removingExternalRolesAllowed) {
+            Set<String> userCurrentExternalRoles = getUserAppRolesByUserId(userProfileId).stream()
+                    .filter(appRole -> Arrays.asList(appRole.getUserTypeRestriction()).contains(UserType.EXTERNAL))
+                    .map(AppRoleDto::getId).collect(Collectors.toSet());
+            if (!allAssignableRoles.containsAll(userCurrentExternalRoles)) {
+                throw new RuntimeException("User is not allowed to remove existing roles");
+            }
+        }
+
+        // Validate no internal roles removed if modifier not allowed removing roles
+        boolean removingInternalRolesAllowed = accessControlService.canRemoveInternalAppRoles(userProfileId);
+        if (!removingInternalRolesAllowed) {
+            Set<String> userCurrentInternalRoles = getUserAppRolesByUserId(userProfileId).stream()
+                    .filter(appRole -> Arrays.asList(appRole.getUserTypeRestriction()).contains(UserType.INTERNAL))
+                    .map(AppRoleDto::getId).collect(Collectors.toSet());
+            if (!allAssignableRoles.containsAll(userCurrentInternalRoles)) {
+                throw new RuntimeException("User is not allowed to remove existing roles");
+            }
+        }
+
+        Map<String, String> result = new HashMap<>();
+        UserProfile userProfile = optionalUserProfile.get();
+
+        boolean self = userProfile.getEntraUser().getEntraOid().equals(modifierId.toString());
+        List<UserType> modifierTypes = findUserTypeByUserEntraId(modifierId.toString());
+        boolean internal = modifierTypes.contains(UserType.INTERNAL);
+        int before = assignableAppRoles.size();
+        assignableAppRoles = assignableAppRoles.stream().filter(appRole -> Arrays.stream(appRole.getUserTypeRestriction())
+                .anyMatch(userType -> userType == userProfile.getUserType())).toList();
+        int after = assignableAppRoles.size();
+        if (after < before) {
+            logger.warn("Attempt to assign internal role user entra ID {}.",
+                    userProfile.getEntraUser().getEntraOid());
+        }
+
+        Set<AppRole> newRoles = new HashSet<>(assignableAppRoles);
+        Set<AppRole> oldRoles = Objects.isNull(userProfile.getAppRoles()) ? new HashSet<>()
+                : new HashSet<>(userProfile.getAppRoles());
+        String error = roleCoverage(oldRoles, newRoles, userProfile.getFirm(),
+                userProfile.getId().toString(), self, internal);
+        if (!error.isEmpty()) {
+            result.put("error", error);
+            return result;
+        }
+
+        Set<String> oldPuiRoles = filterByPuiRoles(userProfile.getAppRoles());
+        Set<String> newPuiRoles = filterByPuiRoles(newRoles);
+
+        // Update roles
+        userProfile.setAppRoles(newRoles);
+
+        // Try to send role change notification with retry logic before saving
+        boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile,
+                newPuiRoles, oldPuiRoles);
+        userProfile.setLastCcmsSyncSuccessful(notificationSuccess);
+
+        // Save user profile with ccms sync status
+        userProfileRepository.save(userProfile);
+        techServicesClient.updateRoleAssignment(userProfile.getEntraUser().getId());
+        String diff = diffRole(oldRoles, newRoles);
+        result.put("diff", diff);
+
         return result;
     }
 
@@ -1688,7 +1758,9 @@ public class UserService {
             return "Unknown";
         }
 
-        Set<String> firmNames = profiles.stream().map(UserProfile::getFirm).filter(Objects::nonNull)
+        Set<String> firmNames = profiles.stream()
+                .filter(profile -> UserType.EXTERNAL.equals(profile.getUserType()))
+                .map(UserProfile::getFirm).filter(Objects::nonNull)
                 .map(Firm::getName).collect(Collectors.toCollection(TreeSet::new));
 
         if (firmNames.isEmpty()) {
@@ -1708,7 +1780,7 @@ public class UserService {
         Set<String> firmCodes = new HashSet<>();
 
         if (!csvExport) {
-            firmCodes = profiles.stream().map(profile -> profile.getFirm()).filter(Objects::nonNull)
+            firmCodes = profiles.stream().map(UserProfile::getFirm).filter(Objects::nonNull)
                 .map(Firm::getCode).collect(Collectors.toCollection(HashSet::new));
         } else {
             List<Firm> sortedFirms =
@@ -1763,6 +1835,7 @@ public class UserService {
      */
     public boolean determineIsProviderAdminForSelectedFirm(List<UserProfile> profiles, UUID firmId) {
         return profiles.stream()
+                .filter(p -> UserType.EXTERNAL.equals(p.getUserType()))
                 .filter(p -> firmId.equals(p.getFirm().getId()))
                 .anyMatch(profile ->
                         profile.getAppRoles().stream()
@@ -1775,7 +1848,8 @@ public class UserService {
      */
     public String determineAppAccess(List<UserProfile> profiles, UUID firmId) {
         return profiles.stream()
-                .filter(p -> firmId.equals(p.getFirm().getId()))
+                .filter(p -> UserType.INTERNAL.equals(p.getUserType())
+                        || firmId.equals(p.getFirm().getId()))
                 .flatMap(profile -> profile.getAppRoles().stream())
                 .map(AppRole::getApp)
                 .filter(Objects::nonNull)
@@ -1843,6 +1917,11 @@ public class UserService {
         // Map profiles to DTOs (no pagination for this method)
         List<AuditProfileDto> profileDtos = allProfiles.stream().map(this::mapToAuditProfileDto).toList();
 
+        // Fetch account status history
+        List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository
+                .findByEntraUserIdOrderByStatusChangedDateDesc(entraUser.getId());
+        List<AccountStatusHistoryDto> accountStatusHistory = mapAccountStatusHistory(auditRecords);
+
         // Determine user type using shared method
         String userType = determineUserType(entraUser, allProfiles);
 
@@ -1863,6 +1942,7 @@ public class UserService {
                 .profiles(profileDtos).totalProfiles(allProfiles.size()).totalProfilePages(1)
                 .currentProfilePage(1)
                 .entraOid(entraUser.getEntraOid())
+                .accountStatusHistory(accountStatusHistory)
                 .build();
     }
 
@@ -1904,6 +1984,11 @@ public class UserService {
         // Determine user type using shared method
         String userType = determineUserType(entraUser, allProfiles);
 
+        // Fetch account status history
+        List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository
+                .findByEntraUserIdOrderByStatusChangedDateDesc(entraUser.getId());
+        List<AccountStatusHistoryDto> accountStatusHistory = mapAccountStatusHistory(auditRecords);
+
         // Build detail DTO
         return AuditUserDetailDto.builder().userId(entraUser.getId().toString())
                 .email(entraUser.getEmail()).firstName(entraUser.getFirstName())
@@ -1921,6 +2006,7 @@ public class UserService {
                 .profiles(profileDtos).totalProfiles(totalProfiles).totalProfilePages(totalPages)
                 .currentProfilePage(profilePage).hasNoProfile(false)
                 .entraOid(entraUser.getEntraOid())
+                .accountStatusHistory(accountStatusHistory)
                 .build();
     }
 
@@ -1944,6 +2030,11 @@ public class UserService {
         // Determine user type using shared method
         String userType = determineUserType(entraUser, allProfiles);
 
+        // Fetch account status history
+        List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository
+                .findByEntraUserIdOrderByStatusChangedDateDesc(entraUser.getId());
+        List<AccountStatusHistoryDto> accountStatusHistory = mapAccountStatusHistory(auditRecords);
+
         // Build detail DTO with Entra data only
         return AuditUserDetailDto.builder().userId(entraUser.getId().toString())
                 .email(entraUser.getEmail()).firstName(entraUser.getFirstName())
@@ -1961,6 +2052,7 @@ public class UserService {
                 .profiles(Collections.emptyList()).totalProfiles(0).totalProfilePages(0)
                 .currentProfilePage(1).hasNoProfile(true)
                 .entraOid(entraUser.getEntraOid())
+                .accountStatusHistory(accountStatusHistory)
                 .build();
     }
 
@@ -1994,6 +2086,28 @@ public class UserService {
                 .roles(roleDtos)
                 .userType(profile.getUserType() != null ? profile.getUserType().name() : "UNKNOWN")
                 .activeProfile(profile.isActiveProfile()).build();
+    }
+
+    /**
+     * Map UserAccountStatusAudit to AccountStatusHistoryDto
+     * Converts status to sentence case and includes disable reason
+     */
+    protected List<AccountStatusHistoryDto> mapAccountStatusHistory(List<UserAccountStatusAudit> auditRecords) {
+        return auditRecords.stream()
+                .map(record -> AccountStatusHistoryDto.builder()
+                        .statusChangedDate(record.getStatusChangedDate())
+                        .statusChange(convertToSentenceCase(record.getStatusChange().toString()))
+                        .disableReason(record.getDisableUserReason() != null ? record.getDisableUserReason().getName() : null)
+                        .statusChangedBy(record.getStatusChangedBy())
+                        .build())
+                .toList();
+    }
+
+    private String convertToSentenceCase(String input) {
+        if (input == null || input.isEmpty()) {
+            return input;
+        }
+        return input.substring(0, 1).toUpperCase() + input.substring(1).toLowerCase();
     }
 
     /**

@@ -13,6 +13,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import org.springframework.test.web.servlet.MvcResult;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.ModelAndView;
@@ -133,18 +134,18 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
 
     @Test
     @Transactional
-    public void testSecurityResponseCanAssignInternalUserManagerRoleToInternalUser() throws Exception {
+    public void testSecurityResponseCannotAssignInternalUserManagerRoleToInternalUser() throws Exception {
         EntraUser loggedInUser = securityResponseUsers.getFirst();
         EntraUser editedUser = internalUsersNoRoles.getFirst();
-        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.INTERNAL_USER_MANAGER.getRoleName(), true);
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.INTERNAL_USER_MANAGER.getRoleName(), false, true);
     }
 
     @Test
     @Transactional
-    public void testSecurityResponseCanAssignExternalUserManagerRoleToInternalUser() throws Exception {
+    public void testSecurityResponseCannotAssignExternalUserManagerRoleToInternalUser() throws Exception {
         EntraUser loggedInUser = securityResponseUsers.getFirst();
         EntraUser editedUser = internalUsersNoRoles.getFirst();
-        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.EXTERNAL_USER_MANAGER.getRoleName(), true);
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.EXTERNAL_USER_MANAGER.getRoleName(), false, true);
     }
 
     @Test
@@ -157,10 +158,10 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
 
     @Test
     @Transactional
-    public void testSecurityResponseCanAssignFirmUserManagerRoleToExternalUser() throws Exception {
+    public void testSecurityResponseCannotAssignFirmUserManagerRoleToExternalUser() throws Exception {
         EntraUser loggedInUser = securityResponseUsers.getFirst();
         EntraUser editedUser = externalUsersNoRoles.getFirst();
-        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.FIRM_USER_MANAGER.getRoleName(), true);
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.FIRM_USER_MANAGER.getRoleName(), false, true);
     }
 
     @Test
@@ -181,10 +182,10 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
 
     @Test
     @Transactional
-    public void testSecurityResponseCanAssignInternalUserViewerRoleToInternalUser() throws Exception {
+    public void testSecurityResponseCannotAssignInternalUserViewerRoleToInternalUser() throws Exception {
         EntraUser loggedInUser = securityResponseUsers.getFirst();
         EntraUser editedUser = internalUsersNoRoles.getFirst();
-        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.INTERNAL_USER_VIEWER.getRoleName(), true);
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.INTERNAL_USER_VIEWER.getRoleName(), false, true);
     }
 
     @Test
@@ -192,15 +193,15 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     public void testSecurityResponseCannotAssignInternalUserViewerRoleToExternalUser() throws Exception {
         EntraUser loggedInUser = securityResponseUsers.getFirst();
         EntraUser editedUser = externalUsersNoRoles.getFirst();
-        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.INTERNAL_USER_VIEWER.getRoleName(), false);
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.INTERNAL_USER_VIEWER.getRoleName(), false, true);
     }
 
     @Test
     @Transactional
-    public void testSecurityResponseCanAssignExternalUserViewerRoleToInternalUser() throws Exception {
+    public void testSecurityResponseCannotAssignExternalUserViewerRoleToInternalUser() throws Exception {
         EntraUser loggedInUser = securityResponseUsers.getFirst();
         EntraUser editedUser = internalUsersNoRoles.getFirst();
-        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.EXTERNAL_USER_VIEWER.getRoleName(), true);
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.EXTERNAL_USER_VIEWER.getRoleName(), false, true);
     }
 
     @Test
@@ -557,8 +558,42 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
                 .getAppRoles();
     }
 
-    @SuppressWarnings("unchecked")
+    private void assignAuthzAppRoleToUserNotAllowed(EntraUser loggedInUser, EntraUser editedUser, String authzRoleName, boolean expectedSuccess) throws Exception {
+        UserProfile editedUserProfile = editedUser.getUserProfiles().stream().findFirst().orElseThrow();
+        MockHttpSession session = new MockHttpSession();
+
+        // Open App editing screen
+        MvcResult selectAppsResult = this.mockMvc.perform(get(String.format("/admin/users/edit/%s/apps", editedUserProfile.getId()))
+                        .with(userOauth2Login(loggedInUser))
+                        .session(session))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // Fetch AuthZ app from response.
+        ModelAndView modelAndView = selectAppsResult.getModelAndView();
+        List<AppDto> availableApps = (List<AppDto>) modelAndView.getModel().get("apps");
+        AppDto authzApp = availableApps.stream()
+                .filter(app -> app.getName().equals("Manage Your Users"))
+                .findFirst()
+                .orElseThrow();
+
+        // Select AuthZ app using post failse
+        this.mockMvc.perform(post(String.format("/admin/users/edit/%s/apps", editedUserProfile.getId()))
+                        .with(userOauth2Login(loggedInUser))
+                        .with(csrf())
+                        .session(session)
+                        .param("apps", authzApp.getId()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrlPattern("**/oauth2/authorization/azure"));
+    }
+
     private void assignAuthzRoleToUser(EntraUser loggedInUser, EntraUser editedUser, String authzRoleName, boolean expectedSuccess) throws Exception {
+        assignAuthzRoleToUser(loggedInUser, editedUser, authzRoleName, expectedSuccess, false);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void assignAuthzRoleToUser(EntraUser loggedInUser, EntraUser editedUser, String authzRoleName,
+                                       boolean expectedSuccess, boolean errorOnConfirm) throws Exception {
         UserProfile editedUserProfile = editedUser.getUserProfiles().stream().findFirst().orElseThrow();
         MockHttpSession session = new MockHttpSession();
 
@@ -641,6 +676,10 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
                 .andReturn();
         String confirmUrl = postAppsResult.getResponse().getRedirectedUrl();
         Assertions.assertThat(confirmUrl).isNotNull();
+        if (errorOnConfirm) {
+            Assertions.assertThat(confirmUrl).contains("error");
+            return;
+        }
         Assertions.assertThat(confirmUrl).contains("confirm");
         this.mockMvc.perform(get(confirmUrl)
                         .with(userOauth2Login(loggedInUser))
