@@ -103,7 +103,6 @@ public class UserService {
     private final AppRepository appRepository;
     private final AppRoleRepository appRoleRepository;
     private final ModelMapper mapper;
-    private final AppService appService;
     private final TechServicesClient techServicesClient;
     private final UserProfileRepository userProfileRepository;
     private final UserAccountStatusAuditRepository userAccountStatusAuditRepository;
@@ -116,23 +115,21 @@ public class UserService {
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
-                       EntraUserRepository entraUserRepository, AppRepository appRepository,
-                       AppRoleRepository appRoleRepository, ModelMapper mapper,
-                       OfficeRepository officeRepository,
-                       AppService appService,
-                       TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
-                       UserAccountStatusAuditRepository userAccountStatusAuditRepository,
-                       RoleChangeNotificationService roleChangeNotificationService, FirmService firmService,
-                       FirmRepository firmRepository, EventService eventService,
-                       NotificationService notificationService,
-                       @Lazy AccessControlService accessControlService) {
+           EntraUserRepository entraUserRepository, AppRepository appRepository,
+           AppRoleRepository appRoleRepository, ModelMapper mapper,
+           OfficeRepository officeRepository,
+           TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
+           UserAccountStatusAuditRepository userAccountStatusAuditRepository,
+           RoleChangeNotificationService roleChangeNotificationService, FirmService firmService,
+           FirmRepository firmRepository, EventService eventService,
+           NotificationService notificationService,
+           @Lazy AccessControlService accessControlService) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
         this.appRoleRepository = appRoleRepository;
         this.mapper = mapper;
         this.officeRepository = officeRepository;
-        this.appService = appService;
         this.techServicesClient = techServicesClient;
         this.userProfileRepository = userProfileRepository;
         this.userAccountStatusAuditRepository = userAccountStatusAuditRepository;
@@ -1184,29 +1181,7 @@ public class UserService {
                 .sorted()
                 .collect(Collectors.toCollection(TreeSet::new));
 
-        // Make any necessary adjustments to the app display properties
-        makeAppDisplayAdjustments(userAssignedLaaApps);
-
         return userAssignedLaaApps;
-    }
-
-    private void makeAppDisplayAdjustments(Set<LaaApplicationForView> userApps) {
-        List<AppDto> applications = appService.getAllActiveLaaApps();
-
-        Set<String> userAppIds = userApps.stream()
-                .map(LaaApplicationForView::getId)
-                .collect(Collectors.toSet());
-
-        for (LaaApplicationForView userApp : userApps) {
-            if (userApp.isSpecialHandling() && userAppIds.contains(userApp.getOtherAssignedAppIdForAltDesc())) {
-                String alternateDescription = applications.stream()
-                        .filter(app -> app.getId().equals(userApp.getId()))
-                        .map(app -> app.getAlternativeAppDescription().getAlternativeDescription())
-                        .findFirst()
-                        .orElse("Unknown");
-                userApp.setDescription(alternateDescription);
-            }
-        }
     }
 
     /**
