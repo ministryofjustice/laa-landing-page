@@ -391,6 +391,38 @@
                                 </dl>
                             </div>
                         </div>
+
+                        <!-- Account status history Card -->
+                        <div class="govuk-summary-card">
+                            <div class="govuk-summary-card__title-wrapper">
+                                <h3 class="govuk-summary-card__title">Account status history</h3>
+                            </div>
+                            <div class="govuk-summary-card__content" th:each="record : ${user.accountStatusHistory}">
+                                <dl class="govuk-summary-list">
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Date</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.statusChangedDate}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Status</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.statusChange}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Disable reason</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.disableReason}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Changed by</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.statusChangedBy}">
+                                    </div>
+                                    <div class="govuk-summary-list__row"
+                                         th:if="${user.accountStatusHistory == null || user.accountStatusHistory.size() == 0}">
+                                        <dt class="govuk-summary-list__key">No account status history available</dt>
+                                        <dd class="govuk-summary-list__value"></dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
