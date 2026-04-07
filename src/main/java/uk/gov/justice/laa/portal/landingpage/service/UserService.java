@@ -41,6 +41,7 @@ import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 
 import jakarta.transaction.Transactional;
+import uk.gov.justice.laa.portal.landingpage.dto.AccountStatusHistoryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
@@ -1847,6 +1848,11 @@ public class UserService {
         // Map profiles to DTOs (no pagination for this method)
         List<AuditProfileDto> profileDtos = allProfiles.stream().map(this::mapToAuditProfileDto).toList();
 
+        // Fetch account status history
+        List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository
+                .findByEntraUserIdOrderByStatusChangedDateDesc(entraUser.getId());
+        List<AccountStatusHistoryDto> accountStatusHistory = mapAccountStatusHistory(auditRecords);
+
         // Determine user type using shared method
         String userType = determineUserType(entraUser, allProfiles);
 
@@ -1867,6 +1873,7 @@ public class UserService {
                 .profiles(profileDtos).totalProfiles(allProfiles.size()).totalProfilePages(1)
                 .currentProfilePage(1)
                 .entraOid(entraUser.getEntraOid())
+                .accountStatusHistory(accountStatusHistory)
                 .build();
     }
 
@@ -1908,6 +1915,11 @@ public class UserService {
         // Determine user type using shared method
         String userType = determineUserType(entraUser, allProfiles);
 
+        // Fetch account status history
+        List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository
+                .findByEntraUserIdOrderByStatusChangedDateDesc(entraUser.getId());
+        List<AccountStatusHistoryDto> accountStatusHistory = mapAccountStatusHistory(auditRecords);
+
         // Build detail DTO
         return AuditUserDetailDto.builder().userId(entraUser.getId().toString())
                 .email(entraUser.getEmail()).firstName(entraUser.getFirstName())
@@ -1925,6 +1937,7 @@ public class UserService {
                 .profiles(profileDtos).totalProfiles(totalProfiles).totalProfilePages(totalPages)
                 .currentProfilePage(profilePage).hasNoProfile(false)
                 .entraOid(entraUser.getEntraOid())
+                .accountStatusHistory(accountStatusHistory)
                 .build();
     }
 
@@ -1948,6 +1961,11 @@ public class UserService {
         // Determine user type using shared method
         String userType = determineUserType(entraUser, allProfiles);
 
+        // Fetch account status history
+        List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository
+                .findByEntraUserIdOrderByStatusChangedDateDesc(entraUser.getId());
+        List<AccountStatusHistoryDto> accountStatusHistory = mapAccountStatusHistory(auditRecords);
+
         // Build detail DTO with Entra data only
         return AuditUserDetailDto.builder().userId(entraUser.getId().toString())
                 .email(entraUser.getEmail()).firstName(entraUser.getFirstName())
@@ -1965,6 +1983,7 @@ public class UserService {
                 .profiles(Collections.emptyList()).totalProfiles(0).totalProfilePages(0)
                 .currentProfilePage(1).hasNoProfile(true)
                 .entraOid(entraUser.getEntraOid())
+                .accountStatusHistory(accountStatusHistory)
                 .build();
     }
 
@@ -1998,6 +2017,28 @@ public class UserService {
                 .roles(roleDtos)
                 .userType(profile.getUserType() != null ? profile.getUserType().name() : "UNKNOWN")
                 .activeProfile(profile.isActiveProfile()).build();
+    }
+
+    /**
+     * Map UserAccountStatusAudit to AccountStatusHistoryDto
+     * Converts status to sentence case and includes disable reason
+     */
+    protected List<AccountStatusHistoryDto> mapAccountStatusHistory(List<UserAccountStatusAudit> auditRecords) {
+        return auditRecords.stream()
+                .map(record -> AccountStatusHistoryDto.builder()
+                        .statusChangedDate(record.getStatusChangedDate())
+                        .statusChange(convertToSentenceCase(record.getStatusChange().toString()))
+                        .disableReason(record.getDisableUserReason() != null ? record.getDisableUserReason().getName() : null)
+                        .statusChangedBy(record.getStatusChangedBy())
+                        .build())
+                .toList();
+    }
+
+    private String convertToSentenceCase(String input) {
+        if (input == null || input.isEmpty()) {
+            return input;
+        }
+        return input.substring(0, 1).toUpperCase() + input.substring(1).toLowerCase();
     }
 
     /**
