@@ -458,10 +458,10 @@ public class ManageUsersTest extends BaseFrontEndTest {
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         assertTrue(page.locator(".govuk-button:has-text('Manage Access')").isVisible());
         manageUsersPage.clickManageAccess();
-        List<String> services = List.of("Manage Your Users");
+        List<String> services = List.of("Test LAA App One");
         manageUsersPage.checkSelectedRoles(services);
         manageUsersPage.clickContinueLink();
-        List<String> roles = List.of("Firm User Manager");
+        List<String> roles = List.of("Test LAA App One Access");
         manageUsersPage.checkSelectedRoles(roles);
         manageUsersPage.clickContinueLink();
         manageUsersPage.clickContinueLink();
