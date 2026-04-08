@@ -61,7 +61,7 @@ public class PlaywrightLoginController {
             }
         } else {
             log.warn("There was an attempt to access playwright authentication in a deployed environment. This should not be possible, please review.");
-            response.sendRedirect("/home");
+            response.sendError(HttpServletResponse.SC_FORBIDDEN);
         }
     }
 
