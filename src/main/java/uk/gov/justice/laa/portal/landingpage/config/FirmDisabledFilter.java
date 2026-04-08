@@ -78,4 +78,14 @@ public class FirmDisabledFilter extends OncePerRequestFilter {
 
         filterChain.doFilter(request, response);
     }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getServletPath();
+
+        return path.startsWith("/css/")
+                || path.startsWith("/js/")
+                || path.startsWith("/assets/")
+                || path.equals("/favicon.ico");
+    }
 }
