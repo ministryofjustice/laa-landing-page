@@ -19,6 +19,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -9319,9 +9320,17 @@ class UserServiceTest {
             userProfile.setEntraUser(user);
 
             UUID modifierId = UUID.randomUUID();
+            EntraUser modifier = EntraUser.builder()
+                    .entraOid(modifierId.toString())
+                    .userProfiles(Set.of(UserProfile.builder()
+                            .id(UUID.randomUUID())
+                            .activeProfile(true)
+                            .userType(UserType.INTERNAL)
+                            .build()))
+                    .build();
 
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
-
+            when(mockAppRoleRepository.findAllById(List.of(newRoleId))).thenReturn(List.of(newExternalRole));
 
             // Mock accessControl to NOT allow adding external roles
             when(accessControlService.canAssignExternalAppRoles(userProfileId.toString())).thenReturn(false);
@@ -9432,8 +9441,9 @@ class UserServiceTest {
                     .userTypeRestriction(new UserType[]{UserType.INTERNAL})
                     .build();
 
-
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
+            when(mockAppRoleRepository.findAllById(Stream.of(existingRoleId, newInternalRoleId).sorted().toList()))
+                    .thenReturn(List.of(existingInternalRole, newInternalRole));
 
             // Mock accessControl to NOT allow adding internal roles
             when(accessControlService.canAssignInternalAppRoles(userProfileId.toString())).thenReturn(false);
