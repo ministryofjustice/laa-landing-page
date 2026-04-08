@@ -9846,4 +9846,141 @@ class UserServiceTest {
             verify(techServicesClient).updateRoleAssignment(entraUserId);
         }
     }
+
+    @Nested
+    class InternalUserPollingTests {
+
+        @Test
+        void deleteInternalUsersByEntraIds_deletesUsers_whenValidEntraIdsProvided() {
+            // Given
+            UUID entraId1 = UUID.randomUUID();
+            UUID entraId2 = UUID.randomUUID();
+            List<UUID> entraIds = List.of(entraId1, entraId2);
+
+            EntraUser entraUser1 = EntraUser.builder()
+                    .id(UUID.randomUUID())
+                    .entraOid(entraId1.toString())
+                    .email("user1@example.com")
+                    .firstName("User")
+                    .lastName("One")
+                    .build();
+
+            EntraUser entraUser2 = EntraUser.builder()
+                    .id(UUID.randomUUID())
+                    .entraOid(entraId2.toString())
+                    .email("user2@example.com")
+                    .firstName("User")
+                    .lastName("Two")
+                    .build();
+
+            UserProfile profile1 = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .userType(UserType.INTERNAL)
+                    .entraUser(entraUser1)
+                    .build();
+
+            UserProfile profile2 = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .userType(UserType.INTERNAL)
+                    .entraUser(entraUser2)
+                    .build();
+
+            when(mockEntraUserRepository.findByEntraOid(entraId1.toString())).thenReturn(Optional.of(entraUser1));
+            when(mockEntraUserRepository.findByEntraOid(entraId2.toString())).thenReturn(Optional.of(entraUser2));
+            when(mockUserProfileRepository.findAllByEntraUser(entraUser1)).thenReturn(List.of(profile1));
+            when(mockUserProfileRepository.findAllByEntraUser(entraUser2)).thenReturn(List.of(profile2));
+            when(mockUserAccountStatusAuditRepository.findByEntraUser(any())).thenReturn(List.of());
+
+            // When
+            int result = userService.deleteInternalUsersByEntraIds(entraIds);
+
+            // Then
+            assertEquals(2, result);
+            verify(mockUserProfileRepository).deleteAll(List.of(profile1));
+            verify(mockUserProfileRepository).deleteAll(List.of(profile2));
+            verify(mockEntraUserRepository).delete(entraUser1);
+            verify(mockEntraUserRepository).delete(entraUser2);
+        }
+
+        @Test
+        void deleteInternalUsersByEntraIds_skipsNonInternalUsers_whenExternalUserProvided() {
+            // Given
+            UUID entraId = UUID.randomUUID();
+            List<UUID> entraIds = List.of(entraId);
+
+            EntraUser entraUser = EntraUser.builder()
+                    .id(UUID.randomUUID())
+                    .entraOid(entraId.toString())
+                    .build();
+
+            UserProfile externalProfile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .userType(UserType.EXTERNAL)
+                    .entraUser(entraUser)
+                    .build();
+
+            when(mockEntraUserRepository.findByEntraOid(entraId.toString())).thenReturn(Optional.of(entraUser));
+            when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(externalProfile));
+
+            // When
+            int result = userService.deleteInternalUsersByEntraIds(entraIds);
+
+            // Then
+            assertEquals(0, result);
+            verify(mockUserProfileRepository, never()).deleteAll(any());
+            verify(mockEntraUserRepository, never()).delete(any());
+        }
+
+        @Test
+        void deleteInternalUsersByEntraIds_returnsZero_whenEmptyListProvided() {
+            // When
+            int result = userService.deleteInternalUsersByEntraIds(List.of());
+
+            // Then
+            assertEquals(0, result);
+            verify(mockEntraUserRepository, never()).findByEntraOid(any());
+        }
+
+        @Test
+        void deleteInternalUsersByEntraIds_returnsZero_whenNullListProvided() {
+            // When
+            int result = userService.deleteInternalUsersByEntraIds(null);
+
+            // Then
+            assertEquals(0, result);
+            verify(mockEntraUserRepository, never()).findByEntraOid(any());
+        }
+
+        @Test
+        void deleteInternalUsersByEntraIds_continuesOnError_whenOneUserFailsToDelete() {
+            // Given
+            UUID entraId1 = UUID.randomUUID();
+            UUID entraId2 = UUID.randomUUID();
+            List<UUID> entraIds = List.of(entraId1, entraId2);
+
+            EntraUser entraUser2 = EntraUser.builder()
+                    .id(UUID.randomUUID())
+                    .entraOid(entraId2.toString())
+                    .build();
+
+            UserProfile profile2 = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .userType(UserType.INTERNAL)
+                    .entraUser(entraUser2)
+                    .build();
+
+            // First user not found, second user exists
+            when(mockEntraUserRepository.findByEntraOid(entraId1.toString())).thenReturn(Optional.empty());
+            when(mockEntraUserRepository.findByEntraOid(entraId2.toString())).thenReturn(Optional.of(entraUser2));
+            when(mockUserProfileRepository.findAllByEntraUser(entraUser2)).thenReturn(List.of(profile2));
+            when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser2)).thenReturn(List.of());
+
+            // When
+            int result = userService.deleteInternalUsersByEntraIds(entraIds);
+
+            // Then
+            assertEquals(1, result);
+            verify(mockEntraUserRepository).delete(entraUser2);
+        }
+    }
 }
