@@ -540,8 +540,8 @@ public class ManageUsersTest extends BaseFrontEndTest {
 
 
         assertTrue(
-            page.locator(".govuk-panel__title:has-text('User created')").isVisible() ||
-            page.locator(".govuk-panel__title").isVisible(),
+            page.locator(".govuk-panel__title:has-text('User created')").isVisible()
+                || page.locator(".govuk-panel__title").isVisible(),
             "Expected success panel to be visible after user creation"
         );
 
