@@ -187,7 +187,7 @@ public class UserService {
         allAssignableRoles.addAll(nonEditableRoles);
 
         List<AppRole> assignableAppRoles = appRoleRepository.findAllById(
-                allAssignableRoles.stream().map(UUID::fromString).collect(Collectors.toList()));
+                allAssignableRoles.stream().map(UUID::fromString).sorted().collect(Collectors.toList()));
 
         // Validate no new external roles allowed if modifier not allowed adding new roles
         boolean addingExternalRolesAllowed = accessControlService.canAssignExternalAppRoles(userProfileId);

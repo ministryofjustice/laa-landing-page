@@ -19,6 +19,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -9441,7 +9442,7 @@ class UserServiceTest {
                     .build();
 
             when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(userProfile));
-            when(mockAppRoleRepository.findAllById(List.of(existingRoleId, newInternalRoleId)))
+            when(mockAppRoleRepository.findAllById(Stream.of(existingRoleId, newInternalRoleId).sorted().toList()))
                     .thenReturn(List.of(existingInternalRole, newInternalRole));
 
             // Mock accessControl to NOT allow adding internal roles

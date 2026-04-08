@@ -152,17 +152,18 @@ public class CcmsRoleGroupsUtilTest {
         Map<String, List<AppRoleViewModel>> result = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
 
         // Then
-        assertThat(result).hasSize(3); // Provider, Chambers, Advocate sections always present
+        assertThat(result).hasSize(4); // Provider, Chambers, Advocate sections always present
         assertThat(result).containsKeys(
             CcmsRoleGroupsUtil.PROVIDER_SECTION,
             CcmsRoleGroupsUtil.CHAMBERS_SECTION,
-            CcmsRoleGroupsUtil.ADVOCATE_SECTION
+            CcmsRoleGroupsUtil.ADVOCATE_SECTION,
+            CcmsRoleGroupsUtil.OTHER_SECTION
         );
-        assertThat(result).doesNotContainKey(CcmsRoleGroupsUtil.OTHER_SECTION);
         
         assertThat(result.get(CcmsRoleGroupsUtil.PROVIDER_SECTION)).isEmpty();
         assertThat(result.get(CcmsRoleGroupsUtil.CHAMBERS_SECTION)).isEmpty();
         assertThat(result.get(CcmsRoleGroupsUtil.ADVOCATE_SECTION)).isEmpty();
+        assertThat(result.get(CcmsRoleGroupsUtil.OTHER_SECTION)).isEmpty();
     }
 
     @Test
@@ -195,7 +196,8 @@ public class CcmsRoleGroupsUtilTest {
         assertThat(result.keySet()).containsExactly(
             CcmsRoleGroupsUtil.PROVIDER_SECTION,
             CcmsRoleGroupsUtil.CHAMBERS_SECTION,
-            CcmsRoleGroupsUtil.ADVOCATE_SECTION
+            CcmsRoleGroupsUtil.ADVOCATE_SECTION,
+            CcmsRoleGroupsUtil.OTHER_SECTION
         );
     }
 
