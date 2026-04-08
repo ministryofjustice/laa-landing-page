@@ -1433,6 +1433,63 @@ public class UserService {
         return userProfileRepository.findByUserTypes(UserType.INTERNAL);
     }
 
+    @Transactional
+    public int deleteInternalUsersByEntraIds(List<UUID> entraIds) {
+        if (entraIds == null || entraIds.isEmpty()) {
+            logger.info("No internal users to delete - empty list provided");
+            return 0;
+        }
+
+        logger.info("Starting deletion of {} internal users by Entra IDs", entraIds.size());
+        int deletedCount = 0;
+
+        for (UUID entraId : entraIds) {
+            try {
+                Optional<EntraUser> optionalEntraUser = entraUserRepository.findByEntraOid(entraId.toString());
+                if (optionalEntraUser.isEmpty()) {
+                    logger.warn("EntraUser not found for ID: {}", entraId);
+                    continue;
+                }
+
+                EntraUser entraUser = optionalEntraUser.get();
+
+                List<UserProfile> profiles = userProfileRepository.findAllByEntraUser(entraUser);
+                boolean isInternalUser = profiles.stream()
+                        .anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
+                
+                if (!isInternalUser) {
+                    logger.warn("Skipping deletion of user {} - not an internal user", entraId);
+                    continue;
+                }
+
+                List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
+                if (!auditRecords.isEmpty()) {
+                    userAccountStatusAuditRepository.deleteAll(auditRecords);
+                    userAccountStatusAuditRepository.flush();
+                    logger.debug("Deleted {} audit records for internal user: {}", auditRecords.size(), entraId);
+                }
+
+                if (!profiles.isEmpty()) {
+                    userProfileRepository.deleteAll(profiles);
+                    userProfileRepository.flush();
+                    logger.debug("Deleted {} profiles for internal user: {}", profiles.size(), entraId);
+                }
+
+                entraUserRepository.delete(entraUser);
+                entraUserRepository.flush();
+                
+                deletedCount++;
+                logger.debug("Successfully deleted internal user: {}", entraId);
+
+            } catch (Exception e) {
+                logger.error("Failed to delete internal user with Entra ID: {}. Error: {}", entraId, e.getMessage(), e);
+            }
+        }
+
+        logger.info("Completed deletion of internal users. Successfully deleted: {}/{}", deletedCount, entraIds.size());
+        return deletedCount;
+    }
+
     /**
      * Remove a specific app role from a user
      */
