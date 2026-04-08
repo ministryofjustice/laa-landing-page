@@ -1475,9 +1475,6 @@ public class UserService {
                         if (profile.getAppRoles() != null) {
                             profile.getAppRoles().clear();
                         }
-                        if (profile.getOffices() != null) {
-                            profile.getOffices().clear();
-                        }
                         profile.setEntraUser(null);
                         userProfileRepository.save(profile);
                     }
