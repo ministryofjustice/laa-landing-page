@@ -973,6 +973,116 @@ class AppRoleServiceTest {
     }
 
     @Test
+    void testCreateRole_WithSingleInternalUserType_CreatesSuccessfully() {
+        // Arrange
+        UUID appId = UUID.randomUUID();
+
+        App parentApp = App.builder()
+                .id(appId)
+                .name("Test App")
+                .build();
+
+        CurrentUserDto currentUser = new CurrentUserDto();
+        currentUser.setUserId(UUID.randomUUID());
+        currentUser.setName("Admin User");
+
+        when(appRepository.findById(appId)).thenReturn(Optional.of(parentApp));
+        when(appRoleRepository.findByName("Internal Role")).thenReturn(Optional.empty());
+
+        AppRole savedRole = AppRole.builder()
+                .id(UUID.randomUUID())
+                .name("Internal Role")
+                .description("Role for internal users only")
+                .userTypeRestriction(new UserType[]{UserType.INTERNAL})
+                .app(parentApp)
+                .build();
+
+        when(appRoleRepository.save(any(AppRole.class))).thenReturn(savedRole);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUser);
+
+        EntraUser mockEntraUser = EntraUser.builder()
+                .entraOid("test-entra-oid")
+                .userProfiles(Set.of(
+                        UserProfile.builder()
+                                .id(UUID.randomUUID())
+                                .activeProfile(true)
+                                .build()
+                ))
+                .build();
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(mockEntraUser);
+
+        // Act
+        RoleCreationDto dto = RoleCreationDto.builder()
+                .name("Internal Role")
+                .description("Role for internal users only")
+                .parentAppId(appId)
+                .userTypeRestriction(List.of(UserType.INTERNAL))
+                .legacySync(false)
+                .build();
+        appRoleService.createRole(dto);
+
+        // Assert
+        verify(appRoleRepository).save(any(AppRole.class));
+        verify(eventService).logEvent(any(RoleCreationAuditEvent.class));
+    }
+
+    @Test
+    void testCreateRole_WithSingleExternalUserType_CreatesSuccessfully() {
+        // Arrange
+        UUID appId = UUID.randomUUID();
+
+        App parentApp = App.builder()
+                .id(appId)
+                .name("Test App")
+                .build();
+
+        CurrentUserDto currentUser = new CurrentUserDto();
+        currentUser.setUserId(UUID.randomUUID());
+        currentUser.setName("Admin User");
+
+        when(appRepository.findById(appId)).thenReturn(Optional.of(parentApp));
+        when(appRoleRepository.findByName("External Role")).thenReturn(Optional.empty());
+
+        AppRole savedRole = AppRole.builder()
+                .id(UUID.randomUUID())
+                .name("External Role")
+                .description("Role for external users only")
+                .userTypeRestriction(new UserType[]{UserType.EXTERNAL})
+                .app(parentApp)
+                .build();
+
+        when(appRoleRepository.save(any(AppRole.class))).thenReturn(savedRole);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUser);
+
+        EntraUser mockEntraUser = EntraUser.builder()
+                .entraOid("test-entra-oid")
+                .userProfiles(Set.of(
+                        UserProfile.builder()
+                                .id(UUID.randomUUID())
+                                .activeProfile(true)
+                                .build()
+                ))
+                .build();
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(mockEntraUser);
+
+        // Act
+        RoleCreationDto dto = RoleCreationDto.builder()
+                .name("External Role")
+                .description("Role for external users only")
+                .parentAppId(appId)
+                .userTypeRestriction(List.of(UserType.EXTERNAL))
+                .legacySync(false)
+                .build();
+        appRoleService.createRole(dto);
+
+        // Assert
+        verify(appRoleRepository).save(any(AppRole.class));
+        verify(eventService).logEvent(any(RoleCreationAuditEvent.class));
+    }
+
+    @Test
     void testEnrichRoleCreationDto_SetsRandomId() {
         // Arrange
         UUID appId = UUID.randomUUID();

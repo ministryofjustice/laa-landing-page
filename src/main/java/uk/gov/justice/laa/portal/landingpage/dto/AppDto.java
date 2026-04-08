@@ -27,7 +27,8 @@ public class AppDto implements Comparable<AppDto>, Serializable {
     private boolean selected;
     private AppType appType;
     private boolean enabled;
-    private AlternativeAppDescriptionDto alternativeAppDescription;
+    private boolean changeNotAllowed;
+    private boolean hiddenFromSelection;
     private ChangeType changeType;
 
     @Override
@@ -58,17 +59,6 @@ public class AppDto implements Comparable<AppDto>, Serializable {
         }
 
         return name.compareToIgnoreCase(o.name);
-    }
-
-    @Data
-    @Builder
-    @AllArgsConstructor
-    @NoArgsConstructor
-    public static class AlternativeAppDescriptionDto implements Serializable {
-        @Serial
-        private static final long serialVersionUID = 1L;
-        private String assignedAppId;
-        private String alternativeDescription;
     }
 
     public enum ChangeType {

@@ -7,7 +7,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
-import uk.gov.justice.laa.portal.landingpage.entity.BaseEntity;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import java.util.Arrays;
@@ -38,8 +37,7 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
 
     @Test
     public void testSaveAndRetrieveLaaAppRole() {
-        App app = buildLaaApp("App1", "Entra App 1", "Security Group Id",
-                "Security Group Name");
+        App app = buildLaaApp("App1", "Entra App 1", "Security Group Id");
         appRepository.saveAndFlush(app);
 
         AppRole appRole1 = buildLaaAppRole(app, "App Role 1");
@@ -70,8 +68,7 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
 
     @Test
     public void testSaveAndRetrieveLaaAppRoleMultipleUserTypeRestriction() {
-        App app = buildLaaApp("App1", "Entra App 1", "Security Group Id",
-                "Security Group Name");
+        App app = buildLaaApp("App1", "Entra App 1", "Security Group Id");
         appRepository.saveAndFlush(app);
 
         AppRole appRole1 = buildLaaAppRole(app, "App Role 1");
@@ -93,11 +90,9 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
     @Test
     public void findAllByIdInAndAuthzRoleIs() {
         App lassie = buildLaaApp("lassie", "Entra App 1", "Security Group Id",
-                "Security Group Name", "Lassie App Title", "Lassie App Description",
-                "Lassie OID Group", "http://localhost:8080/lassie");
+                "Lassie App Description", "http://localhost:8080/lassie");
         App crime = buildLaaApp("crime", "Entra App 2", "Security Group Id 2",
-                "Security Group Name 2", "Crime App Title", "Crime App Description",
-                "Crime OID Group", "http://localhost:8080/crime");
+                "Crime App Description", "http://localhost:8080/crime");
         appRepository.saveAllAndFlush(Arrays.asList(lassie, crime));
 
         AppRole lassieExMan = buildLaaAppRole(lassie, "App Role 1");
@@ -123,11 +118,9 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
     public void testGetExternalRoleNames() {
 
         App lassie = buildLaaApp("lassie", "Entra App 1", "Security Group Id",
-                "Security Group Name", "Lassie App Title", "Lassie App Description",
-                "Lassie OID Group", "http://localhost:8080/lassie");
+                "Lassie App Description", "http://localhost:8080/lassie");
         App crime = buildLaaApp("crime", "Entra App 2", "Security Group Id 2",
-                "Security Group Name 2", "Crime App Title", "Crime App Description",
-                "Crime OID Group", "http://localhost:8080/crime");
+                "Crime App Description", "http://localhost:8080/crime");
         appRepository.saveAllAndFlush(Arrays.asList(lassie, crime));
         AppRole externalTestRole = buildLaaExternalAppRole(lassie, "External role test");
         repository.saveAndFlush(externalTestRole);

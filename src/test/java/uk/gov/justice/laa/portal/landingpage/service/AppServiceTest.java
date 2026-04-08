@@ -478,7 +478,6 @@ class AppServiceTest {
                 .name(name)
                 .url(url)
                 .securityGroupOid(sgId)
-                .securityGroupName(sgName)
                 .appType(AppType.LAA)
                 .enabled(enabled)
                 .build();
@@ -608,7 +607,6 @@ class AppServiceTest {
         assertThat(savedApp.getName()).isEqualTo("RemoteName");
         assertThat(savedApp.getUrl()).isEqualTo("https://remote");
         assertThat(savedApp.getSecurityGroupOid()).isEqualTo("SGX");
-        assertThat(savedApp.getSecurityGroupName()).isEqualTo("RemoteSG");
 
         // Verify event summary mentions Updated=1
         ArgumentCaptor<AppSynchronizationAuditEvent> eventCaptor = ArgumentCaptor.forClass(AppSynchronizationAuditEvent.class);

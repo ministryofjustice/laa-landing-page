@@ -67,12 +67,10 @@ class EntraUserRepositoryAuditIntegrationTest extends BaseRepositoryTest {
         // Create test app and roles
         App testApp = App.builder()
                 .name("Test Audit App")
+                .description("Lassie App Description")
                 .ordinal(0)
                 .enabled(true)
                 .securityGroupOid("test-audit-security-group-oid")
-                .securityGroupName("Test Audit Security Group")
-                .title("Lassie App Title").description("Lassie App Description")
-                .oidGroupName("Lassie OID Group")
                 .appType(AppType.LAA)
                 .url("http://localhost:8080/lassie")
                 .build();

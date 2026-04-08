@@ -25,10 +25,12 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -41,6 +43,7 @@ import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 
 import jakarta.transaction.Transactional;
+import uk.gov.justice.laa.portal.landingpage.dto.AccountStatusHistoryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
@@ -100,7 +103,6 @@ public class UserService {
     private final AppRepository appRepository;
     private final AppRoleRepository appRoleRepository;
     private final ModelMapper mapper;
-    private final AppService appService;
     private final TechServicesClient techServicesClient;
     private final UserProfileRepository userProfileRepository;
     private final UserAccountStatusAuditRepository userAccountStatusAuditRepository;
@@ -109,25 +111,25 @@ public class UserService {
     private final FirmRepository firmRepository;
     private final EventService eventService;
     private final NotificationService notificationService;
+    private final AccessControlService accessControlService;
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
-            EntraUserRepository entraUserRepository, AppRepository appRepository,
-            AppRoleRepository appRoleRepository, ModelMapper mapper,
-            OfficeRepository officeRepository,
-            AppService appService,
-            TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
-            UserAccountStatusAuditRepository userAccountStatusAuditRepository,
-            RoleChangeNotificationService roleChangeNotificationService, FirmService firmService,
-            FirmRepository firmRepository, EventService eventService,
-            NotificationService notificationService) {
+           EntraUserRepository entraUserRepository, AppRepository appRepository,
+           AppRoleRepository appRoleRepository, ModelMapper mapper,
+           OfficeRepository officeRepository,
+           TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
+           UserAccountStatusAuditRepository userAccountStatusAuditRepository,
+           RoleChangeNotificationService roleChangeNotificationService, FirmService firmService,
+           FirmRepository firmRepository, EventService eventService,
+           NotificationService notificationService,
+           @Lazy AccessControlService accessControlService) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
         this.appRoleRepository = appRoleRepository;
         this.mapper = mapper;
         this.officeRepository = officeRepository;
-        this.appService = appService;
         this.techServicesClient = techServicesClient;
         this.userProfileRepository = userProfileRepository;
         this.userAccountStatusAuditRepository = userAccountStatusAuditRepository;
@@ -136,6 +138,7 @@ public class UserService {
         this.firmRepository = firmRepository;
         this.eventService = eventService;
         this.notificationService = notificationService;
+        this.accessControlService = accessControlService;
     }
 
     public boolean hasUserFirmAlreadyAssigned(String email, UUID firmId) {
@@ -174,58 +177,122 @@ public class UserService {
     @Transactional
     public Map<String, String> updateUserRoles(String userProfileId, Collection<String> selectedRoles,
             List<String> nonEditableRoles, UUID modifierId) {
-        Set<String> allAssignableRoles = new HashSet<>(selectedRoles);
-        allAssignableRoles.addAll(nonEditableRoles);
-        List<AppRole> roles = appRoleRepository.findAllById(
-                allAssignableRoles.stream().map(UUID::fromString).collect(Collectors.toList()));
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
-
-        String diff = "";
-        Map<String, String> result = new HashMap<>();
-        if (optionalUserProfile.isPresent()) {
-            UserProfile userProfile = optionalUserProfile.get();
-            boolean self = userProfile.getEntraUser().getEntraOid().equals(modifierId.toString());
-            List<UserType> modifierTypes = findUserTypeByUserEntraId(modifierId.toString());
-            boolean internal = modifierTypes.contains(UserType.INTERNAL);
-            int before = roles.size();
-            roles = roles.stream().filter(appRole -> Arrays.stream(appRole.getUserTypeRestriction())
-                    .anyMatch(userType -> userType == userProfile.getUserType())).toList();
-            int after = roles.size();
-            if (after < before) {
-                logger.warn("Attempt to assign internal role user entra ID {}.",
-                        userProfile.getEntraUser().getEntraOid());
-            }
-
-            Set<AppRole> newRoles = new HashSet<>(roles);
-            Set<AppRole> oldRoles = Objects.isNull(userProfile.getAppRoles()) ? new HashSet<>()
-                    : new HashSet<>(userProfile.getAppRoles());
-            String error = roleCoverage(oldRoles, newRoles, userProfile.getFirm(),
-                    userProfile.getId().toString(), self, internal);
-            if (!error.isEmpty()) {
-                result.put("error", error);
-                return result;
-            }
-
-            Set<String> oldPuiRoles = filterByPuiRoles(userProfile.getAppRoles());
-            Set<String> newPuiRoles = filterByPuiRoles(newRoles);
-
-            // Update roles
-            userProfile.setAppRoles(newRoles);
-            diff = diffRole(oldRoles, newRoles);
-
-            // Try to send role change notification with retry logic before saving
-            boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile,
-                    newPuiRoles, oldPuiRoles);
-            userProfile.setLastCcmsSyncSuccessful(notificationSuccess);
-
-            // Save user profile with ccms sync status
-            userProfileRepository.save(userProfile);
-            techServicesClient.updateRoleAssignment(userProfile.getEntraUser().getId());
-            result.put("diff", diff);
-        } else {
+        if (optionalUserProfile.isEmpty()) {
             logger.warn("User profile with id {} not found. Could not update roles.",
                     userProfileId);
+            return Collections.emptyMap();
         }
+
+        Set<String> allAssignableRoles = new HashSet<>(selectedRoles);
+        allAssignableRoles.addAll(nonEditableRoles);
+
+        List<AppRole> assignableAppRoles = appRoleRepository.findAllById(
+                allAssignableRoles.stream().map(UUID::fromString).collect(Collectors.toList()));
+
+        // Validate no new external roles allowed if modifier not allowed adding new roles
+        boolean addingExternalRolesAllowed = accessControlService.canAssignExternalAppRoles(userProfileId);
+
+        if (!allAssignableRoles.isEmpty() && !addingExternalRolesAllowed) {
+            Set<String> userCurrentExternalRoles = getUserAppRolesByUserId(userProfileId).stream()
+                    .filter(appRole -> Arrays.asList(appRole.getUserTypeRestriction()).contains(UserType.EXTERNAL))
+                    .map(AppRoleDto::getId).collect(Collectors.toSet());
+            Set<String> assignableExternalRoles = assignableAppRoles.stream()
+                    .filter(appRole -> appRole.getUserTypeRestriction() != null
+                            && Arrays.stream(appRole.getUserTypeRestriction())
+                                    .anyMatch(type -> type == UserType.EXTERNAL))
+                    .map(AppRole::getName)
+                    .collect(Collectors.toSet());
+
+            if (!CollectionUtils.isEqualCollection(assignableExternalRoles, userCurrentExternalRoles)) {
+                throw new RuntimeException("User is not allowed to add new roles");
+            }
+        }
+
+        // Validate no new internal roles allowed if modifier not allowed adding new roles
+        boolean addingInternalRolesAllowed = accessControlService.canAssignInternalAppRoles(userProfileId);
+
+        if (!allAssignableRoles.isEmpty() && !addingInternalRolesAllowed) {
+            Set<String> userCurrentInternalRoles = getUserAppRolesByUserId(userProfileId).stream()
+                    .filter(appRole -> Arrays.asList(appRole.getUserTypeRestriction()).contains(UserType.INTERNAL))
+                    .map(AppRoleDto::getId).collect(Collectors.toSet());
+            Set<String> assignableInternalRoles = assignableAppRoles.stream()
+                    .filter(appRole -> appRole.getUserTypeRestriction() != null
+                            && Arrays.stream(appRole.getUserTypeRestriction())
+                                    .anyMatch(type -> type == UserType.INTERNAL))
+                    .map(AppRole::getName)
+                    .collect(Collectors.toSet());
+
+            if (!CollectionUtils.isEqualCollection(assignableInternalRoles, userCurrentInternalRoles)) {
+                throw new RuntimeException("User is not allowed to add new roles");
+            }
+
+        }
+
+        // Validate no external roles removed if modifier not allowed to remove roles
+        boolean removingExternalRolesAllowed = accessControlService.canRemoveExternalAppRoles(userProfileId);
+        if (!removingExternalRolesAllowed) {
+            Set<String> userCurrentExternalRoles = getUserAppRolesByUserId(userProfileId).stream()
+                    .filter(appRole -> Arrays.asList(appRole.getUserTypeRestriction()).contains(UserType.EXTERNAL))
+                    .map(AppRoleDto::getId).collect(Collectors.toSet());
+            if (!allAssignableRoles.containsAll(userCurrentExternalRoles)) {
+                throw new RuntimeException("User is not allowed to remove existing roles");
+            }
+        }
+
+        // Validate no internal roles removed if modifier not allowed removing roles
+        boolean removingInternalRolesAllowed = accessControlService.canRemoveInternalAppRoles(userProfileId);
+        if (!removingInternalRolesAllowed) {
+            Set<String> userCurrentInternalRoles = getUserAppRolesByUserId(userProfileId).stream()
+                    .filter(appRole -> Arrays.asList(appRole.getUserTypeRestriction()).contains(UserType.INTERNAL))
+                    .map(AppRoleDto::getId).collect(Collectors.toSet());
+            if (!allAssignableRoles.containsAll(userCurrentInternalRoles)) {
+                throw new RuntimeException("User is not allowed to remove existing roles");
+            }
+        }
+
+        Map<String, String> result = new HashMap<>();
+        UserProfile userProfile = optionalUserProfile.get();
+
+        boolean self = userProfile.getEntraUser().getEntraOid().equals(modifierId.toString());
+        List<UserType> modifierTypes = findUserTypeByUserEntraId(modifierId.toString());
+        boolean internal = modifierTypes.contains(UserType.INTERNAL);
+        int before = assignableAppRoles.size();
+        assignableAppRoles = assignableAppRoles.stream().filter(appRole -> Arrays.stream(appRole.getUserTypeRestriction())
+                .anyMatch(userType -> userType == userProfile.getUserType())).toList();
+        int after = assignableAppRoles.size();
+        if (after < before) {
+            logger.warn("Attempt to assign internal role user entra ID {}.",
+                    userProfile.getEntraUser().getEntraOid());
+        }
+
+        Set<AppRole> newRoles = new HashSet<>(assignableAppRoles);
+        Set<AppRole> oldRoles = Objects.isNull(userProfile.getAppRoles()) ? new HashSet<>()
+                : new HashSet<>(userProfile.getAppRoles());
+        String error = roleCoverage(oldRoles, newRoles, userProfile.getFirm(),
+                userProfile.getId().toString(), self, internal);
+        if (!error.isEmpty()) {
+            result.put("error", error);
+            return result;
+        }
+
+        Set<String> oldPuiRoles = filterByPuiRoles(userProfile.getAppRoles());
+        Set<String> newPuiRoles = filterByPuiRoles(newRoles);
+
+        // Update roles
+        userProfile.setAppRoles(newRoles);
+
+        // Try to send role change notification with retry logic before saving
+        boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile,
+                newPuiRoles, oldPuiRoles);
+        userProfile.setLastCcmsSyncSuccessful(notificationSuccess);
+
+        // Save user profile with ccms sync status
+        userProfileRepository.save(userProfile);
+        techServicesClient.updateRoleAssignment(userProfile.getEntraUser().getId());
+        String diff = diffRole(oldRoles, newRoles);
+        result.put("diff", diff);
+
         return result;
     }
 
@@ -1114,29 +1181,7 @@ public class UserService {
                 .sorted()
                 .collect(Collectors.toCollection(TreeSet::new));
 
-        // Make any necessary adjustments to the app display properties
-        makeAppDisplayAdjustments(userAssignedLaaApps);
-
         return userAssignedLaaApps;
-    }
-
-    private void makeAppDisplayAdjustments(Set<LaaApplicationForView> userApps) {
-        List<AppDto> applications = appService.getAllActiveLaaApps();
-
-        Set<String> userAppIds = userApps.stream()
-                .map(LaaApplicationForView::getId)
-                .collect(Collectors.toSet());
-
-        for (LaaApplicationForView userApp : userApps) {
-            if (userApp.isSpecialHandling() && userAppIds.contains(userApp.getOtherAssignedAppIdForAltDesc())) {
-                String alternateDescription = applications.stream()
-                        .filter(app -> app.getId().equals(userApp.getId()))
-                        .map(app -> app.getAlternativeAppDescription().getAlternativeDescription())
-                        .findFirst()
-                        .orElse("Unknown");
-                userApp.setDescription(alternateDescription);
-            }
-        }
     }
 
     /**
@@ -1311,7 +1356,18 @@ public class UserService {
     public int createInternalPolledUser(List<EntraUserDto> entraUserDtos) {
         List<EntraUser> entraUsers = new ArrayList<>();
         String createdBy = "INTERNAL_USER_SYNC";
+        int skippedUsers = 0;
+        
         for (EntraUserDto user : entraUserDtos) {
+            Optional<EntraUser> existingUser = entraUserRepository.findByEmailIgnoreCase(user.getEmail());
+            
+            // Skip if user already exists and has external user profile
+            if (existingUser.isPresent() && hasExternalUserProfile(existingUser.get())) {
+                skippedUsers++;
+                logger.info("Skipping user {} - already exists as external user", user.getEntraOid());
+                continue;
+            }
+            
             EntraUser entraUser = mapper.map(user, EntraUser.class);
             UserProfile userProfile = UserProfile.builder().activeProfile(true)
                     .userProfileStatus(UserProfileStatus.COMPLETE).userType(UserType.INTERNAL)
@@ -1325,6 +1381,10 @@ public class UserService {
             entraUser.setCreatedDate(LocalDateTime.now());
             entraUsers.add(entraUser);
             // todo: security group to access authz app
+        }
+        
+        if (skippedUsers > 0) {
+            logger.info("{} users skipped - already exist as external users", skippedUsers);
         }
         return persistNewInternalUser(entraUsers);
     }
@@ -1343,6 +1403,13 @@ public class UserService {
             }
         }
         return usersPersisted;
+    }
+
+    private boolean hasExternalUserProfile(EntraUser entraUser) {
+        Set<UserProfile> profiles = entraUser.getUserProfiles();
+
+        return (profiles == null || profiles.isEmpty()) || profiles.stream()
+                .anyMatch(profile -> profile.getUserType() == UserType.EXTERNAL);
     }
 
     public Set<Permission> getUserPermissionsByUserId(String userId) {
@@ -1666,7 +1733,9 @@ public class UserService {
             return "Unknown";
         }
 
-        Set<String> firmNames = profiles.stream().map(UserProfile::getFirm).filter(Objects::nonNull)
+        Set<String> firmNames = profiles.stream()
+                .filter(profile -> UserType.EXTERNAL.equals(profile.getUserType()))
+                .map(UserProfile::getFirm).filter(Objects::nonNull)
                 .map(Firm::getName).collect(Collectors.toCollection(TreeSet::new));
 
         if (firmNames.isEmpty()) {
@@ -1686,7 +1755,7 @@ public class UserService {
         Set<String> firmCodes = new HashSet<>();
 
         if (!csvExport) {
-            firmCodes = profiles.stream().map(profile -> profile.getFirm()).filter(Objects::nonNull)
+            firmCodes = profiles.stream().map(UserProfile::getFirm).filter(Objects::nonNull)
                 .map(Firm::getCode).collect(Collectors.toCollection(HashSet::new));
         } else {
             List<Firm> sortedFirms =
@@ -1705,26 +1774,56 @@ public class UserService {
     }
 
     /**
-     * Determine account status for audit table Returns: "Active", "Inactive",
-     * "Pending", or
-     * "Disabled"
+     * Determine account status for audit table Returns: "Disabled", "Activation pending",
+     * "Complete", "No roles assigned"
+     * "Incomplete"
      */
     private String determineAccountStatus(EntraUser user, List<UserProfile> profiles) {
+
         // Check if user has any pending profiles
-        boolean hasPending = profiles.stream()
-                .anyMatch(profile -> profile.getUserProfileStatus() == UserProfileStatus.PENDING);
+        boolean hasPending = profiles.isEmpty() || profiles.stream()
+                .anyMatch(profile -> profile.getUserProfileStatus() == null || profile.getUserProfileStatus() == UserProfileStatus.PENDING);
+        // Check if user has roles assigned
+        boolean noRolesAssigned = profiles.isEmpty() || profiles.stream()
+                .anyMatch(userProfile ->
+                        userProfile.getAppRoles() == null || userProfile.getAppRoles().isEmpty()
+                );
 
-        if (hasPending) {
-            return "Pending";
-        }
-
-        // Check user status
-        if (user.getUserStatus() == UserStatus.DEACTIVE) {
+        // user disable
+        if (!user.isEnabled()) {
             return "Disabled";
+        } else { //user active
+            // user is complete
+            if (!hasPending) {
+                if (user.getInvitationStatus() != null) {
+                    switch (user.getInvitationStatus().name()) {
+                        case "AWAITING_VERIFICATION" -> {
+                            return "Activation pending";
+                        }
+                        case "VERIFICATION_SUCCESS" -> {
+                            return "Complete";
+                        }
+                        case "VERIFICATION_FAILED" -> {
+                            return "Activation failed";
+                        }
+                        default -> {
+                            return "Incomplete";
+                        }
+                    }
+                }
+            } else { // user is incomplete user hasn't roles assigned any roles
+                if (user.getInvitationStatus() != null) {
+                    if (user.getInvitationStatus().name().equals("VERIFICATION_SUCCESS")) {
+                        //check if user has roles assigned
+                        if (noRolesAssigned) {
+                            return "No roles assigned";
+                        }
+                    }
+                }
+            }
         }
-
-        // All other cases considered active
-        return "Active";
+        //All the other situation is incomplete
+        return "Incomplete";
     }
 
     /**
@@ -1741,6 +1840,7 @@ public class UserService {
      */
     public boolean determineIsProviderAdminForSelectedFirm(List<UserProfile> profiles, UUID firmId) {
         return profiles.stream()
+                .filter(p -> UserType.EXTERNAL.equals(p.getUserType()))
                 .filter(p -> firmId.equals(p.getFirm().getId()))
                 .anyMatch(profile ->
                         profile.getAppRoles().stream()
@@ -1753,7 +1853,8 @@ public class UserService {
      */
     public String determineAppAccess(List<UserProfile> profiles, UUID firmId) {
         return profiles.stream()
-                .filter(p -> firmId.equals(p.getFirm().getId()))
+                .filter(p -> UserType.INTERNAL.equals(p.getUserType())
+                        || firmId.equals(p.getFirm().getId()))
                 .flatMap(profile -> profile.getAppRoles().stream())
                 .map(AppRole::getApp)
                 .filter(Objects::nonNull)
@@ -1821,6 +1922,11 @@ public class UserService {
         // Map profiles to DTOs (no pagination for this method)
         List<AuditProfileDto> profileDtos = allProfiles.stream().map(this::mapToAuditProfileDto).toList();
 
+        // Fetch account status history
+        List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository
+                .findByEntraUserIdOrderByStatusChangedDateDesc(entraUser.getId());
+        List<AccountStatusHistoryDto> accountStatusHistory = mapAccountStatusHistory(auditRecords);
+
         // Determine user type using shared method
         String userType = determineUserType(entraUser, allProfiles);
 
@@ -1841,6 +1947,7 @@ public class UserService {
                 .profiles(profileDtos).totalProfiles(allProfiles.size()).totalProfilePages(1)
                 .currentProfilePage(1)
                 .entraOid(entraUser.getEntraOid())
+                .accountStatusHistory(accountStatusHistory)
                 .build();
     }
 
@@ -1864,6 +1971,14 @@ public class UserService {
         // Get all profiles for this user
         List<UserProfile> allProfiles = new ArrayList<>(entraUser.getUserProfiles());
 
+        // Check if user has any pending profiles
+        boolean hasPending = allProfiles.stream()
+                .anyMatch(up -> up.getUserProfileStatus() == null || UserProfileStatus.PENDING.equals(up.getUserProfileStatus()));
+
+        //Check if user haven't assigned any roles
+        boolean noRolesAssigned = allProfiles.stream()
+                .anyMatch(userProfile -> userProfile.getAppRoles() == null || userProfile.getAppRoles().isEmpty());
+
         // Sort with active profile first
         allProfiles.sort((p1, p2) -> Boolean.compare(p2.isActiveProfile(), p1.isActiveProfile()));
 
@@ -1882,6 +1997,11 @@ public class UserService {
         // Determine user type using shared method
         String userType = determineUserType(entraUser, allProfiles);
 
+        // Fetch account status history
+        List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository
+                .findByEntraUserIdOrderByStatusChangedDateDesc(entraUser.getId());
+        List<AccountStatusHistoryDto> accountStatusHistory = mapAccountStatusHistory(auditRecords);
+
         // Build detail DTO
         return AuditUserDetailDto.builder().userId(entraUser.getId().toString())
                 .email(entraUser.getEmail()).firstName(entraUser.getFirstName())
@@ -1892,13 +2012,15 @@ public class UserService {
                 .createdDate(entraUser.getCreatedDate()).createdBy(entraUser.getCreatedBy())
                 // TODO: Fetch lastLoginDate from Microsoft Graph API
                 .lastLoginDate(null)
-                // TODO: Fetch activationStatus from TechServices API or SILAS API
-                .activationStatus(null)
+                .activationStatus(entraUser.getInvitationStatus() != null ? entraUser.getInvitationStatus().name() : null)
                 .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
                         : "UNKNOWN")
                 .profiles(profileDtos).totalProfiles(totalProfiles).totalProfilePages(totalPages)
                 .currentProfilePage(profilePage).hasNoProfile(false)
                 .entraOid(entraUser.getEntraOid())
+                .accountStatusHistory(accountStatusHistory)
+                .isPending(hasPending)
+                .isNoRole(noRolesAssigned)
                 .build();
     }
 
@@ -1919,8 +2041,21 @@ public class UserService {
                 ? new ArrayList<>(entraUser.getUserProfiles())
                 : Collections.emptyList();
 
+        //check if user is pending
+        boolean hasPending = allProfiles.isEmpty() || allProfiles.stream()
+                .anyMatch(profile -> profile.getUserProfileStatus() == UserProfileStatus.PENDING);
+
+        //Check if user haven't assigned any roles
+        boolean noRolesAssigned =  allProfiles.isEmpty() || allProfiles.stream()
+                .anyMatch(profile ->  profile.getAppRoles() == null || profile.getAppRoles().isEmpty());
+
         // Determine user type using shared method
         String userType = determineUserType(entraUser, allProfiles);
+
+        // Fetch account status history
+        List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository
+                .findByEntraUserIdOrderByStatusChangedDateDesc(entraUser.getId());
+        List<AccountStatusHistoryDto> accountStatusHistory = mapAccountStatusHistory(auditRecords);
 
         // Build detail DTO with Entra data only
         return AuditUserDetailDto.builder().userId(entraUser.getId().toString())
@@ -1932,13 +2067,15 @@ public class UserService {
                 .createdDate(entraUser.getCreatedDate()).createdBy(entraUser.getCreatedBy())
                 // TODO: Fetch lastLoginDate from Microsoft Graph API
                 .lastLoginDate(null)
-                // TODO: Fetch activationStatus from TechServices API or SILAS API
-                .activationStatus(null)
+                .activationStatus(entraUser.getInvitationStatus() != null ? entraUser.getInvitationStatus().name() : null)
                 .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
                         : "UNKNOWN")
                 .profiles(Collections.emptyList()).totalProfiles(0).totalProfilePages(0)
                 .currentProfilePage(1).hasNoProfile(true)
                 .entraOid(entraUser.getEntraOid())
+                .accountStatusHistory(accountStatusHistory)
+                .isPending(hasPending)
+                .isNoRole(noRolesAssigned)
                 .build();
     }
 
@@ -1972,6 +2109,28 @@ public class UserService {
                 .roles(roleDtos)
                 .userType(profile.getUserType() != null ? profile.getUserType().name() : "UNKNOWN")
                 .activeProfile(profile.isActiveProfile()).build();
+    }
+
+    /**
+     * Map UserAccountStatusAudit to AccountStatusHistoryDto
+     * Converts status to sentence case and includes disable reason
+     */
+    protected List<AccountStatusHistoryDto> mapAccountStatusHistory(List<UserAccountStatusAudit> auditRecords) {
+        return auditRecords.stream()
+                .map(record -> AccountStatusHistoryDto.builder()
+                        .statusChangedDate(record.getStatusChangedDate())
+                        .statusChange(convertToSentenceCase(record.getStatusChange().toString()))
+                        .disableReason(record.getDisableUserReason() != null ? record.getDisableUserReason().getName() : null)
+                        .statusChangedBy(record.getStatusChangedBy())
+                        .build())
+                .toList();
+    }
+
+    private String convertToSentenceCase(String input) {
+        if (input == null || input.isEmpty()) {
+            return input;
+        }
+        return input.substring(0, 1).toUpperCase() + input.substring(1).toLowerCase();
     }
 
     /**

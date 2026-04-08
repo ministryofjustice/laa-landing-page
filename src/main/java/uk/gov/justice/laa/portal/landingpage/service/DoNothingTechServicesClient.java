@@ -147,7 +147,7 @@ public class DoNothingTechServicesClient implements TechServicesClient {
                 .name(app.getName())
                 .url(app.getUrl())
                 .securityGroups(List.of(GetAllApplicationsResponse.TechServicesApplication.AppSecurityGroup.builder()
-                        .id(app.getSecurityGroupOid()).name(app.getSecurityGroupName()).build()))
+                        .id(app.getSecurityGroupOid()).build()))
                 .build();
     }
 }
