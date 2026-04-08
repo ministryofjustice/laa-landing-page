@@ -103,36 +103,6 @@ public class RoleAssignmentService {
         }
     }
 
-    public boolean canUserMainScreenApps(UserProfile userProfile, AppDto appDto) {
-        Optional<App> appOptional = appRepository.findById(UUID.fromString(appDto.getId()));
-        if (appOptional.isPresent()) {
-            App app = appOptional.get();
-            Set<AppRole> editorRoles = new HashSet<>(userProfile.getAppRoles()
-                    .stream()
-                    .filter(AppRole::isAuthzRole)
-                    .toList());
-
-            boolean hasAnyEditorRole =
-                    app.getAppRoles().stream()
-/*                            .filter( role -> role.getName().equals("Manage Your Users") ||
-                                    role.getName().equals("User Access Audit Table") ||
-                                    role.getName().equals("SiLAS Administration") ||
-                                    role.getName().equals("Firm Directory"))*/
-                            .anyMatch(role ->
-                                    editorRoles.stream().anyMatch(er -> er.getId().equals(role.getId()))
-                            );
-            return  hasAnyEditorRole;
-
-        } else {
-            log.warn("App not found : {}", appDto.getId());
-            return false;
-        }
-    }
-
-    private boolean isAuthzApp(App app) {
-        return app.getAppRoles().stream().anyMatch(AppRole::isAuthzRole);
-    }
-
     public Map<AppRoleDto, List<AppRoleDto>> getLaaAppRoleAssignmentRestrictions() {
 
         Map<AppRoleDto, List<AppRoleDto>> result = new HashMap<>();

@@ -81,6 +81,14 @@ public class AppService {
                 .toList();
     }
 
+    public List<AppDto> getAllAuthzApps() {
+        return appRepository.findAppsByAppType(AppType.AUTHZ)
+                .stream()
+                .map(app -> mapper.map(app, AppDto.class))
+                .sorted()
+                .toList();
+    }
+
     public List<AppDto> getAllActiveLaaApps() {
         return appRepository.findAppsByAppTypeAndEnabled(AppType.LAA, true)
                 .stream()

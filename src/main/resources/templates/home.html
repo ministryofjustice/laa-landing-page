@@ -57,14 +57,14 @@
             <div class="govuk-grid-column-full">
                 <h1 class="govuk-heading-xl">Your legal aid services</h1>
 
-<!--                <div th:if="${isAdminUser}" class="govuk-!-margin-bottom-6">
+                <div th:if="${isAdminUser}" class="govuk-!-margin-bottom-6">
                     <h2 class="govuk-heading-l">Admin services</h2>
 
                     <div class="govuk-grid-row">
                         <div class="govuk-grid-column-full">
-                            <div class="moj-ticket-panel__content moj-ticket-panel__content&#45;&#45;blue">
+                            <div class="moj-ticket-panel__content moj-ticket-panel__content--blue">
                                 <h3 class="govuk-heading-m">
-                                    <a href="/admin/users" class="govuk-link govuk-link&#45;&#45;no-visited-state">Manage
+                                    <a href="/admin/users" class="govuk-link govuk-link--no-visited-state">Manage
                                         your
                                         users</a>
                                 </h3>
@@ -72,52 +72,39 @@
                             </div>
                         </div>
                     </div>
-                </div>-->
+                </div>
 
-<!--                <div th:if="${hasSilasAdminRole}" class="govuk-!-margin-bottom-6">
+                <div th:if="${hasSilasAdminRole}" class="govuk-!-margin-bottom-6">
                     <div class="govuk-grid-row">
                         <div class="govuk-grid-column-full">
-                            <div class="moj-ticket-panel__content moj-ticket-panel__content&#45;&#45;blue">
+                            <div class="moj-ticket-panel__content moj-ticket-panel__content--blue">
                                 <h3 class="govuk-heading-m">
-                                    <a href="/admin/silas-administration" class="govuk-link govuk-link&#45;&#45;no-visited-state">SiLAS Administration</a>
+                                    <a href="/admin/silas-administration" class="govuk-link govuk-link--no-visited-state">SiLAS Administration</a>
                                 </h3>
                                 <p class="govuk-body">Manage user access and permissions</p>
                             </div>
                         </div>
                     </div>
-                </div>-->
+                </div>
 
-<!--                <div th:if="${canViewAuditTable && enableUserAuditTable}" class="govuk-grid-row govuk-!-margin-top-4">
+                <div th:if="${canViewAuditTable && enableUserAuditTable}" class="govuk-grid-row govuk-!-margin-top-4">
                     <div class="govuk-grid-column-full">
-                        <div class="moj-ticket-panel__content moj-ticket-panel__content&#45;&#45;blue">
+                        <div class="moj-ticket-panel__content moj-ticket-panel__content--blue">
                             <h3 class="govuk-heading-m">
-                                <a href="/admin/users/audit" class="govuk-link govuk-link&#45;&#45;no-visited-state">User Access Audit Table</a>
+                                <a href="/admin/users/audit" class="govuk-link govuk-link--no-visited-state">User Access Audit Table</a>
                             </h3>
                             <p class="govuk-body">View all registered users including account status and role assignments</p>
                         </div>
                     </div>
-                </div>-->
-
-<!--
-                <div th:if="${canViewFirmDirectory and firmDirectoryEnabled}" class="govuk-grid-row govuk-!-margin-top-4">
-                    <div class="govuk-grid-column-full">
-                        <div class="moj-ticket-panel__content moj-ticket-panel__content&#45;&#45;blue">
-                            <h3 class="govuk-heading-m">
-                                <a href="/admin/firmDirectory" class="govuk-link govuk-link&#45;&#45;no-visited-state">Firm Directory</a>
-                            </h3>
-                            <p class="govuk-body">View all registered firms including status, offices and role assignments</p>
-                        </div>
-                    </div>
                 </div>
--->
 
-                <div th:each="app : ${apps}" class="govuk-grid-row govuk-!-margin-top-4">
+                <div th:if="${canViewFirmDirectory and firmDirectoryEnabled}" class="govuk-grid-row govuk-!-margin-top-4">
                     <div class="govuk-grid-column-full">
                         <div class="moj-ticket-panel__content moj-ticket-panel__content--blue">
                             <h3 class="govuk-heading-m">
-                                <a th:href="${app.getUrl()}" th:text="${app.getTitle()}" class="govuk-link govuk-link--no-visited-state"/>
+                                <a href="/admin/firmDirectory" class="govuk-link govuk-link--no-visited-state">Firm Directory</a>
                             </h3>
-                            <p th:text="${app.getDescription()}" class="govuk-body" />
+                            <p class="govuk-body">View all registered firms including status, offices and role assignments</p>
                         </div>
                     </div>
                 </div>
@@ -179,6 +166,7 @@
             </div>
         </div>
     </main>
+    </div>
 </body>
 
 </html>

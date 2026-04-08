@@ -1,65 +1,69 @@
 databaseChangeLog:
-  # Migrate admin_app entries to app table with AppType.AUTHZ
-  - changeSet:
-      id: 1739293200001-1
-      author: leonardopalmeiro
-      preconditions:
-        - tableExists:
-            tableName: admin_app
-      changes:
-        # Insert admin_app entries into app table with AppType.AUTHZ
-        - sql:
-            dbms: postgresql
-            sql: |
-              INSERT INTO app (
-                id, 
-                name, 
-                title, 
-                description, 
-                oid_group_name, 
-                app_type, 
-                ordinal, 
-                url, 
-                enabled, 
-                entra_app_id, 
-                security_group_oid, 
-                security_group_name
-              )
-              SELECT 
-                aa.id,
-                aa.name,
-                aa.name as title,
-                aa.description,
-                aa.name as oid_group_name,
-                'AUTHZ' as app_type,
-                aa.ordinal,
-                '#' as url,
-                aa.enabled,
-                null as entra_app_id,
-                aa.name as security_group_oid,
-                aa.name as security_group_name
-              FROM admin_app aa
-              WHERE NOT EXISTS (
-                SELECT 1 FROM app a WHERE UPPER(a.name) = UPPER(aa.name)
-              );
-      rollback:
-        - sql:
-            dbms: postgresql
-            sql: "DELETE FROM app WHERE app_type = 'AUTHZ' AND id IN (SELECT id FROM admin_app)"
 
-  # Drop admin_app table after successful migration
   - changeSet:
-      id: 1739293200001-2
-      author: leonardopalmeiro
-      preconditions:
-        - onFail: MARK_RAN
-        - tableExists:
-            tableName: admin_app
+      id: migrate-admin-app-apps-to-app-table-1
+      author: Suresh Kavali
+
       changes:
+
+        - sql:
+            sql: |
+              UPDATE app
+              SET name = 'Manage your users',
+                  description = 'Manage user access and permissions',
+                  url = '/admin/users'
+              WHERE lower(name) = lower('Manage Your Users');
+
+        - sql:
+            sql: |
+              INSERT INTO app (id, name, description, url, app_type, security_group_oid, ordinal, enabled)
+              SELECT gen_random_uuid(),
+                     'SiLAS Administration',
+                     'Manage admin services including user roles and permissions',
+                     '/admin/silas-administration',
+                     'AUTHZ',
+                     'SiLAS Administration',
+                     1,
+                     true
+              WHERE NOT EXISTS (
+                SELECT 1 FROM app WHERE name = 'SiLAS Administration'
+              );
+
+        - sql:
+            sql: |
+              INSERT INTO app (id, name, description, url, app_type, security_group_oid, ordinal, enabled)
+              SELECT gen_random_uuid(),
+                     'User Access Audit Table',
+                     'View all registered users including account status and role assignments',
+                     '/admin/users/audit',
+                     'AUTHZ',
+                     'User Access Audit Table',
+                     2,
+                     true
+              WHERE NOT EXISTS (
+                SELECT 1 FROM app WHERE name = 'User Access Audit Table'
+              );
+
+        - sql:
+            sql: |
+              INSERT INTO app (id, name, description, url, app_type, security_group_oid, ordinal, enabled)
+              SELECT gen_random_uuid(),
+                     'Firm Directory',
+                     'View all registered Firms',
+                     '/admin/firmDirectory',
+                     'AUTHZ',
+                     'Firm Directory',
+                     3,
+                     true
+              WHERE NOT EXISTS (
+                SELECT 1 FROM app WHERE name = 'Firm Directory'
+              );
+
         - dropTable:
             tableName: admin_app
+
       rollback:
-        # Recreate admin_app table structure if rollback needed
+
         - createTable:
             tableName: admin_app
             columns:
@@ -83,7 +87,7 @@ databaseChangeLog:
               - column:
                   name: ordinal
                   type: int
-                  defaultValueNumeric: 0
+                  defaultValueNumeric: "0"
                   constraints:
                     nullable: false
               - column:
@@ -102,113 +106,137 @@ databaseChangeLog:
                   type: timestamp
                   constraints:
                     nullable: false
+
         - createIndex:
             indexName: AdminAppNameIdx
             tableName: admin_app
             columns:
               - column:
                   name: name
-        # Restore admin_app data from app table if rollback needed
+
         - sql:
-            dbms: postgresql
             sql: |
-              INSERT INTO admin_app (id, name, description, ordinal, enabled, created_at, updated_at)
-              SELECT id, name, description, ordinal, enabled, created_at, updated_at
-              FROM app 
-              WHERE app_type = 'AUTHZ' AND oid_group_name = name AND security_group_oid = name AND security_group_name = name
+              INSERT INTO admin_app (id, name, description, ordinal, enabled) VALUES
+                ('4b4e6fb2-9a7e-4ab1-a9fe-cdc1963080d4', 'Manage your users', 'Manage user access and permissions', 0, true),
+                ('7edc36ac-d504-4b2f-a998-7cc7dd06af39', 'SiLAS Administration', 'Manage admin services including user roles and permissions', 1, true),
+                ('00eae85f-1a38-4081-82f5-1ae9864b7072', 'User Access Audit Table', 'View all registered users including account status and role assignments', 2, true),
+                ('12a59a6a-ddf5-4a53-a1a2-688cb526fa97', 'Firm Directory', 'View all registered Firms', 3, true);
+
+        - sql:
+            sql: |
+              UPDATE app
+              SET name = 'Manage Your Users',
+                  description = 'Manage Your Users',
+                  url = '#'
+              WHERE lower(name) = lower('Manage your users');
 
   - changeSet:
-      id: 1739293200001-3-add-urls
-      author: leonardopalmeiro
+      id: transfer-autz-roles-to-corresponding-apps-2
+      author: Suresh Kavali
+
       changes:
-        # update the urls
+
         - sql:
-            dbms: postgresql
-            sql: "UPDATE app set url = '/admin/firmDirectory' WHERE name = 'Firm Directory'"
+            sql: |
+              DELETE FROM app_role ar
+              WHERE ar.name = 'SiLAS Administration'
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM role_permission rp
+                  WHERE rp.app_role_id = ar.id
+                )
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM user_profile_app_role ur
+                  WHERE ur.app_role_id = ar.id
+                );          
+
         - sql:
-            dbms: postgresql
-            sql: "UPDATE app set url = '/admin/users/audit' WHERE name = 'User Access Audit Table'"
+            sql: |
+              UPDATE app_role
+              SET app_id = (SELECT id FROM app WHERE name = 'SiLAS Administration')
+              WHERE name = 'SILAS System Administration';
+
         - sql:
-            dbms: postgresql
-            sql: "UPDATE app set url = '/admin/silas-administration' WHERE name = 'SiLAS Administration'"
+            sql: |
+              UPDATE app_role
+              SET app_id = (SELECT id FROM app WHERE name = 'User Access Audit Table')
+              WHERE name = 'Audit Export';
+
         - sql:
-            dbms: postgresql
-            sql: "UPDATE app set url = '/admin/users' WHERE name = 'Manage Your Users'"
+            sql: |
+              INSERT INTO app_role (id, app_id, authz_role, name, description, user_type_restriction, ordinal)
+              SELECT gen_random_uuid(),
+                     (SELECT id FROM app WHERE name = 'Firm Directory'),
+                     true,
+                     'Firm Directory Access',
+                     'Firm Directory Access',
+                     '{INTERNAL}',
+                     0
+              WHERE NOT EXISTS (
+                SELECT 1 FROM app_role WHERE name = 'Firm Directory Access'
+              );
+
+        - sql:
+            sql: |
+              INSERT INTO role_permission (app_role_id, permission)
+              SELECT id, 'VIEW_FIRM_DIRECTORY'
+              FROM app_role
+              WHERE name = 'Firm Directory Access'
+              AND NOT EXISTS (
+                SELECT 1
+                FROM role_permission
+                WHERE permission = 'VIEW_FIRM_DIRECTORY'
+                AND app_role_id = app_role.id
+              );
+
+      rollback:
+
+        - sql:
+            sql: |
+              DELETE FROM role_permission
+              WHERE permission = 'VIEW_FIRM_DIRECTORY'
+              AND app_role_id IN (
+                SELECT id FROM app_role WHERE name = 'Firm Directory Access'
+              );
+
+        - sql:
+            sql: |
+              DELETE FROM app_role
+              WHERE name = 'Firm Directory Access';
+
+        - sql:
+            sql: |
+              UPDATE app_role
+              SET app_id = (SELECT id FROM app WHERE lower(name) = lower('Manage Your Users'))
+              WHERE name = 'Audit Export';
+
+        - sql:
+            sql: |
+              UPDATE app_role
+              SET app_id = (SELECT id FROM app WHERE lower(name) = lower('Manage Your Users'))
+              WHERE name = 'SILAS System Administration';
 
   - changeSet:
-      id: 1739293200001-4-create-app-roles
-      author: leonardopalmeiro
-      changes:
-        # Add global admin as an assigning role for Firm Directory.
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO public.app_role (authz_role, app_id, id, description, name, user_type_restriction, ccms_code, legacy_sync, ordinal, firm_type_restriction) VALUES (true, (SELECT id FROM app WHERE name = 'Firm Directory'), gen_random_uuid(), 'Show Firm Directory in the main screen', 'Firm Directory', '{INTERNAL}', NULL, false, 0, NULL)"
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'Firm Directory'), (SELECT id FROM app_role WHERE name = 'Global Admin'))"
-        # Add global admin as an assigning role for Access SiLAS Administration.
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO public.app_role (authz_role, app_id, id, description, name, user_type_restriction, ccms_code, legacy_sync, ordinal, firm_type_restriction) VALUES (true, (SELECT id FROM app WHERE name = 'SiLAS Administration'), gen_random_uuid(), 'Show SiLAS Administration in the main screen', 'SiLAS Administration', '{INTERNAL}', NULL, false, 0, NULL)"
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'SiLAS Administration'), (SELECT id FROM app_role WHERE name = 'Global Admin'))"
-        # Add global admin as an assigning role for Access User Access Audit Table.
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO public.app_role (authz_role, app_id, id, description, name, user_type_restriction, ccms_code, legacy_sync, ordinal, firm_type_restriction) VALUES (true, (SELECT id FROM app WHERE name = 'User Access Audit Table'), gen_random_uuid(), 'Show User Access Audit Table in the main screen', 'User Access Audit Table', '{INTERNAL}', NULL, false, 0, NULL)"
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'User Access Audit Table'), (SELECT id FROM app_role WHERE name = 'Global Admin'))"
+      id: add-role-assignment-permission-for-firm-directory-3
+      author: Suresh Kavali
 
-        # Add global admin as an assigning role for manage your user.
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO public.app_role (authz_role, app_id, id, description, name, user_type_restriction, ccms_code, legacy_sync, ordinal, firm_type_restriction) VALUES (true, (SELECT id FROM app WHERE name = 'Manage Your Users'), gen_random_uuid(), 'Show Manage Your Users in the main screen', 'Manage Your Users', '{INTERNAL}', NULL, false, 0, NULL)"
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO role_assignment (assignable_role_id, assigning_role_id) VALUES ((SELECT id FROM app_role WHERE name = 'Manage Your Users'), (SELECT id FROM app_role WHERE name = 'Global Admin'))"
-  - changeSet:
-      id: 1739293200001-5-update-silas-admin-roles
-      author: leonardopalmeiro
       changes:
-        # update SiLAS Administration on role_permission table
+
         - sql:
-            dbms: postgresql
-            sql: "UPDATE role_permission set app_role_id = (SELECT id FROM app_role WHERE name = 'SiLAS Administration') where app_role_id = (SELECT id FROM app_role WHERE name = 'SILAS System Administration')"
-        # update SILAS System Administration to SiLAS Administration
+            sql: |
+              INSERT INTO role_assignment (assigning_role_id, assignable_role_id)
+              VALUES
+              ((select id from app_role where name = 'Internal User Manager'), (select id from app_role where name = 'Firm Directory Access')),
+              ((select id from app_role where name = 'Global Admin'), (select id from app_role where name = 'Firm Directory Access'));
+
+      rollback:
         - sql:
-            dbms: postgresql
-            sql: "UPDATE user_profile_app_role set app_role_id = (SELECT id FROM app_role WHERE name = 'SiLAS Administration') where app_role_id = (SELECT id FROM app_role WHERE name = 'SILAS System Administration')"
-        # remove role assignment of SILAS System Administration
-        - sql:
-            dbms: postgresql
-            sql: "DELETE FROM role_assignment WHERE assignable_role_id = (SELECT id FROM app_role WHERE name = 'SILAS System Administration')"
-        # remove unused role
-        - sql:
-            dbms: postgresql
-            sql: "DELETE FROM app_role where name = 'SILAS System Administration'"
-  - changeSet:
-      id: 1739293200001-5-assign-view-firm-directory-to-new-role-created
-      author: leonardopalmeiro
-      changes:
-        # Insert the VIEW_FIRM_DIRECTORY permission into all user profiles that already have the VIEW_FIRM_DIRECTORY permission.
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO user_profile_app_role (app_role_id, user_profile_id) SELECT rp.app_role_id, upar.user_profile_id FROM user_profile_app_role upar JOIN role_permission rp ON rp.permission = 'VIEW_FIRM_DIRECTORY' WHERE upar.app_role_id = rp.app_role_id AND upar.user_profile_id IS NOT NULL;"
-        # remove the VIEW_FIRM_DIRECTORY PERMISSION
-        - sql:
-            dbms: postgresql
-            sql: "DELETE FROM role_permission WHERE permission = 'VIEW_FIRM_DIRECTORY'"
-  - changeSet:
-      id: 1739293200001-6-assign-view-audit-table-to-new-role-created
-      author: leonardopalmeiro
-      changes:
-        # Insert the VIEW_AUDIT_TABLE permission into all user profiles that already have the VIEW_FIRM_DIRECTORY permission.
-        - sql:
-            dbms: postgresql
-            sql: "INSERT INTO user_profile_app_role (app_role_id, user_profile_id) SELECT rp.app_role_id, upar.user_profile_id FROM user_profile_app_role upar JOIN role_permission rp ON rp.permission = 'VIEW_AUDIT_TABLE' WHERE upar.app_role_id = rp.app_role_id AND upar.user_profile_id IS NOT NULL;"
-        # remove the VIEW_AUDIT_TABLE PERMISSION
-        - sql:
-            dbms: postgresql
-            sql: "DELETE FROM role_permission WHERE permission = 'VIEW_AUDIT_TABLE'"
+            sql: |
+              DELETE FROM role_assignment
+              WHERE assigning_role_id IN (
+                (SELECT id FROM app_role WHERE name = 'Internal User Manager'),
+                (SELECT id FROM app_role WHERE name = 'Global Admin')
+              ) AND assignable_role_id IN (
+                SELECT id FROM app_role WHERE name = 'Firm Directory Access'
+              );

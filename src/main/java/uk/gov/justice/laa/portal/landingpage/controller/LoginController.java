@@ -1,7 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 
 import org.slf4j.Logger;
@@ -19,16 +17,12 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 
 import jakarta.servlet.http.HttpSession;
-import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.model.UserSessionData;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
-import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
-import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
 /***
@@ -40,14 +34,10 @@ public class LoginController {
     private static final Logger logger = LoggerFactory.getLogger(LoginController.class);
     private final LoginService loginService;
     private final UserService userService;
-    private final AppService appService;
-    private final RoleAssignmentService roleAssignmentService;
 
-    public LoginController(LoginService loginService, UserService userService, AppService appService, RoleAssignmentService roleAssignmentService) {
+    public LoginController(LoginService loginService, UserService userService) {
         this.loginService = loginService;
         this.userService = userService;
-        this.appService = appService;
-        this.roleAssignmentService = roleAssignmentService;
     }
 
     @GetMapping("/")
@@ -96,32 +86,31 @@ public class LoginController {
                 model.addAttribute("lastLogin", "N/A");
                 model.addAttribute("laaApplications", userSessionData.getLaaApplications());
                 boolean isAdmin = false;
-
-
+                boolean canViewAuditTable = false;
+                boolean hasSilasAdminRole = false;
+                boolean canViewFirmDirectory = false;
                 boolean isProviderAdmin = false;
-                List<AppDto> editableApps = new ArrayList<>();
                 if (userSessionData.getUser() != null) {
                     Set<Permission> permissions = userService
                             .getUserPermissionsByUserId(userSessionData.getUser().getId());
                     isAdmin = permissions.contains(Permission.VIEW_EXTERNAL_USER)
                             || permissions.contains(Permission.VIEW_INTERNAL_USER);
+                    canViewAuditTable = permissions.contains(Permission.VIEW_AUDIT_TABLE);
                     // Check if user has SiLAS Administration role
                     EntraUser currentUser = loginService.getCurrentEntraUser(authentication);
+                    hasSilasAdminRole = currentUser != null
+                            && AccessControlService.userHasAuthzRole(currentUser, AuthzRole.SILAS_ADMINISTRATION.getRoleName());
+                    canViewFirmDirectory = currentUser != null
+                            && AccessControlService.userHasAnyGivenPermissions(currentUser, Permission.VIEW_FIRM_DIRECTORY);
                     isProviderAdmin = currentUser != null
                             && AccessControlService.userHasAuthzRole(currentUser,
                             AuthzRole.FIRM_USER_MANAGER.getRoleName());
 
-                    List<AppDto> apps = appService.getAllActiveAuthzApps();
-                    UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
-
-                    editableApps = apps.stream()
-                            .filter(AppDto::isEnabled)
-                            .filter(app -> roleAssignmentService.canUserMainScreenApps(currentUserProfile, app))
-                            .toList();
-
                 }
-                model.addAttribute("apps", editableApps);
                 model.addAttribute("isAdminUser", isAdmin);
+                model.addAttribute("canViewAuditTable", canViewAuditTable);
+                model.addAttribute("canViewFirmDirectory", canViewFirmDirectory);
+                model.addAttribute("hasSilasAdminRole", hasSilasAdminRole);
                 model.addAttribute("isProviderAdmin", isProviderAdmin);
 
                 // Check if user has no roles assigned and determine user type for custom

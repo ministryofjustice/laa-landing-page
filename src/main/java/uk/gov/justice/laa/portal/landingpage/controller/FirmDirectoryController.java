@@ -39,7 +39,8 @@ import java.util.UUID;
 @Controller
 @RequiredArgsConstructor
 @RequestMapping("/admin/firmDirectory")
-@PreAuthorize("@accessControlService.userHasAuthzRole(authentication, T(uk.gov.justice.laa.portal.landingpage.entity.AuthzRole).FIRM_DIRECTORY.roleName)")
+@PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions("
+        + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_FIRM_DIRECTORY)")
 public class FirmDirectoryController {
 
     private final FirmService firmService;

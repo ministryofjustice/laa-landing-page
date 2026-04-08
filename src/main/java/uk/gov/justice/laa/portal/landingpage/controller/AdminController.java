@@ -55,7 +55,6 @@ import uk.gov.justice.laa.portal.landingpage.forms.AppsOrderForm;
 import uk.gov.justice.laa.portal.landingpage.forms.DeleteAppRoleReasonForm;
 import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
-import uk.gov.justice.laa.portal.landingpage.service.AdminService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
 import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
@@ -85,7 +84,6 @@ public class AdminController {
 
     private final LoginService loginService;
     private final EventService eventService;
-    private final AdminService adminService;
     private final AppService appService;
     private final AppRoleService appRoleService;
     private final AccessControlService accessControlService;
@@ -109,7 +107,7 @@ public class AdminController {
         clearSessionAttributes(session);
 
         // Load all admin apps data for admin-apps tab
-        model.addAttribute("adminApps", adminService.getAllAdminApps());
+        model.addAttribute("adminApps", appService.getAllAuthzApps());
 
         // Load all apps data for apps tab
         List<AppDto> apps = appService.getAllLaaApps();
@@ -155,7 +153,7 @@ public class AdminController {
         clearSessionAttributes(session);
 
         // Load all admin apps data for admin-apps tab
-        model.addAttribute("adminApps", adminService.getAllAdminApps());
+        model.addAttribute("adminApps", appService.getAllAuthzApps());
 
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
         UserProfileDto userProfile = modelMapper.map(loginService.getCurrentProfile(authentication), UserProfileDto.class);
