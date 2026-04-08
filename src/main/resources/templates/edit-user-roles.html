@@ -77,12 +77,14 @@
                                                     th:id="'role-' + ${roleViewModel.id}">
                                                     <input class="govuk-checkboxes__input"
                                                         th:id="'role-input-' + ${roleViewModel.id}" name="roles"
-                                                        th:checked="${roleViewModel.selected}"
-                                                        th:value="${roleViewModel.id}" type="checkbox">
+                                                        th:checked="${roleViewModel.selected}" th:disabled="${roleViewModel.changeNotAllowed}"
+                                                        th:if="${!roleViewModel.hiddenFromSelection}" th:value="${roleViewModel.id}" type="checkbox">
                                                     <label class="govuk-label govuk-checkboxes__label"
                                                         th:for="'role-input-' + ${roleViewModel.id}">
                                                         <span th:text="${roleViewModel.name}"></span>
                                                     </label>
+                                                    <input id="'hidden-role-input-' + ${roleViewModel.id}" name="roles" th:value="${roleViewModel.id}"
+                                                           type="hidden" th:if="${(roleViewModel.changeNotAllowed || roleViewModel.hiddenFromSelection) && roleViewModel.selected}"/>
                                                     <div class="govuk-hint govuk-checkboxes__hint"
                                                         th:text="${roleViewModel.description}"></div>
                                                 </div>
@@ -101,12 +103,14 @@
                                                     th:id="'role-' + ${roleViewModel.id}">
                                                     <input class="govuk-checkboxes__input"
                                                         th:id="'role-input-' + ${roleViewModel.id}" name="roles"
-                                                        th:checked="${roleViewModel.selected}"
+                                                        th:checked="${roleViewModel.selected}" th:disabled="${roleViewModel.changeNotAllowed}"
                                                         th:value="${roleViewModel.id}" type="checkbox">
                                                     <label class="govuk-label govuk-checkboxes__label"
                                                         th:for="'role-input-' + ${roleViewModel.id}">
                                                         <span th:text="${roleViewModel.name}"></span>
                                                     </label>
+                                                    <input id="'hidden-role-input-' + ${roleViewModel.id}" name="roles" th:value="${roleViewModel.id}"
+                                                           type="hidden" th:if="${roleViewModel.changeNotAllowed && roleViewModel.selected}"/>
                                                     <div class="govuk-hint govuk-checkboxes__hint"
                                                         th:text="${roleViewModel.description}"></div>
                                                 </div>
@@ -125,12 +129,14 @@
                                                     th:id="'role-' + ${roleViewModel.id}">
                                                     <input class="govuk-checkboxes__input"
                                                         th:id="'role-input-' + ${roleViewModel.id}" name="roles"
-                                                        th:checked="${roleViewModel.selected}"
+                                                        th:checked="${roleViewModel.selected}" th:disabled="${roleViewModel.changeNotAllowed}"
                                                         th:value="${roleViewModel.id}" type="checkbox">
                                                     <label class="govuk-label govuk-checkboxes__label"
                                                         th:for="'role-input-' + ${roleViewModel.id}">
                                                         <span th:text="${roleViewModel.name}"></span>
                                                     </label>
+                                                    <input id="'hidden-role-input-' + ${roleViewModel.id}" name="roles" th:value="${roleViewModel.id}"
+                                                           type="hidden" th:if="${roleViewModel.changeNotAllowed && roleViewModel.selected}"/>
                                                     <div class="govuk-hint govuk-checkboxes__hint"
                                                         th:text="${roleViewModel.description}"></div>
                                                 </div>
@@ -149,12 +155,14 @@
                                                     th:id="'role-' + ${roleViewModel.id}">
                                                     <input class="govuk-checkboxes__input"
                                                         th:id="'role-input-' + ${roleViewModel.id}" name="roles"
-                                                        th:checked="${roleViewModel.selected}"
+                                                        th:checked="${roleViewModel.selected}" th:disabled="${roleViewModel.changeNotAllowed}"
                                                         th:value="${roleViewModel.id}" type="checkbox">
                                                     <label class="govuk-label govuk-checkboxes__label"
                                                         th:for="'role-input-' + ${roleViewModel.id}">
                                                         <span th:text="${roleViewModel.name}"></span>
                                                     </label>
+                                                    <input id="'hidden-role-input-' + ${roleViewModel.id}" name="roles" th:value="${roleViewModel.id}"
+                                                           type="hidden" th:if="${roleViewModel.changeNotAllowed && roleViewModel.selected}"/>
                                                     <div class="govuk-hint govuk-checkboxes__hint"
                                                         th:text="${roleViewModel.description}"></div>
                                                 </div>
@@ -169,11 +177,13 @@
                                         th:each="role : ${roles}" th:id="'role-' + ${role.id}">
                                         <input class="govuk-checkboxes__input" th:id="'role-input-' + ${role.id}"
                                             name="roles" th:checked="${role.selected}" th:value="${role.id}"
-                                            type="checkbox">
+                                            type="checkbox" th:disabled="${role.changeNotAllowed}">
                                         <label class="govuk-label govuk-checkboxes__label"
                                             th:for="'role-input-' + ${role.id}">
                                             <span th:text="${role.name}"></span>
                                         </label>
+                                        <input id="'hidden-role-input-' + ${role.id}" name="roles" th:value="${role.id}"
+                                               type="hidden" th:if="${role.changeNotAllowed && role.selected}"/>
                                         <div class="govuk-hint govuk-checkboxes__hint" th:text="${role.description}">
                                         </div>
                                     </div>

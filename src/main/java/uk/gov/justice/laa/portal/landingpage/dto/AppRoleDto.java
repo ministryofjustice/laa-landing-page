@@ -24,6 +24,7 @@ public class AppRoleDto implements Comparable<AppRoleDto>, Serializable {
     private String ccmsCode;
     private AppDto app;
     private UserType[] userTypeRestriction;
+    private boolean changeNotAllowed;
 
     @Override
     public int compareTo(@NotNull AppRoleDto o) {
