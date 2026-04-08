@@ -1,13 +1,14 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import uk.gov.justice.laa.portal.landingpage.config.NotificationsProperties;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import uk.gov.justice.laa.portal.landingpage.config.NotificationsProperties;
 
 /**
  * A service to handle email notification specifically for new user creation.
@@ -86,18 +87,18 @@ public class NotificationService {
         }
     }
 
-    public void notifyUserAccessChange(UUID userProfileId, String firstName, String email, String changeType, String changes) {
+    public void notifyUserAccessChange(UUID userProfileId, String firstName, String email, String firmName) {
         if ("NONE".equalsIgnoreCase(notificationProperties.getUserAccessChangeEmailTemplate())) {
             log.info("Email template for user access change is not ready, skipping notification email for User: {}", userProfileId);
             return;
         }
 
-        log.info("Sending user access change notification for User: {} (change type: {})", userProfileId, changeType);
+        log.info("Sending user access change notification for User: {}", userProfileId);
 
         emailService.sendMail(
                 email,
                 notificationProperties.getUserAccessChangeEmailTemplate(),
-                Map.of("first_name", firstName, "change_type", changeType, "changes", changes, "portal_url", notificationProperties.getPortalUrl()),
+                Map.of("first_name", firstName, "firm_name", firmName),
                 String.format(
                         REFERENCE_TEMPLATE_ACCESS_CHANGE,
                         userProfileId
