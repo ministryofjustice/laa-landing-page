@@ -145,7 +145,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickGoBackToManageUsers();
         assertTrue(manageUsersPage.searchAndVerifyUser(email));
         manageUsersPage.clickManageUser();
-        manageUsersPage.verifyUserDetailsPopulated(email, "Test", "User", "90001", "No");
+        manageUsersPage.verifyUserDetailsPopulated();
     }
 
     @Test
@@ -457,10 +457,10 @@ public class ManageUsersTest extends BaseFrontEndTest {
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         assertTrue(page.locator(".govuk-button:has-text('Manage Access')").isVisible());
         manageUsersPage.clickManageAccess();
-        List<String> services = List.of("Manage Your Users");
+        List<String> services = List.of("Test LAA App One");
         manageUsersPage.checkSelectedRoles(services);
         manageUsersPage.clickContinueLink();
-        List<String> roles = List.of("Firm User Manager");
+        List<String> roles = List.of("Test LAA App One Access");
         manageUsersPage.checkSelectedRoles(roles);
         manageUsersPage.clickContinueLink();
         manageUsersPage.clickContinueLink();
@@ -487,5 +487,36 @@ public class ManageUsersTest extends BaseFrontEndTest {
         assertTrue(manageUsersPage.searchAndVerifyUser(email));
         Locator badge = manageUsersPage.firstIncompleteUserRowLocator();
         assertThat(badge).isVisible();
+    }
+
+    @Test
+    @DisplayName("Global Admin creates an external user and assigns offices")
+    void globalAdminCreatesExternalUserAndAssignsOffices() {
+        // Create user
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+        manageUsersPage.clickCreateUser();
+        final String email = manageUsersPage.fillInUserDetails(true);
+        manageUsersPage.selectMultiFirmAccess(false);
+        manageUsersPage.searchAndSelectFirmByCode("90001");
+        manageUsersPage.clickContinueFirmSelectPage();
+        manageUsersPage.clickConfirmNewUserButton();
+        manageUsersPage.clickGoBackToManageUsers();
+
+        assertTrue(manageUsersPage.searchAndVerifyUser(email));
+        manageUsersPage.clickFirstUserLink();
+        manageUsersPage.clickManageAccess();
+
+        manageUsersPage.clickContinueLink();
+        manageUsersPage.clickContinueLink();
+        manageUsersPage.checkSelectedOffices(List.of("Automation Office 1, City1, 12345 (THREE)"));
+        manageUsersPage.clickContinueLink();
+        manageUsersPage.clickConfirmButton();
+
+        // Verify office assigned
+        manageUsersPage.clickGoBackToManageUsers();
+        manageUsersPage.searchForUser(email);
+        manageUsersPage.clickFirstUserLink();
+        manageUsersPage.clickOfficesTab();
+        assertTrue(page.locator(".govuk-summary-card:has-text('Automation Office 1, City1, 12345')").isVisible());
     }
 }

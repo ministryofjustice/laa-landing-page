@@ -1,25 +1,25 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.laa.portal.landingpage.config.NotificationsProperties;
-import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
-
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import uk.gov.justice.laa.portal.landingpage.config.NotificationsProperties;
+import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 import static uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring.addListAppenderToLogger;
 
 /**
@@ -242,17 +242,16 @@ public class NotificationServiceTest {
         UUID userProfileId = UUID.randomUUID();
         String firstName = "Bob";
         String email = "bob@example.com";
-        String changeType = "Service roles";
-        String changes = "Added: Role1, Removed: Role2";
+        String firmName = "Test Firm";
 
         // Act
-        notificationService.notifyUserAccessChange(userProfileId, firstName, email, changeType, changes);
+        notificationService.notifyUserAccessChange(userProfileId, firstName, email, firmName);
 
         // Assert - emailService should be called once
         Mockito.verify(emailService, Mockito.times(1)).sendMail(
                 eq(email),
                 eq("testUserAccessChangeEmailTemplate"),
-                eq(Map.of("first_name", firstName, "change_type", changeType, "changes", changes, "portal_url", "testPortalUrl")),
+                eq(Map.of("first_name", firstName, "firm_name", firmName)),
                 eq(String.format("laa-portal-notice-of-access-change-%s", userProfileId))
         );
     }
@@ -266,17 +265,16 @@ public class NotificationServiceTest {
         UUID userProfileId = UUID.randomUUID();
         String firstName = "Bob";
         String email = null;
-        String changeType = "Offices";
-        String changes = "Added: Office1";
+        String firmName = "Test Firm";
 
         // Act
-        notificationService.notifyUserAccessChange(userProfileId, firstName, email, changeType, changes);
+        notificationService.notifyUserAccessChange(userProfileId, firstName, email, firmName);
 
         // Assert
         Mockito.verify(emailService, Mockito.times(1)).sendMail(
                 eq(null),
                 eq("testUserAccessChangeEmailTemplate"),
-                eq(Map.of("first_name", firstName, "change_type", changeType, "changes", changes, "portal_url", "testPortalUrl")),
+                eq(Map.of("first_name", firstName, "firm_name", firmName)),
                 eq(String.format("laa-portal-notice-of-access-change-%s", userProfileId))
         );
     }
@@ -291,13 +289,12 @@ public class NotificationServiceTest {
         UUID userProfileId = UUID.randomUUID();
         String firstName = "Bob";
         String email = "test@email.com";
-        String changeType = "Access granted";
-        String changes = "You have been granted access to services and offices";
+        String firmName = "Test Firm";
 
         ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(NotificationService.class);
 
         // Act
-        notificationService.notifyUserAccessChange(userProfileId, firstName, email, changeType, changes);
+        notificationService.notifyUserAccessChange(userProfileId, firstName, email, firmName);
 
         // Assert
         Mockito.verify(emailService, Mockito.times(0)).sendMail(any(), any(), any(), any());
@@ -319,19 +316,18 @@ public class NotificationServiceTest {
         UUID userProfileId = UUID.randomUUID();
         String firstName = "Charlie";
         String email = null;
-        String changeType = "Services";
-        String changes = "Removed: Service A, Added: Service B";
+        String firmName = "Test Firm";
 
         ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(NotificationService.class);
 
         // Act
-        notificationService.notifyUserAccessChange(userProfileId, firstName, email, changeType, changes);
+        notificationService.notifyUserAccessChange(userProfileId, firstName, email, firmName);
 
         // Assert – emailService is called even when email is null
         Mockito.verify(emailService, Mockito.times(1)).sendMail(
                 eq(null),
                 eq("testUserAccessChangeEmailTemplate"),
-                eq(Map.of("first_name", firstName, "change_type", changeType, "changes", changes, "portal_url", "testPortalUrl")),
+                eq(Map.of("first_name", firstName, "firm_name", firmName)),
                 eq(String.format("laa-portal-notice-of-access-change-%s", userProfileId))
         );
 
@@ -342,7 +338,7 @@ public class NotificationServiceTest {
         assertThat(infoLogs)
                 .extracting(ILoggingEvent::getFormattedMessage)
                 .containsExactly(
-                        String.format("Sending user access change notification for User: %s (change type: %s)", userProfileId, changeType),
+                        String.format("Sending user access change notification for User: %s", userProfileId),
                         String.format("User access change notification sent for User ID: %s", userProfileId));
     }
 }

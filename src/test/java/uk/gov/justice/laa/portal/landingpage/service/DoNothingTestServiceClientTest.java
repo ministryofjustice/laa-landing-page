@@ -169,8 +169,8 @@ public class DoNothingTestServiceClientTest {
     @DisplayName("getAllApplications: maps repository LAA apps into response with success=true")
     void getAllApplications_mapsFieldsCorrectly() {
         // Given repository returns two apps
-        App a1 = app("A-1", "O-1", "Alpha", "https://alpha.example", "SG-1", "Group One");
-        App a2 = app("A-2", "O-2", "Beta", "https://beta.example", "SG-2", "Group Two");
+        App a1 = app("A-1", "O-1", "Alpha", "https://alpha.example", "SG-1");
+        App a2 = app("A-2", "O-2", "Beta", "https://beta.example", "SG-2");
 
         when(appRepository.findAppsByAppType(AppType.LAA)).thenReturn(List.of(a1, a2));
 
@@ -199,7 +199,6 @@ public class DoNothingTestServiceClientTest {
         assertThat(t1.getUrl()).isEqualTo("https://alpha.example");
         assertThat(t1.getSecurityGroups()).hasSize(1);
         assertThat(t1.getSecurityGroups().getFirst().getId()).isEqualTo("SG-1");
-        assertThat(t1.getSecurityGroups().getFirst().getName()).isEqualTo("Group One");
 
         // Validate second app mapping
         var t2 = payload.getApps().get(1);
@@ -209,7 +208,6 @@ public class DoNothingTestServiceClientTest {
         assertThat(t2.getUrl()).isEqualTo("https://beta.example");
         assertThat(t2.getSecurityGroups()).hasSize(1);
         assertThat(t2.getSecurityGroups().getFirst().getId()).isEqualTo("SG-2");
-        assertThat(t2.getSecurityGroups().getFirst().getName()).isEqualTo("Group Two");
     }
 
     @Test
@@ -229,7 +227,7 @@ public class DoNothingTestServiceClientTest {
     @Test
     @DisplayName("getAllApplications: mapping tolerates null fields (e.g., null SG id/name)")
     void getAllApplications_nullFields() {
-        App a1 = app("A-1", "O-1", null, null, null, null); // null name/url/security group fields
+        App a1 = app("A-1", "O-1", null, null, null); // null name/url/security group fields
         when(appRepository.findAppsByAppType(AppType.LAA)).thenReturn(List.of(a1));
 
         TechServicesApiResponse<GetAllApplicationsResponse> resp = techServicesClient.getAllApplications();
@@ -252,7 +250,7 @@ public class DoNothingTestServiceClientTest {
     @Test
     @DisplayName("mapAppToTechServicesApp: direct invocation via reflection (optional explicit coverage)")
     void mapAppToTechServicesApp_reflection() throws Exception {
-        App a = app("AID-9", "OID-9", "Display", "https://u", "SGX", "SG Name");
+        App a = app("AID-9", "OID-9", "Display", "https://u", "SGX");
 
         Method mapper = DoNothingTechServicesClient.class
                 .getDeclaredMethod("mapAppToTechServicesApp", App.class);
@@ -267,7 +265,6 @@ public class DoNothingTestServiceClientTest {
         assertThat(mapped.getUrl()).isEqualTo("https://u");
         assertThat(mapped.getSecurityGroups()).hasSize(1);
         assertThat(mapped.getSecurityGroups().getFirst().getId()).isEqualTo("SGX");
-        assertThat(mapped.getSecurityGroups().getFirst().getName()).isEqualTo("SG Name");
     }
 
     @Test
@@ -300,14 +297,13 @@ public class DoNothingTestServiceClientTest {
     }
 
     // Helper builder for App entity in tests
-    private App app(String appId, String oid, String name, String url, String sgId, String sgName) {
+    private App app(String appId, String oid, String name, String url, String sgId) {
         return App.builder()
                 .entraAppId(appId)
                 .entraOid(oid)
                 .name(name)
                 .url(url)
                 .securityGroupOid(sgId)
-                .securityGroupName(sgName)
                 .appType(AppType.LAA)
                 .enabled(true)
                 .build();

@@ -113,7 +113,7 @@ public class AdminPageTest extends BaseFrontEndTest {
         clickFirstChangeLinkOnRoleAssignRestrictionsTab();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-        Assertions.assertTrue(page.locator("h1.govuk-fieldset__heading").textContent().contains("Test LAA App One Access"));
+        Assertions.assertTrue(page.locator("h1.govuk-fieldset__heading").textContent().contains("Test LAA App Three Access"));
         Locator others = page.locator("input[type='checkbox']");
         for (int i = 0; i < 3; i++) {
             others.nth(i).check();
@@ -371,7 +371,7 @@ public class AdminPageTest extends BaseFrontEndTest {
     private void clickFirstChangeLinkOnRoleAssignRestrictionsTab() {
         page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Change")).first().click();
 
-        String expectedUrlFragment = "/admin/silas-administration/role/assignRestrictions/dddddddd-dddd-dddd-dddd-aaaaaaaaaaaa";
+        String expectedUrlFragment = "/admin/silas-administration/role/assignRestrictions/ffffffff-ffff-ffff-ffff-bbbbbbbbbbbb";
         Assertions.assertTrue(
                 page.url().contains(expectedUrlFragment),
                 "Expected URL to contain '" + expectedUrlFragment + "' after clicking Change link for Role assignment restrictions"

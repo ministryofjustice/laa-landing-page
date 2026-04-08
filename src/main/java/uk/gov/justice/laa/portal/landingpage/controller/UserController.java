@@ -330,6 +330,8 @@ public class UserController {
         List<OfficeDto> userOffices = user.getOffices() != null ? user.getOffices() : Collections.emptyList();
         final boolean isAccessGranted = userService.isAccessGranted(user.getId().toString());
         final boolean canEditUser = accessControlService.canEditUser(user.getId().toString());
+        final boolean canGrantUserAccess = accessControlService.canGrantUserAccess(user.getId().toString());
+        final boolean canEditUserRoleAssignments = accessControlService.canEditUserAppRoleAssignments(user.getId().toString());
         model.addAttribute("user", user);
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("userOffices", userOffices);
@@ -362,6 +364,8 @@ public class UserController {
         model.addAttribute("isInternalUser", isInternalUser);
 
         model.addAttribute("canEditUser", canEditUser);
+        model.addAttribute("canGrantUserAccess", canGrantUserAccess);
+        model.addAttribute("canEditUserRoleAssignments", canEditUserRoleAssignments);
 
         // Check if current user can reassign firms (External User Admin permission + target is external user)
         boolean canReassignFirm = externalUser
@@ -1071,7 +1075,7 @@ public class UserController {
      * Retrieves available apps for user and their currently assigned apps.
      */
     @GetMapping("/users/edit/{id}/apps")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.canEditUserAppRoleAssignments(#id)")
     public String editUserApps(@PathVariable String id,
             @RequestParam(value = "errorMessage", required = false) String errorMessage,
             Model model, HttpSession session, Authentication authentication) {
@@ -1095,12 +1099,14 @@ public class UserController {
                 app.setSelected(userAssignedApps.stream()
                         .anyMatch(userApp -> userApp.getId().equals(app.getId())));
             });
+            flagEditableApps(id, editableApps);
         } else {
             List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
                     .orElse(List.of());
             editableApps.forEach(app -> {
                 app.setSelected(selectedApps.contains(app.getId()));
             });
+            flagEditableApps(id, editableApps);
         }
 
         model.addAttribute("user", user);
@@ -1112,15 +1118,59 @@ public class UserController {
         return "edit-user-apps";
     }
 
+    private void flagEditableApps(String userProfileId, List<AppDto> editableApps) {
+        if (!accessControlService.canAssignAppRoles(userProfileId)) {
+            editableApps.stream()
+                    .filter(app -> !app.isSelected())
+                    .forEach(appDto -> {
+                        appDto.setChangeNotAllowed(true);
+                        appDto.setHiddenFromSelection(true);
+                    });
+        }
+
+        if (!accessControlService.canRemoveAppRoles(userProfileId)) {
+            editableApps.stream()
+                    .filter(AppDto::isSelected)
+                    .forEach(appDto -> appDto.setChangeNotAllowed(true));
+        }
+
+    }
+
     @PostMapping("/users/edit/{id}/apps")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.canEditUserAppRoleAssignments(#id)")
     public RedirectView setSelectedAppsEdit(@PathVariable String id,
             @RequestParam(value = "apps", required = false) List<String> apps,
             HttpSession session) {
 
         // Handle case where no apps are selected (apps will be null)
         List<String> selectedApps = apps != null ? apps : new ArrayList<>();
+        
+        // Get previous app selection to determine if roles need to be cleaned up
+        List<String> previousSelectedApps = getListFromHttpSession(session, "selectedApps", String.class)
+                .orElse(new ArrayList<>());
+        
         session.setAttribute("selectedApps", selectedApps);
+        
+        // Clean up role selections when app selection changes
+        @SuppressWarnings("unchecked")
+        Map<Integer, List<String>> editUserAllSelectedRoles = (Map<Integer, List<String>>) session
+                .getAttribute("editUserAllSelectedRoles");
+        
+        if (editUserAllSelectedRoles != null && !selectedApps.equals(previousSelectedApps)) {
+            // App selection changed - need to clean up and reindex role data
+            Map<Integer, List<String>> cleanedRoles = new HashMap<>();
+            
+            // Only preserve role data for apps that are still selected and reindex them
+            for (int i = 0; i < selectedApps.size(); i++) {
+                String appId = selectedApps.get(i);
+                int previousIndex = previousSelectedApps.indexOf(appId);
+                if (previousIndex >= 0 && editUserAllSelectedRoles.containsKey(previousIndex)) {
+                    cleanedRoles.put(i, editUserAllSelectedRoles.get(previousIndex));
+                }
+            }
+            session.setAttribute("editUserAllSelectedRoles", cleanedRoles);
+        }
+        
         if (selectedApps.isEmpty()) {
             // Ensure passed in ID is a valid UUID to avoid open redirects.
             session.setAttribute("editUserAllSelectedRoles", new HashMap<>());
@@ -1145,7 +1195,7 @@ public class UserController {
      * @throws IOException              If an error occurs during user retrieval
      */
     @GetMapping("/users/edit/{id}/roles")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.canEditUserAppRoleAssignments(#id)")
     public String editUserRoles(@PathVariable String id,
             @RequestParam(defaultValue = "0") Integer selectedAppIndex,
             RolesForm rolesForm,
@@ -1206,6 +1256,7 @@ public class UserController {
                     viewModel.setSelected(selectedRoles.contains(appRoleDto.getId()));
                     return viewModel;
                 }).sorted().toList();
+        flagEditableAppRoles(id, appRoleViewModels);
 
         // Check if this is the CCMS app and organize roles by section
         boolean isCcmsApp = (currentApp.getName().contains("CCMS")
@@ -1248,6 +1299,24 @@ public class UserController {
         return "edit-user-roles";
     }
 
+    private void flagEditableAppRoles(String userProfileId, List<AppRoleViewModel> editableAppRoles) {
+        if (!accessControlService.canAssignAppRoles(userProfileId)) {
+            editableAppRoles.stream()
+                    .filter(appRole -> !appRole.isSelected())
+                    .forEach(appRoleDto -> {
+                        appRoleDto.setChangeNotAllowed(true);
+                        appRoleDto.setHiddenFromSelection(true);
+                    });
+        }
+
+        if (!accessControlService.canRemoveAppRoles(userProfileId)) {
+            editableAppRoles.stream()
+                    .filter(AppRoleViewModel::isSelected)
+                    .forEach(appRoleDto -> appRoleDto.setChangeNotAllowed(true));
+        }
+
+    }
+
     /**
      * Update user roles for a specific app.
      *
@@ -1259,7 +1328,7 @@ public class UserController {
      * @throws IOException              If an error occurs during user role update
      */
     @PostMapping("/users/edit/{id}/roles")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.canEditUserAppRoleAssignments(#id)")
     public String updateUserRoles(@PathVariable String id,
             @Valid RolesForm rolesForm, BindingResult result,
             @RequestParam int selectedAppIndex,
@@ -1324,7 +1393,7 @@ public class UserController {
     }
 
     @GetMapping("/users/edit/{id}/roles-check-answer")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.canEditUserAppRoleAssignments(#id)")
     public String editUserRolesCheckAnswer(@PathVariable String id,
             @RequestParam(value = "errorMessage", required = false) String errorMessage,
             Model model, HttpSession session, Authentication authentication) {
@@ -1401,7 +1470,7 @@ public class UserController {
     }
 
     @PostMapping("/users/edit/{id}/roles-check-answer")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.canEditUserAppRoleAssignments(#id)")
     public String editUserRolesCheckAnswerSubmit(@PathVariable String id, HttpSession session,
             Authentication authentication) {
         UUID uuid = UUID.fromString(id);
@@ -1800,7 +1869,7 @@ public class UserController {
      * Grant access to a user by updating their profile status to COMPLETE
      */
     @PostMapping("/users/manage/{id}/grant-access")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.canGrantUserAccess(#id)")
     public String grantUserAccess(@PathVariable String id) {
         return "redirect:/admin/users/grant-access/" + id + "/apps";
     }
@@ -1810,12 +1879,21 @@ public class UserController {
      * assigned apps.
      */
     @GetMapping("/users/grant-access/{id}/apps")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.canGrantUserAccess(#id)")
     public String grantAccessEditUserApps(@PathVariable String id, ApplicationsForm applicationsForm, Model model,
-            HttpSession session, Authentication authentication) {
+            RedirectAttributes redirectAttributes, HttpSession session, Authentication authentication) {
         UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         UserType userType = user.getUserType();
+
+        if ((userType == UserType.EXTERNAL && !accessControlService.canAssignExternalAppRoles(id))
+                || (userType == UserType.INTERNAL && !accessControlService.canAssignInternalAppRoles(id))) {
+            log.warn("User {} does not have permission to grant access to {}", editorUserProfile.getId(), id);
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "You do not have sufficient permissions to grant access to the user");
+            return "redirect:/admin/users/manage/" + id;
+        }
+
         Set<AppDto> userAssignedApps = userService.getUserAppsByUserId(id);
         List<AppDto> availableApps = userService.getAppsByUserType(userType);
 
@@ -1844,7 +1922,7 @@ public class UserController {
     }
 
     @PostMapping("/users/grant-access/{id}/apps")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.canGrantUserAccess(#id)")
     public String grantAccessSetSelectedApps(@PathVariable String id,
             @Valid ApplicationsForm applicationsForm, BindingResult result,
             Authentication authentication,
@@ -1894,17 +1972,26 @@ public class UserController {
      * assigned roles.
      */
     @GetMapping("/users/grant-access/{id}/roles")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.canGrantUserAccess(#id)")
     public String grantAccessEditUserRoles(@PathVariable String id,
             @RequestParam(defaultValue = "0") Integer selectedAppIndex,
             RolesForm rolesForm,
             Authentication authentication,
             Model model, HttpSession session,
             RedirectAttributes redirectAttributes) {
-
+        UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         Optional<List<String>> selectedAppsOptional = getListFromHttpSession(session, "grantAccessSelectedApps",
                 String.class);
+        UserType userType = user.getUserType();
+
+        if ((userType == UserType.EXTERNAL && !accessControlService.canAssignExternalAppRoles(id))
+                || (userType == UserType.INTERNAL && !accessControlService.canAssignInternalAppRoles(id))) {
+            log.warn("User {} does not have permission to grant access to {}", editorUserProfile.getId(), id);
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "You do not have sufficient permissions to grant access to the user");
+            return "redirect:/admin/users/manage/" + id;
+        }
 
         if (selectedAppsOptional.isEmpty() || selectedAppsOptional.get().isEmpty()) {
             log.warn("No apps to assign while granting access to user {}. Redirecting to app selection.", id);
@@ -1978,7 +2065,7 @@ public class UserController {
      * Grant Access Flow - Update user roles for a specific app.
      */
     @PostMapping("/users/grant-access/{id}/roles")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.canGrantUserAccess(#id)")
     public String grantAccessUpdateUserRoles(@PathVariable String id,
             @Valid RolesForm rolesForm, BindingResult result,
             @RequestParam int selectedAppIndex,
@@ -2054,7 +2141,8 @@ public class UserController {
      * Grant Access Flow - Get user offices for editing
      */
     @GetMapping("/users/grant-access/{id}/offices")
-    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE)"
+            + " && @accessControlService.canGrantUserAccess(#id)")
     public String grantAccessEditUserOffices(@PathVariable String id, Model model, Authentication authentication, HttpSession session) {
         Optional<List<String>> selectedOfficesOptional = getListFromHttpSession(session, "selectedOffices", String.class);
         List<OfficeDto> userOffices = List.of();
@@ -2169,7 +2257,8 @@ public class UserController {
      * Grant Access Flow - Update user offices
      */
     @PostMapping("/users/grant-access/{id}/offices")
-    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE) && @accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_OFFICE)"
+            + " && @accessControlService.canGrantUserAccess(#id)")
     public String grantAccessUpdateUserOffices(@PathVariable String id,
             @Valid OfficesForm officesForm, BindingResult result,
             Authentication authentication,
@@ -2218,7 +2307,7 @@ public class UserController {
      * Grant Access Flow - Check answers page
      */
     @GetMapping("/users/grant-access/{id}/check-answers")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.canGrantUserAccess(#id)")
     public String grantAccessCheckAnswers(@PathVariable String id,
                                           Model model,
                                           HttpSession session,
@@ -2278,7 +2367,7 @@ public class UserController {
      * Grant Access Flow - Remove an app role from user
      */
     @GetMapping("/users/grant-access/{userId}/remove-app-role/{appId}/{roleName}")
-    @PreAuthorize("@accessControlService.canEditUser(#userId)")
+    @PreAuthorize("@accessControlService.canGrantUserAccess(#id) && @accessControlService.canRemoveAppRoles(#id)")
     public String removeAppRole(@PathVariable String userId, @PathVariable String appId, @PathVariable String roleName,
             Authentication authentication) {
         try {
@@ -2310,12 +2399,22 @@ public class UserController {
      * Grant Access Flow - Process check answers and complete grant
      */
     @PostMapping("/users/grant-access/{id}/check-answers")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.canGrantUserAccess(#id)")
     public String grantAccessProcessCheckAnswers(@PathVariable String id, Authentication authentication,
-            HttpSession session) {
+                                                 RedirectAttributes redirectAttributes, HttpSession session) {
         try {
             UserProfileDto userProfileDto = userService.getUserProfileById(id).orElseThrow();
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+            UserType userType = userProfileDto.getUserType();
+            UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
+
+            if ((userType == UserType.EXTERNAL && !accessControlService.canAssignExternalAppRoles(id))
+                    || (userType == UserType.INTERNAL && !accessControlService.canAssignInternalAppRoles(id))) {
+                log.warn("User {} does not have permission to grant access to {}", editorUserProfile.getId(), id);
+                redirectAttributes.addFlashAttribute("errorMessage",
+                        "You do not have sufficient permissions to grant access to the user");
+                return "redirect:/admin/users/manage/" + id;
+            }
 
             Set<String> allSelectedRoles = getSetFromHttpSession(session, "allSelectedRoles", String.class)
                     .orElseThrow(() -> new RuntimeException("No roles selected for assignment"));
@@ -2380,7 +2479,7 @@ public class UserController {
      * Grant Access Flow - Show confirmation page
      */
     @GetMapping("/users/grant-access/{id}/confirmation")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.canGrantUserAccess(#id)")
     public String grantAccessConfirmation(@PathVariable String id, Model model) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         model.addAttribute("user", user);
@@ -2972,12 +3071,12 @@ public class UserController {
                 && changeDetails != null
                 && !changeDetails.isEmpty()) {
 
+            String firmName = user.getFirm() != null ? user.getFirm().getName() : "";
             notificationService.notifyUserAccessChange(
                     user.getId(),
                     user.getEntraUser().getFirstName(),
                     user.getEntraUser().getEmail(),
-                    changeType,
-                    changeDetails
+                    firmName
             );
         }
     }

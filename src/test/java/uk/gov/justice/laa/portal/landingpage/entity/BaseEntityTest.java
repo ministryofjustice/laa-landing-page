@@ -42,8 +42,7 @@ public class BaseEntityTest {
 
     protected App buildTestLaaApp() {
         return App.builder().name("Test App").entraAppId("Entra App Id").appType(AppType.LAA).url("http://test.com")
-                .title("Test App Title").description("Test App Description").oidGroupName("Oid Group Name")
-                .securityGroupOid("SecGroupId").securityGroupName("SecGroup Name")
+                .description("Test App Description").securityGroupOid("SecGroupId")
                 .build();
     }
 
