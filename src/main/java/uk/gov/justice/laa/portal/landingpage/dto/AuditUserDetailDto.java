@@ -112,6 +112,16 @@ public class AuditUserDetailDto implements Serializable {
     private boolean hasNoProfile;
 
     /**
+     * Flag indicating if user has no role
+     */
+    private boolean isNoRole;
+
+    /**
+     * Flag indicating if user has status pending
+     */
+    private boolean isPending;
+
+    /**
      * Whether the user's account is enabled.
      */
     private boolean enabled;

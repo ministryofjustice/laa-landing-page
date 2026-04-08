@@ -1775,26 +1775,56 @@ public class UserService {
     }
 
     /**
-     * Determine account status for audit table Returns: "Active", "Inactive",
-     * "Pending", or
-     * "Disabled"
+     * Determine account status for audit table Returns: "Disabled", "Activation pending",
+     * "Complete", "No roles assigned"
+     * "Incomplete"
      */
     private String determineAccountStatus(EntraUser user, List<UserProfile> profiles) {
+
         // Check if user has any pending profiles
-        boolean hasPending = profiles.stream()
-                .anyMatch(profile -> profile.getUserProfileStatus() == UserProfileStatus.PENDING);
+        boolean hasPending = profiles.isEmpty() || profiles.stream()
+                .anyMatch(profile -> profile.getUserProfileStatus() == null || profile.getUserProfileStatus() == UserProfileStatus.PENDING);
+        // Check if user has roles assigned
+        boolean noRolesAssigned = profiles.isEmpty() || profiles.stream()
+                .anyMatch(userProfile ->
+                        userProfile.getAppRoles() == null || userProfile.getAppRoles().isEmpty()
+                );
 
-        if (hasPending) {
-            return "Pending";
-        }
-
-        // Check user status
-        if (user.getUserStatus() == UserStatus.DEACTIVE) {
+        // user disable
+        if (!user.isEnabled()) {
             return "Disabled";
+        } else { //user active
+            // user is complete
+            if (!hasPending) {
+                if (user.getInvitationStatus() != null) {
+                    switch (user.getInvitationStatus().name()) {
+                        case "AWAITING_VERIFICATION" -> {
+                            return "Activation pending";
+                        }
+                        case "VERIFICATION_SUCCESS" -> {
+                            return "Complete";
+                        }
+                        case "VERIFICATION_FAILED" -> {
+                            return "Activation failed";
+                        }
+                        default -> {
+                            return "Incomplete";
+                        }
+                    }
+                }
+            } else { // user is incomplete user hasn't roles assigned any roles
+                if (user.getInvitationStatus() != null) {
+                    if (user.getInvitationStatus().name().equals("VERIFICATION_SUCCESS")) {
+                        //check if user has roles assigned
+                        if (noRolesAssigned) {
+                            return "No roles assigned";
+                        }
+                    }
+                }
+            }
         }
-
-        // All other cases considered active
-        return "Active";
+        //All the other situation is incomplete
+        return "Incomplete";
     }
 
     /**
@@ -1942,6 +1972,14 @@ public class UserService {
         // Get all profiles for this user
         List<UserProfile> allProfiles = new ArrayList<>(entraUser.getUserProfiles());
 
+        // Check if user has any pending profiles
+        boolean hasPending = allProfiles.stream()
+                .anyMatch(up -> up.getUserProfileStatus() == null || UserProfileStatus.PENDING.equals(up.getUserProfileStatus()));
+
+        //Check if user haven't assigned any roles
+        boolean noRolesAssigned = allProfiles.stream()
+                .anyMatch(userProfile -> userProfile.getAppRoles() == null || userProfile.getAppRoles().isEmpty());
+
         // Sort with active profile first
         allProfiles.sort((p1, p2) -> Boolean.compare(p2.isActiveProfile(), p1.isActiveProfile()));
 
@@ -1975,14 +2013,15 @@ public class UserService {
                 .createdDate(entraUser.getCreatedDate()).createdBy(entraUser.getCreatedBy())
                 // TODO: Fetch lastLoginDate from Microsoft Graph API
                 .lastLoginDate(null)
-                // TODO: Fetch activationStatus from TechServices API or SILAS API
-                .activationStatus(null)
+                .activationStatus(entraUser.getInvitationStatus() != null ? entraUser.getInvitationStatus().name() : null)
                 .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
                         : "UNKNOWN")
                 .profiles(profileDtos).totalProfiles(totalProfiles).totalProfilePages(totalPages)
                 .currentProfilePage(profilePage).hasNoProfile(false)
                 .entraOid(entraUser.getEntraOid())
                 .accountStatusHistory(accountStatusHistory)
+                .isPending(hasPending)
+                .isNoRole(noRolesAssigned)
                 .build();
     }
 
@@ -2003,6 +2042,14 @@ public class UserService {
                 ? new ArrayList<>(entraUser.getUserProfiles())
                 : Collections.emptyList();
 
+        //check if user is pending
+        boolean hasPending = allProfiles.isEmpty() || allProfiles.stream()
+                .anyMatch(profile -> profile.getUserProfileStatus() == UserProfileStatus.PENDING);
+
+        //Check if user haven't assigned any roles
+        boolean noRolesAssigned =  allProfiles.isEmpty() || allProfiles.stream()
+                .anyMatch(profile ->  profile.getAppRoles() == null || profile.getAppRoles().isEmpty());
+
         // Determine user type using shared method
         String userType = determineUserType(entraUser, allProfiles);
 
@@ -2021,14 +2068,15 @@ public class UserService {
                 .createdDate(entraUser.getCreatedDate()).createdBy(entraUser.getCreatedBy())
                 // TODO: Fetch lastLoginDate from Microsoft Graph API
                 .lastLoginDate(null)
-                // TODO: Fetch activationStatus from TechServices API or SILAS API
-                .activationStatus(null)
+                .activationStatus(entraUser.getInvitationStatus() != null ? entraUser.getInvitationStatus().name() : null)
                 .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
                         : "UNKNOWN")
                 .profiles(Collections.emptyList()).totalProfiles(0).totalProfilePages(0)
                 .currentProfilePage(1).hasNoProfile(true)
                 .entraOid(entraUser.getEntraOid())
                 .accountStatusHistory(accountStatusHistory)
+                .isPending(hasPending)
+                .isNoRole(noRolesAssigned)
                 .build();
     }
 
