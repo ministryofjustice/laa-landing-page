@@ -25,7 +25,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import org.apache.commons.collections4.CollectionUtils;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -201,10 +200,11 @@ public class UserService {
                     .filter(appRole -> appRole.getUserTypeRestriction() != null
                             && Arrays.stream(appRole.getUserTypeRestriction())
                                     .anyMatch(type -> type == UserType.EXTERNAL))
-                    .map(AppRole::getName)
+                    .map(AppRole::getId)
+                    .map(UUID::toString)
                     .collect(Collectors.toSet());
 
-            if (!CollectionUtils.isEqualCollection(assignableExternalRoles, userCurrentExternalRoles)) {
+            if (!userCurrentExternalRoles.containsAll(assignableExternalRoles)) {
                 throw new RuntimeException("User is not allowed to add new roles");
             }
         }
@@ -220,10 +220,11 @@ public class UserService {
                     .filter(appRole -> appRole.getUserTypeRestriction() != null
                             && Arrays.stream(appRole.getUserTypeRestriction())
                                     .anyMatch(type -> type == UserType.INTERNAL))
-                    .map(AppRole::getName)
+                    .map(AppRole::getId)
+                    .map(UUID::toString)
                     .collect(Collectors.toSet());
 
-            if (!CollectionUtils.isEqualCollection(assignableInternalRoles, userCurrentInternalRoles)) {
+            if (!userCurrentInternalRoles.containsAll(assignableInternalRoles)) {
                 throw new RuntimeException("User is not allowed to add new roles");
             }
 

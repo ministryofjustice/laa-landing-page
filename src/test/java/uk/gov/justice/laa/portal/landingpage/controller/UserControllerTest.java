@@ -5222,10 +5222,16 @@ class UserControllerTest {
         ccmsRole.setId(UUID.randomUUID().toString());
         ccmsRole.setCcmsCode("XXCCMS_FIRM_ADMIN"); // CCMS role code
 
+        AppRoleViewModel ccmsRoleViewModel = new AppRoleViewModel();
+        ccmsRoleViewModel.setCcmsCode(ccmsRole.getCcmsCode());
+        ccmsRoleViewModel.setId(ccmsRole.getId());
+
         final List<AppRoleDto> roles = List.of(ccmsRole);
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("selectedApps", List.of("app1"));
 
+        when(accessControlService.canAssignAppRoles(anyString())).thenReturn(true);
+        when(accessControlService.canRemoveAppRoles(anyString())).thenReturn(true);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
         when(userService.getAppByAppId("app1")).thenReturn(Optional.of(regularApp));
         when(userService.getAppRolesByAppIdAndUserType(eq("app1"), any(), eq(null))).thenReturn(roles);
@@ -5242,10 +5248,17 @@ class UserControllerTest {
         assertThat(view).isEqualTo("edit-user-roles");
         assertThat(model.getAttribute("isCcmsApp")).isEqualTo(true);
         @SuppressWarnings("unchecked")
-        Map<String, List<AppRoleDto>> ccmsRolesBySection = (Map<String, List<AppRoleDto>>) model
+        Map<String, List<AppRoleViewModel>> ccmsRolesBySection = (Map<String, List<AppRoleViewModel>>) model
                 .getAttribute("ccmsRolesBySection");
+        Map<String, Boolean> ccmsRolesBySectionFlags = (Map<String, Boolean>) model
+                .getAttribute("ccmsRoleDisplayFlags");
         assertThat(ccmsRolesBySection).isNotNull();
-        assertThat(ccmsRolesBySection.get("Provider")).containsExactly(ccmsRole);
+        assertThat(ccmsRolesBySection.get("Provider")).containsExactly(ccmsRoleViewModel);
+        assertThat(ccmsRolesBySectionFlags).isNotNull();
+        assertThat(ccmsRolesBySectionFlags.get("Provider")).isTrue();
+        assertThat(ccmsRolesBySectionFlags.get("Chambers")).isFalse();
+        assertThat(ccmsRolesBySectionFlags.get("Advocate")).isFalse();
+        assertThat(ccmsRolesBySectionFlags.get("Other")).isFalse();
     }
 
     @Test
@@ -5265,25 +5278,47 @@ class UserControllerTest {
         providerRole.setCcmsCode("XXCCMS_FIRM_ADMIN");
         providerRole.setApp(ccmsApp);
 
+        AppRoleViewModel providerRoleViewModel = new AppRoleViewModel();
+        providerRoleViewModel.setCcmsCode(providerRole.getCcmsCode());
+        providerRoleViewModel.setId(providerRole.getId());
+        providerRoleViewModel.setAppName(ccmsApp.getName());
+
         AppRoleDto chambersRole = new AppRoleDto();
         chambersRole.setId(UUID.randomUUID().toString());
         chambersRole.setCcmsCode("XXCCMS_CHAMBERS_ADMIN");
         chambersRole.setApp(ccmsApp);
+
+        AppRoleViewModel chambersRoleViewModel = new AppRoleViewModel();
+        chambersRoleViewModel.setCcmsCode(chambersRole.getCcmsCode());
+        chambersRoleViewModel.setId(chambersRole.getId());
+        chambersRoleViewModel.setAppName(ccmsApp.getName());
 
         AppRoleDto advocateRole = new AppRoleDto();
         advocateRole.setId(UUID.randomUUID().toString());
         advocateRole.setCcmsCode("XXCCMS_ADVOCATE");
         advocateRole.setApp(ccmsApp);
 
+        AppRoleViewModel advocateRoleViewModel = new AppRoleViewModel();
+        advocateRoleViewModel.setCcmsCode(advocateRole.getCcmsCode());
+        advocateRoleViewModel.setId(advocateRole.getId());
+        advocateRoleViewModel.setAppName(ccmsApp.getName());
+
         AppRoleDto otherRole = new AppRoleDto();
         otherRole.setId(UUID.randomUUID().toString());
         otherRole.setCcmsCode("XXCCMS_UNKNOWN_TYPE");
         otherRole.setApp(ccmsApp);
 
+        AppRoleViewModel otherRoleViewModel = new AppRoleViewModel();
+        otherRoleViewModel.setCcmsCode(otherRole.getCcmsCode());
+        otherRoleViewModel.setId(otherRole.getId());
+        otherRoleViewModel.setAppName(ccmsApp.getName());
+
         final List<AppRoleDto> roles = List.of(providerRole, chambersRole, advocateRole, otherRole);
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("selectedApps", List.of("app1"));
 
+        when(accessControlService.canAssignAppRoles(anyString())).thenReturn(true);
+        when(accessControlService.canRemoveAppRoles(anyString())).thenReturn(true);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
         when(userService.getAppByAppId("app1")).thenReturn(Optional.of(ccmsApp));
         when(userService.getAppRolesByAppIdAndUserType(eq("app1"), any(), eq(null))).thenReturn(roles);
@@ -5301,13 +5336,13 @@ class UserControllerTest {
         assertThat(model.getAttribute("isCcmsApp")).isEqualTo(true);
 
         @SuppressWarnings("unchecked")
-        Map<String, List<AppRoleDto>> ccmsRolesBySection = (Map<String, List<AppRoleDto>>) model
+        Map<String, List<AppRoleViewModel>> ccmsRolesBySection = (Map<String, List<AppRoleViewModel>>) model
                 .getAttribute("ccmsRolesBySection");
         assertThat(ccmsRolesBySection).isNotNull();
-        assertThat(ccmsRolesBySection.get("Provider")).containsExactly(providerRole);
-        assertThat(ccmsRolesBySection.get("Chambers")).containsExactly(chambersRole);
-        assertThat(ccmsRolesBySection.get("Advocate")).containsExactly(advocateRole);
-        assertThat(ccmsRolesBySection.get("Other")).containsExactly(otherRole);
+        assertThat(ccmsRolesBySection.get("Provider")).containsExactly(providerRoleViewModel);
+        assertThat(ccmsRolesBySection.get("Chambers")).containsExactly(chambersRoleViewModel);
+        assertThat(ccmsRolesBySection.get("Advocate")).containsExactly(advocateRoleViewModel);
+        assertThat(ccmsRolesBySection.get("Other")).containsExactly(otherRoleViewModel);
     }
 
     @Test
@@ -5399,14 +5434,24 @@ class UserControllerTest {
         ccmsRole.setId(UUID.randomUUID().toString());
         ccmsRole.setCcmsCode("XXCCMS_FIRM_ADMIN");
 
+        AppRoleViewModel ccmsRoleViewModel = new AppRoleViewModel();
+        ccmsRoleViewModel.setId(ccmsRole.getId());
+        ccmsRoleViewModel.setCcmsCode(ccmsRole.getCcmsCode());
+
         AppRoleDto regularRole = new AppRoleDto();
         regularRole.setId(UUID.randomUUID().toString());
         regularRole.setCcmsCode("REGULAR_ROLE");
+
+        AppRoleViewModel roleViewModel = new AppRoleViewModel();
+        roleViewModel.setId(regularRole.getId());
+        roleViewModel.setCcmsCode(regularRole.getCcmsCode());
 
         final List<AppRoleDto> roles = List.of(ccmsRole, regularRole);
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("selectedApps", List.of("app1"));
 
+        when(accessControlService.canAssignAppRoles(anyString())).thenReturn(true);
+        when(accessControlService.canRemoveAppRoles(anyString())).thenReturn(true);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
         when(userService.getAppByAppId("app1")).thenReturn(Optional.of(mixedApp));
         when(userService.getAppRolesByAppIdAndUserType(eq("app1"), any(), eq(null))).thenReturn(roles);
@@ -5424,13 +5469,20 @@ class UserControllerTest {
         assertThat(model.getAttribute("isCcmsApp")).isEqualTo(true);
 
         @SuppressWarnings("unchecked")
-        Map<String, List<AppRoleDto>> ccmsRolesBySection = (Map<String, List<AppRoleDto>>) model
+        Map<String, List<AppRoleViewModel>> ccmsRolesBySection = (Map<String, List<AppRoleViewModel>>) model
                 .getAttribute("ccmsRolesBySection");
         assertThat(ccmsRolesBySection).isNotNull();
-        assertThat(ccmsRolesBySection.get("Provider")).containsExactly(ccmsRole);
+        assertThat(ccmsRolesBySection.get("Provider")).containsExactly(ccmsRoleViewModel);
         // Regular role should not appear in CCMS sections
         assertThat(ccmsRolesBySection.values().stream().flatMap(List::stream).collect(Collectors.toList()))
-                .containsExactly(ccmsRole);
+                .containsExactly(ccmsRoleViewModel);
+        Map<String, Boolean> ccmsRolesBySectionFlags = (Map<String, Boolean>) model
+                .getAttribute("ccmsRoleDisplayFlags");
+        assertThat(ccmsRolesBySection).isNotNull();
+        assertThat(ccmsRolesBySectionFlags.get("Provider")).isTrue();
+        assertThat(ccmsRolesBySectionFlags.get("Chambers")).isFalse();
+        assertThat(ccmsRolesBySectionFlags.get("Advocate")).isFalse();
+        assertThat(ccmsRolesBySectionFlags.get("Other")).isFalse();
     }
 
     // ===== CCMS-SPECIFIC TESTS FOR grantAccessEditUserRoles =====
@@ -5487,6 +5539,10 @@ class UserControllerTest {
         ccmsRole.setId(UUID.randomUUID().toString());
         ccmsRole.setCcmsCode("XXCCMS_OFFICE_ADMIN");
 
+        AppRoleViewModel ccmsRoleViewModel = new AppRoleViewModel();
+        ccmsRoleViewModel.setCcmsCode(ccmsRole.getCcmsCode());
+        ccmsRoleViewModel.setId(ccmsRole.getId());
+
         final List<AppRoleDto> roles = List.of(ccmsRole);
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("grantAccessSelectedApps", List.of("app1"));
@@ -5507,10 +5563,17 @@ class UserControllerTest {
         assertThat(view).isEqualTo("grant-access-user-roles");
         assertThat(model.getAttribute("isCcmsApp")).isEqualTo(true);
         @SuppressWarnings("unchecked")
-        Map<String, List<AppRoleDto>> ccmsRolesBySection = (Map<String, List<AppRoleDto>>) model
+        Map<String, List<AppRoleViewModel>> ccmsRolesBySection = (Map<String, List<AppRoleViewModel>>) model
                 .getAttribute("ccmsRolesBySection");
+        Map<String, Boolean> ccmsRolesBySectionFlags = (Map<String, Boolean>) model
+                .getAttribute("ccmsRoleDisplayFlags");
         assertThat(ccmsRolesBySection).isNotNull();
-        assertThat(ccmsRolesBySection.get("Provider")).containsExactly(ccmsRole);
+        assertThat(ccmsRolesBySection.get("Provider")).containsExactly(ccmsRoleViewModel);
+        assertThat(ccmsRolesBySectionFlags).isNotNull();
+        assertThat(ccmsRolesBySectionFlags.get("Provider")).isTrue();
+        assertThat(ccmsRolesBySectionFlags.get("Chambers")).isFalse();
+        assertThat(ccmsRolesBySectionFlags.get("Advocate")).isFalse();
+        assertThat(ccmsRolesBySectionFlags.get("Other")).isFalse();
     }
 
     @Test
@@ -5530,30 +5593,60 @@ class UserControllerTest {
         firmRole.setCcmsCode("XXCCMS_FIRM_USER");
         firmRole.setApp(ccmsApp);
 
+        AppRoleViewModel firmRoleViewModel = new AppRoleViewModel();
+        firmRoleViewModel.setCcmsCode(firmRole.getCcmsCode());
+        firmRoleViewModel.setId(firmRole.getId());
+        firmRoleViewModel.setAppName(ccmsApp.getName());
+
         AppRoleDto officeRole = new AppRoleDto();
         officeRole.setId(UUID.randomUUID().toString());
         officeRole.setCcmsCode("XXCCMS_OFFICE_MANAGER");
         officeRole.setApp(ccmsApp);
+
+        AppRoleViewModel officeRoleViewModel = new AppRoleViewModel();
+        officeRoleViewModel.setCcmsCode(officeRole.getCcmsCode());
+        officeRoleViewModel.setId(officeRole.getId());
+        officeRoleViewModel.setAppName(ccmsApp.getName());
 
         AppRoleDto crossOfficeRole = new AppRoleDto();
         crossOfficeRole.setId(UUID.randomUUID().toString());
         crossOfficeRole.setCcmsCode("XXCCMS_CROSS_OFFICE");
         crossOfficeRole.setApp(ccmsApp);
 
+        AppRoleViewModel crossOfficeRoleViewModel = new AppRoleViewModel();
+        crossOfficeRoleViewModel.setCcmsCode(crossOfficeRole.getCcmsCode());
+        crossOfficeRoleViewModel.setId(crossOfficeRole.getId());
+        crossOfficeRoleViewModel.setAppName(ccmsApp.getName());
+
         AppRoleDto chambersRole = new AppRoleDto();
         chambersRole.setId(UUID.randomUUID().toString());
         chambersRole.setCcmsCode("XXCCMS_CHAMBERS_USER");
         chambersRole.setApp(ccmsApp);
+
+        AppRoleViewModel chambersRoleViewModel = new AppRoleViewModel();
+        chambersRoleViewModel.setCcmsCode(chambersRole.getCcmsCode());
+        chambersRoleViewModel.setId(chambersRole.getId());
+        chambersRoleViewModel.setAppName(ccmsApp.getName());
 
         AppRoleDto counselRole = new AppRoleDto();
         counselRole.setId(UUID.randomUUID().toString());
         counselRole.setCcmsCode("XXCCMS_COUNSEL");
         counselRole.setApp(ccmsApp);
 
+        AppRoleViewModel counselRoleViewModel = new AppRoleViewModel();
+        counselRoleViewModel.setCcmsCode(counselRole.getCcmsCode());
+        counselRoleViewModel.setId(counselRole.getId());
+        counselRoleViewModel.setAppName(ccmsApp.getName());
+
         AppRoleDto advocateRole = new AppRoleDto();
         advocateRole.setId(UUID.randomUUID().toString());
         advocateRole.setCcmsCode("XXCCMS_ADVOCATE");
         advocateRole.setApp(ccmsApp);
+
+        AppRoleViewModel advocateRoleViewModel = new AppRoleViewModel();
+        advocateRoleViewModel.setCcmsCode(advocateRole.getCcmsCode());
+        advocateRoleViewModel.setId(advocateRole.getId());
+        advocateRoleViewModel.setAppName(ccmsApp.getName());
 
         final List<AppRoleDto> roles = List.of(firmRole, officeRole, crossOfficeRole, chambersRole, counselRole,
                 advocateRole);
@@ -5577,18 +5670,18 @@ class UserControllerTest {
         assertThat(model.getAttribute("isCcmsApp")).isEqualTo(true);
 
         @SuppressWarnings("unchecked")
-        Map<String, List<AppRoleDto>> ccmsRolesBySection = (Map<String, List<AppRoleDto>>) model
+        Map<String, List<AppRoleViewModel>> ccmsRolesBySection = (Map<String, List<AppRoleViewModel>>) model
                 .getAttribute("ccmsRolesBySection");
         assertThat(ccmsRolesBySection).isNotNull();
 
         // Verify Provider section contains firm, office, and cross office roles
-        assertThat(ccmsRolesBySection.get("Provider")).containsExactlyInAnyOrder(firmRole, officeRole, crossOfficeRole);
+        assertThat(ccmsRolesBySection.get("Provider")).containsExactlyInAnyOrder(firmRoleViewModel, officeRoleViewModel, crossOfficeRoleViewModel);
 
         // Verify Chambers section contains chambers and counsel roles
-        assertThat(ccmsRolesBySection.get("Chambers")).containsExactlyInAnyOrder(chambersRole, counselRole);
+        assertThat(ccmsRolesBySection.get("Chambers")).containsExactlyInAnyOrder(chambersRoleViewModel, counselRoleViewModel);
 
         // Verify Advocate section contains advocate role
-        assertThat(ccmsRolesBySection.get("Advocate")).containsExactly(advocateRole);
+        assertThat(ccmsRolesBySection.get("Advocate")).containsExactly(advocateRoleViewModel);
     }
 
     @Test
@@ -5643,6 +5736,10 @@ class UserControllerTest {
         ccmsRole.setId(UUID.randomUUID().toString());
         ccmsRole.setCcmsCode("XXCCMS_CASE_MANAGER");
 
+        AppRoleViewModel ccmsRoleViewModel = new AppRoleViewModel();
+        ccmsRoleViewModel.setCcmsCode(ccmsRole.getCcmsCode());
+        ccmsRoleViewModel.setId(ccmsRole.getId());
+
         final List<AppRoleDto> roles = List.of(ccmsRole);
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("grantAccessSelectedApps", List.of("app1", "app2"));
@@ -5671,10 +5768,17 @@ class UserControllerTest {
         assertThat(model.getAttribute("isCcmsApp")).isEqualTo(true);
 
         @SuppressWarnings("unchecked")
-        Map<String, List<AppRoleDto>> ccmsRolesBySection = (Map<String, List<AppRoleDto>>) model
+        Map<String, List<AppRoleViewModel>> ccmsRolesBySection = (Map<String, List<AppRoleViewModel>>) model
                 .getAttribute("ccmsRolesBySection");
+        Map<String, Boolean> ccmsRolesBySectionFlags = (Map<String, Boolean>) model
+                .getAttribute("ccmsRoleDisplayFlags");
         assertThat(ccmsRolesBySection).isNotNull();
-        assertThat(ccmsRolesBySection.get("Provider")).containsExactly(ccmsRole);
+        assertThat(ccmsRolesBySection.get("Provider")).containsExactly(ccmsRoleViewModel);
+        assertThat(ccmsRolesBySectionFlags).isNotNull();
+        assertThat(ccmsRolesBySectionFlags.get("Provider")).isTrue();
+        assertThat(ccmsRolesBySectionFlags.get("Chambers")).isFalse();
+        assertThat(ccmsRolesBySectionFlags.get("Advocate")).isFalse();
+        assertThat(ccmsRolesBySectionFlags.get("Other")).isFalse();
     }
 
     @Test
@@ -6940,7 +7044,8 @@ class UserControllerTest {
                 assertThat(anno.value().equals("@accessControlService.canEditUserAppRoleAssignments(#id)")
                         || anno.value().equals("@accessControlService.canEditUser(#id)")
                         || anno.value().equals("@accessControlService.canGrantUserAccess(#id)")
-                        || anno.value().equals("@accessControlService.canGrantUserAccess(#id) && @accessControlService.canRemoveAppRoles(#id)")).isTrue();
+                        || anno.value().equals("@accessControlService.canGrantUserAccess(#id) && @accessControlService.canRemoveAppRoles(#id)")
+                        || anno.value().equals("@accessControlService.canAssignAppRoles(#id) || @accessControlService.canRemoveAppRoles(#id) || @accessControlService.canEditUser(#id)")).isTrue();
                 continue;
             }
             if (canAcessMethods.contains(method.getName())) {

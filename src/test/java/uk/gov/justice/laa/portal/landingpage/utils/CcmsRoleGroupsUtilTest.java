@@ -7,7 +7,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 
-import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
 /**
  * Test class for exercising CcmsRoleGroupsUtil
@@ -19,23 +19,23 @@ public class CcmsRoleGroupsUtilTest {
     @Test
     void organizeCcmsRolesBySection_shouldOrganizeProviderRoles() {
         // Given
-        List<AppRoleDto> ccmsRoles = List.of(
-            createAppRoleDto("role1", "XXCCMS_FIRM_ADMIN"),
-            createAppRoleDto("role2", "XXCCMS_OFFICE_MANAGER"),
-            createAppRoleDto("role3", "XXCCMS_CROSS_OFFICE_USER"),
-            createAppRoleDto("role4", "XXCCMS_PROVIDER_ADMIN"),
-            createAppRoleDto("role5", "XXCCMS_CASE_MANAGER"),
-            createAppRoleDto("role6", "XXCCMS_BILL_REVIEWER")
+        List<AppRoleViewModel> ccmsRoles = List.of(
+            createAppRoleViewModel("role1", "XXCCMS_FIRM_ADMIN"),
+            createAppRoleViewModel("role2", "XXCCMS_OFFICE_MANAGER"),
+            createAppRoleViewModel("role3", "XXCCMS_CROSS_OFFICE_USER"),
+            createAppRoleViewModel("role4", "XXCCMS_PROVIDER_ADMIN"),
+            createAppRoleViewModel("role5", "XXCCMS_CASE_MANAGER"),
+            createAppRoleViewModel("role6", "XXCCMS_BILL_REVIEWER")
         );
 
         // When
-        Map<String, List<AppRoleDto>> result = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
+        Map<String, List<AppRoleViewModel>> result = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
 
         // Then
         assertThat(result).containsKey(CcmsRoleGroupsUtil.PROVIDER_SECTION);
         assertThat(result.get(CcmsRoleGroupsUtil.PROVIDER_SECTION)).hasSize(6);
         assertThat(result.get(CcmsRoleGroupsUtil.PROVIDER_SECTION))
-            .extracting(AppRoleDto::getCcmsCode)
+            .extracting(AppRoleViewModel::getCcmsCode)
             .containsExactlyInAnyOrder(
                 "XXCCMS_FIRM_ADMIN", 
                 "XXCCMS_OFFICE_MANAGER", 
@@ -49,20 +49,20 @@ public class CcmsRoleGroupsUtilTest {
     @Test
     void organizeCcmsRolesBySection_shouldOrganizeChambersRoles() {
         // Given
-        List<AppRoleDto> ccmsRoles = List.of(
-            createAppRoleDto("role1", "XXCCMS_CHAMBERS_ADMIN"),
-            createAppRoleDto("role2", "XXCCMS_CHAMBERS_USER"),
-            createAppRoleDto("role3", "XXCCMS_COUNSEL")
+        List<AppRoleViewModel> ccmsRoles = List.of(
+            createAppRoleViewModel("role1", "XXCCMS_CHAMBERS_ADMIN"),
+            createAppRoleViewModel("role2", "XXCCMS_CHAMBERS_USER"),
+            createAppRoleViewModel("role3", "XXCCMS_COUNSEL")
         );
 
         // When
-        Map<String, List<AppRoleDto>> result = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
+        Map<String, List<AppRoleViewModel>> result = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
 
         // Then
         assertThat(result).containsKey(CcmsRoleGroupsUtil.CHAMBERS_SECTION);
         assertThat(result.get(CcmsRoleGroupsUtil.CHAMBERS_SECTION)).hasSize(3);
         assertThat(result.get(CcmsRoleGroupsUtil.CHAMBERS_SECTION))
-            .extracting(AppRoleDto::getCcmsCode)
+            .extracting(AppRoleViewModel::getCcmsCode)
             .containsExactlyInAnyOrder(
                 "XXCCMS_CHAMBERS_ADMIN", 
                 "XXCCMS_CHAMBERS_USER", 
@@ -73,39 +73,39 @@ public class CcmsRoleGroupsUtilTest {
     @Test
     void organizeCcmsRolesBySection_shouldOrganizeAdvocateRoles() {
         // Given
-        List<AppRoleDto> ccmsRoles = List.of(
-            createAppRoleDto("role1", "XXCCMS_ADVOCATE"),
-            createAppRoleDto("role2", "XXCCMS_ADVOCATE_ADMIN")
+        List<AppRoleViewModel> ccmsRoles = List.of(
+            createAppRoleViewModel("role1", "XXCCMS_ADVOCATE"),
+            createAppRoleViewModel("role2", "XXCCMS_ADVOCATE_ADMIN")
         );
 
         // When
-        Map<String, List<AppRoleDto>> result = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
+        Map<String, List<AppRoleViewModel>> result = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
 
         // Then
         assertThat(result).containsKey(CcmsRoleGroupsUtil.ADVOCATE_SECTION);
         assertThat(result.get(CcmsRoleGroupsUtil.ADVOCATE_SECTION)).hasSize(2);
         assertThat(result.get(CcmsRoleGroupsUtil.ADVOCATE_SECTION))
-            .extracting(AppRoleDto::getCcmsCode)
+            .extracting(AppRoleViewModel::getCcmsCode)
             .containsExactlyInAnyOrder("XXCCMS_ADVOCATE", "XXCCMS_ADVOCATE_ADMIN");
     }
 
     @Test
     void organizeCcmsRolesBySection_shouldOrganizeOtherRoles() {
         // Given
-        List<AppRoleDto> ccmsRoles = List.of(
-            createAppRoleDto("role1", "XXCCMS_UNKNOWN_ROLE"),
-            createAppRoleDto("role2", "XXCCMS_SPECIAL_ACCESS"),
-            createAppRoleDto("role3", "XXCCMS_SYSTEM_ADMIN")
+        List<AppRoleViewModel> ccmsRoles = List.of(
+            createAppRoleViewModel("role1", "XXCCMS_UNKNOWN_ROLE"),
+            createAppRoleViewModel("role2", "XXCCMS_SPECIAL_ACCESS"),
+            createAppRoleViewModel("role3", "XXCCMS_SYSTEM_ADMIN")
         );
 
         // When
-        Map<String, List<AppRoleDto>> result = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
+        Map<String, List<AppRoleViewModel>> result = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
 
         // Then
         assertThat(result).containsKey(CcmsRoleGroupsUtil.OTHER_SECTION);
         assertThat(result.get(CcmsRoleGroupsUtil.OTHER_SECTION)).hasSize(3);
         assertThat(result.get(CcmsRoleGroupsUtil.OTHER_SECTION))
-            .extracting(AppRoleDto::getCcmsCode)
+            .extracting(AppRoleViewModel::getCcmsCode)
             .containsExactlyInAnyOrder(
                 "XXCCMS_UNKNOWN_ROLE", 
                 "XXCCMS_SPECIAL_ACCESS", 
@@ -116,17 +116,17 @@ public class CcmsRoleGroupsUtilTest {
     @Test
     void organizeCcmsRolesBySection_shouldOrganizeAllSections() {
         // Given
-        List<AppRoleDto> ccmsRoles = List.of(
-            createAppRoleDto("provider1", "XXCCMS_FIRM_ADMIN"),
-            createAppRoleDto("provider2", "XXCCMS_OFFICE_USER"),
-            createAppRoleDto("chambers1", "XXCCMS_CHAMBERS_ADMIN"),
-            createAppRoleDto("chambers2", "XXCCMS_COUNSEL"),
-            createAppRoleDto("advocate1", "XXCCMS_ADVOCATE"),
-            createAppRoleDto("other1", "XXCCMS_SYSTEM_ROLE")
+        List<AppRoleViewModel> ccmsRoles = List.of(
+            createAppRoleViewModel("provider1", "XXCCMS_FIRM_ADMIN"),
+            createAppRoleViewModel("provider2", "XXCCMS_OFFICE_USER"),
+            createAppRoleViewModel("chambers1", "XXCCMS_CHAMBERS_ADMIN"),
+            createAppRoleViewModel("chambers2", "XXCCMS_COUNSEL"),
+            createAppRoleViewModel("advocate1", "XXCCMS_ADVOCATE"),
+            createAppRoleViewModel("other1", "XXCCMS_SYSTEM_ROLE")
         );
 
         // When
-        Map<String, List<AppRoleDto>> result = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
+        Map<String, List<AppRoleViewModel>> result = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
 
         // Then
         assertThat(result).hasSize(4);
@@ -146,10 +146,10 @@ public class CcmsRoleGroupsUtilTest {
     @Test
     void organizeCcmsRolesBySection_shouldHandleEmptyList() {
         // Given
-        List<AppRoleDto> ccmsRoles = new ArrayList<>();
+        List<AppRoleViewModel> ccmsRoles = new ArrayList<>();
 
         // When
-        Map<String, List<AppRoleDto>> result = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
+        Map<String, List<AppRoleViewModel>> result = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
 
         // Then
         assertThat(result).hasSize(3); // Provider, Chambers, Advocate sections always present
@@ -168,14 +168,14 @@ public class CcmsRoleGroupsUtilTest {
     @Test
     void organizeCcmsRolesBySection_shouldHandleRolesWithNullCcmsCode() {
         // Given
-        List<AppRoleDto> ccmsRoles = List.of(
-            createAppRoleDto("role1", "XXCCMS_FIRM_ADMIN"),
-            createAppRoleDto("role2", null),
-            createAppRoleDto("role3", "XXCCMS_ADVOCATE")
+        List<AppRoleViewModel> ccmsRoles = List.of(
+            createAppRoleViewModel("role1", "XXCCMS_FIRM_ADMIN"),
+            createAppRoleViewModel("role2", null),
+            createAppRoleViewModel("role3", "XXCCMS_ADVOCATE")
         );
 
         // When
-        Map<String, List<AppRoleDto>> result = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
+        Map<String, List<AppRoleViewModel>> result = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
 
         // Then
         assertThat(result.get(CcmsRoleGroupsUtil.PROVIDER_SECTION)).hasSize(1);
@@ -186,10 +186,10 @@ public class CcmsRoleGroupsUtilTest {
     @Test
     void organizeCcmsRolesBySection_shouldMaintainLinkedHashMapOrder() {
         // Given
-        List<AppRoleDto> ccmsRoles = List.of(createAppRoleDto("role1", "XXCCMS_FIRM_ADMIN"));
+        List<AppRoleViewModel> ccmsRoles = List.of(createAppRoleViewModel("role1", "XXCCMS_FIRM_ADMIN"));
 
         // When
-        Map<String, List<AppRoleDto>> result = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
+        Map<String, List<AppRoleViewModel>> result = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
 
         // Then
         assertThat(result.keySet()).containsExactly(
@@ -294,12 +294,12 @@ public class CcmsRoleGroupsUtilTest {
     @Test
     void organizeCcmsRolesBySection_shouldHandleRolesThatMatchMultiplePatterns() {
         // Given - role that could theoretically match multiple patterns (though unlikely in practice)
-        List<AppRoleDto> ccmsRoles = List.of(
-            createAppRoleDto("role1", "XXCCMS_FIRM_CHAMBERS_HYBRID") // Contains both FIRM_ and CHAMBERS_
+        List<AppRoleViewModel> ccmsRoles = List.of(
+            createAppRoleViewModel("role1", "XXCCMS_FIRM_CHAMBERS_HYBRID") // Contains both FIRM_ and CHAMBERS_
         );
 
         // When
-        Map<String, List<AppRoleDto>> result = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
+        Map<String, List<AppRoleViewModel>> result = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
 
         // Then - should be placed in the first matching section (Provider in this case)
         assertThat(result.get(CcmsRoleGroupsUtil.PROVIDER_SECTION)).hasSize(1);
@@ -309,13 +309,13 @@ public class CcmsRoleGroupsUtilTest {
     @Test
     void organizeCcmsRolesBySection_shouldHandleCaseInsensitiveMatching() {
         // Given - testing that patterns are case sensitive as expected
-        List<AppRoleDto> ccmsRoles = List.of(
-            createAppRoleDto("role1", "xxccms_firm_admin"), // lowercase
-            createAppRoleDto("role2", "XXCCMS_FIRM_ADMIN")  // uppercase
+        List<AppRoleViewModel> ccmsRoles = List.of(
+            createAppRoleViewModel("role1", "xxccms_firm_admin"), // lowercase
+            createAppRoleViewModel("role2", "XXCCMS_FIRM_ADMIN")  // uppercase
         );
 
         // When
-        Map<String, List<AppRoleDto>> result = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
+        Map<String, List<AppRoleViewModel>> result = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
 
         // Then - only the properly formatted uppercase role should match Provider pattern
         assertThat(result.get(CcmsRoleGroupsUtil.PROVIDER_SECTION)).hasSize(1);
@@ -325,12 +325,12 @@ public class CcmsRoleGroupsUtilTest {
     @Test
     void organizeCcmsRolesBySection_shouldHandleDuplicateRoles() {
         // Given
-        AppRoleDto role1 = createAppRoleDto("role1", "XXCCMS_FIRM_ADMIN");
-        AppRoleDto role2 = createAppRoleDto("role1", "XXCCMS_FIRM_ADMIN"); // Same ID and code
-        List<AppRoleDto> ccmsRoles = List.of(role1, role2);
+        AppRoleViewModel role1 = createAppRoleViewModel("role1", "XXCCMS_FIRM_ADMIN");
+        AppRoleViewModel role2 = createAppRoleViewModel("role1", "XXCCMS_FIRM_ADMIN"); // Same ID and code
+        List<AppRoleViewModel> ccmsRoles = List.of(role1, role2);
 
         // When
-        Map<String, List<AppRoleDto>> result = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
+        Map<String, List<AppRoleViewModel>> result = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
 
         // Then - both roles should be included (they are different objects)
         assertThat(result.get(CcmsRoleGroupsUtil.PROVIDER_SECTION)).hasSize(2);
@@ -341,8 +341,8 @@ public class CcmsRoleGroupsUtilTest {
     /**
      * Helper method to create AppRoleDto for testing
      */
-    private AppRoleDto createAppRoleDto(String id, String ccmsCode) {
-        AppRoleDto role = new AppRoleDto();
+    private AppRoleViewModel createAppRoleViewModel(String id, String ccmsCode) {
+        AppRoleViewModel role = new AppRoleViewModel();
         role.setId(id);
         role.setCcmsCode(ccmsCode);
         role.setName("Test Role " + id);

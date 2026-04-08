@@ -1267,16 +1267,21 @@ public class UserController {
 
         if (isCcmsApp) {
             // Filter to only CCMS roles for organization
-            List<AppRoleDto> ccmsRoles = roles.stream()
+            List<AppRoleViewModel> ccmsRoles = appRoleViewModels.stream()
                     .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()))
                     .sorted().collect(Collectors.toList());
 
-            Map<String, List<AppRoleDto>> organizedRoles = new HashMap<>();
+            Map<String, List<AppRoleViewModel>> organizedRoles = new HashMap<>();
+            Map<String, Boolean> organizedRoleDisplayFlags = new HashMap<>();
             if (!ccmsRoles.isEmpty()) {
                 // Organize CCMS roles by section dynamically
                 organizedRoles.putAll(CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles));
+                organizedRoles.keySet().stream()
+                        .forEach(section -> organizedRoleDisplayFlags.put(section, organizedRoles.get(section).stream()
+                                .anyMatch(role -> !role.isHiddenFromSelection())));
             }
             model.addAttribute("ccmsRolesBySection", organizedRoles);
+            model.addAttribute("ccmsRoleDisplayFlags", organizedRoleDisplayFlags);
             model.addAttribute("isCcmsApp", true);
         } else {
             model.addAttribute("isCcmsApp", false);
@@ -1707,7 +1712,9 @@ public class UserController {
      * Update user detail Flow - Show confirmation page
      */
     @GetMapping("/users/edit/{id}/confirmation")
-    @PreAuthorize("@accessControlService.canEditUser(#id)")
+    @PreAuthorize("@accessControlService.canAssignAppRoles(#id) "
+            + "|| @accessControlService.canRemoveAppRoles(#id) "
+            + "|| @accessControlService.canEditUser(#id)")
     public String editUserConfirmation(@PathVariable String id, Model model) {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         model.addAttribute("user", user);
@@ -2032,14 +2039,21 @@ public class UserController {
 
         if (isCcmsApp) {
             // Filter to only CCMS roles for organization
-            List<AppRoleDto> ccmsRoles = roles.stream()
+            List<AppRoleViewModel> ccmsRoles = appRoleViewModels.stream()
                     .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()))
                     .sorted().collect(Collectors.toList());
 
             if (!ccmsRoles.isEmpty()) {
                 // Organize CCMS roles by section dynamically
-                Map<String, List<AppRoleDto>> organizedRoles = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
+                Map<String, List<AppRoleViewModel>> organizedRoles = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
+                Map<String, Boolean> organizedRoleDisplayFlags =
+                        organizedRoles.entrySet().stream()
+                                .collect(Collectors.toMap(
+                                        Map.Entry::getKey,
+                                        e -> e.getValue().stream().anyMatch(role -> !role.isHiddenFromSelection())
+                                ));
                 model.addAttribute("ccmsRolesBySection", organizedRoles);
+                model.addAttribute("ccmsRoleDisplayFlags", organizedRoleDisplayFlags);
             }
             model.addAttribute("isCcmsApp", true);
         } else {
