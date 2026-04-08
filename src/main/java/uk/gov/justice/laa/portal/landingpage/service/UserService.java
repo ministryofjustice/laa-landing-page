@@ -1471,6 +1471,18 @@ public class UserService {
                 }
 
                 if (!profiles.isEmpty()) {
+                    for (UserProfile profile : profiles) {
+                        if (profile.getAppRoles() != null) {
+                            profile.getAppRoles().clear();
+                        }
+                        if (profile.getOffices() != null) {
+                            profile.getOffices().clear();
+                        }
+                        profile.setEntraUser(null);
+                        userProfileRepository.save(profile);
+                    }
+                    userProfileRepository.flush();
+
                     userProfileRepository.deleteAll(profiles);
                     userProfileRepository.flush();
                     logger.debug("Deleted {} profiles for internal user: {}", profiles.size(), entraId);
