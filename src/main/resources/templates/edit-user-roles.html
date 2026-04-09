@@ -26,7 +26,7 @@
                         </h2>
                         <div class="govuk-error-summary__body" id="error-summary-description">
                             <ul th:if="${#fields.hasErrors()}" class="govuk-list govuk-error-summary__list">
-                                <li th:each="error : ${#fields.errors()}"><a th:href="'#role-input-' + ${roles.get(0).id}" th:text="${error}"></a></li>
+                                <li th:each="error : ${#fields.errors()}"><a th:href="${!roles.isEmpty() ? '#role-input-' + roles.get(0).id : '#'}" th:text="${error}"></a></li>
                             </ul>
                             <ul th:if="${errorMessage}" class="govuk-list govuk-error-summary__list">
                                 <li><a href="#" th:text="${errorMessage}"></a></li>
@@ -67,126 +67,138 @@
                                         </div>
                                     </details>
                                     <!-- Provider Section -->
-                                    <div th:if="${ccmsRolesBySection.containsKey('Provider') and !ccmsRolesBySection['Provider'].isEmpty()}"
+                                    <div th:if="${ccmsRolesBySection.containsKey('Provider') and !ccmsRolesBySection['Provider'].isEmpty() and ccmsRoleDisplayFlags['Provider']}"
                                         class="govuk-!-margin-bottom-6">
                                         <h3 class="govuk-heading-m">Provider</h3>
                                         <div th:each="roleDto : ${ccmsRolesBySection['Provider']}">
-                                            <div th:each="roleViewModel : ${roles}"
-                                                th:if="${roleViewModel.id == roleDto.id}">
-                                                <div class="govuk-checkboxes__item govuk-!-margin-bottom-3"
-                                                    th:id="'role-' + ${roleViewModel.id}">
-                                                    <input class="govuk-checkboxes__input"
-                                                        th:id="'role-input-' + ${roleViewModel.id}" name="roles"
-                                                        th:checked="${roleViewModel.selected}" th:disabled="${roleViewModel.changeNotAllowed}"
-                                                        th:if="${!roleViewModel.hiddenFromSelection}" th:value="${roleViewModel.id}" type="checkbox">
-                                                    <label class="govuk-label govuk-checkboxes__label"
-                                                        th:for="'role-input-' + ${roleViewModel.id}">
-                                                        <span th:text="${roleViewModel.name}"></span>
-                                                    </label>
-                                                    <input id="'hidden-role-input-' + ${roleViewModel.id}" name="roles" th:value="${roleViewModel.id}"
-                                                           type="hidden" th:if="${(roleViewModel.changeNotAllowed || roleViewModel.hiddenFromSelection) && roleViewModel.selected}"/>
-                                                    <div class="govuk-hint govuk-checkboxes__hint"
-                                                        th:text="${roleViewModel.description}"></div>
+                                            <th:block th:each="roleViewModel : ${roles}">
+                                                <div th:if="${roleViewModel.id == roleDto.id and !roleViewModel.hiddenFromSelection}">
+                                                    <div class="govuk-checkboxes__item govuk-!-margin-bottom-3"
+                                                        th:id="'role-' + ${roleViewModel.id}">
+                                                        <input class="govuk-checkboxes__input"
+                                                            th:id="'role-input-' + ${roleViewModel.id}" name="roles"
+                                                            th:checked="${roleViewModel.selected}" th:disabled="${roleViewModel.changeNotAllowed}"
+                                                            th:value="${roleViewModel.id}" type="checkbox">
+                                                        <label class="govuk-label govuk-checkboxes__label"
+                                                            th:for="'role-input-' + ${roleViewModel.id}">
+                                                            <span th:text="${roleViewModel.name}"></span>
+                                                        </label>
+                                                        <div class="govuk-hint govuk-checkboxes__hint"
+                                                            th:text="${roleViewModel.description}"></div>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                                <div th:if="${roleViewModel.id == roleDto.id and roleViewModel.hiddenFromSelection and roleViewModel.changeNotAllowed and roleViewModel.selected}">
+                                                    <input id="'hidden-role-input-' + ${roleViewModel.id}" name="roles" th:value="${roleViewModel.id}" type="hidden"/>
+                                                </div>
+                                            </th:block>
                                         </div>
                                     </div>
 
                                     <!-- Chambers Section -->
-                                    <div th:if="${ccmsRolesBySection.containsKey('Chambers') and !ccmsRolesBySection['Chambers'].isEmpty()}"
+                                    <div th:if="${ccmsRolesBySection.containsKey('Chambers') and !ccmsRolesBySection['Chambers'].isEmpty() and ccmsRoleDisplayFlags['Chambers']}"
                                         class="govuk-!-margin-bottom-6">
                                         <h3 class="govuk-heading-m">Chambers</h3>
                                         <div th:each="roleDto : ${ccmsRolesBySection['Chambers']}">
-                                            <div th:each="roleViewModel : ${roles}"
-                                                th:if="${roleViewModel.id == roleDto.id}">
-                                                <div class="govuk-checkboxes__item govuk-!-margin-bottom-3"
-                                                    th:id="'role-' + ${roleViewModel.id}">
-                                                    <input class="govuk-checkboxes__input"
-                                                        th:id="'role-input-' + ${roleViewModel.id}" name="roles"
-                                                        th:checked="${roleViewModel.selected}" th:disabled="${roleViewModel.changeNotAllowed}"
-                                                        th:value="${roleViewModel.id}" type="checkbox">
-                                                    <label class="govuk-label govuk-checkboxes__label"
-                                                        th:for="'role-input-' + ${roleViewModel.id}">
-                                                        <span th:text="${roleViewModel.name}"></span>
-                                                    </label>
-                                                    <input id="'hidden-role-input-' + ${roleViewModel.id}" name="roles" th:value="${roleViewModel.id}"
-                                                           type="hidden" th:if="${roleViewModel.changeNotAllowed && roleViewModel.selected}"/>
-                                                    <div class="govuk-hint govuk-checkboxes__hint"
-                                                        th:text="${roleViewModel.description}"></div>
+                                            <th:block th:each="roleViewModel : ${roles}">
+                                                <div th:if="${roleViewModel.id == roleDto.id and !roleViewModel.hiddenFromSelection}">
+                                                    <div class="govuk-checkboxes__item govuk-!-margin-bottom-3"
+                                                        th:id="'role-' + ${roleViewModel.id}">
+                                                        <input class="govuk-checkboxes__input"
+                                                            th:id="'role-input-' + ${roleViewModel.id}" name="roles"
+                                                            th:checked="${roleViewModel.selected}" th:disabled="${roleViewModel.changeNotAllowed}"
+                                                            th:value="${roleViewModel.id}" type="checkbox">
+                                                        <label class="govuk-label govuk-checkboxes__label"
+                                                            th:for="'role-input-' + ${roleViewModel.id}">
+                                                            <span th:text="${roleViewModel.name}"></span>
+                                                        </label>
+                                                        <div class="govuk-hint govuk-checkboxes__hint"
+                                                            th:text="${roleViewModel.description}"></div>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                                <div th:if="${roleViewModel.id == roleDto.id and roleViewModel.hiddenFromSelection and roleViewModel.changeNotAllowed and roleViewModel.selected}">
+                                                    <input id="'hidden-role-input-' + ${roleViewModel.id}" name="roles" th:value="${roleViewModel.id}" type="hidden"/>
+                                                </div>
+                                            </th:block>
                                         </div>
                                     </div>
 
                                     <!-- Advocate Section -->
-                                    <div th:if="${ccmsRolesBySection.containsKey('Advocate') and !ccmsRolesBySection['Advocate'].isEmpty()}"
+                                    <div th:if="${ccmsRolesBySection.containsKey('Advocate') and !ccmsRolesBySection['Advocate'].isEmpty() and ccmsRoleDisplayFlags['Advocate']}"
                                         class="govuk-!-margin-bottom-6">
                                         <h3 class="govuk-heading-m">Advocate</h3>
                                         <div th:each="roleDto : ${ccmsRolesBySection['Advocate']}">
-                                            <div th:each="roleViewModel : ${roles}"
-                                                th:if="${roleViewModel.id == roleDto.id}">
-                                                <div class="govuk-checkboxes__item govuk-!-margin-bottom-3"
-                                                    th:id="'role-' + ${roleViewModel.id}">
-                                                    <input class="govuk-checkboxes__input"
-                                                        th:id="'role-input-' + ${roleViewModel.id}" name="roles"
-                                                        th:checked="${roleViewModel.selected}" th:disabled="${roleViewModel.changeNotAllowed}"
-                                                        th:value="${roleViewModel.id}" type="checkbox">
-                                                    <label class="govuk-label govuk-checkboxes__label"
-                                                        th:for="'role-input-' + ${roleViewModel.id}">
-                                                        <span th:text="${roleViewModel.name}"></span>
-                                                    </label>
-                                                    <input id="'hidden-role-input-' + ${roleViewModel.id}" name="roles" th:value="${roleViewModel.id}"
-                                                           type="hidden" th:if="${roleViewModel.changeNotAllowed && roleViewModel.selected}"/>
-                                                    <div class="govuk-hint govuk-checkboxes__hint"
-                                                        th:text="${roleViewModel.description}"></div>
+                                            <th:block th:each="roleViewModel : ${roles}">
+                                                <div
+                                                        th:if="${roleViewModel.id == roleDto.id and !roleViewModel.hiddenFromSelection}">
+                                                    <div class="govuk-checkboxes__item govuk-!-margin-bottom-3"
+                                                        th:id="'role-' + ${roleViewModel.id}">
+                                                        <input class="govuk-checkboxes__input"
+                                                            th:id="'role-input-' + ${roleViewModel.id}" name="roles"
+                                                            th:checked="${roleViewModel.selected}" th:disabled="${roleViewModel.changeNotAllowed}"
+                                                            th:value="${roleViewModel.id}" type="checkbox" th:if="${!roleViewModel.hiddenFromSelection}">
+                                                        <label class="govuk-label govuk-checkboxes__label"
+                                                            th:for="'role-input-' + ${roleViewModel.id}" th:if="${!roleViewModel.hiddenFromSelection}">
+                                                            <span th:text="${roleViewModel.name}"></span>
+                                                        </label>
+                                                        <div class="govuk-hint govuk-checkboxes__hint"
+                                                            th:text="${roleViewModel.description}" th:if="${!roleViewModel.hiddenFromSelection}"></div>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                                <div th:if="${roleViewModel.id == roleDto.id and roleViewModel.hiddenFromSelection and roleViewModel.changeNotAllowed and roleViewModel.selected}">
+                                                    <input id="'hidden-role-input-' + ${roleViewModel.id}" name="roles" th:value="${roleViewModel.id}" type="hidden"/>
+                                                </div>
+                                            </th:block>
                                         </div>
                                     </div>
 
                                     <!-- Other CCMS Roles Section (if any) -->
-                                    <div th:if="${ccmsRolesBySection.containsKey('Other') and !ccmsRolesBySection['Other'].isEmpty()}"
+                                    <div th:if="${ccmsRolesBySection.containsKey('Other') and !ccmsRolesBySection['Other'].isEmpty() and ccmsRoleDisplayFlags['Other']}"
                                         class="govuk-!-margin-bottom-6">
                                         <h3 class="govuk-heading-m">Other</h3>
                                         <div th:each="roleDto : ${ccmsRolesBySection['Other']}">
-                                            <div th:each="roleViewModel : ${roles}"
-                                                th:if="${roleViewModel.id == roleDto.id}">
-                                                <div class="govuk-checkboxes__item govuk-!-margin-bottom-3"
-                                                    th:id="'role-' + ${roleViewModel.id}">
-                                                    <input class="govuk-checkboxes__input"
-                                                        th:id="'role-input-' + ${roleViewModel.id}" name="roles"
-                                                        th:checked="${roleViewModel.selected}" th:disabled="${roleViewModel.changeNotAllowed}"
-                                                        th:value="${roleViewModel.id}" type="checkbox">
-                                                    <label class="govuk-label govuk-checkboxes__label"
-                                                        th:for="'role-input-' + ${roleViewModel.id}">
-                                                        <span th:text="${roleViewModel.name}"></span>
-                                                    </label>
-                                                    <input id="'hidden-role-input-' + ${roleViewModel.id}" name="roles" th:value="${roleViewModel.id}"
-                                                           type="hidden" th:if="${roleViewModel.changeNotAllowed && roleViewModel.selected}"/>
-                                                    <div class="govuk-hint govuk-checkboxes__hint"
-                                                        th:text="${roleViewModel.description}"></div>
+                                            <th:block th:each="roleViewModel : ${roles}">
+                                                <div
+                                                    th:if="${roleViewModel.id == roleDto.id and !roleViewModel.hiddenFromSelection}">
+                                                    <div class="govuk-checkboxes__item govuk-!-margin-bottom-3"
+                                                        th:id="'role-' + ${roleViewModel.id}">
+                                                        <input class="govuk-checkboxes__input"
+                                                            th:id="'role-input-' + ${roleViewModel.id}" name="roles"
+                                                            th:checked="${roleViewModel.selected}" th:disabled="${roleViewModel.changeNotAllowed}"
+                                                            th:value="${roleViewModel.id}" type="checkbox">
+                                                        <label class="govuk-label govuk-checkboxes__label"
+                                                            th:for="'role-input-' + ${roleViewModel.id}">
+                                                            <span th:text="${roleViewModel.name}"></span>
+                                                        </label>
+                                                        <div class="govuk-hint govuk-checkboxes__hint" th:text="${roleViewModel.description}"></div>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                                <div th:if="${roleViewModel.id == roleDto.id and roleViewModel.hiddenFromSelection and roleViewModel.changeNotAllowed and roleViewModel.selected}">
+                                                    <input id="'hidden-role-input-' + ${roleViewModel.id}" name="roles" th:value="${roleViewModel.id}" type="hidden"/>
+                                                </div>
+                                            </th:block>
                                         </div>
                                     </div>
                                 </div>
 
                                 <!-- Non-CCMS App: Display roles in flat list -->
                                 <div th:unless="${isCcmsApp}">
-                                    <div class="govuk-checkboxes__item govuk-!-margin-bottom-3"
-                                        th:each="role : ${roles}" th:id="'role-' + ${role.id}">
-                                        <input class="govuk-checkboxes__input" th:id="'role-input-' + ${role.id}"
-                                            name="roles" th:checked="${role.selected}" th:value="${role.id}"
-                                            type="checkbox" th:disabled="${role.changeNotAllowed}">
-                                        <label class="govuk-label govuk-checkboxes__label"
-                                            th:for="'role-input-' + ${role.id}">
-                                            <span th:text="${role.name}"></span>
-                                        </label>
-                                        <input id="'hidden-role-input-' + ${role.id}" name="roles" th:value="${role.id}"
-                                               type="hidden" th:if="${role.changeNotAllowed && role.selected}"/>
-                                        <div class="govuk-hint govuk-checkboxes__hint" th:text="${role.description}">
+                                    <th:block th:each="role : ${roles}">
+                                        <div class="govuk-checkboxes__item govuk-!-margin-bottom-3"
+                                            th:id="'role-' + ${role.id}" th:if="${!role.hiddenFromSelection}">
+                                            <input class="govuk-checkboxes__input" th:id="'role-input-' + ${role.id}"
+                                                name="roles" th:checked="${role.selected}" th:value="${role.id}"
+                                                type="checkbox" th:disabled="${role.changeNotAllowed}">
+                                            <label class="govuk-label govuk-checkboxes__label"
+                                                th:for="'role-input-' + ${role.id}">
+                                                <span th:text="${role.name}"></span>
+                                            </label>
+                                            <div class="govuk-hint govuk-checkboxes__hint" th:text="${role.description}">
+                                            </div>
                                         </div>
-                                    </div>
+                                        <div th:if="${(role.hiddenFromSelection or role.changeNotAllowed) and role.selected}">
+                                            <input id="'hidden-role-input-' + ${role.id}" name="roles" th:value="${role.id}" type="hidden"/>
+                                        </div>
+                                    </th:block>
                                 </div>
                             </div>
                         </div>

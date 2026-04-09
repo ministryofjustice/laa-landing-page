@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
 /**
  * Utility class for dynamically organizing CCMS roles based on their ccmsCode patterns
@@ -23,8 +23,8 @@ public class CcmsRoleGroupsUtil {
      * @param ccmsRoles List of CCMS app roles to organize
      * @return Map with section names as keys and lists of app roles as values
      */
-    public static Map<String, List<AppRoleDto>> organizeCcmsRolesBySection(List<AppRoleDto> ccmsRoles) {
-        Map<String, List<AppRoleDto>> organizedRoles = new LinkedHashMap<>();
+    public static Map<String, List<AppRoleViewModel>> organizeCcmsRolesBySection(List<AppRoleViewModel> ccmsRoles) {
+        Map<String, List<AppRoleViewModel>> organizedRoles = new LinkedHashMap<>();
         
         // Filter and group roles by their ccmsCode patterns
         organizedRoles.put(PROVIDER_SECTION, filterRolesByPattern(ccmsRoles, getProviderPatterns()));
@@ -32,17 +32,14 @@ public class CcmsRoleGroupsUtil {
         organizedRoles.put(ADVOCATE_SECTION, filterRolesByPattern(ccmsRoles, getAdvocatePatterns()));
         
         // Collect any remaining CCMS roles that don't match the known patterns
-        List<AppRoleDto> categorizedRoles = organizedRoles.values().stream()
+        List<AppRoleViewModel> categorizedRoles = organizedRoles.values().stream()
                 .flatMap(List::stream)
-                .collect(Collectors.toList());
+                .toList();
         
-        List<AppRoleDto> otherRoles = ccmsRoles.stream()
+        List<AppRoleViewModel> otherRoles = ccmsRoles.stream()
                 .filter(role -> !categorizedRoles.contains(role))
                 .collect(Collectors.toList());
-        
-        if (!otherRoles.isEmpty()) {
-            organizedRoles.put(OTHER_SECTION, otherRoles);
-        }
+        organizedRoles.put(OTHER_SECTION, otherRoles);
         
         return organizedRoles;
     }
@@ -116,7 +113,7 @@ public class CcmsRoleGroupsUtil {
     /**
      * Filter app roles by matching any of the given patterns
      */
-    private static List<AppRoleDto> filterRolesByPattern(List<AppRoleDto> roles, List<String> patterns) {
+    private static List<AppRoleViewModel> filterRolesByPattern(List<AppRoleViewModel> roles, List<String> patterns) {
         return roles.stream()
             .filter(role -> matchesAnyPattern(role.getCcmsCode(), patterns))
             .collect(Collectors.toList());
@@ -131,6 +128,6 @@ public class CcmsRoleGroupsUtil {
         }
         
         return patterns.stream()
-            .anyMatch(pattern -> roleCode.contains(pattern));
+            .anyMatch(roleCode::contains);
     }
 }

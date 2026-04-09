@@ -25,10 +25,10 @@ jobs:
           
           # Read directly from the markdown file.
           # -m 1 ensures we only grab the first match (which is the summary table at the top of the report)
-          high_value=$(grep -m 1 "| High |" report_md.md | awk -F'|' '{print $3}' | xargs)
-          medium_value=$(grep -m 1 "| Medium |" report_md.md | awk -F'|' '{print $3}' | xargs)
-          low_value=$(grep -m 1 "| Low |" report_md.md | awk -F'|' '{print $3}' | xargs)
-          info_value=$(grep -m 1 "| Informational |" report_md.md | awk -F'|' '{print $3}' | xargs)
+          high_value=$(grep -a -m 1 "| High |" report_md.md | awk -F'|' '{print $3}' | xargs)
+          medium_value=$(grep -a -m 1 "| Medium |" report_md.md | awk -F'|' '{print $3}' | xargs)
+          low_value=$(grep -a -m 1 "| Low |" report_md.md | awk -F'|' '{print $3}' | xargs)
+          info_value=$(grep -a -m 1 "| Informational |" report_md.md | awk -F'|' '{print $3}' | xargs)
           
           # Fallback to 0 if grep returns empty (e.g., if the ZAP report is totally empty/failed)
           high_value=${high_value:-0}

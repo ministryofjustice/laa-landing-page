@@ -25,7 +25,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import org.apache.commons.collections4.CollectionUtils;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -188,7 +187,7 @@ public class UserService {
         allAssignableRoles.addAll(nonEditableRoles);
 
         List<AppRole> assignableAppRoles = appRoleRepository.findAllById(
-                allAssignableRoles.stream().map(UUID::fromString).collect(Collectors.toList()));
+                allAssignableRoles.stream().map(UUID::fromString).sorted().collect(Collectors.toList()));
 
         // Validate no new external roles allowed if modifier not allowed adding new roles
         boolean addingExternalRolesAllowed = accessControlService.canAssignExternalAppRoles(userProfileId);
@@ -201,10 +200,11 @@ public class UserService {
                     .filter(appRole -> appRole.getUserTypeRestriction() != null
                             && Arrays.stream(appRole.getUserTypeRestriction())
                                     .anyMatch(type -> type == UserType.EXTERNAL))
-                    .map(AppRole::getName)
+                    .map(AppRole::getId)
+                    .map(UUID::toString)
                     .collect(Collectors.toSet());
 
-            if (!CollectionUtils.isEqualCollection(assignableExternalRoles, userCurrentExternalRoles)) {
+            if (!userCurrentExternalRoles.containsAll(assignableExternalRoles)) {
                 throw new RuntimeException("User is not allowed to add new roles");
             }
         }
@@ -220,10 +220,11 @@ public class UserService {
                     .filter(appRole -> appRole.getUserTypeRestriction() != null
                             && Arrays.stream(appRole.getUserTypeRestriction())
                                     .anyMatch(type -> type == UserType.INTERNAL))
-                    .map(AppRole::getName)
+                    .map(AppRole::getId)
+                    .map(UUID::toString)
                     .collect(Collectors.toSet());
 
-            if (!CollectionUtils.isEqualCollection(assignableInternalRoles, userCurrentInternalRoles)) {
+            if (!userCurrentInternalRoles.containsAll(assignableInternalRoles)) {
                 throw new RuntimeException("User is not allowed to add new roles");
             }
 
@@ -1431,6 +1432,72 @@ public class UserService {
 
     public List<UUID> getInternalUserEntraIds() {
         return userProfileRepository.findByUserTypes(UserType.INTERNAL);
+    }
+
+    @Transactional
+    public int deleteInternalUsersByEntraIds(List<UUID> entraIds) {
+        if (entraIds == null || entraIds.isEmpty()) {
+            logger.info("No internal users to delete - empty list provided");
+            return 0;
+        }
+
+        logger.info("Starting deletion of {} internal users by Entra IDs", entraIds.size());
+        int deletedCount = 0;
+
+        for (UUID entraId : entraIds) {
+            try {
+                Optional<EntraUser> optionalEntraUser = entraUserRepository.findByEntraOid(entraId.toString());
+                if (optionalEntraUser.isEmpty()) {
+                    logger.warn("EntraUser not found for ID: {}", entraId);
+                    continue;
+                }
+
+                EntraUser entraUser = optionalEntraUser.get();
+
+                List<UserProfile> profiles = userProfileRepository.findAllByEntraUser(entraUser);
+                boolean isInternalUser = profiles.stream()
+                        .anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
+                
+                if (!isInternalUser) {
+                    logger.warn("Skipping deletion of user {} - not an internal user", entraId);
+                    continue;
+                }
+
+                List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
+                if (!auditRecords.isEmpty()) {
+                    userAccountStatusAuditRepository.deleteAll(auditRecords);
+                    userAccountStatusAuditRepository.flush();
+                    logger.debug("Deleted {} audit records for internal user: {}", auditRecords.size(), entraId);
+                }
+
+                if (!profiles.isEmpty()) {
+                    for (UserProfile profile : profiles) {
+                        if (profile.getAppRoles() != null) {
+                            profile.getAppRoles().clear();
+                        }
+                        profile.setEntraUser(null);
+                        userProfileRepository.save(profile);
+                    }
+                    userProfileRepository.flush();
+
+                    userProfileRepository.deleteAll(profiles);
+                    userProfileRepository.flush();
+                    logger.debug("Deleted {} profiles for internal user: {}", profiles.size(), entraId);
+                }
+
+                entraUserRepository.delete(entraUser);
+                entraUserRepository.flush();
+                
+                deletedCount++;
+                logger.debug("Successfully deleted internal user: {}", entraId);
+
+            } catch (Exception e) {
+                logger.error("Failed to delete internal user with Entra ID: {}. Error: {}", entraId, e.getMessage(), e);
+            }
+        }
+
+        logger.info("Completed deletion of internal users. Successfully deleted: {}/{}", deletedCount, entraIds.size());
+        return deletedCount;
     }
 
     /**
