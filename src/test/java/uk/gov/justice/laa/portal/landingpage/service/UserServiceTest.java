@@ -104,6 +104,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
+import uk.gov.justice.laa.portal.landingpage.exception.UserAlreadyAssignedToFirmException;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
@@ -4599,10 +4600,10 @@ class UserServiceTest {
 
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
 
-            RuntimeException ex = assertThrows(RuntimeException.class,
+            UserAlreadyAssignedToFirmException ex = assertThrows(UserAlreadyAssignedToFirmException.class,
                     () -> userService.addMultiFirmUserProfile(user, firmDto, null, List.of(), "admin"));
 
-            assertThat(ex.getMessage()).contains("User profile already exists");
+            assertThat(ex.getMessage()).isNull();
             verify(userProfileRepository, never()).save(any());
             verify(entraUserRepository, never()).save(any());
             verify(techServicesClient, never()).updateRoleAssignment(any(UUID.class));

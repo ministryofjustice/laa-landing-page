@@ -35,6 +35,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import org.springframework.web.servlet.view.RedirectView;
 
 import ch.qos.logback.classic.Level;
@@ -57,6 +59,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.exception.UserAlreadyAssignedToFirmException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmUserForm;
@@ -1509,10 +1512,43 @@ public class MultiFirmUserControllerTest {
         when(appRoleService.getByIds(List.of("role1"))).thenReturn(List.of(roleDto));
         when(loginService.getCurrentProfile(authentication)).thenReturn(profile);
         when(roleAssignmentService.canAssignRole(any(), any())).thenReturn(false);
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
 
-        assertThatThrownBy(() -> controller.checkAnswerAndAddProfilePost(authentication, session, model))
+        assertThatThrownBy(() -> controller.checkAnswerAndAddProfilePost(authentication, redirectAttributes, session, model))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("sufficient permissions to assign the selected roles");
+    }
+
+    @Test
+    void shouldThrowIfUserIsAlreadyAssignedToFim() {
+        session.setAttribute("entraUser", EntraUserDto.builder()
+                .email("testemail@test.com")
+                .fullName("Test User").build());
+        session.setAttribute("addUserProfileAllSelectedRoles", Map.of());
+        session.setAttribute("userOffices", List.of("ALL"));
+
+        UserProfileDto profileDto = new UserProfileDto();
+        profileDto.setFirm(new FirmDto());
+
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setName("admin");
+
+        UserProfile profile = UserProfile.builder()
+                .firm(Firm.builder()
+                        .name("firm name")
+                        .build())
+                .userType(UserType.INTERNAL)
+                .appRoles(Set.of()).build();
+
+        when(appRoleService.getByIds(any())).thenReturn(List.of());
+        when(loginService.getCurrentProfile(authentication)).thenReturn(profile);
+        when(roleAssignmentService.canAssignRole(any(), any())).thenReturn(true);
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        when(userService.addMultiFirmUserProfile(any(), any(), any(), any(), any())).thenThrow(new UserAlreadyAssignedToFirmException());
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        String view = controller.checkAnswerAndAddProfilePost(authentication, redirectAttributes, session, model);
+        assertThat(view).isEqualTo("redirect:/admin/users");
+        assertThat(redirectAttributes.getFlashAttributes().get("userAlreadyAssignedFirmMessage")).isEqualTo("testemail@test.com is Already assigned to the firm firm name");
     }
 
     @Test
@@ -1535,8 +1571,9 @@ public class MultiFirmUserControllerTest {
         Office targetOffice = Office.builder().id(UUID.randomUUID()).code("officeX").address(Office.Address.builder().build()).build();
         Firm targetFirm = Firm.builder().id(targetFirmId).offices(Set.of(targetOffice)).build();
         when(firmService.getById(targetFirmId)).thenReturn(targetFirm);
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
 
-        assertThatThrownBy(() -> controller.checkAnswerAndAddProfilePost(authentication, session, model))
+        assertThatThrownBy(() -> controller.checkAnswerAndAddProfilePost(authentication, redirectAttributes, session, model))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Office assignment is not permitted");
     }
@@ -1565,7 +1602,9 @@ public class MultiFirmUserControllerTest {
         when(userService.addMultiFirmUserProfile(any(), any(), any(), any(), any()))
                 .thenReturn(UserProfile.builder().id(UUID.randomUUID()).build());
 
-        String view = controller.checkAnswerAndAddProfilePost(authentication, session, model);
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+        String view = controller.checkAnswerAndAddProfilePost(authentication, redirectAttributes, session, model);
         assertThat(view).isEqualTo("redirect:/admin/multi-firm/user/add/profile/confirmation");
     }
 
@@ -1595,8 +1634,9 @@ public class MultiFirmUserControllerTest {
         when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         when(userService.addMultiFirmUserProfile(any(), any(), any(), any(), any()))
                 .thenReturn(UserProfile.builder().id(UUID.randomUUID()).build());
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
 
-        String view = controller.checkAnswerAndAddProfilePost(authentication, session, model);
+        String view = controller.checkAnswerAndAddProfilePost(authentication, redirectAttributes, session, model);
 
         assertThat(view).isEqualTo("redirect:/admin/multi-firm/user/add/profile/confirmation");
         verify(eventService).logEvent(any(AddUserProfileAuditEvent.class));
