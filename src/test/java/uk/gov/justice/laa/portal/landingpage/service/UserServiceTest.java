@@ -7380,7 +7380,7 @@ class UserServiceTest {
     class GetAuditUsersDormantFiltersTests {
 
         private EntraUser buildUser(UUID id, String firstName, String lastName, String email,
-                LocalDateTime lastLoginDate, InvitationStatus invitationStatus) {
+                InvitationStatus invitationStatus) {
             return EntraUser.builder()
                     .id(id)
                     .firstName(firstName)
@@ -7388,7 +7388,6 @@ class UserServiceTest {
                     .email(email)
                     .userStatus(UserStatus.ACTIVE)
                     .multiFirmUser(false)
-                    .lastLoginDate(lastLoginDate)
                     .invitationStatus(invitationStatus)
                     .userProfiles(new HashSet<>())
                     .build();
@@ -7400,7 +7399,7 @@ class UserServiceTest {
             LocalDate cutoffDate = LocalDate.of(2025, 1, 1);
             UUID userId = UUID.randomUUID();
             EntraUser user = buildUser(userId, "Old", "User", "old@example.com",
-                    LocalDateTime.of(2024, 6, 1, 0, 0), InvitationStatus.VERIFICATION_SUCCESS);
+                    InvitationStatus.VERIFICATION_SUCCESS);
 
             Page<EntraUser> userPage = new PageImpl<>(List.of(user), PageRequest.of(0, 10), 1);
 
@@ -7429,7 +7428,7 @@ class UserServiceTest {
             // Given
             UUID userId = UUID.randomUUID();
             EntraUser user = buildUser(userId, "Active", "User", "active@example.com",
-                    LocalDateTime.now(), InvitationStatus.VERIFICATION_SUCCESS);
+                    InvitationStatus.VERIFICATION_SUCCESS);
 
             Page<EntraUser> userPage = new PageImpl<>(List.of(user), PageRequest.of(0, 10), 1);
 
@@ -7458,7 +7457,7 @@ class UserServiceTest {
             // Given
             UUID userId = UUID.randomUUID();
             EntraUser user = buildUser(userId, "Never", "Activated", "never@example.com",
-                    null, InvitationStatus.INVITE_SENT);
+                    InvitationStatus.INVITE_SENT);
 
             Page<EntraUser> userPage = new PageImpl<>(List.of(user), PageRequest.of(0, 10), 1);
 
@@ -7487,7 +7486,7 @@ class UserServiceTest {
             // Given
             UUID userId = UUID.randomUUID();
             EntraUser user = buildUser(userId, "Verified", "User", "verified@example.com",
-                    LocalDateTime.now(), InvitationStatus.VERIFICATION_SUCCESS);
+                    InvitationStatus.VERIFICATION_SUCCESS);
 
             Page<EntraUser> userPage = new PageImpl<>(List.of(user), PageRequest.of(0, 10), 1);
 
@@ -7517,7 +7516,7 @@ class UserServiceTest {
             LocalDate cutoffDate = LocalDate.of(2025, 6, 1);
             UUID userId = UUID.randomUUID();
             EntraUser user = buildUser(userId, "Dormant", "User", "dormant@example.com",
-                    LocalDateTime.of(2024, 1, 1, 0, 0), InvitationStatus.INVITE_SENT);
+                    InvitationStatus.INVITE_SENT);
 
             Page<EntraUser> userPage = new PageImpl<>(List.of(user), PageRequest.of(0, 10), 1);
 
