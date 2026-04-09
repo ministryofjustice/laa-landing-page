@@ -47,6 +47,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
+import uk.gov.justice.laa.portal.landingpage.repository.DisableUserReasonRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AuditExportService;
@@ -58,6 +59,7 @@ import uk.gov.justice.laa.portal.landingpage.service.TechServicesClient;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
 
 @Slf4j
 @Controller
@@ -74,6 +76,7 @@ public class AuditController {
     private final FirmService firmService;
     private final AuthenticatedUser authenticatedUser;
     private final TechServicesClient techServicesClient;
+    private final DisableUserReasonRepository disableUserReasonRepository;
 
     @Value("${feature.flag.disable.user}")
     private boolean disableUserFeatureEnabled;
@@ -190,6 +193,8 @@ public class AuditController {
         }
         TechServicesApiResponse<GetUserResponse> entraUserResponse = techServicesClient.getUser(userDetail.getEntraOid());
         if (entraUserResponse.isSuccess()) {
+            TechServicesUser user = entraUserResponse.getData().getUser();
+            formatDisableUserReason(user);
             model.addAttribute("entraUser", entraUserResponse.getData().getUser());
         }
         canDisableUser = accessControlService.canDisableUser(userDetail.getUserId());
@@ -203,6 +208,15 @@ public class AuditController {
         model.addAttribute("userIsEnabled", userDetail.isEnabled());
 
         return "user-audit/details";
+    }
+
+    private void formatDisableUserReason(TechServicesUser user) {
+        Optional.ofNullable(user)
+                .map(TechServicesUser::getCustomSecurityAttributes)
+                .map(TechServicesUser.CustomSecurityAttributes::getGuestUserStatus)
+                .map(TechServicesUser.GuestUserStatus::getDisabledReason)
+                .flatMap(disableUserReasonRepository::findDisableUserReasonByEntraDescription)
+                .ifPresent(databaseDisableReason -> user.getCustomSecurityAttributes().getGuestUserStatus().setDisabledReason(databaseDisableReason.getName()));
     }
 
     /**
@@ -273,6 +287,12 @@ public class AuditController {
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission('EXPORT_AUDIT_DATA')")
     public ResponseEntity<byte[]> downloadAuditCsv(@ModelAttribute AuditTableSearchCriteria criteria) {
 
+        if (criteria.getSearch() == null || (criteria.getSelectedFirmId() == null && criteria.getSelectedUserType() != UserTypeForm.INTERNAL)) {
+            log.warn("Invalid search criteria provided for CSV export - search: '{}', selectedFirmId: {}, selectedUserType: {}",
+                    criteria.getSearch(), criteria.getSelectedFirmId(), criteria.getSelectedUserType());
+            throw new RuntimeException("Invalid Search criteria provided");
+        }
+
         final int pageSize = 500;
         int page = 1;
 
@@ -289,7 +309,8 @@ public class AuditController {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
-        String firmCode = firmRepository.findById(criteria.getSelectedFirmId()).map(Firm::getCode).orElse("");
+        String firmCode = criteria.getSelectedFirmId() == null ? ""
+                : firmRepository.findById(criteria.getSelectedFirmId()).map(Firm::getCode).orElse("");
         List<AuditUserDto> firmData = new ArrayList<>(pageSize);
 
         PaginatedAuditUsers result;

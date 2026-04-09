@@ -151,6 +151,49 @@
                                         <dt class="govuk-summary-list__key">Disabled by</dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.disabledBy == 'null' ? 'User sync' : user.disabledBy}"></dd>
                                     </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">SILAS Status</dt>
+                                        <dd class="govuk-summary-list__value">
+                                            <!--user disable-->
+                                            <th:block th:if="${!user.enabled}">
+                                                <strong class="govuk-tag govuk-tag--red">Disable</strong>
+                                            </th:block>
+                                            <!--user active-->
+                                            <th:block th:unless="${!user.enabled}">
+                                                <!--user still pending-->
+                                                <th:block th:if="${user.isPending}" >
+                                                    <th:block th:if="${user.activationStatus == 'VERIFICATION_SUCCESS'}">
+                                                        <!--user hasn't assigned any roles-->
+                                                        <strong th:if="${user.isNoRole}"
+                                                              class="govuk-tag govuk-tag--purple govuk-!-margin-top-1">No roles assigned</strong>
+                                                        <!--user has roles and no office assigned -->
+                                                        <strong th:unless="${user.isNoRole}"
+                                                              class="govuk-tag govuk-tag--blue govuk-!-margin-top-1">Incomplete</strong>
+                                                    </th:block>
+                                                    <!--entra verification still going-->
+                                                    <th:block th:unless="${user.activationStatus == 'VERIFICATION_SUCCESS'}">
+                                                        <!--All the other situation will be incomplete-->
+                                                        <strong class="govuk-tag govuk-tag--blue govuk-!-margin-top-1">Incomplete</strong>
+                                                    </th:block>
+                                                </th:block>
+                                                <!--user is complete-->
+                                                <th:block th:unless="${user.isPending}">
+                                                    <strong th:if="${user.activationStatus == 'AWAITING_VERIFICATION'}"
+                                                            class="govuk-tag govuk-tag--grey govuk-!-margin-top-1">Activation pending</strong>
+                                                    <strong th:if="${user.activationStatus == 'VERIFICATION_SUCCESS'}"
+                                                            class="govuk-tag govuk-tag--green govuk-!-margin-top-1">Complete</strong>
+                                                    <strong th:if="${user.activationStatus == 'VERIFICATION_FAILED'}"
+                                                            class="govuk-tag govuk-tag--red govuk-!-margin-top-1">Activation failed</strong>
+                                                    <strong th:if="${user.activationStatus == null
+                                                    || user.activationStatus == 'INVITE_SENT'
+                                                    || user.activationStatus == 'AWAITING_MFA'
+                                                    || user.activationStatus == 'CODE_EXPIRED'
+                                                    || user.activationStatus == 'MAX_VERIFICATION_ATTEMPTS'}"
+                                                            class="govuk-tag govuk-tag--blue govuk-!-margin-top-1">Incomplete</strong>
+                                                </th:block>
+                                            </th:block>
+                                        </dd>
+                                    </div>
                                 </dl>
                             </div>
                         </div>
@@ -390,6 +433,38 @@
                                     <div class="govuk-summary-list__row"
                                         th:if="${profile.roles == null || profile.roles.isEmpty()}">
                                         <dt class="govuk-summary-list__key">No services assigned</dt>
+                                        <dd class="govuk-summary-list__value"></dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </div>
+
+                        <!-- Account status history Card -->
+                        <div class="govuk-summary-card">
+                            <div class="govuk-summary-card__title-wrapper">
+                                <h3 class="govuk-summary-card__title">Account status history</h3>
+                            </div>
+                            <div class="govuk-summary-card__content" th:each="record : ${user.accountStatusHistory}">
+                                <dl class="govuk-summary-list">
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Date</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.statusChangedDate}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Status</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.statusChange}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Disable reason</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.disableReason}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Changed by</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.statusChangedBy}">
+                                    </div>
+                                    <div class="govuk-summary-list__row"
+                                         th:if="${user.accountStatusHistory == null || user.accountStatusHistory.size() == 0}">
+                                        <dt class="govuk-summary-list__key">No account status history available</dt>
                                         <dd class="govuk-summary-list__value"></dd>
                                     </div>
                                 </dl>

@@ -186,9 +186,9 @@ public class AccessControlService {
                 hasGlobalAdmin, hasQualityAssurance, hasDeletePermission);
 
         // Require DELETE_AUDIT_USER permission AND either:
-        // 1. Global Admin role alone, OR
-        // 2. Both Quality & Assurance AND Global Admin roles
-        boolean hasRequiredRoles = hasGlobalAdmin || (hasQualityAssurance && hasGlobalAdmin);
+        // 1. Global Admin role, OR
+        // 2. Quality & Assurance role
+        boolean hasRequiredRoles = hasGlobalAdmin || hasQualityAssurance;
 
         return hasDeletePermission && hasRequiredRoles;
     }
@@ -368,6 +368,173 @@ public class AccessControlService {
         // delete profiles from their own firm
         return sameFirm
                 && userHasPermission(authenticatedUser, Permission.DELEGATE_EXTERNAL_USER_ACCESS);
+    }
+
+    public boolean canGrantUserAccess(String userProfileId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
+
+        Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
+        if (optionalAccessedUserProfile.isEmpty()) {
+            return false;
+        }
+
+        // Global Admin
+        if (userHasAuthzRole(authenticatedUser, "Global Admin")) {
+            return true;
+        }
+
+        EntraUserDto accessedUser = optionalAccessedUserProfile.get().getEntraUser();
+
+        // Internal User Manager editing internal user.
+        if (userHasPermission(authenticatedUser, Permission.ASSIGN_INTERNAL_USER_ROLES)
+                && userService.isInternal(accessedUser.getId())) {
+            return true;
+        }
+
+        // internal user with external user manager permission accessing external user
+        return userHasPermission(authenticatedUser, Permission.ASSIGN_EXTERNAL_USER_ROLES)
+                && userHasPermission(authenticatedUser, Permission.EDIT_USER_OFFICE)
+                && !userService.isInternal(accessedUser.getId())
+                && userService.isInternal(authenticatedUser.getId());
+    }
+
+    public boolean canEditUserAppRoleAssignments(String userProfileId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
+
+        Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
+        if (optionalAccessedUserProfile.isEmpty()) {
+            return false;
+        }
+
+        // Global Admin
+        if (userHasAuthzRole(authenticatedUser, "Global Admin")) {
+            return true;
+        }
+
+        EntraUserDto accessedUser = optionalAccessedUserProfile.get().getEntraUser();
+
+        // Internal User Manager editing internal user.
+        if (userHasAnyGivenPermissions(authenticatedUser, Permission.ASSIGN_INTERNAL_USER_ROLES,
+                Permission.REMOVE_INTERNAL_USER_ROLES)
+                && userService.isInternal(accessedUser.getId())) {
+            return true;
+        }
+
+        boolean isFirmUserManager = isFirmUserManager(authenticatedUser);
+        boolean sameFirm = usersAreInSameFirm(authenticatedUser, userProfileId);
+        if (isFirmUserManager && !sameFirm) {
+            return false;
+        }
+
+        // internal user with external user manager permission accessing external user
+        return userHasAnyGivenPermissions(authenticatedUser, Permission.ASSIGN_EXTERNAL_USER_ROLES,
+                Permission.REMOVE_EXTERNAL_USER_ROLES)
+                && !userService.isInternal(accessedUser.getId());
+    }
+
+    public boolean canAssignInternalAppRoles(String userProfileId) {
+        return canAssignAppRoles(userProfileId, true, false);
+    }
+
+    public boolean canAssignExternalAppRoles(String userProfileId) {
+        return canAssignAppRoles(userProfileId, false, true);
+    }
+
+    public boolean canAssignAppRoles(String userProfileId) {
+        return canAssignAppRoles(userProfileId, true, true);
+    }
+
+    private boolean canAssignAppRoles(String userProfileId, boolean internalRoles, boolean externalRoles) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
+
+        Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
+        if (optionalAccessedUserProfile.isEmpty()) {
+            return false;
+        }
+
+        // Global Admin
+        if (userHasAuthzRole(authenticatedUser, "Global Admin")) {
+            return true;
+        }
+
+        EntraUserDto accessedUser = optionalAccessedUserProfile.get().getEntraUser();
+
+        if (internalRoles) {
+            // Internal User Manager editing internal user.
+            if (userHasPermission(authenticatedUser, Permission.ASSIGN_INTERNAL_USER_ROLES)
+                    && userService.isInternal(accessedUser.getId())) {
+                return true;
+            }
+        }
+
+        if (externalRoles) {
+            boolean isFirmUserManager = isFirmUserManager(authenticatedUser);
+            boolean sameFirm = usersAreInSameFirm(authenticatedUser, userProfileId);
+            if (isFirmUserManager && !sameFirm) {
+                return false;
+            }
+
+            // internal user with external user manager permission accessing external user
+            return userHasPermission(authenticatedUser, Permission.ASSIGN_EXTERNAL_USER_ROLES)
+                    && !userService.isInternal(accessedUser.getId());
+        }
+
+        return false;
+    }
+
+    public boolean canRemoveInternalAppRoles(String userProfileId) {
+        return canRemoveAppRoles(userProfileId, true, false);
+    }
+
+    public boolean canRemoveExternalAppRoles(String userProfileId) {
+        return canRemoveAppRoles(userProfileId, false, true);
+    }
+
+    public boolean canRemoveAppRoles(String userProfileId) {
+        return canRemoveAppRoles(userProfileId, true, true);
+    }
+
+    private boolean canRemoveAppRoles(String userProfileId, boolean internalRoles, boolean externalRoles) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
+
+        Optional<UserProfileDto> optionalAccessedUserProfile = userService.getUserProfileById(userProfileId);
+        if (optionalAccessedUserProfile.isEmpty()) {
+            return false;
+        }
+
+        // Global Admin
+        if (userHasAuthzRole(authenticatedUser, "Global Admin")) {
+            return true;
+        }
+
+        EntraUserDto accessedUser = optionalAccessedUserProfile.get().getEntraUser();
+
+        // Internal User Manager editing internal user.
+        if (internalRoles) {
+            if (userHasPermission(authenticatedUser, Permission.REMOVE_INTERNAL_USER_ROLES)
+                    && userService.isInternal(accessedUser.getId())) {
+                return true;
+            }
+        }
+
+        // internal user with external user manager permission accessing external user
+        if (externalRoles) {
+            boolean isFirmUserManager = isFirmUserManager(authenticatedUser);
+            boolean sameFirm = usersAreInSameFirm(authenticatedUser, userProfileId);
+            if (isFirmUserManager && !sameFirm) {
+                return false;
+            }
+
+            return userHasPermission(authenticatedUser, Permission.REMOVE_EXTERNAL_USER_ROLES)
+                    && !userService.isInternal(accessedUser.getId())
+                    && userService.isInternal(authenticatedUser.getId());
+        }
+
+        return false;
     }
 
     public boolean canEditUser(String userProfileId) {
