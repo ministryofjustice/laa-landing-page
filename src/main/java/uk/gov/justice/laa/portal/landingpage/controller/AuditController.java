@@ -287,6 +287,12 @@ public class AuditController {
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission('EXPORT_AUDIT_DATA')")
     public ResponseEntity<byte[]> downloadAuditCsv(@ModelAttribute AuditTableSearchCriteria criteria) {
 
+        if (criteria.getSearch() == null || (criteria.getSelectedFirmId() == null && criteria.getSelectedUserType() != UserTypeForm.INTERNAL)) {
+            log.warn("Invalid search criteria provided for CSV export - search: '{}', selectedFirmId: {}, selectedUserType: {}",
+                    criteria.getSearch(), criteria.getSelectedFirmId(), criteria.getSelectedUserType());
+            throw new RuntimeException("Invalid Search criteria provided");
+        }
+
         final int pageSize = 500;
         int page = 1;
 
@@ -303,7 +309,8 @@ public class AuditController {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
-        String firmCode = firmRepository.findById(criteria.getSelectedFirmId()).map(Firm::getCode).orElse("");
+        String firmCode = criteria.getSelectedFirmId() == null ? ""
+                : firmRepository.findById(criteria.getSelectedFirmId()).map(Firm::getCode).orElse("");
         List<AuditUserDto> firmData = new ArrayList<>(pageSize);
 
         PaginatedAuditUsers result;

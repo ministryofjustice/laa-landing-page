@@ -35,7 +35,7 @@
         <div class="govuk-summary-card">
             <div class="govuk-summary-card__title-wrapper">
                 <h2 class="govuk-summary-card__title">
-                    User Roles
+                    User permissions
                 </h2>
             </div>
             <div class="govuk-summary-card__content">
@@ -46,7 +46,7 @@
                             (<span th:text="${appRole.getAppName()}"></span>)
                         </dd>
                         <dd class="govuk-summary-list__actions">
-                            <a th:href="${appRole.getUrl()}" class="govuk-link">
+                            <a th:href="@{/admin/users/edit/{id}/apps(id=${user.id})}" class="govuk-link">
                                 Change
                                 <span class="govuk-visually-hidden"> app roles</span>
                             </a>
@@ -68,8 +68,8 @@
                 </div>
             </div>
         </div>
-        <h2 class="govuk-heading-m">Edit user roles</h2>
-        <p class="govuk-body">When you confirm, this user role will be updated.
+        <h2 class="govuk-heading-m">Confirm access and permissions</h2>
+        <p class="govuk-body">When you confirm, the user will get access to the chosen services.
         </p>
         <div class="govuk-button-group">
             <button type="submit" class="govuk-button">Confirm</button>

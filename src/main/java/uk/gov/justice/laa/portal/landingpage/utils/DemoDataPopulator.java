@@ -278,13 +278,10 @@ public class DemoDataPopulator {
 
                 // Update if the record already exists
                 app.setEntraAppId(oid);
-                app.setSecurityGroupName(securityGroupName);
                 app.setSecurityGroupOid(securityGroupOid);
                 app.setUrl("https://localhost");
-                app.setOidGroupName(app.getName() + " OID Group");
                 app.setAppType(AppType.LAA);
                 app.setDescription(app.getName() + " description");
-                app.setTitle(app.getName() + " Title");
                 String currentAppName = app.getName();
                 app.setName(appDetailPair.getRight());
                 laaAppRepository.save(app);

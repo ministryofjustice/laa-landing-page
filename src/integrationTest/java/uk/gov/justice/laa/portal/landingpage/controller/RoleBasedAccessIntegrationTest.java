@@ -98,8 +98,8 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
             entityManager.createNativeQuery("SET session_replication_role = replica").executeUpdate();
             Firm firm1 = buildFirm("firm1", "firm1");
             testFirm1 = firmRepository.save(firm1);
-            Office firm1Office1 = buildOffice(testFirm1, "Firm1Office1", "Firm 1 Office 1", "123456789", "F1Office1Code");
-            Office firm1Office2 = buildOffice(testFirm1, "Firm1Office2", "Firm 1 Office 2", "123456789", "F1Office2Code");
+            Office firm1Office1 = buildOffice(testFirm1, "Firm1Office1", "Firm 1 Office 1");
+            Office firm1Office2 = buildOffice(testFirm1, "Firm1Office2", "Firm 1 Office 2");
             officeRepository.save(firm1Office1);
             officeRepository.save(firm1Office2);
             testFirm1.setOffices(new java.util.HashSet<>(Set.of(firm1Office1, firm1Office2)));
@@ -107,8 +107,8 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
 
             Firm firm2 = buildFirm("firm2", "firm2");
             testFirm2 = firmRepository.save(firm2);
-            Office firm2Office1 = buildOffice(testFirm2, "Firm2Office1", "Firm 2 Office 1", "123456789", "F2Office1Code");
-            Office firm2Office2 = buildOffice(testFirm2, "Firm2Office2", "Firm 2 Office 2", "123456789", "F2Office2Code");
+            Office firm2Office1 = buildOffice(testFirm2, "Firm2Office1", "Firm 2 Office 1");
+            Office firm2Office2 = buildOffice(testFirm2, "Firm2Office2", "Firm 2 Office 2");
             officeRepository.save(firm2Office1);
             officeRepository.save(firm2Office2);
             testFirm2.setOffices(new java.util.HashSet<>(Set.of(firm2Office1, firm2Office2)));
