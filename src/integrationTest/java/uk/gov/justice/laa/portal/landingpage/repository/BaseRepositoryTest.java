@@ -137,7 +137,7 @@ public class BaseRepositoryTest {
     protected void deleteNonAuthzApps(AppRepository appRepository) {
         // Keep the Manage Your Users app as it's reference data.
         List<App> nonAuthzApps = appRepository.findAll().stream()
-                .filter(app -> !app.getName().equals("Manage Your Users"))
+                .filter(app -> !AppType.AUTHZ.equals(app.getAppType()))
                 .toList();
         appRepository.deleteAll(nonAuthzApps);
     }
