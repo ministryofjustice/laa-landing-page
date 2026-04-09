@@ -33,6 +33,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRolesOrderForm;
+import uk.gov.justice.laa.portal.landingpage.validation.ValidationMessages;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.RoleAssignmentRepository;
@@ -286,7 +287,7 @@ public class AppRoleService {
                 && !dto.getFirmTypeRestriction().isEmpty();
 
         if (isInternalOnly && hasFirmTypeRestriction) {
-            throw new IllegalArgumentException("Firm type restriction cannot be applied to internal roles");
+            throw new IllegalArgumentException(ValidationMessages.FIRM_TYPE_RESTRICTION_INTERNAL_ROLE);
         }
     }
 

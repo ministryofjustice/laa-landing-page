@@ -50,7 +50,7 @@ public class RoleCreationValidator implements ConstraintValidator<ValidRoleCreat
                 && !dto.getFirmTypeRestriction().isEmpty();
 
         if (isInternalOnly && hasFirmTypeRestriction) {
-            ctx.buildConstraintViolationWithTemplate("Firm type restriction cannot be applied to internal roles.")
+            ctx.buildConstraintViolationWithTemplate(ValidationMessages.FIRM_TYPE_RESTRICTION_INTERNAL_ROLE)
                                         .addPropertyNode("firmTypeRestriction")
                                         .addConstraintViolation();
             valid = false;

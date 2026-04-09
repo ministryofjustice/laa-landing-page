@@ -56,7 +56,8 @@
                                     </li>
                                     <li th:each="err : ${#fields.errors('firmTypeRestriction')}"
                                         th:if="${#fields.hasErrors('firmTypeRestriction')}">
-                                        <a href="#firmType-LEGAL_SERVICES_PROVIDER" th:text="${err}"></a>
+                                        <a th:href="${#lists.isEmpty(firmTypes)} ? '#firmTypeRestriction' : '#firmType-' + firmTypes[0].name()"
+                                           th:text="${err}"></a>
                                     </li>
                                 </ul>
                             </div>
