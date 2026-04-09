@@ -16,6 +16,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.CountFirms;
+import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -66,6 +67,10 @@ public class UserAccountStatusServiceTest {
     private UserProfileRepository userProfileRepository;
     @Mock
     private EventService eventService;
+    @Mock
+    private DisableTypeResolver disableTypeResolver;
+    @Mock
+    private UserEnablementPolicy userEnablementPolicy;
 
     @InjectMocks
     private UserAccountStatusService userAccountStatusService;
@@ -79,7 +84,8 @@ public class UserAccountStatusServiceTest {
                 entraUserRepository,
                 techServicesClient,
                 userService,
-                userProfileRepository, eventService);
+                userProfileRepository, eventService,
+                disableTypeResolver, userEnablementPolicy);
     }
 
     @Test
@@ -542,7 +548,8 @@ public class UserAccountStatusServiceTest {
         when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
         when(entraUserRepository.findById(eq(enabledByUser.getId()))).thenReturn(Optional.of(enabledByUser));
         when(techServicesClient.enableUser(any())).thenReturn(techServicesResponse);
-        when(userService.getUserProfileById(disabledById.toString())).thenReturn(Optional.of(disabledByUserProfile));
+        when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
+        when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(false);
 
         userAccountStatusService.enableUser(enabledUser.getId(), enabledByUser.getId());
 
@@ -589,7 +596,8 @@ public class UserAccountStatusServiceTest {
         when(entraUserRepository.findById(eq(enabledByUser.getId()))).thenReturn(Optional.of(enabledByUser));
         when(techServicesClient.enableUser(any())).thenReturn(techServicesResponse);
         when(userService.isInternal(any(UUID.class))).thenReturn(true);
-        when(userService.getUserProfileById(disabledById.toString())).thenReturn(Optional.of(disabledByUserProfile));
+        when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
+        when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(false);
 
         userAccountStatusService.enableUser(enabledUser.getId(), enabledByUser.getId());
 
@@ -698,7 +706,8 @@ public class UserAccountStatusServiceTest {
         when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
         when(entraUserRepository.findById(eq(enabledByUser.getId()))).thenReturn(Optional.of(enabledByUser));
         when(techServicesClient.enableUser(any())).thenReturn(techServicesResponse);
-        when(userService.getUserProfileById(disabledByUserProfile.getId().toString())).thenReturn(Optional.of(disabledByUserProfile));
+        when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
+        when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(false);
 
         assertThrows(TechServicesClientException.class, () -> userAccountStatusService.enableUser(enabledUser.getId(), enabledByUser.getId()));
         assertThat(enabledUser.isEnabled()).isFalse();
@@ -909,6 +918,8 @@ public class UserAccountStatusServiceTest {
         when(entraUserRepository.findById(targetId)).thenReturn(Optional.of(target));
         when(entraUserRepository.findById(actorId)).thenReturn(Optional.of(actor));
         when(userService.isInternal(actorId)).thenReturn(true);
+        when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
+        when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(false);
 
         // Tech services failure mock
         TechServicesApiResponse<ChangeAccountEnabledResponse> failedResponse =
@@ -979,9 +990,9 @@ public class UserAccountStatusServiceTest {
 
         when(entraUserRepository.findById(targetId)).thenReturn(Optional.of(target));
         when(entraUserRepository.findById(actorId)).thenReturn(Optional.of(actor));
-        when(userService.getUserProfileById(disabledById.toString())).thenReturn(Optional.of(disablerProfile));
-
         when(userService.isInternal(actorId)).thenReturn(true);
+        when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
+        when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(false);
         when(techServicesClient.enableUser(any())).thenReturn(successResp);
 
         userAccountStatusService.enableUser(targetId, actorId);
@@ -1058,9 +1069,9 @@ public class UserAccountStatusServiceTest {
 
         when(entraUserRepository.findById(targetId)).thenReturn(Optional.of(target));
         when(entraUserRepository.findById(actorId)).thenReturn(Optional.of(actor));
-        when(userService.getUserProfileById(disabledById.toString())).thenReturn(Optional.of(disablerProfile));
-
         when(userService.isInternal(actorId)).thenReturn(true);
+        when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
+        when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(false);
         when(techServicesClient.enableUser(any())).thenReturn(successResp);
 
         userAccountStatusService.enableUser(targetId, actorId);
@@ -1133,9 +1144,9 @@ public class UserAccountStatusServiceTest {
 
         when(entraUserRepository.findById(targetId)).thenReturn(Optional.of(target));
         when(entraUserRepository.findById(actorId)).thenReturn(Optional.of(actor));
-        when(userService.getUserProfileById(disabledById.toString())).thenReturn(Optional.of(disablerProfile));
-
         when(userService.isInternal(actorId)).thenReturn(false);
+        when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
+        when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(true);
 
         assertThatThrownBy(() -> userAccountStatusService.enableUser(targetId, actorId))
                 .isInstanceOf(RuntimeException.class)
@@ -1195,9 +1206,9 @@ public class UserAccountStatusServiceTest {
 
         when(entraUserRepository.findById(targetId)).thenReturn(Optional.of(target));
         when(entraUserRepository.findById(actorId)).thenReturn(Optional.of(actor));
-        when(userService.getUserProfileById(disabledById.toString())).thenReturn(Optional.of(disablerProfile));
-
         when(userService.isInternal(actorId)).thenReturn(true);
+        when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
+        when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(false);
         when(techServicesClient.enableUser(any())).thenReturn(successResp);
 
         userAccountStatusService.enableUser(targetId, actorId);
@@ -1274,9 +1285,9 @@ public class UserAccountStatusServiceTest {
 
         when(entraUserRepository.findById(targetId)).thenReturn(Optional.of(target));
         when(entraUserRepository.findById(actorId)).thenReturn(Optional.of(actor));
-        when(userService.getUserProfileById(disabledById.toString())).thenReturn(Optional.of(disablerProfile));
-
         when(userService.isInternal(actorId)).thenReturn(true);
+        when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
+        when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(false);
         when(techServicesClient.enableUser(any())).thenReturn(successResp);
 
         userAccountStatusService.enableUser(targetId, actorId);
@@ -1345,8 +1356,9 @@ public class UserAccountStatusServiceTest {
 
         when(entraUserRepository.findById(targetId)).thenReturn(Optional.of(target));
         when(entraUserRepository.findById(actorId)).thenReturn(Optional.of(actor));
-
         when(userService.isInternal(actorId)).thenReturn(true);
+        when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
+        when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(false);
         when(techServicesClient.enableUser(any())).thenReturn(successResp);
 
         userAccountStatusService.enableUser(targetId, actorId);

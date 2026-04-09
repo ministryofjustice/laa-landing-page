@@ -99,6 +99,13 @@ public class EntraUser extends AuditableEntity {
     private UUID disabledBy;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "disable_type", nullable = true, length = 20)
+    @Nullable
+    @Comment(value = "The delegation level of the user who disabled this account. NULL means unknown/legacy"
+            + " (any role may re-enable). Set at disable-time from the disabling user's highest-delegation role.")
+    private DisableType disableType;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "invitation_status", length = 255)
     private InvitationStatus invitationStatus;
 

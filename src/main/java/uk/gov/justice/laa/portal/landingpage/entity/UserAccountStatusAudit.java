@@ -60,4 +60,8 @@ public class UserAccountStatusAudit extends BaseEntity {
     @JsonIgnore
     private DisableUserReason disableUserReason;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "disable_type", nullable = true, length = 20)
+    private DisableType disableType;
+
 }

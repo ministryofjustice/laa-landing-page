@@ -203,6 +203,17 @@
                         <div class="govuk-summary-card">
                             <div class="govuk-summary-card__title-wrapper">
                                 <h3 class="govuk-summary-card__title">Entra Audit data</h3>
+                                <ul th:if="${canDisableUser or canEnableUser or cannotEnableUser}" class="govuk-summary-card__actions">
+                                    <li th:if="${canDisableUser and userIsEnabled}" class="govuk-summary-card__action">
+                                        <a class="govuk-link" th:href="@{/admin/users/manage/{id}/disable(id=${user.userId}, referer='audit')}">Disable user</a>
+                                    </li>
+                                    <li th:if="${canEnableUser and !userIsEnabled}" class="govuk-summary-card__action">
+                                        <a class="govuk-link" th:href="@{/admin/users/manage/{id}/enable(id=${user.userId}, referer='audit')}">Enable user</a>
+                                    </li>
+                                    <li th:if="${cannotEnableUser and !userIsEnabled}" class="govuk-summary-card__action">
+                                        <span>You cannot enable this user</span>
+                                    </li>
+                                </ul>
                             </div>
                             <div class="govuk-summary-card__content">
                                 <dl class="govuk-summary-list">
@@ -458,6 +469,10 @@
                                         <dt class="govuk-summary-list__key">Changed by</dt>
                                         <dd class="govuk-summary-list__value" th:text="${record.statusChangedBy}">
                                     </div>
+                                    <div class="govuk-summary-list__row" th:if="${record.disableType != null}">
+                                        <dt class="govuk-summary-list__key">Disable type</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.disableType}"></dd>
+                                    </div>
                                     <div class="govuk-summary-list__row"
                                          th:if="${user.accountStatusHistory == null || user.accountStatusHistory.size() == 0}">
                                         <dt class="govuk-summary-list__key">No account status history available</dt>
@@ -489,10 +504,11 @@
                         Disable User
                     </a>
                     <a class="govuk-button govuk-button--warning"
-                       th:if="${canDisableUser && !userIsEnabled}"
+                       th:if="${canEnableUser && !userIsEnabled}"
                        th:href="@{/admin/users/manage/{id}/enable(id=${user.userId}, referer='audit')}">
                         Enable User
                     </a>
+                    <p th:if="${cannotEnableUser && !userIsEnabled}" class="govuk-body">You cannot enable this user</p>
                 </div>
             </div>
         </div>

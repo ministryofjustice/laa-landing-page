@@ -1358,17 +1358,17 @@ public class UserService {
         List<EntraUser> entraUsers = new ArrayList<>();
         String createdBy = "INTERNAL_USER_SYNC";
         int skippedUsers = 0;
-        
+
         for (EntraUserDto user : entraUserDtos) {
             Optional<EntraUser> existingUser = entraUserRepository.findByEmailIgnoreCase(user.getEmail());
-            
+
             // Skip if user already exists and has external user profile
             if (existingUser.isPresent() && hasExternalUserProfile(existingUser.get())) {
                 skippedUsers++;
                 logger.info("Skipping user {} - already exists as external user", user.getEntraOid());
                 continue;
             }
-            
+
             EntraUser entraUser = mapper.map(user, EntraUser.class);
             UserProfile userProfile = UserProfile.builder().activeProfile(true)
                     .userProfileStatus(UserProfileStatus.COMPLETE).userType(UserType.INTERNAL)
@@ -1383,7 +1383,7 @@ public class UserService {
             entraUsers.add(entraUser);
             // todo: security group to access authz app
         }
-        
+
         if (skippedUsers > 0) {
             logger.info("{} users skipped - already exist as external users", skippedUsers);
         }
@@ -1457,7 +1457,7 @@ public class UserService {
                 List<UserProfile> profiles = userProfileRepository.findAllByEntraUser(entraUser);
                 boolean isInternalUser = profiles.stream()
                         .anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
-                
+
                 if (!isInternalUser) {
                     logger.warn("Skipping deletion of user {} - not an internal user", entraId);
                     continue;
@@ -1487,7 +1487,7 @@ public class UserService {
 
                 entraUserRepository.delete(entraUser);
                 entraUserRepository.flush();
-                
+
                 deletedCount++;
                 logger.debug("Successfully deleted internal user: {}", entraId);
 
@@ -2189,6 +2189,7 @@ public class UserService {
                         .statusChange(convertToSentenceCase(record.getStatusChange().toString()))
                         .disableReason(record.getDisableUserReason() != null ? record.getDisableUserReason().getName() : null)
                         .statusChangedBy(record.getStatusChangedBy())
+                        .disableType(record.getDisableType() != null ? record.getDisableType().toString() : null)
                         .build())
                 .toList();
     }
