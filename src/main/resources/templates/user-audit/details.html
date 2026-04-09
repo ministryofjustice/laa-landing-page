@@ -497,18 +497,6 @@
                         th:href="@{/admin/users/audit/entra/{id}/delete(id=${user.userId})}">
                         Delete User
                     </a>
-                    <!-- Disable Button - Only for users without profiles -->
-                    <a class="govuk-button govuk-button--warning"
-                       th:if="${canDisableUser && userIsEnabled}"
-                       th:href="@{/admin/users/manage/{id}/disable(id=${user.userId}, referer='audit')}">
-                        Disable User
-                    </a>
-                    <a class="govuk-button govuk-button--warning"
-                       th:if="${canEnableUser && !userIsEnabled}"
-                       th:href="@{/admin/users/manage/{id}/enable(id=${user.userId}, referer='audit')}">
-                        Enable User
-                    </a>
-                    <p th:if="${cannotEnableUser && !userIsEnabled}" class="govuk-body">You cannot enable this user</p>
                 </div>
             </div>
         </div>

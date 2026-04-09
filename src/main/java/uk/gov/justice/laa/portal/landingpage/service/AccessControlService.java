@@ -241,63 +241,7 @@ public class AccessControlService {
     }
 
     public boolean canEnableUser(String entraUserId) {
-        Optional<EntraUserDto> accessedUserOptional = userService.getEntraUserById(entraUserId);
-        if (accessedUserOptional.isEmpty()) {
-            return false;
-        }
-
-        EntraUserDto accessedUser = accessedUserOptional.get();
-        if (accessedUser.isEnabled()) {
-            return false;
-        }
-
-        boolean isAccessedUserInternal = userService.isInternal(entraUserId);
-        if (isAccessedUserInternal) {
-            return false;
-        }
-
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
-        EntraUser targetUser = entraUserRepository.findById(UUID.fromString(entraUserId)).orElse(null);
-
-        if (targetUser == null) {
-            return false;
-        }
-
-        boolean isInternalUser = userService.isInternal(authenticatedUser.getId());
-        if (!isInternalUser && accessedUser.isMultiFirmUser()) {
-            return false;
-        }
-
-        UserProfile actorUserProfile = authenticatedUser.getUserProfiles().stream()
-                .filter(UserProfile::isActiveProfile).findFirst()
-                .orElse(null);
-        if (actorUserProfile == null) {
-            return false;
-        }
-
-        if (!userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER)) {
-            return false;
-        }
-
-        List<String> actorRoles = actorUserProfile.getAppRoles().stream().map(AppRole::getName).toList();
-        DisableType disableType = targetUser.getDisableType();
-
-        if (!userEnablementPolicy.canEnable(disableType, actorRoles)) {
-            return false;
-        }
-
-        if (userEnablementPolicy.requiresSameFirmCheck(disableType, actorRoles)) {
-            Firm actorFirm = actorUserProfile.getFirm();
-            Firm targetFirm = targetUser.getUserProfiles().stream()
-                    .filter(UserProfile::isActiveProfile)
-                    .findFirst()
-                    .map(UserProfile::getFirm).orElse(null);
-            return actorFirm != null && targetFirm != null
-                    && actorFirm.getId().equals(targetFirm.getId());
-        }
-
-        return true;
+        return computeEnablementState(entraUserId).canEnable();
     }
 
     /**
@@ -312,18 +256,28 @@ public class AccessControlService {
      * @return {@code true} if enable is blocked by hierarchy (show "You cannot enable this user")
      */
     public boolean isEnableBlockedByHierarchy(String entraUserId) {
+        return computeEnablementState(entraUserId).blockedByHierarchy();
+    }
+
+    /**
+     * Computes the full enablement state for the given target user in a single pass.
+     *
+     * <p>Shared by {@link #canEnableUser} and {@link #isEnableBlockedByHierarchy} to avoid
+     * duplicated lookups and ensure both methods apply identical pre-condition checks.
+     */
+    private EnablementState computeEnablementState(String entraUserId) {
         Optional<EntraUserDto> accessedUserOptional = userService.getEntraUserById(entraUserId);
         if (accessedUserOptional.isEmpty()) {
-            return false;
+            return EnablementState.DENIED;
         }
 
         EntraUserDto accessedUser = accessedUserOptional.get();
         if (accessedUser.isEnabled()) {
-            return false;
+            return EnablementState.DENIED;
         }
 
         if (userService.isInternal(entraUserId)) {
-            return false;
+            return EnablementState.DENIED;
         }
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -331,27 +285,31 @@ public class AccessControlService {
         EntraUser targetUser = entraUserRepository.findById(UUID.fromString(entraUserId)).orElse(null);
 
         if (targetUser == null) {
-            return false;
+            return EnablementState.DENIED;
         }
 
-        // Only show the message if the actor actually has the ENABLE_EXTERNAL_USER permission
+        // Non-internal actors cannot enable multi-firm users — not a hierarchy issue, so DENIED
+        boolean isActorInternal = userService.isInternal(authenticatedUser.getId());
+        if (!isActorInternal && accessedUser.isMultiFirmUser()) {
+            return EnablementState.DENIED;
+        }
+
         if (!userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER)) {
-            return false;
+            return EnablementState.DENIED;
         }
 
         UserProfile actorUserProfile = authenticatedUser.getUserProfiles().stream()
                 .filter(UserProfile::isActiveProfile).findFirst()
                 .orElse(null);
         if (actorUserProfile == null) {
-            return false;
+            return EnablementState.DENIED;
         }
 
         List<String> actorRoles = actorUserProfile.getAppRoles().stream().map(AppRole::getName).toList();
         DisableType disableType = targetUser.getDisableType();
 
-        // Blocked = has permission but policy says no (including same-firm failures for FIRM type)
         if (!userEnablementPolicy.canEnable(disableType, actorRoles)) {
-            return true;
+            return EnablementState.BLOCKED_BY_HIERARCHY;
         }
 
         if (userEnablementPolicy.requiresSameFirmCheck(disableType, actorRoles)) {
@@ -360,11 +318,21 @@ public class AccessControlService {
                     .filter(UserProfile::isActiveProfile)
                     .findFirst()
                     .map(UserProfile::getFirm).orElse(null);
-            return actorFirm == null || targetFirm == null
-                    || !actorFirm.getId().equals(targetFirm.getId());
+            boolean sameFirm = actorFirm != null && targetFirm != null
+                    && actorFirm.getId().equals(targetFirm.getId());
+            if (!sameFirm) {
+                return EnablementState.BLOCKED_BY_HIERARCHY;
+            }
         }
 
-        return false;
+        return EnablementState.CAN_ENABLE;
+    }
+
+    /** Encapsulates the result of computing the enable-user access state. */
+    private record EnablementState(boolean canEnable, boolean blockedByHierarchy) {
+        static final EnablementState DENIED = new EnablementState(false, false);
+        static final EnablementState BLOCKED_BY_HIERARCHY = new EnablementState(false, true);
+        static final EnablementState CAN_ENABLE = new EnablementState(true, false);
     }
 
     /**

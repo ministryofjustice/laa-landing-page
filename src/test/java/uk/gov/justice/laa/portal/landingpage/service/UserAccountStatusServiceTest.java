@@ -86,6 +86,7 @@ public class UserAccountStatusServiceTest {
                 userService,
                 userProfileRepository, eventService,
                 disableTypeResolver, userEnablementPolicy);
+        org.mockito.Mockito.lenient().when(disableTypeResolver.resolve(any())).thenReturn(DisableType.NONE);
     }
 
     @Test
