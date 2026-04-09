@@ -18,11 +18,11 @@ databaseChangeLog:
             sql: |
               INSERT INTO app (id, name, description, url, app_type, security_group_oid, ordinal, enabled)
               SELECT gen_random_uuid(),
-                     'SiLAS Administration',
+                     'SILAS System Administration',
                      'Manage admin services including user roles and permissions',
                      '/admin/silas-administration',
                      'AUTHZ',
-                     'SiLAS Administration',
+                     'SILAS System Administration',
                      1,
                      true
               WHERE NOT EXISTS (
@@ -138,23 +138,23 @@ databaseChangeLog:
 
         - sql:
             sql: |
+              DELETE FROM user_profile_app_role 
+                WHERE app_role_id IN (SELECT id FROM app_role ar
+                                      WHERE ar.name = 'SiLAS Administration');
+        - sql:
+            sql: |
+              DELETE FROM role_permission 
+              WHERE app_role_id IN (SELECT id FROM app_role ar
+                                WHERE ar.name = 'SiLAS Administration');
+        - sql:
+            sql: |
               DELETE FROM app_role ar
-              WHERE ar.name = 'SiLAS Administration'
-                AND NOT EXISTS (
-                  SELECT 1
-                  FROM role_permission rp
-                  WHERE rp.app_role_id = ar.id
-                )
-                AND NOT EXISTS (
-                  SELECT 1
-                  FROM user_profile_app_role ur
-                  WHERE ur.app_role_id = ar.id
-                );          
+              WHERE ar.name = 'SiLAS Administration';
 
         - sql:
             sql: |
               UPDATE app_role
-              SET app_id = (SELECT id FROM app WHERE name = 'SiLAS Administration')
+              SET app_id = (SELECT id FROM app WHERE name = 'SILAS System Administration')
               WHERE name = 'SILAS System Administration';
 
         - sql:
