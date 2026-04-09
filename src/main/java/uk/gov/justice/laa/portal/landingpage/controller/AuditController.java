@@ -215,8 +215,8 @@ public class AuditController {
     private String formatDisableUserReason(TechServicesUser user) {
         return Optional.ofNullable(user)
                 .map(TechServicesUser::getCustomSecurityAttributes)
-                .map(attr -> attr.getGuestUserStatus())
-                .map(status -> status.getDisabledReason())
+                .map(TechServicesUser.CustomSecurityAttributes::getGuestUserStatus)
+                .map(TechServicesUser.GuestUserStatus::getDisabledReason)
                 .flatMap(disableUserReasonRepository::findDisableUserReasonByEntraDescription)
                 .map(DisableUserReason::getName)
                 .orElse("Inactivity");
