@@ -1,18 +1,20 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import uk.gov.justice.laa.portal.landingpage.repository.DistributedLockRepository;
-
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.function.Supplier;
+
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import uk.gov.justice.laa.portal.landingpage.repository.DistributedLockRepository;
 
 @Slf4j
 @Service
@@ -26,7 +28,7 @@ public class DistributedLockService {
     @Retryable(retryFor = LockAcquisitionException.class,
             maxAttempts = 3,
             backoff = @Backoff(delay = 10000, multiplier = 2))
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public <T> T withLock(String lockKey, Duration lockDuration, Supplier<T> task) {
         if (acquireLock(lockKey, lockDuration)) {
             try {
@@ -42,7 +44,7 @@ public class DistributedLockService {
     @Retryable(retryFor = LockAcquisitionException.class,
             maxAttempts = 3,
             backoff = @Backoff(delay = 10000, multiplier = 2))
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void withLock(String lockKey, Duration lockDuration, Runnable task) {
         withLock(lockKey, lockDuration, () -> {
             task.run();

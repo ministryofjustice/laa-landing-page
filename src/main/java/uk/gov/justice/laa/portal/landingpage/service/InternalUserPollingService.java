@@ -62,22 +62,44 @@ public class InternalUserPollingService {
                 break;
             }
         }
+
+        deleteInternalUsers(allUsers, existingUserOids);
+
+        createInternalUsers(allUsers, existingUserOids);
+    }
+
+    private void createInternalUsers(List<DirectoryObject> allUsers, List<UUID> existingUserOids) {
         List<DirectoryObject> newUsers = allUsers.stream()
                 .filter(u -> !existingUserOids.contains(UUID.fromString(u.getId())))
                 .toList();
 
-        if (newUsers.isEmpty()) {
-            logger.info("No new users found to add.");
-            return;
-        }
-
-        List<EntraUserDto> entraUserDtoList = extractEntraUserDtos(newUsers);
-        if (!entraUserDtoList.isEmpty()) {
-            logger.info("Inserting {} new internal users.", entraUserDtoList.size());
-            int savedUserCount = userService.createInternalPolledUser(entraUserDtoList);
-            logger.info("Inserted {} new internal users.", savedUserCount);
+        if (!newUsers.isEmpty()) {
+            List<EntraUserDto> entraUserDtoList = extractEntraUserDtos(newUsers);
+            if (!entraUserDtoList.isEmpty()) {
+                logger.info("Inserting {} new internal users.", entraUserDtoList.size());
+                int savedUserCount = userService.createInternalPolledUser(entraUserDtoList);
+                logger.info("Inserted {} new internal users.", savedUserCount);
+            }
         } else {
-            logger.info("No valid User objects found among new users.");
+            logger.info("No new users found to add.");
+        }
+    }
+
+    private void deleteInternalUsers(List<DirectoryObject> allUsers, List<UUID> existingUserOids) {
+        List<UUID> graphApiUserOids = allUsers.stream()
+                .map(u -> UUID.fromString(u.getId()))
+                .toList();
+
+        List<UUID> usersToDelete = existingUserOids.stream()
+                .filter(existingUserOid -> !graphApiUserOids.contains(existingUserOid))
+                .toList();
+
+        if (!usersToDelete.isEmpty()) {
+            logger.info("Deleting {} internal users in Silas that no longer exist in internal SG", usersToDelete.size());
+            int deletedUserCount = userService.deleteInternalUsersByEntraIds(usersToDelete);
+            logger.info("Deleted {} internal users", deletedUserCount);
+        } else {
+            logger.info("No internal users found for deletion");
         }
     }
 

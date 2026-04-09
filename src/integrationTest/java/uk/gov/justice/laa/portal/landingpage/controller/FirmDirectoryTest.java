@@ -5,12 +5,8 @@ import jakarta.annotation.Resource;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
 
-import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.ui.ExtendedModelMap;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
-
-import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 
@@ -45,7 +41,7 @@ public class FirmDirectoryTest extends BaseIntegrationTest {
     @Transactional
     public void accessFirmDrilldownView() throws Exception {
         Firm firm1 = buildFirm("Test Firm", "A123");
-        Office office1 = buildOffice(firm1, "Test Office", "123 Test Street", "BT12 3AB", "O123");
+        Office office1 = buildOffice(firm1, "Test Office", "O123");
         firmRepository.saveAndFlush(firm1);
         officeRepository.saveAndFlush(office1);
 
@@ -74,55 +70,39 @@ public class FirmDirectoryTest extends BaseIntegrationTest {
 
     @Test
     @Transactional
-    public void reasonForDisableGet() throws Exception {
+    public void bulkDisableConfirmationGet() throws Exception {
 
         Firm firm1 = buildFirm("Test Firm", "A123");
-        Office office1 = buildOffice(firm1, "Test Office", "123 Test Street", "BT12 3AB", "O123");
+        Office office1 = buildOffice(firm1, "Test Office", "O123");
         firmRepository.saveAndFlush(firm1);
         officeRepository.saveAndFlush(office1);
 
         UUID firmId = firm1.getId();
 
-        mockMvc.perform(get(FIRM_DIRECTORY_PATH + "/" + firmId + "/reasonForDisable")
+        mockMvc.perform(get(FIRM_DIRECTORY_PATH + "/" + firmId + "/confirmation")
                         .with(defaultOauth2Login(defaultLoggedInUser)))
                 .andExpect(status().is2xxSuccessful())
-                .andExpect(view().name("firm-directory/bulk-disable-user-reason"))
+                .andExpect(view().name("firm-directory/bulk-confirmation"))
                 .andExpect(model().attributeExists("firm"))
-                .andExpect(model().attributeExists("reasons"))
-                .andExpect(model().attributeExists("disableUserReasonsForm"))
-                .andExpect(model().attribute(ModelAttributes.PAGE_TITLE, "Choose a reason to disable access for - " + firm1.getName()));
+                .andExpect(model().attribute(ModelAttributes.PAGE_TITLE, "Remove access for all - " + firm1.getName()));
     }
 
     @Test
     @Transactional
-    void reasonForDisablePostWithoutError() throws Exception {
+    void bulkDisableConfirmationPostWithoutError() throws Exception {
         // Arrange
         Firm firm1 = buildFirm("Test Firm", "A123");
-        Office office1 = buildOffice(firm1, "Test Office", "123 Test Street", "BT12 3AB", "O123");
+        Office office1 = buildOffice(firm1, "Test Office", "O123");
         firmRepository.saveAndFlush(firm1);
         officeRepository.saveAndFlush(office1);
 
-
-        String selectedReasonId = String.valueOf(UUID.randomUUID());
-
-        MockHttpSession httpSession = new MockHttpSession();
-        ExtendedModelMap disableUserReasonModel = new ExtendedModelMap();
-        disableUserReasonModel.addAttribute("reasonIdSelected", selectedReasonId);
-        disableUserReasonModel.addAttribute("firm", FirmDto.builder()
-                .id(firm1.getId())
-                .name(firm1.getName())
-                .code(firm1.getCode())
-                .build());
-        httpSession.setAttribute("disableUserReasonModel", disableUserReasonModel);
-        String firmId = String.valueOf(UUID.randomUUID());
+        UUID firmId = firm1.getId();
+        
         // Act + Assert
-        mockMvc.perform(post(FIRM_DIRECTORY_PATH + "/" + firmId + "/reasonForDisable")
-                        .session(httpSession)
+        mockMvc.perform(post(FIRM_DIRECTORY_PATH + "/" + firmId + "/confirmation")
                         .with(defaultOauth2Login(defaultLoggedInUser))
-                        .with(csrf())
-                        .param("reasonId", String.valueOf(selectedReasonId)))
-                .andExpect(status().is2xxSuccessful())
-                .andExpect(view().name("firm-directory/bulk-confirmation"))
-                .andExpect(model().attribute(ModelAttributes.PAGE_TITLE, "Remove access for all - " + firm1.getName()));
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(view().name("redirect:/admin/firmDirectory/" + firmId));
     }
 }

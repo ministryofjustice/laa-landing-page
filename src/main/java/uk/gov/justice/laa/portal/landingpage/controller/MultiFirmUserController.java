@@ -573,11 +573,11 @@ public class MultiFirmUserController {
 
         if (isCcmsApp) {
             // Filter to only CCMS roles for organization
-            List<AppRoleDto> ccmsRoles = assignableRoles.stream()
+            List<AppRoleViewModel> ccmsRoles = appRoleViewModels.stream()
                     .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()))
                     .sorted().collect(Collectors.toList());
 
-            Map<String, List<AppRoleDto>> organizedRoles = new HashMap<>();
+            Map<String, List<AppRoleViewModel>> organizedRoles = new HashMap<>();
             if (!ccmsRoles.isEmpty()) {
                 // Organize CCMS roles by section dynamically
                 organizedRoles.putAll(CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles));
