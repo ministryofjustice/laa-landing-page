@@ -80,9 +80,9 @@ public class UserAccountStatusService {
         }
 
         // Fetch entities
-        EntraUser disabledUser = entraUserRepository.findById(disabledUserId)
+        EntraUser disabledUser = entraUserRepository.findByIdWithAssociations(disabledUserId)
                 .orElseThrow(() -> new RuntimeException(String.format("Could not find a user account to disable with id \"%s\"", disabledUserId)));
-        EntraUser disabledByUser = entraUserRepository.findById(disabledById)
+        EntraUser disabledByUser = entraUserRepository.findByIdWithAssociations(disabledById)
                 .orElseThrow(() -> new RuntimeException(String.format("Could not find a user account with id \"%s\"", disabledById)));
         DisableUserReason reason = disableUserReasonRepository.findById(disableReasonId)
                 .orElseThrow(() -> new RuntimeException(String.format("Could not find a disable user reason with id \"%s\"", disableReasonId)));
