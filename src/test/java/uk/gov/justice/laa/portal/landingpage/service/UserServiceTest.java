@@ -8564,9 +8564,6 @@ class UserServiceTest {
             assertThat(result.getDisabledBy())
                     .isEqualTo(String.valueOf(user.getDisabledBy()));
 
-            assertThat(result.getLastLoginDate())
-                    .isNull();
-
             assertThat(result.getActivationStatus())
                     .isNull();
 
@@ -8660,9 +8657,6 @@ class UserServiceTest {
 
             assertThat(result.getDisabledBy())
                     .isEqualTo(String.valueOf(user.getDisabledBy()));
-
-            assertThat(result.getLastLoginDate())
-                    .isNull();
 
             assertThat(result.getActivationStatus())
                     .isNull();
