@@ -906,10 +906,10 @@ public class AdminController {
         AppRoleDto appRoleDto = appRoleService.findById(appRoleId).orElseThrow();
         List<AppRoleDto> assignableByRoles = appRoleService.getAssigningRolesFor(appRoleId);
         List<String> assigningRoleIds = assignableByRoles.stream().map(AppRoleDto::getId).toList();
-        List<AppRoleDto> allAuthzRoles = appRoleService.getAllAuthzRoles();
+        List<AppRoleDto> allAssigningRolesByAppType = appRoleService.getAllAssigningRoles(appRoleDto.getApp().getAppType());
 
         List<AppRoleViewModel> assigningRoleViewModels = getListFromHttpSession(session, "appRoleSelections", AppRoleViewModel.class)
-                .orElse(allAuthzRoles.stream()
+                .orElse(allAssigningRolesByAppType.stream()
                         .map(dto -> {
                             AppRoleViewModel viewModel = modelMapper.map(dto, AppRoleViewModel.class);
                             viewModel.setSelected(assigningRoleIds.contains(dto.getId()));
