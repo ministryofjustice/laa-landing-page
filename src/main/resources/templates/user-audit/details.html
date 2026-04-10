@@ -221,7 +221,7 @@
                                     <div class="govuk-summary-list__row" th:if="${entraUser != null && !entraUser.accountEnabled}">
                                         <dt class="govuk-summary-list__key">Disable Reason</dt>
                                         <dd class="govuk-summary-list__value" th:if="${entraUser.customSecurityAttributes == null || entraUser.customSecurityAttributes.guestUserStatus == null || entraUser.customSecurityAttributes.guestUserStatus.disabledReason == null}">Unknown</dd>
-                                        <dd class="govuk-summary-list__value" th:if="${entraUser.customSecurityAttributes != null && entraUser.customSecurityAttributes.guestUserStatus != null && entraUser.customSecurityAttributes.guestUserStatus.disabledReason != null}" th:text="${entraUser.customSecurityAttributes.guestUserStatus.disabledReason}"></dd>
+                                        <dd class="govuk-summary-list__value" th:if="${entraUser.customSecurityAttributes != null && entraUser.customSecurityAttributes.guestUserStatus != null && entraUser.customSecurityAttributes.guestUserStatus.disabledReason != null}" th:text="${entraUserDisableReason}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Invitation State</dt>
