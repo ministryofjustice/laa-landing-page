@@ -72,6 +72,10 @@ public class AuditUserDetailDto implements Serializable {
     private String createdBy;
 
     /**
+     * User who disabled this account
+     */
+    private String disabledBy;
+    /**
      * Entra status from EntraUser.userStatus enum
      */
     private String entraStatus;
