@@ -226,7 +226,7 @@ public class UserAccountStatusService {
         }
         // Fetch entities
         EntraUser enabledUser = entraUserRepository.findByIdWithAssociations(enabledUserId)
-                .orElseThrow(() -> new RuntimeException(String.format("Could not find a user account to disable with id \"%s\"", enabledUserId)));
+                .orElseThrow(() -> new RuntimeException(String.format("Could not find a user account with id \"%s\"", enabledUserId)));
         EntraUser enabledByUser = entraUserRepository.findByIdWithAssociations(enabledById)
                 .orElseThrow(() -> new RuntimeException(String.format("Could not find a user account with id \"%s\"", enabledById)));
 
