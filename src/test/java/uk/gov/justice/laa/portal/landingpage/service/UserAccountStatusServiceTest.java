@@ -249,8 +249,8 @@ public class UserAccountStatusServiceTest {
                 .build();
         TechServicesApiResponse<ChangeAccountEnabledResponse> techServicesResponse = TechServicesApiResponse.success(null);
 
-        when(entraUserRepository.findById(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
-        when(entraUserRepository.findById(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
         when(disableUserReasonRepository.findById(eq(disableUserReason.getId()))).thenReturn(Optional.of(disableUserReason));
         when(techServicesClient.disableUser(any(), any())).thenReturn(techServicesResponse);
         when(disableTypeResolver.resolve(eq(disabledByUser))).thenReturn(DisableType.FIRM);
@@ -297,8 +297,8 @@ public class UserAccountStatusServiceTest {
                 .build();
         TechServicesApiResponse<ChangeAccountEnabledResponse> techServicesResponse = TechServicesApiResponse.success(null);
 
-        when(entraUserRepository.findById(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
-        when(entraUserRepository.findById(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
         when(disableUserReasonRepository.findById(eq(disableUserReason.getId()))).thenReturn(Optional.of(disableUserReason));
         when(techServicesClient.disableUser(any(), any())).thenReturn(techServicesResponse);
         when(userService.isInternal(any(UUID.class))).thenReturn(true);
@@ -341,8 +341,8 @@ public class UserAccountStatusServiceTest {
                 .entraDescription("ATestReason")
                 .build();
 
-        when(entraUserRepository.findById(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
-        when(entraUserRepository.findById(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
         when(disableUserReasonRepository.findById(eq(disableUserReason.getId()))).thenReturn(Optional.of(disableUserReason));
 
         assertThrows(RuntimeException.class,
@@ -415,8 +415,8 @@ public class UserAccountStatusServiceTest {
                 .build();
         TechServicesApiResponse<ChangeAccountEnabledResponse> techServicesResponse = TechServicesApiResponse.error(errorResponse);
 
-        when(entraUserRepository.findById(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
-        when(entraUserRepository.findById(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
         when(disableUserReasonRepository.findById(eq(disableUserReason.getId()))).thenReturn(Optional.of(disableUserReason));
         when(techServicesClient.disableUser(any(), any())).thenReturn(techServicesResponse);
 
@@ -457,8 +457,8 @@ public class UserAccountStatusServiceTest {
                 .entraDescription("ATestReason")
                 .build();
 
-        when(entraUserRepository.findById(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
-        when(entraUserRepository.findById(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
         when(disableUserReasonRepository.findById(eq(disableUserReason.getId()))).thenReturn(Optional.of(disableUserReason));
 
         assertThrows(RuntimeException.class, () -> userAccountStatusService.disableUser(disabledUser.getId(), disableUserReason.getId(), disabledByUser.getId()));
@@ -470,7 +470,7 @@ public class UserAccountStatusServiceTest {
     @Test
     public void testDisableUserThrowsExceptionWhenDisabledUserNotFound() {
         assertThrows(RuntimeException.class, () -> userAccountStatusService.disableUser(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()));
-        verify(entraUserRepository, times(1)).findById(any());
+        verify(entraUserRepository, times(1)).findByIdWithAssociations(any());
         verify(entraUserRepository, times(0)).saveAndFlush(any());
         verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
     }
@@ -483,11 +483,11 @@ public class UserAccountStatusServiceTest {
                 .lastName("User")
                 .build();
 
-        when(entraUserRepository.findById(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
 
         assertThrows(RuntimeException.class, () -> userAccountStatusService.disableUser(disabledUser.getId(), UUID.randomUUID(), UUID.randomUUID()));
         assertThat(disabledUser.isEnabled()).isTrue();
-        verify(entraUserRepository, times(2)).findById(any());
+        verify(entraUserRepository, times(2)).findByIdWithAssociations(any());
         verify(entraUserRepository, times(0)).saveAndFlush(any());
         verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
     }
@@ -505,12 +505,12 @@ public class UserAccountStatusServiceTest {
                 .lastName("User")
                 .build();
 
-        when(entraUserRepository.findById(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
-        when(entraUserRepository.findById(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
 
         assertThrows(RuntimeException.class, () -> userAccountStatusService.disableUser(disabledUser.getId(), UUID.randomUUID(), disabledByUser.getId()));
         assertThat(disabledUser.isEnabled()).isTrue();
-        verify(entraUserRepository, times(2)).findById(any());
+        verify(entraUserRepository, times(2)).findByIdWithAssociations(any());
         verify(disableUserReasonRepository, times(1)).findById(any());
         verify(entraUserRepository, times(0)).saveAndFlush(any());
         verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
