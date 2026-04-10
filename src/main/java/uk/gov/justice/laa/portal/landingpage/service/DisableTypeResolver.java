@@ -8,6 +8,8 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 /**
  * Resolves the {@link DisableType} that should be recorded when an external user is disabled.
@@ -49,7 +51,7 @@ public class DisableTypeResolver {
         List<String> roleNames = actor.getUserProfiles().stream()
                 .filter(UserProfile::isActiveProfile)
                 .findFirst()
-                .map(profile -> profile.getAppRoles().stream()
+                .map(profile -> Optional.ofNullable(profile.getAppRoles()).orElse(Set.of()).stream()
                         .map(appRole -> appRole.getName())
                         .toList())
                 .orElse(List.of());

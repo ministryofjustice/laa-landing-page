@@ -95,7 +95,7 @@ public class EntraUser extends AuditableEntity {
 
     @Column(name = "disabled_by", nullable = true, length = 255)
     @Nullable
-    @Comment(value = "The user profile id of the admin who disabled the user")
+    @Comment(value = "The EntraUser id of the admin who disabled the user")
     private UUID disabledBy;
 
     @Enumerated(EnumType.STRING)

@@ -29,6 +29,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -274,7 +275,8 @@ public class UserAccountStatusService {
         UserProfile actorUserProfile = actor.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
                 .orElseThrow(() -> new RuntimeException(String.format("Could not find an active user profile for user with id \"%s\"", actor.getId())));
 
-        List<String> actingUserRoles = actorUserProfile.getAppRoles().stream().map(AppRole::getName).toList();
+        List<String> actingUserRoles = Optional.ofNullable(actorUserProfile.getAppRoles()).orElse(Set.of())
+                .stream().map(AppRole::getName).toList();
         DisableType disableType = targetUser.getDisableType();
 
         if (!userEnablementPolicy.canEnable(disableType, actingUserRoles)) {

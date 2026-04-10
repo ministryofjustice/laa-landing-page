@@ -321,7 +321,8 @@ public class AccessControlService {
             return EnablementState.DENIED;
         }
 
-        List<String> actorRoles = actorUserProfile.getAppRoles().stream().map(AppRole::getName).toList();
+        List<String> actorRoles = Optional.ofNullable(actorUserProfile.getAppRoles()).orElse(Set.of())
+                .stream().map(AppRole::getName).toList();
         DisableType disableType = targetUser.getDisableType();
 
         if (!userEnablementPolicy.canEnable(disableType, actorRoles)) {
