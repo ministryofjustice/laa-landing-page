@@ -281,8 +281,8 @@ public class AppRoleService {
 
     private void validateInternalUserFirmTypeRestriction(RoleCreationDto dto) {
         boolean isInternalOnly = dto.getUserTypeRestriction() != null
-                && dto.getUserTypeRestriction().size() == 1
-                && dto.getUserTypeRestriction().contains(UserType.INTERNAL);
+                && !dto.getUserTypeRestriction().isEmpty()
+                && dto.getUserTypeRestriction().stream().allMatch(UserType.INTERNAL::equals);
         boolean hasFirmTypeRestriction = dto.getFirmTypeRestriction() != null
                 && !dto.getFirmTypeRestriction().isEmpty();
 

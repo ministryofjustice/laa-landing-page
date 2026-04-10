@@ -15,6 +15,7 @@ import jakarta.validation.ValidatorFactory;
 import uk.gov.justice.laa.portal.landingpage.dto.RoleCreationDto;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.validation.ValidationMessages;
 
 /**
  * Test class for RoleCreationValidator
@@ -193,7 +194,7 @@ class RoleCreationValidatorTest {
         assertThat(violations.isEmpty()).isFalse();
         assertThat(violations)
                 .anyMatch(v -> v.getMessage()
-                        .equals("Firm type restriction cannot be applied to internal roles."));
+                        .equals(ValidationMessages.FIRM_TYPE_RESTRICTION_INTERNAL_ROLE));
     }
 
     @Test
@@ -214,7 +215,7 @@ class RoleCreationValidatorTest {
         // Assert
         assertThat(violations)
                 .noneMatch(v -> v.getMessage()
-                        .equals("Firm type restriction cannot be applied to internal roles."));
+                        .equals(ValidationMessages.FIRM_TYPE_RESTRICTION_INTERNAL_ROLE));
     }
 
     @Test
@@ -235,6 +236,6 @@ class RoleCreationValidatorTest {
         // Assert
         assertThat(violations)
                 .noneMatch(v -> v.getMessage()
-                        .equals("Firm type restriction cannot be applied to internal roles."));
+                        .equals(ValidationMessages.FIRM_TYPE_RESTRICTION_INTERNAL_ROLE));
     }
 }
