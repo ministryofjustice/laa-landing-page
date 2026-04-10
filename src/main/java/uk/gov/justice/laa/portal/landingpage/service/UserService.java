@@ -71,6 +71,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
+import uk.gov.justice.laa.portal.landingpage.exception.UserAlreadyAssignedToFirmException;
 import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
@@ -902,9 +903,8 @@ public class UserService {
                             && profile.getFirm().getId().equals(firmDto.getId()));
 
             if (firmAlreadyAssigned) {
-                logger.error("The user is already got a profile for the firm: {}", firmDto);
-                throw new RuntimeException(
-                        String.format("User profile already exists for this firm %s", firmDto));
+                logger.warn("The user is already got a profile for the firm: {}", firmDto);
+                throw new UserAlreadyAssignedToFirmException();
             }
         }
 
@@ -2076,7 +2076,9 @@ public class UserService {
                 .lastName(entraUser.getLastName())
                 .fullName(entraUser.getFirstName() + " " + entraUser.getLastName())
                 .isMultiFirmUser(entraUser.isMultiFirmUser()).userType(userType)
-                .createdDate(entraUser.getCreatedDate()).createdBy(entraUser.getCreatedBy())
+                .createdDate(entraUser.getCreatedDate())
+                .createdBy(entraUser.getCreatedBy())
+                .disabledBy(String.valueOf(entraUser.getDisabledBy()))
                 // TODO: Fetch lastLoginDate from Microsoft Graph API
                 .lastLoginDate(null)
                 .activationStatus(entraUser.getInvitationStatus() != null ? entraUser.getInvitationStatus().name() : null)
@@ -2132,6 +2134,7 @@ public class UserService {
                 .fullName(entraUser.getFirstName() + " " + entraUser.getLastName())
                 .isMultiFirmUser(entraUser.isMultiFirmUser()).userType(userType)
                 .createdDate(entraUser.getCreatedDate()).createdBy(entraUser.getCreatedBy())
+                .disabledBy(String.valueOf(entraUser.getDisabledBy()))
                 // TODO: Fetch lastLoginDate from Microsoft Graph API
                 .lastLoginDate(null)
                 .activationStatus(entraUser.getInvitationStatus() != null ? entraUser.getInvitationStatus().name() : null)

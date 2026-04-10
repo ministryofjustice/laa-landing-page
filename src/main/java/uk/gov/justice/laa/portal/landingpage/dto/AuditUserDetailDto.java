@@ -72,6 +72,11 @@ public class AuditUserDetailDto implements Serializable {
     private String createdBy;
 
     /**
+     * User who disabled this account
+     */
+    private String disabledBy;
+
+    /**
      * Last login date from Graph API signInActivity
      */
     private LocalDateTime lastLoginDate;

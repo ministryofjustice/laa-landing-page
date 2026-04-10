@@ -16,7 +16,7 @@
             Back </a>
     </nav>
     <main class="govuk-main-wrapper" id="main-content" th:if="${#authentication.isAuthenticated()}">
-        <div th:if="${successMessage}" class="govuk-notification-banner govuk-notification-banner--success" role="alert"
+        <div th:if="${successMessage}" class="govuk-notification-banner govuk-notification-banner--successsuccess" role="alert"
             aria-labelledby="govuk-notification-banner-title" data-module="govuk-notification-banner">
             <div class="govuk-notification-banner__header">
                 <h2 class="govuk-notification-banner__title" id="govuk-notification-banner-title">
@@ -33,6 +33,20 @@
                     aria-label="Dismiss success message">
                     Dismiss
                 </a>
+            </div>
+        </div>
+        <div th:if="${userAlreadyAssignedFirmMessage}" class="govuk-notification-banner " role="alert"
+             aria-labelledby="govuk-notification-banner-title-firm-already" data-module="govuk-notification-banner">
+            <div class="govuk-notification-banner__header">
+                <h2 class="govuk-notification-banner__title" id="govuk-notification-banner-title-firm-already">
+                    Important
+                </h2>
+            </div>
+            <div class="govuk-notification-banner__content"
+                 style="display: flex; justify-content: space-between; align-items: center;">
+                <p class="govuk-notification-banner__heading" style="margin: 0;">
+                    <span th:text="${userAlreadyAssignedFirmMessage}"></span>
+                </p>
             </div>
         </div>
         <div class="govuk-grid-row">
