@@ -198,8 +198,11 @@ public class AuditController {
             model.addAttribute("entraUser", entraUserResponse.getData().getUser());
         }
         canDisableUser = accessControlService.canDisableUser(userDetail.getUserId());
-        boolean canEnableUser = disableUserFeatureEnabled && accessControlService.canEnableUser(userDetail.getUserId());
-        boolean cannotEnableUser = disableUserFeatureEnabled && accessControlService.isEnableBlockedByHierarchy(userDetail.getUserId());
+        AccessControlService.EnablementFlags enablementFlags = disableUserFeatureEnabled
+                ? accessControlService.getEnablementFlags(userDetail.getUserId())
+                : new AccessControlService.EnablementFlags(false, false);
+        boolean canEnableUser = enablementFlags.canEnable();
+        boolean cannotEnableUser = enablementFlags.blockedByHierarchy();
 
         // Add attributes to model
         model.addAttribute("user", userDetail);

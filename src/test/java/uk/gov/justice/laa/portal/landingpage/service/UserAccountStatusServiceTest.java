@@ -253,12 +253,17 @@ public class UserAccountStatusServiceTest {
         when(entraUserRepository.findById(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
         when(disableUserReasonRepository.findById(eq(disableUserReason.getId()))).thenReturn(Optional.of(disableUserReason));
         when(techServicesClient.disableUser(any(), any())).thenReturn(techServicesResponse);
+        when(disableTypeResolver.resolve(eq(disabledByUser))).thenReturn(DisableType.FIRM);
 
         userAccountStatusService.disableUser(disabledUser.getId(), disableUserReason.getId(), disabledByUser.getId());
 
         assertThat(disabledUser.isEnabled()).isFalse();
+        assertThat(disabledUser.getDisableType()).isEqualTo(DisableType.FIRM);
+        verify(disableTypeResolver, times(1)).resolve(disabledByUser);
         verify(entraUserRepository, times(1)).saveAndFlush(any());
-        verify(userAccountStatusAuditRepository, times(1)).saveAndFlush(any());
+        ArgumentCaptor<UserAccountStatusAudit> auditCaptor = ArgumentCaptor.forClass(UserAccountStatusAudit.class);
+        verify(userAccountStatusAuditRepository, times(1)).saveAndFlush(auditCaptor.capture());
+        assertThat(auditCaptor.getValue().getDisableType()).isEqualTo(DisableType.FIRM);
     }
 
     @Test
@@ -1550,15 +1555,15 @@ public class UserAccountStatusServiceTest {
                     .name("test Reason")
                     .build();
 
+            EntraUser userToDisable = EntraUser.builder()
+                    .enabled(true)
+                    .entraOid(UUID.randomUUID().toString())
+                    .build();
             List<UserProfile> userProfiles = List.of(
                     UserProfile.builder()
-                            .entraUser(EntraUser.builder()
-                                    .enabled(true)
-                                    .entraOid(UUID.randomUUID().toString())
-                                    .build())
+                            .entraUser(userToDisable)
                             .id(UUID.randomUUID())
                             .build()
-
             );
             TechServicesApiResponse<ChangeAccountEnabledResponse> techServicesResponse = TechServicesApiResponse.success(null);
 
@@ -1566,12 +1571,17 @@ public class UserAccountStatusServiceTest {
             when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
             when(disableUserReasonRepository.findById(eq(reason.getId()))).thenReturn(Optional.of(reason));
             when(userProfileRepository.findByFirmId(eq(firmId))).thenReturn(userProfiles);
+            when(disableTypeResolver.resolve(eq(enabledUser))).thenReturn(DisableType.FIRM);
 
             userAccountStatusService.disableUserAllUserByFirmId(String.valueOf(firmId), reason.getId(), enabledUser.getId());
 
+            verify(disableTypeResolver, times(1)).resolve(enabledUser);
+            assertThat(userToDisable.getDisableType()).isEqualTo(DisableType.FIRM);
             verify(entraUserRepository, times(1)).saveAndFlush(any());
             verify(techServicesClient, times(1)).disableUser(any(), any());
-            verify(userAccountStatusAuditRepository, times(1)).saveAndFlush(any());
+            ArgumentCaptor<UserAccountStatusAudit> bulkAuditCaptor = ArgumentCaptor.forClass(UserAccountStatusAudit.class);
+            verify(userAccountStatusAuditRepository, times(1)).saveAndFlush(bulkAuditCaptor.capture());
+            assertThat(bulkAuditCaptor.getValue().getDisableType()).isEqualTo(DisableType.FIRM);
 
         }
 

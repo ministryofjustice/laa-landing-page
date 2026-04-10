@@ -41,6 +41,11 @@ public class DisableTypeResolver {
             return DisableType.NONE;
         }
 
+        if (actor.getUserProfiles() == null) {
+            log.warn("DisableTypeResolver.resolve called with null userProfiles — returning NONE");
+            return DisableType.NONE;
+        }
+
         List<String> roleNames = actor.getUserProfiles().stream()
                 .filter(UserProfile::isActiveProfile)
                 .findFirst()

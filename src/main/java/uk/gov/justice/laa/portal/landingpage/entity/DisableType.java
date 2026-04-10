@@ -23,23 +23,33 @@ public enum DisableType {
      * Disabled by an automated sync process (manual or automatic user sync).
      * Only External User Manager / Admin or higher can re-enable.
      */
-    NONE,
+    NONE("None"),
 
     /**
      * Disabled by a Firm User Manager.
      * A FUM from the same firm, or any EUM/EUA or higher, can re-enable.
      */
-    FIRM,
+    FIRM("Firm"),
 
     /**
      * Disabled by an External User Manager or External User Admin.
      * Only External User Manager / Admin or higher can re-enable.
      */
-    LAA,
+    LAA("LAA"),
 
     /**
      * Disabled by Security Response or Global Admin.
      * Only Security Response or Global Admin can re-enable.
      */
-    PRIVILEGED
+    PRIVILEGED("Privileged");
+
+    private final String displayName;
+
+    DisableType(String displayName) {
+        this.displayName = displayName;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
 }

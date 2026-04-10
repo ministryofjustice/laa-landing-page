@@ -379,12 +379,11 @@ public class UserController {
         final boolean canDisableUser = disableUserFeatureEnabled
                 && accessControlService.canDisableUser(user.getEntraUser().getId());
         model.addAttribute("canDisableUser", canDisableUser);
-        final boolean canEnableUser = disableUserFeatureEnabled
-                && accessControlService.canEnableUser(user.getEntraUser().getId());
-        model.addAttribute("canEnableUser", canEnableUser);
-        final boolean cannotEnableUser = disableUserFeatureEnabled
-                && accessControlService.isEnableBlockedByHierarchy(user.getEntraUser().getId());
-        model.addAttribute("cannotEnableUser", cannotEnableUser);
+        AccessControlService.EnablementFlags enablementFlags = disableUserFeatureEnabled
+                ? accessControlService.getEnablementFlags(user.getEntraUser().getId())
+                : new AccessControlService.EnablementFlags(false, false);
+        model.addAttribute("canEnableUser", enablementFlags.canEnable());
+        model.addAttribute("cannotEnableUser", enablementFlags.blockedByHierarchy());
         final boolean userIsEnabled = user.getEntraUser().isEnabled();
         model.addAttribute("userIsEnabled", userIsEnabled);
         boolean showResendVerificationLink = accessControlService.canSendVerificationEmail(id);

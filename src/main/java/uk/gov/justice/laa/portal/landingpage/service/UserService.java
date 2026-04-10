@@ -2192,7 +2192,7 @@ public class UserService {
                         .statusChange(convertToSentenceCase(record.getStatusChange().toString()))
                         .disableReason(record.getDisableUserReason() != null ? record.getDisableUserReason().getName() : null)
                         .statusChangedBy(record.getStatusChangedBy())
-                        .disableType(record.getDisableType() != null ? record.getDisableType().toString() : null)
+                        .disableType(record.getDisableType() != null ? record.getDisableType().getDisplayName() : null)
                         .build())
                 .toList();
     }

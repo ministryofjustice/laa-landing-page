@@ -260,6 +260,22 @@ public class AccessControlService {
     }
 
     /**
+     * Returns both enablement flags in a single pass, avoiding duplicate DB lookups
+     * when a caller needs both {@link #canEnableUser} and {@link #isEnableBlockedByHierarchy}.
+     *
+     * @param entraUserId the EntraUser ID of the user to check
+     * @return an {@link EnablementFlags} record with both values derived from a single call to
+     *         {@link #computeEnablementState(String)}
+     */
+    public EnablementFlags getEnablementFlags(String entraUserId) {
+        EnablementState state = computeEnablementState(entraUserId);
+        return new EnablementFlags(state.canEnable(), state.blockedByHierarchy());
+    }
+
+    /** Exposes both canEnable and blockedByHierarchy in one object to avoid computing state twice. */
+    public record EnablementFlags(boolean canEnable, boolean blockedByHierarchy) {}
+
+    /**
      * Computes the full enablement state for the given target user in a single pass.
      *
      * <p>Shared by {@link #canEnableUser} and {@link #isEnableBlockedByHierarchy} to avoid

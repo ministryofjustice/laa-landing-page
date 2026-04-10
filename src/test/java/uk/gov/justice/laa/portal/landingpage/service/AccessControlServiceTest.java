@@ -2972,6 +2972,96 @@ public class AccessControlServiceTest {
             }
         }
 
+        @Nested
+        class IsEnableBlockedByHierarchyTest {
+
+            @Test
+            void shouldReturnTrue_whenPolicyDenies() {
+                // FUM actor, PRIVILEGED-disabled user — policy rejects → hierarchy denial
+                Firm firmA = Firm.builder().id(UUID.randomUUID()).build();
+                EntraUser authenticatedUser = setupMockAuthenticatedUser(FIRM_USER_MANAGER.getRoleName(), firmA,
+                        Permission.ENABLE_EXTERNAL_USER);
+                EntraUserDto targetEntraUserDto = EntraUserDto.builder().id(targetUserId.toString()).enabled(false).build();
+                EntraUser target = createTargetUser(DisableType.PRIVILEGED, null);
+
+                when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
+                when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+                when(userService.isInternal(any(String.class))).thenReturn(false);
+                when(userService.isInternal(any(UUID.class))).thenReturn(true);
+                when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
+                when(userEnablementPolicy.canEnable(any(), any())).thenReturn(false);
+
+                try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
+                    mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser,
+                            Permission.ENABLE_EXTERNAL_USER)).thenReturn(true);
+                    assertThat(accessControlService.isEnableBlockedByHierarchy(targetUserId.toString())).isTrue();
+                }
+            }
+
+            @Test
+            void shouldReturnTrue_whenSameFirmCheckFails() {
+                // FUM actor in firmB, FIRM-disabled user in firmA — same-firm check fails
+                Firm firmA = Firm.builder().id(UUID.randomUUID()).build();
+                Firm firmB = Firm.builder().id(UUID.randomUUID()).build();
+                EntraUser authenticatedUser = setupMockAuthenticatedUser(FIRM_USER_MANAGER.getRoleName(), firmB,
+                        Permission.ENABLE_EXTERNAL_USER);
+                EntraUserDto targetEntraUserDto = EntraUserDto.builder().id(targetUserId.toString()).enabled(false).build();
+                EntraUser target = createTargetUser(DisableType.FIRM, firmA);
+
+                when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
+                when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+                when(userService.isInternal(any(String.class))).thenReturn(false);
+                when(userService.isInternal(any(UUID.class))).thenReturn(true);
+                when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
+                when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
+                when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(true);
+
+                try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
+                    mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser,
+                            Permission.ENABLE_EXTERNAL_USER)).thenReturn(true);
+                    assertThat(accessControlService.isEnableBlockedByHierarchy(targetUserId.toString())).isTrue();
+                }
+            }
+
+            @Test
+            void shouldReturnFalse_whenUserAlreadyEnabled() {
+                // Already enabled — DENIED, not a hierarchy issue
+                EntraUserDto dto = EntraUserDto.builder().enabled(true).build();
+                when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(dto));
+                assertThat(accessControlService.isEnableBlockedByHierarchy(targetUserId.toString())).isFalse();
+            }
+
+            @Test
+            void shouldReturnFalse_whenTargetIsInternal() {
+                // Internal user — DENIED, not a hierarchy issue
+                EntraUserDto dto = EntraUserDto.builder().enabled(false).build();
+                when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(dto));
+                when(userService.isInternal(targetUserId.toString())).thenReturn(true);
+                assertThat(accessControlService.isEnableBlockedByHierarchy(targetUserId.toString())).isFalse();
+            }
+
+            @Test
+            void shouldReturnFalse_whenActorLacksEnablePermission() {
+                // Actor lacks ENABLE_EXTERNAL_USER — DENIED, not a hierarchy issue
+                EntraUser authenticatedUser = setupMockAuthenticatedUser(INTERNAL_USER_MANAGER.getRoleName(), null,
+                        Permission.EDIT_EXTERNAL_USER);
+                EntraUserDto targetEntraUserDto = EntraUserDto.builder().id(targetUserId.toString()).enabled(false).build();
+                EntraUser target = createTargetUser(null);
+
+                when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
+                when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+                when(userService.isInternal(any(String.class))).thenReturn(false);
+                when(userService.isInternal(any(UUID.class))).thenReturn(true);
+                when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
+
+                try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
+                    mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser,
+                            Permission.ENABLE_EXTERNAL_USER)).thenReturn(false);
+                    assertThat(accessControlService.isEnableBlockedByHierarchy(targetUserId.toString())).isFalse();
+                }
+            }
+        }
+
         private EntraUser createActorWithRoles(String... roles) {
             UserProfile profile = UserProfile.builder()
                     .id(UUID.randomUUID())
