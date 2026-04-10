@@ -2725,7 +2725,7 @@ public class AccessControlServiceTest {
             EntraUserDto targetEntraUserDto = EntraUserDto.builder().id(targetUserId.toString()).enabled(false).build();
 
             when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-            when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.empty());
+            when(entraUserRepository.findByIdWithAssociations(targetUserId)).thenReturn(Optional.empty());
             when(userService.isInternal(any(String.class))).thenReturn(false);
             when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
 
@@ -2740,7 +2740,7 @@ public class AccessControlServiceTest {
             EntraUser target = createTargetUser((Firm) null);
 
             when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-            when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+            when(entraUserRepository.findByIdWithAssociations(targetUserId)).thenReturn(Optional.of(target));
             when(userService.isInternal(any(String.class))).thenReturn(false);
             when(userService.isInternal(any(UUID.class))).thenReturn(false);
             when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
@@ -2759,7 +2759,7 @@ public class AccessControlServiceTest {
             EntraUser target = createTargetUser((Firm) null);
 
             when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-            when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+            when(entraUserRepository.findByIdWithAssociations(targetUserId)).thenReturn(Optional.of(target));
             when(userService.isInternal(any(String.class))).thenReturn(false);
             when(userService.isInternal(any(UUID.class))).thenReturn(true);
             when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
@@ -2774,7 +2774,7 @@ public class AccessControlServiceTest {
             EntraUser target = createTargetUser(null);
 
             when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-            when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+            when(entraUserRepository.findByIdWithAssociations(targetUserId)).thenReturn(Optional.of(target));
             when(userService.isInternal(any(String.class))).thenReturn(false);
             when(userService.isInternal(any(UUID.class))).thenReturn(true);
             when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
@@ -2794,7 +2794,7 @@ public class AccessControlServiceTest {
             EntraUser target = createTargetUser(null);
 
             when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-            when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+            when(entraUserRepository.findByIdWithAssociations(targetUserId)).thenReturn(Optional.of(target));
             when(userService.isInternal(any(String.class))).thenReturn(false);
             when(userService.isInternal(any(UUID.class))).thenReturn(true);
             when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
@@ -2814,7 +2814,7 @@ public class AccessControlServiceTest {
             EntraUser target = createTargetUser(null);
 
             when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-            when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+            when(entraUserRepository.findByIdWithAssociations(targetUserId)).thenReturn(Optional.of(target));
             when(userService.isInternal(any(String.class))).thenReturn(false);
             when(userService.isInternal(any(UUID.class))).thenReturn(true);
             when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
@@ -2835,7 +2835,7 @@ public class AccessControlServiceTest {
             EntraUser target = createTargetUser(firmA);
 
             when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-            when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+            when(entraUserRepository.findByIdWithAssociations(targetUserId)).thenReturn(Optional.of(target));
             when(userService.isInternal(any(String.class))).thenReturn(false);
             when(userService.isInternal(any(UUID.class))).thenReturn(true);
             when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
@@ -2857,7 +2857,7 @@ public class AccessControlServiceTest {
             EntraUser target = createTargetUser(DisableType.PRIVILEGED, null);
 
             when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-            when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+            when(entraUserRepository.findByIdWithAssociations(targetUserId)).thenReturn(Optional.of(target));
             when(userService.isInternal(any(String.class))).thenReturn(false);
             when(userService.isInternal(any(UUID.class))).thenReturn(true);
             when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
@@ -2879,7 +2879,7 @@ public class AccessControlServiceTest {
             EntraUser target = createTargetUser(firmA);
 
             when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-            when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+            when(entraUserRepository.findByIdWithAssociations(targetUserId)).thenReturn(Optional.of(target));
             when(userService.isInternal(any(String.class))).thenReturn(false);
             when(userService.isInternal(any(UUID.class))).thenReturn(true);
             when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
@@ -2900,7 +2900,7 @@ public class AccessControlServiceTest {
             EntraUser target = createTargetUser(DisableType.LAA, null);
 
             when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-            when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+            when(entraUserRepository.findByIdWithAssociations(targetUserId)).thenReturn(Optional.of(target));
             when(userService.isInternal(any(String.class))).thenReturn(false);
             when(userService.isInternal(any(UUID.class))).thenReturn(true);
             when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
@@ -2921,7 +2921,7 @@ public class AccessControlServiceTest {
             EntraUser target = createTargetUser(DisableType.FIRM, null);
 
             when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-            when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+            when(entraUserRepository.findByIdWithAssociations(targetUserId)).thenReturn(Optional.of(target));
             when(userService.isInternal(any(String.class))).thenReturn(false);
             when(userService.isInternal(any(UUID.class))).thenReturn(true);
             when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
@@ -2941,7 +2941,7 @@ public class AccessControlServiceTest {
             EntraUser target = createTargetUser(null);
 
             when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-            when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+            when(entraUserRepository.findByIdWithAssociations(targetUserId)).thenReturn(Optional.of(target));
             when(userService.isInternal(any(String.class))).thenReturn(false);
             when(userService.isInternal(any(UUID.class))).thenReturn(true);
             when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
@@ -2961,7 +2961,7 @@ public class AccessControlServiceTest {
             EntraUser target = createTargetUser(null);
 
             when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-            when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+            when(entraUserRepository.findByIdWithAssociations(targetUserId)).thenReturn(Optional.of(target));
             when(userService.isInternal(any(String.class))).thenReturn(false);
             when(userService.isInternal(any(UUID.class))).thenReturn(true);
             when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
@@ -2985,7 +2985,7 @@ public class AccessControlServiceTest {
                 EntraUser target = createTargetUser(DisableType.PRIVILEGED, null);
 
                 when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-                when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+                when(entraUserRepository.findByIdWithAssociations(targetUserId)).thenReturn(Optional.of(target));
                 when(userService.isInternal(any(String.class))).thenReturn(false);
                 when(userService.isInternal(any(UUID.class))).thenReturn(true);
                 when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
@@ -3009,7 +3009,7 @@ public class AccessControlServiceTest {
                 EntraUser target = createTargetUser(DisableType.FIRM, firmA);
 
                 when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-                when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+                when(entraUserRepository.findByIdWithAssociations(targetUserId)).thenReturn(Optional.of(target));
                 when(userService.isInternal(any(String.class))).thenReturn(false);
                 when(userService.isInternal(any(UUID.class))).thenReturn(true);
                 when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
@@ -3049,7 +3049,7 @@ public class AccessControlServiceTest {
                 EntraUser target = createTargetUser(null);
 
                 when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
-                when(entraUserRepository.findById(targetUserId)).thenReturn(Optional.of(target));
+                when(entraUserRepository.findByIdWithAssociations(targetUserId)).thenReturn(Optional.of(target));
                 when(userService.isInternal(any(String.class))).thenReturn(false);
                 when(userService.isInternal(any(UUID.class))).thenReturn(true);
                 when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));

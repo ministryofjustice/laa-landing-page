@@ -224,9 +224,9 @@ public class UserAccountStatusService {
             throw new RuntimeException(String.format("User %s can not be enabled by themselves", enabledUserId));
         }
         // Fetch entities
-        EntraUser enabledUser = entraUserRepository.findById(enabledUserId)
+        EntraUser enabledUser = entraUserRepository.findByIdWithAssociations(enabledUserId)
                 .orElseThrow(() -> new RuntimeException(String.format("Could not find a user account to disable with id \"%s\"", enabledUserId)));
-        EntraUser enabledByUser = entraUserRepository.findById(enabledById)
+        EntraUser enabledByUser = entraUserRepository.findByIdWithAssociations(enabledById)
                 .orElseThrow(() -> new RuntimeException(String.format("Could not find a user account with id \"%s\"", enabledById)));
 
         boolean isUserEnablementAllowed = isUserEnablementAllowed(enabledUser, enabledByUser);

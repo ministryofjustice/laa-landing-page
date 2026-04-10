@@ -298,7 +298,7 @@ public class AccessControlService {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
-        EntraUser targetUser = entraUserRepository.findById(UUID.fromString(entraUserId)).orElse(null);
+        EntraUser targetUser = entraUserRepository.findByIdWithAssociations(UUID.fromString(entraUserId)).orElse(null);
 
         if (targetUser == null) {
             return EnablementState.DENIED;
