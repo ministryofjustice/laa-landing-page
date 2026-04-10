@@ -58,7 +58,7 @@ databaseChangeLog:
                      1,
                      true
               WHERE NOT EXISTS (
-                SELECT 1 FROM app WHERE name = 'SiLAS Administration'
+                SELECT 1 FROM app WHERE name = 'SILAS System Administration'
               );
 
         - sql:
@@ -176,6 +176,13 @@ databaseChangeLog:
               DELETE FROM role_permission
               WHERE app_role_id IN (SELECT id FROM app_role ar
                                 WHERE ar.name = 'SiLAS Administration');
+        - sql:
+            sql: |
+              DELETE FROM role_assignment 
+              WHERE assignable_role_id IN (SELECT id FROM app_role ar
+                                WHERE ar.name = 'SiLAS Administration')
+              OR assigning_role_id IN (SELECT id FROM app_role ar
+                                WHERE ar.name = 'SiLAS Administration');;
         - sql:
             sql: |
               DELETE FROM app_role ar
