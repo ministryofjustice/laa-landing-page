@@ -164,6 +164,8 @@ databaseChangeLog:
   - changeSet:
       id: transfer-autz-roles-to-corresponding-apps-2
       author: Suresh Kavali
+      validCheckSum:
+        - ANY
 
       changes:
         - sql:

@@ -168,7 +168,7 @@ public class UserAccountStatusService {
     public void disableUserAllUserByFirmId(String firmId, UUID disableReasonId, UUID disabledById) {
         log.info("Started Bulk disable users");
         // Fetch entities
-        EntraUser disabledByUser = entraUserRepository.findById(disabledById)
+        EntraUser disabledByUser = entraUserRepository.findByIdWithAssociations(disabledById)
                 .orElseThrow(() -> new RuntimeException(String.format("Could not find a user account with id \"%s\"", disabledById)));
         DisableUserReason reason = disableUserReasonRepository.findById(disableReasonId)
                 .orElseThrow(() -> new RuntimeException(String.format("Could not find a disable user reason with id \"%s\"", disableReasonId)));
