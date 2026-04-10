@@ -122,8 +122,6 @@ public interface FirmRepository extends JpaRepository<Firm, UUID> {
         GROUP BY
             f.id, f.name, f.code, f.type, pf.code
         ORDER BY
-            COALESCE(f.parent_firm_id, f.id),
-            f.parent_firm_id NULLS FIRST,
             f.code
         """,
             nativeQuery = true

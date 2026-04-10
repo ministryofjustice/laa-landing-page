@@ -824,6 +824,45 @@ public class LiveTechServicesClientTest {
     }
 
     @Test
+    void testRegisterUserError500() {
+        EntraUserDto user = EntraUserDto.builder().email("test@email.com").entraOid("entraOid")
+                .firstName("firstName").lastName("lastName").build();
+
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(restClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(RegisterUserRequest.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        String errorBody = """
+                {
+                    "success": false,
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "message": "givenName is required and must be a non-empty string"
+                  }""";
+        HttpClientErrorException exception = HttpClientErrorException.create(HttpStatus.INTERNAL_SERVER_ERROR,
+                "Server Error", null, errorBody.getBytes(), null);
+        when(responseSpec.toEntity(String.class)).thenThrow(exception);
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+
+
+        RuntimeException rtEx = assertThrows(RuntimeException.class,
+                () -> liveTechServicesClient.registerNewUser(user),
+                "RuntimeException expected");
+
+        Assertions.assertThat(rtEx).isInstanceOf(RuntimeException.class);
+        Assertions.assertThat(rtEx.getMessage())
+                .contains("Error while sending new user creation request to Tech Services.");
+        assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
+        assertLogMessage(Level.ERROR,
+                "Error while sending new user creation request to Tech Services for entra user");
+        verify(restClient, times(1)).post();
+        Assertions.assertThat(rtEx).isNotNull();
+    }
+
+    @Test
     void testRegisterUserError5Xx() {
         EntraUserDto user = EntraUserDto.builder().email("test@email.com").entraOid("entraOid")
                 .firstName("firstName").lastName("lastName").build();
@@ -1147,6 +1186,32 @@ public class LiveTechServicesClientTest {
 
         TechServicesApiResponse<ChangeAccountEnabledResponse> response = liveTechServicesClient.disableUser(user, "Test reason");
         Assertions.assertThat(response.isSuccess()).isFalse();
+    }
+
+    @Test
+    public void testDisableUserReturnsHttpClientErrorException() {
+        AccessToken token = new AccessToken("token", null);
+
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+        String errorBody = """
+                {
+                    "success": false,
+                    "code": "RECENTLY_TRIGGERED",
+                    "message": "An activation code was recently sent. Please wait before requesting another."
+                }""";
+        HttpClientErrorException exception = HttpClientErrorException.create(HttpStatus.TOO_EARLY,
+                "Too early", null, errorBody.getBytes(), null);
+
+        EntraUserDto user = EntraUserDto.builder()
+                .entraOid(UUID.randomUUID().toString())
+                .build();
+
+        when(restClient.patch()).thenThrow(exception);
+        liveTechServicesClient.disableUser(user, "Test reason");
+
+        assertLogMessage(Level.INFO, "Failed to disable entra user:");
+        verify(restClient, times(1)).patch();
     }
 
     @Test

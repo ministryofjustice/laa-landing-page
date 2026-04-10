@@ -573,7 +573,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
         ModelAndView modelAndView = selectAppsResult.getModelAndView();
         List<AppDto> availableApps = (List<AppDto>) modelAndView.getModel().get("apps");
         AppDto authzApp = availableApps.stream()
-                .filter(app -> app.getName().equals("Manage Your Users"))
+                .filter(app -> app.getName().equals("Manage your users"))
                 .findFirst()
                 .orElseThrow();
 
@@ -608,7 +608,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
         ModelAndView modelAndView = selectAppsResult.getModelAndView();
         List<AppDto> availableApps = (List<AppDto>) modelAndView.getModel().get("apps");
         AppDto authzApp = availableApps.stream()
-                .filter(app -> app.getName().equals("Manage Your Users"))
+                .filter(app -> app.getName().equals("Manage your users"))
                 .findFirst()
                 .orElseThrow();
 

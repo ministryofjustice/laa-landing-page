@@ -50,6 +50,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.exception.UserAlreadyAssignedToFirmException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmUserForm;
@@ -788,7 +789,7 @@ public class MultiFirmUserController {
     }
 
     @PostMapping("/user/add/profile/check-answers")
-    public String checkAnswerAndAddProfilePost(Authentication authentication, HttpSession session, Model model) {
+    public String checkAnswerAndAddProfilePost(Authentication authentication, RedirectAttributes redirectAttributes, HttpSession session, Model model) {
         EntraUserDto user = getObjectFromHttpSession(session, "entraUser", EntraUserDto.class).orElseThrow();
 
         Map<Integer, List<String>> appRolesByPage = (Map<Integer, List<String>>) session
@@ -850,6 +851,12 @@ public class MultiFirmUserController {
                     "roles",
                     rolesAdded);
             eventService.logEvent(addUserProfileAuditEvent);
+        } catch (UserAlreadyAssignedToFirmException e) {
+            clearSessionAttributes(session);
+            //show information banner
+            redirectAttributes.addFlashAttribute("userAlreadyAssignedFirmMessage",
+                    user.getEmail() + " is Already assigned to the firm " + firmDto.getName());
+            return "redirect:/admin/users";
         } catch (Exception ex) {
             log.error("Error creating new profile for user: {} with entra id: {}", user.getEntraOid(), userProfile.getId(), ex);
             throw ex;
