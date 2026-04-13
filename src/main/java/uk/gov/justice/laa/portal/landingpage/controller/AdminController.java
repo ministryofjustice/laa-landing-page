@@ -616,7 +616,11 @@ public class AdminController {
             }
 
             DeleteAppRoleReasonForm reasonForm = getObjectFromHttpSession(session, "deleteAppRoleReasonForm",
-                    DeleteAppRoleReasonForm.class).orElse(DeleteAppRoleReasonForm.builder().appRoleId(roleId).appName(appName).build());
+                    DeleteAppRoleReasonForm.class)
+                    .orElseGet(DeleteAppRoleReasonForm::new);
+            //update appRoleId because in session still have the old role id from the preview selection in case user change his mind in CYA screen
+            reasonForm.setAppRoleId(roleIdFromSession);
+            reasonForm.setAppName(appName);
             model.addAttribute("deleteAppRoleReasonForm", reasonForm);
             model.addAttribute("roleName", roleName);
             model.addAttribute("appName", appName);
