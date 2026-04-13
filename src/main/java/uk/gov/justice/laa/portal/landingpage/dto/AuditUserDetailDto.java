@@ -72,6 +72,11 @@ public class AuditUserDetailDto implements Serializable {
     private String createdBy;
 
     /**
+     * User who disabled this account
+     */
+    private String disabledBy;
+
+    /**
      * Last login date from Graph API signInActivity
      */
     private LocalDateTime lastLoginDate;
@@ -110,6 +115,16 @@ public class AuditUserDetailDto implements Serializable {
      * Flag indicating if user has no profile (Entra-only data)
      */
     private boolean hasNoProfile;
+
+    /**
+     * Flag indicating if user has no role
+     */
+    private boolean isNoRole;
+
+    /**
+     * Flag indicating if user has status pending
+     */
+    private boolean isPending;
 
     /**
      * Whether the user's account is enabled.

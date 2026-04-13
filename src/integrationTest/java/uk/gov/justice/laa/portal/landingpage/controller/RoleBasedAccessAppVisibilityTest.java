@@ -30,7 +30,7 @@ public class RoleBasedAccessAppVisibilityTest extends RoleBasedAccessIntegration
     @Test
     public void testValidUserCanSeeRestrictedApp() throws Exception {
         // Build test app
-        App testExternalApp = buildLaaApp("Test External App", generateEntraId(), "TestExternalAppSecurityGroupOid", "TestExternalAppSecurityGroup");
+        App testExternalApp = buildLaaApp("Test External App", generateEntraId(), "TestExternalAppSecurityGroupOid");
 
         // Build test role
         AppRole testExternalAppRole = buildLaaAppRole(testExternalApp, "Test External App Role");
@@ -71,7 +71,7 @@ public class RoleBasedAccessAppVisibilityTest extends RoleBasedAccessIntegration
     @Test
     public void testInvalidUserCannotSeeRestrictedApp() throws Exception {
         // Build test app
-        App testExternalApp = buildLaaApp("Test External App", generateEntraId(), "TestExternalAppSecurityGroupOid", "TestExternalAppSecurityGroup");
+        App testExternalApp = buildLaaApp("Test External App", generateEntraId(), "TestExternalAppSecurityGroupOid");
 
         // Build test role
         AppRole testExternalAppRole = buildLaaAppRole(testExternalApp, "Test External App Role");
