@@ -58,24 +58,36 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Parent App Selection -->
-                    <div class="govuk-form-group" th:classappend="${#fields.hasErrors('parentAppId')} ? 'govuk-form-group--error'">
+                    <div class="govuk-form-group"
+                         th:classappend="${#fields.hasErrors('parentAppId')} ? 'govuk-form-group--error'">
+
                         <label class="govuk-label govuk-label--m" for="parentAppId">
                             Parent Application
                         </label>
+
                         <div class="govuk-hint" id="parentAppId-hint">
                             Select the application this role will belong to
                         </div>
+
                         <div th:if="${#fields.hasErrors('parentAppId')}" class="govuk-error-message">
                             <span class="govuk-visually-hidden">Error:</span>
                             <span th:errors="*{parentAppId}"></span>
                         </div>
-                        <select class="govuk-select" th:classappend="${#fields.hasErrors('parentAppId')} ? 'govuk-select--error'" 
-                                id="parentAppId" name="parentAppId" th:field="*{parentAppId}" 
+
+                        <select class="govuk-select"
+                                th:classappend="${#fields.hasErrors('parentAppId')} ? 'govuk-select--error'"
+                                id="parentAppId"
+                                th:field="*{parentAppId}"
                                 aria-describedby="parentAppId-hint">
+
                             <option value="">Select an application</option>
-                            <option th:each="app : ${apps}" th:value="${app.id}" th:text="${app.name}">App Name</option>
+
+                            <option th:each="app : ${apps}"
+                                    th:value="${app.id}"
+                                    th:text="${app.name}">
+                            </option>
                         </select>
                     </div>
 
@@ -120,21 +132,21 @@
                                 User Type Restriction
                             </legend>
                             <div class="govuk-hint">
-                                Select which user types can be assigned this role
+                                SiLAS requires separate roles for internal and external users. Choose one user type for this role
                             </div>
                             <div th:if="${#fields.hasErrors('userTypeRestriction')}" class="govuk-error-message">
                                 <span class="govuk-visually-hidden">Error:</span>
                                 <span th:errors="*{userTypeRestriction}"></span>
                             </div>
-                            <div class="govuk-checkboxes" data-module="govuk-checkboxes">
-                                <div class="govuk-checkboxes__item" th:each="userType : ${userTypes}">
-                                    <input class="govuk-checkboxes__input"
+                            <div class="govuk-radios" data-module="govuk-radios">
+                                <div class="govuk-radios__item" th:each="userType : ${userTypes}">
+                                    <input class="govuk-radios__input"
                                            th:id="'userType-' + ${userType.name()}"
                                            th:name="userTypeRestriction"
                                            th:value="${userType}"
-                                           type="checkbox"
+                                           type="radio"
                                            th:checked="${roleCreationDto.userTypeRestriction != null and roleCreationDto.userTypeRestriction.contains(userType)}">
-                                    <label class="govuk-label govuk-checkboxes__label"
+                                    <label class="govuk-label govuk-radios__label"
                                            th:for="'userType-' + ${userType.name()}"
                                            th:text="${userType.name()}">
                                         User Type

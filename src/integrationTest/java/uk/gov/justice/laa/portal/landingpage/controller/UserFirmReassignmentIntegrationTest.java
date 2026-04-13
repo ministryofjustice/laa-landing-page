@@ -88,19 +88,19 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
             entityManager.createNativeQuery("SET session_replication_role = replica").executeUpdate();
             
             firm1 = firmRepository.save(buildFirm("ABC Law Firm", "ABC001"));
-            var office1 = officeRepository.save(buildOffice(firm1, "Main Office", "123 Main St", "555-0001", "ABC-MAIN"));
+            var office1 = officeRepository.save(buildOffice(firm1, "Main Office", "ABC-MAIN"));
             firm1.getOffices().add(office1);
 
             firm2 = firmRepository.save(buildFirm("XYZ Legal Services", "XYZ001"));
-            var office2 = officeRepository.save(buildOffice(firm2, "Main Office", "456 Legal Ave", "555-0002", "XYZ-MAIN"));
+            var office2 = officeRepository.save(buildOffice(firm2, "Main Office", "XYZ-MAIN"));
             firm2.getOffices().add(office2);
 
             firm3 = firmRepository.save(buildFirm("New Legal Services", "NEW001"));
-            var office3 = officeRepository.save(buildOffice(firm3, "Main Office", "789 Legal Ave", "555-0002", "NEW-MAIN"));
+            var office3 = officeRepository.save(buildOffice(firm3, "Main Office", "NEW-MAIN"));
             firm3.getOffices().add(office3);
 
             firm4 = firmRepository.save(buildFirm("FOUR Legal Services", "FOUR001"));
-            var office4 = officeRepository.save(buildOffice(firm4, "Main Office", "789 Legal Ave", "555-0002", "FOUR-MAIN"));
+            var office4 = officeRepository.save(buildOffice(firm4, "Main Office", "FOUR-MAIN"));
             firm4.getOffices().add(office4);
             
             firmRepository.flush();

@@ -42,9 +42,9 @@ public class OfficeRepositoryTest extends BaseRepositoryTest {
         Firm firm2 = buildFirm("Firm2", "Firm Code 2");
         firmRepository.saveAllAndFlush(Arrays.asList(firm1, firm2));
 
-        Office office1 = buildOffice(firm1, "Office1", "Addr 1", "12345", "Office Code 1");
-        Office office2 = buildOffice(firm2, "Office2", "Addr 2", "23456", "Office Code 2");
-        Office office3 = buildOffice(firm2, "Office3", "Addr 3", "34567", "Office Code 3");
+        Office office1 = buildOffice(firm1, "Office1", "Office Code 1");
+        Office office2 = buildOffice(firm2, "Office2", "Office Code 2");
+        Office office3 = buildOffice(firm2, "Office3", "Office Code 3");
         firm1.getOffices().add(office1);
         firm2.getOffices().add(office2);
         firm2.getOffices().add(office3);
@@ -84,8 +84,8 @@ public class OfficeRepositoryTest extends BaseRepositoryTest {
         Firm firm1 = buildFirm("Firm1", "Firm Code 1");
         firm1 = firmRepository.saveAndFlush(firm1);
 
-        Office office = buildOffice(firm1, "Test Name", "Test Phone", "Test phone", "A123");
-        Office office2 = buildOffice(firm1, "Test Name 2", "Test Phone 2", "Test phone 2", "B123");
+        Office office = buildOffice(firm1, "Test Name", "A123");
+        Office office2 = buildOffice(firm1, "Test Name 2", "B123");
         repository.saveAllAndFlush(Arrays.asList(office, office2));
 
         Pageable pageable = PageRequest.of(0, 10);
