@@ -13,6 +13,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -567,7 +569,7 @@ class AuditControllerTest {
 
         when(techServicesClient.getUser(any())).thenReturn(techServicesResponse);
         when(userService.getAuditUserDetail(userId, 1, 5)).thenReturn(mockUserDetail);
-        Optional<DisableUserReason> optionalDisableUserReason = Optional.of(DisableUserReason.builder().name("User Request").build());
+        Optional<DisableUserReason> optionalDisableUserReason = Optional.of(DisableUserReason.builder().description("UserRequest").name("User Request").build());
         when(disableUserReasonRepository.findDisableUserReasonByEntraDescription(eq("UserRequest"))).thenReturn(optionalDisableUserReason);
 
         // When
@@ -578,7 +580,7 @@ class AuditControllerTest {
         assertThat(model.getAttribute("user")).isEqualTo(mockUserDetail);
         TechServicesUser returnedTechServicesUser = (TechServicesUser) model.getAttribute("entraUser");
         assertThat(returnedTechServicesUser).isNotNull();
-        assertThat(returnedTechServicesUser.getCustomSecurityAttributes().getGuestUserStatus().getDisabledReason()).isEqualTo("User Request");
+        assertThat(model.getAttribute("entraUserDisableReason")).isEqualTo("User Request");
         verify(userService, times(1)).getAuditUserDetail(userId, 1, 5);
     }
 
@@ -953,10 +955,12 @@ class AuditControllerTest {
     @Test
     void downloadAuditCsv_shouldReturnSuccess() {
 
+        UUID selectedFirmId = UUID.randomUUID();
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
         criteria.setSearch("TestSearch");
         criteria.setSort("name");
         criteria.setDirection("asc");
+        criteria.setSelectedFirmId(selectedFirmId.toString());
 
         AuditUserDto page1User =
                 AuditUserDto.builder().name("P1").email("p1@example.com").build();
@@ -998,8 +1002,177 @@ class AuditControllerTest {
         assertThat(headers.getContentDisposition().getType()).isEqualTo("attachment");
         assertThat(headers.getContentDisposition().getFilename()).isEqualTo("audit.csv");
 
-        verify(userService, times(1)).getAuditUsers("TestSearch", null, null, null, null, 1, 500, "name", "asc", true, null, null);
-        verify(userService, times(1)).getAuditUsers("TestSearch", null, null, null, null, 2, 500, "name", "asc", true, null, null);
+        verify(userService, times(1)).getAuditUsers("TestSearch", selectedFirmId, null, null, null, 1, 500, "name", "asc", true, null, null);
+        verify(userService, times(1)).getAuditUsers("TestSearch", selectedFirmId, null, null, null, 2, 500, "name", "asc", true, null, null);
         verify(auditExportService, times(1)).downloadAuditCsv(any(), any(), any());
+    }
+
+    @Test
+    void downloadAuditCsvWithNerverActivated_shouldReturnSuccess() {
+
+        UUID selectedFirmId = UUID.randomUUID();
+        AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
+        criteria.setSearch("TestSearch");
+        criteria.setSort("name");
+        criteria.setDirection("asc");
+        criteria.setSelectedFirmId(selectedFirmId.toString());
+        criteria.setNeverActivated(true);
+
+        AuditUserDto page1User =
+                AuditUserDto.builder().name("P1").email("p1@example.com").build();
+        List<AuditUserDto> page1Users = Collections.nCopies(500, page1User);
+
+        AuditUserDto page2User =
+                AuditUserDto.builder().name("P2").email("p2@example.com").build();
+        List<AuditUserDto> page2Users = List.of(page2User);
+
+        PaginatedAuditUsers page1 = PaginatedAuditUsers.builder()
+                .users(page1Users)
+                .currentPage(1)
+                .pageSize(500)
+                .build();
+
+        PaginatedAuditUsers page2 = PaginatedAuditUsers.builder()
+                .users(page2Users)
+                .currentPage(2)
+                .pageSize(500)
+                .build();
+
+        when(userService.getAuditUsers(
+                eq("TestSearch"), any(), any(), any(), any(), eq(1), eq(500), eq("name"), eq("asc"), eq(true), any(), any())).thenReturn(page1);
+
+        when(userService.getAuditUsers(
+                eq("TestSearch"), any(), any(), any(), any(), eq(2), eq(500), eq("name"), eq("asc"), eq(true), any(), any())).thenReturn(page2);
+
+        byte[] csvBytes = "Name,Email\nP1,p1@example.com\n".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        AuditExportService.AuditCsvExport export = new AuditExportService.AuditCsvExport("audit.csv", csvBytes);
+        when(auditExportService.downloadAuditCsv(any(), any(), any())).thenReturn(export);
+
+        ResponseEntity<byte[]> response = auditController.downloadAuditCsv(criteria);
+
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(response.getBody()).isEqualTo(csvBytes);
+
+        HttpHeaders headers = response.getHeaders();
+        assertThat(headers.getContentType()).isEqualTo(MediaType.parseMediaType("text/csv"));
+        assertThat(headers.getContentDisposition().getType()).isEqualTo("attachment");
+        assertThat(headers.getContentDisposition().getFilename()).isEqualTo("audit.csv");
+
+        verify(userService, times(1)).getAuditUsers("TestSearch", selectedFirmId, null, null, null, 1, 500, "name", "asc", true, null, true);
+        verify(userService, times(1)).getAuditUsers("TestSearch", selectedFirmId, null, null, null, 2, 500, "name", "asc", true, null, true);
+        verify(auditExportService, times(1)).downloadAuditCsv(any(), any(), any());
+    }
+
+    @Test
+    void downloadInternalUserAuditCsv_shouldReturnSuccess() {
+
+        AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
+        criteria.setSearch("TestSearch");
+        criteria.setSort("name");
+        criteria.setDirection("asc");
+        criteria.setSelectedUserType(UserTypeForm.INTERNAL.name());
+
+        AuditUserDto page1User =
+                AuditUserDto.builder().name("P1").email("p1@example.com").build();
+        List<AuditUserDto> page1Users = Collections.nCopies(500, page1User);
+
+        AuditUserDto page2User =
+                AuditUserDto.builder().name("P2").email("p2@example.com").build();
+        List<AuditUserDto> page2Users = List.of(page2User);
+
+        PaginatedAuditUsers page1 = PaginatedAuditUsers.builder()
+                .users(page1Users)
+                .currentPage(1)
+                .pageSize(500)
+                .build();
+
+        PaginatedAuditUsers page2 = PaginatedAuditUsers.builder()
+                .users(page2Users)
+                .currentPage(2)
+                .pageSize(500)
+                .build();
+
+        when(userService.getAuditUsers(
+                eq("TestSearch"), any(), any(), any(), any(), eq(1), eq(500), eq("name"), eq("asc"), eq(true), any(), any())).thenReturn(page1);
+
+        when(userService.getAuditUsers(
+                eq("TestSearch"), any(), any(), any(), any(), eq(2), eq(500), eq("name"), eq("asc"), eq(true), any(), any())).thenReturn(page2);
+
+        byte[] csvBytes = "Name,Email\nP1,p1@example.com\n".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        AuditExportService.AuditCsvExport export = new AuditExportService.AuditCsvExport("audit.csv", csvBytes);
+        when(auditExportService.downloadAuditCsv(any(), any(), any())).thenReturn(export);
+
+        ResponseEntity<byte[]> response = auditController.downloadAuditCsv(criteria);
+
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(response.getBody()).isEqualTo(csvBytes);
+
+        HttpHeaders headers = response.getHeaders();
+        assertThat(headers.getContentType()).isEqualTo(MediaType.parseMediaType("text/csv"));
+        assertThat(headers.getContentDisposition().getType()).isEqualTo("attachment");
+        assertThat(headers.getContentDisposition().getFilename()).isEqualTo("audit.csv");
+
+        verify(userService, times(1)).getAuditUsers("TestSearch", null,
+                null, null, UserTypeForm.INTERNAL, 1, 500, "name", "asc", true, null, null);
+        verify(userService, times(1)).getAuditUsers("TestSearch", null,
+                null, null, UserTypeForm.INTERNAL, 2, 500, "name", "asc", true, null, null);
+        verify(auditExportService, times(1)).downloadAuditCsv(any(), any(), any());
+    }
+
+    @Test
+    void downloadInternalUserWithFirmSelectionAuditCsv_shouldReturnSuccess() {
+
+        UUID selectedFirmId = UUID.randomUUID();
+        AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
+        criteria.setSearch("TestSearch");
+        criteria.setSort("name");
+        criteria.setDirection("asc");
+        criteria.setSelectedUserType(UserTypeForm.INTERNAL.name());
+        criteria.setSelectedFirmId(selectedFirmId.toString());
+
+        List<AuditUserDto> page1Users = Collections.emptyList();
+
+
+        PaginatedAuditUsers page1 = PaginatedAuditUsers.builder()
+                .users(page1Users)
+                .currentPage(1)
+                .pageSize(500)
+                .build();
+
+        when(userService.getAuditUsers(
+                eq("TestSearch"), any(), any(), any(), any(), eq(1), eq(500), eq("name"), eq("asc"), eq(true), any(), any())).thenReturn(page1);
+
+
+        byte[] csvBytes = "Name,Email\nP1,p1@example.com\n".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        AuditExportService.AuditCsvExport export = new AuditExportService.AuditCsvExport("audit.csv", csvBytes);
+        when(auditExportService.downloadAuditCsv(any(), any(), any())).thenReturn(export);
+
+        ResponseEntity<byte[]> response = auditController.downloadAuditCsv(criteria);
+
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(response.getBody()).isEqualTo(csvBytes);
+
+        HttpHeaders headers = response.getHeaders();
+        assertThat(headers.getContentType()).isEqualTo(MediaType.parseMediaType("text/csv"));
+        assertThat(headers.getContentDisposition().getType()).isEqualTo("attachment");
+        assertThat(headers.getContentDisposition().getFilename()).isEqualTo("audit.csv");
+
+        verify(userService, times(1)).getAuditUsers("TestSearch", selectedFirmId,
+                null, null, UserTypeForm.INTERNAL, 1, 500, "name", "asc", true, null, null);
+        verify(auditExportService, times(1)).downloadAuditCsv(any(), any(), any());
+    }
+
+    @Test
+    void downloadExternalUserWithNoFirmSelectionAuditCsv_shouldReturnException() {
+
+        AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
+        criteria.setSearch("TestSearch");
+        criteria.setSort("name");
+        criteria.setDirection("asc");
+        criteria.setSelectedUserType(UserTypeForm.EXTERNAL.name());
+
+        assertThatThrownBy(() -> auditController.downloadAuditCsv(criteria))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Invalid Search criteria provided");
     }
 }

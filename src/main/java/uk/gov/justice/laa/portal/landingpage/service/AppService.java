@@ -21,6 +21,7 @@ import uk.gov.justice.laa.portal.landingpage.techservices.GetAllApplicationsResp
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -80,10 +81,26 @@ public class AppService {
                 .toList();
     }
 
+    public List<AppDto> getAllAuthzApps() {
+        return appRepository.findAppsByAppType(AppType.AUTHZ)
+                .stream()
+                .map(app -> mapper.map(app, AppDto.class))
+                .sorted()
+                .toList();
+    }
+
     public List<AppDto> getAllActiveLaaApps() {
         return appRepository.findAppsByAppTypeAndEnabled(AppType.LAA, true)
                 .stream()
                 .map(app -> mapper.map(app, AppDto.class))
+                .toList();
+    }
+
+    public List<AppDto> getAllActiveAuthzApps() {
+        return appRepository.findAppsByAppTypeAndEnabled(AppType.AUTHZ, true)
+                .stream()
+                .map(app -> mapper.map(app, AppDto.class))
+                .sorted(Comparator.comparingInt(AppDto::getOrdinal))
                 .toList();
     }
 
@@ -271,17 +288,10 @@ public class AppService {
             local.setSecurityGroupOid(appSecurityGroup.getId());
         }
 
-        if (appSecurityGroup.getName() == null) {
-            local.setSecurityGroupName(local.getName());
-            local.setEnabled(false);
-        } else {
-            local.setSecurityGroupName(appSecurityGroup.getName());
-        }
     }
 
     private void applyDefaultSecurityGroup(App local) {
         local.setSecurityGroupOid(local.getName());
-        local.setSecurityGroupName(local.getName());
         local.setEnabled(false);
     }
 
@@ -302,13 +312,10 @@ public class AppService {
         return App.builder()
                 .entraAppId(remote.getAppId())
                 .entraOid(remote.getId())
-                .title(remote.getName())
                 .name(remote.getName())
                 .description(remote.getName())
-                .oidGroupName(remote.getName())
                 .url(url)
                 .securityGroupOid(sgId)
-                .securityGroupName(sgName)
                 .appType(AppType.LAA)
                 .enabled(false)
                 .ordinal(ordinal)
@@ -344,11 +351,8 @@ public class AppService {
     }
 
     private boolean areSecurityGroupsEqual(List<GetAllApplicationsResponse.TechServicesApplication.AppSecurityGroup> remoteSecGroups, App local) {
-        String remoteSecGroupName = remoteSecGroups == null || remoteSecGroups.isEmpty() ? null : remoteSecGroups.getFirst().getName();
         String remoteSecGroupId = remoteSecGroups == null || remoteSecGroups.isEmpty() ? null : remoteSecGroups.getFirst().getId();
-
-        return Objects.equals(remoteSecGroupName, local.getSecurityGroupName()) && Objects.equals(remoteSecGroupId, local.getSecurityGroupOid());
-
+        return Objects.equals(remoteSecGroupId, local.getSecurityGroupOid());
     }
 
 }

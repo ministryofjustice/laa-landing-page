@@ -106,7 +106,7 @@ public interface FirmRepository extends JpaRepository<Firm, UUID> {
             COUNT(DISTINCT up.id) AS "User Count",
             COUNT(DISTINCT CASE WHEN ar.id IS NOT NULL THEN up.id END) AS "Admin User Count",
             COUNT(DISTINCT CASE WHEN eu.multi_firm_user = TRUE THEN up.id END) AS "Multi-Firm User Count",
-            COUNT(DISTINCT CASE WHEN eu.status = 'DEACTIVE' THEN up.id END) AS "Disabled User Count"
+            COUNT(DISTINCT CASE WHEN eu.enabled = false THEN up.id END) AS "Disabled User Count"
         FROM firm f
         JOIN user_profile up
             ON up.firm_id = f.id
@@ -122,8 +122,6 @@ public interface FirmRepository extends JpaRepository<Firm, UUID> {
         GROUP BY
             f.id, f.name, f.code, f.type, pf.code
         ORDER BY
-            COALESCE(f.parent_firm_id, f.id),
-            f.parent_firm_id NULLS FIRST,
             f.code
         """,
             nativeQuery = true
