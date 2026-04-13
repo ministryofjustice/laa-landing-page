@@ -1,15 +1,24 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import jakarta.persistence.EntityNotFoundException;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.Arrays;
+import static java.util.Arrays.stream;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import org.modelmapper.ModelMapper;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
@@ -24,19 +33,11 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRolesOrderForm;
+import uk.gov.justice.laa.portal.landingpage.validation.ValidationMessages;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.RoleAssignmentRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
-
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import static java.util.Arrays.stream;
 
 @Service
 @Slf4j
@@ -211,6 +212,7 @@ public class AppRoleService {
     @Transactional
     public void createRole(RoleCreationDto dto) {
         validateLegacySyncAndCcmsCode(dto);
+        validateInternalUserFirmTypeRestriction(dto);
 
         // Validate unique role name within app
         validateUniqueRoleName(dto.getName(), dto.getParentAppId());
@@ -275,6 +277,18 @@ public class AppRoleService {
         eventService.logEvent(auditEvent);
 
         log.info("Created new role: {} in app: {}", savedRole.getName(), parentApp.getName());
+    }
+
+    private void validateInternalUserFirmTypeRestriction(RoleCreationDto dto) {
+        boolean isInternalOnly = dto.getUserTypeRestriction() != null
+                && !dto.getUserTypeRestriction().isEmpty()
+                && dto.getUserTypeRestriction().stream().allMatch(UserType.INTERNAL::equals);
+        boolean hasFirmTypeRestriction = dto.getFirmTypeRestriction() != null
+                && !dto.getFirmTypeRestriction().isEmpty();
+
+        if (isInternalOnly && hasFirmTypeRestriction) {
+            throw new IllegalArgumentException(ValidationMessages.FIRM_TYPE_RESTRICTION_INTERNAL_ROLE);
+        }
     }
 
     private void validateUniqueRoleName(String roleName, UUID appId) {
