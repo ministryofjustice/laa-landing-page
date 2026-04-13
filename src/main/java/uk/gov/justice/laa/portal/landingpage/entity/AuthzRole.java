@@ -1,6 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.entity;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
@@ -17,10 +16,11 @@ public enum AuthzRole {
     INTERNAL_USER_VIEWER("Internal User Viewer"),
     EXTERNAL_USER_VIEWER("External User Viewer"),
     SILAS_ADMINISTRATION("SiLAS System Administration"),
+    USER_ACCESS_AUDIT_TABLE("User Access Audit Table"),
+    FIRM_DIRECTORY("Firm Directory"),
     SECURITY_RESPONSE("Security Response"),
     MULTI_FIRM_DELEGATION("Multi-firm Delegation"),
     AUDIT_EXPORT("Audit Export");
-
     private final String roleName;
 
     AuthzRole(String roleName) {

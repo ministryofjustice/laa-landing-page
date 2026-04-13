@@ -41,7 +41,7 @@ public class FirmDirectoryTest extends BaseIntegrationTest {
     @Transactional
     public void accessFirmDrilldownView() throws Exception {
         Firm firm1 = buildFirm("Test Firm", "A123");
-        Office office1 = buildOffice(firm1, "Test Office", "123 Test Street", "BT12 3AB", "O123");
+        Office office1 = buildOffice(firm1, "Test Office", "O123");
         firmRepository.saveAndFlush(firm1);
         officeRepository.saveAndFlush(office1);
 
@@ -73,7 +73,7 @@ public class FirmDirectoryTest extends BaseIntegrationTest {
     public void bulkDisableConfirmationGet() throws Exception {
 
         Firm firm1 = buildFirm("Test Firm", "A123");
-        Office office1 = buildOffice(firm1, "Test Office", "123 Test Street", "BT12 3AB", "O123");
+        Office office1 = buildOffice(firm1, "Test Office", "O123");
         firmRepository.saveAndFlush(firm1);
         officeRepository.saveAndFlush(office1);
 
@@ -92,7 +92,7 @@ public class FirmDirectoryTest extends BaseIntegrationTest {
     void bulkDisableConfirmationPostWithoutError() throws Exception {
         // Arrange
         Firm firm1 = buildFirm("Test Firm", "A123");
-        Office office1 = buildOffice(firm1, "Test Office", "123 Test Street", "BT12 3AB", "O123");
+        Office office1 = buildOffice(firm1, "Test Office", "O123");
         firmRepository.saveAndFlush(firm1);
         officeRepository.saveAndFlush(office1);
 

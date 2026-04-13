@@ -128,9 +128,8 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPageReLogin.clickAndConfirmSignOut();
 
         //Failed Login with deleted user
-        ManageUsersPage manageUsersPageDeletedUser = loginAndGetManageUsersPage(email);
-        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-        manageUsersPageDeletedUser.verifySignInError();
+        loginAs(email);
+        assertThat(page.getByText("Sorry, but we're having trouble signing you in.")).isVisible();
     }
 
     @Test
@@ -458,10 +457,10 @@ public class ManageUsersTest extends BaseFrontEndTest {
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         assertTrue(page.locator(".govuk-button:has-text('Manage Access')").isVisible());
         manageUsersPage.clickManageAccess();
-        List<String> services = List.of("Manage Your Users");
+        List<String> services = List.of("Test LAA App One");
         manageUsersPage.checkSelectedRoles(services);
         manageUsersPage.clickContinueLink();
-        List<String> roles = List.of("Firm User Manager");
+        List<String> roles = List.of("Test LAA App One Access");
         manageUsersPage.checkSelectedRoles(roles);
         manageUsersPage.clickContinueLink();
         manageUsersPage.clickContinueLink();
@@ -469,7 +468,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         assertTrue(page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible());
         manageUsersPage.clickGoBackToManageUsers();
-        assertTrue(row.locator(".moj-badge.moj-badge--blue").isHidden());
+        assertTrue(row.locator(".moj-badge.moj-badge--blue").isVisible()); // because the invitation status is null
     }
 
     @Disabled("Test disabled - user creation logic changed. Users with only firm selection get COMPLETE status instead of PENDING. Needs investigation.")

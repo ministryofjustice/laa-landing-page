@@ -517,6 +517,61 @@ class ExternalUserPollingServiceTest {
     }
 
     @Test
+    void shouldDeleteUserWithProfiles_whenApiReturnFails() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        UserProfile profile1 = UserProfile.builder()
+                .id(java.util.UUID.randomUUID())
+                .activeProfile(true)
+                .build();
+        UserProfile profile2 = UserProfile.builder()
+                .id(java.util.UUID.randomUUID())
+                .activeProfile(false)
+                .build();
+        EntraUser existingUser = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("deleted-user-with-profiles")
+                .firstName("Jane")
+                .lastName("Smith")
+                .email("jane.smith@example.com")
+                .enabled(true)
+                .mailOnly(false)
+                .userProfiles(new java.util.HashSet<>(java.util.Set.of(profile1, profile2)))
+                .build();
+
+        profile1.setEntraUser(existingUser);
+        profile2.setEntraUser(existingUser);
+
+        when(entraUserRepository.findByEntraOid("deleted-user-with-profiles")).thenReturn(Optional.of(existingUser));
+
+        TechServicesUser deletedUser = TechServicesUser.builder()
+                .id("deleted-user-with-profiles")
+                .givenName("Jane")
+                .surname("Smith")
+                .accountEnabled(true)
+                .isMailOnly(false)
+                .deleted(true)
+                .build();
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("fail")
+                .users(List.of(deletedUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        verify(userProfileRepository).save(profile1);
+        verify(userProfileRepository).save(profile2);
+        verify(userProfileRepository).delete(profile1);
+        verify(userProfileRepository).delete(profile2);
+        verify(userProfileRepository, times(3)).flush();
+        verify(entraUserRepository).delete(existingUser);
+        verify(entraUserRepository).flush();
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
     void shouldSkipDeletion_whenUserNotFoundInDatabase() {
         when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
 
@@ -743,6 +798,44 @@ class ExternalUserPollingServiceTest {
         verify(userAccountStatusAuditRepository).flush();
         verify(entraUserRepository).delete(userToDelete);
         verify(entraUserRepository).flush();
+        verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    @Test
+    void shouldHandleUserDeletionThrowsRuntimeException() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        EntraUser userToDelete = EntraUser.builder()
+                .id(java.util.UUID.randomUUID())
+                .entraOid("user123")
+                .firstName("John")
+                .lastName("Doe")
+                .email("user@example.com")
+                .enabled(true)
+                .mailOnly(false)
+                .build();
+        when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(userToDelete));
+        when(userAccountStatusAuditRepository.findByEntraUser(userToDelete)).thenThrow(new RuntimeException());
+
+        TechServicesUser apiUser = TechServicesUser.builder()
+                .id("user123")
+                .givenName("John")
+                .surname("Doe")
+                .accountEnabled(true)
+                .isMailOnly(false)
+                .deleted(true)
+                .build();
+
+        GetUsersResponse response = GetUsersResponse.builder()
+                .message("Success")
+                .users(List.of(apiUser))
+                .build();
+        TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
+
+        externalUserPollingService.updateSyncMetadata();
+
+        verify(userAccountStatusAuditRepository).findByEntraUser(userToDelete);
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
 
