@@ -156,14 +156,14 @@ spec:
                   key: rds_instance_endpoint
             - name: POLLING_ENABLED
               value: "${POLLING_ENABLED}"
-            - name: POLLING_INTERVAL
-              value: "${POLLING_INTERVAL}"
+            - name: POLLING_SCHEDULE
+              value: "${POLLING_SCHEDULE}"
             - name: POLLING_GROUP_ID
               value: "${POLLING_GROUP_ID}"
             - name: EXTERNAL_USER_POLLING_ENABLED
               value: "${EXTERNAL_USER_POLLING_ENABLED}"
-            - name: EXTERNAL_USER_POLLING_INTERVAL
-              value: "${EXTERNAL_USER_POLLING_INTERVAL}"
+            - name: EXTERNAL_USER_POLLING_SCHEDULE
+              value: "${EXTERNAL_USER_POLLING_SCHEDULE}"
             - name: EXTERNAL_USER_REPORTING_ENABLED
               value: "${EXTERNAL_USER_REPORTING_ENABLED}"
             - name: EXTERNAL_USER_REPORTING_SCHEDULE
