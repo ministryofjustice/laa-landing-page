@@ -54,28 +54,44 @@
                                         th:if="${#fields.hasErrors('ccmsCode')}">
                                         <a href="#ccmsCode" th:text="${err}"></a>
                                     </li>
+                                    <li th:each="err : ${#fields.errors('firmTypeRestriction')}"
+                                        th:if="${#fields.hasErrors('firmTypeRestriction')}">
+                                        <a th:href="${#lists.isEmpty(firmTypes)} ? '#firmTypeRestriction' : '#firmType-' + firmTypes[0].name()"
+                                           th:text="${err}"></a>
+                                    </li>
                                 </ul>
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Parent App Selection -->
-                    <div class="govuk-form-group" th:classappend="${#fields.hasErrors('parentAppId')} ? 'govuk-form-group--error'">
+                    <div class="govuk-form-group"
+                         th:classappend="${#fields.hasErrors('parentAppId')} ? 'govuk-form-group--error'">
+
                         <label class="govuk-label govuk-label--m" for="parentAppId">
                             Parent Application
                         </label>
+
                         <div class="govuk-hint" id="parentAppId-hint">
                             Select the application this role will belong to
                         </div>
+
                         <div th:if="${#fields.hasErrors('parentAppId')}" class="govuk-error-message">
                             <span class="govuk-visually-hidden">Error:</span>
                             <span th:errors="*{parentAppId}"></span>
                         </div>
-                        <select class="govuk-select" th:classappend="${#fields.hasErrors('parentAppId')} ? 'govuk-select--error'" 
-                                id="parentAppId" name="parentAppId" th:field="*{parentAppId}" 
+                        <select class="govuk-select"
+                                th:classappend="${#fields.hasErrors('parentAppId')} ? 'govuk-select--error'"
+                                id="parentAppId"
+                                th:field="*{parentAppId}"
                                 aria-describedby="parentAppId-hint">
+
                             <option value="">Select an application</option>
-                            <option th:each="app : ${apps}" th:value="${app.id}" th:text="${app.name}">App Name</option>
+
+                            <option th:each="app : ${apps}"
+                                    th:value="${app.id}"
+                                    th:text="${app.name}">
+                            </option>
                         </select>
                     </div>
 
@@ -91,8 +107,8 @@
                             <span class="govuk-visually-hidden">Error:</span>
                             <span th:errors="*{name}"></span>
                         </div>
-                        <input class="govuk-input" th:classappend="${#fields.hasErrors('name')} ? 'govuk-input--error'" 
-                               id="name" name="name" type="text" th:field="*{name}" 
+                        <input class="govuk-input" th:classappend="${#fields.hasErrors('name')} ? 'govuk-input--error'"
+                               id="name" name="name" type="text" th:field="*{name}"
                                aria-describedby="name-hint" maxlength="255">
                     </div>
 
@@ -108,8 +124,8 @@
                             <span class="govuk-visually-hidden">Error:</span>
                             <span th:errors="*{description}"></span>
                         </div>
-                        <textarea class="govuk-textarea" th:classappend="${#fields.hasErrors('description')} ? 'govuk-textarea--error'" 
-                                  id="description" name="description" rows="3" th:field="*{description}" 
+                        <textarea class="govuk-textarea" th:classappend="${#fields.hasErrors('description')} ? 'govuk-textarea--error'"
+                                  id="description" name="description" rows="3" th:field="*{description}"
                                   aria-describedby="description-hint" maxlength="255"></textarea>
                     </div>
 
@@ -186,13 +202,13 @@
                             <span class="govuk-visually-hidden">Error:</span>
                             <span th:errors="*{ccmsCode}"></span>
                         </div>
-                        <input class="govuk-input govuk-!-width-one-third" th:classappend="${#fields.hasErrors('ccmsCode')} ? 'govuk-input--error'" 
-                               id="ccmsCode" name="ccmsCode" type="text" th:field="*{ccmsCode}" 
+                        <input class="govuk-input govuk-!-width-one-third" th:classappend="${#fields.hasErrors('ccmsCode')} ? 'govuk-input--error'"
+                               id="ccmsCode" name="ccmsCode" type="text" th:field="*{ccmsCode}"
                                aria-describedby="ccmsCode-hint" maxlength="30">
                     </div>
 
                     <!-- Firm Type Restriction -->
-                    <div class="govuk-form-group">
+                    <div class="govuk-form-group" th:classappend="${#fields.hasErrors('firmTypeRestriction')} ? 'govuk-form-group--error'">
                         <fieldset class="govuk-fieldset">
                             <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
                                 Firm Type Restriction (Optional)
@@ -200,16 +216,20 @@
                             <div class="govuk-hint">
                                 Select which firm types can be assigned this role (leave blank for no restriction)
                             </div>
+                            <div th:if="${#fields.hasErrors('firmTypeRestriction')}" class="govuk-error-message">
+                                <span class="govuk-visually-hidden">Error:</span>
+                                <span th:errors="*{firmTypeRestriction}"></span>
+                            </div>
                             <div class="govuk-checkboxes" data-module="govuk-checkboxes">
                                 <div class="govuk-checkboxes__item" th:each="firmType : ${firmTypes}">
-                                    <input class="govuk-checkboxes__input" 
-                                           th:id="'firmType-' + ${firmType.name()}" 
-                                           th:name="firmTypeRestriction" 
-                                           th:value="${firmType}" 
+                                    <input class="govuk-checkboxes__input"
+                                           th:id="'firmType-' + ${firmType.name()}"
+                                           th:name="firmTypeRestriction"
+                                           th:value="${firmType}"
                                            type="checkbox"
                                            th:checked="${roleCreationDto.firmTypeRestriction != null and roleCreationDto.firmTypeRestriction.contains(firmType)}">
-                                    <label class="govuk-label govuk-checkboxes__label" 
-                                           th:for="'firmType-' + ${firmType.name()}" 
+                                    <label class="govuk-label govuk-checkboxes__label"
+                                           th:for="'firmType-' + ${firmType.name()}"
                                            th:text="${firmType.name()}">
                                         Firm Type
                                     </label>

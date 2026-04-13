@@ -1195,10 +1195,11 @@ class AdminControllerTest {
         // Arrange
         MockHttpSession session = new MockHttpSession();
         List<AppDto> apps = createMockApps();
+        String appName = "Test App";
         when(appService.getAllLaaApps()).thenReturn(apps);
 
         // Act
-        String result = adminController.showRoleCreationForm(model, session);
+        String result = adminController.showRoleCreationForm(model, session, appName);
 
         // Assert
         assertEquals("silas-administration/create-role", result);
@@ -1206,6 +1207,7 @@ class AdminControllerTest {
         assertThat(model.getAttribute("apps")).isEqualTo(apps);
         assertThat(model.getAttribute("userTypes")).isEqualTo(UserType.values());
         assertThat(model.getAttribute("firmTypes")).isEqualTo(FirmType.values());
+        assertThat(model.getAttribute("appFilter")).isEqualTo(appName);
     }
 
     @Test
@@ -1219,10 +1221,11 @@ class AdminControllerTest {
         session.setAttribute("roleCreationDto", existingDto);
 
         List<AppDto> apps = createMockApps();
+        String appName = "Test App";
         when(appService.getAllLaaApps()).thenReturn(apps);
 
         // Act
-        String result = adminController.showRoleCreationForm(model, session);
+        String result = adminController.showRoleCreationForm(model, session, appName);
 
         // Assert
         assertEquals("silas-administration/create-role", result);
@@ -1230,6 +1233,7 @@ class AdminControllerTest {
         assertThat(model.getAttribute("apps")).isEqualTo(apps);
         assertThat(model.getAttribute("userTypes")).isEqualTo(UserType.values());
         assertThat(model.getAttribute("firmTypes")).isEqualTo(FirmType.values());
+        assertThat(model.getAttribute("appFilter")).isEqualTo(appName);
     }
 
     @Test
@@ -3181,9 +3185,11 @@ class AdminControllerTest {
         void setUp() {
             // Shared test data
             targetId = UUID.randomUUID().toString();
+            AppDto appDto = AppDto.builder().name("MyApp").build();
             targetDto = AppRoleDto.builder()
                     .id(targetId)
                     .name("Target Role")
+                    .app(appDto)
                     .build();
 
             dtoA = dto("A", "Alpha");
@@ -3206,7 +3212,7 @@ class AdminControllerTest {
             // DB says: dtoB can assign
             when(appRoleService.findById(targetId)).thenReturn(Optional.of(targetDto));
             when(appRoleService.getAssigningRolesFor(targetId)).thenReturn(List.of(dtoB));
-            when(appRoleService.getAllAuthzRoles()).thenReturn(List.of(dtoA, dtoB, dtoC));
+            when(appRoleService.getAllAssigningRoles(any())).thenReturn(List.of(dtoA, dtoB, dtoC));
 
             String view = adminController.roleAssignmentRestrictionGet(targetId, model, session);
 
@@ -3239,7 +3245,7 @@ class AdminControllerTest {
 
             when(appRoleService.findById(targetId)).thenReturn(Optional.of(targetDto));
             when(appRoleService.getAssigningRolesFor(targetId)).thenReturn(List.of());
-            when(appRoleService.getAllAuthzRoles()).thenReturn(List.of(dtoA, dtoB, dtoC));
+            when(appRoleService.getAllAssigningRoles(any())).thenReturn(List.of(dtoA, dtoB, dtoC));
 
             String view = adminController.roleAssignmentRestrictionGet(targetId, model, session);
 
