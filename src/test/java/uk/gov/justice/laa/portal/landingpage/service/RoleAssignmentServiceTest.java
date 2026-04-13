@@ -71,7 +71,7 @@ public class RoleAssignmentServiceTest {
     void setUp() {
         mapper = new MapperConfig().modelMapper();
         roleAssignmentService = new RoleAssignmentService(roleAssignmentRepository, appRepository, appRoleRepository, mapper, eventService);
-        app = App.builder().id(UUID.randomUUID()).name("app").securityGroupOid("sec_grp_oid").securityGroupName("sec_grp_name").build();
+        app = App.builder().id(UUID.randomUUID()).name("app").securityGroupOid("sec_grp_oid").build();
         gbAdmin = AppRole.builder().id(gbAdminId).name("globalAdmin").description("appRole1").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).authzRole(true).build();
         exAdmin = AppRole.builder().id(exAdminId).name("externalAdmin").description("appRole2").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).authzRole(true).build();
         exMan = AppRole.builder().id(exManId).name("externalManager").description("appRole3").userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(app).authzRole(true).build();
@@ -171,7 +171,7 @@ public class RoleAssignmentServiceTest {
         AppRoleDto exManDto = new AppRoleDto();
         exManDto.setId(gbAdminId.toString());
         UUID viewCrimeId = UUID.randomUUID();
-        App crimeApp = App.builder().name("crime").securityGroupOid("sec_grp_oid").securityGroupName("sec_grp_name").build();
+        App crimeApp = App.builder().name("crime").securityGroupOid("sec_grp_oid").build();
         AppRole viewCrime = AppRole.builder().id(viewCrimeId).name("View Crime Guy").description("appRole3")
                 .userTypeRestriction(new UserType[] {UserType.EXTERNAL}).app(crimeApp).authzRole(false).build();
         AppRoleDto viewCrimeDto = new AppRoleDto();

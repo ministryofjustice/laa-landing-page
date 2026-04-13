@@ -1,0 +1,48 @@
+databaseChangeLog:
+  - changeSet:
+      id: remove-unused-columns-from-app-table
+      author: suresh.kavali
+      changes:
+        - dropColumn:
+            tableName: app
+            columnName: security_group_name
+
+        - dropColumn:
+            tableName: app
+            columnName: title
+
+        - dropColumn:
+            tableName: app
+            columnName: assigned_app_id
+
+        - dropColumn:
+            tableName: app
+            columnName: alternative_description
+
+        - dropColumn:
+            tableName: app
+            columnName: oid_group_name
+
+      rollback:
+        - addColumn:
+            tableName: app
+            columns:
+              - column:
+                  name: security_group_name
+                  type: varchar(255)
+
+              - column:
+                  name: title
+                  type: varchar(255)
+
+              - column:
+                  name: assigned_app_id
+                  type: uuid
+
+              - column:
+                  name: alternative_description
+                  type: varchar(255)
+
+              - column:
+                  name: oid_group_name
+                  type: varchar(255)

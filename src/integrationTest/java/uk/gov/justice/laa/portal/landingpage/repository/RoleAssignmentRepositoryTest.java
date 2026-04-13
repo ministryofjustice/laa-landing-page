@@ -38,8 +38,7 @@ public class RoleAssignmentRepositoryTest extends BaseRepositoryTest {
     @Test
     public void roleAssignmentAndRetrieval() {
         // Arrange
-        App app = App.builder().name("app").securityGroupOid("sec_grp_oid").securityGroupName("sec_grp_name")
-                .title("Lassie App Title").description("Lassie App Description").oidGroupName("Lassie OID Group")
+        App app = App.builder().name("app").securityGroupOid("sec_grp_oid").description("Lassie App Description")
                 .appType(AppType.LAA).url("http://localhost:8080/lassie").enabled(true).build();
         appRepository.save(app);
 
@@ -67,8 +66,7 @@ public class RoleAssignmentRepositoryTest extends BaseRepositoryTest {
     @Test
     public void findByAssigningRole() {
         // Arrange
-        App app = App.builder().name("app").securityGroupOid("sec_grp_oid").securityGroupName("sec_grp_name")
-                .title("Lassie App Title").description("Lassie App Description").oidGroupName("Lassie OID Group")
+        App app = App.builder().name("app").securityGroupOid("sec_grp_oid").description("Lassie App Description")
                 .appType(AppType.LAA).url("http://localhost:8080/lassie").enabled(true).build();
         appRepository.save(app);
 

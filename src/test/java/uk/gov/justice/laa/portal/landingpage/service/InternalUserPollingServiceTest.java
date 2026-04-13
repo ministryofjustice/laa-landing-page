@@ -174,4 +174,54 @@ class InternalUserPollingServiceTest {
         assertEquals(1, dtos.size());
         assertEquals(newId.toString(), dtos.get(0).getEntraOid());
     }
+
+    @Test
+    void shouldDeleteInternalUsers_whenUsersExistInSilasButNotInGraphResponse() {
+        UUID existingId1 = UUID.randomUUID();
+        UUID existingId2 = UUID.randomUUID();
+        UUID graphApiId = UUID.randomUUID();
+        
+        // Setup: 2 users in Silas, only 1 in Graph API
+        when(userService.getInternalUserEntraIds()).thenReturn(List.of(existingId1, existingId2));
+        
+        User graphUser = new User();
+        graphUser.setId(graphApiId.toString());
+        graphUser.setMail("graph@example.com");
+        graphUser.setSurname("Graph");
+        graphUser.setGivenName("User");
+        
+        DirectoryObjectCollectionResponse response = new DirectoryObjectCollectionResponse();
+        response.setValue(List.of(graphUser));
+        when(graphServiceClient.groups().byGroupId(anyString()).members().get()).thenReturn(response);
+        when(userService.deleteInternalUsersByEntraIds(any())).thenReturn(2);
+
+        internalUserPollingService.pollForNewUsers();
+        
+        ArgumentCaptor<List<UUID>> deleteCaptor = ArgumentCaptor.forClass(List.class);
+        verify(userService).deleteInternalUsersByEntraIds(deleteCaptor.capture());
+        List<UUID> usersToDelete = deleteCaptor.getValue();
+        assertEquals(2, usersToDelete.size());
+        assertEquals(List.of(existingId1, existingId2), usersToDelete);
+    }
+
+    @Test
+    void shouldNotDeleteUsers_whenAllSilasUsersExistInGraphResponse() {
+        UUID existingId = UUID.randomUUID();
+        
+        when(userService.getInternalUserEntraIds()).thenReturn(List.of(existingId));
+        
+        User graphUser = new User();
+        graphUser.setId(existingId.toString());
+        graphUser.setMail("existing@example.com");
+        graphUser.setSurname("Existing");
+        graphUser.setGivenName("User");
+        
+        DirectoryObjectCollectionResponse response = new DirectoryObjectCollectionResponse();
+        response.setValue(List.of(graphUser));
+        when(graphServiceClient.groups().byGroupId(anyString()).members().get()).thenReturn(response);
+
+        internalUserPollingService.pollForNewUsers();
+        
+        verify(userService, never()).deleteInternalUsersByEntraIds(any());
+    }
 }

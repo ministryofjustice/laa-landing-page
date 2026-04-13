@@ -5,15 +5,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -27,6 +23,9 @@ import org.springframework.security.oauth2.client.authentication.OAuth2Authentic
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -434,6 +433,72 @@ class FirmDisabledFilterTest {
                 "Access denied - your firm is temporarily disabled due to contract status"
             );
             verify(filterChain, never()).doFilter(request, response);
+        }
+    }
+
+    @Nested
+    class NotAuthenticatedTests {
+
+        @Test
+        void shouldAllowAccessWhenAuthIsNotAuthenticated() throws Exception {
+            // Given
+            OAuth2User oauth2User = new DefaultOAuth2User(
+                Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")),
+                Collections.singletonMap("sub", "user-id"),
+                "sub"
+            );
+            OAuth2AuthenticationToken auth = new OAuth2AuthenticationToken(
+                oauth2User,
+                oauth2User.getAuthorities(),
+                "azure"
+            ) {
+                @Override
+                public boolean isAuthenticated() {
+                    return false;
+                }
+            };
+            when(securityContext.getAuthentication()).thenReturn(auth);
+
+            // When
+            filter.doFilterInternal(request, response, filterChain);
+
+            // Then
+            verify(filterChain).doFilter(request, response);
+            verify(response, never()).sendError(HttpServletResponse.SC_FORBIDDEN);
+        }
+    }
+
+    @Nested
+    class ShouldNotFilterTests {
+
+        @Test
+        void shouldNotFilterCssRequests() {
+            when(request.getServletPath()).thenReturn("/css/style.css");
+            assertThat(filter.shouldNotFilter(request)).isTrue();
+        }
+
+        @Test
+        void shouldNotFilterJsRequests() {
+            when(request.getServletPath()).thenReturn("/js/app.js");
+            assertThat(filter.shouldNotFilter(request)).isTrue();
+        }
+
+        @Test
+        void shouldNotFilterAssetsRequests() {
+            when(request.getServletPath()).thenReturn("/assets/images/logo.png");
+            assertThat(filter.shouldNotFilter(request)).isTrue();
+        }
+
+        @Test
+        void shouldNotFilterFaviconRequest() {
+            when(request.getServletPath()).thenReturn("/favicon.ico");
+            assertThat(filter.shouldNotFilter(request)).isTrue();
+        }
+
+        @Test
+        void shouldFilterNormalRequests() {
+            when(request.getServletPath()).thenReturn("/admin/users");
+            assertThat(filter.shouldNotFilter(request)).isFalse();
         }
     }
 
