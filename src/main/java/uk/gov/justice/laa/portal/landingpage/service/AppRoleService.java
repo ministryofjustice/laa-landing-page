@@ -30,6 +30,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRolesOrderForm;
@@ -339,8 +340,27 @@ public class AppRoleService {
                 .toList();
     }
 
+    public List<AppRoleDto> getAllAssigningRoles(AppType appType) {
+        return appRoleRepository.findAllAuthzRoles().stream()
+                .filter(role -> hasAssignPermission(role, appType))
+                .map(this::toDto)
+                .toList();
+    }
+
+    private boolean hasAssignPermission(AppRole role, AppType appType) {
+        return switch (appType) {
+            case AUTHZ -> role.getPermissions().contains(Permission.ASSIGN_INTERNAL_USER_ROLES);
+            case LAA -> role.getPermissions().contains(Permission.ASSIGN_EXTERNAL_USER_ROLES);
+        };
+    }
+
+    private AppRoleDto toDto(AppRole role) {
+        return modelMapper.map(role, AppRoleDto.class);
+    }
+
+
     public List<AppRoleDto> getAssigningRolesFor(String appRoleId) {
-        List<AppRole> assigningRolesFor = appRoleRepository.findAssigningRolesFor(UUID.fromString(appRoleId));;
+        List<AppRole> assigningRolesFor = appRoleRepository.findAssigningRolesFor(UUID.fromString(appRoleId));
         return assigningRolesFor.stream()
                 .map(appRole -> modelMapper.map(appRole, AppRoleDto.class))
                 .toList();
