@@ -835,7 +835,7 @@ public class UserAccountStatusServiceTest {
 
         assertThatThrownBy(() -> userAccountStatusService.enableUser(targetId, actorId))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Could not find a user account to disable");
+                .hasMessageContaining("Could not find a user account with id");
     }
 
     @Test
