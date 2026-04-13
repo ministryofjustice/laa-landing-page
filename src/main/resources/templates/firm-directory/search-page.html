@@ -34,7 +34,7 @@
                             You can search using one or both boxes
                         </div>
 
-                        <form method="get" th:action="@{firmDirectory}" role="search" id="search-form">
+                        <form method="get" th:action="@{/admin/firmDirectory}" role="search" id="search-form">
                             <div class="search-inputs-container">
                                 <!-- Search by firm name or firm code -->
                                 <div class="search-input-group">
@@ -387,7 +387,7 @@
                         }
                     }
 
-                    const actionUrl = form.getAttribute('action') || '/firmDirectory';
+                    const actionUrl = form.getAttribute('action') || '/admin/firmDirectory';
                     window.location.href = buildCleanUrl(actionUrl, params);
                 });
             });
@@ -408,7 +408,7 @@
                         firmSearch: this.dataset.firmSearch,
                         selectedFirmType: this.dataset.selectedFirmType,
                     };
-                    window.location.href = buildCleanUrl('/firmDirectory', params);
+                    window.location.href = buildCleanUrl('/admin/firmDirectory', params);
                 });
             });
 
@@ -492,7 +492,7 @@
                     <tr class="govuk-table__row" th:each="firmDirectory : ${firmDirectories}">
                         <td class="govuk-table__cell">
                             <a class="govuk-link" th:if="${firmDirectory.firmId != null}"
-                               th:href="@{firmDirectory/{id}(id=${firmDirectory.firmId})}"
+                               th:href="@{/admin/firmDirectory/{id}(id=${firmDirectory.firmId})}"
                                th:text="${firmDirectory.firmName}"></a>
 
                         </td>
@@ -510,7 +510,7 @@
     <nav class="govuk-pagination" aria-label="Pagination" th:if="${totalPages > 1}">
         <div class="govuk-pagination__prev" th:if="${page > 1}">
             <a class="govuk-link govuk-pagination__link"
-               th:href="@{firmDirectory(size=${requestedPageSize}, page=${page - 1}, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
+               th:href="@{/admin/firmDirectory(size=${requestedPageSize}, page=${page - 1}, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
                rel="prev">
                 <svg class="govuk-pagination__icon govuk-pagination__icon--prev" xmlns="http://www.w3.org/2000/svg"
                      height="13" width="15" aria-hidden="true" focusable="false" viewBox="0 0 15 13">
@@ -529,10 +529,10 @@
             <li class="govuk-pagination__item"
                 th:classappend="${page == 1 ? 'govuk-pagination__item--current' : ''}">
                 <a class="govuk-link govuk-pagination__link" th:if="${page != 1}"
-                   th:href="@{firmDirectory(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
+                   th:href="@{/admin/firmDirectory(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
                    th:aria-label="'Page 1'">1</a>
                 <a class="govuk-link govuk-pagination__link" th:if="${page == 1}"
-                   th:href="@{firmDirectory(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
+                   th:href="@{/admin/firmDirectory(size=${requestedPageSize}, page=1, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
                    th:aria-label="'Page 1'" aria-current="page">1</a>
             </li>
 
@@ -545,10 +545,10 @@
                 <li class="govuk-pagination__item" th:if="${i > 1 and i < totalPages}"
                     th:classappend="${i == page ? 'govuk-pagination__item--current' : ''}">
                     <a class="govuk-link govuk-pagination__link" th:if="${i != page}"
-                       th:href="@{firmDirectory(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
+                       th:href="@{/admin/firmDirectory(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
                        th:aria-label="'Page ' + ${i}" th:text="${i}"></a>
                     <a class="govuk-link govuk-pagination__link" th:if="${i == page}"
-                       th:href="@{firmDirectory(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
+                       th:href="@{/admin/firmDirectory(size=${requestedPageSize}, page=${i}, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
                        th:aria-label="'Page ' + ${i}" aria-current="page" th:text="${i}"></a>
                 </li>
             </th:block>
@@ -560,17 +560,17 @@
             <li class="govuk-pagination__item" th:if="${totalPages > 1}"
                 th:classappend="${page == totalPages ? 'govuk-pagination__item--current' : ''}">
                 <a class="govuk-link govuk-pagination__link" th:if="${page != totalPages}"
-                   th:href="@{firmDirectory(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
+                   th:href="@{/admin/firmDirectory(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
                    th:aria-label="'Page ' + ${totalPages}" th:text="${totalPages}"></a>
                 <a class="govuk-link govuk-pagination__link" th:if="${page == totalPages}"
-                   th:href="@{firmDirectory(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
+                   th:href="@{/admin/firmDirectory(size=${requestedPageSize}, page=${totalPages}, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
                    th:aria-label="'Page ' + ${totalPages}" aria-current="page" th:text="${totalPages}"></a>
             </li>
         </ul>
 
         <div class="govuk-pagination__next" th:if="${page < totalPages}">
             <a class="govuk-link govuk-pagination__link"
-               th:href="@{firmDirectory(size=${requestedPageSize}, page=${page + 1}, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
+               th:href="@{/admin/firmDirectory(size=${requestedPageSize}, page=${page + 1}, search=${search}, firmSearch=${firmSearch.firmSearch}, silasRole=${selectedSilasRole}, selectedAppId=${selectedAppId}, selectedUserType=${selectedUserType}, sort=${sort}, direction=${direction})}"
                rel="next">
                     <span class="govuk-pagination__link-title">
                         Next<span class="govuk-visually-hidden"> page</span>
