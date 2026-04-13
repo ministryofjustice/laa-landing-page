@@ -54,9 +54,7 @@ public class AppRoleService {
     private final ModelMapper modelMapper;
     private final RoleAssignmentRepository roleAssignmentRepository;
     private final UserProfileRepository userProfileRepository;
-
-    @PersistenceContext
-    private EntityManager entityManager;
+    private final EntityManager entityManager;
 
     public List<AppRoleDto> getByIds(Collection<String> ids) {
 
