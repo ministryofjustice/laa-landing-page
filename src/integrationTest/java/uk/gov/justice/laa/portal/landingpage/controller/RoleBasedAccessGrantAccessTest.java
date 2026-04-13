@@ -52,42 +52,42 @@ public class RoleBasedAccessGrantAccessTest extends RoleBasedAccessIntegrationTe
 
     @Test
     public void testSecurityResponseCanOpenGlobalAdminAppsToGrantAccess() throws Exception {
-        canOpenGrantAccessScreen(securityResponseUsers.getFirst(), globalAdmins.getFirst(), status().isOk());
+        canOpenGrantAccessScreen(securityResponseUsers.getFirst(), globalAdmins.getFirst(), status().is3xxRedirection());
     }
 
     @Test
-    public void testSecurityResponseCanOpenInternalUserManagerAppsToGrantAccess() throws Exception {
-        canOpenGrantAccessScreen(securityResponseUsers.getFirst(), internalUserManagers.getFirst(), status().isOk());
+    public void testSecurityResponseCannotOpenInternalUserManagerAppsToGrantAccess() throws Exception {
+        canOpenGrantAccessScreen(securityResponseUsers.getFirst(), internalUserManagers.getFirst(), status().is3xxRedirection());
     }
 
     @Test
-    public void testSecurityResponseCanOpenInternalAndExternalUserManagerAppsToGrantAccess() throws Exception {
-        canOpenGrantAccessScreen(securityResponseUsers.getFirst(), internalAndExternalUserManagers.getFirst(), status().isOk());
+    public void testSecurityResponseCannotOpenInternalAndExternalUserManagerAppsToGrantAccess() throws Exception {
+        canOpenGrantAccessScreen(securityResponseUsers.getFirst(), internalAndExternalUserManagers.getFirst(), status().is3xxRedirection());
     }
 
     @Test
-    public void testSecurityResponseCanOpenExternalUserAppsToGrantAccess() throws Exception {
-        canOpenGrantAccessScreen(securityResponseUsers.getFirst(), externalUsersNoRoles.getFirst(), status().isOk());
+    public void testSecurityResponseCannotOpenExternalUserAppsToGrantAccess() throws Exception {
+        canOpenGrantAccessScreen(securityResponseUsers.getFirst(), externalUsersNoRoles.getFirst(), status().is3xxRedirection());
     }
 
     @Test
-    public void testSecurityResponseCanOpenExternalUserManagerAppsToGrantAccess() throws Exception {
-        canOpenGrantAccessScreen(securityResponseUsers.getFirst(), externalOnlyUserManagers.getFirst(), status().isOk());
+    public void testSecurityResponseCannotOpenExternalUserManagerAppsToGrantAccess() throws Exception {
+        canOpenGrantAccessScreen(securityResponseUsers.getFirst(), externalOnlyUserManagers.getFirst(), status().is3xxRedirection());
     }
 
     @Test
-    public void testSecurityResponseCanOpenExternalUserAdminAppsToGrantAccess() throws Exception {
-        canOpenGrantAccessScreen(securityResponseUsers.getFirst(), externalUserAdmins.getFirst(), status().isOk());
+    public void testSecurityResponseCannotOpenExternalUserAdminAppsToGrantAccess() throws Exception {
+        canOpenGrantAccessScreen(securityResponseUsers.getFirst(), externalUserAdmins.getFirst(), status().is3xxRedirection());
     }
 
     @Test
-    public void testSecurityResponseCanOpenInternalUserWithExternalUserManagerRoleAdminAppsToGrantAccess() throws Exception {
-        canOpenGrantAccessScreen(securityResponseUsers.getFirst(), internalWithExternalOnlyUserManagers.getFirst(), status().isOk());
+    public void testSecurityResponseCannotOpenInternalUserWithExternalUserManagerRoleAdminAppsToGrantAccess() throws Exception {
+        canOpenGrantAccessScreen(securityResponseUsers.getFirst(), internalWithExternalOnlyUserManagers.getFirst(), status().is3xxRedirection());
     }
 
     @Test
-    public void testSecurityResponseCanOpenInternalUserAdminAppsToGrantAccess() throws Exception {
-        canOpenGrantAccessScreen(securityResponseUsers.getFirst(), internalUsersNoRoles.getFirst(), status().isOk());
+    public void testSecurityResponseCannotOpenInternalUserAdminAppsToGrantAccess() throws Exception {
+        canOpenGrantAccessScreen(securityResponseUsers.getFirst(), internalUsersNoRoles.getFirst(), status().is3xxRedirection());
     }
 
     @Test
@@ -150,12 +150,12 @@ public class RoleBasedAccessGrantAccessTest extends RoleBasedAccessIntegrationTe
     }
 
     @Test
-    public void testExternalUserManagerCanOpenExternalUserInSameFirmsAppsToGrantAccess() throws Exception {
+    public void testFirmUserManagerCannotOpenExternalUserInSameFirmsAppsToGrantAccess() throws Exception {
         EntraUser externalUserManagerFirm1 = externalOnlyUserManagers.getFirst();
         EntraUser externalUserFirm1 = externalUsersNoRoles.stream()
                 .filter(user -> user.getUserProfiles().stream().findFirst().orElseThrow().getFirm().getId().equals(testFirm1.getId()))
                 .findFirst().orElseThrow();
-        canOpenGrantAccessScreen(externalUserManagerFirm1, externalUserFirm1, status().isOk());
+        canOpenGrantAccessScreen(externalUserManagerFirm1, externalUserFirm1, status().is3xxRedirection());
     }
 
     @Test

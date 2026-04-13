@@ -427,8 +427,8 @@ databaseChangeLog:
             sql: |
               -- Insert apps
               INSERT INTO public.app (
-              id, entra_app_id, entra_oid, name, security_group_name, security_group_oid,
-              ordinal, enabled, title, description, oid_group_name, url, app_type
+              id, entra_app_id, entra_oid, name, security_group_oid,
+              ordinal, enabled, description, url, app_type
               )
               VALUES (
               '88888888-8888-8888-8888-888888888888',
@@ -436,18 +436,15 @@ databaseChangeLog:
               'tttttttt-tttt-tttt-tttt-tttttttttttt',
               'Test LAA App One',
               'Test LAA App One',
-              'Test LAA App One',
               1, TRUE,
-              'Test LAA App One',
-              'Test LAA App One',
               'Test LAA App One',
               '#',
               'LAA'
               );
               
               INSERT INTO public.app (
-              id, entra_app_id, entra_oid, name, security_group_name, security_group_oid,
-              ordinal, enabled, title, description, oid_group_name, url, app_type
+              id, entra_app_id, entra_oid, name, security_group_oid,
+              ordinal, enabled, description, url, app_type
               )
               VALUES (
               '99999999-9999-9999-9999-999999999999',
@@ -455,10 +452,7 @@ databaseChangeLog:
               'ssssssss-ssss-ssss-ssss-ssssssssssss',
               'Test LAA App Two',
               'Test LAA App Two',
-              'Test LAA App Two',
               2, TRUE,
-              'Test LAA App Two',
-              'Test LAA App Two',
               'Test LAA App Two',
               '#',
               'LAA'

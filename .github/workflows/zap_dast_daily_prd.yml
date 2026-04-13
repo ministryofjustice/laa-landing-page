@@ -18,19 +18,23 @@ jobs:
           cmd_options: '-a -j'
           fail_action: false
           issue_title: ZAP Scan Baseline Report - prd
-      - id: extract-summary
-        uses: sean0x42/markdown-extract@7b185cbe85263116bbf741e739e7198ba86465dc # v2.1.0
-        with:
-          file: report_md.md
-          pattern: "Summary.of.Alerts"  # Bug in Action with passing quoted string, so use regex any char instead of spaces
-          case-sensitive: "true"
+          
       - name: Parse summary
         run: |
           #!/bin/bash -xe
-          high_value=$(echo "$ZAP_SUMMARY" | grep "| High |" | awk -F'|' '{print $3}' | xargs)
-          medium_value=$(echo "$ZAP_SUMMARY" | grep "| Medium |" | awk -F'|' '{print $3}' | xargs)
-          low_value=$(echo "$ZAP_SUMMARY" | grep "| Low |" | awk -F'|' '{print $3}' | xargs)
-          info_value=$(echo "$ZAP_SUMMARY" | grep "| Informational |" | awk -F'|' '{print $3}' | xargs)
+          
+          # Read directly from the markdown file, stopping after the first match (-m 1)
+          high_value=$(grep -a -m 1 "| High |" report_md.md | awk -F'|' '{print $3}' | xargs)
+          medium_value=$(grep -a -m 1 "| Medium |" report_md.md | awk -F'|' '{print $3}' | xargs)
+          low_value=$(grep -a -m 1 "| Low |" report_md.md | awk -F'|' '{print $3}' | xargs)
+          info_value=$(grep -a -m 1 "| Informational |" report_md.md | awk -F'|' '{print $3}' | xargs)
+          
+          # Fallback to 0 if grep returns empty
+          high_value=${high_value:-0}
+          medium_value=${medium_value:-0}
+          low_value=${low_value:-0}
+          info_value=${info_value:-0}
+
           echo "ZAP_HIGH=${high_value}" >> "$GITHUB_ENV"
           echo "ZAP_MEDIUM=${medium_value}" >> "$GITHUB_ENV"
           echo "ZAP_LOW=${low_value}" >> "$GITHUB_ENV"
@@ -43,8 +47,7 @@ jobs:
           else
               echo "ZAP_SHOULD_NOTIFY=false" >> "$GITHUB_ENV"
           fi
-        env:
-          ZAP_SUMMARY: ${{ steps.extract-summary.outputs.markdown }}
+
       - name: Post to Slack
         if: env.ZAP_SHOULD_NOTIFY == 'true'
         uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a # v2.1.1

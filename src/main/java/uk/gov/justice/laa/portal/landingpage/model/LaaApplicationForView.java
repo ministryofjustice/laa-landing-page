@@ -5,7 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.apache.commons.lang3.StringUtils;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 
@@ -34,11 +33,6 @@ public class LaaApplicationForView implements Comparable<LaaApplicationForView>,
         this.description = appDto.getDescription();
         this.url = appDto.getUrl();
         this.ordinal = appDto.getOrdinal();
-        this.specialHandling = appDto.getAlternativeAppDescription() != null
-                && appDto.getAlternativeAppDescription().getAssignedAppId() != null
-                && StringUtils.isNotEmpty(appDto.getAlternativeAppDescription().getAlternativeDescription());
-        this.otherAssignedAppIdForAltDesc =
-                specialHandling ? appDto.getAlternativeAppDescription().getAssignedAppId() : null;
         this.appGroup = appDto.getAppType();
     }
 
