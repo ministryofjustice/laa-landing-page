@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -808,16 +809,27 @@ public class AdminController {
 
     @GetMapping("/silas-administration/roles/create")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_LAA_APP_ROLE)")
-    public String showRoleCreationForm(Model model, HttpSession session) {
+    public String showRoleCreationForm(Model model, HttpSession session, @RequestParam String appFilter) {
         RoleCreationDto roleCreationDto = (RoleCreationDto) session.getAttribute("roleCreationDto");
         if (roleCreationDto == null) {
             roleCreationDto = new RoleCreationDto();
+        }
+
+        if (appFilter != null) {
+            List<AppDto> allApps = appService.getAllLaaApps();
+            for (AppDto app : allApps) {
+                if (app.getName().equals(appFilter)) {
+                    roleCreationDto.setParentAppId(UUID.fromString(app.getId()));
+                    break;
+                }
+            }
         }
 
         model.addAttribute("roleCreationDto", roleCreationDto);
         model.addAttribute("apps", appService.getAllLaaApps());
         model.addAttribute("userTypes", UserType.values());
         model.addAttribute("firmTypes", FirmType.values());
+        model.addAttribute("appFilter", appFilter);
 
         return "silas-administration/create-role";
     }
@@ -841,6 +853,7 @@ public class AdminController {
             model.addAttribute("apps", appService.getAllLaaApps());
             model.addAttribute("userTypes", UserType.values());
             model.addAttribute("firmTypes", FirmType.values());
+
             return "silas-administration/create-role";
         }
 
