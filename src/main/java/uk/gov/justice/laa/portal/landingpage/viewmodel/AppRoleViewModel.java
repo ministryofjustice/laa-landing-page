@@ -19,6 +19,7 @@ public class AppRoleViewModel implements Comparable<AppRoleViewModel>, Serializa
     private String appName;
     private int appOrdinal;
     private String description;
+    private String ccmsCode;
     private boolean selected;
     private boolean changeNotAllowed;
     private boolean hiddenFromSelection;

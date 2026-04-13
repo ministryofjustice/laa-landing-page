@@ -11,7 +11,6 @@
             </svg>
             <a class="moj-header__link moj-header__link--organisation-name" href="/home">Legal Aid Agency</a>
         </div>
-
         <div sec:authorize="isAuthenticated()" class="logout">
             <strong><a th:href="@{/home/my-account-details}" style="display: inline;" class="moj-header__link"><span
                     class="govuk-visually-hidden">Open account page for</span><span th:text="${currentUser.name}"></span></a></strong>

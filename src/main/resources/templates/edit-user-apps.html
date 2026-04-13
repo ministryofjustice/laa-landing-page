@@ -40,15 +40,18 @@
                         Select all that apply
                     </div>
                     <div class="govuk-checkboxes govuk-!-padding-top-3" data-module="govuk-checkboxes">
-                        <div class="govuk-checkboxes__item" th:each="app : ${apps}">
-                            <input class="govuk-checkboxes__input" id="apps" name="apps" th:checked="${app.selected}"
-                                th:value="${app.id}" type="checkbox" th:disabled="${app.changeNotAllowed}" th:if="${!app.hiddenFromSelection}">
-                            <label class="govuk-label govuk-checkboxes__label" th:for="${app.id}">
-                                <span th:text="${app.name}"></span>
-                            </label>
-                            <input id="apps-hidden" name="apps" th:value="${app.id}" type="hidden"
-                                   th:if="${app.selected && (app.changeNotAllowed || app.hiddenFromSelection)}">
-                        </div>
+                        <th:block th:each="app : ${apps}">
+                            <div class="govuk-checkboxes__item" th:if="${!app.hiddenFromSelection}">
+                                <input class="govuk-checkboxes__input" id="apps" name="apps" th:checked="${app.selected}"
+                                    th:value="${app.id}" type="checkbox" th:disabled="${app.changeNotAllowed}">
+                                <label class="govuk-label govuk-checkboxes__label" th:for="${app.id}" th:if="${!app.hiddenFromSelection}">
+                                    <span th:text="${app.name}"></span>
+                                </label>
+                            </div>
+                            <div th:if="${app.selected && (app.changeNotAllowed || app.hiddenFromSelection)}">
+                                <input id="apps-hidden" name="apps" th:value="${app.id}" type="hidden" />
+                            </div>
+                        </th:block>
                     </div>
                 </fieldset>
             </div>

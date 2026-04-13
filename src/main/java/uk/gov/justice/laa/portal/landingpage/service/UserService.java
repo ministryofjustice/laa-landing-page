@@ -25,7 +25,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import org.apache.commons.collections4.CollectionUtils;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,6 +71,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
+import uk.gov.justice.laa.portal.landingpage.exception.UserAlreadyAssignedToFirmException;
 import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
@@ -188,7 +188,7 @@ public class UserService {
         allAssignableRoles.addAll(nonEditableRoles);
 
         List<AppRole> assignableAppRoles = appRoleRepository.findAllById(
-                allAssignableRoles.stream().map(UUID::fromString).collect(Collectors.toList()));
+                allAssignableRoles.stream().map(UUID::fromString).sorted().collect(Collectors.toList()));
 
         // Validate no new external roles allowed if modifier not allowed adding new roles
         boolean addingExternalRolesAllowed = accessControlService.canAssignExternalAppRoles(userProfileId);
@@ -201,10 +201,11 @@ public class UserService {
                     .filter(appRole -> appRole.getUserTypeRestriction() != null
                             && Arrays.stream(appRole.getUserTypeRestriction())
                                     .anyMatch(type -> type == UserType.EXTERNAL))
-                    .map(AppRole::getName)
+                    .map(AppRole::getId)
+                    .map(UUID::toString)
                     .collect(Collectors.toSet());
 
-            if (!CollectionUtils.isEqualCollection(assignableExternalRoles, userCurrentExternalRoles)) {
+            if (!userCurrentExternalRoles.containsAll(assignableExternalRoles)) {
                 throw new RuntimeException("User is not allowed to add new roles");
             }
         }
@@ -220,10 +221,11 @@ public class UserService {
                     .filter(appRole -> appRole.getUserTypeRestriction() != null
                             && Arrays.stream(appRole.getUserTypeRestriction())
                                     .anyMatch(type -> type == UserType.INTERNAL))
-                    .map(AppRole::getName)
+                    .map(AppRole::getId)
+                    .map(UUID::toString)
                     .collect(Collectors.toSet());
 
-            if (!CollectionUtils.isEqualCollection(assignableInternalRoles, userCurrentInternalRoles)) {
+            if (!userCurrentInternalRoles.containsAll(assignableInternalRoles)) {
                 throw new RuntimeException("User is not allowed to add new roles");
             }
 
@@ -901,9 +903,8 @@ public class UserService {
                             && profile.getFirm().getId().equals(firmDto.getId()));
 
             if (firmAlreadyAssigned) {
-                logger.error("The user is already got a profile for the firm: {}", firmDto);
-                throw new RuntimeException(
-                        String.format("User profile already exists for this firm %s", firmDto));
+                logger.warn("The user is already got a profile for the firm: {}", firmDto);
+                throw new UserAlreadyAssignedToFirmException();
             }
         }
 
@@ -1470,6 +1471,15 @@ public class UserService {
                 }
 
                 if (!profiles.isEmpty()) {
+                    for (UserProfile profile : profiles) {
+                        if (profile.getAppRoles() != null) {
+                            profile.getAppRoles().clear();
+                        }
+                        profile.setEntraUser(null);
+                        userProfileRepository.save(profile);
+                    }
+                    userProfileRepository.flush();
+
                     userProfileRepository.deleteAll(profiles);
                     userProfileRepository.flush();
                     logger.debug("Deleted {} profiles for internal user: {}", profiles.size(), entraId);
@@ -2066,7 +2076,9 @@ public class UserService {
                 .lastName(entraUser.getLastName())
                 .fullName(entraUser.getFirstName() + " " + entraUser.getLastName())
                 .isMultiFirmUser(entraUser.isMultiFirmUser()).userType(userType)
-                .createdDate(entraUser.getCreatedDate()).createdBy(entraUser.getCreatedBy())
+                .createdDate(entraUser.getCreatedDate())
+                .createdBy(entraUser.getCreatedBy())
+                .disabledBy(String.valueOf(entraUser.getDisabledBy()))
                 // TODO: Fetch lastLoginDate from Microsoft Graph API
                 .lastLoginDate(null)
                 .activationStatus(entraUser.getInvitationStatus() != null ? entraUser.getInvitationStatus().name() : null)
@@ -2122,6 +2134,7 @@ public class UserService {
                 .fullName(entraUser.getFirstName() + " " + entraUser.getLastName())
                 .isMultiFirmUser(entraUser.isMultiFirmUser()).userType(userType)
                 .createdDate(entraUser.getCreatedDate()).createdBy(entraUser.getCreatedBy())
+                .disabledBy(String.valueOf(entraUser.getDisabledBy()))
                 // TODO: Fetch lastLoginDate from Microsoft Graph API
                 .lastLoginDate(null)
                 .activationStatus(entraUser.getInvitationStatus() != null ? entraUser.getInvitationStatus().name() : null)
