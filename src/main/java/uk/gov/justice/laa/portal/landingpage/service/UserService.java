@@ -732,9 +732,12 @@ public class UserService {
     }
 
     private String calculateUserSilasStatus(UserSearchResultsDto user) {
-        if (InvitationStatus.AWAITING_VERIFICATION.equals(user.invitationStatus())
-                && user.hasAppRoles()) {
-            return "Activation pending";
+        if (InvitationStatus.AWAITING_VERIFICATION.equals(user.invitationStatus())) {
+            if (user.hasAppRoles()) {
+                return "Activation pending";
+            } else {
+                return "Incomplete";
+            }
         }
 
         if (!user.enabled()) {
@@ -752,9 +755,12 @@ public class UserService {
     }
 
     public String calculateSilasStatusForUserProfile(UserProfileDto user) {
-        if (InvitationStatus.AWAITING_VERIFICATION.equals(user.getEntraUser().getInvitationStatus())
-                && user.getAppRoles() != null && !user.getAppRoles().isEmpty()) {
-            return "Activation pending";
+        if (InvitationStatus.AWAITING_VERIFICATION.equals(user.getEntraUser().getInvitationStatus())) {
+            if (user.getAppRoles() != null && !user.getAppRoles().isEmpty()) {
+                return "Activation pending";
+            } else {
+                return "Incomplete";
+            }
         }
 
         if (!user.getEntraUser().isEnabled()) {
@@ -1930,9 +1936,12 @@ public class UserService {
                 );
 
         // awaiting verification badges take priority over disabled badge
-        if (InvitationStatus.AWAITING_VERIFICATION.equals(user.getInvitationStatus())
-                && !(hasPending || noRolesAssigned)) {
-            return "Activation pending";
+        if (InvitationStatus.AWAITING_VERIFICATION.equals(user.getInvitationStatus())) {
+            if (hasPending || noRolesAssigned) {
+                return "Incomplete";
+            } else {
+                return "Activation pending";
+            }
         }
 
         // user disable
@@ -1957,9 +1966,12 @@ public class UserService {
                         userProfile.getRoles() == null || userProfile.getRoles().isEmpty()
                 );
         // awaiting verification badges take priority over disabled badge
-        if (InvitationStatus.AWAITING_VERIFICATION.name().equals(userDetail.getActivationStatus())
-                && !(noRolesAssigned || userDetail.isPending())) {
-            return "Activation pending";
+        if (InvitationStatus.AWAITING_VERIFICATION.name().equals(userDetail.getActivationStatus())) {
+            if (noRolesAssigned || userDetail.isPending()) {
+                return "Incomplete";
+            } else {
+                return "Activation pending";
+            }
         }
         if (!userDetail.isEnabled()) {
             return "Disabled";
