@@ -28,10 +28,14 @@ class UserEnablementPolicyTest {
         @Test
         void nullDisableType_anyRole_returnsTrue() {
             assertThat(policy.canEnable(null, List.of(FUM))).isTrue();
+            assertThat(policy.canEnable(null, List.of(EUM))).isTrue();
             assertThat(policy.canEnable(null, List.of(EUA))).isTrue();
+            assertThat(policy.canEnable(null, List.of(SR))).isTrue();
             assertThat(policy.canEnable(null, List.of(GA))).isTrue();
             assertThat(policy.canEnable(null, List.of())).isTrue();
         }
+
+        // --- NONE disable type (Manual User Sync / Automatic User Sync) ---
 
         @Test
         void none_gaCanEnable() {
@@ -63,14 +67,26 @@ class UserEnablementPolicyTest {
             assertThat(policy.canEnable(DisableType.NONE, List.of())).isFalse();
         }
 
+        // --- FIRM disable type (Firm User Manager disabled the user) ---
+
         @Test
         void firm_fumCanEnable() {
             assertThat(policy.canEnable(DisableType.FIRM, List.of(FUM))).isTrue();
         }
 
         @Test
+        void firm_eumCanEnable() {
+            assertThat(policy.canEnable(DisableType.FIRM, List.of(EUM))).isTrue();
+        }
+
+        @Test
         void firm_euaCanEnable() {
             assertThat(policy.canEnable(DisableType.FIRM, List.of(EUA))).isTrue();
+        }
+
+        @Test
+        void firm_srCanEnable() {
+            assertThat(policy.canEnable(DisableType.FIRM, List.of(SR))).isTrue();
         }
 
         @Test
@@ -83,6 +99,8 @@ class UserEnablementPolicyTest {
             assertThat(policy.canEnable(DisableType.FIRM, List.of())).isFalse();
         }
 
+        // --- LAA disable type (External User Manager / External User Admin disabled the user) ---
+
         @Test
         void laa_eumCanEnable() {
             assertThat(policy.canEnable(DisableType.LAA, List.of(EUM))).isTrue();
@@ -94,6 +112,11 @@ class UserEnablementPolicyTest {
         }
 
         @Test
+        void laa_srCanEnable() {
+            assertThat(policy.canEnable(DisableType.LAA, List.of(SR))).isTrue();
+        }
+
+        @Test
         void laa_gaCanEnable() {
             assertThat(policy.canEnable(DisableType.LAA, List.of(GA))).isTrue();
         }
@@ -102,6 +125,13 @@ class UserEnablementPolicyTest {
         void laa_fumCannotEnable() {
             assertThat(policy.canEnable(DisableType.LAA, List.of(FUM))).isFalse();
         }
+
+        @Test
+        void laa_noRoleCannotEnable() {
+            assertThat(policy.canEnable(DisableType.LAA, List.of())).isFalse();
+        }
+
+        // --- PRIVILEGED disable type (Security Response / Global Admin disabled the user) ---
 
         @Test
         void privileged_gaCanEnable() {
@@ -126,6 +156,43 @@ class UserEnablementPolicyTest {
         @Test
         void privileged_fumCannotEnable() {
             assertThat(policy.canEnable(DisableType.PRIVILEGED, List.of(FUM))).isFalse();
+        }
+
+        @Test
+        void privileged_noRoleCannotEnable() {
+            assertThat(policy.canEnable(DisableType.PRIVILEGED, List.of())).isFalse();
+        }
+
+        // --- Multi-role scenarios: highest delegation of the enabling user is used ---
+
+        @Test
+        void none_fumWithEumRole_canEnable() {
+            // FUM alone cannot re-enable a NONE-disabled user, but EUM (higher delegation) can
+            assertThat(policy.canEnable(DisableType.NONE, List.of(FUM, EUM))).isTrue();
+        }
+
+        @Test
+        void none_fumWithSrRole_canEnable() {
+            // FUM alone cannot re-enable a NONE-disabled user, but SR (higher delegation) can
+            assertThat(policy.canEnable(DisableType.NONE, List.of(FUM, SR))).isTrue();
+        }
+
+        @Test
+        void laa_fumWithEumRole_canEnable() {
+            // FUM alone cannot re-enable a LAA-disabled user, but EUM (higher delegation) can
+            assertThat(policy.canEnable(DisableType.LAA, List.of(FUM, EUM))).isTrue();
+        }
+
+        @Test
+        void privileged_eumWithGaRole_canEnable() {
+            // EUM alone cannot re-enable a PRIVILEGED-disabled user, but GA (higher delegation) can
+            assertThat(policy.canEnable(DisableType.PRIVILEGED, List.of(EUM, GA))).isTrue();
+        }
+
+        @Test
+        void privileged_fumWithEumRole_cannotEnable() {
+            // Neither FUM nor EUM qualifies to re-enable a PRIVILEGED-disabled user
+            assertThat(policy.canEnable(DisableType.PRIVILEGED, List.of(FUM, EUM))).isFalse();
         }
     }
 
