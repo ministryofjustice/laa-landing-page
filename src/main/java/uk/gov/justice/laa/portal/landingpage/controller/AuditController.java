@@ -203,6 +203,7 @@ public class AuditController {
 
         // Add attributes to model
         model.addAttribute("user", userDetail);
+        model.addAttribute("silasStatus", userService.determineStatusBadgeForAuditUser(userDetail));
         model.addAttribute("profileId", userId); // Add profile ID for pagination links
         model.addAttribute("profilePage", profilePage);
         model.addAttribute("profileSize", profileSize);

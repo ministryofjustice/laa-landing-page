@@ -3855,7 +3855,7 @@ class UserServiceTest {
 
         UserSearchResultsDto userSearchResultsDto = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
                 UUID.randomUUID(), UserProfileStatus.COMPLETE, false, "Test", "User", "Test User",
-                "test@example.com", UserStatus.ACTIVE, "Test Firm", InvitationStatus.INVITE_SENT, true, true);
+                "test@example.com", UserStatus.ACTIVE, "Test Firm", InvitationStatus.INVITE_SENT, true, true, "Complete");
 
         Page<UserSearchResultsDto> userSearchResultsPage = new PageImpl<>(
                 List.of(userSearchResultsDto),
@@ -3959,7 +3959,7 @@ class UserServiceTest {
 
         UserSearchResultsDto userSearchResultsDto = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
                 UUID.randomUUID(), UserProfileStatus.COMPLETE, false, "Test", "Name", "Test User",
-                "test@example.com", UserStatus.ACTIVE, "Test Firm",  InvitationStatus.INVITE_SENT, true, true);
+                "test@example.com", UserStatus.ACTIVE, "Test Firm",  InvitationStatus.INVITE_SENT, true, true, "Complete");
 
         Page<UserSearchResultsDto> userProfilePage = new PageImpl<>(
                 List.of(userSearchResultsDto),
@@ -5324,7 +5324,7 @@ class UserServiceTest {
             for (int i = 0; i < count; i++) {
                 UserSearchResultsDto result = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
                         UUID.randomUUID(), UserProfileStatus.COMPLETE, false, "User" + i, "Test" + i, "Test User",
-                        "user" + i + "@example.com", UserStatus.ACTIVE, "Firm" + i,  InvitationStatus.INVITE_SENT, true, true);
+                        "user" + i + "@example.com", UserStatus.ACTIVE, "Firm" + i,  InvitationStatus.INVITE_SENT, true, true, "Complete");
 
                 searchResults.add(result);
             }
@@ -6412,7 +6412,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Complete");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("No roles assigned");
         }
 
         @Test
@@ -6466,7 +6466,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Activation failed");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Incomplete");
         }
 
         @Test
@@ -6576,7 +6576,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Activation failed");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Incomplete");
         }
 
         @Test
@@ -6878,7 +6878,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Activation pending");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Incomplete");
         }
 
         @Test
