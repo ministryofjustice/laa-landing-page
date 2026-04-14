@@ -1,13 +1,12 @@
 package uk.gov.justice.laa.portal.landingpage.validation;
 
+import org.springframework.stereotype.Component;
+
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.lang.Nullable;
-import org.springframework.stereotype.Component;
-import org.springframework.validation.Errors;
-import org.springframework.validation.Validator;
 import uk.gov.justice.laa.portal.landingpage.dto.RoleCreationDto;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 /**
  * Custom validator for RoleCreationDto that enforces interdependent validation rules
@@ -43,8 +42,21 @@ public class RoleCreationValidator implements ConstraintValidator<ValidRoleCreat
             valid = false;
             log.warn("Validation failed: CCMS code is provided but legacy sync is not enabled");
         }
+
+        boolean isInternalOnly = dto.getUserTypeRestriction() != null
+                && !dto.getUserTypeRestriction().isEmpty()
+                && dto.getUserTypeRestriction().stream().allMatch(UserType.INTERNAL::equals);
+        boolean hasFirmTypeRestriction = dto.getFirmTypeRestriction() != null
+                && !dto.getFirmTypeRestriction().isEmpty();
+
+        if (isInternalOnly && hasFirmTypeRestriction) {
+            ctx.buildConstraintViolationWithTemplate(ValidationMessages.FIRM_TYPE_RESTRICTION_INTERNAL_ROLE)
+                                        .addPropertyNode("firmTypeRestriction")
+                                        .addConstraintViolation();
+            valid = false;
+            log.warn("Validation failed: Firm type restriction cannot be applied to internal roles");
+        }
+
         return valid;
     }
 }
-
-

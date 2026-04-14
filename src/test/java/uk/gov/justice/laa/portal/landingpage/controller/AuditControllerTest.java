@@ -569,7 +569,7 @@ class AuditControllerTest {
 
         when(techServicesClient.getUser(any())).thenReturn(techServicesResponse);
         when(userService.getAuditUserDetail(userId, 1, 5)).thenReturn(mockUserDetail);
-        Optional<DisableUserReason> optionalDisableUserReason = Optional.of(DisableUserReason.builder().name("User Request").build());
+        Optional<DisableUserReason> optionalDisableUserReason = Optional.of(DisableUserReason.builder().description("UserRequest").name("User Request").build());
         when(disableUserReasonRepository.findDisableUserReasonByEntraDescription(eq("UserRequest"))).thenReturn(optionalDisableUserReason);
 
         // When
@@ -580,7 +580,7 @@ class AuditControllerTest {
         assertThat(model.getAttribute("user")).isEqualTo(mockUserDetail);
         TechServicesUser returnedTechServicesUser = (TechServicesUser) model.getAttribute("entraUser");
         assertThat(returnedTechServicesUser).isNotNull();
-        assertThat(returnedTechServicesUser.getCustomSecurityAttributes().getGuestUserStatus().getDisabledReason()).isEqualTo("User Request");
+        assertThat(model.getAttribute("entraUserDisableReason")).isEqualTo("User Request");
         verify(userService, times(1)).getAuditUserDetail(userId, 1, 5);
     }
 

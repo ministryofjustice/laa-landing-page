@@ -41,6 +41,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
+import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
@@ -194,8 +195,9 @@ public class AuditController {
         TechServicesApiResponse<GetUserResponse> entraUserResponse = techServicesClient.getUser(userDetail.getEntraOid());
         if (entraUserResponse.isSuccess()) {
             TechServicesUser user = entraUserResponse.getData().getUser();
-            formatDisableUserReason(user);
+            String disableUserReason = formatDisableUserReason(user);
             model.addAttribute("entraUser", entraUserResponse.getData().getUser());
+            model.addAttribute("entraUserDisableReason", disableUserReason);
         }
         canDisableUser = accessControlService.canDisableUser(userDetail.getUserId());
         AccessControlService.EnablementFlags enablementFlags = disableUserFeatureEnabled
@@ -217,13 +219,14 @@ public class AuditController {
         return "user-audit/details";
     }
 
-    private void formatDisableUserReason(TechServicesUser user) {
-        Optional.ofNullable(user)
+    private String formatDisableUserReason(TechServicesUser user) {
+        return Optional.ofNullable(user)
                 .map(TechServicesUser::getCustomSecurityAttributes)
                 .map(TechServicesUser.CustomSecurityAttributes::getGuestUserStatus)
                 .map(TechServicesUser.GuestUserStatus::getDisabledReason)
                 .flatMap(disableUserReasonRepository::findDisableUserReasonByEntraDescription)
-                .ifPresent(databaseDisableReason -> user.getCustomSecurityAttributes().getGuestUserStatus().setDisabledReason(databaseDisableReason.getName()));
+                .map(DisableUserReason::getName)
+                .orElse("Inactivity");
     }
 
     /**
