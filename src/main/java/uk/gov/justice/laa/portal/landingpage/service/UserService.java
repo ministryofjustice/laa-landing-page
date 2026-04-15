@@ -1926,17 +1926,16 @@ public class UserService {
                 return "Activation pending";
             }
         }
-        if (!isEnabled) {
-            return "Disabled";
-        } else {
-            if (InvitationStatus.VERIFICATION_SUCCESS.name().equals(invitationStatus)) {
+        if (InvitationStatus.VERIFICATION_SUCCESS.name().equals(invitationStatus)) {
+            if (isEnabled) {
                 if (isPending || noRolesAssigned) {
                     return "No roles assigned";
                 }
                 return "Complete";
             }
+            return "Disabled";
         }
-        return "Incomplete";
+        return "Activation pending";
     }
 
     /**
