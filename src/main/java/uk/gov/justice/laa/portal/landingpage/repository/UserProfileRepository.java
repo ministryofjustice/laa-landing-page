@@ -58,7 +58,7 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                                         u.lastName, CONCAT(u.firstName, ' ', u.lastName), u.email, u.userStatus, f.name,
                                                     u.invitationStatus, u.enabled,
                                                     CASE WHEN EXISTS (SELECT 1 FROM ups.appRoles) THEN TRUE ELSE FALSE END,
-                                                    'PLACEHOLDER')
+                                                    'Unknown')
                                 FROM UserProfile ups
                                     JOIN ups.entraUser u
                                     LEFT JOIN ups.firm f

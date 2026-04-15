@@ -732,49 +732,17 @@ public class UserService {
     }
 
     private String calculateUserSilasStatus(UserSearchResultsDto user) {
-        if (InvitationStatus.AWAITING_VERIFICATION.equals(user.invitationStatus())) {
-            if (user.hasAppRoles()) {
-                return "Activation pending";
-            } else {
-                return "Incomplete";
-            }
-        }
-
-        if (!user.enabled()) {
-            return "Disabled";
-        } else {
-            if (InvitationStatus.VERIFICATION_SUCCESS.equals(user.invitationStatus())) {
-                if (user.hasAppRoles()) {
-                    return "Complete";
-                } else {
-                    return "No roles assigned";
-                }
-            }
-        }
-        return "Incomplete";
+        boolean noRolesAssigned = !user.hasAppRoles();
+        boolean isPending = UserProfileStatus.PENDING.equals(user.userProfileStatus());
+        boolean isEnabled = user.enabled();
+        return determineStatusBadge(user.invitationStatus().name(), noRolesAssigned, isPending, isEnabled);
     }
 
     public String calculateSilasStatusForUserProfile(UserProfileDto user) {
-        if (InvitationStatus.AWAITING_VERIFICATION.equals(user.getEntraUser().getInvitationStatus())) {
-            if (user.getAppRoles() != null && !user.getAppRoles().isEmpty()) {
-                return "Activation pending";
-            } else {
-                return "Incomplete";
-            }
-        }
-
-        if (!user.getEntraUser().isEnabled()) {
-            return "Disabled";
-        } else {
-            if (InvitationStatus.VERIFICATION_SUCCESS.equals(user.getEntraUser().getInvitationStatus())) {
-                if (user.getAppRoles() != null && !user.getAppRoles().isEmpty()) {
-                    return "Complete";
-                } else {
-                    return "No roles assigned";
-                }
-            }
-        }
-        return "Incomplete";
+        boolean noRolesAssigned = user.getAppRoles() != null && !user.getAppRoles().isEmpty();
+        boolean isPending = UserProfileStatus.PENDING.equals(user.getUserProfileStatus());
+        boolean isEnabled = user.getEntraUser().isEnabled();
+        return determineStatusBadge(user.getEntraUser().getInvitationStatus().name(), noRolesAssigned, isPending, isEnabled);
     }
 
     /**
@@ -1925,7 +1893,6 @@ public class UserService {
      * "Incomplete"
      */
     private String determineAccountStatus(EntraUser user, List<UserProfile> profiles) {
-
         // Check if user has any pending profiles
         boolean hasPending = profiles.isEmpty() || profiles.stream()
                 .anyMatch(profile -> profile.getUserProfileStatus() == null || profile.getUserProfileStatus() == UserProfileStatus.PENDING);
@@ -1935,29 +1902,7 @@ public class UserService {
                         userProfile.getAppRoles() == null || userProfile.getAppRoles().isEmpty()
                 );
 
-        // awaiting verification badges take priority over disabled badge
-        if (InvitationStatus.AWAITING_VERIFICATION.equals(user.getInvitationStatus())) {
-            if (hasPending || noRolesAssigned) {
-                return "Incomplete";
-            } else {
-                return "Activation pending";
-            }
-        }
-
-        // user disable
-        if (!user.isEnabled()) {
-            return "Disabled";
-        } else {
-            if (InvitationStatus.VERIFICATION_SUCCESS.equals(user.getInvitationStatus())) {
-                if (hasPending || noRolesAssigned) {
-                    return "No roles assigned";
-                } else {
-                    return "Complete";
-                }
-            }
-        }
-        //All the other situation is incomplete
-        return "Incomplete";
+        return determineStatusBadge(user.getInvitationStatus().name(), noRolesAssigned, hasPending, user.isEnabled());
     }
 
     public String determineStatusBadgeForAuditUser(AuditUserDetailDto userDetail) {
@@ -1965,19 +1910,24 @@ public class UserService {
                 .anyMatch(userProfile ->
                         userProfile.getRoles() == null || userProfile.getRoles().isEmpty()
                 );
+        return determineStatusBadge(userDetail.getActivationStatus(), noRolesAssigned, userDetail.isPending(), userDetail.isEnabled());
+    }
+
+    private String determineStatusBadge(String invitationStatus, boolean noRolesAssigned,
+                                        boolean isPending, boolean isEnabled) {
         // awaiting verification badges take priority over disabled badge
-        if (InvitationStatus.AWAITING_VERIFICATION.name().equals(userDetail.getActivationStatus())) {
-            if (noRolesAssigned || userDetail.isPending()) {
+        if (InvitationStatus.AWAITING_VERIFICATION.name().equals(invitationStatus)) {
+            if (noRolesAssigned || isPending) {
                 return "Incomplete";
             } else {
                 return "Activation pending";
             }
         }
-        if (!userDetail.isEnabled()) {
+        if (!isEnabled) {
             return "Disabled";
         } else {
-            if (InvitationStatus.VERIFICATION_SUCCESS.name().equals(userDetail.getActivationStatus())) {
-                if (userDetail.isPending() || noRolesAssigned) {
+            if (InvitationStatus.VERIFICATION_SUCCESS.name().equals(invitationStatus)) {
+                if (isPending || noRolesAssigned) {
                     return "No roles assigned";
                 }
                 return "Complete";
