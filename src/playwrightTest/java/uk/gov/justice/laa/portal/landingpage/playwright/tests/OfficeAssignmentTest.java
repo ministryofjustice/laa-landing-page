@@ -68,7 +68,7 @@ public class OfficeAssignmentTest extends BaseFrontEndTest {
         userProfilePage.clickConfirmButton();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-        assertTrue(page.locator(".govuk-panel--confirmation:has-text(\"User detail updated\") .govuk-panel__title").isVisible());
+        assertTrue(page.locator(".govuk-panel--confirmation:has-text(\"Access and permissions updated\") .govuk-panel__title").isVisible());
     }
 
     @Test
@@ -107,7 +107,7 @@ public class OfficeAssignmentTest extends BaseFrontEndTest {
         userProfilePage.clickConfirmButton();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-        assertTrue(page.locator(".govuk-panel--confirmation:has-text(\"User detail updated\") .govuk-panel__title").isVisible());
+        assertTrue(page.locator(".govuk-panel--confirmation:has-text(\"Access and permissions updated\") .govuk-panel__title").isVisible());
     }
 
     @Test
