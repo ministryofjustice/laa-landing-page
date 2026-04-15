@@ -739,7 +739,7 @@ public class UserService {
     }
 
     public String calculateSilasStatusForUserProfile(UserProfileDto user) {
-        boolean noRolesAssigned = user.getAppRoles() != null && !user.getAppRoles().isEmpty();
+        boolean noRolesAssigned = user.getAppRoles() == null || user.getAppRoles().isEmpty();
         boolean isPending = UserProfileStatus.PENDING.equals(user.getUserProfileStatus());
         boolean isEnabled = user.getEntraUser().isEnabled();
         return determineStatusBadge(user.getEntraUser().getInvitationStatus().name(), noRolesAssigned, isPending, isEnabled);
