@@ -28,6 +28,12 @@ public class ReportUploadService {
 
     public void uploadCsvToSharePoint(File file, String folderPath) throws FileNotFoundException {
 
+        if ("none".equalsIgnoreCase(baseFolder)) {
+            log.error("report.sharepoint.base.folder is set to 'none'. Upload aborted. Need a valid folder path to "
+                    + "upload report.");
+            return;
+        }
+
         FileInputStream fileInputStream = new FileInputStream(file);
 
         Site site = graphClientConfig.graphUploadClient()
