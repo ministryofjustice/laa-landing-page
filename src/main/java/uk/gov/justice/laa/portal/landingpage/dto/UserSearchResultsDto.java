@@ -12,4 +12,4 @@ public record UserSearchResultsDto(UUID id, boolean activeProfile, UserType user
                                    UserProfileStatus userProfileStatus, boolean multiFirmUser, String firstName,
                                    String lastName, String fullName, String email, UserStatus userStatus,
                                    String firmName, InvitationStatus invitationStatus, boolean enabled,
-                                   boolean hasAppRoles) implements Serializable {}
+                                   boolean hasAppRoles, String silasStatus) implements Serializable {}
