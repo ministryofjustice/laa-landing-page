@@ -21,7 +21,7 @@ import java.util.List;
 public class AuditExportService {
 
     private static final String HEADER = "Name,Email,\"Firm Name\",\"Firm Code\",Multi-firm,\"Provider "
-            + "Admin\",\"App Access\"\n";
+            + "Admin\",\"App Access\",\"SILAS Status\"\n";
     private final DateTimeFormatter fileTimestamp = DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmm");
 
     public AuditCsvExport downloadAuditCsv(List<AuditUserDto> firmData, String firmCode, String firmName) {
@@ -47,6 +47,7 @@ public class AuditExportService {
                 .addColumn("Multi-firm")
                 .addColumn("Provider Admin")
                 .addColumn("App Access")
+                .addColumn("SILAS Status")
                 .build();
 
         List<AuditUserCsvRow> rows = firmData.stream()
@@ -57,7 +58,8 @@ public class AuditExportService {
                         toStringSafe(firmCode),
                         u.isMultiFirmUser() ? "Yes" : "No",
                         u.isProviderAdmin() ? "Yes" : "No",
-                        toStringSafe(u.getAppAccess())
+                        toStringSafe(u.getAppAccess()),
+                        toStringSafe(u.getAccountStatus())
                 ))
                 .toList();
 
@@ -81,7 +83,7 @@ public class AuditExportService {
         return value == null ? "" : value.toString();
     }
 
-    @JsonPropertyOrder({ "Name", "Email", "Firm Name", "Firm Code", "Multi-firm", "Provider Admin", "App Access" })
+    @JsonPropertyOrder({ "Name", "Email", "Firm Name", "Firm Code", "Multi-firm", "Provider Admin", "App Access", "SILAS Status" })
     private record AuditUserCsvRow(
             @JsonProperty("Name") String name,
             @JsonProperty("Email") String email,
@@ -89,7 +91,8 @@ public class AuditExportService {
             @JsonProperty("Firm Code") String firmCode,
             @JsonProperty("Multi-firm") String multiFirm,
             @JsonProperty("Provider Admin") String providerAdmin,
-            @JsonProperty("App Access") String appAccess) {}
+            @JsonProperty("App Access") String appAccess,
+            @JsonProperty("SILAS Status") String silasStatus) {}
 
     public record AuditCsvExport(String filename, byte[] bytes) {}
 }
