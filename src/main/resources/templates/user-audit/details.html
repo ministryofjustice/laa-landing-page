@@ -190,9 +190,15 @@
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Account Status</dt>
                                         <dd class="govuk-summary-list__value">
-                                            <strong class="govuk-tag govuk-tag--green" th:if="${entraUser != null && entraUser.accountEnabled}">Active</strong>
-                                            <strong class="govuk-tag govuk-tag--red" th:if="${entraUser != null && !entraUser.accountEnabled}">Disabled</strong>
-                                            <strong class="govuk-tag govuk-tag--grey" th:if="${entraUser == null}">Unknown</strong>
+                                            <th:block th:if="${entraVerificationStatus != 'VERIFICATION_SUCCESS'}">
+                                                <strong class="govuk-tag govuk-tag--grey" th:if="${entraUser != null}" style="white-space: nowrap;">Awaiting Verification</strong>
+                                                <strong class="govuk-tag govuk-tag--grey" th:if="${entraUser == null}">Unknown</strong>
+                                            </th:block>
+                                            <th:block th:if="${entraVerificationStatus == 'VERIFICATION_SUCCESS'}">
+                                                <strong class="govuk-tag govuk-tag--green" th:if="${entraUser != null && entraUser.accountEnabled}">Active</strong>
+                                                <strong class="govuk-tag govuk-tag--red" th:if="${entraUser != null && !entraUser.accountEnabled}">Disabled</strong>
+                                                <strong class="govuk-tag govuk-tag--grey" th:if="${entraUser == null}">Unknown</strong>
+                                            </th:block>
                                         </dd>
                                     </div>
                                     <div class="govuk-summary-list__row" th:if="${entraUser != null && !entraUser.accountEnabled}">
