@@ -18,6 +18,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
@@ -50,6 +51,7 @@ public class BaseRepositoryTest {
                 .userProfiles(HashSet.newHashSet(11))
                 .firstName(firstName).lastName(lastName)
                 .userStatus(UserStatus.ACTIVE)
+                .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
     }
 
