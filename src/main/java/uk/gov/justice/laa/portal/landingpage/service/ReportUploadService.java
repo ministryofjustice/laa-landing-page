@@ -21,6 +21,9 @@ public class ReportUploadService {
     @Value("${report.sharepoint.site.id}")
     private String sharepointUrl;
 
+    @Value("${report.sharepoint.base.folder}")
+    private String baseFolder;
+
     private final GraphClientConfig graphClientConfig;
 
     public void uploadCsvToSharePoint(File file, String folderPath) throws FileNotFoundException {
@@ -42,13 +45,14 @@ public class ReportUploadService {
 
         String driveId = drive.getId();
 
+        String fullFolderPath = baseFolder + "/" + folderPath;
 
         try {
             DriveItem existing = graphClientConfig.graphUploadClient()
                 .drives()
                 .byDriveId(driveId)
                 .items()
-                .byDriveItemId("root:/" + folderPath + "/" + file.getName() + ":")
+                .byDriveItemId("root:/" + fullFolderPath + "/" + file.getName() + ":")
                 .get();
 
             if (existing != null) {
