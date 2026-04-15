@@ -735,14 +735,16 @@ public class UserService {
         boolean noRolesAssigned = !user.hasAppRoles();
         boolean isPending = UserProfileStatus.PENDING.equals(user.userProfileStatus());
         boolean isEnabled = user.enabled();
-        return determineStatusBadge(user.invitationStatus().name(), noRolesAssigned, isPending, isEnabled);
+        String invitationStatus = user.invitationStatus() != null ? user.invitationStatus().name() : "";
+        return determineStatusBadge(invitationStatus, noRolesAssigned, isPending, isEnabled);
     }
 
     public String calculateSilasStatusForUserProfile(UserProfileDto user) {
         boolean noRolesAssigned = user.getAppRoles() == null || user.getAppRoles().isEmpty();
         boolean isPending = UserProfileStatus.PENDING.equals(user.getUserProfileStatus());
         boolean isEnabled = user.getEntraUser().isEnabled();
-        return determineStatusBadge(user.getEntraUser().getInvitationStatus().name(), noRolesAssigned, isPending, isEnabled);
+        String invitationStatus = user.getEntraUser().getInvitationStatus() != null ? user.getEntraUser().getInvitationStatus().name() : "";
+        return determineStatusBadge(invitationStatus, noRolesAssigned, isPending, isEnabled);
     }
 
     /**
@@ -1902,7 +1904,8 @@ public class UserService {
                         userProfile.getAppRoles() == null || userProfile.getAppRoles().isEmpty()
                 );
 
-        return determineStatusBadge(user.getInvitationStatus().name(), noRolesAssigned, hasPending, user.isEnabled());
+        String invitationStatus = user.getInvitationStatus() != null ? user.getInvitationStatus().name() : "";
+        return determineStatusBadge(invitationStatus, noRolesAssigned, hasPending, user.isEnabled());
     }
 
     public String determineStatusBadgeForAuditUser(AuditUserDetailDto userDetail) {
