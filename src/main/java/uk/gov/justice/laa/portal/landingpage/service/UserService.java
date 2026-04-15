@@ -1919,23 +1919,24 @@ public class UserService {
     private String determineStatusBadge(String invitationStatus, boolean noRolesAssigned,
                                         boolean isPending, boolean isEnabled) {
         // awaiting verification badges take priority over disabled badge
-        if (InvitationStatus.AWAITING_VERIFICATION.name().equals(invitationStatus)) {
+        if (!InvitationStatus.VERIFICATION_SUCCESS.name().equals(invitationStatus)) {
             if (noRolesAssigned || isPending) {
                 return "Incomplete";
             } else {
                 return "Activation pending";
             }
         }
-        if (InvitationStatus.VERIFICATION_SUCCESS.name().equals(invitationStatus)) {
-            if (isEnabled) {
-                if (isPending || noRolesAssigned) {
-                    return "No roles assigned";
-                }
-                return "Complete";
-            }
+        
+        // At this point, invitationStatus == VERIFICATION_SUCCESS
+        if (!isEnabled) {
             return "Disabled";
         }
-        return "Activation pending";
+        
+        if (isPending || noRolesAssigned) {
+            return "No roles assigned";
+        }
+        
+        return "Complete";
     }
 
     /**
