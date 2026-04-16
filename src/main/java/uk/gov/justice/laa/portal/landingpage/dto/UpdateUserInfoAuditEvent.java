@@ -31,9 +31,15 @@ public class UpdateUserInfoAuditEvent extends AuditEvent implements Serializable
         this.actorOid = actorOid;
         this.actorProfileId = actorProfileId;
         List<String> fields = new ArrayList<>();
-        if (!Objects.equals(user.getFirstName(), newFirstName)) fields.add("firstName");
-        if (!Objects.equals(user.getLastName(), newLastName)) fields.add("lastName");
-        if (!Objects.equals(user.getEmail(), newEmail)) fields.add("email");
+        if (!Objects.equals(user.getFirstName(), newFirstName)) {
+            fields.add("firstName");
+        }
+        if (!Objects.equals(user.getLastName(), newLastName)) {
+            fields.add("lastName");
+        }
+        if (!Objects.equals(user.getEmail(), newEmail)) {
+            fields.add("email");
+        }
         this.changedFields = fields;
     }
 

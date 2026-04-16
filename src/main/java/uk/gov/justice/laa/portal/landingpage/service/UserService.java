@@ -1158,7 +1158,7 @@ public class UserService {
             EntraUser entraUser = optionalUser.get();
 
             try {
-                UpdateUserInfoAuditEvent updateUserInfoAuditEvent = new UpdateUserInfoAuditEvent(
+                final UpdateUserInfoAuditEvent updateUserInfoAuditEvent = new UpdateUserInfoAuditEvent(
                         entraUser, firstName, lastName, email,
                         String.valueOf(currentUserProfile.getId()), currentUserProfile.getEntraUser().getEntraOid());
 
