@@ -7726,11 +7726,6 @@ class UserControllerTest {
             // Given
             UUID userId = UUID.randomUUID();
             MockHttpSession testSession = new MockHttpSession();
-            
-            UserProfileDto user = UserProfileDto.builder()
-                    .id(userId)
-                    .userType(UserType.EXTERNAL)
-                    .build();
 
             AppDto ccmsApp = new AppDto();
             ccmsApp.setId(UUID.randomUUID().toString());
@@ -7743,6 +7738,11 @@ class UserControllerTest {
                     createAppRoleDto(UUID.randomUUID().toString(), "Non-CCMS Role", null),
                     createAppRoleDto(UUID.randomUUID().toString(), "CCMS Role 2", "XXCCMS_ADVOCATE")
             );
+
+            UserProfileDto user = UserProfileDto.builder()
+                    .id(userId)
+                    .userType(UserType.EXTERNAL)
+                    .build();
 
             when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.of(user));
             when(userService.getAppRolesByAppIdAndUserType(ccmsApp.getId(), UserType.EXTERNAL, null)).thenReturn(roles);
