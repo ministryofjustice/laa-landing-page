@@ -1267,6 +1267,9 @@ public class UserController {
                 && !currentApp.getName().contains("CCMS case transfer requests"))
                 || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()));
 
+        // Apply CCMS filtering before storing in model
+        List<AppRoleViewModel> finalRoles = appRoleViewModels;
+        
         if (isCcmsApp) {
             // Filter to only CCMS roles for organization
             List<AppRoleViewModel> ccmsRoles = appRoleViewModels.stream()
@@ -1281,6 +1284,9 @@ public class UserController {
                 organizedRoles.keySet().stream()
                         .forEach(section -> organizedRoleDisplayFlags.put(section, organizedRoles.get(section).stream()
                                 .anyMatch(role -> !role.isHiddenFromSelection())));
+                
+                // Use filtered CCMS roles for both display and session storage
+                finalRoles = ccmsRoles;
             }
             model.addAttribute("ccmsRolesBySection", organizedRoles);
             model.addAttribute("ccmsRoleDisplayFlags", organizedRoleDisplayFlags);
@@ -1290,7 +1296,7 @@ public class UserController {
         }
 
         model.addAttribute("user", user);
-        model.addAttribute("roles", appRoleViewModels);
+        model.addAttribute("roles", finalRoles);
         model.addAttribute("editUserRolesSelectedAppIndex", currentSelectedAppIndex);
         model.addAttribute("editUserRolesCurrentApp", currentApp);
 
@@ -2044,6 +2050,9 @@ public class UserController {
                 && !currentApp.getName().contains("CCMS case transfer requests"))
                 || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()));
 
+        // Apply CCMS filtering before storing in model/session
+        List<AppRoleViewModel> finalRoles = appRoleViewModels;
+        
         if (isCcmsApp) {
             // Filter to only CCMS roles for organization
             List<AppRoleViewModel> ccmsRoles = appRoleViewModels.stream()
@@ -2061,6 +2070,9 @@ public class UserController {
                                 ));
                 model.addAttribute("ccmsRolesBySection", organizedRoles);
                 model.addAttribute("ccmsRoleDisplayFlags", organizedRoleDisplayFlags);
+                
+                // Use filtered CCMS roles for both display and session storage
+                finalRoles = ccmsRoles;
             }
             model.addAttribute("isCcmsApp", true);
         } else {
@@ -2068,7 +2080,7 @@ public class UserController {
         }
 
         model.addAttribute("user", user);
-        model.addAttribute("roles", appRoleViewModels);
+        model.addAttribute("roles", finalRoles);
         model.addAttribute("grantAccessSelectedAppIndex", currentSelectedAppIndex);
         model.addAttribute("grantAccessCurrentApp", currentApp);
 

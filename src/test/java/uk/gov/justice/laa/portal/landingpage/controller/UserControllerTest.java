@@ -5794,6 +5794,58 @@ class UserControllerTest {
     }
 
     @Test
+    void grantAccessEditUserRoles_shouldFilterRolesInMainRolesAttribute() {
+        // Given
+        final String userId = UUID.randomUUID().toString();
+        UserProfileDto user = new UserProfileDto();
+        user.setId(UUID.fromString(userId));
+        user.setUserType(UserType.EXTERNAL);
+
+        AppDto ccmsApp = new AppDto();
+        ccmsApp.setId(UUID.randomUUID().toString());
+        ccmsApp.setName("Apply for civil legal aid using CCMS");
+
+        // Create roles - mix of CCMS and non-CCMS roles
+        List<AppRoleDto> roles = List.of(
+                createAppRoleDto(UUID.randomUUID().toString(), "CCMS Role 1", "XXCCMS_FIRM_ADMIN"),  // CCMS role
+                createAppRoleDto(UUID.randomUUID().toString(), "Non-CCMS Role", null),               // Non-CCMS role
+                createAppRoleDto(UUID.randomUUID().toString(), "CCMS Role 2", "XXCCMS_ADVOCATE")     // CCMS role
+        );
+
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("grantAccessSelectedApps", List.of(ccmsApp.getId()));
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+        when(userService.getAppRolesByAppIdAndUserType(ccmsApp.getId(), UserType.EXTERNAL, null)).thenReturn(roles);
+        when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
+        when(userService.getAppByAppId(ccmsApp.getId())).thenReturn(Optional.of(ccmsApp));
+        when(loginService.getCurrentProfile(authentication)).thenReturn(createUserProfile());
+        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
+        when(accessControlService.canAssignExternalAppRoles(userId)).thenReturn(true);
+
+        // When
+        String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
+                testSession, redirectAttributes);
+
+        // Then
+        assertThat(view).isEqualTo("grant-access-user-roles");
+        assertThat(model.getAttribute("isCcmsApp")).isEqualTo(true);
+
+        @SuppressWarnings("unchecked")
+        List<AppRoleViewModel> rolesInModel = (List<AppRoleViewModel>) model.getAttribute("roles");
+        assertThat(rolesInModel).hasSize(2);
+        assertThat(rolesInModel.stream().map(AppRoleViewModel::getName))
+                .containsExactlyInAnyOrder("CCMS Role 1", "CCMS Role 2");
+
+        Model sessionModel = (Model) testSession.getAttribute("grantAccessUserRolesModel");
+        @SuppressWarnings("unchecked")
+        List<AppRoleViewModel> sessionRoles = (List<AppRoleViewModel>) sessionModel.getAttribute("roles");
+        assertThat(sessionRoles).hasSize(2);
+        assertThat(sessionRoles.stream().map(AppRoleViewModel::getName))
+                .containsExactlyInAnyOrder("CCMS Role 1", "CCMS Role 2");
+    }
+
+    @Test
     void grantAccessEditUserRoles_shouldUseSessionModelAppIndex() {
         // Given
         final String userId = "user123";
@@ -6704,6 +6756,23 @@ class UserControllerTest {
 
         Assertions.assertEquals("disable-user-reason", view);
         Assertions.assertEquals("There was an error\nThere was another error", model.getAttribute("errorMessage"));
+    }
+
+    private AppRoleDto createAppRoleDto(String id, String name, String ccmsCode) {
+        AppRoleDto role = new AppRoleDto();
+        role.setId(id);
+        role.setName(name);
+        role.setCcmsCode(ccmsCode);
+        role.setUserTypeRestriction(new UserType[] { UserType.EXTERNAL });
+        return role;
+    }
+
+    private UserProfile createUserProfile() {
+        return UserProfile.builder()
+                .id(UUID.randomUUID())
+                .userType(UserType.EXTERNAL)
+                .appRoles(Set.of())
+                .build();
     }
 
     @Nested
@@ -7650,6 +7719,57 @@ class UserControllerTest {
 
             assertThat(view).isEqualTo("edit-user-roles");
             verify(userService).getAppRolesByAppIdAndUserType("app-id-1", UserType.EXTERNAL, null);
+        }
+
+        @Test
+        public void testEditUserRoles_shouldFilterRolesInMainRolesAttribute() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            MockHttpSession testSession = new MockHttpSession();
+            
+            UserProfileDto user = UserProfileDto.builder()
+                    .id(userId)
+                    .userType(UserType.EXTERNAL)
+                    .build();
+
+            AppDto ccmsApp = new AppDto();
+            ccmsApp.setId(UUID.randomUUID().toString());
+            ccmsApp.setName("Apply for civil legal aid using CCMS");
+            
+            testSession.setAttribute("selectedApps", List.of(ccmsApp.getId()));
+
+            List<AppRoleDto> roles = List.of(
+                    createAppRoleDto(UUID.randomUUID().toString(), "CCMS Role 1", "XXCCMS_FIRM_ADMIN"),
+                    createAppRoleDto(UUID.randomUUID().toString(), "Non-CCMS Role", null),
+                    createAppRoleDto(UUID.randomUUID().toString(), "CCMS Role 2", "XXCCMS_ADVOCATE")
+            );
+
+            when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.of(user));
+            when(userService.getAppRolesByAppIdAndUserType(ccmsApp.getId(), UserType.EXTERNAL, null)).thenReturn(roles);
+            when(userService.getUserAppRolesByUserId(userId.toString())).thenReturn(List.of());
+            when(userService.getAppByAppId(ccmsApp.getId())).thenReturn(Optional.of(ccmsApp));
+            when(loginService.getCurrentProfile(authentication)).thenReturn(createUserProfile());
+            when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
+
+            // When
+            String view = userController.editUserRoles(userId.toString(), 0, new RolesForm(), null, authentication, model, testSession);
+
+            // Then
+            assertThat(view).isEqualTo("edit-user-roles");
+            assertThat(model.getAttribute("isCcmsApp")).isEqualTo(true);
+
+            @SuppressWarnings("unchecked")
+            List<AppRoleViewModel> rolesInModel = (List<AppRoleViewModel>) model.getAttribute("roles");
+            assertThat(rolesInModel).hasSize(2); // Only 2 CCMS roles
+            assertThat(rolesInModel.stream().map(AppRoleViewModel::getName))
+                    .containsExactlyInAnyOrder("CCMS Role 1", "CCMS Role 2");
+
+            Model sessionModel = (Model) testSession.getAttribute("editProfileUserRolesModel");
+            @SuppressWarnings("unchecked")
+            List<AppRoleViewModel> sessionRoles = (List<AppRoleViewModel>) sessionModel.getAttribute("roles");
+            assertThat(sessionRoles).hasSize(2); // Session should also have filtered roles
+            assertThat(sessionRoles.stream().map(AppRoleViewModel::getName))
+                    .containsExactlyInAnyOrder("CCMS Role 1", "CCMS Role 2");
         }
 
         @Test
