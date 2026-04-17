@@ -277,7 +277,7 @@ public class AuditController {
         model.addAttribute("canDisableUser", disableUserFeatureEnabled && canDisableUser);
         model.addAttribute("userIsEnabled", userDetail.isEnabled());
 
-        return "user-audit/details/full";
+        return "user-audit/full-details";
     }
 
     private String formatDisableUserReason(TechServicesUser user) {

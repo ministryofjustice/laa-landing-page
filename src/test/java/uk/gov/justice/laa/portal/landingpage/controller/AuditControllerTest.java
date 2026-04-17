@@ -813,7 +813,7 @@ class AuditControllerTest {
         String viewName = auditController.displayFullUserAuditDetail(userId, 1, 5, false, model);
 
         // Then
-        assertThat(viewName).isEqualTo("user-audit/details/full");
+        assertThat(viewName).isEqualTo("user-audit/full-details");
         assertThat(model.getAttribute("user")).isEqualTo(mockUserDetail);
         TechServicesUser returnedTechServicesUser = (TechServicesUser) model.getAttribute("entraUser");
         assertThat(returnedTechServicesUser).isNotNull();
