@@ -768,6 +768,60 @@ class AuditControllerTest {
     }
 
     @Test
+    void displayCompleteUserAuditDetail_withValidUserId_returnsDetailView() {
+        // Given
+        UUID userId = UUID.randomUUID();
+        AuditUserDetailDto mockUserDetail = AuditUserDetailDto
+                .builder()
+                .userId(userId.toString())
+                .email("john.doe@example.com")
+                .firstName("John")
+                .lastName("Doe")
+                .fullName("John Doe")
+                .isMultiFirmUser(false)
+                .profiles(Collections.emptyList())
+                .build();
+
+        TechServicesUser.GuestUserStatus guestUserStatus = TechServicesUser.GuestUserStatus.builder()
+                .disabledReason("UserRequest")
+                .build();
+
+        TechServicesUser.CustomSecurityAttributes customSecurityAttributes = TechServicesUser.CustomSecurityAttributes.builder()
+                .guestUserStatus(guestUserStatus)
+                .build();
+
+        TechServicesUser techServicesUser = TechServicesUser.builder()
+                .id(UUID.randomUUID().toString())
+                .givenName("Test")
+                .surname("User")
+                .customSecurityAttributes(customSecurityAttributes)
+                .build();
+
+        GetUserResponse getUserResponse = GetUserResponse.builder()
+                .success(true)
+                .user(techServicesUser)
+                .build();
+
+        TechServicesApiResponse<GetUserResponse> techServicesResponse = TechServicesApiResponse.success(getUserResponse);
+
+        when(techServicesClient.getUser(any())).thenReturn(techServicesResponse);
+        when(userService.getAuditUserDetail(userId, 1, 5)).thenReturn(mockUserDetail);
+        Optional<DisableUserReason> optionalDisableUserReason = Optional.of(DisableUserReason.builder().description("UserRequest").name("User Request").build());
+        when(disableUserReasonRepository.findDisableUserReasonByEntraDescription(eq("UserRequest"))).thenReturn(optionalDisableUserReason);
+
+        // When
+        String viewName = auditController.displayFullUserAuditDetail(userId, 1, 5, false, model);
+
+        // Then
+        assertThat(viewName).isEqualTo("user-audit/details/full");
+        assertThat(model.getAttribute("user")).isEqualTo(mockUserDetail);
+        TechServicesUser returnedTechServicesUser = (TechServicesUser) model.getAttribute("entraUser");
+        assertThat(returnedTechServicesUser).isNotNull();
+        assertThat(model.getAttribute("entraUserDisableReason")).isEqualTo("User Request");
+        verify(userService, times(1)).getAuditUserDetail(userId, 1, 5);
+    }
+
+    @Test
     void deleteUserWithoutProfileConfirm_shouldReturnConfirmationView() {
         // Given
         String entraUserId = UUID.randomUUID().toString();
