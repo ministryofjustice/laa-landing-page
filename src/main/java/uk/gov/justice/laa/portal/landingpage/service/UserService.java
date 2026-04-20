@@ -63,6 +63,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
+import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
@@ -693,9 +694,57 @@ public class UserService {
         Page<UserSearchResultsDto> userPage = pageSupplier.get();
         PaginatedUsers paginatedUsers = new PaginatedUsers();
         paginatedUsers.setTotalUsers(userPage.getTotalElements());
-        paginatedUsers.setUsers(userPage.stream().toList());
+        
+        // Calculate Silas status for each user
+        List<UserSearchResultsDto> usersWithStatus = userPage.stream()
+                .map(this::addSilasStatusToUser)
+                .toList();
+        
+        paginatedUsers.setUsers(usersWithStatus);
         paginatedUsers.setTotalPages(userPage.getTotalPages());
         return paginatedUsers;
+    }
+
+    /**
+     * Add calculated SILAS status to a UserSearchResultsDto
+     */
+    private UserSearchResultsDto addSilasStatusToUser(UserSearchResultsDto user) {
+        String silasStatus = calculateUserSilasStatus(user);
+        
+        return new UserSearchResultsDto(
+                user.id(),
+                user.activeProfile(),
+                user.userType(),
+                user.legacyUserId(),
+                user.userProfileStatus(),
+                user.multiFirmUser(),
+                user.firstName(),
+                user.lastName(),
+                user.fullName(),
+                user.email(),
+                user.userStatus(),
+                user.firmName(),
+                user.invitationStatus(),
+                user.enabled(),
+                user.hasAppRoles(),
+                silasStatus
+        );
+    }
+
+    private String calculateUserSilasStatus(UserSearchResultsDto user) {
+        boolean noRolesAssigned = !user.hasAppRoles();
+        boolean isPending = UserProfileStatus.PENDING.equals(user.userProfileStatus());
+        boolean isEnabled = user.enabled();
+        String invitationStatus = user.invitationStatus() != null ? user.invitationStatus().name() : "";
+        return determineStatusBadge(invitationStatus, noRolesAssigned, isPending, isEnabled);
+    }
+
+    public String calculateSilasStatusForUserProfile(UserProfileDto user) {
+        boolean noRolesAssigned = user.getAppRoles() == null || user.getAppRoles().isEmpty();
+        boolean isPending = UserProfileStatus.PENDING.equals(user.getUserProfileStatus());
+        boolean isEnabled = user.getEntraUser().isEnabled();
+        String invitationStatus = user.getEntraUser().getInvitationStatus() != null ? user.getEntraUser().getInvitationStatus().name() : "";
+        return determineStatusBadge(invitationStatus, noRolesAssigned, isPending, isEnabled);
     }
 
     /**
@@ -1846,7 +1895,6 @@ public class UserService {
      * "Incomplete"
      */
     private String determineAccountStatus(EntraUser user, List<UserProfile> profiles) {
-
         // Check if user has any pending profiles
         boolean hasPending = profiles.isEmpty() || profiles.stream()
                 .anyMatch(profile -> profile.getUserProfileStatus() == null || profile.getUserProfileStatus() == UserProfileStatus.PENDING);
@@ -1856,41 +1904,39 @@ public class UserService {
                         userProfile.getAppRoles() == null || userProfile.getAppRoles().isEmpty()
                 );
 
-        // user disable
-        if (!user.isEnabled()) {
-            return "Disabled";
-        } else { //user active
-            // user is complete
-            if (!hasPending) {
-                if (user.getInvitationStatus() != null) {
-                    switch (user.getInvitationStatus().name()) {
-                        case "AWAITING_VERIFICATION" -> {
-                            return "Activation pending";
-                        }
-                        case "VERIFICATION_SUCCESS" -> {
-                            return "Complete";
-                        }
-                        case "VERIFICATION_FAILED" -> {
-                            return "Activation failed";
-                        }
-                        default -> {
-                            return "Incomplete";
-                        }
-                    }
-                }
-            } else { // user is incomplete user hasn't roles assigned any roles
-                if (user.getInvitationStatus() != null) {
-                    if (user.getInvitationStatus().name().equals("VERIFICATION_SUCCESS")) {
-                        //check if user has roles assigned
-                        if (noRolesAssigned) {
-                            return "No roles assigned";
-                        }
-                    }
-                }
+        String invitationStatus = user.getInvitationStatus() != null ? user.getInvitationStatus().name() : "";
+        return determineStatusBadge(invitationStatus, noRolesAssigned, hasPending, user.isEnabled());
+    }
+
+    public String determineStatusBadgeForAuditUser(AuditUserDetailDto userDetail) {
+        boolean noRolesAssigned = userDetail.getProfiles().isEmpty() || userDetail.getProfiles().stream()
+                .anyMatch(userProfile ->
+                        userProfile.getRoles() == null || userProfile.getRoles().isEmpty()
+                );
+        return determineStatusBadge(userDetail.getActivationStatus(), noRolesAssigned, userDetail.isPending(), userDetail.isEnabled());
+    }
+
+    private String determineStatusBadge(String invitationStatus, boolean noRolesAssigned,
+                                        boolean isPending, boolean isEnabled) {
+        // awaiting verification badges take priority over disabled badge
+        if (!InvitationStatus.VERIFICATION_SUCCESS.name().equals(invitationStatus)) {
+            if (noRolesAssigned || isPending) {
+                return "Incomplete";
+            } else {
+                return "Activation pending";
             }
         }
-        //All the other situation is incomplete
-        return "Incomplete";
+        
+        // At this point, invitationStatus == VERIFICATION_SUCCESS
+        if (!isEnabled) {
+            return "Disabled";
+        }
+        
+        if (isPending || noRolesAssigned) {
+            return "No roles assigned";
+        }
+        
+        return "Complete";
     }
 
     /**

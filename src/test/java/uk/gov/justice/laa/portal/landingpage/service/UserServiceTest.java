@@ -3855,7 +3855,7 @@ class UserServiceTest {
 
         UserSearchResultsDto userSearchResultsDto = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
                 UUID.randomUUID(), UserProfileStatus.COMPLETE, false, "Test", "User", "Test User",
-                "test@example.com", UserStatus.ACTIVE, "Test Firm", InvitationStatus.INVITE_SENT, true, true);
+                "test@example.com", UserStatus.ACTIVE, "Test Firm", InvitationStatus.INVITE_SENT, true, true, "Complete");
 
         Page<UserSearchResultsDto> userSearchResultsPage = new PageImpl<>(
                 List.of(userSearchResultsDto),
@@ -3959,7 +3959,7 @@ class UserServiceTest {
 
         UserSearchResultsDto userSearchResultsDto = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
                 UUID.randomUUID(), UserProfileStatus.COMPLETE, false, "Test", "Name", "Test User",
-                "test@example.com", UserStatus.ACTIVE, "Test Firm",  InvitationStatus.INVITE_SENT, true, true);
+                "test@example.com", UserStatus.ACTIVE, "Test Firm",  InvitationStatus.INVITE_SENT, true, true, "Complete");
 
         Page<UserSearchResultsDto> userProfilePage = new PageImpl<>(
                 List.of(userSearchResultsDto),
@@ -5324,7 +5324,7 @@ class UserServiceTest {
             for (int i = 0; i < count; i++) {
                 UserSearchResultsDto result = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
                         UUID.randomUUID(), UserProfileStatus.COMPLETE, false, "User" + i, "Test" + i, "Test User",
-                        "user" + i + "@example.com", UserStatus.ACTIVE, "Firm" + i,  InvitationStatus.INVITE_SENT, true, true);
+                        "user" + i + "@example.com", UserStatus.ACTIVE, "Firm" + i,  InvitationStatus.INVITE_SENT, true, true, "Complete");
 
                 searchResults.add(result);
             }
@@ -5810,6 +5810,7 @@ class UserServiceTest {
                     .lastName("Doe")
                     .email("john.doe@example.com")
                     .userStatus(UserStatus.ACTIVE)
+                    .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .multiFirmUser(false)
                     .build();
 
@@ -5818,6 +5819,7 @@ class UserServiceTest {
                     .firstName("Jane")
                     .lastName("Smith")
                     .email("jane.smith@example.com")
+                    .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .userStatus(UserStatus.ACTIVE)
                     .multiFirmUser(false)
                     .build();
@@ -5828,6 +5830,7 @@ class UserServiceTest {
                     .lastName("Doe")
                     .email("jane.doe@example.com")
                     .userStatus(UserStatus.ACTIVE)
+                    .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .multiFirmUser(false)
                     .build();
 
@@ -5924,6 +5927,7 @@ class UserServiceTest {
                     .lastName("Doe")
                     .email("john.doe@example.com")
                     .userStatus(UserStatus.ACTIVE)
+                    .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .multiFirmUser(false)
                     .build();
 
@@ -5979,6 +5983,7 @@ class UserServiceTest {
                     .firstName("Jane")
                     .lastName("Smith")
                     .email("jane.smith@example.com")
+                    .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .userStatus(UserStatus.ACTIVE)
                     .multiFirmUser(false)
                     .build();
@@ -6031,6 +6036,7 @@ class UserServiceTest {
                     .lastName("User")
                     .email("admin@example.com")
                     .userStatus(UserStatus.ACTIVE)
+                    .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .multiFirmUser(false)
                     .build();
 
@@ -6098,6 +6104,7 @@ class UserServiceTest {
                     .email("multi@example.com")
                     .userStatus(UserStatus.ACTIVE)
                     .multiFirmUser(true)
+                    .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .build();
 
             UserProfile profile1 = UserProfile.builder()
@@ -6181,6 +6188,7 @@ class UserServiceTest {
                     .lastName("Staff")
                     .email("internal@justice.gov.uk")
                     .userStatus(UserStatus.ACTIVE)
+                    .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .multiFirmUser(false)
                     .build();
 
@@ -6229,6 +6237,7 @@ class UserServiceTest {
                         .lastName("Test")
                         .email("user" + i + "@example.com")
                         .userStatus(UserStatus.ACTIVE)
+                        .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                         .multiFirmUser(false)
                         .build();
 
@@ -6283,6 +6292,7 @@ class UserServiceTest {
                     .userStatus(UserStatus.ACTIVE)
                     .multiFirmUser(false)
                     .userProfiles(new HashSet<>())
+                    .invitationStatus(InvitationStatus.AWAITING_VERIFICATION)
                     .build();
 
             Page<EntraUser> userPage = new PageImpl<>(List.of(user),
@@ -6320,6 +6330,7 @@ class UserServiceTest {
                     .userStatus(UserStatus.DEACTIVE)
                     .enabled(false)
                     .multiFirmUser(false)
+                    .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .build();
 
             Firm firm = Firm.builder()
@@ -6412,7 +6423,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Complete");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("No roles assigned");
         }
 
         @Test
@@ -6466,7 +6477,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Activation failed");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Incomplete");
         }
 
         @Test
@@ -6576,7 +6587,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Activation failed");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Activation pending");
         }
 
         @Test
@@ -6607,9 +6618,7 @@ class UserServiceTest {
                     .firm(firm)
                     .userType(UserType.EXTERNAL)
                     .activeProfile(true)
-                    .appRoles(Set.of(AppRole.builder()
-                            .id(UUID.randomUUID())
-                            .build()))
+                    .appRoles(new HashSet<>())
                     .userProfileStatus(UserProfileStatus.PENDING)
                     .build();
 
@@ -6689,7 +6698,7 @@ class UserServiceTest {
         }
 
         @Test
-        void getAuditUsers_whenUserIsComplete_displaysActivationIncomplete() {
+        void getAuditUsers_whenUserIsComplete_displaysActivationPending() {
             // Given
             UUID userId = UUID.randomUUID();
 
@@ -6715,7 +6724,7 @@ class UserServiceTest {
                     .firm(firm)
                     .userType(UserType.EXTERNAL)
                     .activeProfile(true)
-                    .appRoles(new HashSet<>())
+                    .appRoles(Set.of(AppRole.builder().id(UUID.randomUUID()).build()))
                     .userProfileStatus(UserProfileStatus.COMPLETE)
                     .build();
 
@@ -6738,7 +6747,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Incomplete");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Activation pending");
         }
 
         @Test
@@ -6753,7 +6762,7 @@ class UserServiceTest {
                     .email("pending@example.com")
                     .userStatus(UserStatus.ACTIVE)
                     .multiFirmUser(false)
-                    .invitationStatus(InvitationStatus.INVITE_SENT)
+                    .invitationStatus(InvitationStatus.AWAITING_VERIFICATION)
                     .build();
 
             Firm firm = Firm.builder()
@@ -6804,6 +6813,7 @@ class UserServiceTest {
                     .firstName("Pending")
                     .lastName("User")
                     .email("pending@example.com")
+                    .invitationStatus(InvitationStatus.AWAITING_VERIFICATION)
                     .multiFirmUser(false)
                     .build();
 
@@ -6826,59 +6836,6 @@ class UserServiceTest {
             assertThat(result.getUsers()).hasSize(1);
             assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Incomplete");
             assertThat(result.getUsers().get(0).getEntraStatus()).isEqualTo("UNKNOWN");
-        }
-
-        @Test
-        void getAuditUsers_whenUserIsComplete_displaysActivationPending() {
-            // Given
-            UUID userId = UUID.randomUUID();
-
-            EntraUser user = EntraUser.builder()
-                    .id(userId)
-                    .firstName("Pending")
-                    .lastName("User")
-                    .email("pending@example.com")
-                    .userStatus(UserStatus.ACTIVE)
-                    .multiFirmUser(false)
-                    .invitationStatus(InvitationStatus.AWAITING_VERIFICATION)
-                    .build();
-
-            Firm firm = Firm.builder()
-                    .id(UUID.randomUUID())
-                    .name("Test Firm")
-                    .code("TF001")
-                    .build();
-
-            UserProfile profile = UserProfile.builder()
-                    .id(UUID.randomUUID())
-                    .entraUser(user)
-                    .firm(firm)
-                    .userType(UserType.EXTERNAL)
-                    .activeProfile(true)
-                    .appRoles(new HashSet<>())
-                    .userProfileStatus(UserProfileStatus.COMPLETE)
-                    .build();
-
-            user.setUserProfiles(Set.of(profile));
-
-            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
-                    PageRequest.of(0, 10), 1);
-
-            when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
-                    .thenReturn(userPage);
-
-            when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
-                    .thenReturn(List.of(user));
-
-            // When
-            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "name", "asc", false, null, null);
-
-            // Then
-            assertThat(result).isNotNull();
-            assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Activation pending");
         }
 
         @Test
@@ -6920,6 +6877,7 @@ class UserServiceTest {
                     .lastName("Aardvark")
                     .email("alice@example.com")
                     .userStatus(UserStatus.ACTIVE)
+                    .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .multiFirmUser(false)
                     .build();
 
@@ -6929,6 +6887,7 @@ class UserServiceTest {
                     .lastName("Zebra")
                     .email("zack@example.com")
                     .userStatus(UserStatus.ACTIVE)
+                    .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .multiFirmUser(false)
                     .build();
 
@@ -6987,6 +6946,7 @@ class UserServiceTest {
                     .email("nullprofiles@example.com")
                     .userStatus(UserStatus.ACTIVE)
                     .multiFirmUser(false)
+                    .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .userProfiles(null) // Explicitly null
                     .build();
 
@@ -7022,6 +6982,7 @@ class UserServiceTest {
                     .email("test@example.com")
                     .userStatus(UserStatus.ACTIVE)
                     .multiFirmUser(false)
+                    .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .userProfiles(new HashSet<>())
                     .build();
 
@@ -7085,6 +7046,7 @@ class UserServiceTest {
                     .email("test@example.com")
                     .userStatus(UserStatus.ACTIVE)
                     .multiFirmUser(false)
+                    .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .userProfiles(new HashSet<>())
                     .build();
 
@@ -7121,6 +7083,7 @@ class UserServiceTest {
                     .userStatus(UserStatus.ACTIVE)
                     .multiFirmUser(false)
                     .userProfiles(new HashSet<>())
+                    .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .build();
 
             Page<EntraUser> userPage = new PageImpl<>(List.of(user),
@@ -7161,6 +7124,7 @@ class UserServiceTest {
                     .email("john.smith@example.com")
                     .userStatus(UserStatus.ACTIVE)
                     .multiFirmUser(true)
+                    .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .userProfiles(new HashSet<>())
                     .build();
 
@@ -7205,6 +7169,7 @@ class UserServiceTest {
                     .email("john.smith@example.com")
                     .userStatus(UserStatus.ACTIVE)
                     .multiFirmUser(false)
+                    .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .userProfiles(new HashSet<>())
                     .build();
 
@@ -7250,6 +7215,7 @@ class UserServiceTest {
                     .userStatus(UserStatus.ACTIVE)
                     .multiFirmUser(false)
                     .userProfiles(new HashSet<>())
+                    .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .build();
 
             UserProfile profile = UserProfile.builder()
@@ -7304,6 +7270,7 @@ class UserServiceTest {
                     .email("test@example.com")
                     .userStatus(UserStatus.ACTIVE)
                     .multiFirmUser(false)
+                    .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .userProfiles(new HashSet<>())
                     .build();
 
@@ -7345,6 +7312,7 @@ class UserServiceTest {
                     .email("test@example.com")
                     .userStatus(UserStatus.ACTIVE)
                     .multiFirmUser(false)
+                    .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .userProfiles(new HashSet<>())
                     .build();
 
@@ -8729,9 +8697,9 @@ class UserServiceTest {
                     .thenReturn(projectionPage);
 
             // Mock full user fetching
-            EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", UserStatus.ACTIVE);
-            EntraUser user2 = createUserWithStatus(userId2, "Jane", "Smith", UserStatus.DEACTIVE);
-            EntraUser user3 = createUserWithStatus(userId3, "Bob", "Jones", UserStatus.ACTIVE);
+            EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", UserStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
+            EntraUser user2 = createUserWithStatus(userId2, "Jane", "Smith", UserStatus.DEACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
+            EntraUser user3 = createUserWithStatus(userId3, "Bob", "Jones", UserStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user1, user2, user3));
@@ -8779,9 +8747,9 @@ class UserServiceTest {
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(projectionPage);
 
-            EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", UserStatus.ACTIVE);
-            EntraUser user2 = createUserWithStatus(userId2, "Jane", "Smith", UserStatus.DEACTIVE);
-            EntraUser user3 = createUserWithStatus(userId3, "Bob", "Jones", UserStatus.ACTIVE);
+            EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", UserStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
+            EntraUser user2 = createUserWithStatus(userId2, "Jane", "Smith", UserStatus.DEACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
+            EntraUser user3 = createUserWithStatus(userId3, "Bob", "Jones", UserStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user1, user2, user3));
@@ -8847,9 +8815,9 @@ class UserServiceTest {
                     .thenReturn(projectionPage);
 
             // Return users in different order to test sorting preservation
-            EntraUser user3 = createUserWithStatus(id3, "Bob", "Jones", UserStatus.ACTIVE);
-            EntraUser user1 = createUserWithStatus(id1, "John", "Doe", UserStatus.ACTIVE);
-            EntraUser user2 = createUserWithStatus(id2, "Jane", "Smith", UserStatus.DEACTIVE);
+            EntraUser user3 = createUserWithStatus(id3, "Bob", "Jones", UserStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
+            EntraUser user1 = createUserWithStatus(id1, "John", "Doe", UserStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
+            EntraUser user2 = createUserWithStatus(id2, "Jane", "Smith", UserStatus.DEACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user3, user1, user2)); // Different order
@@ -8886,7 +8854,7 @@ class UserServiceTest {
                     eq(appId), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(projectionPage);
 
-            EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", UserStatus.ACTIVE);
+            EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", UserStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user1));
 
@@ -8917,7 +8885,7 @@ class UserServiceTest {
             };
         }
 
-        private EntraUser createUserWithStatus(UUID id, String firstName, String lastName, UserStatus status) {
+        private EntraUser createUserWithStatus(UUID id, String firstName, String lastName, UserStatus status, InvitationStatus invitationStatus) {
             return EntraUser.builder()
                     .id(id)
                     .firstName(firstName)
@@ -8925,6 +8893,7 @@ class UserServiceTest {
                     .email(firstName.toLowerCase() + "." + lastName.toLowerCase() + "@example.com")
                     .userStatus(status)
                     .userProfiles(new HashSet<>())
+                    .invitationStatus(invitationStatus)
                     .build();
         }
     }
@@ -9503,6 +9472,7 @@ class UserServiceTest {
                 .lastName("Smith")
                 .email("jane.smith@example.com")
                 .userStatus(UserStatus.ACTIVE)
+                .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                 .multiFirmUser(true)
                 .build();
 
