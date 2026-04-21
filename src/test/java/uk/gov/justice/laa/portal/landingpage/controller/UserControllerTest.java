@@ -7724,7 +7724,6 @@ class UserControllerTest {
         @Test
         public void testEditUserRoles_shouldFilterRolesInMainRolesAttribute() {
             // Given
-            UUID userId = UUID.randomUUID();
             MockHttpSession testSession = new MockHttpSession();
 
             AppDto ccmsApp = new AppDto();
@@ -7738,7 +7737,7 @@ class UserControllerTest {
                     createAppRoleDto(UUID.randomUUID().toString(), "Non-CCMS Role", null),
                     createAppRoleDto(UUID.randomUUID().toString(), "CCMS Role 2", "XXCCMS_ADVOCATE")
             );
-
+            UUID userId = UUID.randomUUID();
             UserProfileDto user = UserProfileDto.builder()
                     .id(userId)
                     .userType(UserType.EXTERNAL)
