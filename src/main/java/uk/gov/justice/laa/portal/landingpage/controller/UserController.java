@@ -1243,8 +1243,6 @@ public class UserController {
         FirmType userFirmType = user.getFirm() != null ? user.getFirm().getType() : null;
 
         String currentAppId = selectedApps.get(currentSelectedAppIndex);
-        AppDto currentApp = userService.getAppByAppId(currentAppId).orElseThrow(() ->
-            new IllegalArgumentException("App not found with ID: " + currentAppId));
 
         List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(currentAppId,
                 user.getUserType(), userFirmType);
@@ -1277,6 +1275,10 @@ public class UserController {
                     return viewModel;
                 }).sorted().toList();
         flagEditableAppRoles(id, appRoleViewModels);
+
+        // Get the current app details
+        AppDto currentApp = userService.getAppByAppId(currentAppId).orElseThrow(() ->
+            new IllegalArgumentException("App not found with ID: " + currentAppId));
 
         // Check if this is the CCMS app and organize roles by section
         boolean isCcmsApp = (currentApp.getName().contains("CCMS")
