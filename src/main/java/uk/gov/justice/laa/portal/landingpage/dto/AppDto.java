@@ -58,6 +58,16 @@ public class AppDto implements Comparable<AppDto>, Serializable {
             return cmp;
         }
 
+        if (name == null && o.name == null) {
+            return 0;
+        }
+        if (name == null) {
+            return 1;
+        }
+        if (o.name == null) {
+            return -1;
+        }
+
         return name.compareToIgnoreCase(o.name);
     }
 
