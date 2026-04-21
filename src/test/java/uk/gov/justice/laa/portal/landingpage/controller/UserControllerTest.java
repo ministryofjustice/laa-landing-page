@@ -3822,7 +3822,6 @@ class UserControllerTest {
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
-        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of());
 
         // When - passing selectedAppIndex of 5 which is out of bounds
         String view = userController.editUserRoles(userId, 5, new RolesForm(), null, authentication, model,
@@ -4577,7 +4576,7 @@ class UserControllerTest {
                 testSession, redirectAttributes);
 
         // Then
-        assertThat(view).isEqualTo("redirect:/users/grant-access/" + userId + "/apps");
+        assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/apps");
 
     }
 
@@ -5299,10 +5298,14 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("edit-user-roles");
         assertThat(model.getAttribute("isCcmsApp")).isEqualTo(true);
+        // When no CCMS roles exist, should have empty map with all sections initialized
         assertThat(model.getAttribute("ccmsRolesBySection")).isNotNull();
-        Map<String, List<AppRoleDto>> ccmsRolesBySection = (Map<String, List<AppRoleDto>>) model
-                .getAttribute("ccmsRolesBySection");
-        assertThat(ccmsRolesBySection).isEmpty(); // No CCMS roles to organize
+        Map<String, List<AppRoleViewModel>> ccmsRolesBySection = (Map<String, List<AppRoleViewModel>>) model.getAttribute("ccmsRolesBySection");
+        assertThat(ccmsRolesBySection).containsKeys("Provider", "Chambers", "Advocate", "Other");
+        assertThat(ccmsRolesBySection.get("Provider")).isEmpty();
+        assertThat(ccmsRolesBySection.get("Chambers")).isEmpty();
+        assertThat(ccmsRolesBySection.get("Advocate")).isEmpty();
+        assertThat(ccmsRolesBySection.get("Other")).isEmpty();
     }
 
     @Test
@@ -5619,7 +5622,14 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("grant-access-user-roles");
         assertThat(model.getAttribute("isCcmsApp")).isEqualTo(true);
-        assertThat(model.getAttribute("ccmsRolesBySection")).isNull(); // No CCMS roles to organize
+        // When no CCMS roles exist, should have empty map with all sections initialized
+        assertThat(model.getAttribute("ccmsRolesBySection")).isNotNull();
+        Map<String, List<AppRoleViewModel>> ccmsRolesBySection = (Map<String, List<AppRoleViewModel>>) model.getAttribute("ccmsRolesBySection");
+        assertThat(ccmsRolesBySection).containsKeys("Provider", "Chambers", "Advocate", "Other");
+        assertThat(ccmsRolesBySection.get("Provider")).isEmpty();
+        assertThat(ccmsRolesBySection.get("Chambers")).isEmpty();
+        assertThat(ccmsRolesBySection.get("Advocate")).isEmpty();
+        assertThat(ccmsRolesBySection.get("Other")).isEmpty();
     }
 
     @Test
