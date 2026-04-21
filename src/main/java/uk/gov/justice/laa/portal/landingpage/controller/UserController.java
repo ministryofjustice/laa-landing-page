@@ -332,7 +332,11 @@ public class UserController {
         final boolean canEditUser = accessControlService.canEditUser(user.getId().toString());
         final boolean canGrantUserAccess = accessControlService.canGrantUserAccess(user.getId().toString());
         final boolean canEditUserRoleAssignments = accessControlService.canEditUserAppRoleAssignments(user.getId().toString());
+
+        String silasStatus = userService.calculateSilasStatusForUserProfile(user);
+        
         model.addAttribute("user", user);
+        model.addAttribute("silasStatus", silasStatus);
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("userOffices", userOffices);
         model.addAttribute("isAccessGranted", isAccessGranted);

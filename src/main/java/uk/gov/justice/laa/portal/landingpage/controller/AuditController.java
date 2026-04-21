@@ -10,6 +10,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -197,12 +198,14 @@ public class AuditController {
             TechServicesUser user = entraUserResponse.getData().getUser();
             String disableUserReason = formatDisableUserReason(user);
             model.addAttribute("entraUser", entraUserResponse.getData().getUser());
+            model.addAttribute("entraVerificationStatus", getEntraVerificationStatus(entraUserResponse));
             model.addAttribute("entraUserDisableReason", disableUserReason);
         }
         canDisableUser = accessControlService.canDisableUser(userDetail.getUserId());
 
         // Add attributes to model
         model.addAttribute("user", userDetail);
+        model.addAttribute("silasStatus", userService.determineStatusBadgeForAuditUser(userDetail));
         model.addAttribute("profileId", userId); // Add profile ID for pagination links
         model.addAttribute("profilePage", profilePage);
         model.addAttribute("profileSize", profileSize);
@@ -210,6 +213,16 @@ public class AuditController {
         model.addAttribute("userIsEnabled", userDetail.isEnabled());
 
         return "user-audit/details";
+    }
+
+    private String getEntraVerificationStatus(TechServicesApiResponse<GetUserResponse> entraUserResponse) {
+        if (entraUserResponse.getData().getUser() != null
+                && entraUserResponse.getData().getUser().getCustomSecurityAttributes() != null
+                && entraUserResponse.getData().getUser().getCustomSecurityAttributes().getGuestUserStatus() != null
+                && entraUserResponse.getData().getUser().getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress() != null) {
+            return entraUserResponse.getData().getUser().getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress().name();
+        }
+        return "";
     }
 
     private String formatDisableUserReason(TechServicesUser user) {

@@ -104,6 +104,8 @@ spec:
               value: "${REPORT_SERVICE_TENANT_ID}"
             - name: REPORT_SHAREPOINT_URL
               value: "${REPORT_SHAREPOINT_URL}"
+            - name: REPORT_SHAREPOINT_BASE_FOLDER
+              value: "${REPORT_SHAREPOINT_BASE_FOLDER}"
             - name: AZURE_CLIENT_ID
               valueFrom:
                 secretKeyRef:
