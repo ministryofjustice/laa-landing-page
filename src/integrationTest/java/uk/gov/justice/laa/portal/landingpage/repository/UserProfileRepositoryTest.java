@@ -23,6 +23,7 @@ import jakarta.transaction.Transactional;
 import uk.gov.justice.laa.portal.landingpage.entity.CountFirms;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
@@ -388,6 +389,10 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         assertThat(page.getTotalElements()).isEqualTo(1);
         assertThat(page.getContent()).extracting(UserSearchResultsDto::id)
                 .containsExactly(childProfile2.getId());
+        assertThat(page.getContent().get(0).hasAppRoles()).isTrue();
+        assertThat(page.getContent().get(0).enabled()).isTrue();
+        assertThat(page.getContent().get(0).invitationStatus()).isEqualTo(InvitationStatus.VERIFICATION_SUCCESS);
+
     }
 
     @Test

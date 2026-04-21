@@ -49,7 +49,6 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
-import uk.gov.justice.laa.portal.landingpage.dto.AdminAppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -68,7 +67,6 @@ import uk.gov.justice.laa.portal.landingpage.forms.AppsOrderForm;
 import uk.gov.justice.laa.portal.landingpage.forms.DeleteAppRoleReasonForm;
 import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
-import uk.gov.justice.laa.portal.landingpage.service.AdminService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
 import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
@@ -80,8 +78,6 @@ import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 @ExtendWith(MockitoExtension.class)
 class AdminControllerTest {
 
-    @Mock
-    private AdminService adminService;
     @Mock
     private LoginService loginService;
     @Mock
@@ -106,7 +102,7 @@ class AdminControllerTest {
     @BeforeEach
     void setUp() {
         mapper = new ModelMapper();
-        adminController = new AdminController(mapper, loginService, eventService, adminService,
+        adminController = new AdminController(mapper, loginService, eventService,
                 appService, appRoleService, accessControlService, roleAssignmentService);
         model = new ExtendedModelMap();
     }
@@ -114,11 +110,11 @@ class AdminControllerTest {
     @Test
     void testShowAdministration_WithDefaultTab_LoadsAllData() {
         // Arrange
-        List<AdminAppDto> adminApps = createMockAdminApps();
+        List<AppDto> adminApps = createMockAdminApps();
         List<AppDto> apps = createMockApps();
         List<AppRoleAdminDto> roles = createMockRoles();
 
-        when(adminService.getAllAdminApps()).thenReturn(adminApps);
+        when(appService.getAllAuthzApps()).thenReturn(adminApps);
         when(appService.getAllLaaApps()).thenReturn(apps);
         when(appRoleService.getAllLaaAppRoles()).thenReturn(roles);
 
@@ -134,7 +130,7 @@ class AdminControllerTest {
         assertThat(model.getAttribute("apps")).isEqualTo(apps);
         assertThat(model.getAttribute("roles")).isEqualTo(roles);
 
-        verify(adminService).getAllAdminApps();
+        verify(appService).getAllAuthzApps();
         // getAllApps is called twice - once for apps data and once for app names filter
         verify(appService, times(1)).getAllLaaApps();
         verify(appRoleService).getAllLaaAppRoles();
@@ -143,11 +139,11 @@ class AdminControllerTest {
     @Test
     void testShowAdministration_WithRolesTab_LoadsAllData() {
         // Arrange
-        List<AdminAppDto> adminApps = createMockAdminApps();
+        List<AppDto> adminApps = createMockAdminApps();
         List<AppDto> apps = createMockApps();
         List<AppRoleAdminDto> roles = createMockRoles();
 
-        when(adminService.getAllAdminApps()).thenReturn(adminApps);
+        when(appService.getAllAuthzApps()).thenReturn(adminApps);
         when(appService.getAllLaaApps()).thenReturn(apps);
         when(appRoleService.getAllLaaAppRoles()).thenReturn(roles);
 
@@ -175,11 +171,11 @@ class AdminControllerTest {
                         .ordinal(0)
                         .build()
         );
-        List<AdminAppDto> adminApps = createMockAdminApps();
+        List<AppDto> adminApps = createMockAdminApps();
         List<AppDto> apps = createMockApps();
         String appFilter = "CCMS case transfer requests";
 
-        when(adminService.getAllAdminApps()).thenReturn(adminApps);
+        when(appService.getAllAuthzApps()).thenReturn(adminApps);
         when(appService.getAllLaaApps()).thenReturn(apps);
         when(appRoleService.getLaaAppRolesByAppName(appFilter)).thenReturn(filteredRoles);
 
@@ -436,7 +432,7 @@ class AdminControllerTest {
         session.setAttribute("appId", "test-id");
         session.setAttribute("appsOrderForm", new AppsOrderForm());
 
-        when(adminService.getAllAdminApps()).thenReturn(createMockAdminApps());
+        when(appService.getAllAuthzApps()).thenReturn(createMockAdminApps());
         when(appService.getAllLaaApps()).thenReturn(createMockApps());
         when(appRoleService.getAllLaaAppRoles()).thenReturn(createMockRoles());
 
@@ -452,7 +448,7 @@ class AdminControllerTest {
     void showAdministration_withNullAppFilter_loadsAllRoles() {
         List<AppRoleAdminDto> allRoles = createMockRoles();
 
-        when(adminService.getAllAdminApps()).thenReturn(createMockAdminApps());
+        when(appService.getAllAuthzApps()).thenReturn(createMockAdminApps());
         when(appService.getAllLaaApps()).thenReturn(createMockApps());
         when(appRoleService.getAllLaaAppRoles()).thenReturn(allRoles);
 
@@ -528,7 +524,7 @@ class AdminControllerTest {
 
     @Test
     void showAdministration_loadsAppNamesForFilter_sorted() {
-        when(adminService.getAllAdminApps()).thenReturn(createMockAdminApps());
+        when(appService.getAllAuthzApps()).thenReturn(createMockAdminApps());
         when(appService.getAllLaaApps()).thenReturn(createMockApps());
         when(appRoleService.getAllLaaAppRoles()).thenReturn(createMockRoles());
 
@@ -1199,10 +1195,11 @@ class AdminControllerTest {
         // Arrange
         MockHttpSession session = new MockHttpSession();
         List<AppDto> apps = createMockApps();
+        String appName = "Test App";
         when(appService.getAllLaaApps()).thenReturn(apps);
 
         // Act
-        String result = adminController.showRoleCreationForm(model, session);
+        String result = adminController.showRoleCreationForm(model, session, appName);
 
         // Assert
         assertEquals("silas-administration/create-role", result);
@@ -1210,6 +1207,7 @@ class AdminControllerTest {
         assertThat(model.getAttribute("apps")).isEqualTo(apps);
         assertThat(model.getAttribute("userTypes")).isEqualTo(UserType.values());
         assertThat(model.getAttribute("firmTypes")).isEqualTo(FirmType.values());
+        assertThat(model.getAttribute("appFilter")).isEqualTo(appName);
     }
 
     @Test
@@ -1223,10 +1221,11 @@ class AdminControllerTest {
         session.setAttribute("roleCreationDto", existingDto);
 
         List<AppDto> apps = createMockApps();
+        String appName = "Test App";
         when(appService.getAllLaaApps()).thenReturn(apps);
 
         // Act
-        String result = adminController.showRoleCreationForm(model, session);
+        String result = adminController.showRoleCreationForm(model, session, appName);
 
         // Assert
         assertEquals("silas-administration/create-role", result);
@@ -1234,6 +1233,7 @@ class AdminControllerTest {
         assertThat(model.getAttribute("apps")).isEqualTo(apps);
         assertThat(model.getAttribute("userTypes")).isEqualTo(UserType.values());
         assertThat(model.getAttribute("firmTypes")).isEqualTo(FirmType.values());
+        assertThat(model.getAttribute("appFilter")).isEqualTo(appName);
     }
 
     @Test
@@ -1461,14 +1461,14 @@ class AdminControllerTest {
     }
 
     // Helper methods to create mock data
-    private List<AdminAppDto> createMockAdminApps() {
+    private List<AppDto> createMockAdminApps() {
         return Arrays.asList(
-                AdminAppDto.builder()
+                AppDto.builder()
                         .name("Manage your users")
                         .description("Manage user access and permissions")
                         .ordinal(0)
                         .build(),
-                AdminAppDto.builder()
+                AppDto.builder()
                         .name("User access audit table")
                         .description("View all registered users")
                         .ordinal(1)
@@ -3014,8 +3014,8 @@ class AdminControllerTest {
         @DisplayName("Happy path: populates model, uses current user + mapped profile, invokes services, returns view")
         void syncLaaApps_happyPath() {
             // Given: admin apps
-            List<AdminAppDto> adminApps = createMockAdminApps();
-            when(adminService.getAllAdminApps()).thenReturn(adminApps);
+            List<AppDto> adminApps = createMockAdminApps();
+            when(appService.getAllAuthzApps()).thenReturn(adminApps);
 
             // Given: current user and profile
             final UUID entraOid = UUID.randomUUID();
@@ -3070,13 +3070,13 @@ class AdminControllerTest {
             assertThat(model.getAttribute("successMessage")).isEqualTo("App Syncing successful");
 
             // Then: verify interactions
-            verify(adminService, times(1)).getAllAdminApps();
+            verify(appService, times(1)).getAllAuthzApps();
             verify(loginService, times(1)).getCurrentUser(authentication);
             verify(loginService, times(1)).getCurrentProfile(authentication);
             verify(appService, times(1)).synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
             verify(appRoleService, times(1)).getAllLaaAppRoles();
             verify(accessControlService, times(1)).authenticatedUserHasPermission(Permission.TRIGGER_LAA_APP_SYNC);
-            verifyNoMoreInteractions(adminService, appService, appRoleService, accessControlService, loginService);
+            verifyNoMoreInteractions(appService, appRoleService, accessControlService, loginService);
         }
 
         @Test
@@ -3084,7 +3084,7 @@ class AdminControllerTest {
         void syncLaaApps_permissionFalse() {
             when(accessControlService.authenticatedUserHasPermission(Permission.TRIGGER_LAA_APP_SYNC)).thenReturn(false);
 
-            when(adminService.getAllAdminApps()).thenReturn(List.of());
+            when(appService.getAllAuthzApps()).thenReturn(List.of());
 
             // Given: current user and profile
             final UUID entraOid = UUID.randomUUID();
@@ -3131,8 +3131,8 @@ class AdminControllerTest {
         void syncLaaApps_appNamesDistinctSorted() {
             when(accessControlService.authenticatedUserHasPermission(Permission.TRIGGER_LAA_APP_SYNC)).thenReturn(true);
 
-            List<AdminAppDto> adminApps = createMockAdminApps();
-            when(adminService.getAllAdminApps()).thenReturn(adminApps);
+            List<AppDto> adminApps = createMockAdminApps();
+            when(appService.getAllAuthzApps()).thenReturn(adminApps);
 
             final UUID entraOid = UUID.randomUUID();
             final UUID profileId = UUID.randomUUID();
@@ -3185,9 +3185,11 @@ class AdminControllerTest {
         void setUp() {
             // Shared test data
             targetId = UUID.randomUUID().toString();
+            AppDto appDto = AppDto.builder().name("MyApp").build();
             targetDto = AppRoleDto.builder()
                     .id(targetId)
                     .name("Target Role")
+                    .app(appDto)
                     .build();
 
             dtoA = dto("A", "Alpha");
@@ -3210,7 +3212,7 @@ class AdminControllerTest {
             // DB says: dtoB can assign
             when(appRoleService.findById(targetId)).thenReturn(Optional.of(targetDto));
             when(appRoleService.getAssigningRolesFor(targetId)).thenReturn(List.of(dtoB));
-            when(appRoleService.getAllAuthzRoles()).thenReturn(List.of(dtoA, dtoB, dtoC));
+            when(appRoleService.getAllAssigningRoles(any())).thenReturn(List.of(dtoA, dtoB, dtoC));
 
             String view = adminController.roleAssignmentRestrictionGet(targetId, model, session);
 
@@ -3243,7 +3245,7 @@ class AdminControllerTest {
 
             when(appRoleService.findById(targetId)).thenReturn(Optional.of(targetDto));
             when(appRoleService.getAssigningRolesFor(targetId)).thenReturn(List.of());
-            when(appRoleService.getAllAuthzRoles()).thenReturn(List.of(dtoA, dtoB, dtoC));
+            when(appRoleService.getAllAssigningRoles(any())).thenReturn(List.of(dtoA, dtoB, dtoC));
 
             String view = adminController.roleAssignmentRestrictionGet(targetId, model, session);
 

@@ -65,7 +65,7 @@ public class AdminPageTest extends BaseFrontEndTest {
         AdminPage adminPage = loginAndGetAdminPage(TestUser.SILAS_ADMINISTRATION);
 
         adminPage.assertLegalAidServicesTableColumns()
-                .assertReorderLegalAidServicesButtonVisible();
+                .assertReorderLegalAidServicesLinkVisible();
 
         Assertions.assertTrue(
                 adminPage.getLegalAidServicesRowCount() > 0,
@@ -79,7 +79,7 @@ public class AdminPageTest extends BaseFrontEndTest {
         AdminPage adminPage = loginAndGetAdminPage(TestUser.SILAS_ADMINISTRATION);
 
         adminPage.assertLegalAidServicesTableColumns()
-                .assertReorderLegalAidServicesButtonVisible();
+                .assertReorderLegalAidServicesLinkVisible();
 
         Assertions.assertTrue(
                 adminPage.getLegalAidServicesRowCount() > 0,
@@ -113,7 +113,7 @@ public class AdminPageTest extends BaseFrontEndTest {
         clickFirstChangeLinkOnRoleAssignRestrictionsTab();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-        Assertions.assertTrue(page.locator("h1.govuk-fieldset__heading").textContent().contains("Test LAA App One Access"));
+        Assertions.assertTrue(page.locator("h1.govuk-fieldset__heading").textContent().contains("Test LAA App Three Access"));
         Locator others = page.locator("input[type='checkbox']");
         for (int i = 0; i < 3; i++) {
             others.nth(i).check();
@@ -137,14 +137,14 @@ public class AdminPageTest extends BaseFrontEndTest {
         AdminPage adminPage = loginAndGetAdminPage(TestUser.SILAS_ADMINISTRATION);
 
         adminPage.assertLegalAidServicesTableColumns()
-                .assertReorderLegalAidServicesButtonVisible();
+                .assertReorderLegalAidServicesLinkVisible();
 
         Assertions.assertTrue(
                 adminPage.getLegalAidServicesRowCount() > 0,
                 "Expected Legal Aid Services table to contain at least 1 row"
         );
 
-        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Reorder legal aid services")).click();
+        page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Reorder legal aid services")).click();
 
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
@@ -169,7 +169,7 @@ public class AdminPageTest extends BaseFrontEndTest {
         AdminPage adminPage = loginAndGetAdminPage(TestUser.SILAS_ADMINISTRATION);
         adminPage.assertRolesTableColumns()
                 .assertRolesActionButtonsVisible()
-                .assertReorderRolesButtonVisible();
+                .assertReorderRolesLinkVisible();
 
         Assertions.assertTrue(
                 adminPage.getRolesRowCount() == 3,
@@ -204,7 +204,7 @@ public class AdminPageTest extends BaseFrontEndTest {
         adminPage = loginAndGetAdminPage(TestUser.SILAS_ADMINISTRATION);
         adminPage.assertRolesTableColumns()
                 .assertRolesActionButtonsVisible()
-                .assertReorderRolesButtonVisible();
+                .assertReorderRolesLinkVisible();
 
         Assertions.assertTrue(
                 adminPage.getRolesRowCount() == 2,
@@ -319,7 +319,7 @@ public class AdminPageTest extends BaseFrontEndTest {
 
         adminPage.assertRolesTableColumns()
                 .assertRolesActionButtonsVisible()
-                .assertReorderRolesButtonVisible();
+                .assertReorderRolesLinkVisible();
 
         Assertions.assertTrue(
                 adminPage.getRolesRowCount() > 0,
@@ -371,7 +371,7 @@ public class AdminPageTest extends BaseFrontEndTest {
     private void clickFirstChangeLinkOnRoleAssignRestrictionsTab() {
         page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Change")).first().click();
 
-        String expectedUrlFragment = "/admin/silas-administration/role/assignRestrictions/dddddddd-dddd-dddd-dddd-aaaaaaaaaaaa";
+        String expectedUrlFragment = "/admin/silas-administration/role/assignRestrictions/ffffffff-ffff-ffff-ffff-bbbbbbbbbbbb";
         Assertions.assertTrue(
                 page.url().contains(expectedUrlFragment),
                 "Expected URL to contain '" + expectedUrlFragment + "' after clicking Change link for Role assignment restrictions"

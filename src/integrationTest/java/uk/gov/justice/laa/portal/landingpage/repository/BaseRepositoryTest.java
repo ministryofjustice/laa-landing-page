@@ -18,6 +18,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
@@ -50,6 +51,7 @@ public class BaseRepositoryTest {
                 .userProfiles(HashSet.newHashSet(11))
                 .firstName(firstName).lastName(lastName)
                 .userStatus(UserStatus.ACTIVE)
+                .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
     }
 
@@ -68,21 +70,19 @@ public class BaseRepositoryTest {
                 .code(firmCode).type(FirmType.ADVOCATE).parentFirm(parentFirm).build();
     }
 
-    protected Office buildOffice(Firm firm, String name, String address, String phone, String officeCode) {
+    protected Office buildOffice(Firm firm, String address, String officeCode) {
         Office.Address addr = Office.Address.builder().addressLine1(address).city("city").postcode("postcode").build();
         return Office.builder().code(officeCode).address(addr).firm(firm).build();
     }
 
-    protected App buildLaaApp(String name, String entraAppId, String securityGroupOid, String securityGroupName) {
-        return buildLaaApp(name, entraAppId, securityGroupOid, securityGroupName, "Test App Title", "Test App Description",
-                "http://localhost:8080/", "OID Group");
+    protected App buildLaaApp(String name, String entraAppId, String securityGroupOid) {
+        return buildLaaApp(name, entraAppId, securityGroupOid, "Test App Description", "http://localhost:8080/");
     }
 
-    protected App buildLaaApp(String name, String entraAppId, String securityGroupOid, String securityGroupName,
-                              String title, String description, String url, String oidGroupName) {
+    protected App buildLaaApp(String name, String entraAppId, String securityGroupOid, String description, String url) {
         return App.builder().name(name).appRoles(HashSet.newHashSet(1)).url(url)
-                .title(title).description(description).appType(AppType.LAA).oidGroupName(oidGroupName)
-                .entraAppId(entraAppId).securityGroupOid(securityGroupOid).securityGroupName(securityGroupName)
+                .description(description).appType(AppType.LAA)
+                .entraAppId(entraAppId).securityGroupOid(securityGroupOid)
                 .enabled(true).build();
     }
 
@@ -139,7 +139,7 @@ public class BaseRepositoryTest {
     protected void deleteNonAuthzApps(AppRepository appRepository) {
         // Keep the Manage Your Users app as it's reference data.
         List<App> nonAuthzApps = appRepository.findAll().stream()
-                .filter(app -> !app.getName().equals("Manage Your Users"))
+                .filter(app -> !AppType.AUTHZ.equals(app.getAppType()))
                 .toList();
         appRepository.deleteAll(nonAuthzApps);
     }
@@ -159,6 +159,7 @@ public class BaseRepositoryTest {
                 .userProfiles(HashSet.newHashSet(11))
                 .firstName(firstName).lastName(lastName)
                 .userStatus(UserStatus.DEACTIVE)
+                .enabled(false)
                 .createdDate(LocalDateTime.now()).createdBy("Test").multiFirmUser(multiFirmUser).build();
     }
 

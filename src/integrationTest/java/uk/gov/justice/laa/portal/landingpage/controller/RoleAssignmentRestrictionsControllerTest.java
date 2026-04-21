@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
@@ -69,6 +70,7 @@ class RoleAssignmentRestrictionsControllerTest extends BaseIntegrationTest {
         targetDto = new AppRoleDto();
         targetDto.setId(targetId);
         targetDto.setName("Target Role");
+        targetDto.setApp(AppDto.builder().id(UUID.randomUUID().toString()).name("Test App").build());
 
         dtoA = dto("A", "Alpha");
         dtoB = dto("B", "Beta");
@@ -95,7 +97,7 @@ class RoleAssignmentRestrictionsControllerTest extends BaseIntegrationTest {
     void getFirstPage_buildsViewModelsAndMarksSelected() throws Exception {
         given(appRoleService.findById(targetId)).willReturn(Optional.of(targetDto));
         given(appRoleService.getAssigningRolesFor(targetId)).willReturn(List.of(dtoB));
-        given(appRoleService.getAllAuthzRoles()).willReturn(List.of(dtoA, dtoB, dtoC));
+        given(appRoleService.getAllAssigningRoles(any())).willReturn(List.of(dtoA, dtoB, dtoC));
 
         mockMvc.perform(get("/admin/silas-administration/role/assignRestrictions/{appRoleId}", targetId)
                         .with(defaultOauth2Login(silasAdminUser)))

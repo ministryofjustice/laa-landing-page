@@ -147,6 +147,30 @@
                                         <dt class="govuk-summary-list__key">Created by</dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.createdBy}"></dd>
                                     </div>
+                                    <div th:if="${!user.enabled}" class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Disabled by</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${user.disabledBy == 'null' ? 'User sync' : user.disabledBy}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">SILAS Status</dt>
+                                        <dd class="govuk-summary-list__value">
+                                            <th:block th:if="${silasStatus == 'Disabled'}">
+                                                <strong class="govuk-tag govuk-tag--red">Disabled</strong>
+                                            </th:block>
+                                            <th:block th:if="${silasStatus == 'Incomplete'}">
+                                                <strong class="govuk-tag govuk-tag--blue govuk-!-margin-top-1">Incomplete</strong>
+                                            </th:block>
+                                            <th:block th:if="${silasStatus == 'Complete'}">
+                                                <strong class="govuk-tag govuk-tag--green govuk-!-margin-top-1">Complete</strong>
+                                            </th:block>
+                                            <th:block th:if="${silasStatus == 'Activation pending'}">
+                                                <strong class="govuk-tag govuk-tag--grey govuk-!-margin-top-1">Activation pending</strong>
+                                            </th:block>
+                                            <th:block th:if="${silasStatus == 'No roles assigned'}">
+                                                <strong class="govuk-tag govuk-tag--purple govuk-!-margin-top-1">No roles assigned</strong>
+                                            </th:block>
+                                        </dd>
+                                    </div>
                                 </dl>
                             </div>
                         </div>
@@ -166,15 +190,21 @@
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Account Status</dt>
                                         <dd class="govuk-summary-list__value">
-                                            <strong class="govuk-tag govuk-tag--green" th:if="${entraUser != null && entraUser.accountEnabled}">Active</strong>
-                                            <strong class="govuk-tag govuk-tag--red" th:if="${entraUser != null && !entraUser.accountEnabled}">Disabled</strong>
-                                            <strong class="govuk-tag govuk-tag--grey" th:if="${entraUser == null}">Unknown</strong>
+                                            <th:block th:if="${entraVerificationStatus != 'VERIFICATION_SUCCESS'}">
+                                                <strong class="govuk-tag govuk-tag--grey" th:if="${entraUser != null}" style="white-space: nowrap;">Awaiting Verification</strong>
+                                                <strong class="govuk-tag govuk-tag--grey" th:if="${entraUser == null}">Unknown</strong>
+                                            </th:block>
+                                            <th:block th:if="${entraVerificationStatus == 'VERIFICATION_SUCCESS'}">
+                                                <strong class="govuk-tag govuk-tag--green" th:if="${entraUser != null && entraUser.accountEnabled}">Active</strong>
+                                                <strong class="govuk-tag govuk-tag--red" th:if="${entraUser != null && !entraUser.accountEnabled}">Disabled</strong>
+                                                <strong class="govuk-tag govuk-tag--grey" th:if="${entraUser == null}">Unknown</strong>
+                                            </th:block>
                                         </dd>
                                     </div>
                                     <div class="govuk-summary-list__row" th:if="${entraUser != null && !entraUser.accountEnabled}">
                                         <dt class="govuk-summary-list__key">Disable Reason</dt>
                                         <dd class="govuk-summary-list__value" th:if="${entraUser.customSecurityAttributes == null || entraUser.customSecurityAttributes.guestUserStatus == null || entraUser.customSecurityAttributes.guestUserStatus.disabledReason == null}">Unknown</dd>
-                                        <dd class="govuk-summary-list__value" th:if="${entraUser.customSecurityAttributes != null && entraUser.customSecurityAttributes.guestUserStatus != null && entraUser.customSecurityAttributes.guestUserStatus.disabledReason != null}" th:text="${entraUser.customSecurityAttributes.guestUserStatus.disabledReason}"></dd>
+                                        <dd class="govuk-summary-list__value" th:if="${entraUser.customSecurityAttributes != null && entraUser.customSecurityAttributes.guestUserStatus != null && entraUser.customSecurityAttributes.guestUserStatus.disabledReason != null}" th:text="${entraUserDisableReason}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Invitation State</dt>
@@ -386,6 +416,38 @@
                                     <div class="govuk-summary-list__row"
                                         th:if="${profile.roles == null || profile.roles.isEmpty()}">
                                         <dt class="govuk-summary-list__key">No services assigned</dt>
+                                        <dd class="govuk-summary-list__value"></dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </div>
+
+                        <!-- Account status history Card -->
+                        <div class="govuk-summary-card">
+                            <div class="govuk-summary-card__title-wrapper">
+                                <h3 class="govuk-summary-card__title">Account status history</h3>
+                            </div>
+                            <div class="govuk-summary-card__content" th:each="record : ${user.accountStatusHistory}">
+                                <dl class="govuk-summary-list">
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Date</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.statusChangedDate}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Status</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.statusChange}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Disable reason</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.disableReason}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Changed by</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.statusChangedBy}">
+                                    </div>
+                                    <div class="govuk-summary-list__row"
+                                         th:if="${user.accountStatusHistory == null || user.accountStatusHistory.size() == 0}">
+                                        <dt class="govuk-summary-list__key">No account status history available</dt>
                                         <dd class="govuk-summary-list__value"></dd>
                                     </div>
                                 </dl>

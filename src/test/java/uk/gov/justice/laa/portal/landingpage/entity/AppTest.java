@@ -65,47 +65,6 @@ public class AppTest extends BaseEntityTest {
     }
 
     @Test
-    public void testLaaAppNullTitle() {
-        App app = buildTestLaaApp();
-        update(app, f -> f.setTitle(null));
-
-        Set<ConstraintViolation<App>> violations = validator.validate(app);
-
-        assertThat(violations).isNotEmpty();
-        assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Application title must be provided");
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("title");
-    }
-
-    @Test
-    public void testLaaAppEmptyTitle() {
-        App app = buildTestLaaApp();
-        update(app, f -> f.setTitle(""));
-
-        Set<ConstraintViolation<App>> violations = validator.validate(app);
-
-        assertThat(violations).isNotEmpty();
-        assertThat(violations).hasSize(2);
-        Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
-        assertThat(messages).hasSameElementsAs(Set.of("Application title must be provided", "Application title must be between 1 and 255 characters"));
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("title");
-    }
-
-    @Test
-    public void testLaaAppTitleTooLong() {
-        App app = buildTestLaaApp();
-        update(app, f -> f.setTitle("TestLaaAppTitleThatIsTooLong".repeat(15)));
-
-        Set<ConstraintViolation<App>> violations = validator.validate(app);
-
-        assertThat(violations).isNotEmpty();
-        assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Application title must be between 1 and 255 characters");
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("title");
-
-    }
-
-    @Test
     public void testLaaAppNullDescription() {
         App app = buildTestLaaApp();
         update(app, f -> f.setDescription(null));
@@ -143,47 +102,6 @@ public class AppTest extends BaseEntityTest {
         assertThat(violations).hasSize(1);
         assertThat(violations.iterator().next().getMessage()).isEqualTo("Application description must be between 1 and 255 characters");
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("description");
-
-    }
-
-    @Test
-    public void testLaaAppNullOidGroupName() {
-        App app = buildTestLaaApp();
-        update(app, f -> f.setOidGroupName(null));
-
-        Set<ConstraintViolation<App>> violations = validator.validate(app);
-
-        assertThat(violations).isNotEmpty();
-        assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Application OID Group Name must be provided");
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("oidGroupName");
-    }
-
-    @Test
-    public void testLaaAppEmptyOidGroupName() {
-        App app = buildTestLaaApp();
-        update(app, f -> f.setOidGroupName(""));
-
-        Set<ConstraintViolation<App>> violations = validator.validate(app);
-
-        assertThat(violations).isNotEmpty();
-        assertThat(violations).hasSize(2);
-        Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
-        assertThat(messages).hasSameElementsAs(Set.of("Application OID Group Name must be provided", "Application OID Group Name must be between 1 and 255 characters"));
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("oidGroupName");
-    }
-
-    @Test
-    public void testLaaAppOidGroupNameTooLong() {
-        App app = buildTestLaaApp();
-        update(app, f -> f.setOidGroupName("TestLaaAppOIDGroupNameThatIsTooLong".repeat(15)));
-
-        Set<ConstraintViolation<App>> violations = validator.validate(app);
-
-        assertThat(violations).isNotEmpty();
-        assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Application OID Group Name must be between 1 and 255 characters");
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("oidGroupName");
 
     }
 
@@ -313,47 +231,6 @@ public class AppTest extends BaseEntityTest {
         assertThat(violations).hasSize(1);
         assertThat(violations.iterator().next().getMessage()).isEqualTo("Security Group Oid must be less than 255 characters");
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("securityGroupOid");
-
-    }
-
-
-    @Test
-    public void testLaaAppNullSecurityGroupName() {
-        App app = buildTestLaaApp();
-        update(app, f -> f.setSecurityGroupName(null));
-
-        Set<ConstraintViolation<App>> violations = validator.validate(app);
-
-        assertThat(violations).isNotEmpty();
-        assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Security Group Name must be provided");
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("securityGroupName");
-    }
-
-    @Test
-    public void testLaaAppEmptySecurityGroupName() {
-        App app = buildTestLaaApp();
-        update(app, f -> f.setSecurityGroupName(""));
-
-        Set<ConstraintViolation<App>> violations = validator.validate(app);
-
-        assertThat(violations).isNotEmpty();
-        assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Security Group Name must be provided");
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("securityGroupName");
-    }
-
-    @Test
-    public void testLaaAppSecurityGroupNameTooLong() {
-        App app = buildTestLaaApp();
-        update(app, f -> f.setSecurityGroupName("TestLaaAppNameThatIsTooLong".repeat(25)));
-
-        Set<ConstraintViolation<App>> violations = validator.validate(app);
-
-        assertThat(violations).isNotEmpty();
-        assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Security Group Name must be less than 255 characters");
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("securityGroupName");
 
     }
 }

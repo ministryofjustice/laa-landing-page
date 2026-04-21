@@ -31,7 +31,7 @@ public class HomePage {
     public HomePage(Page page) {
         this.page = page;
         this.header = page.locator("h1.govuk-heading-xl");
-        this.signOutLink = page.locator("a.govuk-header__link:has-text('Sign out')");
+        this.signOutLink = page.locator("a.moj-header__link:has-text('Sign out')");
         this.signOutConfirmButton = page.locator("button[type='submit']:has-text('Sign out')");
         this.manageUsersLink = page.locator("a.govuk-link:has-text('Manage your users')");
         this.silasAdministrationLink = page.locator("a.govuk-link:has-text('SiLAS Administration')");

@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -55,7 +56,6 @@ import uk.gov.justice.laa.portal.landingpage.forms.AppsOrderForm;
 import uk.gov.justice.laa.portal.landingpage.forms.DeleteAppRoleReasonForm;
 import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
-import uk.gov.justice.laa.portal.landingpage.service.AdminService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
 import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
@@ -85,7 +85,6 @@ public class AdminController {
 
     private final LoginService loginService;
     private final EventService eventService;
-    private final AdminService adminService;
     private final AppService appService;
     private final AppRoleService appRoleService;
     private final AccessControlService accessControlService;
@@ -109,7 +108,7 @@ public class AdminController {
         clearSessionAttributes(session);
 
         // Load all admin apps data for admin-apps tab
-        model.addAttribute("adminApps", adminService.getAllAdminApps());
+        model.addAttribute("adminApps", appService.getAllAuthzApps());
 
         // Load all apps data for apps tab
         List<AppDto> apps = appService.getAllLaaApps();
@@ -155,7 +154,7 @@ public class AdminController {
         clearSessionAttributes(session);
 
         // Load all admin apps data for admin-apps tab
-        model.addAttribute("adminApps", adminService.getAllAdminApps());
+        model.addAttribute("adminApps", appService.getAllAuthzApps());
 
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
         UserProfileDto userProfile = modelMapper.map(loginService.getCurrentProfile(authentication), UserProfileDto.class);
@@ -617,7 +616,11 @@ public class AdminController {
             }
 
             DeleteAppRoleReasonForm reasonForm = getObjectFromHttpSession(session, "deleteAppRoleReasonForm",
-                    DeleteAppRoleReasonForm.class).orElse(DeleteAppRoleReasonForm.builder().appRoleId(roleId).appName(appName).build());
+                    DeleteAppRoleReasonForm.class)
+                    .orElseGet(DeleteAppRoleReasonForm::new);
+            //update appRoleId because in session still have the old role id from the preview selection in case user change his mind in CYA screen
+            reasonForm.setAppRoleId(roleIdFromSession);
+            reasonForm.setAppName(appName);
             model.addAttribute("deleteAppRoleReasonForm", reasonForm);
             model.addAttribute("roleName", roleName);
             model.addAttribute("appName", appName);
@@ -810,16 +813,27 @@ public class AdminController {
 
     @GetMapping("/silas-administration/roles/create")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_LAA_APP_ROLE)")
-    public String showRoleCreationForm(Model model, HttpSession session) {
+    public String showRoleCreationForm(Model model, HttpSession session, @RequestParam String appFilter) {
         RoleCreationDto roleCreationDto = (RoleCreationDto) session.getAttribute("roleCreationDto");
         if (roleCreationDto == null) {
             roleCreationDto = new RoleCreationDto();
+        }
+
+        if (appFilter != null) {
+            List<AppDto> allApps = appService.getAllLaaApps();
+            for (AppDto app : allApps) {
+                if (app.getName().equals(appFilter)) {
+                    roleCreationDto.setParentAppId(UUID.fromString(app.getId()));
+                    break;
+                }
+            }
         }
 
         model.addAttribute("roleCreationDto", roleCreationDto);
         model.addAttribute("apps", appService.getAllLaaApps());
         model.addAttribute("userTypes", UserType.values());
         model.addAttribute("firmTypes", FirmType.values());
+        model.addAttribute("appFilter", appFilter);
 
         return "silas-administration/create-role";
     }
@@ -843,6 +857,7 @@ public class AdminController {
             model.addAttribute("apps", appService.getAllLaaApps());
             model.addAttribute("userTypes", UserType.values());
             model.addAttribute("firmTypes", FirmType.values());
+
             return "silas-administration/create-role";
         }
 
@@ -908,10 +923,10 @@ public class AdminController {
         AppRoleDto appRoleDto = appRoleService.findById(appRoleId).orElseThrow();
         List<AppRoleDto> assignableByRoles = appRoleService.getAssigningRolesFor(appRoleId);
         List<String> assigningRoleIds = assignableByRoles.stream().map(AppRoleDto::getId).toList();
-        List<AppRoleDto> allAuthzRoles = appRoleService.getAllAuthzRoles();
+        List<AppRoleDto> allAssigningRolesByAppType = appRoleService.getAllAssigningRoles(appRoleDto.getApp().getAppType());
 
         List<AppRoleViewModel> assigningRoleViewModels = getListFromHttpSession(session, "appRoleSelections", AppRoleViewModel.class)
-                .orElse(allAuthzRoles.stream()
+                .orElse(allAssigningRolesByAppType.stream()
                         .map(dto -> {
                             AppRoleViewModel viewModel = modelMapper.map(dto, AppRoleViewModel.class);
                             viewModel.setSelected(assigningRoleIds.contains(dto.getId()));

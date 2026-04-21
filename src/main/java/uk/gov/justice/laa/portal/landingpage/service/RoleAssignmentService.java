@@ -103,10 +103,6 @@ public class RoleAssignmentService {
         }
     }
 
-    private boolean isAuthzApp(App app) {
-        return app.getAppRoles().stream().anyMatch(AppRole::isAuthzRole);
-    }
-
     public Map<AppRoleDto, List<AppRoleDto>> getLaaAppRoleAssignmentRestrictions() {
 
         Map<AppRoleDto, List<AppRoleDto>> result = new HashMap<>();

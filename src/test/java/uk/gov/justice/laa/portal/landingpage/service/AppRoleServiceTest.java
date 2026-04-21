@@ -25,6 +25,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.AppRolesOrderForm;
@@ -46,7 +47,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -973,6 +978,116 @@ class AppRoleServiceTest {
     }
 
     @Test
+    void testCreateRole_WithSingleInternalUserType_CreatesSuccessfully() {
+        // Arrange
+        UUID appId = UUID.randomUUID();
+
+        App parentApp = App.builder()
+                .id(appId)
+                .name("Test App")
+                .build();
+
+        CurrentUserDto currentUser = new CurrentUserDto();
+        currentUser.setUserId(UUID.randomUUID());
+        currentUser.setName("Admin User");
+
+        when(appRepository.findById(appId)).thenReturn(Optional.of(parentApp));
+        when(appRoleRepository.findByName("Internal Role")).thenReturn(Optional.empty());
+
+        AppRole savedRole = AppRole.builder()
+                .id(UUID.randomUUID())
+                .name("Internal Role")
+                .description("Role for internal users only")
+                .userTypeRestriction(new UserType[]{UserType.INTERNAL})
+                .app(parentApp)
+                .build();
+
+        when(appRoleRepository.save(any(AppRole.class))).thenReturn(savedRole);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUser);
+
+        EntraUser mockEntraUser = EntraUser.builder()
+                .entraOid("test-entra-oid")
+                .userProfiles(Set.of(
+                        UserProfile.builder()
+                                .id(UUID.randomUUID())
+                                .activeProfile(true)
+                                .build()
+                ))
+                .build();
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(mockEntraUser);
+
+        // Act
+        RoleCreationDto dto = RoleCreationDto.builder()
+                .name("Internal Role")
+                .description("Role for internal users only")
+                .parentAppId(appId)
+                .userTypeRestriction(List.of(UserType.INTERNAL))
+                .legacySync(false)
+                .build();
+        appRoleService.createRole(dto);
+
+        // Assert
+        verify(appRoleRepository).save(any(AppRole.class));
+        verify(eventService).logEvent(any(RoleCreationAuditEvent.class));
+    }
+
+    @Test
+    void testCreateRole_WithSingleExternalUserType_CreatesSuccessfully() {
+        // Arrange
+        UUID appId = UUID.randomUUID();
+
+        App parentApp = App.builder()
+                .id(appId)
+                .name("Test App")
+                .build();
+
+        CurrentUserDto currentUser = new CurrentUserDto();
+        currentUser.setUserId(UUID.randomUUID());
+        currentUser.setName("Admin User");
+
+        when(appRepository.findById(appId)).thenReturn(Optional.of(parentApp));
+        when(appRoleRepository.findByName("External Role")).thenReturn(Optional.empty());
+
+        AppRole savedRole = AppRole.builder()
+                .id(UUID.randomUUID())
+                .name("External Role")
+                .description("Role for external users only")
+                .userTypeRestriction(new UserType[]{UserType.EXTERNAL})
+                .app(parentApp)
+                .build();
+
+        when(appRoleRepository.save(any(AppRole.class))).thenReturn(savedRole);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUser);
+
+        EntraUser mockEntraUser = EntraUser.builder()
+                .entraOid("test-entra-oid")
+                .userProfiles(Set.of(
+                        UserProfile.builder()
+                                .id(UUID.randomUUID())
+                                .activeProfile(true)
+                                .build()
+                ))
+                .build();
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(mockEntraUser);
+
+        // Act
+        RoleCreationDto dto = RoleCreationDto.builder()
+                .name("External Role")
+                .description("Role for external users only")
+                .parentAppId(appId)
+                .userTypeRestriction(List.of(UserType.EXTERNAL))
+                .legacySync(false)
+                .build();
+        appRoleService.createRole(dto);
+
+        // Assert
+        verify(appRoleRepository).save(any(AppRole.class));
+        verify(eventService).logEvent(any(RoleCreationAuditEvent.class));
+    }
+
+    @Test
     void testEnrichRoleCreationDto_SetsRandomId() {
         // Arrange
         UUID appId = UUID.randomUUID();
@@ -1038,6 +1153,116 @@ class AppRoleServiceTest {
 
         verify(appRoleRepository).findAssigningRolesFor(appRole.getId());
         verify(modelMapper).map(appRole, AppRoleDto.class);
+    }
+
+    @Test
+    void shouldReturnOnlyAuthzRolesWithInternalAssignPermission() {
+        AppRole internalRole = createRole("Internal Role", Permission.ASSIGN_INTERNAL_USER_ROLES);
+        AppRole externalRole = createRole("External Role", Permission.ASSIGN_EXTERNAL_USER_ROLES);
+
+        when(appRoleRepository.findAllAuthzRoles())
+                .thenReturn(List.of(internalRole, externalRole));
+
+        when(modelMapper.map(internalRole, AppRoleDto.class))
+                .thenReturn(new AppRoleDto());
+
+        List<AppRoleDto> result =
+                appRoleService.getAllAssigningRoles(AppType.AUTHZ);
+
+        assertEquals(1, result.size());
+        verify(modelMapper).map(internalRole, AppRoleDto.class);
+        verify(modelMapper, never()).map(externalRole, AppRoleDto.class);
+    }
+
+    @Test
+    void shouldReturnOnlyLaaRolesWithExternalAssignPermission() {
+        AppRole internalRole = createRole("Internal Role", Permission.ASSIGN_INTERNAL_USER_ROLES);
+        AppRole externalRole = createRole("External Role", Permission.ASSIGN_EXTERNAL_USER_ROLES);
+
+        when(appRoleRepository.findAllAuthzRoles())
+                .thenReturn(List.of(internalRole, externalRole));
+
+        when(modelMapper.map(externalRole, AppRoleDto.class))
+                .thenReturn(new AppRoleDto());
+
+        List<AppRoleDto> result =
+                appRoleService.getAllAssigningRoles(AppType.LAA);
+
+        assertEquals(1, result.size());
+        verify(modelMapper).map(externalRole, AppRoleDto.class);
+        verify(modelMapper, never()).map(internalRole, AppRoleDto.class);
+    }
+
+    @Test
+    void shouldReturnEmptyListForUnsupportedAppType() {
+        AppRole roles = createRole("Multi perm role",
+                Permission.ASSIGN_EXTERNAL_USER_ROLES,
+                Permission.REMOVE_EXTERNAL_USER_ROLES
+        );
+
+        when(appRoleRepository.findAllAuthzRoles())
+                .thenReturn(List.of(roles));
+
+        List<AppRoleDto> result =
+                appRoleService.getAllAssigningRoles(AppType.AUTHZ);
+
+        assertTrue(result.isEmpty());
+        verifyNoInteractions(modelMapper);
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenNoRolesExist() {
+        when(appRoleRepository.findAllAuthzRoles())
+                .thenReturn(List.of());
+
+        List<AppRoleDto> result =
+                appRoleService.getAllAssigningRoles(AppType.AUTHZ);
+
+        assertTrue(result.isEmpty());
+        verifyNoInteractions(modelMapper);
+    }
+
+    @Test
+    void shouldIgnoreRoleWithNoPermissions() {
+        AppRole role = mock(AppRole.class);
+        when(role.getPermissions()).thenReturn(Set.of());
+
+        when(appRoleRepository.findAllAuthzRoles())
+                .thenReturn(List.of(role));
+
+        List<AppRoleDto> result =
+                appRoleService.getAllAssigningRoles(AppType.AUTHZ);
+
+        assertTrue(result.isEmpty());
+        verifyNoInteractions(modelMapper);
+    }
+
+    @Test
+    void shouldReturnMultipleMatchingRoles() {
+        AppRole role1 = createRole("Role 1", Permission.ASSIGN_INTERNAL_USER_ROLES);
+        AppRole role2 = createRole("Role 2", Permission.ASSIGN_INTERNAL_USER_ROLES);
+
+        when(appRoleRepository.findAllAuthzRoles())
+                .thenReturn(List.of(role1, role2));
+
+        when(modelMapper.map(any(AppRole.class), eq(AppRoleDto.class)))
+                .thenReturn(new AppRoleDto());
+
+        List<AppRoleDto> result =
+                appRoleService.getAllAssigningRoles(AppType.AUTHZ);
+
+        assertEquals(2, result.size());
+        verify(modelMapper, times(2))
+                .map(any(AppRole.class), eq(AppRoleDto.class));
+    }
+
+    private AppRole createRole(String roleName, Permission... permissions) {
+        Set<Permission> permissionSet = Set.of(permissions);
+        return AppRole.builder()
+                .id(UUID.randomUUID())
+                .name(roleName)
+                .permissions(permissionSet)
+                .build();
     }
 
 }

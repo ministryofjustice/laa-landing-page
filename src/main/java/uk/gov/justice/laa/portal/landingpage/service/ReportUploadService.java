@@ -21,9 +21,18 @@ public class ReportUploadService {
     @Value("${report.sharepoint.site.id}")
     private String sharepointUrl;
 
+    @Value("${report.sharepoint.base.folder}")
+    private String baseFolder;
+
     private final GraphClientConfig graphClientConfig;
 
     public void uploadCsvToSharePoint(File file, String folderPath) throws FileNotFoundException {
+
+        if ("none".equalsIgnoreCase(baseFolder)) {
+            log.error("report.sharepoint.base.folder is set to 'none'. Upload aborted. Need a valid folder path to "
+                    + "upload report.");
+            return;
+        }
 
         FileInputStream fileInputStream = new FileInputStream(file);
 
@@ -42,13 +51,14 @@ public class ReportUploadService {
 
         String driveId = drive.getId();
 
+        String fullFolderPath = baseFolder + "/" + folderPath;
 
         try {
             DriveItem existing = graphClientConfig.graphUploadClient()
                 .drives()
                 .byDriveId(driveId)
                 .items()
-                .byDriveItemId("root:/" + folderPath + "/" + file.getName() + ":")
+                .byDriveItemId("root:/" + fullFolderPath + "/" + file.getName() + ":")
                 .get();
 
             if (existing != null) {
