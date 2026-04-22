@@ -1158,6 +1158,10 @@ public class UserService {
             EntraUser entraUser = optionalUser.get();
 
             try {
+                final UpdateUserInfoAuditEvent updateUserInfoAuditEvent = new UpdateUserInfoAuditEvent(
+                        entraUser, firstName, lastName, email,
+                        String.valueOf(currentUserProfile.getId()), currentUserProfile.getEntraUser().getEntraOid());
+
                 entraUser.setEmail(email);
                 entraUser.setFirstName(firstName);
                 entraUser.setLastName(lastName);
@@ -1167,9 +1171,6 @@ public class UserService {
                 if (response.isSuccess()) {
                     //update user information on database
                     entraUserRepository.saveAndFlush(entraUser);
-                    final UpdateUserInfoAuditEvent updateUserInfoAuditEvent = new UpdateUserInfoAuditEvent(
-                            entraUser, firstName, lastName, email,
-                            String.valueOf(currentUserProfile.getId()), currentUserProfile.getEntraUser().getEntraOid());
                     eventService.logEvent(updateUserInfoAuditEvent);
                     logger.info("Successfully updated user details in database for user ID: {}",
                             userId);
