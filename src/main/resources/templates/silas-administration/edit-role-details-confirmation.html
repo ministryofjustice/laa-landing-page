@@ -24,14 +24,17 @@
 
             <!-- Success Panel -->
             <div class="govuk-panel govuk-panel--confirmation">
-                <h1 class="govuk-panel__title">Role details updated successfully</h1>
+                <h1 class="govuk-panel__title">Role details are updated</h1>
+                <p>for <span th:text="${appRole.app.name}"></span></p>
             </div>
+
+            <p class="govuk-body">The updated roles and description will be now visible across the application</p>
 
             <br>
 
             <!-- Go Back Button -->
             <a class="govuk-button" data-module="govuk-button" th:href="@{'/admin/silas-administration'}">
-                Go back to app administration
+                Go back to SILAS administration
             </a>
 
         </div>

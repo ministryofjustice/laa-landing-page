@@ -37,22 +37,43 @@
                 <fieldset class="govuk-fieldset">
                     <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
                         <h1 class="govuk-fieldset__heading">
-                            Which of these services will <span th:text="${entraUser.firstName}"></span> <span
-                                th:text="${entraUser.lastName}"></span> need access?
+                            Which services does <span th:text="${entraUser.firstName}"></span> <span
+                                th:text="${entraUser.lastName}"></span> need access to?
                         </h1>
                     </legend>
                     <div id="offices-hint" class="govuk-hint">
                         Select all that apply
                     </div>
                     <p class="govuk-error-message" th:if="${#fields.hasErrors('apps')}" th:errors="*{apps}"></p>
-                    <div class="govuk-checkboxes govuk-!-padding-top-3" data-module="govuk-checkboxes">
-                        <div class="govuk-checkboxes__item" th:each="app : ${apps}">
-                            <input class="govuk-checkboxes__input" id="apps" name="apps" th:checked="${app.selected}"
-                                th:value="${app.id}" type="checkbox">
-                            <label class="govuk-label govuk-checkboxes__label" th:for="${app.id}">
-                                <span th:text="${app.name}"></span>
-                            </label>
-                        </div>
+
+                    <!-- Admin Services Section -->
+                    <h2 class="govuk-heading-m govuk-!-margin-top-6">Admin services</h2>
+                    <div class="govuk-checkboxes" data-module="govuk-checkboxes">
+                        <th:block th:each="app : ${apps}">
+                            <div class="govuk-checkboxes__item" th:if="${app.appType != null and app.appType.name() == 'AUTHZ'}">
+                                <input class="govuk-checkboxes__input" th:id="${app.id}" name="apps" th:checked="${app.selected}"
+                                    th:value="${app.id}" type="checkbox">
+                                <label class="govuk-label govuk-checkboxes__label" th:for="${app.id}">
+                                    <span th:text="${app.name}"></span>
+                                </label>
+                                <div class="govuk-hint govuk-checkboxes__hint" th:text="${app.description}"></div>
+                            </div>
+                        </th:block>
+                    </div>
+
+                    <!-- Legal Aid Services Section -->
+                    <h2 class="govuk-heading-m govuk-!-margin-top-6">Legal aid Services</h2>
+                    <div class="govuk-checkboxes" data-module="govuk-checkboxes">
+                        <th:block th:each="app : ${apps}">
+                            <div class="govuk-checkboxes__item" th:if="${app.appType != null and app.appType.name() == 'LAA'}">
+                                <input class="govuk-checkboxes__input" th:id="${app.id}" name="apps" th:checked="${app.selected}"
+                                    th:value="${app.id}" type="checkbox">
+                                <label class="govuk-label govuk-checkboxes__label" th:for="${app.id}">
+                                    <span th:text="${app.name}"></span>
+                                </label>
+                                <div class="govuk-hint govuk-checkboxes__hint" th:text="${app.description}"></div>
+                            </div>
+                        </th:block>
                     </div>
                 </fieldset>
             </div>
