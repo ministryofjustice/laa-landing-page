@@ -1784,7 +1784,6 @@ public class UserService {
                 .isMultiFirmUser(user.isMultiFirmUser()).profileCount(profileCount)
                 .createdDate(user.getCreatedDate()).createdBy(user.getCreatedBy())
                 // TODO: Fetch lastLoginDate from Microsoft Graph or Silas API
-                .lastLoginDate(null)
                 .entraStatus(user.getUserStatus() != null ? user.getUserStatus().name() : "UNKNOWN")
                 // TODO: Fetch activationStatus from TechServices API
                 .activationStatus(null).build();
@@ -2055,7 +2054,6 @@ public class UserService {
                 .isMultiFirmUser(entraUser.isMultiFirmUser()).userType(userType)
                 .createdDate(entraUser.getCreatedDate()).createdBy(entraUser.getCreatedBy())
                 // TODO: Fetch lastLoginDate from Microsoft Graph API
-                .lastLoginDate(null)
                 // TODO: Fetch activationStatus from TechServices API or SILAS API
                 .activationStatus(null)
                 .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
@@ -2129,7 +2127,6 @@ public class UserService {
                 .createdBy(entraUser.getCreatedBy())
                 .disabledBy(String.valueOf(entraUser.getDisabledBy()))
                 // TODO: Fetch lastLoginDate from Microsoft Graph API
-                .lastLoginDate(null)
                 .activationStatus(entraUser.getInvitationStatus() != null ? entraUser.getInvitationStatus().name() : null)
                 .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
                         : "UNKNOWN")
@@ -2185,7 +2182,6 @@ public class UserService {
                 .createdDate(entraUser.getCreatedDate()).createdBy(entraUser.getCreatedBy())
                 .disabledBy(String.valueOf(entraUser.getDisabledBy()))
                 // TODO: Fetch lastLoginDate from Microsoft Graph API
-                .lastLoginDate(null)
                 .activationStatus(entraUser.getInvitationStatus() != null ? entraUser.getInvitationStatus().name() : null)
                 .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
                         : "UNKNOWN")
