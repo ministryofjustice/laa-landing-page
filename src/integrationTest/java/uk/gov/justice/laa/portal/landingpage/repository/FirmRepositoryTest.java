@@ -341,9 +341,9 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
         user3 = entraUserRepository.saveAndFlush(user3);
 
         // Create firms
-        Firm firm1 = buildFirm("Firm Epsilon", "EPSILON");
-        Firm firm2 = buildFirm("Firm Zeta", "ZETA");
-        Firm firm3 = buildFirm("Firm Eta", "ETA");
+        Firm firm1 = buildFirm("Firm Epsilon", "30");
+        Firm firm2 = buildFirm("Firm Zeta", "2000");
+        Firm firm3 = buildFirm("Firm Eta", "11");
         repository.saveAllAndFlush(List.of(firm1, firm2, firm3));
 
 
@@ -371,9 +371,9 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
         assertThat(result)
                 .hasSize(3)
                 .containsExactlyInAnyOrder(
-                        new Object[]{"Firm Epsilon", "EPSILON", "ADVOCATE", null, 1L, 1L, 1L, 0L},
-                        new Object[]{"Firm Zeta", "ZETA", "ADVOCATE", null, 2L, 1L, 1L, 1L},
-                        new Object[]{"Firm Eta", "ETA", "ADVOCATE", null, 2L, 1L, 2L, 0L});
+                        new Object[]{"Firm Epsilon", "30", "ADVOCATE", null, 1L, 1L, 1L, 0L},
+                        new Object[]{"Firm Zeta", "2000", "ADVOCATE", null, 2L, 1L, 1L, 1L},
+                        new Object[]{"Firm Eta", "11", "ADVOCATE", null, 2L, 1L, 2L, 0L});
     }
 
 }
