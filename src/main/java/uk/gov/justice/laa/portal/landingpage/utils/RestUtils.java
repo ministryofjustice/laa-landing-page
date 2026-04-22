@@ -63,25 +63,16 @@ public class RestUtils {
     }
 
     @SuppressWarnings("unchecked")
-    public static <T> Optional<List<T>> getListFromHttpSession(
-            HttpSession session,
-            String key,
-            Class<T> elementType
-    ) {
+    public static <T> Optional<List<T>> getListFromHttpSession(HttpSession session, String key, Class<T> elementType) {
         Object value = session.getAttribute(key);
 
         if (value instanceof List<?> list
                 && (list.isEmpty() || list.stream().allMatch(o -> o == null || elementType.isInstance(o)))) {
-
-            // Optional: defensive copy to protect session state
             return Optional.of(new ArrayList<>((List<T>) list));
         }
 
-        log.debug(
-                "Session attribute '{}' is missing, not a List, or contains elements not of type {}",
-                key,
-                elementType.getSimpleName()
-        );
+        log.debug("Session attribute '{}' is missing, not a List, or contains elements not of type {}",
+                key, elementType.getSimpleName());
         return Optional.empty();
     }
 

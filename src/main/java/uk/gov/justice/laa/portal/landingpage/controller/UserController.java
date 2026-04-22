@@ -1236,15 +1236,15 @@ public class UserController {
 
         @SuppressWarnings("unchecked")
         Map<Integer, List<String>> editUserAllSelectedRoles =
-                (Map<Integer, List<String>>)getObjectFromHttpSession(session, "editUserAllSelectedRoles", Map.class)
+                (Map<Integer, List<String>>) getObjectFromHttpSession(session, "editUserAllSelectedRoles", Map.class)
                         .orElse(new HashMap<>());
         List<AppRoleDto> roles = List.of();
         List<AppRoleDto> userRoles = List.of();
 
-        for(int appIndex = currentSelectedAppIndex; appIndex < selectedApps.size(); appIndex++) {
+        while (currentSelectedAppIndex < selectedApps.size()) {
 
             FirmType userFirmType = user.getFirm() != null ? user.getFirm().getType() : null;
-            roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(appIndex),
+            roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
                     user.getUserType(), userFirmType);
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
             roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
@@ -1252,11 +1252,11 @@ public class UserController {
             userRoles = userService.getUserAppRolesByUserId(id);
 
             // Skip role selection if there is only one selectable role
-            if (roles.size() > 1) {
+            if (roles.size() != 1) {
                 break;
             }
 
-            editUserAllSelectedRoles.put(appIndex, roles.stream().map(AppRoleDto::getId).toList());
+            editUserAllSelectedRoles.put(currentSelectedAppIndex, roles.stream().map(AppRoleDto::getId).toList());
             session.setAttribute("editUserAllSelectedRoles", editUserAllSelectedRoles);
             currentSelectedAppIndex++;
             if (currentSelectedAppIndex >= selectedApps.size()) {
@@ -1454,7 +1454,7 @@ public class UserController {
             backUrl = "/admin/users/edit/" + id + "/apps";
         } else {
             int size = editUserAllSelectedRoles.size();
-            backUrl = getBackButtonUrl(id, session, size+1);
+            backUrl = getBackButtonUrl(id, session, size + 1);
             for (Integer key : editUserAllSelectedRoles.keySet()) {
                 String url = "/admin/users/edit/" + id + "/roles?selectedAppIndex=" + key;
                 if (Objects.nonNull(editUserAllSelectedRoles.get(key))
@@ -2055,28 +2055,26 @@ public class UserController {
             currentSelectedAppIndex = 0;
         }
 
-        //=========================================
-
         @SuppressWarnings("unchecked")
         Map<Integer, List<String>> allSelectedRolesByPage =
-                (Map<Integer, List<String>>)getObjectFromHttpSession(session, "grantAccessAllSelectedRoles", Map.class)
+                (Map<Integer, List<String>>) getObjectFromHttpSession(session, "grantAccessAllSelectedRoles", Map.class)
                         .orElse(new HashMap<>());
         List<AppRoleDto> roles = List.of();
 
-        for(int appIndex = currentSelectedAppIndex; appIndex < selectedApps.size(); appIndex++) {
+        while (currentSelectedAppIndex < selectedApps.size()) {
 
             FirmType userFirmType = user.getFirm() != null ? user.getFirm().getType() : null;
-            roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(appIndex),
+            roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
                     user.getUserType(), userFirmType);
             roles = roleAssignmentService.filterRoles(editorUserProfile.getAppRoles(),
                     roles.stream().map(role -> UUID.fromString(role.getId())).toList());
 
             // Skip role selection if there is only one selectable role
-            if (roles.size() > 1) {
+            if (roles.size() != 1) {
                 break;
             }
 
-            allSelectedRolesByPage.put(appIndex, roles.stream().map(AppRoleDto::getId).toList());
+            allSelectedRolesByPage.put(currentSelectedAppIndex, roles.stream().map(AppRoleDto::getId).toList());
             session.setAttribute("grantAccessAllSelectedRoles", allSelectedRolesByPage);
 
             Set<String> allSelectedRoles = allSelectedRolesByPage.values().stream().filter(Objects::nonNull)
