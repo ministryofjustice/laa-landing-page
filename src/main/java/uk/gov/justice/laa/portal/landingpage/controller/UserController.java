@@ -1092,7 +1092,6 @@ public class UserController {
         List<AppDto> editableApps = availableApps.stream()
                 .filter(AppDto::isEnabled)
                 .filter(app -> roleAssignmentService.canUserAssignRolesForApp(currentUserProfile, app))
-                .sorted()
                 .toList();
 
         @SuppressWarnings("unchecked")
@@ -1148,16 +1147,8 @@ public class UserController {
             HttpSession session) {
 
         // Handle case where no apps are selected (apps will be null)
-        List<String> unsortedApps = apps != null ? apps : new ArrayList<>();
-
-        // Sort selected apps by their ordinal to maintain consistent order
-        List<String> selectedApps = unsortedApps.stream()
-                .map(appId -> userService.getAppByAppId(appId).orElse(null))
-                .filter(Objects::nonNull)
-                .sorted()
-                .map(AppDto::getId)
-                .collect(Collectors.toList());
-
+        List<String> selectedApps = apps != null ? apps : new ArrayList<>();
+        
         // Get previous app selection to determine if roles need to be cleaned up
         List<String> previousSelectedApps = getListFromHttpSession(session, "selectedApps", String.class)
                 .orElse(new ArrayList<>());
@@ -1242,17 +1233,11 @@ public class UserController {
         }
         FirmType userFirmType = user.getFirm() != null ? user.getFirm().getType() : null;
 
-        String currentAppId = selectedApps.get(currentSelectedAppIndex);
-
-        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(currentAppId,
+        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
                 user.getUserType(), userFirmType);
         UserProfile editorProfile = loginService.getCurrentProfile(authentication);
-
-        if (!roles.isEmpty()) {
-            roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
-                    roles.stream().map(role -> UUID.fromString(role.getId())).toList());
-        }
-
+        roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
+                roles.stream().map(role -> UUID.fromString(role.getId())).toList());
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
         @SuppressWarnings("unchecked")
         Map<Integer, List<String>> editUserAllSelectedRoles = (Map<Integer, List<String>>) session
@@ -1267,6 +1252,7 @@ public class UserController {
         } else {
             selectedRoles = userRoles.stream().map(AppRoleDto::getId).collect(Collectors.toList());
         }
+        AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();
 
         List<AppRoleViewModel> appRoleViewModels = roles.stream()
                 .map(appRoleDto -> {
@@ -1276,17 +1262,10 @@ public class UserController {
                 }).sorted().toList();
         flagEditableAppRoles(id, appRoleViewModels);
 
-        // Get the current app details
-        AppDto currentApp = userService.getAppByAppId(currentAppId).orElseThrow(() ->
-            new IllegalArgumentException("App not found with ID: " + currentAppId));
-
         // Check if this is the CCMS app and organize roles by section
         boolean isCcmsApp = (currentApp.getName().contains("CCMS")
                 && !currentApp.getName().contains("CCMS case transfer requests"))
                 || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()));
-
-        // Apply CCMS filtering before storing in model
-        List<AppRoleViewModel> finalRoles = appRoleViewModels;
 
         if (isCcmsApp) {
             // Filter to only CCMS roles for organization
@@ -1294,35 +1273,15 @@ public class UserController {
                     .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()))
                     .sorted().collect(Collectors.toList());
 
-            Map<String, List<AppRoleViewModel>> organizedRoles;
-            Map<String, Boolean> organizedRoleDisplayFlags;
-
+            Map<String, List<AppRoleViewModel>> organizedRoles = new HashMap<>();
+            Map<String, Boolean> organizedRoleDisplayFlags = new HashMap<>();
             if (!ccmsRoles.isEmpty()) {
                 // Organize CCMS roles by section dynamically
-                organizedRoles = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
-                organizedRoleDisplayFlags =
-                        organizedRoles.entrySet().stream()
-                                .collect(Collectors.toMap(
-                                        Map.Entry::getKey,
-                                        e -> !e.getValue().isEmpty()
-                                ));
-                // Use filtered CCMS roles for both display and session storage
-                finalRoles = ccmsRoles;
-            } else {
-                // No CCMS roles found - initialize with empty maps to prevent NPE in template
-                organizedRoles = new LinkedHashMap<>();
-                organizedRoles.put("Provider", new ArrayList<>());
-                organizedRoles.put("Chambers", new ArrayList<>());
-                organizedRoles.put("Advocate", new ArrayList<>());
-                organizedRoles.put("Other", new ArrayList<>());
-
-                organizedRoleDisplayFlags = new HashMap<>();
-                organizedRoleDisplayFlags.put("Provider", false);
-                organizedRoleDisplayFlags.put("Chambers", false);
-                organizedRoleDisplayFlags.put("Advocate", false);
-                organizedRoleDisplayFlags.put("Other", false);
+                organizedRoles.putAll(CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles));
+                organizedRoles.keySet().stream()
+                        .forEach(section -> organizedRoleDisplayFlags.put(section, organizedRoles.get(section).stream()
+                                .anyMatch(role -> !role.isHiddenFromSelection())));
             }
-
             model.addAttribute("ccmsRolesBySection", organizedRoles);
             model.addAttribute("ccmsRoleDisplayFlags", organizedRoleDisplayFlags);
             model.addAttribute("isCcmsApp", true);
@@ -1331,7 +1290,7 @@ public class UserController {
         }
 
         model.addAttribute("user", user);
-        model.addAttribute("roles", finalRoles);
+        model.addAttribute("roles", appRoleViewModels);
         model.addAttribute("editUserRolesSelectedAppIndex", currentSelectedAppIndex);
         model.addAttribute("editUserRolesCurrentApp", currentApp);
 
@@ -1409,13 +1368,6 @@ public class UserController {
             model.addAttribute("editUserRolesSelectedAppIndex", selectedAppIndex);
             model.addAttribute("editUserRolesCurrentApp",
                     modelFromSession.getAttribute("editUserRolesCurrentApp"));
-
-            // Add CCMS attributes if this is a CCMS app
-            if (modelFromSession.getAttribute("isCcmsApp") != null) {
-                model.addAttribute("isCcmsApp", modelFromSession.getAttribute("isCcmsApp"));
-                model.addAttribute("ccmsRolesBySection", modelFromSession.getAttribute("ccmsRolesBySection"));
-                model.addAttribute("ccmsRoleDisplayFlags", modelFromSession.getAttribute("ccmsRoleDisplayFlags"));
-            }
 
             String rolesBackUrl = selectedAppIndex == 0
                     ? "/admin/users/edit/" + id + "/apps"
@@ -1959,7 +1911,6 @@ public class UserController {
         List<AppDto> editableApps = availableApps.stream()
                 .filter(AppDto::isEnabled)
                 .filter(app -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, app))
-                .sorted()
                 .toList();
 
         Optional<List<String>> selectedApps = getListFromHttpSession(session, "grantAccessSelectedApps", String.class);
@@ -2007,14 +1958,8 @@ public class UserController {
 
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
 
-        List<String> unsortedApps = applicationsForm.getApps() != null ? applicationsForm.getApps() : new ArrayList<>();
-
-        List<String> selectedApps = unsortedApps.stream()
-                .map(appId -> userService.getAppByAppId(appId).orElse(null))
-                .filter(Objects::nonNull)
-                .sorted()
-                .map(AppDto::getId)
-                .collect(Collectors.toList());
+        // Handle case where no apps are selected (apps will be null)
+        List<String> selectedApps = applicationsForm.getApps() != null ? applicationsForm.getApps() : new ArrayList<>();
 
         session.setAttribute("grantAccessSelectedApps", selectedApps);
         List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
@@ -2062,7 +2007,7 @@ public class UserController {
         if (selectedAppsOptional.isEmpty() || selectedAppsOptional.get().isEmpty()) {
             log.warn("No apps to assign while granting access to user {}. Redirecting to app selection.", id);
             redirectAttributes.addFlashAttribute("errorMessage", "You must select an app for assignment.");
-            return "redirect:/admin/users/grant-access/" + id + "/apps";
+            return "redirect:/users/grant-access/" + id + "/apps";
         }
 
         List<String> selectedApps = selectedAppsOptional.get();
@@ -2099,52 +2044,31 @@ public class UserController {
                 && !currentApp.getName().contains("CCMS case transfer requests"))
                 || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()));
 
-        // Apply CCMS filtering before storing in model/session
-        List<AppRoleViewModel> finalRoles = appRoleViewModels;
-
         if (isCcmsApp) {
             // Filter to only CCMS roles for organization
             List<AppRoleViewModel> ccmsRoles = appRoleViewModels.stream()
                     .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()))
                     .sorted().collect(Collectors.toList());
 
-            Map<String, List<AppRoleViewModel>> organizedRoles;
-            Map<String, Boolean> organizedRoleDisplayFlags;
-
             if (!ccmsRoles.isEmpty()) {
-                organizedRoles = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
-                organizedRoleDisplayFlags =
+                // Organize CCMS roles by section dynamically
+                Map<String, List<AppRoleViewModel>> organizedRoles = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
+                Map<String, Boolean> organizedRoleDisplayFlags =
                         organizedRoles.entrySet().stream()
                                 .collect(Collectors.toMap(
                                         Map.Entry::getKey,
-                                        e -> !e.getValue().isEmpty()
+                                        e -> e.getValue().stream().anyMatch(role -> !role.isHiddenFromSelection())
                                 ));
-                // Use filtered CCMS roles for both display and session storage
-                finalRoles = ccmsRoles;
-            } else {
-                // No CCMS roles found - initialize with empty maps to prevent NPE in template
-                organizedRoles = new LinkedHashMap<>();
-                organizedRoles.put("Provider", new ArrayList<>());
-                organizedRoles.put("Chambers", new ArrayList<>());
-                organizedRoles.put("Advocate", new ArrayList<>());
-                organizedRoles.put("Other", new ArrayList<>());
-
-                organizedRoleDisplayFlags = new HashMap<>();
-                organizedRoleDisplayFlags.put("Provider", false);
-                organizedRoleDisplayFlags.put("Chambers", false);
-                organizedRoleDisplayFlags.put("Advocate", false);
-                organizedRoleDisplayFlags.put("Other", false);
+                model.addAttribute("ccmsRolesBySection", organizedRoles);
+                model.addAttribute("ccmsRoleDisplayFlags", organizedRoleDisplayFlags);
             }
-
-            model.addAttribute("ccmsRolesBySection", organizedRoles);
-            model.addAttribute("ccmsRoleDisplayFlags", organizedRoleDisplayFlags);
             model.addAttribute("isCcmsApp", true);
         } else {
             model.addAttribute("isCcmsApp", false);
         }
 
         model.addAttribute("user", user);
-        model.addAttribute("roles", finalRoles);
+        model.addAttribute("roles", appRoleViewModels);
         model.addAttribute("grantAccessSelectedAppIndex", currentSelectedAppIndex);
         model.addAttribute("grantAccessCurrentApp", currentApp);
 
@@ -2187,12 +2111,6 @@ public class UserController {
             model.addAttribute("grantAccessSelectedAppIndex",
                     modelFromSession.getAttribute("grantAccessSelectedAppIndex"));
             model.addAttribute("grantAccessCurrentApp", modelFromSession.getAttribute("grantAccessCurrentApp"));
-
-            if (modelFromSession.getAttribute("isCcmsApp") != null) {
-                model.addAttribute("isCcmsApp", modelFromSession.getAttribute("isCcmsApp"));
-                model.addAttribute("ccmsRolesBySection", modelFromSession.getAttribute("ccmsRolesBySection"));
-                model.addAttribute("ccmsRoleDisplayFlags", modelFromSession.getAttribute("ccmsRoleDisplayFlags"));
-            }
 
             return "grant-access-user-roles";
         }

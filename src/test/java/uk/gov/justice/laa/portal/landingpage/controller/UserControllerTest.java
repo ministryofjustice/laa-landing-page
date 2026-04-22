@@ -1538,10 +1538,6 @@ class UserControllerTest {
         List<String> apps = List.of(appId.toString());
         HttpSession session = new MockHttpSession();
 
-        // Mock AppDto object with ordinal for sorting
-        AppDto app = AppDto.builder().id(appId.toString()).ordinal(1).build();
-        when(userService.getAppByAppId(appId.toString())).thenReturn(Optional.of(app));
-
         // When
         RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), apps, session);
 
@@ -1601,12 +1597,6 @@ class UserControllerTest {
         
         MockHttpSession session = new MockHttpSession();
         
-        // Mock AppDto objects with ordinals for sorting (only for selected apps)
-        AppDto app1 = AppDto.builder().id(app1Id).ordinal(1).build();
-        AppDto app3 = AppDto.builder().id(app3Id).ordinal(3).build();
-        when(userService.getAppByAppId(app1Id)).thenReturn(Optional.of(app1));
-        when(userService.getAppByAppId(app3Id)).thenReturn(Optional.of(app3));
-
         // Setup initial state: 3 apps selected with role data
         session.setAttribute("selectedApps", List.of(app1Id, app2Id, app3Id));
         Map<Integer, List<String>> existingRoles = new HashMap<>();
@@ -1644,12 +1634,6 @@ class UserControllerTest {
         
         MockHttpSession session = new MockHttpSession();
         
-        // Mock AppDto objects with ordinals for sorting
-        AppDto app1 = AppDto.builder().id(app1Id).ordinal(1).build();
-        AppDto app2 = AppDto.builder().id(app2Id).ordinal(2).build();
-        when(userService.getAppByAppId(app1Id)).thenReturn(Optional.of(app1));
-        when(userService.getAppByAppId(app2Id)).thenReturn(Optional.of(app2));
-
         // Setup initial state: no previous selectedApps or role data
         List<String> newApps = List.of(app1Id, app2Id);
         
@@ -2180,11 +2164,6 @@ class UserControllerTest {
         String userId = "550e8400-e29b-41d4-a716-446655440000"; // Valid UUID
         List<String> apps = List.of("app1", "app2");
         MockHttpSession testSession = new MockHttpSession();
-
-        AppDto app1 = AppDto.builder().id("app1").ordinal(1).build();
-        AppDto app2 = AppDto.builder().id("app2").ordinal(2).build();
-        when(userService.getAppByAppId("app1")).thenReturn(Optional.of(app1));
-        when(userService.getAppByAppId("app2")).thenReturn(Optional.of(app2));
 
         // When
         RedirectView redirectView = userController.setSelectedAppsEdit(userId, apps, testSession);
@@ -3822,6 +3801,7 @@ class UserControllerTest {
         when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of());
 
         // When - passing selectedAppIndex of 5 which is out of bounds
         String view = userController.editUserRoles(userId, 5, new RolesForm(), null, authentication, model,
@@ -4367,19 +4347,14 @@ class UserControllerTest {
     @Test
     void grantAccessSetSelectedApps_shouldRedirectToRolesWhenAppsSelected() {
         // Given
+        String userId = "550e8400-e29b-41d4-a716-446655440000";
         ApplicationsForm applicationsForm = new ApplicationsForm();
         applicationsForm.setApps(List.of("app1", "app2"));
         MockHttpSession testSession = new MockHttpSession();
         BindingResult bindingResult = Mockito.mock(BindingResult.class);
         when(bindingResult.hasErrors()).thenReturn(false);
 
-        AppDto app1 = AppDto.builder().id("app1").ordinal(1).build();
-        AppDto app2 = AppDto.builder().id("app2").ordinal(2).build();
-        when(userService.getAppByAppId("app1")).thenReturn(Optional.of(app1));
-        when(userService.getAppByAppId("app2")).thenReturn(Optional.of(app2));
-
         // When
-        String userId = "550e8400-e29b-41d4-a716-446655440000";
         String result = userController.grantAccessSetSelectedApps(userId, applicationsForm, bindingResult,
                 authentication, model, testSession);
 
@@ -4576,7 +4551,7 @@ class UserControllerTest {
                 testSession, redirectAttributes);
 
         // Then
-        assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/apps");
+        assertThat(view).isEqualTo("redirect:/users/grant-access/" + userId + "/apps");
 
     }
 
@@ -5298,14 +5273,10 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("edit-user-roles");
         assertThat(model.getAttribute("isCcmsApp")).isEqualTo(true);
-        // When no CCMS roles exist, should have empty map with all sections initialized
         assertThat(model.getAttribute("ccmsRolesBySection")).isNotNull();
-        Map<String, List<AppRoleViewModel>> ccmsRolesBySection = (Map<String, List<AppRoleViewModel>>) model.getAttribute("ccmsRolesBySection");
-        assertThat(ccmsRolesBySection).containsKeys("Provider", "Chambers", "Advocate", "Other");
-        assertThat(ccmsRolesBySection.get("Provider")).isEmpty();
-        assertThat(ccmsRolesBySection.get("Chambers")).isEmpty();
-        assertThat(ccmsRolesBySection.get("Advocate")).isEmpty();
-        assertThat(ccmsRolesBySection.get("Other")).isEmpty();
+        Map<String, List<AppRoleDto>> ccmsRolesBySection = (Map<String, List<AppRoleDto>>) model
+                .getAttribute("ccmsRolesBySection");
+        assertThat(ccmsRolesBySection).isEmpty(); // No CCMS roles to organize
     }
 
     @Test
@@ -5622,14 +5593,7 @@ class UserControllerTest {
         // Then
         assertThat(view).isEqualTo("grant-access-user-roles");
         assertThat(model.getAttribute("isCcmsApp")).isEqualTo(true);
-        // When no CCMS roles exist, should have empty map with all sections initialized
-        assertThat(model.getAttribute("ccmsRolesBySection")).isNotNull();
-        Map<String, List<AppRoleViewModel>> ccmsRolesBySection = (Map<String, List<AppRoleViewModel>>) model.getAttribute("ccmsRolesBySection");
-        assertThat(ccmsRolesBySection).containsKeys("Provider", "Chambers", "Advocate", "Other");
-        assertThat(ccmsRolesBySection.get("Provider")).isEmpty();
-        assertThat(ccmsRolesBySection.get("Chambers")).isEmpty();
-        assertThat(ccmsRolesBySection.get("Advocate")).isEmpty();
-        assertThat(ccmsRolesBySection.get("Other")).isEmpty();
+        assertThat(model.getAttribute("ccmsRolesBySection")).isNull(); // No CCMS roles to organize
     }
 
     @Test
@@ -5827,58 +5791,6 @@ class UserControllerTest {
         assertThat(view).isEqualTo("grant-access-user-roles");
         assertThat(model.getAttribute("isCcmsApp")).isEqualTo(false);
         assertThat(model.getAttribute("ccmsRolesBySection")).isNull();
-    }
-
-    @Test
-    void grantAccessEditUserRoles_shouldFilterRolesInMainRolesAttribute() {
-        // Given
-        final String userId = UUID.randomUUID().toString();
-        UserProfileDto user = new UserProfileDto();
-        user.setId(UUID.fromString(userId));
-        user.setUserType(UserType.EXTERNAL);
-
-        AppDto ccmsApp = new AppDto();
-        ccmsApp.setId(UUID.randomUUID().toString());
-        ccmsApp.setName("Apply for civil legal aid using CCMS");
-
-        // Create roles - mix of CCMS and non-CCMS roles
-        List<AppRoleDto> roles = List.of(
-                createAppRoleDto(UUID.randomUUID().toString(), "CCMS Role 1", "XXCCMS_FIRM_ADMIN"),  // CCMS role
-                createAppRoleDto(UUID.randomUUID().toString(), "Non-CCMS Role", null),               // Non-CCMS role
-                createAppRoleDto(UUID.randomUUID().toString(), "CCMS Role 2", "XXCCMS_ADVOCATE")     // CCMS role
-        );
-
-        MockHttpSession testSession = new MockHttpSession();
-        testSession.setAttribute("grantAccessSelectedApps", List.of(ccmsApp.getId()));
-
-        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
-        when(userService.getAppRolesByAppIdAndUserType(ccmsApp.getId(), UserType.EXTERNAL, null)).thenReturn(roles);
-        when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
-        when(userService.getAppByAppId(ccmsApp.getId())).thenReturn(Optional.of(ccmsApp));
-        when(loginService.getCurrentProfile(authentication)).thenReturn(createUserProfile());
-        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
-        when(accessControlService.canAssignExternalAppRoles(userId)).thenReturn(true);
-
-        // When
-        String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
-                testSession, redirectAttributes);
-
-        // Then
-        assertThat(view).isEqualTo("grant-access-user-roles");
-        assertThat(model.getAttribute("isCcmsApp")).isEqualTo(true);
-
-        @SuppressWarnings("unchecked")
-        List<AppRoleViewModel> rolesInModel = (List<AppRoleViewModel>) model.getAttribute("roles");
-        assertThat(rolesInModel).hasSize(2);
-        assertThat(rolesInModel.stream().map(AppRoleViewModel::getName))
-                .containsExactlyInAnyOrder("CCMS Role 1", "CCMS Role 2");
-
-        Model sessionModel = (Model) testSession.getAttribute("grantAccessUserRolesModel");
-        @SuppressWarnings("unchecked")
-        List<AppRoleViewModel> sessionRoles = (List<AppRoleViewModel>) sessionModel.getAttribute("roles");
-        assertThat(sessionRoles).hasSize(2);
-        assertThat(sessionRoles.stream().map(AppRoleViewModel::getName))
-                .containsExactlyInAnyOrder("CCMS Role 1", "CCMS Role 2");
     }
 
     @Test
@@ -6792,23 +6704,6 @@ class UserControllerTest {
 
         Assertions.assertEquals("disable-user-reason", view);
         Assertions.assertEquals("There was an error\nThere was another error", model.getAttribute("errorMessage"));
-    }
-
-    private AppRoleDto createAppRoleDto(String id, String name, String ccmsCode) {
-        AppRoleDto role = new AppRoleDto();
-        role.setId(id);
-        role.setName(name);
-        role.setCcmsCode(ccmsCode);
-        role.setUserTypeRestriction(new UserType[] { UserType.EXTERNAL });
-        return role;
-    }
-
-    private UserProfile createUserProfile() {
-        return UserProfile.builder()
-                .id(UUID.randomUUID())
-                .userType(UserType.EXTERNAL)
-                .appRoles(Set.of())
-                .build();
     }
 
     @Nested
@@ -7755,56 +7650,6 @@ class UserControllerTest {
 
             assertThat(view).isEqualTo("edit-user-roles");
             verify(userService).getAppRolesByAppIdAndUserType("app-id-1", UserType.EXTERNAL, null);
-        }
-
-        @Test
-        public void testEditUserRoles_shouldFilterRolesInMainRolesAttribute() {
-            // Given
-            MockHttpSession testSession = new MockHttpSession();
-
-            AppDto ccmsApp = new AppDto();
-            ccmsApp.setId(UUID.randomUUID().toString());
-            ccmsApp.setName("Apply for civil legal aid using CCMS");
-            
-            testSession.setAttribute("selectedApps", List.of(ccmsApp.getId()));
-
-            List<AppRoleDto> roles = List.of(
-                    createAppRoleDto(UUID.randomUUID().toString(), "CCMS Role 1", "XXCCMS_FIRM_ADMIN"),
-                    createAppRoleDto(UUID.randomUUID().toString(), "Non-CCMS Role", null),
-                    createAppRoleDto(UUID.randomUUID().toString(), "CCMS Role 2", "XXCCMS_ADVOCATE")
-            );
-            UUID userId = UUID.randomUUID();
-            UserProfileDto user = UserProfileDto.builder()
-                    .id(userId)
-                    .userType(UserType.EXTERNAL)
-                    .build();
-
-            when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.of(user));
-            when(userService.getAppRolesByAppIdAndUserType(ccmsApp.getId(), UserType.EXTERNAL, null)).thenReturn(roles);
-            when(userService.getUserAppRolesByUserId(userId.toString())).thenReturn(List.of());
-            when(userService.getAppByAppId(ccmsApp.getId())).thenReturn(Optional.of(ccmsApp));
-            when(loginService.getCurrentProfile(authentication)).thenReturn(createUserProfile());
-            when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
-
-            // When
-            String view = userController.editUserRoles(userId.toString(), 0, new RolesForm(), null, authentication, model, testSession);
-
-            // Then
-            assertThat(view).isEqualTo("edit-user-roles");
-            assertThat(model.getAttribute("isCcmsApp")).isEqualTo(true);
-
-            @SuppressWarnings("unchecked")
-            List<AppRoleViewModel> rolesInModel = (List<AppRoleViewModel>) model.getAttribute("roles");
-            assertThat(rolesInModel).hasSize(2); // Only 2 CCMS roles
-            assertThat(rolesInModel.stream().map(AppRoleViewModel::getName))
-                    .containsExactlyInAnyOrder("CCMS Role 1", "CCMS Role 2");
-
-            Model sessionModel = (Model) testSession.getAttribute("editProfileUserRolesModel");
-            @SuppressWarnings("unchecked")
-            List<AppRoleViewModel> sessionRoles = (List<AppRoleViewModel>) sessionModel.getAttribute("roles");
-            assertThat(sessionRoles).hasSize(2); // Session should also have filtered roles
-            assertThat(sessionRoles.stream().map(AppRoleViewModel::getName))
-                    .containsExactlyInAnyOrder("CCMS Role 1", "CCMS Role 2");
         }
 
         @Test

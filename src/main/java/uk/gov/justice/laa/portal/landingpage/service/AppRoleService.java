@@ -8,8 +8,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -54,7 +52,8 @@ public class AppRoleService {
     private final ModelMapper modelMapper;
     private final RoleAssignmentRepository roleAssignmentRepository;
     private final UserProfileRepository userProfileRepository;
-    private final EntityManager entityManager;
+
+
 
     public List<AppRoleDto> getByIds(Collection<String> ids) {
 
@@ -143,8 +142,6 @@ public class AppRoleService {
         // Delete role permissions
         appRoleRepository.deleteRolePermissions(id);
 
-        entityManager.flush();
-        entityManager.clear();
         // Delete role
         appRoleRepository.delete(appRole);
 

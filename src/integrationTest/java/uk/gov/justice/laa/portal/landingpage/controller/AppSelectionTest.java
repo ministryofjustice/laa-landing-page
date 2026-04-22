@@ -103,7 +103,7 @@ public class AppSelectionTest extends BaseIntegrationTest {
         accessedUser = entraUserRepository.saveAndFlush(accessedUser);
         UserProfile accessedUserProfile = accessedUser.getUserProfiles().stream().findFirst().orElseThrow();
         String path = String.format("/admin/users/edit/%s/apps", accessedUserProfile.getId());
-        String[] selectedApps = { testAppRole.getApp().getId().toString() };
+        String[] selectedApps = { UUID.randomUUID().toString() };
         MvcResult result = mockMvc.perform(MockMvcRequestBuilders.post(path)
                 .with(defaultOauth2Login(loggedInUser))
                 .with(csrf())

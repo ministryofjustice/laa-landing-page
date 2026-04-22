@@ -24,6 +24,7 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.Assertions;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -2012,9 +2013,6 @@ class UserServiceTest {
         void updateUserDetails_updatesDatabase_whenUserExists() throws IOException {
             // Arrange
             UUID userId = UUID.randomUUID();
-            String oldFirstName = "Jane";
-            String oldLastName = "Doe";
-            String oldEmail = "old@example.com";
             String firstName = "John";
             String lastName = "Doe";
             String email = "email@example.com";
@@ -2022,9 +2020,9 @@ class UserServiceTest {
             EntraUser entraUser = EntraUser.builder()
                     .id(userId)
                     .entraOid(String.valueOf(userId))
-                    .firstName(oldFirstName)
-                    .lastName(oldLastName)
-                    .email(oldEmail)
+                    .firstName(firstName)
+                    .lastName(lastName)
+                    .email(email)
                     .build();
 
             when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
@@ -2062,7 +2060,7 @@ class UserServiceTest {
             verify(mockEventService).logEvent(captorUpdateUserInfoAuditEvent.capture());
             UpdateUserInfoAuditEvent updateUserAuditEvent = captorUpdateUserInfoAuditEvent.getValue();
             assertThat(updateUserAuditEvent.getDescription()).isEqualTo(String.format("""
-                    User details updated for existing user entra oid: %s by user entra oid: %s profile id: %s. Fields changed: firstName, email
+                    User details updated for existing user entra oid: %s by user entra oid: %s profile id: %s
                     """, userId, userProfileId, userProfileId));
             assertThat(updateUserAuditEvent.getEventType()).isEqualTo(EventType.UPDATE_USER);
         }
@@ -2071,7 +2069,6 @@ class UserServiceTest {
         void updateUserDetails_throwsIoException_whenDatabaseUpdateFails() {
             // Arrange
             UUID userId = UUID.randomUUID();
-            UUID profileId = UUID.randomUUID();
             EntraUser entraUser = EntraUser.builder().id(userId).build();
             when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
             when(mockEntraUserRepository.saveAndFlush(any())).thenThrow(new RuntimeException("DB error"));
@@ -2079,8 +2076,7 @@ class UserServiceTest {
                     .thenReturn(TechServicesApiResponse
                             .success(ChangeAccountEnabledResponse.builder().success(true).build()));
             UserProfile userProfile = UserProfile.builder()
-                    .id(profileId)
-                    .entraUser(EntraUser.builder().id(profileId).entraOid(String.valueOf(profileId)).build())
+                    .id(UUID.randomUUID())
                     .build();
             // Act & Assert
             IOException exception = Assertions.assertThrows(IOException.class,
@@ -2092,7 +2088,6 @@ class UserServiceTest {
         void updateUserDetails_throwsIoException_whenTechServiceFails() {
             // Arrange
             UUID userId = UUID.randomUUID();
-            UUID profileId = UUID.randomUUID();
             EntraUser entraUser = EntraUser.builder().id(userId).build();
             when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
             when(techServicesClient.updateUserDetails(any(), any(), any(), any()))
@@ -2103,8 +2098,7 @@ class UserServiceTest {
                                     .code("400")
                                     .build()));
             UserProfile userProfile = UserProfile.builder()
-                    .id(profileId)
-                    .entraUser(EntraUser.builder().id(profileId).entraOid(String.valueOf(profileId)).build())
+                    .id(UUID.randomUUID())
                     .build();
             // Act & Assert
             IOException exception = Assertions.assertThrows(IOException.class,
@@ -7354,7 +7348,7 @@ class UserServiceTest {
     class GetAuditUsersDormantFiltersTests {
 
         private EntraUser buildUser(UUID id, String firstName, String lastName, String email,
-                InvitationStatus invitationStatus) {
+                LocalDateTime lastLoginDate, InvitationStatus invitationStatus) {
             return EntraUser.builder()
                     .id(id)
                     .firstName(firstName)
@@ -7362,6 +7356,7 @@ class UserServiceTest {
                     .email(email)
                     .userStatus(UserStatus.ACTIVE)
                     .multiFirmUser(false)
+                    .lastLoginDate(lastLoginDate)
                     .invitationStatus(invitationStatus)
                     .userProfiles(new HashSet<>())
                     .build();
@@ -7373,7 +7368,7 @@ class UserServiceTest {
             LocalDate cutoffDate = LocalDate.of(2025, 1, 1);
             UUID userId = UUID.randomUUID();
             EntraUser user = buildUser(userId, "Old", "User", "old@example.com",
-                    InvitationStatus.VERIFICATION_SUCCESS);
+                    LocalDateTime.of(2024, 6, 1, 0, 0), InvitationStatus.VERIFICATION_SUCCESS);
 
             Page<EntraUser> userPage = new PageImpl<>(List.of(user), PageRequest.of(0, 10), 1);
 
@@ -7402,7 +7397,7 @@ class UserServiceTest {
             // Given
             UUID userId = UUID.randomUUID();
             EntraUser user = buildUser(userId, "Active", "User", "active@example.com",
-                    InvitationStatus.VERIFICATION_SUCCESS);
+                    LocalDateTime.now(), InvitationStatus.VERIFICATION_SUCCESS);
 
             Page<EntraUser> userPage = new PageImpl<>(List.of(user), PageRequest.of(0, 10), 1);
 
@@ -7431,7 +7426,7 @@ class UserServiceTest {
             // Given
             UUID userId = UUID.randomUUID();
             EntraUser user = buildUser(userId, "Never", "Activated", "never@example.com",
-                    InvitationStatus.INVITE_SENT);
+                    null, InvitationStatus.INVITE_SENT);
 
             Page<EntraUser> userPage = new PageImpl<>(List.of(user), PageRequest.of(0, 10), 1);
 
@@ -7460,7 +7455,7 @@ class UserServiceTest {
             // Given
             UUID userId = UUID.randomUUID();
             EntraUser user = buildUser(userId, "Verified", "User", "verified@example.com",
-                    InvitationStatus.VERIFICATION_SUCCESS);
+                    LocalDateTime.now(), InvitationStatus.VERIFICATION_SUCCESS);
 
             Page<EntraUser> userPage = new PageImpl<>(List.of(user), PageRequest.of(0, 10), 1);
 
@@ -7490,7 +7485,7 @@ class UserServiceTest {
             LocalDate cutoffDate = LocalDate.of(2025, 6, 1);
             UUID userId = UUID.randomUUID();
             EntraUser user = buildUser(userId, "Dormant", "User", "dormant@example.com",
-                    InvitationStatus.INVITE_SENT);
+                    LocalDateTime.of(2024, 1, 1, 0, 0), InvitationStatus.INVITE_SENT);
 
             Page<EntraUser> userPage = new PageImpl<>(List.of(user), PageRequest.of(0, 10), 1);
 
@@ -8538,6 +8533,9 @@ class UserServiceTest {
             assertThat(result.getDisabledBy())
                     .isEqualTo(String.valueOf(user.getDisabledBy()));
 
+            assertThat(result.getLastLoginDate())
+                    .isNull();
+
             assertThat(result.getActivationStatus())
                     .isNull();
 
@@ -8631,6 +8629,9 @@ class UserServiceTest {
 
             assertThat(result.getDisabledBy())
                     .isEqualTo(String.valueOf(user.getDisabledBy()));
+
+            assertThat(result.getLastLoginDate())
+                    .isNull();
 
             assertThat(result.getActivationStatus())
                     .isNull();
