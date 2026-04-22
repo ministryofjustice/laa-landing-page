@@ -1285,6 +1285,9 @@ public class UserController {
                 && !currentApp.getName().contains("CCMS case transfer requests"))
                 || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()));
 
+        // Apply CCMS filtering before storing in model
+        List<AppRoleViewModel> finalRoles = appRoleViewModels;
+
         if (isCcmsApp) {
             // Filter to only CCMS roles for organization
             List<AppRoleViewModel> ccmsRoles = appRoleViewModels.stream()
@@ -1303,6 +1306,8 @@ public class UserController {
                                         Map.Entry::getKey,
                                         e -> !e.getValue().isEmpty()
                                 ));
+                // Use filtered CCMS roles for both display and session storage
+                finalRoles = ccmsRoles;
             } else {
                 // No CCMS roles found - initialize with empty maps to prevent NPE in template
                 organizedRoles = new LinkedHashMap<>();
@@ -1326,7 +1331,7 @@ public class UserController {
         }
 
         model.addAttribute("user", user);
-        model.addAttribute("roles", appRoleViewModels);
+        model.addAttribute("roles", finalRoles);
         model.addAttribute("editUserRolesSelectedAppIndex", currentSelectedAppIndex);
         model.addAttribute("editUserRolesCurrentApp", currentApp);
 
@@ -2094,6 +2099,9 @@ public class UserController {
                 && !currentApp.getName().contains("CCMS case transfer requests"))
                 || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()));
 
+        // Apply CCMS filtering before storing in model/session
+        List<AppRoleViewModel> finalRoles = appRoleViewModels;
+
         if (isCcmsApp) {
             // Filter to only CCMS roles for organization
             List<AppRoleViewModel> ccmsRoles = appRoleViewModels.stream()
@@ -2111,6 +2119,8 @@ public class UserController {
                                         Map.Entry::getKey,
                                         e -> !e.getValue().isEmpty()
                                 ));
+                // Use filtered CCMS roles for both display and session storage
+                finalRoles = ccmsRoles;
             } else {
                 // No CCMS roles found - initialize with empty maps to prevent NPE in template
                 organizedRoles = new LinkedHashMap<>();
@@ -2134,7 +2144,7 @@ public class UserController {
         }
 
         model.addAttribute("user", user);
-        model.addAttribute("roles", appRoleViewModels);
+        model.addAttribute("roles", finalRoles);
         model.addAttribute("grantAccessSelectedAppIndex", currentSelectedAppIndex);
         model.addAttribute("grantAccessCurrentApp", currentApp);
 
