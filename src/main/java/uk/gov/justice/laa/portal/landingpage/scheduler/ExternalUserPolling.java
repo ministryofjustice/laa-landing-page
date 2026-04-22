@@ -34,7 +34,7 @@ public class ExternalUserPolling {
      * Scheduled task that runs at configurable intervals to update the EntraLastSyncMetadata.
      * This tracks the last successful sync operation and updates the metadata accordingly.
      */
-    @Scheduled(cron = "${external.user.polling.schedule}")
+    @Scheduled(fixedRateString = "${external.user.polling.interval}")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void poll() {
         if (pollingEnabled) {

@@ -87,6 +87,11 @@ public class AuditUserDto implements Serializable {
     private String createdBy;
 
     /**
+     * Last login date from Graph API signInActivity
+     */
+    private LocalDateTime lastLoginDate;
+
+    /**
      * Entra status from EntraUser.userStatus enum
      */
     private String entraStatus;

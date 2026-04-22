@@ -813,7 +813,7 @@ public class AdminController {
 
     @GetMapping("/silas-administration/roles/create")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_LAA_APP_ROLE)")
-    public String showRoleCreationForm(Model model, HttpSession session, @RequestParam (required = false) String appFilter) {
+    public String showRoleCreationForm(Model model, HttpSession session, @RequestParam String appFilter) {
         RoleCreationDto roleCreationDto = (RoleCreationDto) session.getAttribute("roleCreationDto");
         if (roleCreationDto == null) {
             roleCreationDto = new RoleCreationDto();

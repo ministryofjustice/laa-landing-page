@@ -129,7 +129,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     public void testSecurityResponseCannotAssignInternalUserManagerRoleToExternalUser() throws Exception {
         EntraUser loggedInUser = securityResponseUsers.getFirst();
         EntraUser editedUser = externalUsersNoRoles.getFirst();
-        assertNoAppRoleSelectionAllowed(loggedInUser, editedUser);
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.INTERNAL_USER_MANAGER.getRoleName(), false);
     }
 
     @Test
@@ -137,7 +137,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     public void testSecurityResponseCannotAssignInternalUserManagerRoleToInternalUser() throws Exception {
         EntraUser loggedInUser = securityResponseUsers.getFirst();
         EntraUser editedUser = internalUsersNoRoles.getFirst();
-        assertNoAppRoleSelectionAllowed(loggedInUser, editedUser);
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.INTERNAL_USER_MANAGER.getRoleName(), false, true);
     }
 
     @Test
@@ -145,7 +145,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     public void testSecurityResponseCannotAssignExternalUserManagerRoleToInternalUser() throws Exception {
         EntraUser loggedInUser = securityResponseUsers.getFirst();
         EntraUser editedUser = internalUsersNoRoles.getFirst();
-        assertNoAppRoleSelectionAllowed(loggedInUser, editedUser);
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.EXTERNAL_USER_MANAGER.getRoleName(), false, true);
     }
 
     @Test
@@ -153,7 +153,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     public void testSecurityResponseCannotAssignExternalUserManagerRoleToExternalUser() throws Exception {
         EntraUser loggedInUser = securityResponseUsers.getFirst();
         EntraUser editedUser = externalUsersNoRoles.getFirst();
-        assertNoAppRoleSelectionAllowed(loggedInUser, editedUser);
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.EXTERNAL_USER_MANAGER.getRoleName(), false);
     }
 
     @Test
@@ -161,7 +161,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     public void testSecurityResponseCannotAssignFirmUserManagerRoleToExternalUser() throws Exception {
         EntraUser loggedInUser = securityResponseUsers.getFirst();
         EntraUser editedUser = externalUsersNoRoles.getFirst();
-        assertNoAppRoleSelectionAllowed(loggedInUser, editedUser);
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.FIRM_USER_MANAGER.getRoleName(), false, true);
     }
 
     @Test
@@ -169,7 +169,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     public void testSecurityResponseCannotAssignGlobalAdminRoleToExternalUser() throws Exception {
         EntraUser loggedInUser = securityResponseUsers.getFirst();
         EntraUser editedUser = externalUsersNoRoles.getFirst();
-        assertNoAppRoleSelectionAllowed(loggedInUser, editedUser);
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.GLOBAL_ADMIN.getRoleName(), false);
     }
 
     @Test
@@ -177,7 +177,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     public void testSecurityResponseCannotAssignExternalUserAdminRoleToExternalUser() throws Exception {
         EntraUser loggedInUser = securityResponseUsers.getFirst();
         EntraUser editedUser = externalUsersNoRoles.getFirst();
-        assertNoAppRoleSelectionAllowed(loggedInUser, editedUser);
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName(), false);
     }
 
     @Test
@@ -185,7 +185,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     public void testSecurityResponseCannotAssignInternalUserViewerRoleToInternalUser() throws Exception {
         EntraUser loggedInUser = securityResponseUsers.getFirst();
         EntraUser editedUser = internalUsersNoRoles.getFirst();
-        assertNoAppRoleSelectionAllowed(loggedInUser, editedUser);
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.INTERNAL_USER_VIEWER.getRoleName(), false, true);
     }
 
     @Test
@@ -193,7 +193,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     public void testSecurityResponseCannotAssignInternalUserViewerRoleToExternalUser() throws Exception {
         EntraUser loggedInUser = securityResponseUsers.getFirst();
         EntraUser editedUser = externalUsersNoRoles.getFirst();
-        assertNoAppRoleSelectionAllowed(loggedInUser, editedUser);
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.INTERNAL_USER_VIEWER.getRoleName(), false, true);
     }
 
     @Test
@@ -201,7 +201,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     public void testSecurityResponseCannotAssignExternalUserViewerRoleToInternalUser() throws Exception {
         EntraUser loggedInUser = securityResponseUsers.getFirst();
         EntraUser editedUser = internalUsersNoRoles.getFirst();
-        assertNoAppRoleSelectionAllowed(loggedInUser, editedUser);
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.EXTERNAL_USER_VIEWER.getRoleName(), false, true);
     }
 
     @Test
@@ -209,23 +209,7 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
     public void testSecurityResponseCannotAssignExternalUserViewerRoleToExternalUser() throws Exception {
         EntraUser loggedInUser = securityResponseUsers.getFirst();
         EntraUser editedUser = externalUsersNoRoles.getFirst();
-        assertNoAppRoleSelectionAllowed(loggedInUser, editedUser);
-    }
-
-    @Test
-    @Transactional
-    public void testSecurityResponseCanRemoveExternalUserViewerRoleFromExternalUser() throws Exception {
-        EntraUser loggedInUser = securityResponseUsers.getFirst();
-        EntraUser editedUser = externalUserViewers.getFirst();
-        removeAuthzAppAccessFromUser(loggedInUser, editedUser);
-    }
-
-    @Test
-    @Transactional
-    public void testSecurityResponseCanRemoveAppAccessFromExternalUser() throws Exception {
-        EntraUser loggedInUser = securityResponseUsers.getFirst();
-        EntraUser editedUser = externalUserViewers.getFirst();
-        removeAuthzAppAccessFromUser(loggedInUser, editedUser);
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.EXTERNAL_USER_VIEWER.getRoleName(), false);
     }
 
     @Test
@@ -512,25 +496,8 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
 
     }
 
-    private void assertNoAppRoleSelectionAllowed(EntraUser loggedInUser, EntraUser editedUser) throws Exception {
-        UserProfile editedUserProfile = editedUser.getUserProfiles().stream().findFirst().orElseThrow();
-        MockHttpSession session = new MockHttpSession();
 
-        // Open App editing screen
-        MvcResult selectAppsResult = this.mockMvc.perform(get(String.format("/admin/users/edit/%s/apps", editedUserProfile.getId()))
-                        .with(userOauth2Login(loggedInUser))
-                        .session(session))
-                .andExpect(status().isOk())
-                .andReturn();
 
-        // Fetch AuthZ app from response.
-        ModelAndView modelAndView = selectAppsResult.getModelAndView();
-        List<AppDto> availableApps = (List<AppDto>) modelAndView.getModel().get("apps");
-        Assertions.assertThat(availableApps).isNotEmpty();
-        boolean editableAppsPresent = availableApps.stream()
-                .anyMatch(app -> !app.isChangeNotAllowed() || !app.isHiddenFromSelection());
-        Assertions.assertThat(editableAppsPresent).isFalse();
-    }
 
     private Set<AppRole> assignRoleToUserAndReturnRoles(EntraUser loggedInUser, EntraUser editedUser, App app, AppRole role) throws Exception {
         UserProfile editedUserProfile = editedUser.getUserProfiles().stream().findFirst().orElseThrow();
@@ -731,167 +698,5 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
         } else {
             Assertions.assertThat(editedUserRoles).doesNotContain(authzRole.getId());
         }
-    }
-
-    private void removeAuthzRoleFromUser(EntraUser loggedInUser, EntraUser editedUser, String authzRoleName) throws Exception {
-        UserProfile editedUserProfile = editedUser.getUserProfiles().stream().findFirst().orElseThrow();
-        MockHttpSession session = new MockHttpSession();
-
-        // Open App editing screen
-        MvcResult selectAppsResult = this.mockMvc.perform(get(String.format("/admin/users/edit/%s/apps", editedUserProfile.getId()))
-                        .with(userOauth2Login(loggedInUser))
-                        .session(session))
-                .andExpect(status().isOk())
-                .andReturn();
-
-        // Fetch AuthZ app from response.
-        ModelAndView modelAndView = selectAppsResult.getModelAndView();
-        List<AppDto> availableApps = (List<AppDto>) modelAndView.getModel().get("apps");
-        AppDto authzApp = availableApps.stream()
-                .filter(app -> app.getName().equals("Manage your users"))
-                .findFirst()
-                .orElseThrow();
-
-        // De-select AuthZ app using post request.
-        MvcResult postAppsResult = this.mockMvc.perform(post(String.format("/admin/users/edit/%s/apps", editedUserProfile.getId()))
-                        .with(userOauth2Login(loggedInUser))
-                        .with(csrf())
-                        .session(session)
-                        .param("apps", authzApp.getId()))
-                .andExpect(status().is3xxRedirection())
-                .andReturn();
-
-        // Fetch redirected URL from response and request it.
-        String redirectedUrl = postAppsResult.getResponse().getRedirectedUrl();
-        Assertions.assertThat(redirectedUrl).isNotNull();
-        MvcResult getRolesResult = this.mockMvc.perform(get(redirectedUrl)
-                        .with(userOauth2Login(loggedInUser))
-                        .session(session))
-                .andExpect(status().isOk())
-                .andReturn();
-
-        // Fetch returned roles.
-        List<AppRoleViewModel> roles = (List<AppRoleViewModel>) getRolesResult.getModelAndView().getModel().get("roles");
-
-        // Get Authz Role from list.
-        AppRoleViewModel selectedRole = roles.stream()
-                .filter(role -> role.getName().equals(authzRoleName))
-                .findFirst()
-                .orElseThrow();
-        Assertions.assertThat(selectedRole.isSelected()).isTrue();
-        Assertions.assertThat(selectedRole.isChangeNotAllowed()).isFalse();
-        Assertions.assertThat(selectedRole.isHiddenFromSelection()).isFalse();
-
-        List<AppRoleViewModel> otherAuthzRoles = roles.stream()
-                .filter(role -> !role.getName().equals(authzRoleName))
-                .toList();
-        boolean isAnyOtherRoleAllowedForEdit = otherAuthzRoles.stream()
-                .anyMatch(role -> !role.isChangeNotAllowed() && !role.isHiddenFromSelection());
-        Assertions.assertThat(isAnyOtherRoleAllowedForEdit).isFalse();
-
-        // Post request to set Internal User Manager role
-        MvcResult postRolesResult = this.mockMvc.perform(post(redirectedUrl)
-                        .with(userOauth2Login(loggedInUser))
-                        .with(csrf())
-                        .session(session)
-                        .param("selectedAppIndex", "0"))
-                .andExpect(status().is3xxRedirection())
-                .andReturn();
-
-        // Check we're redirected to cya screen
-        String cyaUrl = postRolesResult.getResponse().getRedirectedUrl();
-        Assertions.assertThat(cyaUrl).isNotNull();
-        this.mockMvc.perform(get(cyaUrl)
-                        .with(userOauth2Login(loggedInUser))
-                        .session(session))
-                .andExpect(status().isOk())
-                .andReturn();
-
-        //Check your answer
-        postAppsResult = this.mockMvc.perform(post(String.format("/admin/users/edit/%s/roles-check-answer", editedUserProfile.getId().toString()))
-                        .with(userOauth2Login(loggedInUser))
-                        .with(csrf())
-                        .session(session))
-                .andExpect(status().is3xxRedirection())
-                .andReturn();
-        String confirmUrl = postAppsResult.getResponse().getRedirectedUrl();
-        Assertions.assertThat(confirmUrl).isNotNull();
-
-        Assertions.assertThat(confirmUrl).contains("confirm");
-        this.mockMvc.perform(get(confirmUrl)
-                        .with(userOauth2Login(loggedInUser))
-                        .session(session))
-                .andExpect(status().isOk())
-                .andReturn();
-
-        Set<String> editedUserRoles = userProfileRepository.findById(editedUserProfile.getId())
-                .orElseThrow()
-                .getAppRoles().stream()
-                .map(role -> role.getId().toString())
-                .collect(Collectors.toSet());
-
-        Assertions.assertThat(editedUserRoles).doesNotContain(selectedRole.getId());
-    }
-
-    private void removeAuthzAppAccessFromUser(EntraUser loggedInUser, EntraUser editedUser) throws Exception {
-        UserProfile editedUserProfile = editedUser.getUserProfiles().stream().findFirst().orElseThrow();
-        MockHttpSession session = new MockHttpSession();
-
-        // Open App editing screen
-        MvcResult selectAppsResult = this.mockMvc.perform(get(String.format("/admin/users/edit/%s/apps", editedUserProfile.getId()))
-                        .with(userOauth2Login(loggedInUser))
-                        .session(session))
-                .andExpect(status().isOk())
-                .andReturn();
-
-        // Fetch AuthZ app from response.
-        ModelAndView modelAndView = selectAppsResult.getModelAndView();
-        List<AppDto> availableApps = (List<AppDto>) modelAndView.getModel().get("apps");
-        availableApps.stream()
-                .filter(app -> app.getName().equals("Manage your users"))
-                .findFirst()
-                .orElseThrow();
-
-        // De-select AuthZ app using post request.
-        MvcResult postAppsResult = this.mockMvc.perform(post(String.format("/admin/users/edit/%s/apps", editedUserProfile.getId()))
-                        .with(userOauth2Login(loggedInUser))
-                        .with(csrf())
-                        .session(session))
-                .andExpect(status().is3xxRedirection())
-                .andReturn();
-
-        // Check we're redirected to cya screen
-        String cyaUrl = postAppsResult.getResponse().getRedirectedUrl();
-        Assertions.assertThat(cyaUrl).isNotNull();
-        this.mockMvc.perform(get(cyaUrl)
-                        .with(userOauth2Login(loggedInUser))
-                        .session(session))
-                .andExpect(status().isOk())
-                .andReturn();
-
-        //Check your answer
-        postAppsResult = this.mockMvc.perform(post(String.format("/admin/users/edit/%s/roles-check-answer", editedUserProfile.getId().toString()))
-                        .with(userOauth2Login(loggedInUser))
-                        .with(csrf())
-                        .session(session))
-                .andExpect(status().is3xxRedirection())
-                .andReturn();
-        String confirmUrl = postAppsResult.getResponse().getRedirectedUrl();
-        Assertions.assertThat(confirmUrl).isNotNull();
-
-        Assertions.assertThat(confirmUrl).contains("confirm");
-        this.mockMvc.perform(get(confirmUrl)
-                        .with(userOauth2Login(loggedInUser))
-                        .session(session))
-                .andExpect(status().isOk())
-                .andReturn();
-
-        Set<String> editedUserRoles = userProfileRepository.findById(editedUserProfile.getId())
-                .orElseThrow()
-                .getAppRoles().stream()
-                .map(role -> role.getId().toString())
-                .collect(Collectors.toSet());
-
-        Assertions.assertThat(editedUserRoles).isEmpty();
     }
 }

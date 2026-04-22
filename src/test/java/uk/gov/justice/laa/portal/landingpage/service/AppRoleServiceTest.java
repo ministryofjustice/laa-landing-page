@@ -1,6 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -87,16 +86,13 @@ class AppRoleServiceTest {
     @Mock
     private UserProfileRepository userProfileRepository;
 
-    @Mock
-    private EntityManager entityManager;
-
     @InjectMocks
     private AppRoleService appRoleService;
 
     @BeforeEach
     void setUp() {
         appRoleService = new AppRoleService(appRoleRepository, appRepository, eventService, loginService,
-                modelMapper, roleAssignmentRepository, userProfileRepository, entityManager);
+                modelMapper, roleAssignmentRepository, userProfileRepository);
         SecurityContextHolder.setContext(securityContext);
     }
 

@@ -225,61 +225,6 @@ public class AuditController {
         return "";
     }
 
-    /**
-     * Display complete detailed audit information for a specific user
-     */
-    @GetMapping("/users/audit/{id}/full")
-    @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions("
-            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_AUDIT_TABLE)")
-    public String displayFullUserAuditDetail(@PathVariable("id") UUID userId,
-                                         @RequestParam(name = "profilePage", defaultValue = "1") int profilePage,
-                                         @RequestParam(name = "profileSize", defaultValue = "3") int profileSize,
-                                         @RequestParam(name = "isEntraId", defaultValue = "false") boolean isEntraId,
-                                         Model model) {
-
-        log.debug(
-                "AuditController.displayUserAuditDetail - userId: '{}', isEntraId: {}, profilePage: {}, profileSize: {}",
-                userId, isEntraId, profilePage, profileSize);
-
-        AuditUserDetailDto userDetail;
-        boolean canDisableUser = false;
-
-        // Determine if this is an EntraUser ID or UserProfile ID
-        if (isEntraId) {
-            // Load user by EntraUser ID (for users without profiles)
-            userDetail = userService.getAuditUserDetailByEntraId(userId);
-        } else {
-            // Try to load by UserProfile ID first (existing behavior)
-            try {
-                userDetail = userService.getAuditUserDetail(userId, profilePage, profileSize);
-            } catch (IllegalArgumentException e) {
-                // If profile not found, try as EntraUser ID
-                log.debug("Profile not found with ID {}, attempting to load as EntraUser ID",
-                        userId);
-                userDetail = userService.getAuditUserDetailByEntraId(userId);
-            }
-        }
-        TechServicesApiResponse<GetUserResponse> entraUserResponse = techServicesClient.getUser(userDetail.getEntraOid());
-        if (entraUserResponse.isSuccess()) {
-            TechServicesUser user = entraUserResponse.getData().getUser();
-            String disableUserReason = formatDisableUserReason(user);
-            model.addAttribute("entraUser", entraUserResponse.getData().getUser());
-            model.addAttribute("entraUserDisableReason", disableUserReason);
-        }
-        canDisableUser = accessControlService.canDisableUser(userDetail.getUserId());
-
-        // Add attributes to model
-        model.addAttribute("user", userDetail);
-        model.addAttribute("silasStatus", userService.determineStatusBadgeForAuditUser(userDetail));
-        model.addAttribute("profileId", userId); // Add profile ID for pagination links
-        model.addAttribute("profilePage", profilePage);
-        model.addAttribute("profileSize", profileSize);
-        model.addAttribute("canDisableUser", disableUserFeatureEnabled && canDisableUser);
-        model.addAttribute("userIsEnabled", userDetail.isEnabled());
-
-        return "user-audit/full-details";
-    }
-
     private String formatDisableUserReason(TechServicesUser user) {
         return Optional.ofNullable(user)
                 .map(TechServicesUser::getCustomSecurityAttributes)

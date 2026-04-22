@@ -225,7 +225,7 @@ public class PdaSyncScheduler {
      * Runs according to the cron expression defined in app.pda.sync.scheduler.cron
      * Default: 0 0 7 * * * (daily at 7:00 AM)
      */
-    @Scheduled(cron = "${app.pda.sync.scheduler.cron:0 0 7 * * *}", zone = "Europe/London")
+    @Scheduled(cron = "${app.pda.sync.scheduler.cron:0 0 7 * * *}")
     public void scheduledSync() {
         log.debug("Starting scheduled PDA synchronization");
 

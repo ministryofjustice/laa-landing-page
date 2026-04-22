@@ -32,7 +32,7 @@ public class InternalUserPolling {
     @Value("${app.distributed.db.locking.period}")
     private int distributedDbLockingPeriod;
 
-    @Scheduled(cron = "${internal.user.polling.schedule}")
+    @Scheduled(fixedRateString = "${internal.user.polling.interval}")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void poll() {
         if (pollingEnabled) {

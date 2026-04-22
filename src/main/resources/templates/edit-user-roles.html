@@ -52,12 +52,6 @@
                                 <span class="govuk-error-message" th:if="${#fields.hasErrors('roles')}"
                                     th:errors="*{roles}"></span>
 
-                                <!-- No roles available message -->
-                                <div th:if="${roles == null or roles.isEmpty()}" class="govuk-inset-text">
-                                    <p>There are currently no roles available for <span th:text="${editUserRolesCurrentApp.name}"></span>.</p>
-                                    <p>Please contact your administrator if you believe this is an error.</p>
-                                </div>
-
                                 <!-- CCMS App: Display roles organized by sections -->
                                 <div th:if="${isCcmsApp}">
                                     <details class="govuk-details">

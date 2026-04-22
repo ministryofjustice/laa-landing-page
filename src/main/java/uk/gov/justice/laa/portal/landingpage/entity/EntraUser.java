@@ -85,6 +85,9 @@ public class EntraUser extends AuditableEntity {
     @Column(name = "mail_only")
     private boolean mailOnly;
 
+    @Column(name = "last_login_date")
+    private LocalDateTime lastLoginDate;
+
     @Column(name = "enabled", nullable = false)
     @ColumnDefault("true")
     @Builder.Default

@@ -572,9 +572,6 @@ public class MultiFirmUserController {
                 && !currentApp.getName().contains("CCMS case transfer requests"))
                 || assignableRoles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()));
 
-        // Apply CCMS filtering before storing in model
-        List<AppRoleViewModel> finalRoles = appRoleViewModels;
-        
         if (isCcmsApp) {
             // Filter to only CCMS roles for organization
             List<AppRoleViewModel> ccmsRoles = appRoleViewModels.stream()
@@ -585,9 +582,6 @@ public class MultiFirmUserController {
             if (!ccmsRoles.isEmpty()) {
                 // Organize CCMS roles by section dynamically
                 organizedRoles.putAll(CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles));
-                
-                // Use filtered CCMS roles for both display and session storage
-                finalRoles = ccmsRoles;
             }
             model.addAttribute("ccmsRolesBySection", organizedRoles);
             model.addAttribute("isCcmsApp", true);
@@ -598,7 +592,7 @@ public class MultiFirmUserController {
         EntraUserDto user = getObjectFromHttpSession(session, "entraUser", EntraUserDto.class).orElseThrow();
 
         model.addAttribute("entraUser", user);
-        model.addAttribute("roles", finalRoles);
+        model.addAttribute("roles", appRoleViewModels);
         model.addAttribute("addProfileSelectedAppIndex", currentSelectedAppIndex);
         model.addAttribute("addProfileCurrentApp", currentApp);
 

@@ -122,7 +122,7 @@ public interface FirmRepository extends JpaRepository<Firm, UUID> {
         GROUP BY
             f.id, f.name, f.code, f.type, pf.code
         ORDER BY
-            f.code::BIGINT;
+            f.code
         """,
             nativeQuery = true
     )
