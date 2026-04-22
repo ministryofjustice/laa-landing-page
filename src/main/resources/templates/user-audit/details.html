@@ -218,6 +218,11 @@
                                         <dd class="govuk-summary-list__value" th:if="${entraUser == null}">Unknown</dd>
                                         <dd class="govuk-summary-list__value" th:if="${entraUser != null}" th:text="${entraUser.email}"></dd>
                                     </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Last Login Time</dt>
+                                        <dd class="govuk-summary-list__value" th:if="${entraUser == null}">Unknown</dd>
+                                        <dd class="govuk-summary-list__value" th:if="${entraUser != null}" th:text="${entraUser.lastSignIn != null ? #temporals.format(entraUser.lastSignIn, 'dd MMM yyyy HH:mm') : 'Unknown'}"></dd>
+                                    </div>
                                 </dl>
                             </div>
                         </div>

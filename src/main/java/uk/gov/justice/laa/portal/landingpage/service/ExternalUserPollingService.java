@@ -106,7 +106,7 @@ public class ExternalUserPollingService {
 
     /**
      * Synchronizes user data from Tech Services API response to local EntraUser records.
-     * Updates firstName, lastName, lastLoginDate, enabled, mailOnly, and lastSyncedOn fields.
+     * Updates firstName, lastName, enabled, mailOnly, and lastSyncedOn fields.
      * 
      * @param users List of users from Tech Services API
      * @param syncTime The sync time to set as lastSyncedOn
@@ -157,10 +157,6 @@ public class ExternalUserPollingService {
 
                     if (user.isMailOnly() != entraUser.isMailOnly()) {
                         entraUser.setMailOnly(user.isMailOnly());
-                    }
-
-                    if (user.getLastSignIn() != null && !user.getLastSignIn().trim().isEmpty()) {
-                        entraUser.setLastLoginDate(LocalDateTime.parse(user.getLastSignIn().substring(0, user.getLastSignIn().length() - 1)));
                     }
 
                     entraUser.setLastSyncedOn(syncTime);
