@@ -548,6 +548,10 @@
                 overflow-wrap: anywhere;
             }
 
+            #export-csv-error[hidden] {
+                display: none !important;
+            }
+
             @media (max-width: 1200px) {
 
                 .govuk-table__header,
@@ -941,6 +945,21 @@
                     }
                 });
             });
+
+
+            document.addEventListener('DOMContentLoaded', function () {
+                const button = document.getElementById('exportCsvButton');
+                const error = document.getElementById('export-csv-error');
+
+                if (button) {
+                    button.addEventListener('click', function (event) {
+                        event.preventDefault();
+                        error.hidden = false;
+                        button.classList.add('govuk-button--warning');
+                    });
+                }
+            });
+
         </script>
 
         <!-- Audit Table -->
@@ -1087,7 +1106,13 @@
         <!-- Export CSV -->
         <div class="moj-button-group moj-button-group--inline moj-button-group--with-divider"
              th:if="${exportCsv and firmSearch.getSelectedFirmId() == null and selectedUserType != 'INTERNAL'}">
-            <a class="govuk-button" disabled=".govuk-button" title="Select a single firm to enable CSV export.">Export as CSV</a>
+            <a href="#" class="govuk-button" id="exportCsvButton" aria-describedby="export-csv-error">
+                Export as CSV
+            </a>
+            <span id="export-csv-error" class="govuk-error-message govuk-!-margin-left-2" hidden>
+        <span class="govuk-visually-hidden">Error:</span>
+        You need to filter results to a single firm to enable CSV export.
+    </span>
         </div>
 
         <div class="moj-nutton-group moj-button-group--inline moj-button-group--with-divider"
