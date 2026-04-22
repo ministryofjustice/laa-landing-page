@@ -71,14 +71,18 @@ public class RestUtils {
         }
     }
 
-    public static <T> Optional<Set<T>> getSetFromHttpSession(HttpSession session, String key, Class<T> setType) {
+    @SuppressWarnings("unchecked")
+    public static <T> Optional<Set<T>> getSetFromHttpSession(HttpSession session, String key, Class<T> elementType) {
         Object object = session.getAttribute(key);
-        if (object instanceof Set<?> set && set.stream().allMatch(o -> o == null || setType.isInstance(o))) {
+        if (object instanceof Set<?> set
+                && set.stream().allMatch(o -> o == null || elementType.isInstance(o))) {
             return Optional.of((Set<T>) set);
-        } else {
-            log.debug("Type mismatch: session attribute '{}' is null or not of the expected type", key);
-            return Optional.empty();
         }
+
+        log.debug("Session attribute '{}' is missing, not a Set, or contains elements not of type {}",
+                key, elementType.getSimpleName());
+
+        return Optional.empty();
     }
 
 }
