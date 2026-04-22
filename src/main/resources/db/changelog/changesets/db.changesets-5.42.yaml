@@ -1,18 +1,117 @@
 databaseChangeLog:
+
   - changeSet:
-      id: 1775813144-1
-      author: majid.elmi
-      comment: "Drop last_login_date column from entra_user table"
+      id: cleanup-and-reassign-app-roles-and-permissions
+      author: Suresh Kavali
+
       changes:
-        - dropColumn:
-            tableName: entra_user
-            columnName: last_login_date
-      rollback:
-        - addColumn:
-            tableName: entra_user
-            columns:
-              - column:
-                  name: last_login_date
-                  type: timestamp
-                  constraints:
-                    nullable: true
+        - sql:
+            sql: |
+              UPDATE app_role
+              SET app_id = (
+                SELECT id FROM app WHERE name = 'Manage your users'
+              )
+              WHERE name = 'Audit Export'
+              AND EXISTS (
+                SELECT 1 FROM app WHERE name = 'Manage your users'
+              );
+
+        - sql:
+            sql: |
+              DELETE FROM app
+              WHERE name = 'User Access Audit Table';
+
+        - sql:
+            sql: |
+              DELETE FROM user_profile_app_role
+              WHERE app_role_id IN (
+                SELECT id FROM app_role WHERE name = 'Firm Directory Access'
+              );
+
+        - sql:
+            sql: |
+              DELETE FROM role_assignment
+              WHERE assigning_role_id IN (
+                SELECT id FROM app_role WHERE name = 'Firm Directory Access'
+              );
+
+        - sql:
+            sql: |
+              DELETE FROM role_assignment
+              WHERE assignable_role_id IN (
+                SELECT id FROM app_role WHERE name = 'Firm Directory Access'
+              );
+
+        - sql:
+            sql: |
+              DELETE FROM role_permission
+              WHERE app_role_id IN (
+                SELECT id FROM app_role WHERE name = 'Firm Directory Access'
+              );
+
+        - sql:
+            sql: |
+              DELETE FROM app_role
+              WHERE name = 'Firm Directory Access';
+
+        - sql:
+            sql: |
+              DELETE FROM app
+              WHERE name = 'Firm Directory';
+
+        - sql:
+            sql: |
+              INSERT INTO role_permission (permission, app_role_id)
+              SELECT 'VIEW_FIRM_DIRECTORY', ar.id
+              FROM app_role ar
+              WHERE ar.name IN (
+                'External User Manager',
+                'External User Admin',
+                'Global Admin',
+                'External User Viewer',
+                'Security Response'
+              )
+              AND NOT EXISTS (
+                SELECT 1
+                FROM role_permission rp
+                WHERE rp.permission = 'VIEW_FIRM_DIRECTORY'
+                AND rp.app_role_id = ar.id
+              );
+
+        - sql:
+            sql: |
+              INSERT INTO role_permission (permission, app_role_id)
+              SELECT 'VIEW_AUDIT_TABLE', ar.id
+              FROM app_role ar
+              WHERE ar.name IN (
+                'Internal User Manager',
+                'External User Manager',
+                'External User Admin',
+                'Global Admin',
+                'Audit Export',
+                'Internal User Viewer',
+                'External User Viewer',
+                'Security Response'
+              )
+              AND NOT EXISTS (
+                SELECT 1
+                FROM role_permission rp
+                WHERE rp.permission = 'VIEW_AUDIT_TABLE'
+                AND rp.app_role_id = ar.id
+              );
+
+        - sql:
+            sql: |
+              INSERT INTO role_permission (permission, app_role_id)
+              SELECT 'EXPORT_AUDIT_DATA', ar.id
+              FROM app_role ar
+              WHERE ar.name IN (
+                'Global Admin',
+                'Audit Export'
+              )
+              AND NOT EXISTS (
+                SELECT 1
+                FROM role_permission rp
+                WHERE rp.permission = 'EXPORT_AUDIT_DATA'
+                AND rp.app_role_id = ar.id
+              );

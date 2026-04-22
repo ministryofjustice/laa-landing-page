@@ -11,17 +11,9 @@
 
 <body>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-        <ol class="govuk-breadcrumbs__list">
-            <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" th:href="@{/home}">Home</a>
-            </li>
-            <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" th:href="@{/admin/users/audit}">Audit</a>
-            </li>
-            <li class="govuk-breadcrumbs__list-item" aria-current="page">
-                <span th:text="${user.fullName}">User Name</span>
-            </li>
-        </ol>
+        <a class="govuk-back-link" th:href="@{/admin/users/audit}">
+            Back
+        </a>
     </nav>
 
     <main class="govuk-main-wrapper" id="main-content" th:if="${#authentication.isAuthenticated()}">
@@ -48,7 +40,7 @@
 
             /* Add spacing only in Audit data section (second card in Identity Information) */
             .govuk-grid-row .govuk-grid-column-one-half:nth-child(2) .govuk-summary-list__key {
-                white-space: nowrap;
+                white-space: wrap;
                 padding-right: 50px;
             }
 
@@ -154,43 +146,20 @@
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">SILAS Status</dt>
                                         <dd class="govuk-summary-list__value">
-                                            <!--user disable-->
-                                            <th:block th:if="${!user.enabled}">
-                                                <strong class="govuk-tag govuk-tag--red">Disable</strong>
+                                            <th:block th:if="${silasStatus == 'Disabled'}">
+                                                <strong class="govuk-tag govuk-tag--red">Disabled</strong>
                                             </th:block>
-                                            <!--user active-->
-                                            <th:block th:unless="${!user.enabled}">
-                                                <!--user still pending-->
-                                                <th:block th:if="${user.isPending}" >
-                                                    <th:block th:if="${user.activationStatus == 'VERIFICATION_SUCCESS'}">
-                                                        <!--user hasn't assigned any roles-->
-                                                        <strong th:if="${user.isNoRole}"
-                                                              class="govuk-tag govuk-tag--purple govuk-!-margin-top-1">No roles assigned</strong>
-                                                        <!--user has roles and no office assigned -->
-                                                        <strong th:unless="${user.isNoRole}"
-                                                              class="govuk-tag govuk-tag--blue govuk-!-margin-top-1">Incomplete</strong>
-                                                    </th:block>
-                                                    <!--entra verification still going-->
-                                                    <th:block th:unless="${user.activationStatus == 'VERIFICATION_SUCCESS'}">
-                                                        <!--All the other situation will be incomplete-->
-                                                        <strong class="govuk-tag govuk-tag--blue govuk-!-margin-top-1">Incomplete</strong>
-                                                    </th:block>
-                                                </th:block>
-                                                <!--user is complete-->
-                                                <th:block th:unless="${user.isPending}">
-                                                    <strong th:if="${user.activationStatus == 'AWAITING_VERIFICATION'}"
-                                                            class="govuk-tag govuk-tag--grey govuk-!-margin-top-1">Activation pending</strong>
-                                                    <strong th:if="${user.activationStatus == 'VERIFICATION_SUCCESS'}"
-                                                            class="govuk-tag govuk-tag--green govuk-!-margin-top-1">Complete</strong>
-                                                    <strong th:if="${user.activationStatus == 'VERIFICATION_FAILED'}"
-                                                            class="govuk-tag govuk-tag--red govuk-!-margin-top-1">Activation failed</strong>
-                                                    <strong th:if="${user.activationStatus == null
-                                                    || user.activationStatus == 'INVITE_SENT'
-                                                    || user.activationStatus == 'AWAITING_MFA'
-                                                    || user.activationStatus == 'CODE_EXPIRED'
-                                                    || user.activationStatus == 'MAX_VERIFICATION_ATTEMPTS'}"
-                                                            class="govuk-tag govuk-tag--blue govuk-!-margin-top-1">Incomplete</strong>
-                                                </th:block>
+                                            <th:block th:if="${silasStatus == 'Incomplete'}">
+                                                <strong class="govuk-tag govuk-tag--blue govuk-!-margin-top-1">Incomplete</strong>
+                                            </th:block>
+                                            <th:block th:if="${silasStatus == 'Complete'}">
+                                                <strong class="govuk-tag govuk-tag--green govuk-!-margin-top-1">Complete</strong>
+                                            </th:block>
+                                            <th:block th:if="${silasStatus == 'Activation pending'}">
+                                                <strong class="govuk-tag govuk-tag--grey govuk-!-margin-top-1">Activation pending</strong>
+                                            </th:block>
+                                            <th:block th:if="${silasStatus == 'No roles assigned'}">
+                                                <strong class="govuk-tag govuk-tag--purple govuk-!-margin-top-1">No roles assigned</strong>
                                             </th:block>
                                         </dd>
                                     </div>
@@ -213,9 +182,15 @@
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Account Status</dt>
                                         <dd class="govuk-summary-list__value">
-                                            <strong class="govuk-tag govuk-tag--green" th:if="${entraUser != null && entraUser.accountEnabled}">Active</strong>
-                                            <strong class="govuk-tag govuk-tag--red" th:if="${entraUser != null && !entraUser.accountEnabled}">Disabled</strong>
-                                            <strong class="govuk-tag govuk-tag--grey" th:if="${entraUser == null}">Unknown</strong>
+                                            <th:block th:if="${entraVerificationStatus != 'VERIFICATION_SUCCESS'}">
+                                                <strong class="govuk-tag govuk-tag--grey" th:if="${entraUser != null}" style="white-space: nowrap;">Awaiting Verification</strong>
+                                                <strong class="govuk-tag govuk-tag--grey" th:if="${entraUser == null}">Unknown</strong>
+                                            </th:block>
+                                            <th:block th:if="${entraVerificationStatus == 'VERIFICATION_SUCCESS'}">
+                                                <strong class="govuk-tag govuk-tag--green" th:if="${entraUser != null && entraUser.accountEnabled}">Active</strong>
+                                                <strong class="govuk-tag govuk-tag--red" th:if="${entraUser != null && !entraUser.accountEnabled}">Disabled</strong>
+                                                <strong class="govuk-tag govuk-tag--grey" th:if="${entraUser == null}">Unknown</strong>
+                                            </th:block>
                                         </dd>
                                     </div>
                                     <div class="govuk-summary-list__row" th:if="${entraUser != null && !entraUser.accountEnabled}">
@@ -257,7 +232,13 @@
                 </div>
 
                 <!-- Profile Information Section - Only show for external users -->
-                <h2 class="govuk-heading-m govuk-!-margin-top-6" th:unless="${user.hasNoProfile or user.userType == 'Internal'}">Profile information</h2>
+                <div class="moj-page-header-actions govuk-!-display-flex govuk-!-justify-content-space-between govuk-!-align-items-center">
+                    <h2 class="govuk-heading-m govuk-!-margin-top-2" th:unless="${user.hasNoProfile or user.userType == 'Internal'}">Profile information</h2>
+                    <div>
+                            <a class="govuk-link govuk-body-m govuk-!-font-weight-bold" th:href="@{/admin/users/audit/{id}/full(id=${profileId})}">View complete profile information</a>
+                    </div>
+                </div>
+
 
                 <!-- Show message for users without profiles (external users only) -->
                 <div th:if="${user.hasNoProfile and user.userType != 'Internal'}"
@@ -413,64 +394,6 @@
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Offices</dt>
                                         <dd class="govuk-summary-list__value" th:text="${profile.officeRestrictions}"></dd>
-                                    </div>
-                                </dl>
-                            </div>
-                        </div>
-
-                        <!-- Services Card -->
-                        <div class="govuk-summary-card">
-                            <div class="govuk-summary-card__title-wrapper">
-                                <h3 class="govuk-summary-card__title">Services</h3>
-                            </div>
-                            <div class="govuk-summary-card__content">
-                                <dl class="govuk-summary-list">
-                                    <!-- Display roles -->
-                                    <div class="govuk-summary-list__row" th:each="appAssignment : ${profile.getRolesGroupByAppName}">
-                                        <dt class="govuk-summary-list__key"th:text="${appAssignment.key}" />
-
-                                        <dd class="govuk-summary-list__value">
-                                            <div th:each="appRole : ${appAssignment.value}">
-                                                <span th:text="${appRole}"></span>
-                                            </div>
-                                        </dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row"
-                                        th:if="${profile.roles == null || profile.roles.isEmpty()}">
-                                        <dt class="govuk-summary-list__key">No services assigned</dt>
-                                        <dd class="govuk-summary-list__value"></dd>
-                                    </div>
-                                </dl>
-                            </div>
-                        </div>
-
-                        <!-- Account status history Card -->
-                        <div class="govuk-summary-card">
-                            <div class="govuk-summary-card__title-wrapper">
-                                <h3 class="govuk-summary-card__title">Account status history</h3>
-                            </div>
-                            <div class="govuk-summary-card__content" th:each="record : ${user.accountStatusHistory}">
-                                <dl class="govuk-summary-list">
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Date</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${record.statusChangedDate}"></dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Status</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${record.statusChange}"></dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Disable reason</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${record.disableReason}"></dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Changed by</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${record.statusChangedBy}">
-                                    </div>
-                                    <div class="govuk-summary-list__row"
-                                         th:if="${user.accountStatusHistory == null || user.accountStatusHistory.size() == 0}">
-                                        <dt class="govuk-summary-list__key">No account status history available</dt>
-                                        <dd class="govuk-summary-list__value"></dd>
                                     </div>
                                 </dl>
                             </div>
