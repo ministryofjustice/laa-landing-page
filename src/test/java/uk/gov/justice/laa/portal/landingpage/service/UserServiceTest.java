@@ -7994,7 +7994,7 @@ class UserServiceTest {
         }
 
         @Test
-        void getAuditUserDetail_withNoOffices_showsAccessToAllOffices() {
+        void getAuditUserDetail_withNoOffices_showsNoOfficesAssigned() {
             // Given
             UUID userId = UUID.randomUUID();
             UUID profileId = UUID.randomUUID();
@@ -8011,6 +8011,58 @@ class UserServiceTest {
                     .firm(firm)
                     .userType(UserType.EXTERNAL)
                     .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .activeProfile(true)
+                    .offices(new HashSet<>()) // No offices
+                    .appRoles(new HashSet<>())
+                    .build();
+
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("Test")
+                    .lastName("User")
+                    .email("test@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .userProfiles(Set.of(profile))
+                    .build();
+
+            profile.setEntraUser(user);
+
+            when(mockUserProfileRepository.findById(profileId))
+                    .thenReturn(Optional.of(profile));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto result = userService
+                    .getAuditUserDetail(profileId);
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getProfiles()).hasSize(1);
+
+            uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto.AuditProfileDto profileDto = result
+                    .getProfiles().get(0);
+            assertThat(profileDto.getOfficeRestrictions()).isEqualTo("No office access assigned");
+        }
+
+        @Test
+        void getAuditUserDetail_withUnrestrictedOffices_showsAccessToAllOffices() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            UUID profileId = UUID.randomUUID();
+            UUID firmId = UUID.randomUUID();
+
+            Firm firm = Firm.builder()
+                    .id(firmId)
+                    .name("Test Firm")
+                    .code("TF001")
+                    .build();
+
+            UserProfile profile = UserProfile.builder()
+                    .id(profileId)
+                    .firm(firm)
+                    .userType(UserType.EXTERNAL)
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .unrestrictedOfficeAccess(true)
                     .activeProfile(true)
                     .offices(new HashSet<>()) // No offices
                     .appRoles(new HashSet<>())
