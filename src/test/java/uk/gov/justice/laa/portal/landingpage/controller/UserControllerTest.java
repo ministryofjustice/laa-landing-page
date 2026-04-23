@@ -2552,7 +2552,7 @@ class UserControllerTest {
         // When
         String view = userController.updateUserOfficesCheck(userId, model, testSession);
         // Then
-        assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/offices");
+        assertThat(view).isEqualTo("redirect:/admin/journey-completed");
     }
 
     @Test
