@@ -1270,6 +1270,50 @@ class UserControllerTest {
     }
 
     @Test
+    public void testEditUserRolesWithOneRoleAppOutputMatchesInput() {
+        // Given
+        final String userId = "12345";
+        // Setup test user call
+        EntraUserDto entraUser = new EntraUserDto();
+        UserProfileDto testUser = UserProfileDto.builder()
+                .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+                .entraUser(entraUser)
+                .userType(UserType.EXTERNAL)
+                .build();
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(testUser));
+        // Setup test user roles
+        AppRoleDto testUserRole = new AppRoleDto();
+        testUserRole.setId("testUserAppRoleId");
+        List<AppRoleDto> testUserRoles = List.of(testUserRole);
+        when(userService.getUserAppRolesByUserId(userId)).thenReturn(testUserRoles);
+        //setup app
+        String appId = String.valueOf(UUID.randomUUID());
+        AppDto currentApp = new AppDto();
+        currentApp.setId(appId);
+        currentApp.setName("testAppName");
+        // Setup all available roles
+        AppRoleDto testRole1 = new AppRoleDto();
+        testRole1.setId(UUID.randomUUID().toString());
+        testRole1.setUserTypeRestriction(new UserType[] { UserType.EXTERNAL });
+        testRole1.setApp(currentApp);
+
+        List<String> selectedApps = List.of(currentApp.getId());
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("selectedApps", selectedApps);
+        List<AppRoleDto> allRoles = List.of(testRole1);
+        when(userService.getAppRolesByAppIdAndUserType(eq(currentApp.getId()), any(), eq(null))).thenReturn(allRoles);
+        when(loginService.getCurrentProfile(authentication))
+                .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(allRoles);
+        // When
+        String view = userController.editUserRoles(userId, 0, new RolesForm(), null, authentication, model,
+                testSession);
+
+        // Then
+        Assertions.assertEquals("redirect:/admin/users/edit/" + userId + "/roles-check-answer", view);
+    }
+
+    @Test
     public void testEditUserRoles_view_external_user() {
         // Given
         final String userId = "12345";
@@ -4564,6 +4608,41 @@ class UserControllerTest {
         assertThat(model.getAttribute("grantAccessSelectedAppIndex")).isEqualTo(0);
         assertThat(model.getAttribute("grantAccessCurrentApp")).isEqualTo(currentApp);
         assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNotNull();
+    }
+
+    @Test
+    void grantAccessEditUserSingleRoleApp_shouldPopulateModelAndRedirectToOffices() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440002";
+        UserProfileDto user = new UserProfileDto();
+        user.setUserType(UserType.EXTERNAL);
+        user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
+
+        AppDto currentApp = new AppDto();
+        currentApp.setId("app1");
+        currentApp.setName("App 1");
+
+        AppRoleDto role1 = new AppRoleDto();
+        role1.setId(UUID.randomUUID().toString());
+        role1.setName("Role 1");
+        final List<AppRoleDto> roles = List.of(role1);
+
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("grantAccessSelectedApps", List.of("app1"));
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(user));
+        when(userService.getAppRolesByAppIdAndUserType(eq("app1"), any(), eq(null))).thenReturn(roles);
+        when(userService.getUserAppRolesByUserId(userId)).thenReturn(List.of());
+        when(loginService.getCurrentProfile(authentication))
+                .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(roles);
+        when(accessControlService.canAssignExternalAppRoles(userId)).thenReturn(true);
+        // When
+        String view = userController.grantAccessEditUserRoles(userId, 0, new RolesForm(), authentication, model,
+                testSession, redirectAttributes);
+
+        // Then
+        assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/offices");
     }
 
     @Test

@@ -802,6 +802,32 @@ public class MultiFirmUserControllerTest {
     }
 
     @Test
+    void shouldSetBackUrlAndRedirectsCorrectlyForSingleRoleApp() {
+        String appId = UUID.randomUUID().toString();
+        session.setAttribute("addProfileSelectedApps", List.of(appId));
+        session.setAttribute("entraUser", EntraUserDto.builder().fullName("Test User").build());
+        AppDto appDto = AppDto.builder().id(appId).name("App One").build();
+
+        AppRoleDto roleDto = new AppRoleDto();
+        roleDto.setId(UUID.randomUUID().toString());
+        roleDto.setApp(appDto);
+
+        UserProfile userProfile = UserProfile.builder().appRoles(Set.of()).build();
+
+        when(userService.getAppRolesByAppIdAndUserType(appId, UserType.EXTERNAL, null)).thenReturn(List.of(roleDto));
+        when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
+        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(roleDto));
+
+        AppRoleViewModel viewModel = new AppRoleViewModel();
+        viewModel.setSelected(false);
+
+        String view = controller.selectUserAppRoles(0, new RolesForm(), authentication, model, session);
+
+        assertThat(model.getAttribute("backUrl")).isEqualTo("/admin/multi-firm/user/add/profile/select/apps");
+        assertThat(view).isEqualTo("redirect:/admin/multi-firm/user/add/profile/select/offices");
+    }
+
+    @Test
     void shouldSetBackUrlCorrectlyForSubsequentApps() {
 
         String app1Id = UUID.randomUUID().toString();
