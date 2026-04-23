@@ -462,6 +462,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         List<String> roles = List.of("Test LAA App Two Access");
         manageUsersPage.checkSelectedRoles(roles);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         manageUsersPage.clickContinueLink();
         manageUsersPage.clickContinueLink();
         manageUsersPage.clickConfirmButton();
