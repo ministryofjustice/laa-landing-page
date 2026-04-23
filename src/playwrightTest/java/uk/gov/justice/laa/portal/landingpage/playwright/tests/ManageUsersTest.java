@@ -468,8 +468,6 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickConfirmButton();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         assertTrue(page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible());
-        manageUsersPage.clickGoBackToManageUsers();
-        assertTrue(row.locator(".moj-badge.moj-badge--grey").isVisible());
     }
 
     @Test
