@@ -1843,7 +1843,7 @@ class UserControllerTest {
                 authentication);
 
         // Then - should redirect back when role coverage exception thrown
-        assertThat(redirect).isEqualTo("redirect:/admin/users/manage/" + userId);
+        assertThat(redirect).isEqualTo("redirect:/admin/journey-completed");
     }
 
     @Test
@@ -1888,7 +1888,7 @@ class UserControllerTest {
         String redirect = userController.editUserRolesCheckAnswerSubmit(userId.toString(), session, authentication);
 
         // Then - should redirect back when role coverage exception thrown
-        assertThat(redirect).isEqualTo("redirect:/admin/users/manage/" + userId);
+        assertThat(redirect).isEqualTo("redirect:/admin/journey-completed");
     }
 
     @Test
@@ -2552,7 +2552,7 @@ class UserControllerTest {
         // When
         String view = userController.updateUserOfficesCheck(userId, model, testSession);
         // Then
-        assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/offices");
+        assertThat(view).isEqualTo("redirect:/admin/journey-completed");
     }
 
     @Test
@@ -2615,7 +2615,7 @@ class UserControllerTest {
         // When
         String view = userController.updateUserOfficesSubmit(userId, authentication, testSession);
         // Then
-        assertThat(view).isEqualTo("redirect:/admin/users/edit/" + userId + "/offices");
+        assertThat(view).isEqualTo("redirect:/admin/journey-completed");
     }
 
     @Test
@@ -6197,7 +6197,7 @@ class UserControllerTest {
         String view = userController.grantAccessProcessCheckAnswers(userId, authentication, redirectAttributes, testSession);
 
         // then
-        assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/confirmation");
+        assertThat(view).isEqualTo("redirect:/admin/journey-completed");
         // Verify session cleanup
         assertThat(testSession.getAttribute("grantAccessUserOfficesModel")).isNull();
         assertThat(testSession.getAttribute("grantAccessSelectedApps")).isNull();
