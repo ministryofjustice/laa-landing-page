@@ -222,15 +222,16 @@ class UserControllerTest {
         when(userService.getUserProfileById(id)).thenReturn(Optional.of(user));
 
         AppDto appDto = AppDto.builder().id(UUID.randomUUID().toString()).name("Some App").build();
-        AppRoleDto roleDto = AppRoleDto.builder().id(UUID.randomUUID().toString()).app(appDto).build();
+        AppRoleDto roleDto1 = AppRoleDto.builder().id(UUID.randomUUID().toString()).app(appDto).build();
+        AppRoleDto roleDto2 = AppRoleDto.builder().id(UUID.randomUUID().toString()).app(appDto).build();
         when(userService.getAppRolesByAppIdAndUserType(anyString(), eq(UserType.EXTERNAL), eq(null)))
-                .thenReturn(List.of(roleDto));
+                .thenReturn(List.of(roleDto1, roleDto2));
         when(userService.getUserAppRolesByUserId(id)).thenReturn(List.of());
         when(userService.getAppByAppId(anyString())).thenReturn(Optional.of(appDto));
 
         UserProfile editor = UserProfile.builder().build();
         when(loginService.getCurrentProfile(authentication)).thenReturn(editor);
-        when(roleAssignmentService.filterRoles(any(), any())).thenAnswer(inv -> List.of(roleDto));
+        when(roleAssignmentService.filterRoles(any(), any())).thenAnswer(inv -> List.of(roleDto1, roleDto2));
 
         // Act
         String view = userController.editUserRoles(id, 1, new RolesForm(), null, authentication, model, httpSession);
@@ -238,7 +239,7 @@ class UserControllerTest {
         // Assert
         assertThat(view).isEqualTo("edit-user-roles");
         String backUrl = (String) model.getAttribute("backUrl");
-        assertThat(backUrl).endsWith("/roles?selectedAppIndex=0");
+        assertThat(backUrl).endsWith("/admin/users/edit/" + id + "/apps");
     }
 
     @Test
@@ -256,15 +257,16 @@ class UserControllerTest {
         when(userService.getUserProfileById(id)).thenReturn(Optional.of(user));
 
         AppDto appDto = AppDto.builder().id(UUID.randomUUID().toString()).name("Some App").build();
-        AppRoleDto roleDto = AppRoleDto.builder().id(UUID.randomUUID().toString()).app(appDto).build();
+        AppRoleDto roleDto1 = AppRoleDto.builder().id(UUID.randomUUID().toString()).app(appDto).build();
+        AppRoleDto roleDto2 = AppRoleDto.builder().id(UUID.randomUUID().toString()).app(appDto).build();
         when(userService.getAppRolesByAppIdAndUserType(anyString(), eq(UserType.EXTERNAL), eq(null)))
-                .thenReturn(List.of(roleDto));
+                .thenReturn(List.of(roleDto1, roleDto2));
         when(userService.getUserAppRolesByUserId(id)).thenReturn(List.of());
         when(userService.getAppByAppId(anyString())).thenReturn(Optional.of(appDto));
 
         UserProfile editor = UserProfile.builder().build();
         when(loginService.getCurrentProfile(authentication)).thenReturn(editor);
-        when(roleAssignmentService.filterRoles(any(), any())).thenAnswer(inv -> List.of(roleDto));
+        when(roleAssignmentService.filterRoles(any(), any())).thenAnswer(inv -> List.of(roleDto1, roleDto2));
 
         // Act
         String view = userController.editUserRoles(id, 0, new RolesForm(), null, authentication, model, httpSession);
@@ -284,6 +286,7 @@ class UserControllerTest {
         selected.put(0, List.of());
         selected.put(1, List.of());
         httpSession.setAttribute("editUserAllSelectedRoles", selected);
+        httpSession.setAttribute("roleSelectableAppIndexes", Set.of(0, 1));
         List<String> selectedApps = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
         httpSession.setAttribute("selectedApps", selectedApps);
         String id = UUID.randomUUID().toString();
@@ -3025,6 +3028,7 @@ class UserControllerTest {
         modelFromSession.addAttribute("editUserRolesCurrentApp", "currentAppMock");
         HttpSession mockHttpSession = new MockHttpSession();
         mockHttpSession.setAttribute("editProfileUserRolesModel", modelFromSession);
+        mockHttpSession.setAttribute("roleSelectableAppIndexes", Set.of(0, 1));
 
         int selectedAppIndex = 1;
         String userId = "123e4567-e89b-12d3-a456-426614174000";
@@ -4509,7 +4513,10 @@ class UserControllerTest {
         AppRoleDto role1 = new AppRoleDto();
         role1.setId(UUID.randomUUID().toString());
         role1.setName("Role 1");
-        final List<AppRoleDto> roles = List.of(role1);
+        AppRoleDto role2 = new AppRoleDto();
+        role2.setId(UUID.randomUUID().toString());
+        role2.setName("Role 2");
+        final List<AppRoleDto> roles = List.of(role1, role2);
 
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("grantAccessSelectedApps", List.of("app1"));
@@ -5250,11 +5257,15 @@ class UserControllerTest {
         ccmsApp.setId("app1");
         ccmsApp.setName("CCMS Application"); // Contains "CCMS" in name
 
-        AppRoleDto normalRole = new AppRoleDto();
-        normalRole.setId(UUID.randomUUID().toString());
-        normalRole.setCcmsCode("NORMAL_ROLE");
+        AppRoleDto normalRole1 = new AppRoleDto();
+        normalRole1.setId(UUID.randomUUID().toString());
+        normalRole1.setCcmsCode("NORMAL_ROLE_1");
 
-        final List<AppRoleDto> roles = List.of(normalRole);
+        AppRoleDto normalRole2 = new AppRoleDto();
+        normalRole2.setId(UUID.randomUUID().toString());
+        normalRole2.setCcmsCode("NORMAL_ROLE_2");
+
+        final List<AppRoleDto> roles = List.of(normalRole1, normalRole2);
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("selectedApps", List.of("app1"));
 
@@ -5290,15 +5301,23 @@ class UserControllerTest {
         regularApp.setId("app1");
         regularApp.setName("Regular Application"); // Doesn't contain "CCMS"
 
-        AppRoleDto ccmsRole = new AppRoleDto();
-        ccmsRole.setId(UUID.randomUUID().toString());
-        ccmsRole.setCcmsCode("XXCCMS_FIRM_ADMIN"); // CCMS role code
+        AppRoleDto ccmsRole1 = new AppRoleDto();
+        ccmsRole1.setId(UUID.randomUUID().toString());
+        ccmsRole1.setCcmsCode("XXCCMS_FIRM_ADMIN_1"); // CCMS role code
 
-        AppRoleViewModel ccmsRoleViewModel = new AppRoleViewModel();
-        ccmsRoleViewModel.setCcmsCode(ccmsRole.getCcmsCode());
-        ccmsRoleViewModel.setId(ccmsRole.getId());
+        AppRoleDto ccmsRole2 = new AppRoleDto();
+        ccmsRole2.setId(UUID.randomUUID().toString());
+        ccmsRole2.setCcmsCode("XXCCMS_FIRM_ADMIN_2"); // CCMS role code
 
-        final List<AppRoleDto> roles = List.of(ccmsRole);
+        AppRoleViewModel ccmsRoleViewModel1 = new AppRoleViewModel();
+        ccmsRoleViewModel1.setCcmsCode(ccmsRole1.getCcmsCode());
+        ccmsRoleViewModel1.setId(ccmsRole1.getId());
+
+        AppRoleViewModel ccmsRoleViewModel2 = new AppRoleViewModel();
+        ccmsRoleViewModel2.setCcmsCode(ccmsRole2.getCcmsCode());
+        ccmsRoleViewModel2.setId(ccmsRole2.getId());
+
+        final List<AppRoleDto> roles = List.of(ccmsRole1, ccmsRole2);
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("selectedApps", List.of("app1"));
 
@@ -5325,7 +5344,7 @@ class UserControllerTest {
         Map<String, Boolean> ccmsRolesBySectionFlags = (Map<String, Boolean>) model
                 .getAttribute("ccmsRoleDisplayFlags");
         assertThat(ccmsRolesBySection).isNotNull();
-        assertThat(ccmsRolesBySection.get("Provider")).containsExactly(ccmsRoleViewModel);
+        assertThat(ccmsRolesBySection.get("Provider")).containsExactlyInAnyOrder(ccmsRoleViewModel1, ccmsRoleViewModel2);
         assertThat(ccmsRolesBySectionFlags).isNotNull();
         assertThat(ccmsRolesBySectionFlags.get("Provider")).isTrue();
         assertThat(ccmsRolesBySectionFlags.get("Chambers")).isFalse();
@@ -5428,11 +5447,15 @@ class UserControllerTest {
         regularApp.setId("app1");
         regularApp.setName("Regular Application");
 
-        AppRoleDto regularRole = new AppRoleDto();
-        regularRole.setId(UUID.randomUUID().toString());
-        regularRole.setCcmsCode("REGULAR_ROLE"); // Not a CCMS role
+        AppRoleDto regularRole1 = new AppRoleDto();
+        regularRole1.setId(UUID.randomUUID().toString());
+        regularRole1.setCcmsCode("REGULAR_ROLE1"); // Not a CCMS role
 
-        final List<AppRoleDto> roles = List.of(regularRole);
+        AppRoleDto regularRole2 = new AppRoleDto();
+        regularRole2.setId(UUID.randomUUID().toString());
+        regularRole2.setCcmsCode("REGULAR_ROLE2"); // Not a CCMS role
+
+        final List<AppRoleDto> roles = List.of(regularRole1, regularRole2);
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("selectedApps", List.of("app1"));
 
@@ -5465,11 +5488,15 @@ class UserControllerTest {
         regularApp.setId("app1");
         regularApp.setName("CCMS case transfer requests");
 
-        AppRoleDto regularRole = new AppRoleDto();
-        regularRole.setId(UUID.randomUUID().toString());
-        regularRole.setCcmsCode("REQUESTS TO TRANSFER CCMS CASES_VIEWER_EXTERN"); // Not a CCMS role
+        AppRoleDto regularRole1 = new AppRoleDto();
+        regularRole1.setId(UUID.randomUUID().toString());
+        regularRole1.setCcmsCode("REQUESTS TO TRANSFER CCMS CASES_VIEWER_EXTERN_1"); // Not a CCMS role
 
-        final List<AppRoleDto> roles = List.of(regularRole);
+        AppRoleDto regularRole2 = new AppRoleDto();
+        regularRole2.setId(UUID.randomUUID().toString());
+        regularRole2.setCcmsCode("REQUESTS TO TRANSFER CCMS CASES_VIEWER_EXTERN_2"); // Not a CCMS role
+
+        final List<AppRoleDto> roles = List.of(regularRole1, regularRole2);
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("selectedApps", List.of("app1"));
 
@@ -5570,11 +5597,15 @@ class UserControllerTest {
         ccmsApp.setId("app1");
         ccmsApp.setName("CCMS Application");
 
-        AppRoleDto normalRole = new AppRoleDto();
-        normalRole.setId(UUID.randomUUID().toString());
-        normalRole.setCcmsCode("NORMAL_ROLE");
+        AppRoleDto normalRole1 = new AppRoleDto();
+        normalRole1.setId(UUID.randomUUID().toString());
+        normalRole1.setCcmsCode("NORMAL_ROLE1");
 
-        final List<AppRoleDto> roles = List.of(normalRole);
+        AppRoleDto normalRole2 = new AppRoleDto();
+        normalRole2.setId(UUID.randomUUID().toString());
+        normalRole2.setCcmsCode("NORMAL_ROLE2");
+
+        final List<AppRoleDto> roles = List.of(normalRole1, normalRole2);
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("grantAccessSelectedApps", List.of("app1"));
 
@@ -5607,15 +5638,23 @@ class UserControllerTest {
         regularApp.setId("app1");
         regularApp.setName("Regular Application");
 
-        AppRoleDto ccmsRole = new AppRoleDto();
-        ccmsRole.setId(UUID.randomUUID().toString());
-        ccmsRole.setCcmsCode("XXCCMS_OFFICE_ADMIN");
+        AppRoleDto ccmsRole1 = new AppRoleDto();
+        ccmsRole1.setId(UUID.randomUUID().toString());
+        ccmsRole1.setCcmsCode("XXCCMS_OFFICE_ADMIN_1");
 
-        AppRoleViewModel ccmsRoleViewModel = new AppRoleViewModel();
-        ccmsRoleViewModel.setCcmsCode(ccmsRole.getCcmsCode());
-        ccmsRoleViewModel.setId(ccmsRole.getId());
+        AppRoleDto ccmsRole2 = new AppRoleDto();
+        ccmsRole2.setId(UUID.randomUUID().toString());
+        ccmsRole2.setCcmsCode("XXCCMS_OFFICE_ADMIN_2");
 
-        final List<AppRoleDto> roles = List.of(ccmsRole);
+        AppRoleViewModel ccmsRoleViewModel1 = new AppRoleViewModel();
+        ccmsRoleViewModel1.setCcmsCode(ccmsRole1.getCcmsCode());
+        ccmsRoleViewModel1.setId(ccmsRole1.getId());
+
+        AppRoleViewModel ccmsRoleViewModel2 = new AppRoleViewModel();
+        ccmsRoleViewModel2.setCcmsCode(ccmsRole2.getCcmsCode());
+        ccmsRoleViewModel2.setId(ccmsRole2.getId());
+
+        final List<AppRoleDto> roles = List.of(ccmsRole1, ccmsRole2);
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("grantAccessSelectedApps", List.of("app1"));
 
@@ -5640,7 +5679,7 @@ class UserControllerTest {
         Map<String, Boolean> ccmsRolesBySectionFlags = (Map<String, Boolean>) model
                 .getAttribute("ccmsRoleDisplayFlags");
         assertThat(ccmsRolesBySection).isNotNull();
-        assertThat(ccmsRolesBySection.get("Provider")).containsExactly(ccmsRoleViewModel);
+        assertThat(ccmsRolesBySection.get("Provider")).containsExactlyInAnyOrder(ccmsRoleViewModel1, ccmsRoleViewModel2);
         assertThat(ccmsRolesBySectionFlags).isNotNull();
         assertThat(ccmsRolesBySectionFlags.get("Provider")).isTrue();
         assertThat(ccmsRolesBySectionFlags.get("Chambers")).isFalse();
@@ -5767,11 +5806,15 @@ class UserControllerTest {
         regularApp.setId("app1");
         regularApp.setName("Regular Grant Access App");
 
-        AppRoleDto regularRole = new AppRoleDto();
-        regularRole.setId(UUID.randomUUID().toString());
-        regularRole.setCcmsCode("REGULAR_ROLE");
+        AppRoleDto regularRole1 = new AppRoleDto();
+        regularRole1.setId(UUID.randomUUID().toString());
+        regularRole1.setCcmsCode("REGULAR_ROLE1");
 
-        final List<AppRoleDto> roles = List.of(regularRole);
+        AppRoleDto regularRole2 = new AppRoleDto();
+        regularRole2.setId(UUID.randomUUID().toString());
+        regularRole2.setCcmsCode("REGULAR_ROLE2");
+
+        final List<AppRoleDto> roles = List.of(regularRole1, regularRole2);
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("grantAccessSelectedApps", List.of("app1"));
 
@@ -5804,15 +5847,23 @@ class UserControllerTest {
         ccmsApp.setId("app2");
         ccmsApp.setName("CCMS App 2");
 
-        AppRoleDto ccmsRole = new AppRoleDto();
-        ccmsRole.setId(UUID.randomUUID().toString());
-        ccmsRole.setCcmsCode("XXCCMS_CASE_MANAGER");
+        AppRoleDto ccmsRole1 = new AppRoleDto();
+        ccmsRole1.setId(UUID.randomUUID().toString());
+        ccmsRole1.setCcmsCode("XXCCMS_CASE_MANAGER_1");
 
-        AppRoleViewModel ccmsRoleViewModel = new AppRoleViewModel();
-        ccmsRoleViewModel.setCcmsCode(ccmsRole.getCcmsCode());
-        ccmsRoleViewModel.setId(ccmsRole.getId());
+        AppRoleDto ccmsRole2 = new AppRoleDto();
+        ccmsRole2.setId(UUID.randomUUID().toString());
+        ccmsRole2.setCcmsCode("XXCCMS_CASE_MANAGER_2");
 
-        final List<AppRoleDto> roles = List.of(ccmsRole);
+        AppRoleViewModel ccmsRoleViewModel1 = new AppRoleViewModel();
+        ccmsRoleViewModel1.setCcmsCode(ccmsRole1.getCcmsCode());
+        ccmsRoleViewModel1.setId(ccmsRole1.getId());
+
+        AppRoleViewModel ccmsRoleViewModel2 = new AppRoleViewModel();
+        ccmsRoleViewModel2.setCcmsCode(ccmsRole2.getCcmsCode());
+        ccmsRoleViewModel2.setId(ccmsRole2.getId());
+
+        final List<AppRoleDto> roles = List.of(ccmsRole1, ccmsRole2);
         MockHttpSession testSession = new MockHttpSession();
         testSession.setAttribute("grantAccessSelectedApps", List.of("app1", "app2"));
 
@@ -5845,7 +5896,7 @@ class UserControllerTest {
         Map<String, Boolean> ccmsRolesBySectionFlags = (Map<String, Boolean>) model
                 .getAttribute("ccmsRoleDisplayFlags");
         assertThat(ccmsRolesBySection).isNotNull();
-        assertThat(ccmsRolesBySection.get("Provider")).containsExactly(ccmsRoleViewModel);
+        assertThat(ccmsRolesBySection.get("Provider")).containsExactlyInAnyOrder(ccmsRoleViewModel1, ccmsRoleViewModel2);
         assertThat(ccmsRolesBySectionFlags).isNotNull();
         assertThat(ccmsRolesBySectionFlags.get("Provider")).isTrue();
         assertThat(ccmsRolesBySectionFlags.get("Chambers")).isFalse();
@@ -7561,24 +7612,30 @@ class UserControllerTest {
             UUID userId = UUID.randomUUID();
             MockHttpSession testSession = new MockHttpSession();
             testSession.setAttribute("selectedApps", List.of("app-id-1"));
-            FirmDto chambersFirm = FirmDto.builder().id(UUID.randomUUID()).name("Chambers Firm").type(FirmType.CHAMBERS).build();
+            FirmDto chambersFirm = FirmDto.builder().id(UUID.randomUUID()).name("Chambers Firm")
+                    .type(FirmType.CHAMBERS).build();
             UserProfileDto user = UserProfileDto.builder()
                     .id(userId)
                     .userType(UserType.EXTERNAL)
                     .firm(chambersFirm)
                     .build();
 
-            AppRoleDto chambersRole = new AppRoleDto();
-            chambersRole.setId(UUID.randomUUID().toString());
-            chambersRole.setName("Chambers Role");
+            AppRoleDto chambersRole1 = AppRoleDto.builder()
+                    .id(UUID.randomUUID().toString())
+                    .name("Chambers Role 1")
+                    .build();
+
+            AppRoleDto chambersRole2 = AppRoleDto.builder()
+                    .id(UUID.randomUUID().toString())
+                    .name("Chambers Role 2").build();
 
             AppDto appDto = AppDto.builder().id("app-id-1").name("Test App").build();
             when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.of(user));
             when(userService.getAppRolesByAppIdAndUserType("app-id-1", UserType.EXTERNAL, FirmType.CHAMBERS))
-                    .thenReturn(List.of(chambersRole));
+                    .thenReturn(List.of(chambersRole1, chambersRole2));
             when(loginService.getCurrentProfile(authentication))
                     .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
-            when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(chambersRole));
+            when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(chambersRole1, chambersRole2));
             when(userService.getUserAppRolesByUserId(userId.toString())).thenReturn(List.of());
             when(userService.getAppByAppId("app-id-1")).thenReturn(Optional.of(appDto));
             String view = userController.editUserRoles(userId.toString(), 0, new RolesForm(), null, authentication, model, testSession);
@@ -7599,17 +7656,23 @@ class UserControllerTest {
                     .firm(advocateFirm)
                     .build();
 
-            AppRoleDto advocateRole = new AppRoleDto();
-            advocateRole.setId(UUID.randomUUID().toString());
-            advocateRole.setName("Advocate Role");
+            AppRoleDto advocateRole1 = AppRoleDto.builder()
+                    .id(UUID.randomUUID().toString())
+                    .name("Advocate Role 1")
+                    .build();
+
+            AppRoleDto advocateRole2 = AppRoleDto.builder()
+                    .id(UUID.randomUUID().toString())
+                    .name("Advocate Role 2")
+                    .build();
 
             AppDto appDto = AppDto.builder().id("app-id-1").name("Test App").build();
             when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.of(user));
             when(userService.getAppRolesByAppIdAndUserType("app-id-1", UserType.EXTERNAL, FirmType.ADVOCATE))
-                    .thenReturn(List.of(advocateRole));
+                    .thenReturn(List.of(advocateRole1, advocateRole2));
             when(loginService.getCurrentProfile(authentication))
                     .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
-            when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(advocateRole));
+            when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(advocateRole1, advocateRole2));
             when(userService.getUserAppRolesByUserId(userId.toString())).thenReturn(List.of());
             when(userService.getAppByAppId("app-id-1")).thenReturn(Optional.of(appDto));
 
@@ -7631,18 +7694,24 @@ class UserControllerTest {
                     .firm(null)
                     .build();
 
-            AppRoleDto unrestrictedRole = new AppRoleDto();
-            unrestrictedRole.setId(UUID.randomUUID().toString());
-            unrestrictedRole.setName("Unrestricted Role");
+            AppRoleDto unrestrictedRole1 = AppRoleDto.builder()
+                    .id(UUID.randomUUID().toString())
+                    .name("Unrestricted Role 1")
+                    .build();
+
+            AppRoleDto unrestrictedRole2 = AppRoleDto.builder()
+                    .id(UUID.randomUUID().toString())
+                    .name("Unrestricted Role 2")
+                    .build();
 
             AppDto appDto = AppDto.builder().id("app-id-1").name("Test App").build();
 
             when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.of(user));
             when(userService.getAppRolesByAppIdAndUserType("app-id-1", UserType.EXTERNAL, null))
-                    .thenReturn(List.of(unrestrictedRole));
+                    .thenReturn(List.of(unrestrictedRole1, unrestrictedRole2));
             when(loginService.getCurrentProfile(authentication))
                     .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
-            when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(unrestrictedRole));
+            when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(unrestrictedRole1, unrestrictedRole2));
             when(userService.getUserAppRolesByUserId(userId.toString())).thenReturn(List.of());
             when(userService.getAppByAppId("app-id-1")).thenReturn(Optional.of(appDto));
 
@@ -7665,19 +7734,25 @@ class UserControllerTest {
                     .firm(lspFirm)
                     .build();
 
-            AppRoleDto lspRole = new AppRoleDto();
-            lspRole.setId(UUID.randomUUID().toString());
-            lspRole.setName("LSP Role");
+            AppRoleDto lspRole1 = AppRoleDto.builder()
+                    .id(UUID.randomUUID().toString())
+                    .name("LSP Role 1")
+                    .build();
+
+            AppRoleDto lspRole2 = AppRoleDto.builder()
+                    .id(UUID.randomUUID().toString())
+                    .name("LSP Role 2")
+                    .build();
 
             AppDto appDto = AppDto.builder().id("app-id-1").name("Test App").build();
 
             Model model = new ExtendedModelMap();
             when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.of(user));
             when(userService.getAppRolesByAppIdAndUserType("app-id-1", UserType.EXTERNAL, FirmType.LEGAL_SERVICES_PROVIDER))
-                    .thenReturn(List.of(lspRole));
+                    .thenReturn(List.of(lspRole1, lspRole2));
             when(loginService.getCurrentProfile(authentication))
                     .thenReturn(UserProfile.builder().id(UUID.randomUUID()).appRoles(new HashSet<>()).build());
-            when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(lspRole));
+            when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(lspRole1, lspRole2));
             when(userService.getUserAppRolesByUserId(userId.toString())).thenReturn(List.of());
             when(userService.getAppByAppId("app-id-1")).thenReturn(Optional.of(appDto));
             when(accessControlService.canAssignExternalAppRoles(userId.toString())).thenReturn(true);
@@ -7700,19 +7775,25 @@ class UserControllerTest {
                     .firm(null)
                     .build();
 
-            AppRoleDto internalRole = new AppRoleDto();
-            internalRole.setId(UUID.randomUUID().toString());
-            internalRole.setName("Internal Role");
+            AppRoleDto internalRole1 = AppRoleDto.builder()
+                    .id(UUID.randomUUID().toString())
+                    .name("Internal Role1")
+                    .build();
+
+            AppRoleDto internalRole2 = AppRoleDto.builder()
+                    .id(UUID.randomUUID().toString())
+                    .name("Internal Role2")
+                    .build();
 
             AppDto appDto = AppDto.builder().id("app-id-1").name("Test App").build();
 
             Model model = new ExtendedModelMap();
             when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.of(user));
             when(userService.getAppRolesByAppIdAndUserType("app-id-1", UserType.INTERNAL, null))
-                    .thenReturn(List.of(internalRole));
+                    .thenReturn(List.of(internalRole1, internalRole2));
             when(loginService.getCurrentProfile(authentication))
                     .thenReturn(UserProfile.builder().id(UUID.randomUUID()).appRoles(new HashSet<>()).build());
-            when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(internalRole));
+            when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(internalRole1, internalRole2));
             when(userService.getUserAppRolesByUserId(userId.toString())).thenReturn(List.of());
             when(userService.getAppByAppId("app-id-1")).thenReturn(Optional.of(appDto));
             when(accessControlService.canAssignInternalAppRoles(userId.toString())).thenReturn(true);

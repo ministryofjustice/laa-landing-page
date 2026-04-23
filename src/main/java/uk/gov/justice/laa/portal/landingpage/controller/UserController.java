@@ -1260,6 +1260,7 @@ public class UserController {
             session.setAttribute("editUserAllSelectedRoles", editUserAllSelectedRoles);
             currentSelectedAppIndex++;
             if (currentSelectedAppIndex >= selectedApps.size()) {
+                model.addAttribute("backUrl", getBackButtonUrl(id, session, currentSelectedAppIndex));
                 return "redirect:/admin/users/edit/" + id + "/roles-check-answer";
             }
 

@@ -564,6 +564,7 @@ public class MultiFirmUserController {
             currentSelectedAppIndex++;
 
             if (currentSelectedAppIndex == selectedAppIds.size()) {
+                model.addAttribute("backUrl", getBackButtonUrl(session, currentSelectedAppIndex));
                 return "redirect:/admin/multi-firm/user/add/profile/select/offices";
             }
 
