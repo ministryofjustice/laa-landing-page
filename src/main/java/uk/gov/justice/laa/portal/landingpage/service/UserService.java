@@ -2200,9 +2200,11 @@ public class UserService {
     private AuditProfileDto mapToAuditProfileDto(UserProfile profile) {
         // Get offices
         List<OfficeDto> officeDtos = new ArrayList<>();
-        String officeRestrictions = "Access to All Offices";
+        String officeRestrictions = "No office access assigned";
 
-        if (profile.getOffices() != null && !profile.getOffices().isEmpty()) {
+        if (profile.isUnrestrictedOfficeAccess()) {
+            officeRestrictions = "Access to All Offices";
+        } else if (profile.getOffices() != null && !profile.getOffices().isEmpty()) {
             officeDtos = profile.getOffices().stream()
                     .map(office -> mapper.map(office, OfficeDto.class)).toList();
             officeRestrictions = officeDtos.size() + " office(s) selected";
