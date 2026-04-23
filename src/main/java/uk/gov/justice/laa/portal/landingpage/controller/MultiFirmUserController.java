@@ -782,7 +782,11 @@ public class MultiFirmUserController {
                 .map(appRoleDto -> UserRole.builder().appName(appRoleDto.getName())
                         .roleName(appRoleDto.getName()).url("/admin/multi-firm/user/add/profile/select/roles").build())
                 .toList();
-        EntraUserDto user = getObjectFromHttpSession(session, "entraUser", EntraUserDto.class).orElseThrow();
+        Optional<EntraUserDto> userOptional = getObjectFromHttpSession(session, "entraUser", EntraUserDto.class);
+        if (userOptional.isEmpty()) {
+            return "redirect:/admin/journey-completed";
+        }
+        EntraUserDto user = userOptional.get();
 
         model.addAttribute("user", user);
         model.addAttribute("selectedAppRole", selectedAppRole);
@@ -796,7 +800,11 @@ public class MultiFirmUserController {
 
     @PostMapping("/user/add/profile/check-answers")
     public String checkAnswerAndAddProfilePost(Authentication authentication, RedirectAttributes redirectAttributes, HttpSession session, Model model) {
-        EntraUserDto user = getObjectFromHttpSession(session, "entraUser", EntraUserDto.class).orElseThrow();
+        Optional<EntraUserDto> userOptional = getObjectFromHttpSession(session, "entraUser", EntraUserDto.class);
+        if (userOptional.isEmpty()) {
+            return "redirect:/admin/journey-completed";
+        }
+        EntraUserDto user = userOptional.get();
 
         Map<Integer, List<String>> appRolesByPage = (Map<Integer, List<String>>) session
                 .getAttribute("addUserProfileAllSelectedRoles");

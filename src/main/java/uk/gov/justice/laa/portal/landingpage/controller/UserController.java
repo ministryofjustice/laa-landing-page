@@ -1460,7 +1460,7 @@ public class UserController {
         Map<Integer, List<String>> editUserAllSelectedRoles = (Map<Integer, List<String>>) session
                 .getAttribute("editUserAllSelectedRoles");
         if (editUserAllSelectedRoles == null) {
-            return "redirect:/admin/users/manage/" + id;
+            return "redirect:/admin/journey-completed";
         }
         UserType userType = user.getUserType();
         List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
@@ -1538,7 +1538,7 @@ public class UserController {
         Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) session
                 .getAttribute("editUserAllSelectedRoles");
         if (allSelectedRolesByPage == null) {
-            return "redirect:/admin/users/manage/" + id;
+            return "redirect:/admin/journey-completed";
         }
         List<String> allSelectedRoles = allSelectedRolesByPage.values().stream().filter(Objects::nonNull)
                 .flatMap(List::stream)
@@ -1706,7 +1706,7 @@ public class UserController {
             Model model, HttpSession session) {
         OfficesForm officesForm = (OfficesForm) session.getAttribute("officesForm");
         if (officesForm == null) {
-            return "redirect:/admin/users/edit/" + id + "/offices";
+            return "redirect:/admin/journey-completed";
         }
         // Update user offices
         List<String> selectedOffices = officesForm.getOffices() != null ? officesForm.getOffices() : new ArrayList<>();
@@ -1742,7 +1742,7 @@ public class UserController {
             HttpSession session) throws IOException {
         OfficesForm officesForm = (OfficesForm) session.getAttribute("officesForm");
         if (officesForm == null) {
-            return "redirect:/admin/users/edit/" + id + "/offices";
+            return "redirect:/admin/journey-completed";
         }
         // Update user offices
         UserProfileDto userProfileDto = userService.getUserProfileById(id).orElseThrow();
@@ -2416,8 +2416,11 @@ public class UserController {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         UserType userType = user.getUserType();
         // Get user's current app roles from session
-        Set<String> allSelectedRoles = getSetFromHttpSession(session, "allSelectedRoles", String.class)
-                .orElseThrow(() -> new RuntimeException("No roles selected for assignment"));
+        Optional<Set<String>> allSelectedRolesOptional = getSetFromHttpSession(session, "allSelectedRoles", String.class);
+        if (allSelectedRolesOptional.isEmpty()) {
+            return "redirect:/admin/journey-completed";
+        }
+        Set<String> allSelectedRoles = allSelectedRolesOptional.get();
 
         List<AppRoleDto> userAppRoles = appRoleService.getByIds(allSelectedRoles);
         List<AppRoleDto> editableUserAppRoles = userAppRoles.stream()
@@ -2432,8 +2435,11 @@ public class UserController {
                         Collectors.toList()));
 
         // get all offices from session
-        List<String> selectedOffices = getListFromHttpSession(session, "selectedOffices", String.class)
-                .orElseThrow(() -> new RuntimeException("No Office selected for assignment"));
+        Optional<List<String>> selectedOfficesOptional = getListFromHttpSession(session, "selectedOffices", String.class);
+        if (selectedOfficesOptional.isEmpty()) {
+            return "redirect:/admin/journey-completed";
+        }
+        List<String> selectedOffices = selectedOfficesOptional.get();
 
         List<OfficeDto> userOffices = new ArrayList<>();
 
@@ -2516,8 +2522,11 @@ public class UserController {
                 return "redirect:/admin/users/manage/" + id;
             }
 
-            Set<String> allSelectedRoles = getSetFromHttpSession(session, "allSelectedRoles", String.class)
-                    .orElseThrow(() -> new RuntimeException("No roles selected for assignment"));
+            Optional<Set<String>> allSelectedRolesOptional = getSetFromHttpSession(session, "allSelectedRoles", String.class);
+            if (allSelectedRolesOptional.isEmpty()) {
+                return "redirect:/admin/journey-completed";
+            }
+            Set<String> allSelectedRoles = allSelectedRolesOptional.get();
             List<String> nonEditableRoles = getListFromHttpSession(session, "nonEditableRoles", String.class)
                     .orElseGet(ArrayList::new);
 
@@ -2533,7 +2542,11 @@ public class UserController {
                 eventService.logEvent(updateUserAuditEvent);
             }
 
-            List<String> selectedOffices = getListFromHttpSession(session, "selectedOffices", String.class).orElseThrow();
+            Optional<List<String>> selectedOfficesOptional = getListFromHttpSession(session, "selectedOffices", String.class);
+            if (selectedOfficesOptional.isEmpty()) {
+                return "redirect:/admin/journey-completed";
+            }
+            List<String> selectedOffices = selectedOfficesOptional.get();
 
             String changed = userService.updateUserOffices(id, selectedOffices);
 
@@ -2585,6 +2598,18 @@ public class UserController {
         model.addAttribute("user", user);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Access granted - " + user.getFullName());
         return "grant-access-confirmation";
+    }
+
+    /**
+     * Shows a user-friendly page when a user navigates back
+     * after completing a transactional journey (e.g. grant access, edit roles, add profile).
+     * This replaces the generic error page that would otherwise appear when session data
+     * has been cleared after successful completion.
+     */
+    @GetMapping("/journey-completed")
+    public String journeyCompleted(Model model) {
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Action already completed");
+        return "journey-completed";
     }
 
     @GetMapping("/users/grant-access/{id}/cancel/confirmation")
