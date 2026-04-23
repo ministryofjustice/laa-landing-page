@@ -518,6 +518,22 @@ databaseChangeLog:
               '#',
               'LAA'
               );
+              
+              INSERT INTO public.app (
+              id, entra_app_id, entra_oid, name, security_group_oid,
+              ordinal, enabled, description, url, app_type
+              )
+              VALUES (
+              '77777777-7777-7777-7777-777777777777',
+              'uuuuuuuu-uuuu-uuuu-uuuu-uuuuuuuuuuuu',
+              'uuuuuuuu-uuuu-uuuu-uuuu-uuuuuuuuuuuu',
+              'Test LAA App Four',
+              'Test LAA App Four',
+              2, TRUE,
+              'Test LAA App Four',
+              '#',
+              'LAA'
+              );
 
               -- Insert app roles
               INSERT INTO public.app_role (
@@ -564,12 +580,25 @@ databaseChangeLog:
               )
               VALUES (
               FALSE,
-              '99999999-9999-9999-9999-999999999999',
-              'ffffffff-ffff-ffff-ffff-cccbbbbbbbbb',
-              'Test LAA App Four Access',
-              'Test LAA App Four Access',
+              '77777777-7777-7777-7777-777777777777',
+              'ffffffff-ffff-ffff-ffff-dddbbbbbbbbb',
+              'Test LAA App Four Role One Access',
+              'Test LAA App Four Role One Access',
               '{EXTERNAL}',
-              2
+              0
+              );
+              
+              INSERT INTO public.app_role (
+              authz_role, app_id, id, description, name, user_type_restriction, ordinal
+              )
+              VALUES (
+              FALSE,
+              '77777777-7777-7777-7777-777777777777',
+              'ffffffff-ffff-ffff-ffff-eeebbbbbbbbb',
+              'Test LAA App Four Role Two Access',
+              'Test LAA App Four Role Two Access',
+              '{EXTERNAL}',
+              1
               );
 
 

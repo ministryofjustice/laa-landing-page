@@ -456,11 +456,11 @@ public class ManageUsersTest extends BaseFrontEndTest {
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         assertTrue(page.locator(".govuk-button:has-text('Manage Access')").isVisible());
         manageUsersPage.clickManageAccess();
-        List<String> services = List.of("Test LAA App Two");
+        List<String> services = List.of("Test LAA App Four");
         manageUsersPage.checkSelectedServices(services);
         manageUsersPage.clickContinueLink();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-        List<String> roles = List.of("Test LAA App Two Access");
+        List<String> roles = List.of("Test LAA App Four Role One Access");
         manageUsersPage.checkSelectedRoles(roles);
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         manageUsersPage.clickContinueLink();
@@ -468,6 +468,8 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickConfirmButton();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         assertTrue(page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible());
+        manageUsersPage.clickGoBackToManageUsers();
+        assertTrue(row.locator(".moj-badge.moj-badge--grey").isVisible());
     }
 
     @Test
