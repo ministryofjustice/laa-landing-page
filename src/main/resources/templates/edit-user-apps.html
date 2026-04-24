@@ -40,57 +40,33 @@
                         Select all that apply
                     </div>
 
-                    <!-- Admin Services Section -->
-                    <h2 class="govuk-heading-m govuk-!-margin-top-6">Admin services</h2>
-                    <div class="govuk-checkboxes" data-module="govuk-checkboxes">
-                        <th:block th:each="app : ${apps}">
-                            <div class="govuk-checkboxes__item" th:if="${app.appType != null and app.appType.name() == 'AUTHZ' and !app.hiddenFromSelection}">
-                                <input class="govuk-checkboxes__input"
-                                       th:id="'app-' + ${app.id}"
-                                       name="apps"
-                                       th:checked="${app.selected}"
-                                       th:value="${app.id}"
-                                       type="checkbox"
-                                       th:disabled="${app.changeNotAllowed}">
-                                <label class="govuk-label govuk-checkboxes__label"
-                                       th:for="'app-' + ${app.id}">
-                                    <span th:text="${app.name}"></span>
-                                </label>
-                                <div th:if="${app.description != null && !app.description.isEmpty()}"
-                                     class="govuk-hint govuk-checkboxes__hint"
-                                     th:text="${app.description}"></div>
-                            </div>
-                            <div th:if="${app.appType != null and app.appType.name() == 'AUTHZ' and app.selected && (app.changeNotAllowed || app.hiddenFromSelection)}">
-                                <input th:id="'app-hidden-' + ${app.id}" name="apps" th:value="${app.id}" type="hidden" />
-                            </div>
-                        </th:block>
-                    </div>
-
-                    <!-- Legal Aid Services Section -->
-                    <h2 class="govuk-heading-m govuk-!-margin-top-6">Legal aid Services</h2>
-                    <div class="govuk-checkboxes" data-module="govuk-checkboxes">
-                        <th:block th:each="app : ${apps}">
-                            <div class="govuk-checkboxes__item" th:if="${app.appType != null and app.appType.name() == 'LAA' and !app.hiddenFromSelection}">
-                                <input class="govuk-checkboxes__input"
-                                       th:id="'app-' + ${app.id}"
-                                       name="apps"
-                                       th:checked="${app.selected}"
-                                       th:value="${app.id}"
-                                       type="checkbox"
-                                       th:disabled="${app.changeNotAllowed}">
-                                <label class="govuk-label govuk-checkboxes__label"
-                                       th:for="'app-' + ${app.id}">
-                                    <span th:text="${app.name}"></span>
-                                </label>
-                                <div th:if="${app.description != null && !app.description.isEmpty()}"
-                                     class="govuk-hint govuk-checkboxes__hint"
-                                     th:text="${app.description}"></div>
-                            </div>
-                            <div th:if="${app.appType != null and app.appType.name() == 'LAA' and app.selected && (app.changeNotAllowed || app.hiddenFromSelection)}">
-                                <input th:id="'app-hidden-' + ${app.id}" name="apps" th:value="${app.id}" type="hidden" />
-                            </div>
-                        </th:block>
-                    </div>
+                    <!-- App sections grouped by type, driven by database -->
+                    <th:block th:each="groupEntry : ${groupedApps.entrySet()}">
+                        <h2 class="govuk-heading-m govuk-!-margin-top-6" th:text="${groupEntry.key.name}"></h2>
+                        <div class="govuk-checkboxes" data-module="govuk-checkboxes">
+                            <th:block th:each="app : ${groupEntry.value}">
+                                <div class="govuk-checkboxes__item" th:if="${!app.hiddenFromSelection}">
+                                    <input class="govuk-checkboxes__input"
+                                           th:id="'app-' + ${app.id}"
+                                           name="apps"
+                                           th:checked="${app.selected}"
+                                           th:value="${app.id}"
+                                           type="checkbox"
+                                           th:disabled="${app.changeNotAllowed}">
+                                    <label class="govuk-label govuk-checkboxes__label"
+                                           th:for="'app-' + ${app.id}">
+                                        <span th:text="${app.name}"></span>
+                                    </label>
+                                    <div th:if="${app.description != null && !app.description.isEmpty()}"
+                                         class="govuk-hint govuk-checkboxes__hint"
+                                         th:text="${app.description}"></div>
+                                </div>
+                                <div th:if="${app.selected && (app.changeNotAllowed || app.hiddenFromSelection)}">
+                                    <input th:id="'app-hidden-' + ${app.id}" name="apps" th:value="${app.id}" type="hidden" />
+                                </div>
+                            </th:block>
+                        </div>
+                    </th:block>
                 </fieldset>
             </div>
             <div class="govuk-button-group">

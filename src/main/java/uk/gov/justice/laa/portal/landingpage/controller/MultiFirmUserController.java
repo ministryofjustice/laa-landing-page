@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -44,6 +45,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
+import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
@@ -60,14 +62,13 @@ import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
+import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
-
-import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
@@ -98,6 +99,19 @@ public class MultiFirmUserController {
     private final ModelMapper mapper;
 
     private final FirmService firmService;
+
+    private LinkedHashMap<AppType, List<AppDto>> buildGroupedApps(List<AppDto> apps) {
+        LinkedHashMap<AppType, List<AppDto>> grouped = new LinkedHashMap<>();
+        for (AppType type : AppType.values()) {
+            List<AppDto> typeApps = apps.stream()
+                    .filter(app -> type.equals(app.getAppType()))
+                    .toList();
+            if (!typeApps.isEmpty()) {
+                grouped.put(type, typeApps);
+            }
+        }
+        return grouped;
+    }
 
 
     @GetMapping("/user/add/profile/select/internalUserFirm")
@@ -480,6 +494,7 @@ public class MultiFirmUserController {
         EntraUserDto entraUserDto = getObjectFromHttpSession(session, "entraUser", EntraUserDto.class).orElseThrow();
         model.addAttribute("entraUser", entraUserDto);
         model.addAttribute("apps", assignableApps);
+        model.addAttribute("groupedApps", buildGroupedApps(assignableApps));
 
         session.setAttribute("addProfileUserAppsModel", model);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile - Select services - " + entraUserDto.getFullName());
@@ -500,6 +515,7 @@ public class MultiFirmUserController {
 
             model.addAttribute("entraUser", modelFromSession.getAttribute("entraUser"));
             model.addAttribute("apps", modelFromSession.getAttribute("apps"));
+            model.addAttribute("groupedApps", modelFromSession.getAttribute("groupedApps"));
             return "multi-firm-user/select-user-apps";
         }
 
@@ -574,7 +590,7 @@ public class MultiFirmUserController {
 
         // Apply CCMS filtering before storing in model
         List<AppRoleViewModel> finalRoles = appRoleViewModels;
-        
+
         if (isCcmsApp) {
             // Filter to only CCMS roles for organization
             List<AppRoleViewModel> ccmsRoles = appRoleViewModels.stream()
@@ -585,7 +601,7 @@ public class MultiFirmUserController {
             if (!ccmsRoles.isEmpty()) {
                 // Organize CCMS roles by section dynamically
                 organizedRoles.putAll(CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles));
-                
+
                 // Use filtered CCMS roles for both display and session storage
                 finalRoles = ccmsRoles;
             }
