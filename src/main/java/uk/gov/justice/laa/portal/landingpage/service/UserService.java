@@ -1802,12 +1802,14 @@ public class UserService {
 
         String getAppAccess = determineAppAccess(profiles, firmId);
 
+        String accountStatus = determineAccountStatus(user, profiles);
+
         // Get firm code
         String firmCode = determineFirmCode(profiles, csvExport);
 
         return AuditUserDto.builder().name(user.getFirstName() + " " + user.getLastName())
                 .email(user.getEmail()).firmAssociation(firmAssociation).firmCode(firmCode).appAccess(getAppAccess)
-                .isMultiFirmUser(user.isMultiFirmUser()).isProviderAdmin(userRole).build();
+                .isMultiFirmUser(user.isMultiFirmUser()).isProviderAdmin(userRole).accountStatus(accountStatus).build();
     }
 
     /**
