@@ -336,4 +336,231 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
                 WHERE multiFirmUser = TRUE
             """)
     List<Object[]> findTotalMultiFirmUsersCount();
+
+
+    /* ---------------- INTERNAL USERS ---------------- */
+
+    @Query("""
+        SELECT COUNT(DISTINCT eu.id)
+        FROM EntraUser eu
+        LEFT JOIN UserProfile up
+            ON up.entraUser.id = eu.id
+        WHERE up.userType = 'INTERNAL'
+        """)
+    long countInternalUsers();
+
+    /* ---------------- TOTAL EXTERNAL USERS ---------------- */
+
+    @Query("""
+        SELECT COUNT(DISTINCT eu.id)
+        FROM EntraUser eu
+        LEFT JOIN UserProfile up
+            ON up.entraUser.id = eu.id
+        WHERE up.userType = 'EXTERNAL'
+        """)
+    long countTotalExternalUsers();
+
+
+    @Query("""
+        SELECT COUNT(DISTINCT eu.id)
+        FROM EntraUser eu
+        LEFT JOIN UserProfile up
+            ON up.entraUser.id = eu.id
+        WHERE up.userType = 'EXTERNAL'
+          AND eu.multiFirmUser = TRUE
+        """)
+    long countTotalExternalMultiFirmUsers();
+
+
+    /* ---------------- ACTIVE EXTERNAL USERS ---------------- */
+
+    @Query("""
+        SELECT COUNT(DISTINCT eu.id)
+        FROM EntraUser eu
+        LEFT JOIN UserProfile up
+            ON up.entraUser.id = eu.id
+        WHERE up.userType = 'EXTERNAL'
+          AND eu.enabled = TRUE
+          AND eu.invitationStatus = 'VERIFICATION_SUCCESS'
+        """)
+    long countActiveExternalUsers();
+
+
+    @Query("""
+        FROM EntraUser eu
+        LEFT JOIN UserProfile up
+            ON up.entraUser.id = eu.id
+        WHERE up.userType = 'EXTERNAL'
+          AND eu.enabled = TRUE
+          AND eu.invitationStatus = 'VERIFICATION_SUCCESS'
+          AND eu.multiFirmUser = true
+        """)
+    long countActiveExternalMultiFirmUsers();
+
+    /* ---------------- COMPLETE EXTERNAL USERS ---------------- */
+    @Query("""
+        SELECT COUNT(DISTINCT eu.id)
+        FROM EntraUser eu
+        LEFT JOIN UserProfile up
+            ON up.entraUser.id = eu.id
+        WHERE up.userType = 'EXTERNAL'
+          AND eu.enabled = TRUE
+          AND eu.invitationStatus = 'VERIFICATION_SUCCESS'
+          AND NOT EXISTS (
+              SELECT 1
+              FROM UserProfile up2
+              WHERE up2.entraUser.id = eu.id
+                AND up2.appRoles IS EMPTY
+          )
+        """)
+    long countCompleteExternalUsers();
+
+    @Query("""
+        SELECT COUNT(DISTINCT eu.id)
+        FROM EntraUser eu
+        LEFT JOIN UserProfile up
+            ON up.entraUser.id = eu.id
+        WHERE up.userType = 'EXTERNAL'
+          AND eu.enabled = TRUE
+          AND eu.invitationStatus = 'VERIFICATION_SUCCESS'
+          AND eu.multiFirmUser = TRUE
+          AND NOT EXISTS (
+              SELECT 1
+              FROM UserProfile up2
+              WHERE up2.entraUser.id = eu.id
+                AND up2.appRoles IS EMPTY
+          )
+        """)
+    long countCompleteExternalMultiFirmUsers();
+
+    /* ---------------- EXTERNAL USERS WITH NO ROLES ASSIGNED ---------------- */
+
+    @Query("""
+        SELECT COUNT(DISTINCT eu.id)
+        FROM EntraUser eu
+        LEFT JOIN UserProfile up
+            ON up.entraUser.id = eu.id
+        WHERE up.userType = 'EXTERNAL'
+          AND eu.enabled = TRUE
+          AND eu.invitationStatus = 'VERIFICATION_SUCCESS'
+          AND EXISTS (
+              SELECT 1
+              FROM UserProfile up2
+              WHERE up2.entraUser.id = eu.id
+                AND up2.appRoles IS EMPTY
+          )
+        """)
+    long countExternalUsersWithNoRoles();
+
+    @Query("""
+        SELECT COUNT(DISTINCT eu.id)
+        FROM EntraUser eu
+        LEFT JOIN UserProfile up
+            ON up.entraUser.id = eu.id
+        WHERE up.userType = 'EXTERNAL'
+          AND eu.enabled = TRUE
+          AND eu.invitationStatus = 'VERIFICATION_SUCCESS'
+                  AND eu.multiFirmUser = TRUE
+          AND EXISTS (
+              SELECT 1
+              FROM UserProfile up2
+              WHERE up2.entraUser.id = eu.id
+                AND up2.appRoles IS EMPTY
+          )
+        """)
+    long countExternalMultiFirmUsersWithNoRoles();
+
+    /* ---------------- DISABLED EXTERNAL USERS ---------------- */
+
+    @Query("""
+        SELECT COUNT(DISTINCT eu.id)
+        FROM EntraUser eu
+        LEFT JOIN UserProfile up
+            ON up.entraUser.id = eu.id
+        WHERE up.userType = 'EXTERNAL'
+          AND eu.enabled = FALSE
+          AND eu.invitationStatus = 'VERIFICATION_SUCCESS'
+    """)
+    long countDisabledExternalUsers();
+
+    @Query("""
+        SELECT COUNT(DISTINCT eu.id)
+        FROM EntraUser eu
+        LEFT JOIN UserProfile up
+            ON up.entraUser.id = eu.id
+        WHERE up.userType = 'EXTERNAL'
+          AND eu.enabled = FALSE
+          AND eu.invitationStatus = 'VERIFICATION_SUCCESS'
+          AND eu.multiFirmUser = TRUE
+        """)
+    long countDisabledExternalMultiFirmUsers();
+
+    /* ---------------- INCOMPLETE EXTERNAL USERS ---------------- */
+
+    @Query("""
+        SELECT COUNT(DISTINCT eu.id)
+        FROM EntraUser eu
+        LEFT JOIN UserProfile up
+            ON up.entraUser.id = eu.id
+        WHERE up.userType = 'EXTERNAL'
+          AND eu.invitationStatus <> 'VERIFICATION_SUCCESS'
+          AND EXISTS (
+              SELECT 1
+              FROM UserProfile up2
+              WHERE up2.entraUser.id = eu.id
+                AND up2.appRoles IS EMPTY
+          )
+        """)
+    long countIncompleteExternalUsers();
+
+    @Query("""
+        SELECT COUNT(DISTINCT eu.id)
+        FROM EntraUser eu
+        LEFT JOIN UserProfile up
+            ON up.entraUser.id = eu.id
+        WHERE up.userType = 'EXTERNAL'
+          AND eu.invitationStatus <> 'VERIFICATION_SUCCESS'
+          AND eu.multiFirmUser = TRUE
+          AND EXISTS (
+              SELECT 1
+              FROM UserProfile up2
+              WHERE up2.entraUser.id = eu.id
+                AND up2.appRoles IS EMPTY
+          )
+        """)
+    long countIncompleteExternalMultiFirmUsers();
+
+    @Query("""
+        SELECT COUNT(DISTINCT eu.id)
+        FROM EntraUser eu
+        LEFT JOIN UserProfile up
+            ON up.entraUser.id = eu.id
+        WHERE up.userType = 'EXTERNAL'
+          AND eu.invitationStatus <> 'VERIFICATION_SUCCESS'
+          AND NOT EXISTS (
+              SELECT 1
+              FROM UserProfile up2
+              WHERE up2.entraUser.id = eu.id
+                AND up2.appRoles IS EMPTY
+          )
+        """)
+    long countActivationPendingExternalUsers();
+
+    @Query("""
+        SELECT COUNT(DISTINCT eu.id)
+        FROM EntraUser eu
+        LEFT JOIN UserProfile up
+            ON up.entraUser.id = eu.id
+        WHERE up.userType = 'EXTERNAL'
+          AND eu.invitationStatus <> 'VERIFICATION_SUCCESS'
+          AND eu.multiFirmUser = TRUE
+          AND NOT EXISTS (
+              SELECT 1
+              FROM UserProfile up2
+              WHERE up2.entraUser.id = eu.id
+                AND up2.appRoles IS EMPTY
+          )
+        """)
+    long countActivationPendingExternalMultiFirmUsers();
+
 }

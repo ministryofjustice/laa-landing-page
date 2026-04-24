@@ -19,6 +19,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
+import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
@@ -374,6 +375,96 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
                         new Object[]{"Firm Epsilon", "EPSILON", "ADVOCATE", null, 1L, 1L, 1L, 0L},
                         new Object[]{"Firm Zeta", "ZETA", "ADVOCATE", null, 2L, 1L, 1L, 1L},
                         new Object[]{"Firm Eta", "ETA", "ADVOCATE", null, 2L, 1L, 2L, 0L});
+    }
+
+    @Test
+    public void testCountFirmsWithExternalUsers() {
+        EntraUser user = buildEntraUser(generateEntraId(),
+                "ext@x.com", "External", "User");
+        entraUserRepository.saveAndFlush(user);
+
+        Firm firm1 = buildFirm("Firm One", "F1");
+        Firm firm2 = buildFirm("Firm Two", "F2");
+        repository.saveAllAndFlush(List.of(firm1, firm2));
+
+        UserProfile profile =
+                buildLaaUserProfileWithoutRoles(user, UserType.EXTERNAL);
+        profile.setFirm(firm1);
+
+        userProfileRepository.saveAndFlush(profile);
+
+        long result = repository.countFirmsWithExternalUsers();
+
+        assertThat(result).isEqualTo(1L);
+    }
+
+    @Test
+    public void testCountFirmsWithMultiFirmExternalUsers() {
+        EntraUser singleFirmUser = buildEntraUser(generateEntraId(),
+                "single@x.com", "Single", "User");
+
+        EntraUser multiFirmUser = buildEntraUser(generateEntraId(),
+                "multi@x.com", "Multi", "User");
+        multiFirmUser.setMultiFirmUser(true);
+
+        entraUserRepository.saveAllAndFlush(
+                List.of(singleFirmUser, multiFirmUser)
+        );
+
+        Firm firm1 = buildFirm("Firm One", "F1");
+        Firm firm2 = buildFirm("Firm Two", "F2");
+        repository.saveAllAndFlush(List.of(firm1, firm2));
+
+        UserProfile profile1 =
+                buildLaaUserProfileWithoutRoles(singleFirmUser, UserType.EXTERNAL);
+        profile1.setFirm(firm1);
+
+        UserProfile profile2 =
+                buildLaaUserProfileWithoutRoles(multiFirmUser, UserType.EXTERNAL);
+        profile2.setFirm(firm2);
+
+        userProfileRepository.saveAllAndFlush(List.of(profile1, profile2));
+
+        long result = repository.countFirmsWithMultiFirmExternalUsers();
+
+        assertThat(result).isEqualTo(1L);
+    }
+
+    @Test
+    public void testCountFirmsWithActiveExternalUsers() {
+        EntraUser activeUser = buildEntraUser(generateEntraId(),
+                "active@x.com", "Active", "User");
+        activeUser.setEnabled(true);
+        activeUser.setInvitationStatus(InvitationStatus.VERIFICATION_SUCCESS);
+
+        EntraUser inactiveUser = buildEntraUser(generateEntraId(),
+                "inactive@x.com", "Inactive", "User");
+        inactiveUser.setEnabled(false);
+        inactiveUser.setInvitationStatus(InvitationStatus.VERIFICATION_SUCCESS);
+
+        entraUserRepository.saveAllAndFlush(
+                List.of(activeUser, inactiveUser)
+        );
+
+        Firm firm1 = buildFirm("Firm One", "F1");
+        Firm firm2 = buildFirm("Firm Two", "F2");
+        repository.saveAllAndFlush(List.of(firm1, firm2));
+
+        UserProfile activeProfile =
+                buildLaaUserProfileWithoutRoles(activeUser, UserType.EXTERNAL);
+        activeProfile.setFirm(firm1);
+
+        UserProfile inactiveProfile =
+                buildLaaUserProfileWithoutRoles(inactiveUser, UserType.EXTERNAL);
+        inactiveProfile.setFirm(firm2);
+
+        userProfileRepository.saveAllAndFlush(
+                List.of(activeProfile, inactiveProfile)
+        );
+
+        long result = repository.countFirmsWithActiveExternalUsers();
+
+        assertThat(result).isEqualTo(1L);
     }
 
 }
