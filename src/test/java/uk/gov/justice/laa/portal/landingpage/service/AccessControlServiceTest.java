@@ -3241,7 +3241,6 @@ public class AccessControlServiceTest {
                 setupSecurityContext(authenticatedUser);
                 when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(accessedUserProfile));
                 when(userService.isInternal(accessedUserProfile.getEntraUser().getId())).thenReturn(false);
-                when(userService.isInternal(authenticatedUser.getId())).thenReturn(true);
 
                 // Act
                 boolean result = accessControlService.canRemoveExternalAppRoles(userProfileId);
@@ -3251,7 +3250,7 @@ public class AccessControlServiceTest {
             }
 
             @Test
-            void canRemoveExternalAppRoles_returnsFalse_whenAuthenticatedUserIsNotInternal() {
+            void canRemoveExternalAppRoles_returnsTrue_whenAuthenticatedUserIsNotInternal() {
                 // Arrange
                 String userProfileId = UUID.randomUUID().toString();
                 UUID authenticatedUserId = UUID.randomUUID();
@@ -3262,13 +3261,12 @@ public class AccessControlServiceTest {
                 setupSecurityContext(authenticatedUser);
                 when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(accessedUserProfile));
                 when(userService.isInternal(accessedUserProfile.getEntraUser().getId())).thenReturn(false);
-                when(userService.isInternal(authenticatedUser.getId())).thenReturn(false); // Authenticated user is external
 
                 // Act
                 boolean result = accessControlService.canRemoveExternalAppRoles(userProfileId);
 
                 // Assert
-                assertThat(result).isFalse();
+                assertThat(result).isTrue();
             }
 
             @Test
@@ -3325,7 +3323,6 @@ public class AccessControlServiceTest {
                 setupSecurityContext(authenticatedUser);
                 when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(accessedUserProfile));
                 when(userService.isInternal(accessedUserProfile.getEntraUser().getId())).thenReturn(false);
-                when(userService.isInternal(authenticatedUser.getId())).thenReturn(true);
 
                 // Act
                 boolean result = accessControlService.canRemoveAppRoles(userProfileId);
@@ -3356,7 +3353,7 @@ public class AccessControlServiceTest {
             }
 
             @Test
-            void canRemoveAppRoles_returnsFalse_whenExternalUserTryingToRemoveFromExternalUser() {
+            void canRemoveAppRoles_returnsTrue_whenExternalUserTryingToRemoveFromExternalUser() {
                 // Arrange
                 String userProfileId = UUID.randomUUID().toString();
                 UUID authenticatedUserId = UUID.randomUUID();
@@ -3368,13 +3365,12 @@ public class AccessControlServiceTest {
                 setupSecurityContext(authenticatedUser);
                 when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(accessedUserProfile));
                 when(userService.isInternal(accessedUserProfile.getEntraUser().getId())).thenReturn(false);
-                when(userService.isInternal(authenticatedUser.getId())).thenReturn(false); // External user
 
                 // Act
                 boolean result = accessControlService.canRemoveExternalAppRoles(userProfileId);
 
                 // Assert
-                assertThat(result).isFalse();
+                assertThat(result).isTrue();
             }
 
             // Helper methods for creating test data
@@ -4214,7 +4210,6 @@ public class AccessControlServiceTest {
                 setupSecurityContext(authenticatedUser);
                 when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(accessedUserProfile));
                 when(userService.isInternal(accessedUserProfile.getEntraUser().getId())).thenReturn(false);
-                when(userService.isInternal(authenticatedUser.getId())).thenReturn(true);
 
                 // Act
                 boolean result = accessControlService.canRemoveExternalAppRoles(userProfileId);
@@ -4224,7 +4219,7 @@ public class AccessControlServiceTest {
             }
 
             @Test
-            void canRemoveExternalAppRoles_returnsFalse_whenAuthenticatedUserIsNotInternal() {
+            void canRemoveExternalAppRoles_returnsTrue_whenAuthenticatedUserIsNotInternal() {
                 // Arrange
                 String userProfileId = UUID.randomUUID().toString();
                 UUID authenticatedUserId = UUID.randomUUID();
@@ -4235,13 +4230,12 @@ public class AccessControlServiceTest {
                 setupSecurityContext(authenticatedUser);
                 when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(accessedUserProfile));
                 when(userService.isInternal(accessedUserProfile.getEntraUser().getId())).thenReturn(false);
-                when(userService.isInternal(authenticatedUser.getId())).thenReturn(false); // Authenticated user is external
 
                 // Act
                 boolean result = accessControlService.canRemoveExternalAppRoles(userProfileId);
 
                 // Assert
-                assertThat(result).isFalse();
+                assertThat(result).isTrue();
             }
 
             @Test
@@ -4317,7 +4311,6 @@ public class AccessControlServiceTest {
                 setupSecurityContext(authenticatedUser);
                 when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(accessedUserProfile));
                 when(userService.isInternal(accessedUserProfile.getEntraUser().getId())).thenReturn(false);
-                when(userService.isInternal(authenticatedUser.getId())).thenReturn(true);
 
                 // Act
                 boolean result = accessControlService.canRemoveAppRoles(userProfileId);
@@ -4348,7 +4341,7 @@ public class AccessControlServiceTest {
             }
 
             @Test
-            void canRemoveAppRoles_returnsFalse_whenExternalUserTryingToRemoveFromExternalUser() {
+            void canRemoveAppRoles_returnsTrue_whenExternalUserTryingToRemoveFromExternalUser() {
                 // Arrange
                 String userProfileId = UUID.randomUUID().toString();
                 UUID authenticatedUserId = UUID.randomUUID();
@@ -4360,13 +4353,12 @@ public class AccessControlServiceTest {
                 setupSecurityContext(authenticatedUser);
                 when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(accessedUserProfile));
                 when(userService.isInternal(accessedUserProfile.getEntraUser().getId())).thenReturn(false);
-                when(userService.isInternal(authenticatedUser.getId())).thenReturn(false); // External user
 
                 // Act
                 boolean result = accessControlService.canRemoveExternalAppRoles(userProfileId);
 
                 // Assert
-                assertThat(result).isFalse();
+                assertThat(result).isTrue();
             }
 
             // Helper methods for creating test data

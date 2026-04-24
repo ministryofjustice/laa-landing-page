@@ -520,7 +520,7 @@ public class AccessControlService {
             }
         }
 
-        // internal user with external user manager permission accessing external user
+        // user with external user manager permission accessing external user
         if (externalRoles) {
             boolean isFirmUserManager = isFirmUserManager(authenticatedUser);
             boolean sameFirm = usersAreInSameFirm(authenticatedUser, userProfileId);
@@ -529,8 +529,7 @@ public class AccessControlService {
             }
 
             return userHasPermission(authenticatedUser, Permission.REMOVE_EXTERNAL_USER_ROLES)
-                    && !userService.isInternal(accessedUser.getId())
-                    && userService.isInternal(authenticatedUser.getId());
+                    && !userService.isInternal(accessedUser.getId());
         }
 
         return false;
