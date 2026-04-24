@@ -34,7 +34,7 @@ public class UserUptakeReportTest {
     private DistributedLockRepository lockRepository;
 
     @BeforeEach
-    void setUp(){
+    void setUp() {
         lockService = new DistributedLockService(lockRepository);
         userUptakeReport = new UserUptakeReport(lockService, userUptakeReportService);
         setReportingEnabled(true);

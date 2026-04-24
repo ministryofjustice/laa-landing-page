@@ -475,7 +475,7 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
         WHERE up.userType = 'EXTERNAL'
           AND eu.enabled = FALSE
           AND eu.invitationStatus = 'VERIFICATION_SUCCESS'
-    """)
+        """)
     long countDisabledExternalUsers();
 
     @Query("""
