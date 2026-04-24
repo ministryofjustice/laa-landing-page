@@ -80,7 +80,7 @@ public class ReportUploadService {
                         .drives()
                         .byDriveId(driveId)
                         .items()
-                        .byDriveItemId("root:/" + folderPath + "/" + file.getName() + ":")
+                        .byDriveItemId("root:/" + fullFolderPath + "/" + file.getName() + ":")
                         .content()
                         .put(fileInputStream);
 
