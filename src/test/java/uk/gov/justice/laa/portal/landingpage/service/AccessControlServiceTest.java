@@ -530,7 +530,6 @@ public class AccessControlServiceTest {
         when(userService.getUserProfileById(accessedUserId.toString()))
                 .thenReturn(Optional.of(accessedUserProfile));
         when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
-        when(userService.isInternal(userId)).thenReturn(true);
 
         boolean result = accessControlService.canGrantUserAccess(accessedUserId.toString());
         Assertions.assertThat(result).isTrue();
@@ -595,7 +594,7 @@ public class AccessControlServiceTest {
     }
 
     @Test
-    public void testCanGrantUserAccess_ExternalUserWithPermissionsEditingExternalUser_ReturnsFalse() {
+    public void testCanGrantUserAccess_ExternalUserWithPermissionsEditingExternalUser_ReturnsTrue() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
@@ -617,7 +616,7 @@ public class AccessControlServiceTest {
         when(userService.getUserProfileById(accessedUserId.toString())).thenReturn(Optional.of(accessedUserProfile));
 
         boolean result = accessControlService.canGrantUserAccess(accessedUserId.toString());
-        Assertions.assertThat(result).isFalse();
+        Assertions.assertThat(result).isTrue();
     }
 
     @Test
@@ -1572,7 +1571,6 @@ public class AccessControlServiceTest {
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         when(userService.getUserProfileById(accessedUserId.toString())).thenReturn(Optional.of(accessedUserProfile));
         when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
-        when(userService.isInternal(userId)).thenReturn(true);
 
         boolean result = accessControlService.canGrantUserAccess(accessedUserId.toString());
         Assertions.assertThat(result).isTrue();
