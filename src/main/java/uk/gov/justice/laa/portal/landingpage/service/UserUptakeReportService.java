@@ -97,7 +97,6 @@ public class UserUptakeReportService {
         }
     }
 
-    /* CSV writer unchanged except simplified input */
     private File writeToCsv(List<ReportRow> rows) {
 
         String timestamp = LocalDateTime.now().format(FILE_TIMESTAMP);
