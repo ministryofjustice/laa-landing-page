@@ -16,6 +16,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -57,9 +58,13 @@ public class ExternalUserReportingService {
                     .addColumn("Firm Code")
                     .addColumn("Firm Type")
                     .addColumn("Parent Firm Code")
-                    .addColumn("User Count")
+                    .addColumn("Total User Count")
                     .addColumn("Admin User Count")
                     .addColumn("Multi-Firm User Count")
+                    .addColumn("Complete User Count")
+                    .addColumn("Activation Pending User Count")
+                    .addColumn("Incomplete User Count")
+                    .addColumn("No Roles Assigned User Count")
                     .addColumn("Disabled User Count")
                     .setUseHeader(true)
                     .build();
@@ -84,7 +89,11 @@ public class ExternalUserReportingService {
                             row[4],
                             row[5],
                             row[6],
-                            row[7]
+                            row[7],
+                            row[8],
+                            row[9],
+                            row[10],
+                            row[11]
                     );
                     sequenceWriter.write(csvRow);
                 }
@@ -95,3 +104,4 @@ public class ExternalUserReportingService {
         }
     }
 }
+
