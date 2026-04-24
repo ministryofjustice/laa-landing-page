@@ -399,7 +399,6 @@ public class ManageUsersTest extends BaseFrontEndTest {
             manageUsersPage.clickServicesTab();
             manageUsersPage.clickChangeLink();
             manageUsersPage.clickContinueLink();
-            manageUsersPage.clickContinueLink();
             manageUsersPage.clickConfirmButton();
             page.waitForLoadState(LoadState.DOMCONTENTLOADED);
             assertTrue(page.url().contains("/confirmation"));
@@ -457,11 +456,13 @@ public class ManageUsersTest extends BaseFrontEndTest {
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         assertTrue(page.locator(".govuk-button:has-text('Manage Access')").isVisible());
         manageUsersPage.clickManageAccess();
-        List<String> services = List.of("Test LAA App One");
-        manageUsersPage.checkSelectedRoles(services);
+        List<String> services = List.of("Test LAA App Four");
+        manageUsersPage.checkSelectedServices(services);
         manageUsersPage.clickContinueLink();
-        List<String> roles = List.of("Test LAA App One Access");
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        List<String> roles = List.of("Test LAA App Four Role One Access");
         manageUsersPage.checkSelectedRoles(roles);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         manageUsersPage.clickContinueLink();
         manageUsersPage.clickContinueLink();
         manageUsersPage.clickConfirmButton();
@@ -469,6 +470,25 @@ public class ManageUsersTest extends BaseFrontEndTest {
         assertTrue(page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible());
         manageUsersPage.clickGoBackToManageUsers();
         assertTrue(row.locator(".moj-badge.moj-badge--grey").isVisible());
+    }
+
+    @Test
+    @DisplayName("Verify External User Manager can Manage Access for incomplete users (Single Role App).")
+    public void verifyExternalUserManagerIncompleteUsersSkipRoleSelectionForSingleRoleApp() {
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+        Locator row = manageUsersPage.externalUserRowLocator();
+        assertTrue(row.locator(".moj-badge.moj-badge--blue").isVisible());
+        manageUsersPage.clickExternalUserLink("Playwright ExternalUserIncompleteTwo");
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        assertTrue(page.locator(".govuk-button:has-text('Manage Access')").isVisible());
+        manageUsersPage.clickManageAccess();
+        List<String> services = List.of("Test LAA App One");
+        manageUsersPage.checkSelectedServices(services);
+        manageUsersPage.clickContinueLink();
+        manageUsersPage.clickContinueLink();
+        manageUsersPage.clickConfirmButton();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        assertTrue(page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible());
     }
 
     @Disabled("Test disabled - user creation logic changed. Users with only firm selection get COMPLETE status instead of PENDING. Needs investigation.")

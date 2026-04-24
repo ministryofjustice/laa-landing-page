@@ -153,7 +153,7 @@ public class AdminPageTest extends BaseFrontEndTest {
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Continue")).click();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-        verifyAppOrderConfirmationTable("3", "4");
+        verifyAppOrderConfirmationTable("2", "4");
 
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Confirm")).click();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
@@ -172,8 +172,8 @@ public class AdminPageTest extends BaseFrontEndTest {
                 .assertReorderRolesLinkVisible();
 
         Assertions.assertTrue(
-                adminPage.getRolesRowCount() == 3,
-                "Expected Roles table to contain 3 rows"
+                adminPage.getRolesRowCount() == 5,
+                "Expected Roles table to contain 5 rows"
         );
 
         page.locator("select#appFilter").selectOption("Test LAA App Two");
@@ -207,8 +207,8 @@ public class AdminPageTest extends BaseFrontEndTest {
                 .assertReorderRolesLinkVisible();
 
         Assertions.assertTrue(
-                adminPage.getRolesRowCount() == 2,
-                "Expected Roles table to contain 2 rows"
+                adminPage.getRolesRowCount() == 4,
+                "Expected Roles table to contain 4 rows"
         );
 
     }
