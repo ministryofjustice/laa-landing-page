@@ -1,6 +1,8 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -197,6 +199,12 @@ public class AuditController {
         if (entraUserResponse.isSuccess()) {
             TechServicesUser user = entraUserResponse.getData().getUser();
             String disableUserReason = formatDisableUserReason(user);
+
+            OffsetDateTime lastLoginTime = user.getLastSignIn() != null
+                    ? OffsetDateTime.parse(user.getLastSignIn())
+                    : null;
+
+            model.addAttribute("lastLogin", lastLoginTime);
             model.addAttribute("entraUser", entraUserResponse.getData().getUser());
             model.addAttribute("entraVerificationStatus", getEntraVerificationStatus(entraUserResponse));
             model.addAttribute("entraUserDisableReason", disableUserReason);

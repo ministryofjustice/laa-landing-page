@@ -423,11 +423,10 @@ public class AccessControlService {
             return true;
         }
 
-        // internal user with external user manager permission accessing external user
+        // user with external user manager permission accessing external user
         return userHasPermission(authenticatedUser, Permission.ASSIGN_EXTERNAL_USER_ROLES)
                 && userHasPermission(authenticatedUser, Permission.EDIT_USER_OFFICE)
-                && !userService.isInternal(accessedUser.getId())
-                && userService.isInternal(authenticatedUser.getId());
+                && !userService.isInternal(accessedUser.getId());
     }
 
     public boolean canEditUserAppRoleAssignments(String userProfileId) {
@@ -552,7 +551,7 @@ public class AccessControlService {
             }
         }
 
-        // internal user with external user manager permission accessing external user
+        // user with external user manager permission accessing external user
         if (externalRoles) {
             boolean isFirmUserManager = isFirmUserManager(authenticatedUser);
             boolean sameFirm = usersAreInSameFirm(authenticatedUser, userProfileId);
@@ -561,8 +560,7 @@ public class AccessControlService {
             }
 
             return userHasPermission(authenticatedUser, Permission.REMOVE_EXTERNAL_USER_ROLES)
-                    && !userService.isInternal(accessedUser.getId())
-                    && userService.isInternal(authenticatedUser.getId());
+                    && !userService.isInternal(accessedUser.getId());
         }
 
         return false;
