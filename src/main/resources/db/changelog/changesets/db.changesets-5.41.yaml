@@ -1,43 +1,11 @@
 databaseChangeLog:
-  - changeSet:
-      id: add-disable-type-to-entra-user
-      author: stb-3994
-      changes:
-        - addColumn:
-            tableName: entra_user
-            columns:
-              - column:
-                  name: disable_type
-                  type: VARCHAR(20)
-                  constraints:
-                    nullable: true
-      rollback:
-        - dropColumn:
-            tableName: entra_user
-            columnName: disable_type
-
-  - changeSet:
-      id: add-disable-type-to-user-account-status-audit
-      author: stb-3994
-      changes:
-        - addColumn:
-            tableName: user_account_status_audit
-            columns:
-              - column:
-                  name: disable_type
-                  type: VARCHAR(20)
-                  constraints:
-                    nullable: true
-      rollback:
-        - dropColumn:
-            tableName: user_account_status_audit
-            columnName: disable_type
 
   - changeSet:
       id: migrate-admin-app-apps-to-app-table-1
       author: Suresh Kavali
 
       changes:
+
         - sql:
             sql: |
               UPDATE app
@@ -95,6 +63,7 @@ databaseChangeLog:
             tableName: admin_app
 
       rollback:
+
         - createTable:
             tableName: admin_app
             columns:
@@ -164,20 +133,22 @@ databaseChangeLog:
   - changeSet:
       id: transfer-autz-roles-to-corresponding-apps-2
       author: Suresh Kavali
+
       changes:
+
         - sql:
             sql: |
-              DELETE FROM user_profile_app_role
+              DELETE FROM user_profile_app_role 
                 WHERE app_role_id IN (SELECT id FROM app_role ar
                                       WHERE ar.name = 'SiLAS Administration');
         - sql:
             sql: |
-              DELETE FROM role_permission
+              DELETE FROM role_permission 
               WHERE app_role_id IN (SELECT id FROM app_role ar
                                 WHERE ar.name = 'SiLAS Administration');
         - sql:
             sql: |
-              DELETE FROM role_assignment
+              DELETE FROM role_assignment 
               WHERE assignable_role_id IN (SELECT id FROM app_role ar
                                 WHERE ar.name = 'SiLAS Administration')
               OR assigning_role_id IN (SELECT id FROM app_role ar
@@ -227,6 +198,7 @@ databaseChangeLog:
               );
 
       rollback:
+
         - sql:
             sql: |
               DELETE FROM role_permission
@@ -257,6 +229,7 @@ databaseChangeLog:
       author: Suresh Kavali
 
       changes:
+
         - sql:
             sql: |
               INSERT INTO role_assignment (assigning_role_id, assignable_role_id)
@@ -274,24 +247,3 @@ databaseChangeLog:
               ) AND assignable_role_id IN (
                 SELECT id FROM app_role WHERE name = 'Firm Directory Access'
               );
-
-  - changeSet:
-      id: fix-silas-admin-role-data-cleanup
-      author: stb-3994
-
-      changes:
-        - sql:
-            sql: |
-              DELETE FROM user_profile_app_role
-                WHERE app_role_id IN (SELECT id FROM app_role ar
-                                      WHERE ar.name = 'SiLAS Administration');
-        - sql:
-            sql: |
-              DELETE FROM role_permission
-              WHERE app_role_id IN (SELECT id FROM app_role ar
-                                WHERE ar.name = 'SiLAS Administration');
-
-      rollback:
-        - sql:
-            sql: |
-              SELECT 1;
