@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -70,6 +71,8 @@ import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
 import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getSetFromHttpSession;
+
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
 /**
@@ -503,6 +506,8 @@ public class MultiFirmUserController {
             return "multi-firm-user/select-user-apps";
         }
 
+        session.removeAttribute("roleSelectableAppIndexes");
+        session.removeAttribute("addUserProfileAllSelectedRoles");
         session.setAttribute("applicationsForm", applicationsForm);
 
         List<String> selectedAppIds = applicationsForm.getApps() != null ? applicationsForm.getApps()
@@ -534,15 +539,42 @@ public class MultiFirmUserController {
             currentSelectedAppIndex = 0;
         }
 
-        UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
-        String targetFirmId = (String) session.getAttribute("delegateTargetFirmId");
-        Firm targetFirm = targetFirmId != null ? firmService.getById(UUID.fromString(targetFirmId)) : currentUserProfile.getFirm();
-        FirmType targetFirmType = targetFirm != null ? targetFirm.getType() : null;
+        List<AppRoleDto> assignableRoles = new ArrayList<>();
 
-        List<AppRoleDto> availableRoles = userService
-                .getAppRolesByAppIdAndUserType(selectedAppIds.get(currentSelectedAppIndex), UserType.EXTERNAL, targetFirmType);
-        List<AppRoleDto> assignableRoles = roleAssignmentService.filterRoles(currentUserProfile.getAppRoles(),
-                availableRoles.stream().map(role -> UUID.fromString(role.getId())).toList());
+        while (currentSelectedAppIndex < selectedAppIds.size()) {
+            UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
+            String targetFirmId = (String) session.getAttribute("delegateTargetFirmId");
+            Firm targetFirm = targetFirmId != null ? firmService.getById(UUID.fromString(targetFirmId)) : currentUserProfile.getFirm();
+            FirmType targetFirmType = targetFirm != null ? targetFirm.getType() : null;
+
+            List<AppRoleDto> availableRoles = userService
+                    .getAppRolesByAppIdAndUserType(selectedAppIds.get(currentSelectedAppIndex), UserType.EXTERNAL, targetFirmType);
+            assignableRoles = roleAssignmentService.filterRoles(currentUserProfile.getAppRoles(),
+                    availableRoles.stream().map(role -> UUID.fromString(role.getId())).toList());
+
+            if (assignableRoles.size() != 1) {
+                break;
+            }
+
+            @SuppressWarnings("unchecked")
+            Map<Integer, List<String>> editUserAllSelectedRolesByPage = getObjectFromHttpSession(session,
+                    "addUserProfileAllSelectedRoles", Map.class).orElse(new HashMap<>());
+            editUserAllSelectedRolesByPage.put(currentSelectedAppIndex, assignableRoles.stream().map(AppRoleDto::getId).toList());
+            session.setAttribute("addUserProfileAllSelectedRoles", editUserAllSelectedRolesByPage);
+            currentSelectedAppIndex++;
+
+            if (currentSelectedAppIndex == selectedAppIds.size()) {
+                model.addAttribute("backUrl", getBackButtonUrl(session, currentSelectedAppIndex));
+                return "redirect:/admin/multi-firm/user/add/profile/select/offices";
+            }
+
+        }
+
+        // Store the app indexes for which roles can be selected, to guide back button
+        Set<Integer> roleSelectableAppIndexes = getSetFromHttpSession(session, "roleSelectableAppIndexes", Integer.class)
+                .orElseGet(TreeSet::new);
+        roleSelectableAppIndexes.add(currentSelectedAppIndex);
+        session.setAttribute("roleSelectableAppIndexes", roleSelectableAppIndexes);
 
         final AppDto currentApp = userService.getAppByAppId(selectedAppIds.get(currentSelectedAppIndex)).orElseThrow();
 
@@ -602,10 +634,7 @@ public class MultiFirmUserController {
         model.addAttribute("addProfileSelectedAppIndex", currentSelectedAppIndex);
         model.addAttribute("addProfileCurrentApp", currentApp);
 
-        String rolesBackUrl = currentSelectedAppIndex == 0
-                ? "/admin/multi-firm/user/add/profile/select/apps"
-                : "/admin/multi-firm/user/add/profile/select/roles?selectedAppIndex=" + (currentSelectedAppIndex - 1);
-        model.addAttribute("backUrl", rolesBackUrl);
+        model.addAttribute("backUrl", getBackButtonUrl(session, currentSelectedAppIndex));
 
         session.setAttribute("addProfileUserRolesModel", model);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile - Select roles - " + user.getFullName());
@@ -879,6 +908,18 @@ public class MultiFirmUserController {
         return "redirect:/admin/multi-firm/user/add/profile/confirmation";
     }
 
+    private String getBackButtonUrl(HttpSession session, int selectedAppIndex) {
+        Set<Integer> roleSelectableAppIndexes = getSetFromHttpSession(session, "roleSelectableAppIndexes", Integer.class)
+                .orElseGet(TreeSet::new);
+        Integer previousAppIndex = roleSelectableAppIndexes.stream()
+                .filter(n -> n < selectedAppIndex)
+                .max(Integer::compareTo)
+                .orElse(-1);
+
+        return previousAppIndex < 0 ? "/admin/multi-firm/user/add/profile/select/apps"
+                : "/admin/multi-firm/user/add/profile/select/roles?selectedAppIndex=" + previousAppIndex;
+    }
+
     @GetMapping("/user/add/profile/confirmation")
     public String addProfileConfirmation(Model model, HttpSession session) {
         EntraUserDto user = getObjectFromHttpSession(session, "entraUser", EntraUserDto.class)
@@ -903,6 +944,8 @@ public class MultiFirmUserController {
         session.removeAttribute("addProfileUserAppsModel");
         session.removeAttribute("addProfileUserOfficesModel");
         session.removeAttribute("addProfileUserRolesModel");
+        session.removeAttribute("roleSelectableAppIndexes");
+        session.removeAttribute("addUserProfileAllSelectedRoles");
         session.removeAttribute("entraUser");
         session.removeAttribute("multiFirmUserForm");
         session.removeAttribute("applicationsForm");
