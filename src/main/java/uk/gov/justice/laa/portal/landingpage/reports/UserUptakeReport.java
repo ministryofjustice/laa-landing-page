@@ -32,7 +32,7 @@ public class UserUptakeReport {
     @Value("${app.distributed.db.locking.period}")
     private int distributedDbLockingPeriod;
 
-    @Scheduled(cron = "${user.uptake.reporting.interval}")
+    @Scheduled(cron = "${user.uptake.reporting.schedule}", zone = "Europe/London")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void getReport() {
         if (reportingEnabled) {
