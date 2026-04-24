@@ -24,7 +24,6 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.Assertions;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -2013,6 +2012,9 @@ class UserServiceTest {
         void updateUserDetails_updatesDatabase_whenUserExists() throws IOException {
             // Arrange
             UUID userId = UUID.randomUUID();
+            String oldFirstName = "Jane";
+            String oldLastName = "Doe";
+            String oldEmail = "old@example.com";
             String firstName = "John";
             String lastName = "Doe";
             String email = "email@example.com";
@@ -2020,9 +2022,9 @@ class UserServiceTest {
             EntraUser entraUser = EntraUser.builder()
                     .id(userId)
                     .entraOid(String.valueOf(userId))
-                    .firstName(firstName)
-                    .lastName(lastName)
-                    .email(email)
+                    .firstName(oldFirstName)
+                    .lastName(oldLastName)
+                    .email(oldEmail)
                     .build();
 
             when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
@@ -2060,7 +2062,7 @@ class UserServiceTest {
             verify(mockEventService).logEvent(captorUpdateUserInfoAuditEvent.capture());
             UpdateUserInfoAuditEvent updateUserAuditEvent = captorUpdateUserInfoAuditEvent.getValue();
             assertThat(updateUserAuditEvent.getDescription()).isEqualTo(String.format("""
-                    User details updated for existing user entra oid: %s by user entra oid: %s profile id: %s
+                    User details updated for existing user entra oid: %s by user entra oid: %s profile id: %s. Fields changed: firstName, email
                     """, userId, userProfileId, userProfileId));
             assertThat(updateUserAuditEvent.getEventType()).isEqualTo(EventType.UPDATE_USER);
         }
@@ -2069,6 +2071,7 @@ class UserServiceTest {
         void updateUserDetails_throwsIoException_whenDatabaseUpdateFails() {
             // Arrange
             UUID userId = UUID.randomUUID();
+            UUID profileId = UUID.randomUUID();
             EntraUser entraUser = EntraUser.builder().id(userId).build();
             when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
             when(mockEntraUserRepository.saveAndFlush(any())).thenThrow(new RuntimeException("DB error"));
@@ -2076,7 +2079,8 @@ class UserServiceTest {
                     .thenReturn(TechServicesApiResponse
                             .success(ChangeAccountEnabledResponse.builder().success(true).build()));
             UserProfile userProfile = UserProfile.builder()
-                    .id(UUID.randomUUID())
+                    .id(profileId)
+                    .entraUser(EntraUser.builder().id(profileId).entraOid(String.valueOf(profileId)).build())
                     .build();
             // Act & Assert
             IOException exception = Assertions.assertThrows(IOException.class,
@@ -2088,6 +2092,7 @@ class UserServiceTest {
         void updateUserDetails_throwsIoException_whenTechServiceFails() {
             // Arrange
             UUID userId = UUID.randomUUID();
+            UUID profileId = UUID.randomUUID();
             EntraUser entraUser = EntraUser.builder().id(userId).build();
             when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
             when(techServicesClient.updateUserDetails(any(), any(), any(), any()))
@@ -2098,7 +2103,8 @@ class UserServiceTest {
                                     .code("400")
                                     .build()));
             UserProfile userProfile = UserProfile.builder()
-                    .id(UUID.randomUUID())
+                    .id(profileId)
+                    .entraUser(EntraUser.builder().id(profileId).entraOid(String.valueOf(profileId)).build())
                     .build();
             // Act & Assert
             IOException exception = Assertions.assertThrows(IOException.class,
@@ -7348,7 +7354,7 @@ class UserServiceTest {
     class GetAuditUsersDormantFiltersTests {
 
         private EntraUser buildUser(UUID id, String firstName, String lastName, String email,
-                LocalDateTime lastLoginDate, InvitationStatus invitationStatus) {
+                InvitationStatus invitationStatus) {
             return EntraUser.builder()
                     .id(id)
                     .firstName(firstName)
@@ -7356,7 +7362,6 @@ class UserServiceTest {
                     .email(email)
                     .userStatus(UserStatus.ACTIVE)
                     .multiFirmUser(false)
-                    .lastLoginDate(lastLoginDate)
                     .invitationStatus(invitationStatus)
                     .userProfiles(new HashSet<>())
                     .build();
@@ -7368,7 +7373,7 @@ class UserServiceTest {
             LocalDate cutoffDate = LocalDate.of(2025, 1, 1);
             UUID userId = UUID.randomUUID();
             EntraUser user = buildUser(userId, "Old", "User", "old@example.com",
-                    LocalDateTime.of(2024, 6, 1, 0, 0), InvitationStatus.VERIFICATION_SUCCESS);
+                    InvitationStatus.VERIFICATION_SUCCESS);
 
             Page<EntraUser> userPage = new PageImpl<>(List.of(user), PageRequest.of(0, 10), 1);
 
@@ -7397,7 +7402,7 @@ class UserServiceTest {
             // Given
             UUID userId = UUID.randomUUID();
             EntraUser user = buildUser(userId, "Active", "User", "active@example.com",
-                    LocalDateTime.now(), InvitationStatus.VERIFICATION_SUCCESS);
+                    InvitationStatus.VERIFICATION_SUCCESS);
 
             Page<EntraUser> userPage = new PageImpl<>(List.of(user), PageRequest.of(0, 10), 1);
 
@@ -7426,7 +7431,7 @@ class UserServiceTest {
             // Given
             UUID userId = UUID.randomUUID();
             EntraUser user = buildUser(userId, "Never", "Activated", "never@example.com",
-                    null, InvitationStatus.INVITE_SENT);
+                    InvitationStatus.INVITE_SENT);
 
             Page<EntraUser> userPage = new PageImpl<>(List.of(user), PageRequest.of(0, 10), 1);
 
@@ -7455,7 +7460,7 @@ class UserServiceTest {
             // Given
             UUID userId = UUID.randomUUID();
             EntraUser user = buildUser(userId, "Verified", "User", "verified@example.com",
-                    LocalDateTime.now(), InvitationStatus.VERIFICATION_SUCCESS);
+                    InvitationStatus.VERIFICATION_SUCCESS);
 
             Page<EntraUser> userPage = new PageImpl<>(List.of(user), PageRequest.of(0, 10), 1);
 
@@ -7485,7 +7490,7 @@ class UserServiceTest {
             LocalDate cutoffDate = LocalDate.of(2025, 6, 1);
             UUID userId = UUID.randomUUID();
             EntraUser user = buildUser(userId, "Dormant", "User", "dormant@example.com",
-                    LocalDateTime.of(2024, 1, 1, 0, 0), InvitationStatus.INVITE_SENT);
+                    InvitationStatus.INVITE_SENT);
 
             Page<EntraUser> userPage = new PageImpl<>(List.of(user), PageRequest.of(0, 10), 1);
 
@@ -7989,7 +7994,7 @@ class UserServiceTest {
         }
 
         @Test
-        void getAuditUserDetail_withNoOffices_showsAccessToAllOffices() {
+        void getAuditUserDetail_withNoOffices_showsNoOfficesAssigned() {
             // Given
             UUID userId = UUID.randomUUID();
             UUID profileId = UUID.randomUUID();
@@ -8006,6 +8011,58 @@ class UserServiceTest {
                     .firm(firm)
                     .userType(UserType.EXTERNAL)
                     .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .activeProfile(true)
+                    .offices(new HashSet<>()) // No offices
+                    .appRoles(new HashSet<>())
+                    .build();
+
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .firstName("Test")
+                    .lastName("User")
+                    .email("test@example.com")
+                    .userStatus(UserStatus.ACTIVE)
+                    .multiFirmUser(false)
+                    .userProfiles(Set.of(profile))
+                    .build();
+
+            profile.setEntraUser(user);
+
+            when(mockUserProfileRepository.findById(profileId))
+                    .thenReturn(Optional.of(profile));
+
+            // When
+            uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto result = userService
+                    .getAuditUserDetail(profileId);
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getProfiles()).hasSize(1);
+
+            uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto.AuditProfileDto profileDto = result
+                    .getProfiles().get(0);
+            assertThat(profileDto.getOfficeRestrictions()).isEqualTo("No office access assigned");
+        }
+
+        @Test
+        void getAuditUserDetail_withUnrestrictedOffices_showsAccessToAllOffices() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            UUID profileId = UUID.randomUUID();
+            UUID firmId = UUID.randomUUID();
+
+            Firm firm = Firm.builder()
+                    .id(firmId)
+                    .name("Test Firm")
+                    .code("TF001")
+                    .build();
+
+            UserProfile profile = UserProfile.builder()
+                    .id(profileId)
+                    .firm(firm)
+                    .userType(UserType.EXTERNAL)
+                    .userProfileStatus(UserProfileStatus.COMPLETE)
+                    .unrestrictedOfficeAccess(true)
                     .activeProfile(true)
                     .offices(new HashSet<>()) // No offices
                     .appRoles(new HashSet<>())
@@ -8533,9 +8590,6 @@ class UserServiceTest {
             assertThat(result.getDisabledBy())
                     .isEqualTo(String.valueOf(user.getDisabledBy()));
 
-            assertThat(result.getLastLoginDate())
-                    .isNull();
-
             assertThat(result.getActivationStatus())
                     .isNull();
 
@@ -8629,9 +8683,6 @@ class UserServiceTest {
 
             assertThat(result.getDisabledBy())
                     .isEqualTo(String.valueOf(user.getDisabledBy()));
-
-            assertThat(result.getLastLoginDate())
-                    .isNull();
 
             assertThat(result.getActivationStatus())
                     .isNull();
