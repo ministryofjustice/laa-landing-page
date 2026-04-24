@@ -199,10 +199,9 @@ public class AuditController {
         if (entraUserResponse.isSuccess()) {
             TechServicesUser user = entraUserResponse.getData().getUser();
             String disableUserReason = formatDisableUserReason(user);
-            String lastSignIn = entraUserResponse.getData().getUser().getLastSignIn();
 
-            OffsetDateTime lastLoginTime = lastSignIn != null
-                    ? OffsetDateTime.parse(lastSignIn)
+            OffsetDateTime lastLoginTime = user.getLastSignIn() != null
+                    ? OffsetDateTime.parse(user.getLastSignIn())
                     : null;
 
             model.addAttribute("lastLogin", lastLoginTime);
