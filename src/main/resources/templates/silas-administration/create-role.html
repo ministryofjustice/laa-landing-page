@@ -230,7 +230,7 @@
                                            th:checked="${roleCreationDto.firmTypeRestriction != null and roleCreationDto.firmTypeRestriction.contains(firmType)}">
                                     <label class="govuk-label govuk-checkboxes__label"
                                            th:for="'firmType-' + ${firmType.name()}"
-                                           th:text="${firmType.name()}">
+                                           th:text="${firmType.getValue()}">
                                         Firm Type
                                     </label>
                                 </div>

@@ -77,7 +77,6 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             AND (:multiFirm IS NULL OR u.multiFirmUser = :multiFirm)
             AND (
                 (:inactiveSinceDateFlag IS NULL AND :neverActivated IS NULL)
-                OR (:inactiveSinceDateFlag IS NOT NULL AND u.lastLoginDate < :inactiveSinceDate)
                 OR (:neverActivated IS NOT NULL AND u.invitationStatus <> 'VERIFICATION_SUCCESS')
             )
             """, countQuery = """
@@ -106,7 +105,6 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             AND (:multiFirm IS NULL OR u.multiFirmUser = :multiFirm)
             AND (
                 (:inactiveSinceDateFlag IS NULL AND :neverActivated IS NULL)
-                OR (:inactiveSinceDateFlag IS NOT NULL AND u.lastLoginDate < :inactiveSinceDate)
                 OR (:neverActivated IS NOT NULL AND u.invitationStatus <> 'VERIFICATION_SUCCESS')
             )
             """)
@@ -166,7 +164,6 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             AND (:multiFirm IS NULL or u.multi_firm_user = :multiFirm)
             AND (
                 (:inactiveSinceDateFlag IS NULL AND :neverActivated IS NULL)
-                OR (:inactiveSinceDateFlag IS NOT NULL AND u.last_login_date < :inactiveSinceDate)
                 OR (:neverActivated IS NOT NULL AND u.invitation_status != 'VERIFICATION_SUCCESS')
             )
             GROUP BY u.id
@@ -216,7 +213,6 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             AND (:multiFirm IS NULL or u.multi_firm_user = :multiFirm)
             AND (
                 (:inactiveSinceDateFlag IS NULL AND :neverActivated IS NULL)
-                OR (:inactiveSinceDateFlag IS NOT NULL AND u.last_login_date < :inactiveSinceDate)
                 OR (:neverActivated IS NOT NULL AND u.invitation_status != 'VERIFICATION_SUCCESS')
             )
             GROUP BY u.id
@@ -302,7 +298,6 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             AND (:multiFirm IS NULL or u.multi_firm_user = :multiFirm)
             AND (
                 (:inactiveSinceDateFlag IS NULL AND :neverActivated IS NULL)
-                OR (:inactiveSinceDateFlag IS NOT NULL AND u.last_login_date < :inactiveSinceDate)
                 OR (:neverActivated IS NOT NULL AND u.invitation_status != 'VERIFICATION_SUCCESS')
             )
             """, nativeQuery = true)
