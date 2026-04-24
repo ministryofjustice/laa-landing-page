@@ -150,12 +150,12 @@ public class RoleBasedAccessGrantAccessTest extends RoleBasedAccessIntegrationTe
     }
 
     @Test
-    public void testFirmUserManagerCannotOpenExternalUserInSameFirmsAppsToGrantAccess() throws Exception {
+    public void testFirmUserManagerCanOpenExternalUserInSameFirmsAppsToGrantAccess() throws Exception {
         EntraUser externalUserManagerFirm1 = externalOnlyUserManagers.getFirst();
         EntraUser externalUserFirm1 = externalUsersNoRoles.stream()
                 .filter(user -> user.getUserProfiles().stream().findFirst().orElseThrow().getFirm().getId().equals(testFirm1.getId()))
                 .findFirst().orElseThrow();
-        canOpenGrantAccessScreen(externalUserManagerFirm1, externalUserFirm1, status().is3xxRedirection());
+        canOpenGrantAccessScreen(externalUserManagerFirm1, externalUserFirm1, status().is2xxSuccessful());
     }
 
     @Test
