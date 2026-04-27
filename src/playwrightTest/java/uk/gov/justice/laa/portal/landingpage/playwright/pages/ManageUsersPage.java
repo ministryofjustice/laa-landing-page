@@ -323,6 +323,10 @@ public class ManageUsersPage {
         }
     }
 
+    public void verifyManageAccessButtonVisible() {
+        assertThat(manageAccessButton).isVisible();
+    }
+
     public void verifyServicesNotPresent(List<String> roles) {
         for (String role : roles) {
             Locator row = page.locator("dd:has-text('" + role + "')");

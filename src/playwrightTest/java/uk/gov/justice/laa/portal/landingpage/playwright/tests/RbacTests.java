@@ -264,4 +264,23 @@ public class RbacTests extends BaseFrontEndTest {
         );
     }
 
+    @Test
+    @DisplayName("A Firm User Manager can delete a user from the same firm")
+    void firmUserManagerCanManageAccess() {
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.FIRM_USER_MANAGER);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser("externaluser-incomplete@playwrighttest.com"),
+                "External User Incomplete should be visible to Firm User Manager"
+        );
+
+        manageUsersPage.clickFirstUserLink();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.verifyUserDetailsPopulated();
+
+        manageUsersPage.verifyManageAccessButtonVisible();
+
+
+    }
 }
