@@ -30,6 +30,12 @@ jobs:
           fail-build: false
           output-format: json
           output-file: grype-report.json
+
+      - name: Output Grype Report to stdout
+        if: always()
+        run: |
+          echo "=== Grype Vulnerability Report ==="
+          jq '.matches[] | {vulnerability: .vulnerability.id, severity: .vulnerability.severity, package: .artifact.name}' grype-report.json
       
       - name: Generate Syft SBOM
         uses: anchore/sbom-action@v0
