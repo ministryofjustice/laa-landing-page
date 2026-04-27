@@ -265,7 +265,7 @@ public class RbacTests extends BaseFrontEndTest {
     }
 
     @Test
-    @DisplayName("A Firm User Manager can delete a user from the same firm")
+    @DisplayName("A Firm User Manager can see the manage access button")
     void firmUserManagerCanManageAccess() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.FIRM_USER_MANAGER);
 
