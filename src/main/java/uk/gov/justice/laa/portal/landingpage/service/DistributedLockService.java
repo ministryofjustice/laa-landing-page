@@ -52,6 +52,23 @@ public class DistributedLockService {
         });
     }
 
+    /**
+     * Attempts to acquire the lock once without retrying.
+     * Returns true if the lock was acquired and the task executed, false otherwise.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public boolean tryOnceWithLock(String lockKey, Duration lockDuration, Runnable task) {
+        if (acquireLock(lockKey, lockDuration)) {
+            try {
+                task.run();
+            } finally {
+                releaseLock(lockKey);
+            }
+            return true;
+        }
+        return false;
+    }
+
     private boolean acquireLock(String key, Duration lockDuration) {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime lockedUntil = now.plus(lockDuration);
