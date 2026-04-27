@@ -107,6 +107,7 @@ import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
+import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
@@ -155,6 +156,8 @@ class UserControllerTest {
     @Mock
     private AppRoleService appRoleService;
     @Mock
+    private AppService appService;
+    @Mock
     private UserAccountStatusService disableUserService;
     @Mock
     private NotificationService notificationService;
@@ -165,7 +168,7 @@ class UserControllerTest {
     void setUp() {
         userController = new UserController(loginService, userService, officeService, eventService, firmService,
                 new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService,
-                appRoleService, disableUserService, notificationService);
+                appRoleService, appService, disableUserService, notificationService);
         userController.disableUserFeatureEnabled = true;
         model = new ExtendedModelMap();
         firmSearchForm = FirmSearchForm.builder().build();
