@@ -54,19 +54,19 @@ public class DistributedLockService {
 
     /**
      * Attempts to acquire the lock once without retrying.
-     * If the lock is not available, throws LockAcquisitionException immediately.
+     * Returns true if the lock was acquired and the task executed, false otherwise.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void tryOnceWithLock(String lockKey, Duration lockDuration, Runnable task) {
+    public boolean tryOnceWithLock(String lockKey, Duration lockDuration, Runnable task) {
         if (acquireLock(lockKey, lockDuration)) {
             try {
                 task.run();
             } finally {
                 releaseLock(lockKey);
             }
-        } else {
-            throw new LockAcquisitionException("Failed to acquire lock for key: " + lockKey);
+            return true;
         }
+        return false;
     }
 
     private boolean acquireLock(String key, Duration lockDuration) {
