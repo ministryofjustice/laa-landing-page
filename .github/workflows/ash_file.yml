@@ -2,7 +2,7 @@ name: Ash OpenGrep & Checkov Scan
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, STB-4081 ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
