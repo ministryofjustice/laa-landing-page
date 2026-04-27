@@ -270,7 +270,7 @@ public class RbacTests extends BaseFrontEndTest {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.FIRM_USER_MANAGER);
 
         assertTrue(
-                manageUsersPage.searchAndVerifyUser("externaluser-incomplete3@playwrighttest.com"),
+                manageUsersPage.searchAndVerifyUser("externaluser-incomplete@playwrighttest.com"),
                 "External User Incomplete should be visible to Firm User Manager"
         );
 
