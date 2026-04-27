@@ -23,6 +23,7 @@ import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiRespons
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -353,6 +354,19 @@ public class AppService {
     private boolean areSecurityGroupsEqual(List<GetAllApplicationsResponse.TechServicesApplication.AppSecurityGroup> remoteSecGroups, App local) {
         String remoteSecGroupId = remoteSecGroups == null || remoteSecGroups.isEmpty() ? null : remoteSecGroups.getFirst().getId();
         return Objects.equals(remoteSecGroupId, local.getSecurityGroupOid());
+    }
+
+    public LinkedHashMap<AppType, List<AppDto>> buildGroupedApps(List<AppDto> apps) {
+        LinkedHashMap<AppType, List<AppDto>> grouped = new LinkedHashMap<>();
+        for (AppType type : AppType.values()) {
+            List<AppDto> typeApps = apps.stream()
+                    .filter(app -> type.equals(app.getAppType()))
+                    .toList();
+            if (!typeApps.isEmpty()) {
+                grouped.put(type, typeApps);
+            }
+        }
+        return grouped;
     }
 
 }

@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -46,7 +45,6 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
-import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
@@ -62,6 +60,7 @@ import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
+import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
@@ -73,7 +72,6 @@ import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getSetFromHttpSession;
-
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
 /**
@@ -93,6 +91,8 @@ public class MultiFirmUserController {
 
     private final AppRoleService appRoleService;
 
+    private final AppService appService;
+
     private final RoleAssignmentService roleAssignmentService;
 
     private final OfficeService officeService;
@@ -102,20 +102,6 @@ public class MultiFirmUserController {
     private final ModelMapper mapper;
 
     private final FirmService firmService;
-
-    private LinkedHashMap<AppType, List<AppDto>> buildGroupedApps(List<AppDto> apps) {
-        LinkedHashMap<AppType, List<AppDto>> grouped = new LinkedHashMap<>();
-        for (AppType type : AppType.values()) {
-            List<AppDto> typeApps = apps.stream()
-                    .filter(app -> type.equals(app.getAppType()))
-                    .toList();
-            if (!typeApps.isEmpty()) {
-                grouped.put(type, typeApps);
-            }
-        }
-        return grouped;
-    }
-
 
     @GetMapping("/user/add/profile/select/internalUserFirm")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).DELEGATE_EXTERNAL_USER_ACCESS_INTERNAL)")
@@ -497,7 +483,7 @@ public class MultiFirmUserController {
         EntraUserDto entraUserDto = getObjectFromHttpSession(session, "entraUser", EntraUserDto.class).orElseThrow();
         model.addAttribute("entraUser", entraUserDto);
         model.addAttribute("apps", assignableApps);
-        model.addAttribute("groupedApps", buildGroupedApps(assignableApps));
+        model.addAttribute("groupedApps", appService.buildGroupedApps(assignableApps));
 
         session.setAttribute("addProfileUserAppsModel", model);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile - Select services - " + entraUserDto.getFullName());

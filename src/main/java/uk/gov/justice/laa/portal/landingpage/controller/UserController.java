@@ -61,7 +61,6 @@ import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
-import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
@@ -89,6 +88,7 @@ import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
+import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
@@ -131,6 +131,7 @@ public class UserController {
     private final RoleAssignmentService roleAssignmentService;
     private final EmailValidationService emailValidationService;
     private final AppRoleService appRoleService;
+    private final AppService appService;
     private final UserAccountStatusService userAccountStatusService;
     private final NotificationService notificationService;
 
@@ -1119,7 +1120,7 @@ public class UserController {
         session.removeAttribute("roleSelectableAppIndexes");
         model.addAttribute("user", user);
         model.addAttribute("apps", editableApps);
-        model.addAttribute("groupedApps", buildGroupedApps(editableApps));
+        model.addAttribute("groupedApps", appService.buildGroupedApps(editableApps));
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user services - " + user.getFullName());
         if (errorMessage != null) {
             model.addAttribute("errorMessage", errorMessage);
@@ -1143,19 +1144,6 @@ public class UserController {
                     .forEach(appDto -> appDto.setChangeNotAllowed(true));
         }
 
-    }
-
-    private LinkedHashMap<AppType, List<AppDto>> buildGroupedApps(List<AppDto> apps) {
-        LinkedHashMap<AppType, List<AppDto>> grouped = new LinkedHashMap<>();
-        for (AppType type : AppType.values()) {
-            List<AppDto> typeApps = apps.stream()
-                    .filter(app -> type.equals(app.getAppType()))
-                    .toList();
-            if (!typeApps.isEmpty()) {
-                grouped.put(type, typeApps);
-            }
-        }
-        return grouped;
     }
 
     @PostMapping("/users/edit/{id}/apps")
@@ -2025,7 +2013,7 @@ public class UserController {
         session.removeAttribute("roleSelectableAppIndexes");
         model.addAttribute("user", user);
         model.addAttribute("apps", editableApps);
-        model.addAttribute("groupedApps", buildGroupedApps(editableApps));
+        model.addAttribute("groupedApps", appService.buildGroupedApps(editableApps));
 
         // Store the model in session to handle validation errors later
         session.setAttribute("grantAccessUserAppsModel", model);
@@ -2054,7 +2042,7 @@ public class UserController {
             }
             model.addAttribute("user", modelFromSession.getAttribute("user"));
             model.addAttribute("apps", apps);
-            model.addAttribute("groupedApps", buildGroupedApps(apps != null ? apps : List.of()));
+            model.addAttribute("groupedApps", appService.buildGroupedApps(apps != null ? apps : List.of()));
             return "grant-access-user-apps";
         }
 
