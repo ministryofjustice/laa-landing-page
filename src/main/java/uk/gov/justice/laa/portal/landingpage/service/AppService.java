@@ -1,25 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
-import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
-import uk.gov.justice.laa.portal.landingpage.dto.AppSynchronizationAuditEvent;
-import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
-import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
-import uk.gov.justice.laa.portal.landingpage.entity.App;
-import uk.gov.justice.laa.portal.landingpage.entity.AppType;
-import uk.gov.justice.laa.portal.landingpage.forms.AppsOrderForm;
-import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
-import uk.gov.justice.laa.portal.landingpage.techservices.GetAllApplicationsResponse;
-import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -31,6 +11,27 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
+import org.apache.commons.lang3.StringUtils;
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AppSynchronizationAuditEvent;
+import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
+import uk.gov.justice.laa.portal.landingpage.entity.App;
+import uk.gov.justice.laa.portal.landingpage.entity.AppType;
+import uk.gov.justice.laa.portal.landingpage.forms.AppsOrderForm;
+import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
+import uk.gov.justice.laa.portal.landingpage.techservices.GetAllApplicationsResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 
 @Slf4j
 @Service
