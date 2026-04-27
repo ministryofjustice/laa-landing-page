@@ -28,14 +28,21 @@ jobs:
         with:
           image: laa-landing-page:latest
           fail-build: false
-          output-format: json
-          output-file: grype-report.json
-
+          output-format: sarif
+          output-file: grype-results.sarif
+      
+      - name: Upload Grype SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: grype-results.sarif
+          category: grype-scan
+      
       - name: Output Grype Report to stdout
         if: always()
         run: |
           echo "=== Grype Vulnerability Report ==="
-          jq '.matches[] | {vulnerability: .vulnerability.id, severity: .vulnerability.severity, package: .artifact.name}' grype-report.json
+          jq '.runs[0].results[] | {ruleId: .ruleId, level: .level, message: .message.text}' grype-results.sarif
       
       - name: Generate Syft SBOM
         uses: anchore/sbom-action@v0
