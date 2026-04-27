@@ -19,6 +19,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
+import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
@@ -335,9 +336,15 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
         // Create three users
         EntraUser user1 = buildMultifirmEntraUser(generateEntraId(), "user1@example.com", "User", "One", true);
         user1 = entraUserRepository.saveAndFlush(user1);
+        user1.setInvitationStatus(InvitationStatus.AWAITING_VERIFICATION);
+        user1.setEnabled(false);
         EntraUser user2 = buildMultifirmEntraUser(generateEntraId(), "user2@example.com", "User", "Two", true);
         user2 = entraUserRepository.saveAndFlush(user2);
+        user2.setInvitationStatus(InvitationStatus.AWAITING_VERIFICATION);
+        user2.setEnabled(true);
         EntraUser user3 = buildDeactiveEntraUser(generateEntraId(), "user3@example.com", "User", "Three", false);
+        user3.setInvitationStatus(InvitationStatus.VERIFICATION_SUCCESS);
+        user3.setEnabled(true);
         user3 = entraUserRepository.saveAndFlush(user3);
 
         // Create firms
@@ -371,9 +378,8 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
         assertThat(result)
                 .hasSize(3)
                 .containsExactlyInAnyOrder(
-                        new Object[]{"Firm Epsilon", "30", "ADVOCATE", null, 1L, 1L, 1L, 0L},
-                        new Object[]{"Firm Zeta", "2000", "ADVOCATE", null, 2L, 1L, 1L, 1L},
-                        new Object[]{"Firm Eta", "11", "ADVOCATE", null, 2L, 1L, 2L, 0L});
+                        new Object[]{"Firm Epsilon", "30", "ADVOCATE", null, 1L, 1L, 1L, 0L, 1L, 0L, 0L, 1L},
+                        new Object[]{"Firm Zeta", "2000", "ADVOCATE", null, 2L, 1L, 1L, 1L, 1L, 0L, 0L, 1L},
+                        new Object[]{"Firm Eta", "11", "ADVOCATE", null, 2L, 1L, 2L, 0L, 2L, 0L, 0L, 1L});
     }
-
 }
