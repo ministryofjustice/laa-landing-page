@@ -42,11 +42,10 @@ public class ExternalUserPolling {
 
             if (enableDistributedDbLocking) {
                 try {
-                    lockService.withLock(SYNC_LOCK_KEY, Duration.ofMinutes(distributedDbLockingPeriod), () -> {
+                    lockService.tryOnceWithLock(SYNC_LOCK_KEY, Duration.ofMinutes(distributedDbLockingPeriod), () -> {
                         log.debug("Acquired lock for external user sync");
                         externalUserPollingService.updateSyncMetadata();
                         log.debug("Completed external user sync");
-                        return null;
                     });
                 } catch (DistributedLockService.LockAcquisitionException e) {
                     log.debug("Could not acquire lock for external user sync. Another instance might be running.");
