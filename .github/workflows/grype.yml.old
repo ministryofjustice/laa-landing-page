@@ -1,0 +1,74 @@
+name: "Grype Scan"
+
+on:
+  push:
+    branches:
+      - STB-4081
+  workflow_dispatch:
+
+jobs:
+  grype-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2s
+
+      - name: Build Docker image
+        run: docker build . --file Dockerfile-WorkFlow --tag laa-landing-page:latest --progress=plain --no-cache
+
+      - name: Run Grype scan
+        uses: anchore/scan-action@v7
+        id: grype
+        with:
+          image: laa-landing-page:latest
+          fail-build: false
+          severity-cutoff: high
+          output-file: grype-results.sarif
+          output-format: sarif
+
+      - name: Print vulnerabilities to stdout
+        if: always()
+        run: |
+          if [ -f grype-results.sarif ]; then
+            total=$(jq '[.runs[].results[]?] | length' grype-results.sarif)
+            echo "Found ${total} vulnerabilities in grype-results.sarif"
+
+            if [ "$total" -eq 0 ]; then
+              echo "No vulnerabilities found."
+            else
+              report=$(jq -r '
+                ["SEVERITY","RULE","PACKAGE","INSTALLED","FIXED","MESSAGE"],
+                (.runs[].results[]? | [
+                  (.level // "unknown"),
+                  (.ruleId // "n/a"),
+                  (.properties.dependency.package.name // .properties.artifact.name // .properties.package // "n/a"),
+                  (.properties.dependency.package.version // .properties.artifact.version // .properties.installedVersion // "n/a"),
+                  (.properties.fix.versions[0] // .properties.vulnerability.fix.versions[0] // .properties.fixedVersion // "n/a"),
+                  ((.message.text // "n/a") | gsub("[\\r\\n\\t]+"; " "))
+                ])
+                | @tsv
+              ' grype-results.sarif)
+
+              if command -v column >/dev/null 2>&1; then
+                echo "$report" | column -t -s $'\t'
+              else
+                echo "$report"
+              fi
+            fi
+          else
+            echo "No SARIF file found at grype-results.sarif"
+          fi
+
+      - name: Validate SARIF JSON
+        run: |
+          test -f grype-results.sarif
+          test -s grype-results.sarif
+          jq empty grype-results.sarif
+
+    #   - name: Upload Grype results to GitHub Security tab
+    #     uses: github/codeql-action/upload-sarif@v4
+    #     with:
+    #       sarif_file: grype-results.sarif
