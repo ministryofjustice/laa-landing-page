@@ -26,7 +26,7 @@ jobs:
       - name: Grype Scan
         uses: anchore/scan-action@v7
         with:
-          image: football-data-xg:latest
+          image: laa-landing-page:latest
           fail-build: false
           output-format: json
           output-file: grype-report.json
@@ -34,7 +34,7 @@ jobs:
       - name: Generate Syft SBOM
         uses: anchore/sbom-action@v0
         with:
-          image: football-data-xg:latest
+          image: laa-landing-page:latest
           format: spdx-json
           output-file: syft-sbom.spdx.json
       
