@@ -2,7 +2,7 @@ name: Ash Grype Scan & Syft SBOM
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, STB-4081 ]
   pull_request:
     branches: [ main ]
   schedule:
