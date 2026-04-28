@@ -194,8 +194,6 @@ class AdminControllerTest {
     @Test
     void testShowAdministration_WithUserTypeFilter_FiltersRolesByUserTypeRestriction() {
 
-        String userTypeFilter = "EXTERNAL";
-
         AppRoleAdminDto externalRole = new AppRoleAdminDto();
         externalRole.setUserTypeRestriction("EXTERNAL");
 
@@ -211,6 +209,8 @@ class AdminControllerTest {
         when(appRoleService.getAllLaaAppRoles()).thenReturn(allRoles);
         when(roleAssignmentService.getLaaAppRoleAssignmentRestrictions())
                 .thenReturn(Collections.emptyMap());
+
+        String userTypeFilter = "EXTERNAL";
 
         String viewName = adminController.showAdministration("roles", null, userTypeFilter, model, mockHttpSession);
 
