@@ -26,3 +26,25 @@ jobs:
           directory: .
           quiet: true
           soft_fail: true
+          output_format: cli,sarif
+          output_file_path: console,results.sarif
+
+      - name: Validate Checkov SARIF file
+        if: always()
+        run: |
+          test -f results.sarif
+          test -s results.sarif
+
+      - name: Upload Checkov SARIF file
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: results.sarif
+          category: checkov-scan
+
+      - name: Upload Checkov SARIF artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: checkov-scan-report
+          path: results.sarif
