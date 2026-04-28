@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -119,7 +120,7 @@ class AdminControllerTest {
         when(appRoleService.getAllLaaAppRoles()).thenReturn(roles);
 
         // Act
-        String viewName = adminController.showAdministration("admin-apps", null, model, mockHttpSession);
+        String viewName = adminController.showAdministration("admin-apps", null, null, model, mockHttpSession);
 
         // Assert
         assertEquals("silas-administration/administration", viewName);
@@ -148,7 +149,7 @@ class AdminControllerTest {
         when(appRoleService.getAllLaaAppRoles()).thenReturn(roles);
 
         // Act
-        String viewName = adminController.showAdministration("roles", null, model, mockHttpSession);
+        String viewName = adminController.showAdministration("roles", null, null, model, mockHttpSession);
 
         // Assert
         assertEquals("silas-administration/administration", viewName);
@@ -180,7 +181,7 @@ class AdminControllerTest {
         when(appRoleService.getLaaAppRolesByAppName(appFilter)).thenReturn(filteredRoles);
 
         // Act
-        String viewName = adminController.showAdministration("roles", appFilter, model, mockHttpSession);
+        String viewName = adminController.showAdministration("roles", appFilter, null, model, mockHttpSession);
 
         // Assert
         assertEquals("silas-administration/administration", viewName);
@@ -188,6 +189,39 @@ class AdminControllerTest {
         assertThat(model.getAttribute("appFilter")).isEqualTo(appFilter);
 
         verify(appRoleService).getLaaAppRolesByAppName(appFilter);
+    }
+
+    @Test
+    void testShowAdministration_WithUserTypeFilter_FiltersRolesByUserTypeRestriction() {
+
+        String userTypeFilter = "EXTERNAL";
+
+        AppRoleAdminDto externalRole = new AppRoleAdminDto();
+        externalRole.setUserTypeRestriction("EXTERNAL");
+
+        AppRoleAdminDto internalRole = new AppRoleAdminDto();
+        internalRole.setUserTypeRestriction("INTERNAL");
+
+        List<AppRoleAdminDto> allRoles = List.of(externalRole, internalRole);
+        List<AppDto> adminApps = createMockAdminApps();
+        List<AppDto> apps = createMockApps();
+
+        when(appService.getAllAuthzApps()).thenReturn(adminApps);
+        when(appService.getAllLaaApps()).thenReturn(apps);
+        when(appRoleService.getAllLaaAppRoles()).thenReturn(allRoles);
+        when(roleAssignmentService.getLaaAppRoleAssignmentRestrictions())
+                .thenReturn(Collections.emptyMap());
+
+        String viewName = adminController.showAdministration("roles", null, userTypeFilter, model, mockHttpSession);
+
+        assertEquals("silas-administration/administration", viewName);
+
+        assertThat(model.getAttribute("userTypeFilter")).isEqualTo(userTypeFilter);
+
+        @SuppressWarnings("unchecked")
+        List<AppRoleAdminDto> roles = (List<AppRoleAdminDto>) model.getAttribute("roles");
+
+        assertThat(roles).hasSize(1).containsExactly(externalRole);
     }
 
     @Test
@@ -436,7 +470,7 @@ class AdminControllerTest {
         when(appService.getAllLaaApps()).thenReturn(createMockApps());
         when(appRoleService.getAllLaaAppRoles()).thenReturn(createMockRoles());
 
-        adminController.showAdministration("admin-apps", null, model, session);
+        adminController.showAdministration("admin-apps", null, null, model, session);
 
         assertThat(session.getAttribute("appDetailsForm")).isNull();
         assertThat(session.getAttribute("appDetailsFormModel")).isNull();
@@ -452,7 +486,7 @@ class AdminControllerTest {
         when(appService.getAllLaaApps()).thenReturn(createMockApps());
         when(appRoleService.getAllLaaAppRoles()).thenReturn(allRoles);
 
-        adminController.showAdministration("roles", null, model, mockHttpSession);
+        adminController.showAdministration("roles", null, null, model, mockHttpSession);
 
         assertThat(model.getAttribute("roles")).isEqualTo(allRoles);
         verify(appRoleService).getAllLaaAppRoles();
@@ -528,7 +562,7 @@ class AdminControllerTest {
         when(appService.getAllLaaApps()).thenReturn(createMockApps());
         when(appRoleService.getAllLaaAppRoles()).thenReturn(createMockRoles());
 
-        adminController.showAdministration("roles", null, model, mockHttpSession);
+        adminController.showAdministration("roles", null, null, model, mockHttpSession);
 
         @SuppressWarnings("unchecked")
         List<String> appNames = (List<String>) model.getAttribute("appNames");
@@ -1486,6 +1520,23 @@ class AdminControllerTest {
                 AppDto.builder()
                         .name("Submit a crime form")
                         .description("Submit crime forms")
+                        .ordinal(1)
+                        .build()
+        );
+    }
+
+    private List<AppRoleAdminDto> createMockFilteredApps(){
+        return Arrays.asList(
+                AppRoleAdminDto.builder()
+                        .name("Apply for criminal legal aid")
+                        .description("Make an application for criminal legal aid")
+                        .userTypeRestriction("EXTERNAL")
+                        .ordinal(0)
+                        .build(),
+                AppRoleAdminDto.builder()
+                        .name("APPLY FOR CIVIL LEGAL AID SERVICES_VIEWER_INTERN")
+                        .description("APPLY FOR CIVIL LEGAL AID SERVICES_VIEWER_INTERN")
+                        .userTypeRestriction("INTERNAL")
                         .ordinal(1)
                         .build()
         );
