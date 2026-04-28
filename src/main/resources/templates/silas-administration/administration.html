@@ -302,6 +302,7 @@
                 <!-- IMPORTANT: no '#roles' fragment in action; use query param instead -->
                 <form method="get" th:action="@{/admin/silas-administration}">
                     <input type="hidden" name="tab" value="roles" />
+                    <input type="hidden" name="userTypeFilter" th:value="${userTypeFilter}" />
                     <select class="govuk-select" id="appFilter" name="appFilter"
                             aria-describedby="appFilter-hint" onchange="this.form.submit()" style="max-width: 350px;">
                         <option value="">All applications</option>
@@ -320,12 +321,14 @@
                 <label class="govuk-label">Select User Type</label>
                 <form method="get" th:action="@{/admin/silas-administration}">
                     <input type="hidden" name="tab" value="roles" />
-                    <select class="govuk-select" name="userTypeFilter" onchange="this.form.submit()">
-                        <option value="All">All user types</option>
+                    <input type="hidden" name="appFilter" th:value="${appFilter}" />
+                    <select class="govuk-select" id="userTypeFilter" name="userTypeFilter"
+                            aria-describedby="userTypeFilter-hint" onchange="this.form.submit()">
+                        <option value="">All user types</option>
                         <option th:each="type : ${userTypes}"
                                 th:value="${type}"
                                 th:text="${type}"
-                                th:selected="${type == userTypeFilter}">
+                                th:selected="${#strings.equals(userTypeFilter, type)}">
                         </option>
                     </select>
                 </form>
