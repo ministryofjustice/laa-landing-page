@@ -331,4 +331,6 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
                 WHERE multiFirmUser = TRUE
             """)
     List<Object[]> findTotalMultiFirmUsersCount();
+
+    List<EntraUser> findEntraUserByCcmsEbsUserIsTrue();
 }

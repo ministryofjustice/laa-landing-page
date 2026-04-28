@@ -1,0 +1,15 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-ccms-ebs-user-column
+      author: niall.mcmahon
+      changes:
+        - addColumn:
+            columns:
+              - column:
+                  constraints:
+                    nullable: false
+                  name: ccms_ebs_user
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+            tableName: entra_user
+
