@@ -24,4 +24,5 @@ public class UserRole implements Serializable {
     private String appRoleAssignmentId;
     private boolean selected;
     private String url;
+    private boolean legacySync;
 }

@@ -95,6 +95,11 @@ public class EntraUser extends AuditableEntity {
     @Comment(value = "The user profile id of the admin who disabled the user")
     private UUID disabledBy;
 
+    @Column(name = "ccms_ebs_user", nullable = false)
+    @ColumnDefault("false")
+    @Builder.Default
+    private boolean ccmsEbsUser = false;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "invitation_status", length = 255)
     private InvitationStatus invitationStatus;
