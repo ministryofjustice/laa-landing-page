@@ -1525,23 +1525,6 @@ class AdminControllerTest {
         );
     }
 
-    private List<AppRoleAdminDto> createMockFilteredApps(){
-        return Arrays.asList(
-                AppRoleAdminDto.builder()
-                        .name("Apply for criminal legal aid")
-                        .description("Make an application for criminal legal aid")
-                        .userTypeRestriction("EXTERNAL")
-                        .ordinal(0)
-                        .build(),
-                AppRoleAdminDto.builder()
-                        .name("APPLY FOR CIVIL LEGAL AID SERVICES_VIEWER_INTERN")
-                        .description("APPLY FOR CIVIL LEGAL AID SERVICES_VIEWER_INTERN")
-                        .userTypeRestriction("INTERNAL")
-                        .ordinal(1)
-                        .build()
-        );
-    }
-
     private List<AppRoleAdminDto> createMockRoles() {
         return Arrays.asList(
                 AppRoleAdminDto.builder()
