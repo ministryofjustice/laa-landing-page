@@ -4,6 +4,7 @@ import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.ResultMatcher;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -13,6 +14,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.MultiFirmUserForm;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -30,6 +32,30 @@ public class RoleBasedAccessDelegateUserAccessTest extends RoleBasedAccessIntegr
         EntraUser editorUser = firmUserManagers.getFirst();
         EntraUser editedUser = multiFirmUsers.getFirst();
         MvcResult result = delegateFirmAccess(editorUser, editedUser);
+        assertThat(result.getResponse()).isNotNull();
+        assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/admin/multi-firm/user/add/profile/confirmation");
+
+        // Teardown
+        List<UserProfile> optionalCreatedUserProfiles = userProfileRepository.findAll().stream()
+                .filter(profile -> profile.getEntraUser().getEmail().equalsIgnoreCase(editedUser.getEmail()))
+                .toList();
+        assertThat(optionalCreatedUserProfiles).isNotEmpty();
+        assertThat(optionalCreatedUserProfiles).hasSize(2);
+
+        // reset
+        UserProfile newlyCreatedUserProfile = entraUserRepository.findById(editedUser.getId()).get().getUserProfiles().stream()
+                .filter(userProfile -> userProfile.getFirm().getId().equals(testFirm2.getId()))
+                .findFirst()
+                .orElseThrow();
+        userProfileRepository.delete(newlyCreatedUserProfile);
+    }
+
+    @Test
+    @Transactional
+    public void testFirmUserManagerCanDelegateFirmAccessToExternalUserAutoRoleSelection() throws Exception {
+        EntraUser editorUser = firmUserManagers.getFirst();
+        EntraUser editedUser = multiFirmUsers.getFirst();
+        MvcResult result = delegateFirmAccess(editorUser, editedUser, true);
         assertThat(result.getResponse()).isNotNull();
         assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/admin/multi-firm/user/add/profile/confirmation");
 
@@ -168,19 +194,29 @@ public class RoleBasedAccessDelegateUserAccessTest extends RoleBasedAccessIntegr
         assertThat(result.getResponse().getErrorMessage()).isEqualTo("Forbidden");
     }
 
-
     private MvcResult delegateFirmAccess(EntraUser loggedInUser, EntraUser editedUser) throws Exception {
+        return delegateFirmAccess(loggedInUser, editedUser, false);
+    }
+
+    private MvcResult delegateFirmAccess(EntraUser loggedInUser, EntraUser editedUser, boolean skipRoleSelection) throws Exception {
         // Build test app
         App testExternalApp = buildLaaApp("Test External App", generateEntraId(), "TestExternalAppSecurityGroupOid");
 
-        // Build test role
-        AppRole testExternalAppRole = buildLaaAppRole(testExternalApp, "Test External App Role");
-        testExternalAppRole.setUserTypeRestriction(new UserType[]{UserType.EXTERNAL});
+        // Build test roles
+        Set<AppRole> testExternalAppRoles = new HashSet<>();
+        AppRole testExternalAppRole1 = buildLaaAppRole(testExternalApp, "Test External App Role One");
+        testExternalAppRole1.setUserTypeRestriction(new UserType[]{UserType.EXTERNAL});
+        testExternalAppRoles.add(testExternalAppRole1);
+        if (!skipRoleSelection) {
+            AppRole testExternalAppRole2 = buildLaaAppRole(testExternalApp, "Test External App Role Two");
+            testExternalAppRole2.setUserTypeRestriction(new UserType[]{UserType.EXTERNAL});
+            testExternalAppRoles.add(testExternalAppRole2);
+        }
 
         // Persist app and role.
-        testExternalApp.setAppRoles(Set.of(testExternalAppRole));
+        testExternalApp.setAppRoles(testExternalAppRoles);
         testExternalApp = appRepository.saveAndFlush(testExternalApp);
-        testExternalAppRole = testExternalApp.getAppRoles().stream().findFirst().orElseThrow();
+        final AppRole testExternalAppRole = testExternalApp.getAppRoles().stream().findFirst().orElseThrow();
 
         UserProfile editedUserProfile = editedUser.getUserProfiles().stream().findFirst().orElseThrow();
         MockHttpSession session = new MockHttpSession();
@@ -211,28 +247,33 @@ public class RoleBasedAccessDelegateUserAccessTest extends RoleBasedAccessIntegr
 
         assertThat(postSelectApps.getResponse()).isNotNull();
         redirectedUrl = postSelectApps.getResponse().getRedirectedUrl();
+
         assertThat(redirectedUrl).isEqualTo("/admin/multi-firm/user/add/profile/select/roles");
 
         // Post Role
+        ResultMatcher expectedRoleSelectionResult = skipRoleSelection ? status().is3xxRedirection() : status().is2xxSuccessful();
         MvcResult getAppRolesResult = this.mockMvc.perform(get("/admin/multi-firm/user/add/profile/select/roles")
                         .with(userOauth2Login(loggedInUser))
                         .with(csrf())
                         .session(session))
-                .andExpect(status().is2xxSuccessful())
+                .andExpect(expectedRoleSelectionResult)
                 .andReturn();
+        redirectedUrl = getAppRolesResult.getResponse().getRedirectedUrl();
 
-        // Post Role
-        MvcResult postAppRolesResult = this.mockMvc.perform(post("/admin/multi-firm/user/add/profile/select/roles")
-                        .with(userOauth2Login(loggedInUser))
-                        .with(csrf())
-                        .param("roles", testExternalAppRole.getId().toString())
-                        .param("selectedAppIndex", "0")
-                        .session(session))
-                .andExpect(status().is3xxRedirection())
-                .andReturn();
+        if (!skipRoleSelection) {
+            // Post Role
+            MvcResult postAppRolesResult = this.mockMvc.perform(post("/admin/multi-firm/user/add/profile/select/roles")
+                            .with(userOauth2Login(loggedInUser))
+                            .with(csrf())
+                            .param("roles", testExternalAppRole.getId().toString())
+                            .param("selectedAppIndex", "0")
+                            .session(session))
+                    .andExpect(status().is3xxRedirection())
+                    .andReturn();
 
-        assertThat(postAppRolesResult.getResponse()).isNotNull();
-        redirectedUrl = postAppRolesResult.getResponse().getRedirectedUrl();
+            assertThat(postAppRolesResult.getResponse()).isNotNull();
+            redirectedUrl = postAppRolesResult.getResponse().getRedirectedUrl();
+        }
         assertThat(redirectedUrl).isEqualTo("/admin/multi-firm/user/add/profile/select/offices");
 
         // Access Offices page
