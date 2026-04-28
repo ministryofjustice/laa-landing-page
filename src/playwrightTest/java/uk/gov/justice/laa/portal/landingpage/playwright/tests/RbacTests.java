@@ -1,5 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.playwright.tests;
 
+import com.microsoft.playwright.BrowserContext;
+import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.LoadState;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -267,20 +269,33 @@ public class RbacTests extends BaseFrontEndTest {
     @Test
     @DisplayName("A Firm User Manager can see the manage access button")
     void firmUserManagerCanManageAccess() {
-        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.FIRM_USER_MANAGER);
+
+        // Login as Global Admin and create user
+        ManageUsersPage globalAdminManageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        String email =
+                globalAdminManageUsersPage.createProviderAdminUserWithNonMultiFirmAccess("90001");
+
+        // Force a clean session without clicking sign out
+        page.context().clearCookies();
+
+        page.evaluate("() => window.localStorage.clear()");
+        page.evaluate("() => window.sessionStorage.clear()");
+
+        // Login as Firm User Manager
+        ManageUsersPage firmUserManagerManageUsersPage =
+                loginAndGetManageUsersPage(TestUser.FIRM_USER_MANAGER);
 
         assertTrue(
-                manageUsersPage.searchAndVerifyUser("externaluser-incomplete@playwrighttest.com"),
-                "External User Incomplete should be visible to Firm User Manager"
+                firmUserManagerManageUsersPage.searchAndVerifyUser(email),
+                "Created user should be visible to Firm User Manager"
         );
 
-        manageUsersPage.clickFirstUserLink();
+        firmUserManagerManageUsersPage.clickFirstUserLink();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-        manageUsersPage.verifyUserDetailsPopulated();
-
-        manageUsersPage.verifyManageAccessButtonVisible();
-
-
+        firmUserManagerManageUsersPage.verifyUserDetailsPopulated();
+        firmUserManagerManageUsersPage.verifyManageAccessButtonVisible();
     }
 }

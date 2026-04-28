@@ -561,4 +561,20 @@ public class ManageUsersPage {
         assertTrue(row.isVisible());
         assertTrue(row.allInnerTexts().getFirst().contains(value));
     }
+
+    public String createProviderAdminUserWithNonMultiFirmAccess(String firmCode) {
+
+        clickCreateUser();
+
+        final String email = fillInUserDetails(false);
+
+        selectMultiFirmAccess(false);
+        searchAndSelectFirmByCode(firmCode);
+        clickContinueFirmSelectPage();
+
+        clickConfirmNewUserButton();
+        clickGoBackToManageUsers();
+
+        return email;
+    }
 }
