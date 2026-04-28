@@ -535,6 +535,8 @@ public class ManageUsersTest extends BaseFrontEndTest {
 
         manageUsersPage.clickGoBackToManageUsers();
 
+        manageUsersPage.clickNextPageLink();
+
         assertTrue(row.locator(".moj-badge.moj-badge--grey").isVisible());
     }
 
