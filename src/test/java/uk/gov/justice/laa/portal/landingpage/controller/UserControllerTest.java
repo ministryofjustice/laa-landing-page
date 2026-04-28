@@ -167,6 +167,8 @@ class UserControllerTest {
                 new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService,
                 appRoleService, disableUserService, notificationService);
         userController.disableUserFeatureEnabled = true;
+        lenient().when(accessControlService.getEnablementFlags(any()))
+                .thenReturn(new AccessControlService.EnablementFlags(false, false));
         model = new ExtendedModelMap();
         firmSearchForm = FirmSearchForm.builder().build();
     }
@@ -1645,9 +1647,9 @@ class UserControllerTest {
         String app1Id = "app1";
         String app2Id = "app2";
         String app3Id = "app3";
-        
+
         MockHttpSession session = new MockHttpSession();
-        
+
         // Mock AppDto objects with ordinals for sorting (only for selected apps)
         AppDto app1 = AppDto.builder().id(app1Id).ordinal(1).build();
         AppDto app3 = AppDto.builder().id(app3Id).ordinal(3).build();
@@ -1658,22 +1660,22 @@ class UserControllerTest {
         session.setAttribute("selectedApps", List.of(app1Id, app2Id, app3Id));
         Map<Integer, List<String>> existingRoles = new HashMap<>();
         existingRoles.put(0, List.of("role1", "role2")); // app1 roles
-        existingRoles.put(1, List.of("role3"));          // app2 roles  
+        existingRoles.put(1, List.of("role3"));          // app2 roles
         existingRoles.put(2, List.of("role4", "role5")); // app3 roles
         session.setAttribute("editUserAllSelectedRoles", existingRoles);
-        
+
         // When - user deselects app2, keeping only app1 and app3
         List<String> newApps = List.of(app1Id, app3Id);
         UUID userId = UUID.randomUUID();
         RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), newApps, session);
-        
+
         // Then
         assertThat(redirectView.getUrl()).isEqualTo(String.format("/admin/users/edit/%s/roles", userId));
-        
+
         @SuppressWarnings("unchecked")
         List<String> updatedApps = (List<String>) session.getAttribute("selectedApps");
         assertThat(updatedApps).containsExactly(app1Id, app3Id);
-        
+
         @SuppressWarnings("unchecked")
         Map<Integer, List<String>> updatedRoles = (Map<Integer, List<String>>) session.getAttribute("editUserAllSelectedRoles");
         assertThat(updatedRoles).hasSize(2);
@@ -1688,9 +1690,9 @@ class UserControllerTest {
         UUID userId = UUID.randomUUID();
         String app1Id = "app1";
         String app2Id = "app2";
-        
+
         MockHttpSession session = new MockHttpSession();
-        
+
         // Mock AppDto objects with ordinals for sorting
         AppDto app1 = AppDto.builder().id(app1Id).ordinal(1).build();
         AppDto app2 = AppDto.builder().id(app2Id).ordinal(2).build();
@@ -1699,17 +1701,17 @@ class UserControllerTest {
 
         // Setup initial state: no previous selectedApps or role data
         List<String> newApps = List.of(app1Id, app2Id);
-        
+
         // When
         RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), newApps, session);
-        
+
         // Then
         assertThat(redirectView.getUrl()).isEqualTo(String.format("/admin/users/edit/%s/roles", userId));
-        
+
         @SuppressWarnings("unchecked")
         List<String> updatedApps = (List<String>) session.getAttribute("selectedApps");
         assertThat(updatedApps).containsExactly(app1Id, app2Id);
-        
+
         // Should not have created editUserAllSelectedRoles since there was no existing data to clean
         assertThat(session.getAttribute("editUserAllSelectedRoles")).isNull();
     }
@@ -7913,7 +7915,7 @@ class UserControllerTest {
             AppDto ccmsApp = new AppDto();
             ccmsApp.setId(UUID.randomUUID().toString());
             ccmsApp.setName("Apply for civil legal aid using CCMS");
-            
+
             testSession.setAttribute("selectedApps", List.of(ccmsApp.getId()));
 
             List<AppRoleDto> roles = List.of(

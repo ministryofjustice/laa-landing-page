@@ -21,6 +21,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
+import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
@@ -30,10 +31,7 @@ import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import org.springframework.beans.factory.annotation.Value;
 
-import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.EXTERNAL_USER_ADMIN;
-import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.EXTERNAL_USER_MANAGER;
 import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.FIRM_USER_MANAGER;
-import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.GLOBAL_ADMIN;
 
 @Service
 public class AccessControlService {
@@ -46,17 +44,21 @@ public class AccessControlService {
 
     private final EntraUserRepository entraUserRepository;
 
+    private final UserEnablementPolicy userEnablementPolicy;
+
     @Value("${feature.flag.bulk.disable.user}")
     private boolean bulkUserDisableFeatureEnabled;
 
     private static final Logger log = LoggerFactory.getLogger(AccessControlService.class);
 
     public AccessControlService(UserService userService, LoginService loginService,
-            FirmService firmService, EntraUserRepository entraUserRepository) {
+            FirmService firmService, EntraUserRepository entraUserRepository,
+            UserEnablementPolicy userEnablementPolicy) {
         this.userService = userService;
         this.loginService = loginService;
         this.firmService = firmService;
         this.entraUserRepository = entraUserRepository;
+        this.userEnablementPolicy = userEnablementPolicy;
     }
 
     public boolean canAccessUser(String userProfileId) {
@@ -239,86 +241,115 @@ public class AccessControlService {
     }
 
     public boolean canEnableUser(String entraUserId) {
+        return computeEnablementState(entraUserId).canEnable();
+    }
+
+    /**
+     * Returns {@code true} when the authenticated user has {@code ENABLE_EXTERNAL_USER} permission
+     * and the target user is disabled and external, but the enable is blocked by the
+     * {@link UserEnablementPolicy} hierarchy.
+     *
+     * <p>Used to display "You cannot enable this user" in the UI instead of hiding the action
+     * entirely — so the actor understands why they cannot proceed.
+     *
+     * @param entraUserId the EntraUser ID of the user to check
+     * @return {@code true} if enable is blocked by hierarchy (show "You cannot enable this user")
+     */
+    public boolean isEnableBlockedByHierarchy(String entraUserId) {
+        return computeEnablementState(entraUserId).blockedByHierarchy();
+    }
+
+    /**
+     * Returns both enablement flags in a single pass, avoiding duplicate DB lookups
+     * when a caller needs both {@link #canEnableUser} and {@link #isEnableBlockedByHierarchy}.
+     *
+     * @param entraUserId the EntraUser ID of the user to check
+     * @return an {@link EnablementFlags} record with both values derived from a single call to
+     *         {@link #computeEnablementState(String)}
+     */
+    public EnablementFlags getEnablementFlags(String entraUserId) {
+        EnablementState state = computeEnablementState(entraUserId);
+        return new EnablementFlags(state.canEnable(), state.blockedByHierarchy());
+    }
+
+    /** Exposes both canEnable and blockedByHierarchy in one object to avoid computing state twice. */
+    public record EnablementFlags(boolean canEnable, boolean blockedByHierarchy) {}
+
+    /**
+     * Computes the full enablement state for the given target user in a single pass.
+     *
+     * <p>Shared by {@link #canEnableUser} and {@link #isEnableBlockedByHierarchy} to avoid
+     * duplicated lookups and ensure both methods apply identical pre-condition checks.
+     */
+    private EnablementState computeEnablementState(String entraUserId) {
         Optional<EntraUserDto> accessedUserOptional = userService.getEntraUserById(entraUserId);
         if (accessedUserOptional.isEmpty()) {
-            return false;
+            return EnablementState.DENIED;
         }
 
         EntraUserDto accessedUser = accessedUserOptional.get();
         if (accessedUser.isEnabled()) {
-            return false;
+            return EnablementState.DENIED;
         }
 
-        boolean isAccessedUserInternal = userService.isInternal(entraUserId);
-        if (isAccessedUserInternal) {
-            return false;
+        if (userService.isInternal(entraUserId)) {
+            return EnablementState.DENIED;
         }
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
-        EntraUser targetUser = entraUserRepository.findById(UUID.fromString(entraUserId)).orElse(null);
+        EntraUser targetUser = entraUserRepository.findByIdWithAssociations(UUID.fromString(entraUserId)).orElse(null);
 
         if (targetUser == null) {
-            return false;
+            return EnablementState.DENIED;
         }
 
-        boolean isInternalUser = userService.isInternal(authenticatedUser.getId());
-        if (!isInternalUser && accessedUser.isMultiFirmUser()) {
-            return false;
+        // Non-internal actors cannot enable multi-firm users — not a hierarchy issue, so DENIED
+        boolean isActorInternal = userService.isInternal(authenticatedUser.getId());
+        if (!isActorInternal && accessedUser.isMultiFirmUser()) {
+            return EnablementState.DENIED;
         }
 
-        UserProfile actorUserProfile = authenticatedUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
+        if (!userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER)) {
+            return EnablementState.DENIED;
+        }
+
+        UserProfile actorUserProfile = authenticatedUser.getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile).findFirst()
                 .orElse(null);
         if (actorUserProfile == null) {
-            return false;
+            return EnablementState.DENIED;
         }
 
-        UUID disabledByUserProfileId = targetUser.getDisabledBy();
+        List<String> actorRoles = Optional.ofNullable(actorUserProfile.getAppRoles()).orElse(Set.of())
+                .stream().map(AppRole::getName).toList();
+        DisableType disableType = targetUser.getDisableType();
 
-        List<String> actingUserRoles = actorUserProfile.getAppRoles().stream().map(AppRole::getName).toList();
-
-        UserProfileDto disabledByProfile = disabledByUserProfileId == null ? null :
-                userService.getUserProfileById(disabledByUserProfileId.toString()).orElse(null);
-        List<AppRoleDto> disabledByUserRoles = disabledByProfile == null ? List.of() : disabledByProfile.getAppRoles();
-
-        String disabledByUserRole = disabledByUserRoles.stream()
-                .map(AppRoleDto::getName)
-                .filter(name ->
-                        name.equals(EXTERNAL_USER_ADMIN.getRoleName())
-                                || name.equals(FIRM_USER_MANAGER.getRoleName())
-                )
-                .findFirst()
-                .orElse("NONE");
-
-        if (actingUserRoles.contains(GLOBAL_ADMIN.getRoleName())
-                || actingUserRoles.contains(EXTERNAL_USER_MANAGER.getRoleName())
-                || actingUserRoles.contains(AuthzRole.SECURITY_RESPONSE.getRoleName())) {
-            return userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER);
+        if (!userEnablementPolicy.canEnable(disableType, actorRoles)) {
+            return EnablementState.BLOCKED_BY_HIERARCHY;
         }
 
-        if (actingUserRoles.contains(FIRM_USER_MANAGER.getRoleName())) {
-            if (!disabledByUserRole.equals(FIRM_USER_MANAGER.getRoleName())) {
-                return false;
-            }
-            Firm enabledByUserFirm = actorUserProfile.getFirm();
-            Firm enabledUserFirm = targetUser.getUserProfiles().stream()
+        if (userEnablementPolicy.requiresSameFirmCheck(disableType, actorRoles)) {
+            Firm actorFirm = actorUserProfile.getFirm();
+            Firm targetFirm = targetUser.getUserProfiles().stream()
                     .filter(UserProfile::isActiveProfile)
                     .findFirst()
                     .map(UserProfile::getFirm).orElse(null);
-
-
-            return enabledUserFirm != null && enabledByUserFirm != null
-                    && enabledByUserFirm.getId().equals(enabledUserFirm.getId())
-                    && userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER);
+            boolean sameFirm = actorFirm != null && targetFirm != null
+                    && actorFirm.getId().equals(targetFirm.getId());
+            if (!sameFirm) {
+                return EnablementState.BLOCKED_BY_HIERARCHY;
+            }
         }
 
-        if (actingUserRoles.contains(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())) {
-            return disabledByUserRole.equals(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())
-                    && userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER);
-        }
+        return EnablementState.CAN_ENABLE;
+    }
 
-
-        return userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER);
+    /** Encapsulates the result of computing the enable-user access state. */
+    private record EnablementState(boolean canEnable, boolean blockedByHierarchy) {
+        static final EnablementState DENIED = new EnablementState(false, false);
+        static final EnablementState BLOCKED_BY_HIERARCHY = new EnablementState(false, true);
+        static final EnablementState CAN_ENABLE = new EnablementState(true, false);
     }
 
     /**

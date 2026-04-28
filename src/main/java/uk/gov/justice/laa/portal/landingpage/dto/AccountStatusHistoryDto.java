@@ -40,5 +40,10 @@ public class AccountStatusHistoryDto implements Serializable {
      * User who changed the status
      */
     private String statusChangedBy;
-}
 
+    /**
+     * The delegation level of the user who disabled the account (only populated on DISABLED records).
+     * NULL means unknown/legacy.
+     */
+    private String disableType;
+}

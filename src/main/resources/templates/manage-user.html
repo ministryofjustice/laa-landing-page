@@ -160,14 +160,7 @@
                                         <a class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
                                            th:href="@{/admin/users/edit/{id}/details(id=${user.id})}">Edit user</a>
                                     </li>
-                                    <li th:if="${canDisableUser or canEnableUser}" class="govuk-summary-card__action">
-                                        <a th:if="${canDisableUser}" class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
-                                           th:href="@{/admin/users/manage/{id}/disable(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">Disable user</a>
-                                        <a th:if="${canEnableUser}" class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
-                                           th:href="@{/admin/users/manage/{id}/enable(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">
-                                            Enable user
-                                        </a>
-                                    </li>
+
                                     <li th:if="${canDeleteUser}" class="govuk-summary-card__action">
                                         <a class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
                                            th:href="@{/admin/users/manage/{id}/delete(id=${user.id})}">Delete user</a>
@@ -235,6 +228,20 @@
                                                th:href="@{/admin/users/edit/{id}/convert-to-multi-firm(id=${user.id})}">
                                                 Convert to multi-firm
                                             </a>
+                                        </dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row" th:if="${canDisableUser or canEnableUser or cannotEnableUser}">
+                                        <dt class="govuk-summary-list__key">Account status</dt>
+                                        <dd class="govuk-summary-list__value">
+                                            <strong class="govuk-tag govuk-tag--green" th:if="${user.entraUser.enabled}">Enabled</strong>
+                                            <strong class="govuk-tag govuk-tag--red" th:unless="${user.entraUser.enabled}">Disabled</strong>
+                                        </dd>
+                                        <dd class="govuk-summary-list__actions">
+                                            <a th:if="${canDisableUser}" class="govuk-link"
+                                               th:href="@{/admin/users/manage/{id}/disable(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">Disable user</a>
+                                            <a th:if="${canEnableUser}" class="govuk-link"
+                                               th:href="@{/admin/users/manage/{id}/enable(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">Enable user</a>
+                                            <span th:if="${cannotEnableUser}">You cannot enable this user</span>
                                         </dd>
                                     </div>
                                 </dl>
