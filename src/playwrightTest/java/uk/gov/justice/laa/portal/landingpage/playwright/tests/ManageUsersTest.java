@@ -478,26 +478,63 @@ public class ManageUsersTest extends BaseFrontEndTest {
     @Test
     @DisplayName("Verify External User Manager can Manage Access for incomplete users.")
     public void verifyExternalUserManagerIncompleteUsers() {
-        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
-        Locator row = manageUsersPage.externalUserRowLocator();
+
+        // Login as Global Admin and create incomplete external user
+        ManageUsersPage globalAdminManageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+        final String email =
+                globalAdminManageUsersPage.createProviderAdminUserWithNonMultiFirmAccess("90001");
+
+        // Force clean session without clicking sign out
+        page.context().clearCookies();
+        page.evaluate("() => window.localStorage.clear()");
+        page.evaluate("() => window.sessionStorage.clear()");
+
+        // Login as External User Manager
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(email),
+                "Created incomplete user should be visible to External User Manager"
+        );
+
+        Locator row = manageUsersPage.userRowLocator(email);
+
         assertTrue(row.locator(".moj-badge.moj-badge--blue").isVisible());
-        manageUsersPage.clickExternalUserLink("Playwright ExternalUserIncomplete");
+
+        manageUsersPage.clickUserLink(email);
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
         assertTrue(page.locator(".govuk-button:has-text('Manage Access')").isVisible());
+
         manageUsersPage.clickManageAccess();
+
         List<String> services = List.of("Test LAA App Four");
         manageUsersPage.checkSelectedServices(services);
+
         manageUsersPage.clickContinueLink();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
         List<String> roles = List.of("Test LAA App Four Role One Access");
         manageUsersPage.checkSelectedRoles(roles);
+
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
         manageUsersPage.clickContinueLink();
+        manageUsersPage.clickContinueLink();
+        manageUsersPage.checkSelectedOffices(List.of("Automation Office 1, City1, 12345 (THREE)"));
         manageUsersPage.clickContinueLink();
         manageUsersPage.clickConfirmButton();
+
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-        assertTrue(page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible());
+
+        assertTrue(
+                page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible()
+        );
+
         manageUsersPage.clickGoBackToManageUsers();
+
         assertTrue(row.locator(".moj-badge.moj-badge--grey").isVisible());
     }
 

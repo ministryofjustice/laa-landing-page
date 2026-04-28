@@ -274,7 +274,7 @@ public class RbacTests extends BaseFrontEndTest {
         ManageUsersPage globalAdminManageUsersPage =
                 loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
 
-        String email =
+        final String email =
                 globalAdminManageUsersPage.createProviderAdminUserWithNonMultiFirmAccess("90001");
 
         // Force a clean session without clicking sign out

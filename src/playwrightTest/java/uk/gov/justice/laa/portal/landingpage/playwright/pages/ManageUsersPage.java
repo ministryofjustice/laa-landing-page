@@ -577,4 +577,12 @@ public class ManageUsersPage {
 
         return email;
     }
+
+    public Locator userRowLocator(String email) {
+        return page.locator("tr", new Page.LocatorOptions().setHasText(email));
+    }
+
+    public void clickUserLink(String email) {
+        userRowLocator(email).locator("a").first().click();
+    }
 }
