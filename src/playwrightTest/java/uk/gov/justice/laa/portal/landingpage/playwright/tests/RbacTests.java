@@ -3,6 +3,8 @@ package uk.gov.justice.laa.portal.landingpage.playwright.tests;
 import com.microsoft.playwright.options.LoadState;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.BaseFrontEndTest;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.TestUser;
 import uk.gov.justice.laa.portal.landingpage.playwright.pages.ManageUsersPage;
@@ -10,6 +12,7 @@ import uk.gov.justice.laa.portal.landingpage.playwright.pages.ManageUsersPage;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@Execution(ExecutionMode.SAME_THREAD)
 public class RbacTests extends BaseFrontEndTest {
 
     @Test
@@ -37,10 +40,6 @@ public class RbacTests extends BaseFrontEndTest {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.INTERNAL_USER_MANAGER);
         assertFalse(manageUsersPage.searchAndVerifyUser("playwright-firmusermanager@playwrighttest.com"));
     }
-
-    // ---------------------------------------------------------------------
-    // EXTERNAL USER MANAGER
-    // ---------------------------------------------------------------------
 
     @Test
     @DisplayName("External User Manager can access landing page")
@@ -75,10 +74,6 @@ public class RbacTests extends BaseFrontEndTest {
         );
     }
 
-    // ---------------------------------------------------------------------
-    // EXTERNAL USER ADMIN
-    // ---------------------------------------------------------------------
-
     @Test
     @DisplayName("External User Admin can access landing page")
     void externalUserAdminCanAccessLandingPage() {
@@ -111,10 +106,6 @@ public class RbacTests extends BaseFrontEndTest {
                 "Create User button should be visible for External User Admin"
         );
     }
-
-    // ---------------------------------------------------------------------
-    // EXTERNAL USER VIEWER
-    // ---------------------------------------------------------------------
 
     @Test
     @DisplayName("External User Viewer can access SILAS")
@@ -150,10 +141,6 @@ public class RbacTests extends BaseFrontEndTest {
         );
     }
 
-    // ---------------------------------------------------------------------
-    // INTERNAL USER VIEWER
-    // ---------------------------------------------------------------------
-
     @Test
     @DisplayName("Internal User Viewer can access SILAS")
     void internalUserViewerCanAccessSilas() {
@@ -186,10 +173,6 @@ public class RbacTests extends BaseFrontEndTest {
                 "Create User button should not be visible for Internal User Viewer"
         );
     }
-
-    // ---------------------------------------------------------------------
-    // FIRM USER MANAGER
-    // ---------------------------------------------------------------------
 
     @Test
     @DisplayName("Firm User Manager can access SILAS")
@@ -224,7 +207,6 @@ public class RbacTests extends BaseFrontEndTest {
         );
     }
 
-
     @Test
     @DisplayName("A Firm User Manager can delete a user from the same firm")
     void firmUserManagerCanDeleteUserFromSameFirm() {
@@ -256,12 +238,38 @@ public class RbacTests extends BaseFrontEndTest {
     void firmUserManagerCannotDeleteUserFromDifferentFirm() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.FIRM_USER_MANAGER);
 
-        // Firm User Manager should NOT be able to see users from different firm
-
         assertFalse(
                 manageUsersPage.searchAndVerifyUser("playwright-firmtwouserviewer@playwrighttest.com"),
                 "User from different firm (Firm Two) should NOT be visible to Firm User Manager from Firm One"
         );
     }
 
+    @Test
+    @DisplayName("A Firm User Manager can see the manage access button")
+    void firmUserManagerCanManageAccess() {
+        ManageUsersPage globalAdminManageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        final String email =
+                globalAdminManageUsersPage.createProviderAdminUserWithNonMultiFirmAccess("90001");
+
+        page.context().clearCookies();
+        page.evaluate("() => window.localStorage.clear()");
+        page.evaluate("() => window.sessionStorage.clear()");
+
+        ManageUsersPage firmUserManagerManageUsersPage =
+                loginAndGetManageUsersPage(TestUser.FIRM_USER_MANAGER);
+
+        assertTrue(
+                firmUserManagerManageUsersPage.searchAndVerifyUser(email),
+                "Created user should be visible to Firm User Manager"
+        );
+
+        firmUserManagerManageUsersPage.clickFirstUserLink();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        firmUserManagerManageUsersPage.verifyUserDetailsPopulated();
+        firmUserManagerManageUsersPage.verifyManageAccessButtonVisible();
+    }
 }
+

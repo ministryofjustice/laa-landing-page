@@ -210,10 +210,13 @@ public class ManageUsersTest extends BaseFrontEndTest {
     void removeServicesAndVerify() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
 
+        String userEmail = "playwright-informationassurance@playwrighttest.com";
+
         // First, add services to ensure they exist
-        manageUsersPage.searchForUser("playwright-informationassurance@playwrighttest.com");
+        manageUsersPage.searchForUser(userEmail);
         manageUsersPage.clickFirstUserLink();
         assertTrue(page.url().contains("/admin/users/manage/"));
+
         manageUsersPage.clickServicesTab();
         manageUsersPage.clickChangeLink();
         manageUsersPage.clickContinueFirmSelectPage();
@@ -223,15 +226,21 @@ public class ManageUsersTest extends BaseFrontEndTest {
                 TestRole.EXTERNAL_USER_MANAGER.roleName,
                 TestRole.EXTERNAL_USER_VIEWER.roleName
         );
+
         manageUsersPage.checkSelectedRoles(allRoles);
         manageUsersPage.clickContinueUserDetails();
         manageUsersPage.clickConfirmButton();
+
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-        assertTrue(page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible());
+
+        assertTrue(
+                page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible(),
+                "Access and permissions updated confirmation should be displayed after adding roles"
+        );
 
         // Now remove some services
         manageUsersPage.clickGoBackToManageUsers();
-        manageUsersPage.searchForUser("playwright-informationassurance@playwrighttest.com");
+        manageUsersPage.searchForUser(userEmail);
         manageUsersPage.clickFirstUserLink();
         manageUsersPage.clickServicesTab();
         manageUsersPage.clickChangeLink();
@@ -241,23 +250,43 @@ public class ManageUsersTest extends BaseFrontEndTest {
                 TestRole.INTERNAL_USER_MANAGER.roleName,
                 TestRole.EXTERNAL_USER_VIEWER.roleName
         );
-        manageUsersPage.uncheckSelectedRoles(rolesToRemove);
+
+        // Verify the roles are visible, selected, and enabled before trying to remove them
+        for (String role : rolesToRemove) {
+            Locator roleCheckbox = page.getByLabel(role);
+
+            assertTrue(roleCheckbox.isVisible(), role + " checkbox should be visible");
+            assertTrue(roleCheckbox.isChecked(), role + " checkbox should be selected before removal");
+            assertTrue(roleCheckbox.isEnabled(), role + " checkbox should be enabled so it can be removed");
+
+            roleCheckbox.uncheck();
+
+            assertFalse(roleCheckbox.isChecked(), role + " checkbox should be unchecked after removal");
+        }
 
         manageUsersPage.clickContinueUserDetails();
         manageUsersPage.clickConfirmButton();
+
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-        assertTrue(page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible());
+
+        assertTrue(
+                page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible(),
+                "Access and permissions updated confirmation should be displayed after removing roles"
+        );
 
         // Verify the services were removed
         manageUsersPage.clickGoBackToManageUsers();
-        manageUsersPage.searchForUser("playwright-informationassurance@playwrighttest.com");
+        manageUsersPage.searchForUser(userEmail);
         manageUsersPage.clickFirstUserLink();
         manageUsersPage.clickServicesTab();
 
         manageUsersPage.verifyServicesNotPresent(rolesToRemove);
 
         // Verify remaining service is still present
-        List<String> remainingRoles = List.of(TestRole.EXTERNAL_USER_MANAGER.roleName);
+        List<String> remainingRoles = List.of(
+                TestRole.EXTERNAL_USER_MANAGER.roleName
+        );
+
         manageUsersPage.verifySelectedUserServices(remainingRoles);
     }
 
@@ -449,26 +478,65 @@ public class ManageUsersTest extends BaseFrontEndTest {
     @Test
     @DisplayName("Verify External User Manager can Manage Access for incomplete users.")
     public void verifyExternalUserManagerIncompleteUsers() {
-        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
-        Locator row = manageUsersPage.externalUserRowLocator();
+
+        // Login as Global Admin and create incomplete external user
+        ManageUsersPage globalAdminManageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+        final String email =
+                globalAdminManageUsersPage.createProviderAdminUserWithNonMultiFirmAccess("90001");
+
+        // Force clean session without clicking sign out
+        page.context().clearCookies();
+        page.evaluate("() => window.localStorage.clear()");
+        page.evaluate("() => window.sessionStorage.clear()");
+
+        // Login as External User Manager
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(email),
+                "Created incomplete user should be visible to External User Manager"
+        );
+
+        Locator row = manageUsersPage.userRowLocator(email);
+
         assertTrue(row.locator(".moj-badge.moj-badge--blue").isVisible());
-        manageUsersPage.clickExternalUserLink("Playwright ExternalUserIncomplete");
+
+        manageUsersPage.clickUserLink(email);
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
         assertTrue(page.locator(".govuk-button:has-text('Manage Access')").isVisible());
+
         manageUsersPage.clickManageAccess();
+
         List<String> services = List.of("Test LAA App Four");
         manageUsersPage.checkSelectedServices(services);
+
         manageUsersPage.clickContinueLink();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
         List<String> roles = List.of("Test LAA App Four Role One Access");
         manageUsersPage.checkSelectedRoles(roles);
+
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
         manageUsersPage.clickContinueLink();
+        manageUsersPage.clickContinueLink();
+        manageUsersPage.checkSelectedOffices(List.of("Automation Office 1, City1, 12345 (THREE)"));
         manageUsersPage.clickContinueLink();
         manageUsersPage.clickConfirmButton();
+
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-        assertTrue(page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible());
+
+        assertTrue(
+                page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible()
+        );
+
         manageUsersPage.clickGoBackToManageUsers();
+
+        manageUsersPage.clickNextPageLink();
+
         assertTrue(row.locator(".moj-badge.moj-badge--grey").isVisible());
     }
 
