@@ -1,0 +1,38 @@
+name: ASH Scan
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+jobs:
+  ash:
+    uses: awslabs/automated-security-helper/.github/workflows/run-ash-security-scan.yml@v3
+    permissions:
+      actions: read # Required for CodeQL action API access during SARIF upload in the called workflow
+      contents: read # Required to read the repository contents in order to scan them with ASH
+      checks: write # Required for writing CI check runs
+      pull-requests: write # Required for writing comments with scan results to pull requests
+      security-events: write # Required for collection of SARIF code scanning results for GitHub Advanced Security checks
+    with:
+      ash-version: v3
+      ash-mode: container
+      config: .ash/ash.yaml
+      fail-on-findings: true
+      collect-junit-xml-report: true
+      collect-sarif-report: ${{ github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork) }}
+      install-grype: true
+      install-syft: true
+      install-opengrep: true
+      post-pr-comment: ${{ github.actor != 'dependabot[bot]' && github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork }}
+      verbose: true
+      output-dir: '.ash/ash_output'

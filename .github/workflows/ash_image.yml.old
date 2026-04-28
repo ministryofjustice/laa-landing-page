@@ -1,0 +1,66 @@
+name: Ash Grype Scan & Syft SBOM
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Build Docker image
+        run: docker build . --file Dockerfile-WorkFlow --tag laa-landing-page:latest --progress=plain --no-cache
+      
+      - name: Grype Scan
+        uses: anchore/scan-action@v7
+        with:
+          image: laa-landing-page:latest
+          fail-build: false
+          output-format: sarif
+          output-file: grype-results.sarif
+      
+      - name: Upload Grype SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: grype-results.sarif
+          category: grype-scan
+      
+      - name: Output Grype Report to stdout
+        if: always()
+        run: |
+          echo "=== Grype Vulnerability Report ==="
+          jq '.runs[0].results[] | {ruleId: .ruleId, level: .level, message: .message.text}' grype-results.sarif
+      
+      - name: Generate Syft SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: laa-landing-page:latest
+          format: spdx-json
+          output-file: syft-sbom.spdx.json
+      
+      - name: Upload Grype Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: grype-scan-report
+          path: grype-report.json
+      
+      - name: Upload Syft SBOM
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: syft-sbom
+          path: syft-sbom.spdx.json
