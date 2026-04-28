@@ -315,6 +315,22 @@
                 </form>
             </div>
 
+            <!-- Filter by User Type -->
+            <div class="govuk-form-group">
+                <label class="govuk-label">Select User Type</label>
+                <form method="get" th:action="@{/admin/silas-administration}">
+                    <input type="hidden" name="tab" value="roles" />
+                    <select class="govuk-select" name="userTypeFilter" onchange="this.form.submit()">
+                        <option value="All">All user types</option>
+                        <option th:each="type : ${userTypes}"
+                                th:value="${type}"
+                                th:text="${type}"
+                                th:selected="${type == userTypeFilter}">
+                        </option>
+                    </select>
+                </form>
+            </div>
+
             <div th:if="${roles != null and !roles.isEmpty()}">
                 <table class="govuk-table">
                     <thead class="govuk-table__head">
@@ -323,6 +339,7 @@
                         <th scope="col" class="govuk-table__header" style="width: 25%;">Description</th>
                         <th scope="col" class="govuk-table__header" style="width: 20%;">CCMS Code</th>
                         <th scope="col" class="govuk-table__header" style="width: 10%;">Legacy Sync</th>
+                        <th scope="col" class="govuk-table__header" style="width: 10%;">User Type</th>
                         <th scope="col" class="govuk-table__header" style="width: 10%;">Order</th>
                         <th scope="col" class="govuk-table__header" style="width: 10%;"></th>
                     </tr>
@@ -333,6 +350,7 @@
                         <td class="govuk-table__cell" th:text="${role.description}" style="word-break: break-word;">Default Role Description</td>
                         <td class="govuk-table__cell" th:text="${role.ccmsCode}" style="word-break: break-word;"></td>
                         <td class="govuk-table__cell" th:text="${role.legacySync}">No</td>
+                        <td class="govuk-table__cell" th:text="${role.getUserTypeRestriction()}">User Type</td>
                         <td class="govuk-table__cell" th:text="${role.ordinal}">0</td>
                         <td class="govuk-table__cell">
                             <a th:href="@{'/admin/silas-administration/role/' + ${role.id}}" class="govuk-link">Change</a>
