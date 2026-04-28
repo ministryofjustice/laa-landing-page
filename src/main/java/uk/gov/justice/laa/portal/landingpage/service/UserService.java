@@ -694,12 +694,12 @@ public class UserService {
         Page<UserSearchResultsDto> userPage = pageSupplier.get();
         PaginatedUsers paginatedUsers = new PaginatedUsers();
         paginatedUsers.setTotalUsers(userPage.getTotalElements());
-        
+
         // Calculate Silas status for each user
         List<UserSearchResultsDto> usersWithStatus = userPage.stream()
                 .map(this::addSilasStatusToUser)
                 .toList();
-        
+
         paginatedUsers.setUsers(usersWithStatus);
         paginatedUsers.setTotalPages(userPage.getTotalPages());
         return paginatedUsers;
@@ -710,7 +710,7 @@ public class UserService {
      */
     private UserSearchResultsDto addSilasStatusToUser(UserSearchResultsDto user) {
         String silasStatus = calculateUserSilasStatus(user);
-        
+
         return new UserSearchResultsDto(
                 user.id(),
                 user.activeProfile(),
@@ -1156,18 +1156,21 @@ public class UserService {
         Optional<EntraUser> optionalUser = entraUserRepository.findById(UUID.fromString(userId));
         if (optionalUser.isPresent()) {
             EntraUser entraUser = optionalUser.get();
-            entraUser.setEmail(email);
-            entraUser.setFirstName(firstName);
-            entraUser.setLastName(lastName);
 
             try {
+                final UpdateUserInfoAuditEvent updateUserInfoAuditEvent = new UpdateUserInfoAuditEvent(
+                        entraUser, firstName, lastName, email,
+                        String.valueOf(currentUserProfile.getId()), currentUserProfile.getEntraUser().getEntraOid());
+
+                entraUser.setEmail(email);
+                entraUser.setFirstName(firstName);
+                entraUser.setLastName(lastName);
+
                 // update on tech services
                 TechServicesApiResponse<ChangeAccountEnabledResponse> response = techServicesClient.updateUserDetails(entraUser.getEntraOid(), firstName, lastName, email);
                 if (response.isSuccess()) {
                     //update user information on database
                     entraUserRepository.saveAndFlush(entraUser);
-                    UpdateUserInfoAuditEvent updateUserInfoAuditEvent = new UpdateUserInfoAuditEvent(
-                            entraUser, String.valueOf(currentUserProfile.getId()), currentUserProfile.getEntraUser().getEntraOid());
                     eventService.logEvent(updateUserInfoAuditEvent);
                     logger.info("Successfully updated user details in database for user ID: {}",
                             userId);
@@ -1407,17 +1410,17 @@ public class UserService {
         List<EntraUser> entraUsers = new ArrayList<>();
         String createdBy = "INTERNAL_USER_SYNC";
         int skippedUsers = 0;
-        
+
         for (EntraUserDto user : entraUserDtos) {
             Optional<EntraUser> existingUser = entraUserRepository.findByEmailIgnoreCase(user.getEmail());
-            
+
             // Skip if user already exists and has external user profile
             if (existingUser.isPresent() && hasExternalUserProfile(existingUser.get())) {
                 skippedUsers++;
                 logger.info("Skipping user {} - already exists as external user", user.getEntraOid());
                 continue;
             }
-            
+
             EntraUser entraUser = mapper.map(user, EntraUser.class);
             UserProfile userProfile = UserProfile.builder().activeProfile(true)
                     .userProfileStatus(UserProfileStatus.COMPLETE).userType(UserType.INTERNAL)
@@ -1432,7 +1435,7 @@ public class UserService {
             entraUsers.add(entraUser);
             // todo: security group to access authz app
         }
-        
+
         if (skippedUsers > 0) {
             logger.info("{} users skipped - already exist as external users", skippedUsers);
         }
@@ -1506,7 +1509,7 @@ public class UserService {
                 List<UserProfile> profiles = userProfileRepository.findAllByEntraUser(entraUser);
                 boolean isInternalUser = profiles.stream()
                         .anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
-                
+
                 if (!isInternalUser) {
                     logger.warn("Skipping deletion of user {} - not an internal user", entraId);
                     continue;
@@ -1536,7 +1539,7 @@ public class UserService {
 
                 entraUserRepository.delete(entraUser);
                 entraUserRepository.flush();
-                
+
                 deletedCount++;
                 logger.debug("Successfully deleted internal user: {}", entraId);
 
@@ -1781,7 +1784,6 @@ public class UserService {
                 .isMultiFirmUser(user.isMultiFirmUser()).profileCount(profileCount)
                 .createdDate(user.getCreatedDate()).createdBy(user.getCreatedBy())
                 // TODO: Fetch lastLoginDate from Microsoft Graph or Silas API
-                .lastLoginDate(null)
                 .entraStatus(user.getUserStatus() != null ? user.getUserStatus().name() : "UNKNOWN")
                 // TODO: Fetch activationStatus from TechServices API
                 .activationStatus(null).build();
@@ -1926,16 +1928,16 @@ public class UserService {
                 return "Activation pending";
             }
         }
-        
+
         // At this point, invitationStatus == VERIFICATION_SUCCESS
         if (!isEnabled) {
             return "Disabled";
         }
-        
+
         if (isPending || noRolesAssigned) {
             return "No roles assigned";
         }
-        
+
         return "Complete";
     }
 
@@ -2052,7 +2054,6 @@ public class UserService {
                 .isMultiFirmUser(entraUser.isMultiFirmUser()).userType(userType)
                 .createdDate(entraUser.getCreatedDate()).createdBy(entraUser.getCreatedBy())
                 // TODO: Fetch lastLoginDate from Microsoft Graph API
-                .lastLoginDate(null)
                 // TODO: Fetch activationStatus from TechServices API or SILAS API
                 .activationStatus(null)
                 .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
@@ -2126,7 +2127,6 @@ public class UserService {
                 .createdBy(entraUser.getCreatedBy())
                 .disabledBy(String.valueOf(entraUser.getDisabledBy()))
                 // TODO: Fetch lastLoginDate from Microsoft Graph API
-                .lastLoginDate(null)
                 .activationStatus(entraUser.getInvitationStatus() != null ? entraUser.getInvitationStatus().name() : null)
                 .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
                         : "UNKNOWN")
@@ -2182,7 +2182,6 @@ public class UserService {
                 .createdDate(entraUser.getCreatedDate()).createdBy(entraUser.getCreatedBy())
                 .disabledBy(String.valueOf(entraUser.getDisabledBy()))
                 // TODO: Fetch lastLoginDate from Microsoft Graph API
-                .lastLoginDate(null)
                 .activationStatus(entraUser.getInvitationStatus() != null ? entraUser.getInvitationStatus().name() : null)
                 .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
                         : "UNKNOWN")
@@ -2201,9 +2200,11 @@ public class UserService {
     private AuditProfileDto mapToAuditProfileDto(UserProfile profile) {
         // Get offices
         List<OfficeDto> officeDtos = new ArrayList<>();
-        String officeRestrictions = "Access to All Offices";
+        String officeRestrictions = "No office access assigned";
 
-        if (profile.getOffices() != null && !profile.getOffices().isEmpty()) {
+        if (profile.isUnrestrictedOfficeAccess()) {
+            officeRestrictions = "Access to All Offices";
+        } else if (profile.getOffices() != null && !profile.getOffices().isEmpty()) {
             officeDtos = profile.getOffices().stream()
                     .map(office -> mapper.map(office, OfficeDto.class)).toList();
             officeRestrictions = officeDtos.size() + " office(s) selected";

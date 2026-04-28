@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -61,24 +62,33 @@ public class RestUtils {
         }
     }
 
-    public static <T> Optional<List<T>> getListFromHttpSession(HttpSession session, String key, Class<T> listType) {
-        Object object = session.getAttribute(key);
-        if (object instanceof List<?> list && list.stream().allMatch(o -> o == null || listType.isInstance(o))) {
-            return Optional.of((List<T>) list);
-        } else {
-            log.debug("Type mismatch: session attribute '{}' is null or not of the expected type", key);
-            return Optional.empty();
+    @SuppressWarnings("unchecked")
+    public static <T> Optional<List<T>> getListFromHttpSession(HttpSession session, String key, Class<T> elementType) {
+        Object value = session.getAttribute(key);
+
+        if (value instanceof List<?> list
+                && (list.isEmpty() || list.stream().allMatch(o -> o == null || elementType.isInstance(o)))) {
+            return Optional.of(new ArrayList<>((List<T>) list));
         }
+
+        log.debug("Session attribute '{}' is missing, not a List, or contains elements not of type {}",
+                key, elementType.getSimpleName());
+        return Optional.empty();
     }
 
-    public static <T> Optional<Set<T>> getSetFromHttpSession(HttpSession session, String key, Class<T> setType) {
+
+    @SuppressWarnings("unchecked")
+    public static <T> Optional<Set<T>> getSetFromHttpSession(HttpSession session, String key, Class<T> elementType) {
         Object object = session.getAttribute(key);
-        if (object instanceof Set<?> set && set.stream().allMatch(o -> o == null || setType.isInstance(o))) {
+        if (object instanceof Set<?> set
+                && set.stream().allMatch(o -> o == null || elementType.isInstance(o))) {
             return Optional.of((Set<T>) set);
-        } else {
-            log.debug("Type mismatch: session attribute '{}' is null or not of the expected type", key);
-            return Optional.empty();
         }
+
+        log.debug("Session attribute '{}' is missing, not a Set, or contains elements not of type {}",
+                key, elementType.getSimpleName());
+
+        return Optional.empty();
     }
 
 }

@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -1092,6 +1093,7 @@ public class UserController {
         List<AppDto> editableApps = availableApps.stream()
                 .filter(AppDto::isEnabled)
                 .filter(app -> roleAssignmentService.canUserAssignRolesForApp(currentUserProfile, app))
+                .sorted()
                 .toList();
 
         @SuppressWarnings("unchecked")
@@ -1113,6 +1115,7 @@ public class UserController {
             flagEditableApps(id, editableApps);
         }
 
+        session.removeAttribute("roleSelectableAppIndexes");
         model.addAttribute("user", user);
         model.addAttribute("apps", editableApps);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user services - " + user.getFullName());
@@ -1147,8 +1150,16 @@ public class UserController {
             HttpSession session) {
 
         // Handle case where no apps are selected (apps will be null)
-        List<String> selectedApps = apps != null ? apps : new ArrayList<>();
-        
+        List<String> unsortedApps = apps != null ? apps : new ArrayList<>();
+
+        // Sort selected apps by their ordinal to maintain consistent order
+        List<String> selectedApps = unsortedApps.stream()
+                .map(appId -> userService.getAppByAppId(appId).orElse(null))
+                .filter(Objects::nonNull)
+                .sorted()
+                .map(AppDto::getId)
+                .collect(Collectors.toList());
+
         // Get previous app selection to determine if roles need to be cleaned up
         List<String> previousSelectedApps = getListFromHttpSession(session, "selectedApps", String.class)
                 .orElse(new ArrayList<>());
@@ -1231,20 +1242,48 @@ public class UserController {
         if (currentSelectedAppIndex >= selectedApps.size()) {
             currentSelectedAppIndex = 0;
         }
-        FirmType userFirmType = user.getFirm() != null ? user.getFirm().getType() : null;
 
-        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
-                user.getUserType(), userFirmType);
-        UserProfile editorProfile = loginService.getCurrentProfile(authentication);
-        roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
-                roles.stream().map(role -> UUID.fromString(role.getId())).toList());
-        List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
         @SuppressWarnings("unchecked")
-        Map<Integer, List<String>> editUserAllSelectedRoles = (Map<Integer, List<String>>) session
-                .getAttribute("editUserAllSelectedRoles");
-        if (Objects.isNull(editUserAllSelectedRoles)) {
-            editUserAllSelectedRoles = new HashMap<>();
+        Map<Integer, List<String>> editUserAllSelectedRoles =
+                (Map<Integer, List<String>>) getObjectFromHttpSession(session, "editUserAllSelectedRoles", Map.class)
+                        .orElse(new HashMap<>());
+        List<AppRoleDto> roles = List.of();
+        List<AppRoleDto> userRoles = List.of();
+        String currentAppId = selectedApps.get(currentSelectedAppIndex);
+
+        while (currentSelectedAppIndex < selectedApps.size()) {
+            currentAppId = selectedApps.get(currentSelectedAppIndex);
+            FirmType userFirmType = user.getFirm() != null ? user.getFirm().getType() : null;
+            roles = userService.getAppRolesByAppIdAndUserType(currentAppId,
+                    user.getUserType(), userFirmType);
+            UserProfile editorProfile = loginService.getCurrentProfile(authentication);
+            if (!roles.isEmpty()) {
+                roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
+                        roles.stream().map(role -> UUID.fromString(role.getId())).toList());
+            }
+            userRoles = userService.getUserAppRolesByUserId(id);
+
+            // Skip role selection if there is only one selectable role
+            if (roles.size() != 1) {
+                break;
+            }
+
+            editUserAllSelectedRoles.put(currentSelectedAppIndex, roles.stream().map(AppRoleDto::getId).toList());
+            session.setAttribute("editUserAllSelectedRoles", editUserAllSelectedRoles);
+            currentSelectedAppIndex++;
+            if (currentSelectedAppIndex >= selectedApps.size()) {
+                model.addAttribute("backUrl", getBackButtonUrl(id, session, currentSelectedAppIndex));
+                return "redirect:/admin/users/edit/" + id + "/roles-check-answer";
+            }
+
         }
+
+        // Store the app indexes for which roles can be selected, to guide back button
+        Set<Integer> roleSelectableAppIndexes = getSetFromHttpSession(session, "roleSelectableAppIndexes", Integer.class)
+                .orElseGet(TreeSet::new);
+        roleSelectableAppIndexes.add(currentSelectedAppIndex);
+        session.setAttribute("roleSelectableAppIndexes", roleSelectableAppIndexes);
+
         // Get currently selected roles from session or use user's existing roles
         List<String> selectedRoles;
         if (editUserAllSelectedRoles.get(currentSelectedAppIndex) != null) {
@@ -1252,7 +1291,6 @@ public class UserController {
         } else {
             selectedRoles = userRoles.stream().map(AppRoleDto::getId).collect(Collectors.toList());
         }
-        AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();
 
         List<AppRoleViewModel> appRoleViewModels = roles.stream()
                 .map(appRoleDto -> {
@@ -1262,10 +1300,18 @@ public class UserController {
                 }).sorted().toList();
         flagEditableAppRoles(id, appRoleViewModels);
 
+        // Get the current app details
+        String finalCurrentAppId = currentAppId;
+        AppDto currentApp = userService.getAppByAppId(currentAppId).orElseThrow(() ->
+            new IllegalArgumentException("App not found with ID: " + finalCurrentAppId));
+
         // Check if this is the CCMS app and organize roles by section
         boolean isCcmsApp = (currentApp.getName().contains("CCMS")
                 && !currentApp.getName().contains("CCMS case transfer requests"))
                 || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()));
+
+        // Apply CCMS filtering before storing in model
+        List<AppRoleViewModel> finalRoles = appRoleViewModels;
 
         if (isCcmsApp) {
             // Filter to only CCMS roles for organization
@@ -1273,15 +1319,35 @@ public class UserController {
                     .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()))
                     .sorted().collect(Collectors.toList());
 
-            Map<String, List<AppRoleViewModel>> organizedRoles = new HashMap<>();
-            Map<String, Boolean> organizedRoleDisplayFlags = new HashMap<>();
+            Map<String, List<AppRoleViewModel>> organizedRoles;
+            Map<String, Boolean> organizedRoleDisplayFlags;
+
             if (!ccmsRoles.isEmpty()) {
                 // Organize CCMS roles by section dynamically
-                organizedRoles.putAll(CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles));
-                organizedRoles.keySet().stream()
-                        .forEach(section -> organizedRoleDisplayFlags.put(section, organizedRoles.get(section).stream()
-                                .anyMatch(role -> !role.isHiddenFromSelection())));
+                organizedRoles = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
+                organizedRoleDisplayFlags =
+                        organizedRoles.entrySet().stream()
+                                .collect(Collectors.toMap(
+                                        Map.Entry::getKey,
+                                        e -> !e.getValue().isEmpty()
+                                ));
+                // Use filtered CCMS roles for both display and session storage
+                finalRoles = ccmsRoles;
+            } else {
+                // No CCMS roles found - initialize with empty maps to prevent NPE in template
+                organizedRoles = new LinkedHashMap<>();
+                organizedRoles.put("Provider", new ArrayList<>());
+                organizedRoles.put("Chambers", new ArrayList<>());
+                organizedRoles.put("Advocate", new ArrayList<>());
+                organizedRoles.put("Other", new ArrayList<>());
+
+                organizedRoleDisplayFlags = new HashMap<>();
+                organizedRoleDisplayFlags.put("Provider", false);
+                organizedRoleDisplayFlags.put("Chambers", false);
+                organizedRoleDisplayFlags.put("Advocate", false);
+                organizedRoleDisplayFlags.put("Other", false);
             }
+
             model.addAttribute("ccmsRolesBySection", organizedRoles);
             model.addAttribute("ccmsRoleDisplayFlags", organizedRoleDisplayFlags);
             model.addAttribute("isCcmsApp", true);
@@ -1290,14 +1356,10 @@ public class UserController {
         }
 
         model.addAttribute("user", user);
-        model.addAttribute("roles", appRoleViewModels);
+        model.addAttribute("roles", finalRoles);
         model.addAttribute("editUserRolesSelectedAppIndex", currentSelectedAppIndex);
         model.addAttribute("editUserRolesCurrentApp", currentApp);
-
-        String rolesBackUrl = currentSelectedAppIndex == 0
-                ? "/admin/users/edit/" + id + "/apps"
-                : "/admin/users/edit/" + id + "/roles?selectedAppIndex=" + (currentSelectedAppIndex - 1);
-        model.addAttribute("backUrl", rolesBackUrl);
+        model.addAttribute("backUrl", getBackButtonUrl(id, session, currentSelectedAppIndex));
 
         session.setAttribute("editProfileUserRolesModel", model);
 
@@ -1369,14 +1431,19 @@ public class UserController {
             model.addAttribute("editUserRolesCurrentApp",
                     modelFromSession.getAttribute("editUserRolesCurrentApp"));
 
-            String rolesBackUrl = selectedAppIndex == 0
-                    ? "/admin/users/edit/" + id + "/apps"
-                    : "/admin/users/edit/" + id + "/roles?selectedAppIndex=" + (selectedAppIndex - 1);
-            model.addAttribute("backUrl", rolesBackUrl);
+            // Add CCMS attributes if this is a CCMS app
+            if (modelFromSession.getAttribute("isCcmsApp") != null) {
+                model.addAttribute("isCcmsApp", modelFromSession.getAttribute("isCcmsApp"));
+                model.addAttribute("ccmsRolesBySection", modelFromSession.getAttribute("ccmsRolesBySection"));
+                model.addAttribute("ccmsRoleDisplayFlags", modelFromSession.getAttribute("ccmsRoleDisplayFlags"));
+            }
+
+            model.addAttribute("backUrl", getBackButtonUrl(id, session, selectedAppIndex));
 
             return "edit-user-roles";
         }
 
+        model.addAttribute("backUrl", getBackButtonUrl(id, session, selectedAppIndex));
         @SuppressWarnings("unchecked")
         Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) session
                 .getAttribute("editUserAllSelectedRoles");
@@ -1412,7 +1479,7 @@ public class UserController {
         Map<Integer, List<String>> editUserAllSelectedRoles = (Map<Integer, List<String>>) session
                 .getAttribute("editUserAllSelectedRoles");
         if (editUserAllSelectedRoles == null) {
-            return "redirect:/admin/users/manage/" + id;
+            return "redirect:/admin/journey-completed";
         }
         UserType userType = user.getUserType();
         List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
@@ -1435,7 +1502,7 @@ public class UserController {
             backUrl = "/admin/users/edit/" + id + "/apps";
         } else {
             int size = editUserAllSelectedRoles.size();
-            backUrl = "/admin/users/edit/" + id + "/roles?selectedAppIndex=" + Math.max(0, size - 1);
+            backUrl = getBackButtonUrl(id, session, size + 1);
             for (Integer key : editUserAllSelectedRoles.keySet()) {
                 String url = "/admin/users/edit/" + id + "/roles?selectedAppIndex=" + key;
                 if (Objects.nonNull(editUserAllSelectedRoles.get(key))
@@ -1490,7 +1557,7 @@ public class UserController {
         Map<Integer, List<String>> allSelectedRolesByPage = (Map<Integer, List<String>>) session
                 .getAttribute("editUserAllSelectedRoles");
         if (allSelectedRolesByPage == null) {
-            return "redirect:/admin/users/manage/" + id;
+            return "redirect:/admin/journey-completed";
         }
         List<String> allSelectedRoles = allSelectedRolesByPage.values().stream().filter(Objects::nonNull)
                 .flatMap(List::stream)
@@ -1522,6 +1589,19 @@ public class UserController {
         session.removeAttribute("selectedApps");
         return "redirect:/admin/users/edit/" + id + "/confirmation";
     }
+
+    private String getBackButtonUrl(String userProfileId, HttpSession session, int selectedAppIndex) {
+        Set<Integer> roleSelectableAppIndexes = getSetFromHttpSession(session, "roleSelectableAppIndexes", Integer.class)
+                .orElseGet(TreeSet::new);
+        Integer previousAppIndex = roleSelectableAppIndexes.stream()
+                .filter(n -> n < selectedAppIndex)
+                .max(Integer::compareTo)
+                .orElse(-1);
+
+        return previousAppIndex < 0 ? "/admin/users/edit/" + userProfileId + "/apps"
+                : "/admin/users/edit/" + userProfileId + "/roles?selectedAppIndex=" + previousAppIndex;
+    }
+
     /**
      * Get user offices for editing
      *
@@ -1658,7 +1738,7 @@ public class UserController {
             Model model, HttpSession session) {
         OfficesForm officesForm = (OfficesForm) session.getAttribute("officesForm");
         if (officesForm == null) {
-            return "redirect:/admin/users/edit/" + id + "/offices";
+            return "redirect:/admin/journey-completed";
         }
         // Update user offices
         List<String> selectedOffices = officesForm.getOffices() != null ? officesForm.getOffices() : new ArrayList<>();
@@ -1694,7 +1774,7 @@ public class UserController {
             HttpSession session) throws IOException {
         OfficesForm officesForm = (OfficesForm) session.getAttribute("officesForm");
         if (officesForm == null) {
-            return "redirect:/admin/users/edit/" + id + "/offices";
+            return "redirect:/admin/journey-completed";
         }
         // Update user offices
         UserProfileDto userProfileDto = userService.getUserProfileById(id).orElseThrow();
@@ -1765,6 +1845,9 @@ public class UserController {
 
         // Clear any success messages
         session.removeAttribute("successMessage");
+
+        // Remove app indexes with multiple roles
+        session.removeAttribute("roleSelectableAppIndexes");
         return "redirect:/admin/users/manage/" + id;
     }
 
@@ -1911,6 +1994,7 @@ public class UserController {
         List<AppDto> editableApps = availableApps.stream()
                 .filter(AppDto::isEnabled)
                 .filter(app -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, app))
+                .sorted()
                 .toList();
 
         Optional<List<String>> selectedApps = getListFromHttpSession(session, "grantAccessSelectedApps", String.class);
@@ -1923,6 +2007,7 @@ public class UserController {
             });
         }
 
+        session.removeAttribute("roleSelectableAppIndexes");
         model.addAttribute("user", user);
         model.addAttribute("apps", editableApps);
 
@@ -1958,8 +2043,14 @@ public class UserController {
 
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
 
-        // Handle case where no apps are selected (apps will be null)
-        List<String> selectedApps = applicationsForm.getApps() != null ? applicationsForm.getApps() : new ArrayList<>();
+        List<String> unsortedApps = applicationsForm.getApps() != null ? applicationsForm.getApps() : new ArrayList<>();
+
+        List<String> selectedApps = unsortedApps.stream()
+                .map(appId -> userService.getAppByAppId(appId).orElse(null))
+                .filter(Objects::nonNull)
+                .sorted()
+                .map(AppDto::getId)
+                .collect(Collectors.toList());
 
         session.setAttribute("grantAccessSelectedApps", selectedApps);
         List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
@@ -2007,7 +2098,7 @@ public class UserController {
         if (selectedAppsOptional.isEmpty() || selectedAppsOptional.get().isEmpty()) {
             log.warn("No apps to assign while granting access to user {}. Redirecting to app selection.", id);
             redirectAttributes.addFlashAttribute("errorMessage", "You must select an app for assignment.");
-            return "redirect:/users/grant-access/" + id + "/apps";
+            return "redirect:/admin/users/grant-access/" + id + "/apps";
         }
 
         List<String> selectedApps = selectedAppsOptional.get();
@@ -2018,15 +2109,55 @@ public class UserController {
         if (currentSelectedAppIndex >= selectedApps.size()) {
             currentSelectedAppIndex = 0;
         }
-        FirmType userFirmType = user.getFirm() != null ? user.getFirm().getType() : null;
-        UserProfile editorProfile = loginService.getCurrentProfile(authentication);
 
-        List<AppRoleDto> roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
-                user.getUserType(), userFirmType);
-        roles = roleAssignmentService.filterRoles(editorProfile.getAppRoles(),
-                roles.stream().map(role -> UUID.fromString(role.getId())).toList());
+        @SuppressWarnings("unchecked")
+        Map<Integer, List<String>> allSelectedRolesByPage =
+                (Map<Integer, List<String>>) getObjectFromHttpSession(session, "grantAccessAllSelectedRoles", Map.class)
+                        .orElse(new HashMap<>());
+        List<AppRoleDto> roles = List.of();
+
+        while (currentSelectedAppIndex < selectedApps.size()) {
+
+            FirmType userFirmType = user.getFirm() != null ? user.getFirm().getType() : null;
+            roles = userService.getAppRolesByAppIdAndUserType(selectedApps.get(currentSelectedAppIndex),
+                    user.getUserType(), userFirmType);
+            roles = roleAssignmentService.filterRoles(editorUserProfile.getAppRoles(),
+                    roles.stream().map(role -> UUID.fromString(role.getId())).toList());
+
+            // Skip role selection if there is only one selectable role
+            if (roles.size() != 1) {
+                break;
+            }
+
+            allSelectedRolesByPage.put(currentSelectedAppIndex, roles.stream().map(AppRoleDto::getId).toList());
+            session.setAttribute("grantAccessAllSelectedRoles", allSelectedRolesByPage);
+
+            Set<String> allSelectedRoles = allSelectedRolesByPage.values().stream().filter(Objects::nonNull)
+                    .flatMap(List::stream)
+                    .collect(Collectors.toSet());
+            List<String> nonEditableRoles = userService.getUserAppRolesByUserId(id).stream()
+                    .filter(role -> !role.getApp().isEnabled()
+                            || !roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, role.getApp()))
+                    .map(AppRoleDto::getId)
+                    .toList();
+            session.setAttribute("grantAccessAllSelectedRoles", allSelectedRolesByPage);
+            session.setAttribute("allSelectedRoles", allSelectedRoles);
+            session.setAttribute("nonEditableRoles", nonEditableRoles);
+            currentSelectedAppIndex++;
+            if (currentSelectedAppIndex >= selectedApps.size()) {
+                return "redirect:/admin/users/grant-access/" + id + "/offices";
+            }
+
+        }
+
+        // Store the app indexes for which roles can be selected, to guide back button
+        Set<Integer> roleSelectableAppIndexes = getSetFromHttpSession(session, "roleSelectableAppIndexes", Integer.class)
+                .orElseGet(TreeSet::new);
+        roleSelectableAppIndexes.add(currentSelectedAppIndex);
+        session.setAttribute("roleSelectableAppIndexes", roleSelectableAppIndexes);
+
+        //===========================================
         List<AppRoleDto> userRoles = userService.getUserAppRolesByUserId(id);
-
         AppDto currentApp = userService.getAppByAppId(selectedApps.get(currentSelectedAppIndex)).orElseThrow();
         // Get currently selected roles from session or use user's existing roles
         Set<String> selectedRoles = getSetFromHttpSession(session, "allSelectedRoles", String.class)
@@ -2044,31 +2175,52 @@ public class UserController {
                 && !currentApp.getName().contains("CCMS case transfer requests"))
                 || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()));
 
+        // Apply CCMS filtering before storing in model/session
+        List<AppRoleViewModel> finalRoles = appRoleViewModels;
+
         if (isCcmsApp) {
             // Filter to only CCMS roles for organization
             List<AppRoleViewModel> ccmsRoles = appRoleViewModels.stream()
                     .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()))
                     .sorted().collect(Collectors.toList());
 
+            Map<String, List<AppRoleViewModel>> organizedRoles;
+            Map<String, Boolean> organizedRoleDisplayFlags;
+
             if (!ccmsRoles.isEmpty()) {
-                // Organize CCMS roles by section dynamically
-                Map<String, List<AppRoleViewModel>> organizedRoles = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
-                Map<String, Boolean> organizedRoleDisplayFlags =
+                organizedRoles = CcmsRoleGroupsUtil.organizeCcmsRolesBySection(ccmsRoles);
+                organizedRoleDisplayFlags =
                         organizedRoles.entrySet().stream()
                                 .collect(Collectors.toMap(
                                         Map.Entry::getKey,
-                                        e -> e.getValue().stream().anyMatch(role -> !role.isHiddenFromSelection())
+                                        e -> !e.getValue().isEmpty()
                                 ));
-                model.addAttribute("ccmsRolesBySection", organizedRoles);
-                model.addAttribute("ccmsRoleDisplayFlags", organizedRoleDisplayFlags);
+                // Use filtered CCMS roles for both display and session storage
+                finalRoles = ccmsRoles;
+            } else {
+                // No CCMS roles found - initialize with empty maps to prevent NPE in template
+                organizedRoles = new LinkedHashMap<>();
+                organizedRoles.put("Provider", new ArrayList<>());
+                organizedRoles.put("Chambers", new ArrayList<>());
+                organizedRoles.put("Advocate", new ArrayList<>());
+                organizedRoles.put("Other", new ArrayList<>());
+
+                organizedRoleDisplayFlags = new HashMap<>();
+                organizedRoleDisplayFlags.put("Provider", false);
+                organizedRoleDisplayFlags.put("Chambers", false);
+                organizedRoleDisplayFlags.put("Advocate", false);
+                organizedRoleDisplayFlags.put("Other", false);
             }
+
+            model.addAttribute("ccmsRolesBySection", organizedRoles);
+            model.addAttribute("ccmsRoleDisplayFlags", organizedRoleDisplayFlags);
             model.addAttribute("isCcmsApp", true);
         } else {
             model.addAttribute("isCcmsApp", false);
         }
 
         model.addAttribute("user", user);
-        model.addAttribute("roles", appRoleViewModels);
+        model.addAttribute("roles", finalRoles);
         model.addAttribute("grantAccessSelectedAppIndex", currentSelectedAppIndex);
         model.addAttribute("grantAccessCurrentApp", currentApp);
 
@@ -2111,6 +2263,12 @@ public class UserController {
             model.addAttribute("grantAccessSelectedAppIndex",
                     modelFromSession.getAttribute("grantAccessSelectedAppIndex"));
             model.addAttribute("grantAccessCurrentApp", modelFromSession.getAttribute("grantAccessCurrentApp"));
+
+            if (modelFromSession.getAttribute("isCcmsApp") != null) {
+                model.addAttribute("isCcmsApp", modelFromSession.getAttribute("isCcmsApp"));
+                model.addAttribute("ccmsRolesBySection", modelFromSession.getAttribute("ccmsRolesBySection"));
+                model.addAttribute("ccmsRoleDisplayFlags", modelFromSession.getAttribute("ccmsRoleDisplayFlags"));
+            }
 
             return "grant-access-user-roles";
         }
@@ -2334,8 +2492,11 @@ public class UserController {
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         UserType userType = user.getUserType();
         // Get user's current app roles from session
-        Set<String> allSelectedRoles = getSetFromHttpSession(session, "allSelectedRoles", String.class)
-                .orElseThrow(() -> new RuntimeException("No roles selected for assignment"));
+        Optional<Set<String>> allSelectedRolesOptional = getSetFromHttpSession(session, "allSelectedRoles", String.class);
+        if (allSelectedRolesOptional.isEmpty()) {
+            return "redirect:/admin/journey-completed";
+        }
+        Set<String> allSelectedRoles = allSelectedRolesOptional.get();
 
         List<AppRoleDto> userAppRoles = appRoleService.getByIds(allSelectedRoles);
         List<AppRoleDto> editableUserAppRoles = userAppRoles.stream()
@@ -2350,8 +2511,11 @@ public class UserController {
                         Collectors.toList()));
 
         // get all offices from session
-        List<String> selectedOffices = getListFromHttpSession(session, "selectedOffices", String.class)
-                .orElseThrow(() -> new RuntimeException("No Office selected for assignment"));
+        Optional<List<String>> selectedOfficesOptional = getListFromHttpSession(session, "selectedOffices", String.class);
+        if (selectedOfficesOptional.isEmpty()) {
+            return "redirect:/admin/journey-completed";
+        }
+        List<String> selectedOffices = selectedOfficesOptional.get();
 
         List<OfficeDto> userOffices = new ArrayList<>();
 
@@ -2434,8 +2598,11 @@ public class UserController {
                 return "redirect:/admin/users/manage/" + id;
             }
 
-            Set<String> allSelectedRoles = getSetFromHttpSession(session, "allSelectedRoles", String.class)
-                    .orElseThrow(() -> new RuntimeException("No roles selected for assignment"));
+            Optional<Set<String>> allSelectedRolesOptional = getSetFromHttpSession(session, "allSelectedRoles", String.class);
+            if (allSelectedRolesOptional.isEmpty()) {
+                return "redirect:/admin/journey-completed";
+            }
+            Set<String> allSelectedRoles = allSelectedRolesOptional.get();
             List<String> nonEditableRoles = getListFromHttpSession(session, "nonEditableRoles", String.class)
                     .orElseGet(ArrayList::new);
 
@@ -2451,7 +2618,11 @@ public class UserController {
                 eventService.logEvent(updateUserAuditEvent);
             }
 
-            List<String> selectedOffices = getListFromHttpSession(session, "selectedOffices", String.class).orElseThrow();
+            Optional<List<String>> selectedOfficesOptional = getListFromHttpSession(session, "selectedOffices", String.class);
+            if (selectedOfficesOptional.isEmpty()) {
+                return "redirect:/admin/journey-completed";
+            }
+            List<String> selectedOffices = selectedOfficesOptional.get();
 
             String changed = userService.updateUserOffices(id, selectedOffices);
 
@@ -2503,6 +2674,18 @@ public class UserController {
         model.addAttribute("user", user);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Access granted - " + user.getFullName());
         return "grant-access-confirmation";
+    }
+
+    /**
+     * Shows a user-friendly page when a user navigates back
+     * after completing a transactional journey (e.g. grant access, edit roles, add profile).
+     * This replaces the generic error page that would otherwise appear when session data
+     * has been cleared after successful completion.
+     */
+    @GetMapping("/journey-completed")
+    public String journeyCompleted(Model model) {
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Action already completed");
+        return "journey-completed";
     }
 
     @GetMapping("/users/grant-access/{id}/cancel/confirmation")

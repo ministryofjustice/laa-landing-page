@@ -75,12 +75,6 @@ public class AuditUserDetailDto implements Serializable {
      * User who disabled this account
      */
     private String disabledBy;
-
-    /**
-     * Last login date from Graph API signInActivity
-     */
-    private LocalDateTime lastLoginDate;
-
     /**
      * Entra status from EntraUser.userStatus enum
      */

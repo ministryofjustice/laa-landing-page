@@ -11,17 +11,9 @@
 
 <body>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-        <ol class="govuk-breadcrumbs__list">
-            <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" th:href="@{/home}">Home</a>
-            </li>
-            <li class="govuk-breadcrumbs__list-item">
-                <a class="govuk-breadcrumbs__link" th:href="@{/admin/users/audit}">Audit</a>
-            </li>
-            <li class="govuk-breadcrumbs__list-item" aria-current="page">
-                <span th:text="${user.fullName}">User Name</span>
-            </li>
-        </ol>
+        <a class="govuk-back-link" th:href="@{/admin/users/audit}">
+            Back
+        </a>
     </nav>
 
     <main class="govuk-main-wrapper" id="main-content" th:if="${#authentication.isAuthenticated()}">
@@ -48,7 +40,7 @@
 
             /* Add spacing only in Audit data section (second card in Identity Information) */
             .govuk-grid-row .govuk-grid-column-one-half:nth-child(2) .govuk-summary-list__key {
-                white-space: nowrap;
+                white-space: wrap;
                 padding-right: 50px;
             }
 
@@ -226,6 +218,11 @@
                                         <dd class="govuk-summary-list__value" th:if="${entraUser == null}">Unknown</dd>
                                         <dd class="govuk-summary-list__value" th:if="${entraUser != null}" th:text="${entraUser.email}"></dd>
                                     </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Last Login Time</dt>
+                                        <dd class="govuk-summary-list__value" th:if="${entraUser == null}">Unknown</dd>
+                                        <dd class="govuk-summary-list__value" th:if="${entraUser != null}" th:text="${lastLogin != null ? #temporals.format(lastLogin, 'dd MMM yyyy HH:mm') : 'Unknown'}"></dd>
+                                    </div>
                                 </dl>
                             </div>
                         </div>
@@ -235,7 +232,13 @@
                 </div>
 
                 <!-- Profile Information Section - Only show for external users -->
-                <h2 class="govuk-heading-m govuk-!-margin-top-6" th:unless="${user.hasNoProfile or user.userType == 'Internal'}">Profile information</h2>
+                <div class="moj-page-header-actions govuk-!-display-flex govuk-!-justify-content-space-between govuk-!-align-items-center">
+                    <h2 class="govuk-heading-m govuk-!-margin-top-2" th:unless="${user.hasNoProfile or user.userType == 'Internal'}">Profile information</h2>
+                    <div>
+                            <a class="govuk-link govuk-body-m govuk-!-font-weight-bold" th:href="@{/admin/users/audit/{id}/full(id=${profileId})}">View complete profile information</a>
+                    </div>
+                </div>
+
 
                 <!-- Show message for users without profiles (external users only) -->
                 <div th:if="${user.hasNoProfile and user.userType != 'Internal'}"
@@ -391,64 +394,6 @@
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Offices</dt>
                                         <dd class="govuk-summary-list__value" th:text="${profile.officeRestrictions}"></dd>
-                                    </div>
-                                </dl>
-                            </div>
-                        </div>
-
-                        <!-- Services Card -->
-                        <div class="govuk-summary-card">
-                            <div class="govuk-summary-card__title-wrapper">
-                                <h3 class="govuk-summary-card__title">Services</h3>
-                            </div>
-                            <div class="govuk-summary-card__content">
-                                <dl class="govuk-summary-list">
-                                    <!-- Display roles -->
-                                    <div class="govuk-summary-list__row" th:each="appAssignment : ${profile.getRolesGroupByAppName}">
-                                        <dt class="govuk-summary-list__key"th:text="${appAssignment.key}" />
-
-                                        <dd class="govuk-summary-list__value">
-                                            <div th:each="appRole : ${appAssignment.value}">
-                                                <span th:text="${appRole}"></span>
-                                            </div>
-                                        </dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row"
-                                        th:if="${profile.roles == null || profile.roles.isEmpty()}">
-                                        <dt class="govuk-summary-list__key">No services assigned</dt>
-                                        <dd class="govuk-summary-list__value"></dd>
-                                    </div>
-                                </dl>
-                            </div>
-                        </div>
-
-                        <!-- Account status history Card -->
-                        <div class="govuk-summary-card">
-                            <div class="govuk-summary-card__title-wrapper">
-                                <h3 class="govuk-summary-card__title">Account status history</h3>
-                            </div>
-                            <div class="govuk-summary-card__content" th:each="record : ${user.accountStatusHistory}">
-                                <dl class="govuk-summary-list">
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Date</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${record.statusChangedDate}"></dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Status</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${record.statusChange}"></dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Disable reason</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${record.disableReason}"></dd>
-                                    </div>
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Changed by</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${record.statusChangedBy}">
-                                    </div>
-                                    <div class="govuk-summary-list__row"
-                                         th:if="${user.accountStatusHistory == null || user.accountStatusHistory.size() == 0}">
-                                        <dt class="govuk-summary-list__key">No account status history available</dt>
-                                        <dd class="govuk-summary-list__value"></dd>
                                     </div>
                                 </dl>
                             </div>
