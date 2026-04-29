@@ -170,6 +170,8 @@ class UserControllerTest {
                 new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService,
                 appRoleService, appService, disableUserService, notificationService);
         userController.disableUserFeatureEnabled = true;
+        lenient().when(accessControlService.getEnablementFlags(any()))
+                .thenReturn(new AccessControlService.EnablementFlags(false, false));
         model = new ExtendedModelMap();
         firmSearchForm = FirmSearchForm.builder().build();
     }
