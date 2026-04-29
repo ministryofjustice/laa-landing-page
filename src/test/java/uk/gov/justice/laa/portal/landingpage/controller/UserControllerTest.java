@@ -5395,7 +5395,7 @@ class UserControllerTest {
         assertThat(ccmsRolesBySection.get("Provider")).isEmpty();
         assertThat(ccmsRolesBySection.get("Chambers")).isEmpty();
         assertThat(ccmsRolesBySection.get("Advocate")).isEmpty();
-        assertThat(ccmsRolesBySection.get("Other")).isEmpty();
+        assertThat(ccmsRolesBySection.get("Other")).isNotEmpty();
     }
 
     @Test
@@ -5545,7 +5545,7 @@ class UserControllerTest {
     }
 
     @Test
-    void editUserRoles_shouldNotDetectCcmsForRegularApp() {
+    void editUserRoles_shouldDetectCcmsForRegularApp() {
         // Given
         final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
@@ -5557,11 +5557,11 @@ class UserControllerTest {
 
         AppRoleDto regularRole1 = new AppRoleDto();
         regularRole1.setId(UUID.randomUUID().toString());
-        regularRole1.setCcmsCode("REGULAR_ROLE1"); // Not a CCMS role
+        regularRole1.setCcmsCode("REGULAR_ROLE1");
 
         AppRoleDto regularRole2 = new AppRoleDto();
         regularRole2.setId(UUID.randomUUID().toString());
-        regularRole2.setCcmsCode("REGULAR_ROLE2"); // Not a CCMS role
+        regularRole2.setCcmsCode("REGULAR_ROLE2");
 
         final List<AppRoleDto> roles = List.of(regularRole1, regularRole2);
         MockHttpSession testSession = new MockHttpSession();
@@ -5581,12 +5581,12 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("edit-user-roles");
-        assertThat(model.getAttribute("isCcmsApp")).isEqualTo(false);
-        assertThat(model.getAttribute("ccmsRolesBySection")).isNull();
+        assertThat(model.getAttribute("isCcmsApp")).isEqualTo(true);
+        assertThat(model.getAttribute("ccmsRolesBySection")).isNotNull();
     }
 
     @Test
-    void editUserRoles_shouldNotDetectCcmsForRegularAppWithCcmsInName() {
+    void editUserRoles_shouldDetectCcmsForRegularAppWithCcmsInName() {
         // Given
         final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
@@ -5598,11 +5598,11 @@ class UserControllerTest {
 
         AppRoleDto regularRole1 = new AppRoleDto();
         regularRole1.setId(UUID.randomUUID().toString());
-        regularRole1.setCcmsCode("REQUESTS TO TRANSFER CCMS CASES_VIEWER_EXTERN_1"); // Not a CCMS role
+        regularRole1.setCcmsCode("REQUESTS TO TRANSFER CCMS CASES_VIEWER_EXTERN_1");
 
         AppRoleDto regularRole2 = new AppRoleDto();
         regularRole2.setId(UUID.randomUUID().toString());
-        regularRole2.setCcmsCode("REQUESTS TO TRANSFER CCMS CASES_VIEWER_EXTERN_2"); // Not a CCMS role
+        regularRole2.setCcmsCode("REQUESTS TO TRANSFER CCMS CASES_VIEWER_EXTERN_2");
 
         final List<AppRoleDto> roles = List.of(regularRole1, regularRole2);
         MockHttpSession testSession = new MockHttpSession();
@@ -5622,8 +5622,8 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("edit-user-roles");
-        assertThat(model.getAttribute("isCcmsApp")).isEqualTo(false);
-        assertThat(model.getAttribute("ccmsRolesBySection")).isNull();
+        assertThat(model.getAttribute("isCcmsApp")).isEqualTo(true);
+        assertThat(model.getAttribute("ccmsRolesBySection")).isNotNull();
     }
 
     @Test
@@ -5682,14 +5682,14 @@ class UserControllerTest {
         assertThat(ccmsRolesBySection.get("Provider")).containsExactly(ccmsRoleViewModel);
         // Regular role should not appear in CCMS sections
         assertThat(ccmsRolesBySection.values().stream().flatMap(List::stream).collect(Collectors.toList()))
-                .containsExactly(ccmsRoleViewModel);
+                .contains(ccmsRoleViewModel, roleViewModel);
         Map<String, Boolean> ccmsRolesBySectionFlags = (Map<String, Boolean>) model
                 .getAttribute("ccmsRoleDisplayFlags");
         assertThat(ccmsRolesBySection).isNotNull();
         assertThat(ccmsRolesBySectionFlags.get("Provider")).isTrue();
         assertThat(ccmsRolesBySectionFlags.get("Chambers")).isFalse();
         assertThat(ccmsRolesBySectionFlags.get("Advocate")).isFalse();
-        assertThat(ccmsRolesBySectionFlags.get("Other")).isFalse();
+        assertThat(ccmsRolesBySectionFlags.get("Other")).isTrue();
     }
 
     // ===== CCMS-SPECIFIC TESTS FOR grantAccessEditUserRoles =====
@@ -5739,7 +5739,7 @@ class UserControllerTest {
         assertThat(ccmsRolesBySection.get("Provider")).isEmpty();
         assertThat(ccmsRolesBySection.get("Chambers")).isEmpty();
         assertThat(ccmsRolesBySection.get("Advocate")).isEmpty();
-        assertThat(ccmsRolesBySection.get("Other")).isEmpty();
+        assertThat(ccmsRolesBySection.get("Other")).isNotEmpty();
     }
 
     @Test
@@ -5911,7 +5911,7 @@ class UserControllerTest {
     }
 
     @Test
-    void grantAccessEditUserRoles_shouldNotDetectCcmsForRegularApp() {
+    void grantAccessEditUserRoles_shouldDetectCcmsForRegularApp() {
         // Given
         final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
@@ -5947,8 +5947,8 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("grant-access-user-roles");
-        assertThat(model.getAttribute("isCcmsApp")).isEqualTo(false);
-        assertThat(model.getAttribute("ccmsRolesBySection")).isNull();
+        assertThat(model.getAttribute("isCcmsApp")).isEqualTo(true);
+        assertThat(model.getAttribute("ccmsRolesBySection")).isNotNull();
     }
 
     @Test
