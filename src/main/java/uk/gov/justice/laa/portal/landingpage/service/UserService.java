@@ -708,7 +708,8 @@ public class UserService {
         boolean isPending = UserProfileStatus.PENDING.equals(user.getUserProfileStatus());
         boolean isEnabled = user.getEntraUser().isEnabled();
         String invitationStatus = user.getEntraUser().getInvitationStatus() != null ? user.getEntraUser().getInvitationStatus().name() : "";
-        return determineStatusBadge(invitationStatus, noRolesAssigned, isPending, isEnabled);
+        boolean isInternalUser = UserType.INTERNAL.equals(user.getUserType());
+        return determineStatusBadge(invitationStatus, noRolesAssigned, isPending, isEnabled, isInternalUser);
     }
 
     public UserProfileSilasStatus calculateSilasStatusForUserProfile(UserProfileDto user) {
@@ -716,7 +717,8 @@ public class UserService {
         boolean isPending = UserProfileStatus.PENDING.equals(user.getUserProfileStatus());
         boolean isEnabled = user.getEntraUser().isEnabled();
         String invitationStatus = user.getEntraUser().getInvitationStatus() != null ? user.getEntraUser().getInvitationStatus().name() : "";
-        return determineStatusBadge(invitationStatus, noRolesAssigned, isPending, isEnabled);
+        boolean isInternalUser = UserType.INTERNAL.equals(user.getUserType());
+        return determineStatusBadge(invitationStatus, noRolesAssigned, isPending, isEnabled, isInternalUser);
     }
 
     /**
@@ -1883,7 +1885,8 @@ public class UserService {
                 );
 
         String invitationStatus = user.getInvitationStatus() != null ? user.getInvitationStatus().name() : "";
-        return determineStatusBadge(invitationStatus, noRolesAssigned, hasPending, user.isEnabled());
+        boolean isInternalUser = profiles.stream().filter(UserProfile::isActiveProfile).anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
+        return determineStatusBadge(invitationStatus, noRolesAssigned, hasPending, user.isEnabled(), isInternalUser);
     }
 
     public UserProfileSilasStatus determineStatusBadgeForAuditUser(AuditUserDetailDto userDetail) {
@@ -1891,13 +1894,14 @@ public class UserService {
                 .anyMatch(userProfile ->
                         userProfile.getRoles() == null || userProfile.getRoles().isEmpty()
                 );
-        return determineStatusBadge(userDetail.getActivationStatus(), noRolesAssigned, userDetail.isPending(), userDetail.isEnabled());
+        boolean isInternalUser = "Internal".equalsIgnoreCase(userDetail.getUserType());
+        return determineStatusBadge(userDetail.getActivationStatus(), noRolesAssigned, userDetail.isPending(), userDetail.isEnabled(), isInternalUser);
     }
 
     private UserProfileSilasStatus determineStatusBadge(String invitationStatus, boolean noRolesAssigned,
-                                                               boolean isPending, boolean isEnabled) {
+                                        boolean isPending, boolean isEnabled, boolean isInternalUser) {
         // awaiting verification badges take priority over disabled badge
-        if (!InvitationStatus.VERIFICATION_SUCCESS.name().equals(invitationStatus)) {
+        if (!isInternalUser && !InvitationStatus.VERIFICATION_SUCCESS.name().equals(invitationStatus)) {
             if (noRolesAssigned || isPending) {
                 return UserProfileSilasStatus.INCOMPLETE;
             } else {
@@ -2354,7 +2358,8 @@ public class UserService {
     public void refreshAndUpdatedUserProfileStatus(boolean isEnabled, InvitationStatus invitationStatus, UserProfile userProfile) {
         String invitationStatusStr = invitationStatus != null ? invitationStatus.name() : "";
         boolean noRoleAssigned = userProfile.getAppRoles() == null || userProfile.getAppRoles().isEmpty();
-        UserProfileSilasStatus silasStatus = determineStatusBadge(invitationStatusStr, noRoleAssigned, false, isEnabled);
+        boolean isInternalUser = userProfile.getUserType() == UserType.INTERNAL;
+        UserProfileSilasStatus silasStatus = determineStatusBadge(invitationStatusStr, noRoleAssigned, false, isEnabled, isInternalUser);
         userProfile.setSilasStatus(silasStatus);
     }
 }
