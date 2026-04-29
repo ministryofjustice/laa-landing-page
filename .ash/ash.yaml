@@ -1,0 +1,36 @@
+$schema: https://raw.githubusercontent.com/awslabs/automated-security-helper/refs/heads/main/automated_security_helper/schemas/AshConfig.json
+project_name: football-data-xg
+
+global_settings:
+  severity_threshold: MEDIUM
+
+scanners:
+  bandit:
+    enabled: false
+  cdk-nag:
+    enabled: false
+  cfn-nag:
+    enabled: false
+  checkov:
+    enabled: true
+    options:
+      frameworks:
+        - all
+  detect-secrets:
+    enabled: false
+  grype:
+    enabled: true
+  npm-audit:
+    enabled: false
+  opengrep:
+    enabled: true
+    options:
+      config: auto
+  semgrep:
+    enabled: false
+  syft:
+    enabled: true
+    options:
+      additional_outputs:
+        - syft-table
+        - spdx-json
