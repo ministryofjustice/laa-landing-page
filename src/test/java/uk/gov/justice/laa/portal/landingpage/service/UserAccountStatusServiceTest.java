@@ -16,6 +16,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.CountFirms;
+import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -66,6 +67,10 @@ public class UserAccountStatusServiceTest {
     private UserProfileRepository userProfileRepository;
     @Mock
     private EventService eventService;
+    @Mock
+    private DisableTypeResolver disableTypeResolver;
+    @Mock
+    private UserEnablementPolicy userEnablementPolicy;
 
     @InjectMocks
     private UserAccountStatusService userAccountStatusService;
@@ -79,7 +84,9 @@ public class UserAccountStatusServiceTest {
                 entraUserRepository,
                 techServicesClient,
                 userService,
-                userProfileRepository, eventService);
+                userProfileRepository, eventService,
+                disableTypeResolver, userEnablementPolicy);
+        org.mockito.Mockito.lenient().when(disableTypeResolver.resolve(any())).thenReturn(DisableType.NONE);
     }
 
     @Test
@@ -242,16 +249,21 @@ public class UserAccountStatusServiceTest {
                 .build();
         TechServicesApiResponse<ChangeAccountEnabledResponse> techServicesResponse = TechServicesApiResponse.success(null);
 
-        when(entraUserRepository.findById(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
-        when(entraUserRepository.findById(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
         when(disableUserReasonRepository.findById(eq(disableUserReason.getId()))).thenReturn(Optional.of(disableUserReason));
         when(techServicesClient.disableUser(any(), any())).thenReturn(techServicesResponse);
+        when(disableTypeResolver.resolve(eq(disabledByUser))).thenReturn(DisableType.FIRM);
 
         userAccountStatusService.disableUser(disabledUser.getId(), disableUserReason.getId(), disabledByUser.getId());
 
         assertThat(disabledUser.isEnabled()).isFalse();
+        assertThat(disabledUser.getDisableType()).isEqualTo(DisableType.FIRM);
+        verify(disableTypeResolver, times(1)).resolve(disabledByUser);
         verify(entraUserRepository, times(1)).saveAndFlush(any());
-        verify(userAccountStatusAuditRepository, times(1)).saveAndFlush(any());
+        ArgumentCaptor<UserAccountStatusAudit> auditCaptor = ArgumentCaptor.forClass(UserAccountStatusAudit.class);
+        verify(userAccountStatusAuditRepository, times(1)).saveAndFlush(auditCaptor.capture());
+        assertThat(auditCaptor.getValue().getDisableType()).isEqualTo(DisableType.FIRM);
     }
 
     @Test
@@ -285,8 +297,8 @@ public class UserAccountStatusServiceTest {
                 .build();
         TechServicesApiResponse<ChangeAccountEnabledResponse> techServicesResponse = TechServicesApiResponse.success(null);
 
-        when(entraUserRepository.findById(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
-        when(entraUserRepository.findById(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
         when(disableUserReasonRepository.findById(eq(disableUserReason.getId()))).thenReturn(Optional.of(disableUserReason));
         when(techServicesClient.disableUser(any(), any())).thenReturn(techServicesResponse);
         when(userService.isInternal(any(UUID.class))).thenReturn(true);
@@ -329,8 +341,8 @@ public class UserAccountStatusServiceTest {
                 .entraDescription("ATestReason")
                 .build();
 
-        when(entraUserRepository.findById(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
-        when(entraUserRepository.findById(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
         when(disableUserReasonRepository.findById(eq(disableUserReason.getId()))).thenReturn(Optional.of(disableUserReason));
 
         assertThrows(RuntimeException.class,
@@ -403,8 +415,8 @@ public class UserAccountStatusServiceTest {
                 .build();
         TechServicesApiResponse<ChangeAccountEnabledResponse> techServicesResponse = TechServicesApiResponse.error(errorResponse);
 
-        when(entraUserRepository.findById(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
-        when(entraUserRepository.findById(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
         when(disableUserReasonRepository.findById(eq(disableUserReason.getId()))).thenReturn(Optional.of(disableUserReason));
         when(techServicesClient.disableUser(any(), any())).thenReturn(techServicesResponse);
 
@@ -445,8 +457,8 @@ public class UserAccountStatusServiceTest {
                 .entraDescription("ATestReason")
                 .build();
 
-        when(entraUserRepository.findById(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
-        when(entraUserRepository.findById(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
         when(disableUserReasonRepository.findById(eq(disableUserReason.getId()))).thenReturn(Optional.of(disableUserReason));
 
         assertThrows(RuntimeException.class, () -> userAccountStatusService.disableUser(disabledUser.getId(), disableUserReason.getId(), disabledByUser.getId()));
@@ -458,7 +470,7 @@ public class UserAccountStatusServiceTest {
     @Test
     public void testDisableUserThrowsExceptionWhenDisabledUserNotFound() {
         assertThrows(RuntimeException.class, () -> userAccountStatusService.disableUser(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()));
-        verify(entraUserRepository, times(1)).findById(any());
+        verify(entraUserRepository, times(1)).findByIdWithAssociations(any());
         verify(entraUserRepository, times(0)).saveAndFlush(any());
         verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
     }
@@ -471,11 +483,11 @@ public class UserAccountStatusServiceTest {
                 .lastName("User")
                 .build();
 
-        when(entraUserRepository.findById(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
 
         assertThrows(RuntimeException.class, () -> userAccountStatusService.disableUser(disabledUser.getId(), UUID.randomUUID(), UUID.randomUUID()));
         assertThat(disabledUser.isEnabled()).isTrue();
-        verify(entraUserRepository, times(2)).findById(any());
+        verify(entraUserRepository, times(2)).findByIdWithAssociations(any());
         verify(entraUserRepository, times(0)).saveAndFlush(any());
         verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
     }
@@ -493,12 +505,12 @@ public class UserAccountStatusServiceTest {
                 .lastName("User")
                 .build();
 
-        when(entraUserRepository.findById(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
-        when(entraUserRepository.findById(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(disabledUser.getId()))).thenReturn(Optional.of(disabledUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
 
         assertThrows(RuntimeException.class, () -> userAccountStatusService.disableUser(disabledUser.getId(), UUID.randomUUID(), disabledByUser.getId()));
         assertThat(disabledUser.isEnabled()).isTrue();
-        verify(entraUserRepository, times(2)).findById(any());
+        verify(entraUserRepository, times(2)).findByIdWithAssociations(any());
         verify(disableUserReasonRepository, times(1)).findById(any());
         verify(entraUserRepository, times(0)).saveAndFlush(any());
         verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
@@ -539,10 +551,11 @@ public class UserAccountStatusServiceTest {
 
         TechServicesApiResponse<ChangeAccountEnabledResponse> techServicesResponse = TechServicesApiResponse.success(null);
 
-        when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
-        when(entraUserRepository.findById(eq(enabledByUser.getId()))).thenReturn(Optional.of(enabledByUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(enabledByUser.getId()))).thenReturn(Optional.of(enabledByUser));
         when(techServicesClient.enableUser(any())).thenReturn(techServicesResponse);
-        when(userService.getUserProfileById(disabledById.toString())).thenReturn(Optional.of(disabledByUserProfile));
+        when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
+        when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(false);
 
         userAccountStatusService.enableUser(enabledUser.getId(), enabledByUser.getId());
 
@@ -585,11 +598,12 @@ public class UserAccountStatusServiceTest {
                 .build();
         TechServicesApiResponse<ChangeAccountEnabledResponse> techServicesResponse = TechServicesApiResponse.success(null);
 
-        when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
-        when(entraUserRepository.findById(eq(enabledByUser.getId()))).thenReturn(Optional.of(enabledByUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(enabledByUser.getId()))).thenReturn(Optional.of(enabledByUser));
         when(techServicesClient.enableUser(any())).thenReturn(techServicesResponse);
         when(userService.isInternal(any(UUID.class))).thenReturn(true);
-        when(userService.getUserProfileById(disabledById.toString())).thenReturn(Optional.of(disabledByUserProfile));
+        when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
+        when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(false);
 
         userAccountStatusService.enableUser(enabledUser.getId(), enabledByUser.getId());
 
@@ -624,8 +638,8 @@ public class UserAccountStatusServiceTest {
                 .userProfiles(Set.of(disabledByUserProfile))
                 .build();
 
-        when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
-        when(entraUserRepository.findById(eq(enabledByUser.getId()))).thenReturn(Optional.of(enabledByUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(enabledByUser.getId()))).thenReturn(Optional.of(enabledByUser));
 
         assertThrows(RuntimeException.class,
                 () -> userAccountStatusService.enableUser(enabledUser.getId(), enabledByUser.getId()));
@@ -695,10 +709,11 @@ public class UserAccountStatusServiceTest {
                 .build();
         TechServicesApiResponse<ChangeAccountEnabledResponse> techServicesResponse = TechServicesApiResponse.error(errorResponse);
 
-        when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
-        when(entraUserRepository.findById(eq(enabledByUser.getId()))).thenReturn(Optional.of(enabledByUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(enabledByUser.getId()))).thenReturn(Optional.of(enabledByUser));
         when(techServicesClient.enableUser(any())).thenReturn(techServicesResponse);
-        when(userService.getUserProfileById(disabledByUserProfile.getId().toString())).thenReturn(Optional.of(disabledByUserProfile));
+        when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
+        when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(false);
 
         assertThrows(TechServicesClientException.class, () -> userAccountStatusService.enableUser(enabledUser.getId(), enabledByUser.getId()));
         assertThat(enabledUser.isEnabled()).isFalse();
@@ -732,8 +747,8 @@ public class UserAccountStatusServiceTest {
                 .userProfiles(Set.of(enabledByUserProfile))
                 .build();
 
-        when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
-        when(entraUserRepository.findById(eq(enabledByUser.getId()))).thenReturn(Optional.of(enabledByUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(enabledByUser.getId()))).thenReturn(Optional.of(enabledByUser));
 
         assertThrows(RuntimeException.class, () -> userAccountStatusService.enableUser(enabledUser.getId(), enabledByUser.getId()));
         assertThat(enabledUser.isEnabled()).isFalse();
@@ -744,7 +759,7 @@ public class UserAccountStatusServiceTest {
     @Test
     public void testEnableUserThrowsExceptionWhenEnabledUserNotFound() {
         assertThrows(RuntimeException.class, () -> userAccountStatusService.enableUser(UUID.randomUUID(), UUID.randomUUID()));
-        verify(entraUserRepository, times(1)).findById(any());
+        verify(entraUserRepository, times(1)).findByIdWithAssociations(any());
         verify(entraUserRepository, times(0)).saveAndFlush(any());
         verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
     }
@@ -757,11 +772,11 @@ public class UserAccountStatusServiceTest {
                 .lastName("User")
                 .build();
 
-        when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
 
         assertThrows(RuntimeException.class, () -> userAccountStatusService.enableUser(enabledUser.getId(), UUID.randomUUID()));
         assertThat(enabledUser.isEnabled()).isTrue();
-        verify(entraUserRepository, times(2)).findById(any());
+        verify(entraUserRepository, times(2)).findByIdWithAssociations(any());
         verify(entraUserRepository, times(0)).saveAndFlush(any());
         verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
     }
@@ -775,11 +790,11 @@ public class UserAccountStatusServiceTest {
                 .enabled(true)
                 .build();
 
-        when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
 
         assertThrows(RuntimeException.class, () -> userAccountStatusService.enableUser(enabledUser.getId(), UUID.randomUUID()));
         assertThat(enabledUser.isEnabled()).isTrue();
-        verify(entraUserRepository, times(2)).findById(any());
+        verify(entraUserRepository, times(2)).findByIdWithAssociations(any());
         verify(entraUserRepository, times(0)).saveAndFlush(any());
         verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
     }
@@ -795,10 +810,10 @@ public class UserAccountStatusServiceTest {
                 .build();
 
         when(userService.isInternal(any(UUID.class))).thenReturn(false);
-        when(entraUserRepository.findById(any(UUID.class))).thenReturn(Optional.of(enabledUser));
+        when(entraUserRepository.findByIdWithAssociations(any(UUID.class))).thenReturn(Optional.of(enabledUser));
 
         assertThrows(RuntimeException.class, () -> userAccountStatusService.enableUser(enabledUser.getId(), UUID.randomUUID()));
-        verify(entraUserRepository, times(2)).findById(any());
+        verify(entraUserRepository, times(2)).findByIdWithAssociations(any());
         verify(entraUserRepository, times(0)).saveAndFlush(any());
         verify(userAccountStatusAuditRepository, times(0)).saveAndFlush(any());
     }
@@ -816,11 +831,11 @@ public class UserAccountStatusServiceTest {
         UUID targetId = UUID.randomUUID();
         UUID actorId = UUID.randomUUID();
 
-        when(entraUserRepository.findById(targetId)).thenReturn(Optional.empty());
+        when(entraUserRepository.findByIdWithAssociations(targetId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> userAccountStatusService.enableUser(targetId, actorId))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Could not find a user account to disable");
+                .hasMessageContaining("Could not find a user account with id");
     }
 
     @Test
@@ -833,8 +848,8 @@ public class UserAccountStatusServiceTest {
                 .enabled(false)
                 .build();
 
-        when(entraUserRepository.findById(targetId)).thenReturn(Optional.of(target));
-        when(entraUserRepository.findById(actorId)).thenReturn(Optional.empty());
+        when(entraUserRepository.findByIdWithAssociations(targetId)).thenReturn(Optional.of(target));
+        when(entraUserRepository.findByIdWithAssociations(actorId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> userAccountStatusService.enableUser(targetId, actorId))
                 .isInstanceOf(RuntimeException.class)
@@ -859,8 +874,8 @@ public class UserAccountStatusServiceTest {
                 .userProfiles(Set.of(UserProfile.builder().id(UUID.randomUUID()).activeProfile(true).build()))
                 .build();
 
-        when(entraUserRepository.findById(targetId)).thenReturn(Optional.of(target));
-        when(entraUserRepository.findById(actorId)).thenReturn(Optional.of(actor));
+        when(entraUserRepository.findByIdWithAssociations(targetId)).thenReturn(Optional.of(target));
+        when(entraUserRepository.findByIdWithAssociations(actorId)).thenReturn(Optional.of(actor));
 
         // internal rule returns false
         when(userService.isInternal(actorId)).thenReturn(false);
@@ -906,9 +921,11 @@ public class UserAccountStatusServiceTest {
                 .lastName("Doe")
                 .build();
 
-        when(entraUserRepository.findById(targetId)).thenReturn(Optional.of(target));
-        when(entraUserRepository.findById(actorId)).thenReturn(Optional.of(actor));
+        when(entraUserRepository.findByIdWithAssociations(targetId)).thenReturn(Optional.of(target));
+        when(entraUserRepository.findByIdWithAssociations(actorId)).thenReturn(Optional.of(actor));
         when(userService.isInternal(actorId)).thenReturn(true);
+        when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
+        when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(false);
 
         // Tech services failure mock
         TechServicesApiResponse<ChangeAccountEnabledResponse> failedResponse =
@@ -977,11 +994,11 @@ public class UserAccountStatusServiceTest {
         TechServicesApiResponse<ChangeAccountEnabledResponse> successResp =
                 TechServicesApiResponse.success(changeResp);
 
-        when(entraUserRepository.findById(targetId)).thenReturn(Optional.of(target));
-        when(entraUserRepository.findById(actorId)).thenReturn(Optional.of(actor));
-        when(userService.getUserProfileById(disabledById.toString())).thenReturn(Optional.of(disablerProfile));
-
+        when(entraUserRepository.findByIdWithAssociations(targetId)).thenReturn(Optional.of(target));
+        when(entraUserRepository.findByIdWithAssociations(actorId)).thenReturn(Optional.of(actor));
         when(userService.isInternal(actorId)).thenReturn(true);
+        when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
+        when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(false);
         when(techServicesClient.enableUser(any())).thenReturn(successResp);
 
         userAccountStatusService.enableUser(targetId, actorId);
@@ -1056,11 +1073,11 @@ public class UserAccountStatusServiceTest {
         TechServicesApiResponse<ChangeAccountEnabledResponse> successResp =
                 TechServicesApiResponse.success(changeResp);
 
-        when(entraUserRepository.findById(targetId)).thenReturn(Optional.of(target));
-        when(entraUserRepository.findById(actorId)).thenReturn(Optional.of(actor));
-        when(userService.getUserProfileById(disabledById.toString())).thenReturn(Optional.of(disablerProfile));
-
+        when(entraUserRepository.findByIdWithAssociations(targetId)).thenReturn(Optional.of(target));
+        when(entraUserRepository.findByIdWithAssociations(actorId)).thenReturn(Optional.of(actor));
         when(userService.isInternal(actorId)).thenReturn(true);
+        when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
+        when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(false);
         when(techServicesClient.enableUser(any())).thenReturn(successResp);
 
         userAccountStatusService.enableUser(targetId, actorId);
@@ -1131,15 +1148,54 @@ public class UserAccountStatusServiceTest {
                         .build()))
                 .build();
 
-        when(entraUserRepository.findById(targetId)).thenReturn(Optional.of(target));
-        when(entraUserRepository.findById(actorId)).thenReturn(Optional.of(actor));
-        when(userService.getUserProfileById(disabledById.toString())).thenReturn(Optional.of(disablerProfile));
-
+        when(entraUserRepository.findByIdWithAssociations(targetId)).thenReturn(Optional.of(target));
+        when(entraUserRepository.findByIdWithAssociations(actorId)).thenReturn(Optional.of(actor));
         when(userService.isInternal(actorId)).thenReturn(false);
+        when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
+        when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(true);
 
         assertThatThrownBy(() -> userAccountStatusService.enableUser(targetId, actorId))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Unable to enable the user ");
+    }
+
+    @Test
+    void shouldThrow_whenPolicyDeniesEnablement() {
+        UUID targetId = UUID.randomUUID();
+        UUID actorId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+
+        UserProfile actorProfile = UserProfile.builder()
+                .id(profileId)
+                .activeProfile(true)
+                .appRoles(Set.of(AppRole.builder()
+                        .name(AuthzRole.FIRM_USER_MANAGER.getRoleName()).build()))
+                .build();
+
+        EntraUser target = EntraUser.builder()
+                .id(targetId)
+                .enabled(false)
+                .disableType(DisableType.PRIVILEGED)
+                .userProfiles(Set.of(UserProfile.builder()
+                        .id(UUID.randomUUID()).activeProfile(true).build()))
+                .build();
+
+        EntraUser actor = EntraUser.builder()
+                .id(actorId)
+                .userProfiles(Set.of(actorProfile))
+                .build();
+
+        when(entraUserRepository.findByIdWithAssociations(targetId)).thenReturn(Optional.of(target));
+        when(entraUserRepository.findByIdWithAssociations(actorId)).thenReturn(Optional.of(actor));
+        when(userService.isInternal(actorId)).thenReturn(false);
+        when(userEnablementPolicy.canEnable(any(), any())).thenReturn(false);
+
+        assertThatThrownBy(() -> userAccountStatusService.enableUser(targetId, actorId))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Unable to enable the user");
+
+        verify(entraUserRepository, never()).saveAndFlush(any());
+        verify(userAccountStatusAuditRepository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -1193,11 +1249,11 @@ public class UserAccountStatusServiceTest {
         TechServicesApiResponse<ChangeAccountEnabledResponse> successResp =
                 TechServicesApiResponse.success(changeResp);
 
-        when(entraUserRepository.findById(targetId)).thenReturn(Optional.of(target));
-        when(entraUserRepository.findById(actorId)).thenReturn(Optional.of(actor));
-        when(userService.getUserProfileById(disabledById.toString())).thenReturn(Optional.of(disablerProfile));
-
+        when(entraUserRepository.findByIdWithAssociations(targetId)).thenReturn(Optional.of(target));
+        when(entraUserRepository.findByIdWithAssociations(actorId)).thenReturn(Optional.of(actor));
         when(userService.isInternal(actorId)).thenReturn(true);
+        when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
+        when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(false);
         when(techServicesClient.enableUser(any())).thenReturn(successResp);
 
         userAccountStatusService.enableUser(targetId, actorId);
@@ -1272,11 +1328,11 @@ public class UserAccountStatusServiceTest {
         TechServicesApiResponse<ChangeAccountEnabledResponse> successResp =
                 TechServicesApiResponse.success(changeResp);
 
-        when(entraUserRepository.findById(targetId)).thenReturn(Optional.of(target));
-        when(entraUserRepository.findById(actorId)).thenReturn(Optional.of(actor));
-        when(userService.getUserProfileById(disabledById.toString())).thenReturn(Optional.of(disablerProfile));
-
+        when(entraUserRepository.findByIdWithAssociations(targetId)).thenReturn(Optional.of(target));
+        when(entraUserRepository.findByIdWithAssociations(actorId)).thenReturn(Optional.of(actor));
         when(userService.isInternal(actorId)).thenReturn(true);
+        when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
+        when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(false);
         when(techServicesClient.enableUser(any())).thenReturn(successResp);
 
         userAccountStatusService.enableUser(targetId, actorId);
@@ -1343,10 +1399,11 @@ public class UserAccountStatusServiceTest {
         TechServicesApiResponse<ChangeAccountEnabledResponse> successResp =
                 TechServicesApiResponse.success(changeResp);
 
-        when(entraUserRepository.findById(targetId)).thenReturn(Optional.of(target));
-        when(entraUserRepository.findById(actorId)).thenReturn(Optional.of(actor));
-
+        when(entraUserRepository.findByIdWithAssociations(targetId)).thenReturn(Optional.of(target));
+        when(entraUserRepository.findByIdWithAssociations(actorId)).thenReturn(Optional.of(actor));
         when(userService.isInternal(actorId)).thenReturn(true);
+        when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
+        when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(false);
         when(techServicesClient.enableUser(any())).thenReturn(successResp);
 
         userAccountStatusService.enableUser(targetId, actorId);
@@ -1407,8 +1464,8 @@ public class UserAccountStatusServiceTest {
                 .userProfiles(Set.of(actorProfile))
                 .build();
 
-        when(entraUserRepository.findById(targetId)).thenReturn(Optional.of(target));
-        when(entraUserRepository.findById(actorId)).thenReturn(Optional.of(actor));
+        when(entraUserRepository.findByIdWithAssociations(targetId)).thenReturn(Optional.of(target));
+        when(entraUserRepository.findByIdWithAssociations(actorId)).thenReturn(Optional.of(actor));
 
         when(userService.isInternal(actorId)).thenReturn(true);
 
@@ -1499,7 +1556,7 @@ public class UserAccountStatusServiceTest {
                     .lastName("User")
                     .build();
 
-            when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
+            when(entraUserRepository.findByIdWithAssociations(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
             assertThrows(RuntimeException.class, () -> userAccountStatusService.disableUserAllUserByFirmId("firmId", UUID.randomUUID(), UUID.randomUUID()));
 
         }
@@ -1516,7 +1573,7 @@ public class UserAccountStatusServiceTest {
                     .id(UUID.randomUUID())
                     .build();
 
-            when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
+            when(entraUserRepository.findByIdWithAssociations(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
             when(disableUserReasonRepository.findById(eq(reason.getId()))).thenReturn(Optional.of(reason));
             assertThrows(RuntimeException.class, () -> userAccountStatusService.disableUserAllUserByFirmId("firmID", UUID.randomUUID(), enabledUser.getId()));
 
@@ -1537,28 +1594,33 @@ public class UserAccountStatusServiceTest {
                     .name("test Reason")
                     .build();
 
+            EntraUser userToDisable = EntraUser.builder()
+                    .enabled(true)
+                    .entraOid(UUID.randomUUID().toString())
+                    .build();
             List<UserProfile> userProfiles = List.of(
                     UserProfile.builder()
-                            .entraUser(EntraUser.builder()
-                                    .enabled(true)
-                                    .entraOid(UUID.randomUUID().toString())
-                                    .build())
+                            .entraUser(userToDisable)
                             .id(UUID.randomUUID())
                             .build()
-
             );
             TechServicesApiResponse<ChangeAccountEnabledResponse> techServicesResponse = TechServicesApiResponse.success(null);
 
             when(techServicesClient.disableUser(any(), any())).thenReturn(techServicesResponse);
-            when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
+            when(entraUserRepository.findByIdWithAssociations(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
             when(disableUserReasonRepository.findById(eq(reason.getId()))).thenReturn(Optional.of(reason));
             when(userProfileRepository.findByFirmId(eq(firmId))).thenReturn(userProfiles);
+            when(disableTypeResolver.resolve(eq(enabledUser))).thenReturn(DisableType.FIRM);
 
             userAccountStatusService.disableUserAllUserByFirmId(String.valueOf(firmId), reason.getId(), enabledUser.getId());
 
+            verify(disableTypeResolver, times(1)).resolve(enabledUser);
+            assertThat(userToDisable.getDisableType()).isEqualTo(DisableType.FIRM);
             verify(entraUserRepository, times(1)).saveAndFlush(any());
             verify(techServicesClient, times(1)).disableUser(any(), any());
-            verify(userAccountStatusAuditRepository, times(1)).saveAndFlush(any());
+            ArgumentCaptor<UserAccountStatusAudit> bulkAuditCaptor = ArgumentCaptor.forClass(UserAccountStatusAudit.class);
+            verify(userAccountStatusAuditRepository, times(1)).saveAndFlush(bulkAuditCaptor.capture());
+            assertThat(bulkAuditCaptor.getValue().getDisableType()).isEqualTo(DisableType.FIRM);
 
         }
 
@@ -1594,7 +1656,7 @@ public class UserAccountStatusServiceTest {
             TechServicesApiResponse<ChangeAccountEnabledResponse> techServicesResponse = TechServicesApiResponse.error(errorResponse);
 
             when(techServicesClient.disableUser(any(), any())).thenReturn(techServicesResponse);
-            when(entraUserRepository.findById(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
+            when(entraUserRepository.findByIdWithAssociations(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
             when(disableUserReasonRepository.findById(eq(reason.getId()))).thenReturn(Optional.of(reason));
             when(userProfileRepository.findByFirmId(eq(firmId))).thenReturn(userProfiles);
 

@@ -89,6 +89,7 @@ import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
+import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
@@ -131,6 +132,7 @@ public class UserController {
     private final RoleAssignmentService roleAssignmentService;
     private final EmailValidationService emailValidationService;
     private final AppRoleService appRoleService;
+    private final AppService appService;
     private final UserAccountStatusService userAccountStatusService;
     private final NotificationService notificationService;
 
@@ -385,9 +387,11 @@ public class UserController {
         final boolean canDisableUser = disableUserFeatureEnabled
                 && accessControlService.canDisableUser(user.getEntraUser().getId());
         model.addAttribute("canDisableUser", canDisableUser);
-        final boolean canEnableUser = disableUserFeatureEnabled
-                && accessControlService.canEnableUser(user.getEntraUser().getId());
-        model.addAttribute("canEnableUser", canEnableUser);
+        AccessControlService.EnablementFlags enablementFlags = disableUserFeatureEnabled
+                ? accessControlService.getEnablementFlags(user.getEntraUser().getId())
+                : new AccessControlService.EnablementFlags(false, false);
+        model.addAttribute("canEnableUser", enablementFlags.canEnable());
+        model.addAttribute("cannotEnableUser", enablementFlags.blockedByHierarchy());
         final boolean userIsEnabled = user.getEntraUser().isEnabled();
         model.addAttribute("userIsEnabled", userIsEnabled);
         boolean showResendVerificationLink = accessControlService.canSendVerificationEmail(id);
@@ -1119,6 +1123,7 @@ public class UserController {
         session.removeAttribute("roleSelectableAppIndexes");
         model.addAttribute("user", user);
         model.addAttribute("apps", editableApps);
+        model.addAttribute("groupedApps", appService.buildGroupedApps(editableApps));
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user services - " + user.getFullName());
         if (errorMessage != null) {
             model.addAttribute("errorMessage", errorMessage);
@@ -1164,18 +1169,18 @@ public class UserController {
         // Get previous app selection to determine if roles need to be cleaned up
         List<String> previousSelectedApps = getListFromHttpSession(session, "selectedApps", String.class)
                 .orElse(new ArrayList<>());
-        
+
         session.setAttribute("selectedApps", selectedApps);
-        
+
         // Clean up role selections when app selection changes
         @SuppressWarnings("unchecked")
         Map<Integer, List<String>> editUserAllSelectedRoles = (Map<Integer, List<String>>) session
                 .getAttribute("editUserAllSelectedRoles");
-        
+
         if (editUserAllSelectedRoles != null && !selectedApps.equals(previousSelectedApps)) {
             // App selection changed - need to clean up and reindex role data
             Map<Integer, List<String>> cleanedRoles = new HashMap<>();
-            
+
             // Only preserve role data for apps that are still selected and reindex them
             for (int i = 0; i < selectedApps.size(); i++) {
                 String appId = selectedApps.get(i);
@@ -1186,7 +1191,7 @@ public class UserController {
             }
             session.setAttribute("editUserAllSelectedRoles", cleanedRoles);
         }
-        
+
         if (selectedApps.isEmpty()) {
             // Ensure passed in ID is a valid UUID to avoid open redirects.
             session.setAttribute("editUserAllSelectedRoles", new HashMap<>());
@@ -1512,7 +1517,7 @@ public class UserController {
                     for (String selectedRole : selectedRoles) {
                         AppRoleDto role = roles.get(selectedRole);
                         UserRole userRole = new UserRole();
-                        userRole.setRoleName(role.getName());
+                        userRole.setRoleName(role.getDescription());
                         userRole.setAppName(role.getApp().getName());
                         userRole.setUrl(url);
                         selectedAppRole.add(userRole);
@@ -2011,6 +2016,7 @@ public class UserController {
         session.removeAttribute("roleSelectableAppIndexes");
         model.addAttribute("user", user);
         model.addAttribute("apps", editableApps);
+        model.addAttribute("groupedApps", appService.buildGroupedApps(editableApps));
 
         // Store the model in session to handle validation errors later
         session.setAttribute("grantAccessUserAppsModel", model);
@@ -2039,6 +2045,7 @@ public class UserController {
             }
             model.addAttribute("user", modelFromSession.getAttribute("user"));
             model.addAttribute("apps", apps);
+            model.addAttribute("groupedApps", appService.buildGroupedApps(apps != null ? apps : List.of()));
             return "grant-access-user-apps";
         }
 

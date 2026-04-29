@@ -4,8 +4,8 @@ import lombok.Getter;
 
 @Getter
 public enum AppType {
-    AUTHZ(0, "Admin Services"),
-    LAA(1, "Leagal aid services");
+    AUTHZ(0, "Admin services"),
+    LAA(1, "Legal aid Services");
 
     private final int ordinal;
     private final String name;

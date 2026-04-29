@@ -4,14 +4,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
-import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.BulkDisableUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.DisableUserReasonDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
-import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
-import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.CountFirms;
+import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
@@ -31,12 +29,9 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-
-import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.EXTERNAL_USER_ADMIN;
-import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.EXTERNAL_USER_MANAGER;
-import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.GLOBAL_ADMIN;
 
 @Service
 @RequiredArgsConstructor
@@ -51,6 +46,8 @@ public class UserAccountStatusService {
     private final UserService userService;
     private final UserProfileRepository userProfileRepository;
     private final EventService eventService;
+    private final DisableTypeResolver disableTypeResolver;
+    private final UserEnablementPolicy userEnablementPolicy;
 
     public List<DisableUserReasonDto> getDisableUserReasons(UserTypeReasonDisable userTypeReasonDisable) {
         List<DisableUserReason> reasons = disableUserReasonRepository.findAll();
@@ -84,9 +81,9 @@ public class UserAccountStatusService {
         }
 
         // Fetch entities
-        EntraUser disabledUser = entraUserRepository.findById(disabledUserId)
+        EntraUser disabledUser = entraUserRepository.findByIdWithAssociations(disabledUserId)
                 .orElseThrow(() -> new RuntimeException(String.format("Could not find a user account to disable with id \"%s\"", disabledUserId)));
-        EntraUser disabledByUser = entraUserRepository.findById(disabledById)
+        EntraUser disabledByUser = entraUserRepository.findByIdWithAssociations(disabledById)
                 .orElseThrow(() -> new RuntimeException(String.format("Could not find a user account with id \"%s\"", disabledById)));
         DisableUserReason reason = disableUserReasonRepository.findById(disableReasonId)
                 .orElseThrow(() -> new RuntimeException(String.format("Could not find a disable user reason with id \"%s\"", disableReasonId)));
@@ -117,10 +114,14 @@ public class UserAccountStatusService {
                         changeAccountEnabledResponse.getError().getErrors());
             }
 
+            // Determine and store the disable type from the actor's roles
+            DisableType disableType = disableTypeResolver.resolve(disabledByUser);
+
             // Perform disable
             disabledUser.setDisabledBy(disabledById);
             disabledUser.setEnabled(false);
             userService.refreshAndUpdatedUserProfilesStatus(false, disabledUser.getInvitationStatus(), disabledUser.getUserProfiles());
+            disabledUser.setDisableType(disableType);
             entraUserRepository.saveAndFlush(disabledUser);
 
             // Add audit entry
@@ -130,6 +131,7 @@ public class UserAccountStatusService {
                     .statusChange(UserAccountStatus.DISABLED)
                     .statusChangedBy(disabledByUser.getFirstName() + " " + disabledByUser.getLastName())
                     .statusChangedDate(LocalDateTime.now())
+                    .disableType(disableType)
                     .build();
             userAccountStatusAuditRepository.saveAndFlush(userAccountStatusAudit);
         } else {
@@ -168,7 +170,7 @@ public class UserAccountStatusService {
     public void disableUserAllUserByFirmId(String firmId, UUID disableReasonId, UUID disabledById) {
         log.info("Started Bulk disable users");
         // Fetch entities
-        EntraUser disabledByUser = entraUserRepository.findById(disabledById)
+        EntraUser disabledByUser = entraUserRepository.findByIdWithAssociations(disabledById)
                 .orElseThrow(() -> new RuntimeException(String.format("Could not find a user account with id \"%s\"", disabledById)));
         DisableUserReason reason = disableUserReasonRepository.findById(disableReasonId)
                 .orElseThrow(() -> new RuntimeException(String.format("Could not find a disable user reason with id \"%s\"", disableReasonId)));
@@ -177,6 +179,7 @@ public class UserAccountStatusService {
                 .map(UserProfile::getEntraUser)
                 .filter(EntraUser::isEnabled)
                 .toList();
+        DisableType bulkDisableType = disableTypeResolver.resolve(disabledByUser);
         Integer totalOfUsersDisabled = 0;
         for (EntraUser entraUser : entraUsers) {
             // Disable user in Entra via tech services.
@@ -190,6 +193,8 @@ public class UserAccountStatusService {
             // Perform disable
             entraUser.setEnabled(false);
             userService.refreshAndUpdatedUserProfilesStatus(false, entraUser.getInvitationStatus(), entraUser.getUserProfiles());
+            entraUser.setDisabledBy(disabledById);
+            entraUser.setDisableType(bulkDisableType);
             entraUserRepository.saveAndFlush(entraUser);
             totalOfUsersDisabled++;
             log.info("User with entra oid: {} has been disabled successfully with reason: {} By actor entra oid: {}",
@@ -203,6 +208,7 @@ public class UserAccountStatusService {
                     .statusChange(UserAccountStatus.DISABLED)
                     .statusChangedBy(disabledByUser.getFirstName() + " " + disabledByUser.getLastName())
                     .statusChangedDate(LocalDateTime.now())
+                    .disableType(bulkDisableType)
                     .build();
 
             userAccountStatusAuditRepository.saveAndFlush(userAccountStatusAudit);
@@ -221,9 +227,9 @@ public class UserAccountStatusService {
             throw new RuntimeException(String.format("User %s can not be enabled by themselves", enabledUserId));
         }
         // Fetch entities
-        EntraUser enabledUser = entraUserRepository.findById(enabledUserId)
-                .orElseThrow(() -> new RuntimeException(String.format("Could not find a user account to disable with id \"%s\"", enabledUserId)));
-        EntraUser enabledByUser = entraUserRepository.findById(enabledById)
+        EntraUser enabledUser = entraUserRepository.findByIdWithAssociations(enabledUserId)
+                .orElseThrow(() -> new RuntimeException(String.format("Could not find a user account with id \"%s\"", enabledUserId)));
+        EntraUser enabledByUser = entraUserRepository.findByIdWithAssociations(enabledById)
                 .orElseThrow(() -> new RuntimeException(String.format("Could not find a user account with id \"%s\"", enabledById)));
 
         boolean isUserEnablementAllowed = isUserEnablementAllowed(enabledUser, enabledByUser);
@@ -242,6 +248,7 @@ public class UserAccountStatusService {
             enabledUser.setDisabledBy(null);
             enabledUser.setEnabled(true);
             userService.refreshAndUpdatedUserProfilesStatus(true, enabledUser.getInvitationStatus(), enabledUser.getUserProfiles());
+            enabledUser.setDisableType(null);
             entraUserRepository.saveAndFlush(enabledUser);
 
             // Add audit entry
@@ -264,70 +271,37 @@ public class UserAccountStatusService {
         }
 
         if (!userService.isInternal(actor.getId()) && targetUser.isMultiFirmUser()) {
-            log.info("Multi-fim user {} can not be enabled by non-internal user {}", targetUser.getId(), actor.getId());
+            log.info("Multi-firm user {} can not be enabled by non-internal user {}", targetUser.getId(), actor.getId());
             return false;
         }
 
         UserProfile actorUserProfile = actor.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
                 .orElseThrow(() -> new RuntimeException(String.format("Could not find an active user profile for user with id \"%s\"", actor.getId())));
-        UUID actorUserProfileId = actor.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst()
-                .map(UserProfile::getId)
-                .orElseThrow(() -> new RuntimeException(String.format("Could not find an active user profile for user with id \"%s\"", actor.getId())));
 
-        UUID disabledByUserProfileId = targetUser.getDisabledBy();
+        List<String> actingUserRoles = Optional.ofNullable(actorUserProfile.getAppRoles()).orElse(Set.of())
+                .stream().map(AppRole::getName).toList();
+        DisableType disableType = targetUser.getDisableType();
 
-        if (actorUserProfileId.equals(disabledByUserProfileId)) {
-            return true;
+        if (!userEnablementPolicy.canEnable(disableType, actingUserRoles)) {
+            log.info("Enable blocked by hierarchy: actor {} with roles {} cannot re-enable user {} with disableType {}",
+                    actor.getId(), actingUserRoles, targetUser.getId(), disableType);
+            return false;
         }
 
-        List<String> actingUserRoles = actorUserProfile.getAppRoles().stream().map(AppRole::getName).toList();
-
-        UserProfileDto disabledByProfile = disabledByUserProfileId == null ? null :
-                userService.getUserProfileById(disabledByUserProfileId.toString()).orElse(null);
-        List<AppRoleDto> disabledByUserRoles = disabledByProfile == null ? List.of() : disabledByProfile.getAppRoles();
-
-
-        String disabledByUserRole = disabledByUserRoles.stream()
-                .map(AppRoleDto::getName)
-                .filter(name ->
-                        name.equals(EXTERNAL_USER_ADMIN.getRoleName())
-                                || name.equals(AuthzRole.FIRM_USER_MANAGER.getRoleName())
-                )
-                .findFirst()
-                .orElse("NONE");
-
-        if (actingUserRoles.contains(GLOBAL_ADMIN.getRoleName())
-                || actingUserRoles.contains(EXTERNAL_USER_MANAGER.getRoleName())
-                || actingUserRoles.contains(AuthzRole.SECURITY_RESPONSE.getRoleName())) {
-            return true;
-        }
-
-        if (actingUserRoles.contains(AuthzRole.FIRM_USER_MANAGER.getRoleName())) {
-            if (!disabledByUserRole.equals(AuthzRole.FIRM_USER_MANAGER.getRoleName())) {
-                log.info("FUM {} is enabling the user {} but is not disabled by an FUM", actor.getId(), targetUser.getId());
-                return false;
-            }
-            Firm enabledByUserFirm = actor.getUserProfiles().stream()
-                    .filter(UserProfile::isActiveProfile)
-                    .findFirst()
-                    .map(UserProfile::getFirm)
-                    .orElse(null);
+        if (userEnablementPolicy.requiresSameFirmCheck(disableType, actingUserRoles)) {
+            Firm enabledByUserFirm = actorUserProfile.getFirm();
             Firm enabledUserFirm = targetUser.getUserProfiles().stream()
                     .filter(UserProfile::isActiveProfile)
                     .findFirst()
                     .map(UserProfile::getFirm).orElse(null);
 
-            log.info("FUM {} enabling user {} is in firm {}", actor.getId(), targetUser.getId(), enabledUserFirm);
-
-            return enabledUserFirm != null && enabledByUserFirm != null
+            boolean sameFirm = enabledUserFirm != null && enabledByUserFirm != null
                     && enabledByUserFirm.getId().equals(enabledUserFirm.getId());
+            if (!sameFirm) {
+                log.info("FUM {} cannot enable user {} — different firm", actor.getId(), targetUser.getId());
+                return false;
+            }
         }
-
-        if (actingUserRoles.contains(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())) {
-            log.info("EUA {}, is enabling the user {}", actor.getId(), targetUser.getId());
-            return disabledByUserRole.equals(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName());
-        }
-
 
         return true;
     }

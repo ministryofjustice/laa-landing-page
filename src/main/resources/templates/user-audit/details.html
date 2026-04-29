@@ -176,6 +176,17 @@
                         <div class="govuk-summary-card">
                             <div class="govuk-summary-card__title-wrapper">
                                 <h3 class="govuk-summary-card__title">Entra Audit data</h3>
+                                <ul th:if="${canDisableUser or canEnableUser or cannotEnableUser}" class="govuk-summary-card__actions">
+                                    <li th:if="${canDisableUser and userIsEnabled}" class="govuk-summary-card__action">
+                                        <a class="govuk-link" th:href="@{/admin/users/manage/{id}/disable(id=${user.userId}, referer='audit')}">Disable user</a>
+                                    </li>
+                                    <li th:if="${canEnableUser and !userIsEnabled}" class="govuk-summary-card__action">
+                                        <a class="govuk-link" th:href="@{/admin/users/manage/{id}/enable(id=${user.userId}, referer='audit')}">Enable user</a>
+                                    </li>
+                                    <li th:if="${cannotEnableUser and !userIsEnabled}" class="govuk-summary-card__action">
+                                        <span>You cannot enable this user</span>
+                                    </li>
+                                </ul>
                             </div>
                             <div class="govuk-summary-card__content">
                                 <dl class="govuk-summary-list">
@@ -398,6 +409,68 @@
                                 </dl>
                             </div>
                         </div>
+
+                        <!-- Services Card -->
+                        <div class="govuk-summary-card">
+                            <div class="govuk-summary-card__title-wrapper">
+                                <h3 class="govuk-summary-card__title">Services</h3>
+                            </div>
+                            <div class="govuk-summary-card__content">
+                                <dl class="govuk-summary-list">
+                                    <!-- Display roles -->
+                                    <div class="govuk-summary-list__row" th:each="appAssignment : ${profile.getRolesGroupByAppName}">
+                                        <dt class="govuk-summary-list__key"th:text="${appAssignment.key}" />
+
+                                        <dd class="govuk-summary-list__value">
+                                            <div th:each="appRole : ${appAssignment.value}">
+                                                <span th:text="${appRole}"></span>
+                                            </div>
+                                        </dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row"
+                                        th:if="${profile.roles == null || profile.roles.isEmpty()}">
+                                        <dt class="govuk-summary-list__key">No services assigned</dt>
+                                        <dd class="govuk-summary-list__value"></dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </div>
+
+                        <!-- Account status history Card -->
+                        <div class="govuk-summary-card">
+                            <div class="govuk-summary-card__title-wrapper">
+                                <h3 class="govuk-summary-card__title">Account status history</h3>
+                            </div>
+                            <div class="govuk-summary-card__content" th:each="record : ${user.accountStatusHistory}">
+                                <dl class="govuk-summary-list">
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Date</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.statusChangedDate}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Status</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.statusChange}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Disable reason</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.disableReason}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Changed by</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.statusChangedBy}">
+                                    </div>
+                                    <div class="govuk-summary-list__row" th:if="${record.disableType != null}">
+                                        <dt class="govuk-summary-list__key">Disable type</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.disableType}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row"
+                                         th:if="${user.accountStatusHistory == null || user.accountStatusHistory.size() == 0}">
+                                        <dt class="govuk-summary-list__key">No account status history available</dt>
+                                        <dd class="govuk-summary-list__value"></dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -413,17 +486,6 @@
                         th:if="${user.hasNoProfile and @accessControlService.canDeleteUserWithoutProfile(user.userId)}"
                         th:href="@{/admin/users/audit/entra/{id}/delete(id=${user.userId})}">
                         Delete User
-                    </a>
-                    <!-- Disable Button - Only for users without profiles -->
-                    <a class="govuk-button govuk-button--warning"
-                       th:if="${canDisableUser && userIsEnabled}"
-                       th:href="@{/admin/users/manage/{id}/disable(id=${user.userId}, referer='audit')}">
-                        Disable User
-                    </a>
-                    <a class="govuk-button govuk-button--warning"
-                       th:if="${canDisableUser && !userIsEnabled}"
-                       th:href="@{/admin/users/manage/{id}/enable(id=${user.userId}, referer='audit')}">
-                        Enable User
                     </a>
                 </div>
             </div>
