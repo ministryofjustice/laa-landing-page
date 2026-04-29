@@ -40,9 +40,9 @@ import uk.gov.justice.laa.portal.landingpage.dto.AuditTableSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
-import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -97,15 +97,15 @@ public class AuditController {
             Model model, Authentication authentication) {
 
         log.debug("AuditController.displayAuditTable - {}", criteria);
-        
+
         // Apply user type filtering based on authenticated user's permissions (same logic as UserController)
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
         boolean canSeeAllUsers = accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)
                 && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
-        
+
         UserTypeForm filteredUserType = criteria.getSelectedUserType();
         UUID filteredFirmId = criteria.getSelectedFirmId();
-        
+
         if (!canSeeAllUsers) {
             if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)) {
                 filteredUserType = UserTypeForm.INTERNAL;
@@ -117,10 +117,10 @@ public class AuditController {
                 }
             }
         }
-        
+
         // Get audit users with security-filtered user type and firm restriction
         PaginatedAuditUsers paginatedUsers = userService.getAuditUsers(
-                criteria.getSearch(), filteredFirmId, 
+                criteria.getSearch(), filteredFirmId,
                 criteria.getSilasRole(), criteria.getSelectedAppId(), filteredUserType,
                 criteria.getPage(), criteria.getSize(), criteria.getSort(), criteria.getDirection(), false,
                 criteria.getInactiveSinceDate(), criteria.getNeverActivated());
@@ -210,6 +210,11 @@ public class AuditController {
             model.addAttribute("entraUserDisableReason", disableUserReason);
         }
         canDisableUser = accessControlService.canDisableUser(userDetail.getUserId());
+        AccessControlService.EnablementFlags enablementFlags = disableUserFeatureEnabled
+                ? accessControlService.getEnablementFlags(userDetail.getUserId())
+                : new AccessControlService.EnablementFlags(false, false);
+        boolean canEnableUser = enablementFlags.canEnable();
+        boolean cannotEnableUser = enablementFlags.blockedByHierarchy();
 
         // Add attributes to model
         model.addAttribute("user", userDetail);
@@ -218,6 +223,8 @@ public class AuditController {
         model.addAttribute("profilePage", profilePage);
         model.addAttribute("profileSize", profileSize);
         model.addAttribute("canDisableUser", disableUserFeatureEnabled && canDisableUser);
+        model.addAttribute("canEnableUser", canEnableUser);
+        model.addAttribute("cannotEnableUser", cannotEnableUser);
         model.addAttribute("userIsEnabled", userDetail.isEnabled());
 
         return "user-audit/details";

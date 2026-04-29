@@ -39,14 +39,14 @@ public class InternalUserPolling {
             log.debug("Starting internal user polling process...");
             if (enableDistributedDbLocking) {
                 try {
-                    lockService.withLock(POLLING_LOCK_KEY, Duration.ofMinutes(distributedDbLockingPeriod), () -> {
+                    boolean acquired = lockService.tryOnceWithLock(POLLING_LOCK_KEY, Duration.ofMinutes(distributedDbLockingPeriod), () -> {
                         log.debug("Acquired lock for internal user polling");
                         internalUserPollingService.pollForNewUsers();
                         log.debug("Completed internal user polling");
-                        return null;
                     });
-                } catch (DistributedLockService.LockAcquisitionException e) {
-                    log.debug("Could not acquire lock for internal user polling. Another instance might be running.");
+                    if (!acquired) {
+                        log.debug("Could not acquire lock for internal user polling. Another instance might be running.");
+                    }
                 } catch (Exception e) {
                     log.error("Error during internal user polling", e);
                 }

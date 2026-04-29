@@ -173,7 +173,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         manageUsersPage.verifyUserDetailsPopulated();
         // Disable link visible
-        assertTrue(page.locator("#user-details ul.govuk-summary-card__actions a.govuk-link:has-text(\"Disable user\")").isVisible());
+        assertTrue(page.locator("#user-details dd.govuk-summary-list__actions a.govuk-link:has-text(\"Disable user\")").isVisible());
     }
 
     @Test

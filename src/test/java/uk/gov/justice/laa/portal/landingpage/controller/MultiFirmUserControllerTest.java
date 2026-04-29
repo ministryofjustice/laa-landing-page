@@ -69,6 +69,7 @@ import uk.gov.justice.laa.portal.landingpage.forms.RolesForm;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
+import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
@@ -100,6 +101,8 @@ public class MultiFirmUserControllerTest {
     @Mock
     private FirmService firmService;
     @Mock
+    private AppService appService;
+    @Mock
     private BindingResult bindingResult;
     @Mock
     private ApplicationsForm applicationsForm;
@@ -115,7 +118,7 @@ public class MultiFirmUserControllerTest {
         model = new ExtendedModelMap();
         session = new MockHttpSession();
         controller = new MultiFirmUserController(userService, loginService, appRoleService,
-                roleAssignmentService, officeService, eventService, mapper, firmService);
+                appService, roleAssignmentService, officeService, eventService, mapper, firmService);
         firmSearchForm = FirmSearchForm.builder()
                 .build();
         multiFirmUserForm = MultiFirmUserForm.builder()
