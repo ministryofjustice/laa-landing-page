@@ -353,7 +353,7 @@
                         <td class="govuk-table__cell" th:text="${role.description}" style="word-break: break-word;">Default Role Description</td>
                         <td class="govuk-table__cell" th:text="${role.ccmsCode}" style="word-break: break-word;"></td>
                         <td class="govuk-table__cell" th:text="${role.legacySync}">No</td>
-                        <td class="govuk-table__cell" th:text="${role.getUserTypeRestriction()}">User Type</td>
+                        <td class="govuk-table__cell" th:text="${role.userTypeRestriction}">User Type</td>
                         <td class="govuk-table__cell" th:text="${role.ordinal}">0</td>
                         <td class="govuk-table__cell">
                             <a th:href="@{'/admin/silas-administration/role/' + ${role.id}}" class="govuk-link">Change</a>

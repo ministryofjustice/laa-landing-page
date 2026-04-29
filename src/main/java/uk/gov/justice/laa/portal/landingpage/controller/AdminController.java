@@ -124,13 +124,11 @@ public class AdminController {
                 ? appRoleService.getLaaAppRolesByAppName(appFilter)
                 : appRoleService.getAllLaaAppRoles();
 
-
         if (userTypeFilter != null && !userTypeFilter.isBlank()) {
             roles = roles.stream()
                     .filter(r -> Objects.equals(r.getUserTypeRestriction(), userTypeFilter))
                     .toList();
         }
-
 
         Map<AppRoleDto, List<AppRoleDto>> roleAssignmentRestrictions = StringUtils.hasText(appFilter)
                 ? roleAssignmentService.getLaaAppRoleAssignmentRestrictionsByAppName(appFilter)
