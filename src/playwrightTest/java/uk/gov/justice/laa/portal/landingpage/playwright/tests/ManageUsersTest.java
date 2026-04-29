@@ -450,7 +450,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
     @DisplayName("Verify External User Manager can Manage Access for incomplete users.")
     public void verifyExternalUserManagerIncompleteUsers() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
-        Locator row = manageUsersPage.externalUserRowLocator();
+        final Locator row = manageUsersPage.externalUserRowLocator();
         manageUsersPage.clickExternalUserLink("Playwright ExternalUserIncomplete");
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         assertTrue(page.locator(".govuk-button:has-text('Manage Access')").isVisible());
