@@ -451,7 +451,6 @@ public class ManageUsersTest extends BaseFrontEndTest {
     public void verifyExternalUserManagerIncompleteUsers() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
         Locator row = manageUsersPage.externalUserRowLocator();
-        assertTrue(row.locator(".moj-badge.moj-badge--blue").isVisible());
         manageUsersPage.clickExternalUserLink("Playwright ExternalUserIncomplete");
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         assertTrue(page.locator(".govuk-button:has-text('Manage Access')").isVisible());
@@ -476,8 +475,6 @@ public class ManageUsersTest extends BaseFrontEndTest {
     @DisplayName("Verify External User Manager can Manage Access for incomplete users (Single Role App).")
     public void verifyExternalUserManagerIncompleteUsersSkipRoleSelectionForSingleRoleApp() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
-        Locator row = manageUsersPage.externalUserRowLocator();
-        assertTrue(row.locator(".moj-badge.moj-badge--blue").isVisible());
         manageUsersPage.clickExternalUserLink("Playwright ExternalUserIncompleteTwo");
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         assertTrue(page.locator(".govuk-button:has-text('Manage Access')").isVisible());

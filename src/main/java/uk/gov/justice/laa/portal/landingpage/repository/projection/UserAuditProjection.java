@@ -8,4 +8,8 @@ import java.util.UUID;
  */
 public interface UserAuditProjection {
     UUID getUserId();
+
+    String getSilasStatus();
+
+    Integer getSilasStatusRank();
 }

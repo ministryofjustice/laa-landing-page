@@ -92,6 +92,11 @@ public class UserProfile extends AuditableEntity {
     @NotNull(message = "User profile status must be provided")
     private UserProfileStatus userProfileStatus;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "silas_status", nullable = false, length = 255)
+    @NotNull(message = "User profile silas status must be provided")
+    private UserProfileSilasStatus silasStatus;
+
     @Column(name = "last_sync_successful", nullable = false)
     private boolean lastCcmsSyncSuccessful;
 

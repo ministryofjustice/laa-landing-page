@@ -850,20 +850,23 @@
                                 </span>
                             </td>
                             <td class="govuk-table__cell">
-                                <th:block th:if="${user.silasStatus == 'Disabled'}">
+                                <th:block th:if="${user.silasStatus().name() == 'DISABLED'}">
                                     <span class="moj-badge moj-badge--red">DISABLED</span>
                                 </th:block>
-                                <th:block th:if="${user.silasStatus == 'Incomplete'}">
+                                <th:block th:if="${user.silasStatus().name() == 'INCOMPLETE'}">
                                     <span class="moj-badge moj-badge--blue">INCOMPLETE</span>
                                 </th:block>
-                                <th:block th:if="${user.silasStatus == 'Complete'}">
+                                <th:block th:if="${user.silasStatus().name() == 'COMPLETE'}">
                                     <span class="moj-badge moj-badge--green">COMPLETE</span>
                                 </th:block>
-                                <th:block th:if="${user.silasStatus == 'Activation pending'}">
+                                <th:block th:if="${user.silasStatus().name() == 'ACTIVATION_PENDING'}">
                                     <span class="moj-badge moj-badge--grey">ACTIVATION PENDING</span>
                                 </th:block>
-                                <th:block th:if="${user.silasStatus == 'No roles assigned'}">
+                                <th:block th:if="${user.silasStatus().name() == 'NO_ROLES_ASSIGNED'}">
                                     <span class="moj-badge moj-badge--purple">NO ROLES ASSIGNED</span>
+                                </th:block>
+                                <th:block th:if="${user.silasStatus().name() == 'UNKNOWN'}">
+                                    <span class="moj-badge moj-badge--grey">UNKNOWN</span>
                                 </th:block>
                             </td>
                         </tr>

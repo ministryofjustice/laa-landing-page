@@ -23,6 +23,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -118,6 +119,7 @@ public class BaseRepositoryTest {
                 .userType(userType).appRoles(new HashSet<>(Set.of(globalAdminAppRole)))
                 .createdDate(LocalDateTime.now()).createdBy("Test").activeProfile(active)
                 .userProfileStatus(UserProfileStatus.COMPLETE)
+                .silasStatus(UserProfileSilasStatus.COMPLETE)
                 .lastCcmsSyncSuccessful(true).build();
     }
 
@@ -174,6 +176,7 @@ public class BaseRepositoryTest {
                 .userType(userType).appRoles(new HashSet<>(Set.of(globalAdminAppRole)))
                 .createdDate(LocalDateTime.now()).createdBy("Test").activeProfile(active)
                 .userProfileStatus(UserProfileStatus.COMPLETE)
+                .silasStatus(UserProfileSilasStatus.COMPLETE)
                 .lastCcmsSyncSuccessful(true).build();
     }
 

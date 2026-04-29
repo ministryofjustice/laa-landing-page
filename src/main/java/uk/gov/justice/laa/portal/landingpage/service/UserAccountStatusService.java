@@ -120,6 +120,7 @@ public class UserAccountStatusService {
             // Perform disable
             disabledUser.setDisabledBy(disabledById);
             disabledUser.setEnabled(false);
+            userService.refreshAndUpdatedUserProfilesStatus(false, disabledUser.getInvitationStatus(), disabledUser.getUserProfiles());
             entraUserRepository.saveAndFlush(disabledUser);
 
             // Add audit entry
@@ -188,6 +189,7 @@ public class UserAccountStatusService {
             }
             // Perform disable
             entraUser.setEnabled(false);
+            userService.refreshAndUpdatedUserProfilesStatus(false, entraUser.getInvitationStatus(), entraUser.getUserProfiles());
             entraUserRepository.saveAndFlush(entraUser);
             totalOfUsersDisabled++;
             log.info("User with entra oid: {} has been disabled successfully with reason: {} By actor entra oid: {}",
@@ -239,6 +241,7 @@ public class UserAccountStatusService {
             // Perform enable
             enabledUser.setDisabledBy(null);
             enabledUser.setEnabled(true);
+            userService.refreshAndUpdatedUserProfilesStatus(true, enabledUser.getInvitationStatus(), enabledUser.getUserProfiles());
             entraUserRepository.saveAndFlush(enabledUser);
 
             // Add audit entry

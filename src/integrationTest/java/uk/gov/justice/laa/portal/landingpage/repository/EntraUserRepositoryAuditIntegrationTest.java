@@ -1,6 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.repository;
 
-import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -22,6 +21,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
@@ -286,6 +286,7 @@ class EntraUserRepositoryAuditIntegrationTest extends BaseRepositoryTest {
                 .activeProfile(true)
                 .appRoles(new HashSet<>())
                 .userProfileStatus(UserProfileStatus.COMPLETE)
+                .silasStatus(UserProfileSilasStatus.COMPLETE)
                 .createdBy("Test")
                 .createdDate(multiFirmUser.getCreatedDate())
                 .build();
@@ -298,6 +299,7 @@ class EntraUserRepositoryAuditIntegrationTest extends BaseRepositoryTest {
                 .activeProfile(false)
                 .appRoles(new HashSet<>())
                 .userProfileStatus(UserProfileStatus.COMPLETE)
+                .silasStatus(UserProfileSilasStatus.COMPLETE)
                 .createdBy("Test")
                 .createdDate(multiFirmUser.getCreatedDate())
                 .build();
@@ -381,6 +383,7 @@ class EntraUserRepositoryAuditIntegrationTest extends BaseRepositoryTest {
                 .activeProfile(true)
                 .appRoles(roles)
                 .userProfileStatus(UserProfileStatus.COMPLETE)
+                .silasStatus(UserProfileSilasStatus.COMPLETE)
                 .createdBy("Test")
                 .createdDate(user.getCreatedDate())
                 .build();
