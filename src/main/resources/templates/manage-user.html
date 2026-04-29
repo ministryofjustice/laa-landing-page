@@ -85,20 +85,23 @@
                 <div class="moj-page-header-actions">
                     <div class="moj-page-header-actions__title" style="display: flex; align-items: center; gap: 1rem;">
                         <h1 class="govuk-heading-xl" th:text="${user.fullName}"></h1>
-                            <th:block th:if="${silasStatus == 'Disabled'}">
+                        <th:block th:if="${silasStatus == 'DISABLED'}">
                                 <span class="govuk-tag govuk-tag--red govuk-!-font-weight-bold govuk-!-margin-top-1">DISABLED</span>
                             </th:block>
-                            <th:block th:if="${silasStatus == 'Incomplete'}">
+                            <th:block th:if="${silasStatus == 'INCOMPLETE'}">
                                 <span class="govuk-tag govuk-tag--blue govuk-!-font-weight-bold govuk-!-margin-top-1">INCOMPLETE</span>
                             </th:block>
-                            <th:block th:if="${silasStatus == 'Complete'}">
+                            <th:block th:if="${silasStatus == 'COMPLETE'}">
                                 <span class="govuk-tag govuk-tag--green govuk-!-font-weight-bold govuk-!-margin-top-1">COMPLETE</span>
                             </th:block>
-                            <th:block th:if="${silasStatus == 'Activation pending'}">
+                            <th:block th:if="${silasStatus == 'ACTIVATION_PENDING'}">
                                 <span class="govuk-tag govuk-tag--grey govuk-!-font-weight-bold govuk-!-margin-top-1" style="min-width: 200px">ACTIVATION PENDING</span>
                             </th:block>
-                            <th:block th:if="${silasStatus == 'No roles assigned'}">
+                            <th:block th:if="${silasStatus == 'NO_ROLES_ASSIGNED'}">
                                 <span class="govuk-tag govuk-tag--purple govuk-!-font-weight-bold govuk-!-margin-top-1" style="min-width: 200px">NO ROLES ASSIGNED</span>
+                            </th:block>
+                            <th:block th:if="${silasStatus == 'UNKNOWN'}">
+                                <span class="govuk-tag govuk-tag--grey govuk-!-font-weight-bold govuk-!-margin-top-1" style="min-width: 200px">UNKNOWN</span>
                             </th:block>
                     </div>
                     <form class="form" th:if="${!isAccessGranted and canGrantUserAccess}"

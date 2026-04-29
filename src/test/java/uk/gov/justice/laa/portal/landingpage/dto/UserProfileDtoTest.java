@@ -8,6 +8,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
@@ -50,6 +51,7 @@ class UserProfileDtoTest {
         UserType userType = UserType.EXTERNAL;
         String legacyUserId = "legacy123";
         UserProfileStatus userProfileStatus = UserProfileStatus.COMPLETE;
+        UserProfileSilasStatus silasStatus = UserProfileSilasStatus.COMPLETE;
         EntraUserDto entraUser = EntraUserDto.builder()
                 .id("entraid123")
                 .firstName("John")
@@ -80,7 +82,7 @@ class UserProfileDtoTest {
         // When
         UserProfileDto userProfile = new UserProfileDto(
                 id, activeProfile, userType, legacyUserId, userProfileStatus,
-                entraUser, firm, offices, appRoles,
+                silasStatus, entraUser, firm, offices, appRoles,
                 createdDate, createdBy, lastModified, lastModifiedBy, true
         );
 

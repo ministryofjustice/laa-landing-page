@@ -146,19 +146,19 @@
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">SILAS Status</dt>
                                         <dd class="govuk-summary-list__value">
-                                            <th:block th:if="${silasStatus == 'Disabled'}">
+                                            <th:block th:if="${silasStatus == 'DISABLED'}">
                                                 <strong class="govuk-tag govuk-tag--red">Disabled</strong>
                                             </th:block>
-                                            <th:block th:if="${silasStatus == 'Incomplete'}">
+                                            <th:block th:if="${silasStatus == 'INCOMPLETE'}">
                                                 <strong class="govuk-tag govuk-tag--blue govuk-!-margin-top-1">Incomplete</strong>
                                             </th:block>
-                                            <th:block th:if="${silasStatus == 'Complete'}">
+                                            <th:block th:if="${silasStatus == 'COMPLETE'}">
                                                 <strong class="govuk-tag govuk-tag--green govuk-!-margin-top-1">Complete</strong>
                                             </th:block>
-                                            <th:block th:if="${silasStatus == 'Activation pending'}">
+                                            <th:block th:if="${silasStatus == 'ACTIVATION_PENDING'}">
                                                 <strong class="govuk-tag govuk-tag--grey govuk-!-margin-top-1">Activation pending</strong>
                                             </th:block>
-                                            <th:block th:if="${silasStatus == 'No roles assigned'}">
+                                            <th:block th:if="${silasStatus == 'NO_ROLES_ASSIGNED'}">
                                                 <strong class="govuk-tag govuk-tag--purple govuk-!-margin-top-1">No roles assigned</strong>
                                             </th:block>
                                         </dd>

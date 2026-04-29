@@ -2,7 +2,6 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -12,7 +11,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -218,7 +216,7 @@ public class AuditController {
 
         // Add attributes to model
         model.addAttribute("user", userDetail);
-        model.addAttribute("silasStatus", userService.determineStatusBadgeForAuditUser(userDetail));
+        model.addAttribute("silasStatus", userService.determineStatusBadgeForAuditUser(userDetail).name());
         model.addAttribute("profileId", userId); // Add profile ID for pagination links
         model.addAttribute("profilePage", profilePage);
         model.addAttribute("profileSize", profileSize);

@@ -99,6 +99,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -115,7 +116,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditAccountStatusProjection;
+import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditSilasStatusProjection;
 import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
@@ -3336,7 +3337,7 @@ class UserServiceTest {
                 "email", "entraUser.email",
                 "eMAIl", "entraUser.email",
                 "lAstName", "entraUser.lastName",
-                "USERSTATUS", "userProfileStatus");
+                "USERSTATUS", "silasStatus");
 
         String sort = "aSc";
         for (Map.Entry<String, String> entry : fieldMappings.entrySet()) {
@@ -3453,6 +3454,7 @@ class UserServiceTest {
         UserProfile userProfile = UserProfile.builder()
                 .id(UUID.fromString(userId))
                 .userProfileStatus(UserProfileStatus.PENDING)
+                .entraUser(EntraUser.builder().id(UUID.randomUUID()).enabled(true).build())
                 .build();
         when(mockUserProfileRepository.findById(UUID.fromString(userId)))
                 .thenReturn(Optional.of(userProfile));
@@ -3860,8 +3862,8 @@ class UserServiceTest {
                 showMultiFirmUsers);
 
         UserSearchResultsDto userSearchResultsDto = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
-                UUID.randomUUID(), UserProfileStatus.COMPLETE, false, "Test", "User", "Test User",
-                "test@example.com", UserStatus.ACTIVE, "Test Firm", InvitationStatus.INVITE_SENT, true, true, "Complete");
+                UUID.randomUUID(), UserProfileStatus.COMPLETE, UserProfileSilasStatus.COMPLETE, false, "Test", "User", "Test User",
+                "test@example.com", UserStatus.ACTIVE, "Test Firm", InvitationStatus.INVITE_SENT, true, true);
 
         Page<UserSearchResultsDto> userSearchResultsPage = new PageImpl<>(
                 List.of(userSearchResultsDto),
@@ -3964,8 +3966,8 @@ class UserServiceTest {
                 showMultiFirmUsers);
 
         UserSearchResultsDto userSearchResultsDto = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
-                UUID.randomUUID(), UserProfileStatus.COMPLETE, false, "Test", "Name", "Test User",
-                "test@example.com", UserStatus.ACTIVE, "Test Firm",  InvitationStatus.INVITE_SENT, true, true, "Complete");
+                UUID.randomUUID(), UserProfileStatus.COMPLETE, UserProfileSilasStatus.COMPLETE, false, "Test", "Name", "Test User",
+                "test@example.com", UserStatus.ACTIVE, "Test Firm",  InvitationStatus.INVITE_SENT, true, true);
 
         Page<UserSearchResultsDto> userProfilePage = new PageImpl<>(
                 List.of(userSearchResultsDto),
@@ -5329,8 +5331,8 @@ class UserServiceTest {
             List<UserSearchResultsDto> searchResults = new ArrayList<>();
             for (int i = 0; i < count; i++) {
                 UserSearchResultsDto result = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
-                        UUID.randomUUID(), UserProfileStatus.COMPLETE, false, "User" + i, "Test" + i, "Test User",
-                        "user" + i + "@example.com", UserStatus.ACTIVE, "Firm" + i,  InvitationStatus.INVITE_SENT, true, true, "Complete");
+                        UUID.randomUUID(), UserProfileStatus.COMPLETE, UserProfileSilasStatus.COMPLETE, false, "User" + i, "Test" + i, "Test User",
+                        "user" + i + "@example.com", UserStatus.ACTIVE, "Firm" + i,  InvitationStatus.INVITE_SENT, true, true);
 
                 searchResults.add(result);
             }
@@ -6320,7 +6322,7 @@ class UserServiceTest {
             assertThat(result.getUsers()).hasSize(1);
             assertThat(result.getUsers().get(0).getUserType()).isEqualTo("External");
             assertThat(result.getUsers().get(0).getFirmAssociation()).isEqualTo("Unknown");
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Incomplete");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.INCOMPLETE);
         }
 
         @Test
@@ -6374,7 +6376,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Disabled");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.DISABLED);
         }
 
         @Test
@@ -6429,7 +6431,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("No roles assigned");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.NO_ROLES_ASSIGNED);
         }
 
         @Test
@@ -6483,7 +6485,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Incomplete");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.INCOMPLETE);
         }
 
         @Test
@@ -6537,7 +6539,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("No roles assigned");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.NO_ROLES_ASSIGNED);
         }
 
         @Test
@@ -6593,7 +6595,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Activation pending");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.ACTIVATION_PENDING);
         }
 
         @Test
@@ -6647,7 +6649,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Incomplete");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.INCOMPLETE);
         }
 
         @Test
@@ -6700,7 +6702,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("No roles assigned");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.NO_ROLES_ASSIGNED);
         }
 
         @Test
@@ -6753,7 +6755,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Activation pending");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.ACTIVATION_PENDING);
         }
 
         @Test
@@ -6806,7 +6808,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Incomplete");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.INCOMPLETE);
         }
 
         @Test
@@ -6840,7 +6842,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Incomplete");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.INCOMPLETE);
             assertThat(result.getUsers().get(0).getEntraStatus()).isEqualTo("UNKNOWN");
         }
 
@@ -7024,24 +7026,29 @@ class UserServiceTest {
         void getAuditUsers_whenSortingByStatusAscending_appliesCorrectSort() {
             // Given
             UUID userId = UUID.randomUUID();
-            UserAuditAccountStatusProjection projection = new UserAuditAccountStatusProjection() {
+            UserAuditSilasStatusProjection projection = new UserAuditSilasStatusProjection() {
                 @Override
                 public UUID getUserId() {
                     return userId;
                 }
 
                 @Override
-                public String getAccountStatus() {
+                public String getSilasStatus() {
                     return "Active";
+                }
+
+                @Override
+                public Integer getSilasStatusRank() {
+                    return 1;
                 }
             };
 
-            Page<UserAuditAccountStatusProjection> projectionPage = new PageImpl<>(
+            Page<UserAuditSilasStatusProjection> projectionPage = new PageImpl<>(
                     List.of(projection),
-                    PageRequest.of(0, 10, Sort.by("accountStatus").ascending()),
+                    PageRequest.of(0, 10, Sort.by("silasStatusRank").ascending()),
                     1);
 
-            when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
+            when(mockEntraUserRepository.findAllUsersForAuditWithSilasStatus(
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(projectionPage);
 
@@ -7059,21 +7066,21 @@ class UserServiceTest {
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(new ArrayList<>(List.of(user)));
 
-            // When - using "accountstatus" as the sort field
+            // When - using "silasStatus" as the sort field
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "accountstatus", "asc", false, null, null);
+                    null, null, null,  1, 10, "silasStatus", "asc", false, null, null);
 
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
 
             ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
-            verify(mockEntraUserRepository).findAllUsersForAuditWithAccountStatus(
+            verify(mockEntraUserRepository).findAllUsersForAuditWithSilasStatus(
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             PageRequest capturedPageRequest = pageRequestCaptor.getValue();
-            assertThat(capturedPageRequest.getSort().getOrderFor("accountStatus")).isNotNull();
-            assertThat(capturedPageRequest.getSort().getOrderFor("accountStatus").getDirection())
+            assertThat(capturedPageRequest.getSort().getOrderFor("silasStatusRank")).isNotNull();
+            assertThat(capturedPageRequest.getSort().getOrderFor("silasStatusRank").getDirection())
                     .isEqualTo(Sort.Direction.ASC);
         }
 
@@ -8734,16 +8741,16 @@ class UserServiceTest {
 
             // Mock projection results (ordered by account status: Active, Disabled,
             // Pending)
-            UserAuditAccountStatusProjection proj1 = createAccountStatusProjection(userId1, "Active");
-            UserAuditAccountStatusProjection proj2 = createAccountStatusProjection(userId2, "Disabled");
-            UserAuditAccountStatusProjection proj3 = createAccountStatusProjection(userId3, "Pending");
+            UserAuditSilasStatusProjection proj1 = createAccountStatusProjection(userId1, "Active");
+            UserAuditSilasStatusProjection proj2 = createAccountStatusProjection(userId2, "Disabled");
+            UserAuditSilasStatusProjection proj3 = createAccountStatusProjection(userId3, "Pending");
 
-            Page<UserAuditAccountStatusProjection> projectionPage = new PageImpl<>(
+            Page<UserAuditSilasStatusProjection> projectionPage = new PageImpl<>(
                     List.of(proj1, proj2, proj3),
-                    PageRequest.of(0, 10, Sort.by("accountStatus").ascending()),
+                    PageRequest.of(0, 10, Sort.by("silasStatusRank").ascending()),
                     3);
 
-            when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
+            when(mockEntraUserRepository.findAllUsersForAuditWithSilasStatus(
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(projectionPage);
 
@@ -8757,7 +8764,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null, 1, 10, "accountStatus", "asc", false, null, null);
+                    null, null, null, 1, 10, "silasStatus", "asc", false, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -8767,14 +8774,14 @@ class UserServiceTest {
 
             // Verify repository was called with correct parameters
             ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
-            verify(mockEntraUserRepository).findAllUsersForAuditWithAccountStatus(
+            verify(mockEntraUserRepository).findAllUsersForAuditWithSilasStatus(
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             PageRequest capturedRequest = pageRequestCaptor.getValue();
             assertThat(capturedRequest.getPageNumber()).isEqualTo(0);
             assertThat(capturedRequest.getPageSize()).isEqualTo(10);
-            assertThat(capturedRequest.getSort().getOrderFor("accountStatus")).isNotNull();
-            assertThat(capturedRequest.getSort().getOrderFor("accountStatus").getDirection())
+            assertThat(capturedRequest.getSort().getOrderFor("silasStatusRank")).isNotNull();
+            assertThat(capturedRequest.getSort().getOrderFor("silasStatusRank").getDirection())
                     .isEqualTo(Sort.Direction.ASC);
         }
 
@@ -8785,16 +8792,16 @@ class UserServiceTest {
             UUID userId2 = UUID.randomUUID();
             UUID userId3 = UUID.randomUUID();
 
-            UserAuditAccountStatusProjection proj1 = createAccountStatusProjection(userId1, "Pending");
-            UserAuditAccountStatusProjection proj2 = createAccountStatusProjection(userId2, "Disabled");
-            UserAuditAccountStatusProjection proj3 = createAccountStatusProjection(userId3, "Active");
+            UserAuditSilasStatusProjection proj1 = createAccountStatusProjection(userId1, "Pending");
+            UserAuditSilasStatusProjection proj2 = createAccountStatusProjection(userId2, "Disabled");
+            UserAuditSilasStatusProjection proj3 = createAccountStatusProjection(userId3, "Active");
 
-            Page<UserAuditAccountStatusProjection> projectionPage = new PageImpl<>(
+            Page<UserAuditSilasStatusProjection> projectionPage = new PageImpl<>(
                     List.of(proj1, proj2, proj3),
-                    PageRequest.of(0, 10, Sort.by("accountStatus").descending()),
+                    PageRequest.of(0, 10, Sort.by("silasStatusRank").descending()),
                     3);
 
-            when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
+            when(mockEntraUserRepository.findAllUsersForAuditWithSilasStatus(
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(projectionPage);
 
@@ -8807,7 +8814,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "accountStatus", "desc", false, null, null);
+                    null, null, null,  1, 10, "silasStatus", "desc", false, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -8815,29 +8822,29 @@ class UserServiceTest {
             assertThat(result.getTotalUsers()).isEqualTo(3);
 
             ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
-            verify(mockEntraUserRepository).findAllUsersForAuditWithAccountStatus(
+            verify(mockEntraUserRepository).findAllUsersForAuditWithSilasStatus(
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             PageRequest capturedRequest = pageRequestCaptor.getValue();
-            assertThat(capturedRequest.getSort().getOrderFor("accountStatus").getDirection())
+            assertThat(capturedRequest.getSort().getOrderFor("silasStatusRank").getDirection())
                     .isEqualTo(Sort.Direction.DESC);
         }
 
         @Test
         void shouldHandleEmptyResultsWithAccountStatusSort() {
             // Given
-            Page<UserAuditAccountStatusProjection> emptyPage = new PageImpl<>(
+            Page<UserAuditSilasStatusProjection> emptyPage = new PageImpl<>(
                     Collections.emptyList(),
-                    PageRequest.of(0, 10, Sort.by("accountStatus").ascending()),
+                    PageRequest.of(0, 10, Sort.by("silasStatusRank").ascending()),
                     0);
 
-            when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
+            when(mockEntraUserRepository.findAllUsersForAuditWithSilasStatus(
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(emptyPage);
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "accountStatus", "asc", false, null, null);
+                    null, null, null,  1, 10, "silasStatus", "asc", false, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -8852,16 +8859,16 @@ class UserServiceTest {
             UUID id2 = UUID.randomUUID();
             UUID id3 = UUID.randomUUID();
 
-            UserAuditAccountStatusProjection proj1 = createAccountStatusProjection(id1, "Active");
-            UserAuditAccountStatusProjection proj2 = createAccountStatusProjection(id2, "Disabled");
-            UserAuditAccountStatusProjection proj3 = createAccountStatusProjection(id3, "Pending");
+            UserAuditSilasStatusProjection proj1 = createAccountStatusProjection(id1, "Active");
+            UserAuditSilasStatusProjection proj2 = createAccountStatusProjection(id2, "Disabled");
+            UserAuditSilasStatusProjection proj3 = createAccountStatusProjection(id3, "Pending");
 
-            Page<UserAuditAccountStatusProjection> projectionPage = new PageImpl<>(
+            Page<UserAuditSilasStatusProjection> projectionPage = new PageImpl<>(
                     List.of(proj1, proj2, proj3),
-                    PageRequest.of(0, 10, Sort.by("accountStatus").ascending()),
+                    PageRequest.of(0, 10, Sort.by("silasStatusRank").ascending()),
                     3);
 
-            when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
+            when(mockEntraUserRepository.findAllUsersForAuditWithSilasStatus(
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(projectionPage);
 
@@ -8875,7 +8882,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "accountStatus", "asc", false, null, null);
+                    null, null, null,  1, 10, "silasStatus", "asc", false, null, null);
 
             // Then
             assertThat(result.getUsers()).hasSize(3);
@@ -8893,14 +8900,14 @@ class UserServiceTest {
             UUID appId = UUID.randomUUID();
 
             UUID userId1 = UUID.randomUUID();
-            UserAuditAccountStatusProjection proj1 = createAccountStatusProjection(userId1, "Active");
+            UserAuditSilasStatusProjection proj1 = createAccountStatusProjection(userId1, "Active");
 
-            Page<UserAuditAccountStatusProjection> projectionPage = new PageImpl<>(
+            Page<UserAuditSilasStatusProjection> projectionPage = new PageImpl<>(
                     List.of(proj1),
-                    PageRequest.of(0, 10, Sort.by("accountStatus").ascending()),
+                    PageRequest.of(0, 10, Sort.by("silasStatusRank").ascending()),
                     1);
 
-            when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
+            when(mockEntraUserRepository.findAllUsersForAuditWithSilasStatus(
                     eq("John"), eq(firmId), eq("PUI_CASE_WORKER"),
                     eq(appId), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(projectionPage);
@@ -8911,27 +8918,41 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers("John",
-                    firmId, "PUI_CASE_WORKER", appId, null,  1, 10, "accountStatus", "asc", false, null, null);
+                    firmId, "PUI_CASE_WORKER", appId, null,  1, 10, "silasStatus", "asc", false, null, null);
 
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getTotalUsers()).isEqualTo(1);
-            verify(mockEntraUserRepository).findAllUsersForAuditWithAccountStatus(
+            verify(mockEntraUserRepository).findAllUsersForAuditWithSilasStatus(
                     eq("John"), eq(firmId), eq("PUI_CASE_WORKER"),
                     eq(appId), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class));
         }
 
         // Helper methods
-        private UserAuditAccountStatusProjection createAccountStatusProjection(UUID userId, String accountStatus) {
-            return new UserAuditAccountStatusProjection() {
+        private UserAuditSilasStatusProjection createAccountStatusProjection(UUID userId, String silasStatus) {
+            return new UserAuditSilasStatusProjection() {
                 @Override
                 public UUID getUserId() {
                     return userId;
                 }
 
                 @Override
-                public String getAccountStatus() {
-                    return accountStatus;
+                public String getSilasStatus() {
+                    return silasStatus;
+                }
+
+                @Override
+                public Integer getSilasStatusRank() {
+                    switch (silasStatus) {
+                        case "Active":
+                            return 1;
+                        case "Disabled":
+                            return 2;
+                        case "Pending":
+                            return 3;
+                        default:
+                            return 99;
+                    }
                 }
             };
         }

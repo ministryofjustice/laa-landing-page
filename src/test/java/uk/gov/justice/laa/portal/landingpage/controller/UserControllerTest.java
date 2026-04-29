@@ -87,6 +87,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -357,11 +358,11 @@ class UserControllerTest {
         // Arrange
         PaginatedUsers mockPaginatedUsers = new PaginatedUsers();
         UserSearchResultsDto userSearchResultsDto1 = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
-                UUID.randomUUID(), UserProfileStatus.COMPLETE, false, "Test", "User", "Test User",
-                "test@example.com", UserStatus.ACTIVE, "Test Firm",  InvitationStatus.INVITE_SENT, true, true, "Incomplete");
+                UUID.randomUUID(), UserProfileStatus.COMPLETE, UserProfileSilasStatus.INCOMPLETE, false, "Test", "User", "Test User",
+                "test@example.com", UserStatus.ACTIVE, "Test Firm",  InvitationStatus.INVITE_SENT, true, true);
         UserSearchResultsDto userSearchResultsDto2 = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
-                UUID.randomUUID(), UserProfileStatus.COMPLETE, false, "Test", "User", "Test User",
-                "test@example.com", UserStatus.ACTIVE, "Test Firm",  InvitationStatus.INVITE_SENT, true, true, "Complete");
+                UUID.randomUUID(), UserProfileStatus.COMPLETE, UserProfileSilasStatus.COMPLETE, false, "Test", "User", "Test User",
+                "test@example.com", UserStatus.ACTIVE, "Test Firm",  InvitationStatus.INVITE_SENT, true, true);
         mockPaginatedUsers.setUsers(List.of(userSearchResultsDto1, userSearchResultsDto2));
         mockPaginatedUsers.setNextPageLink("nextLink123");
         mockPaginatedUsers.setPreviousPageLink("prevLink456");
@@ -594,6 +595,7 @@ class UserControllerTest {
 
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // Act
         String view = userController.manageUser(userId, false, model, session, authentication);
@@ -642,6 +644,7 @@ class UserControllerTest {
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(false);
         when(accessControlService.authenticatedUserHasPermission(eq(Permission.EDIT_USER_DETAILS))).thenReturn(true);
         userController.editUserDetailFeatureEnabled = true;
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
         // Act
         String view = userController.manageUser(userId, false, model, session, authentication);
 
@@ -694,6 +697,7 @@ class UserControllerTest {
                 .entraUser(editorEntraUser)
                 .appRoles(Set.of())
                 .offices(Set.of())
+                .silasStatus(UserProfileSilasStatus.COMPLETE)
                 .userType(UserType.INTERNAL)
                 .build();
 
@@ -705,6 +709,7 @@ class UserControllerTest {
             Map<String, Object> userListFilters = new HashMap<>();
             userListFilters.put(filterKey, nonDefaultUserListFilters.get(filterKey));
             when(session.getAttribute("userListFilters")).thenReturn(userListFilters);
+            when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
             String view = userController.manageUser(userId, false, model, session, authentication);
 
@@ -751,6 +756,7 @@ class UserControllerTest {
                 .thenReturn(TechServicesApiResponse.success(SendUserVerificationEmailResponse.builder().success(true)
                         .message("Activation code has been generated and sent successfully via email.")
                         .build()));
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // Act
         String view = userController.manageUser(mockUser.getId().toString(), true, model, session, authentication);
@@ -919,6 +925,7 @@ class UserControllerTest {
 
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // Act
         String view = userController.manageUser(userId, false, model, session, authentication);
@@ -969,6 +976,7 @@ class UserControllerTest {
 
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // Act
         String view = userController.manageUser(userId, false, model, session, authentication);
@@ -3275,9 +3283,11 @@ class UserControllerTest {
                         .address(OfficeDto.AddressDto.builder().addressLine1("Test Address").build())
                         .build()))
                 .userType(UserType.EXTERNAL)
+                .silasStatus(UserProfileSilasStatus.COMPLETE)
                 .build();
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById("id1")).thenReturn(Optional.of(userProfile));
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         String view = userController.manageUser("id1", false, model, session, authentication);
 
@@ -3319,6 +3329,7 @@ class UserControllerTest {
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById("internal-user-id")).thenReturn(Optional.of(userProfile));
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
         String view = userController.manageUser("internal-user-id", false, model, session, authentication);
@@ -3359,6 +3370,7 @@ class UserControllerTest {
         when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER)).thenReturn(false);
         when(accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE)).thenReturn(false);
         when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_USER_OFFICE)).thenReturn(false);
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
         String view = userController.manageUser("external-user-id", false, model, session, authentication);
@@ -3394,6 +3406,7 @@ class UserControllerTest {
                         .code("Test Office")
                         .address(OfficeDto.AddressDto.builder().addressLine1("Test Address").build())
                         .build()))
+                .silasStatus(UserProfileSilasStatus.COMPLETE)
                 .userType(UserType.EXTERNAL)
                 .build();
 
@@ -3404,6 +3417,7 @@ class UserControllerTest {
         when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER)).thenReturn(true);
         when(accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE)).thenReturn(true);
         when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_USER_OFFICE)).thenReturn(true);
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
         String view = userController.manageUser("external-user-id", false, model, session, authentication);
@@ -3436,6 +3450,7 @@ class UserControllerTest {
                 .entraUser(editorEntraUser)
                 .appRoles(Set.of())
                 .offices(Set.of())
+                .silasStatus(UserProfileSilasStatus.COMPLETE)
                 .userType(UserType.INTERNAL)
                 .build();
 
@@ -3443,6 +3458,7 @@ class UserControllerTest {
         when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(userProfile));
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
         String view = userController.manageUser("external-user-id", false, model, session, authentication);
@@ -3490,6 +3506,7 @@ class UserControllerTest {
         when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(accessControlService.canDeleteFirmProfile("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(accessControlService.canViewAllFirmsOfMultiFirmUser()).thenReturn(true);
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
         String view = userController.manageUser("external-user-id", false, model, session, authentication);
@@ -3525,6 +3542,7 @@ class UserControllerTest {
                 .appRoles(Set.of())
                 .offices(Set.of())
                 .userType(UserType.INTERNAL)
+                .silasStatus(UserProfileSilasStatus.COMPLETE)
                 .build();
 
         UUID entraUserId = UUID.fromString("550e8400-e29b-41d4-a716-446655440002");
@@ -3538,6 +3556,7 @@ class UserControllerTest {
         when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(accessControlService.canDeleteFirmProfile("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(accessControlService.canViewAllFirmsOfMultiFirmUser()).thenReturn(false);
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
         String view = userController.manageUser("external-user-id", false, model, session, authentication);
@@ -3574,6 +3593,7 @@ class UserControllerTest {
                 .entraUser(editorEntraUser)
                 .appRoles(Set.of())
                 .offices(Set.of())
+                .silasStatus(UserProfileSilasStatus.COMPLETE)
                 .userType(UserType.EXTERNAL)
                 .build();
 
@@ -3583,6 +3603,7 @@ class UserControllerTest {
         when(userService.isAccessGranted(profileId.toString())).thenReturn(true);
         when(userService.getProfileCountByEntraUserId(entraUserId)).thenReturn(2L);
         when(accessControlService.canEditUser(profileId.toString())).thenReturn(true);
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
         // Use lenient() since this won't be called when viewing own profile
         lenient().when(accessControlService.canDeleteFirmProfile(profileId.toString())).thenReturn(true);
         when(accessControlService.canViewAllFirmsOfMultiFirmUser()).thenReturn(true);
@@ -3639,6 +3660,7 @@ class UserControllerTest {
         when(accessControlService.canDeleteFirmProfile(viewedProfileId.toString())).thenReturn(true);
         when(accessControlService.canViewAllFirmsOfMultiFirmUser()).thenReturn(true);
         when(accessControlService.canConvertUserToMultiFirm(entraUserId.toString())).thenReturn(false);
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
         String view = userController.manageUser(viewedProfileId.toString(), false, model, session, authentication);
@@ -4128,11 +4150,13 @@ class UserControllerTest {
                 .id(UUID.randomUUID()) // Add ID to prevent null pointer
                 .userType(UserType.EXTERNAL) // Add type to prevent null pointer
                 .entraUser(user)
+                .silasStatus(UserProfileSilasStatus.COMPLETE)
                 .appRoles(List.of()) // Empty list instead of null
                 .offices(List.of()) // Empty list instead of null
                 .build();
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
         String view = userController.manageUser(userId, false, model, session, authentication);
@@ -4178,6 +4202,7 @@ class UserControllerTest {
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
         when(userService.isAccessGranted(any())).thenReturn(false);
         when(accessControlService.canEditUser(any())).thenReturn(true);
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
         String view = userController.manageUser(userId, false, model, session, authentication);

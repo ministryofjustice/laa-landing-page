@@ -15,9 +15,9 @@ import org.springframework.stereotype.Repository;
 
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditAccountStatusProjection;
 import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditFirmProjection;
 import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditProfileCountProjection;
+import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditSilasStatusProjection;
 
 @Repository
 public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
@@ -235,42 +235,77 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
      * Uses same filtering logic as main audit query for consistency
      */
     @Query(value = """
-            SELECT u.id as userId,
-                   CASE
-                       WHEN EXISTS (
-                           SELECT 1 FROM user_profile
-                           WHERE entra_user_id = u.id
-                           AND status = 'PENDING'
-                       ) THEN 'Pending'
-                       WHEN u.status = 'DEACTIVE' THEN 'Disabled'
-                       ELSE 'Active'
-                   END as accountStatus
+            SELECT
+                u.id AS userId,
+                eff.silas_status AS silasStatus,
+                eff.silasStatusRank
             FROM entra_user u
-            LEFT JOIN user_profile up ON up.entra_user_id = u.id
-            LEFT JOIN (
-                SELECT DISTINCT up_role.entra_user_id
-                FROM user_profile up_role
-                JOIN user_profile_app_role upar ON upar.user_profile_id = up_role.id
-                JOIN app_role ar ON ar.id = upar.app_role_id
-                WHERE ar.authz_role = true
-                AND (:silasRole IS NULL OR :silasRole = '' OR ar.name = :silasRole)
-            ) role_filter ON role_filter.entra_user_id = u.id
-            LEFT JOIN (
-                SELECT DISTINCT up_app.entra_user_id
-                FROM user_profile up_app
-                JOIN user_profile_app_role upar_app ON upar_app.user_profile_id = up_app.id
-                JOIN app_role ar_app ON ar_app.id = upar_app.app_role_id
-                WHERE :appId IS NULL OR ar_app.app_id = CAST(:appId AS uuid)
-            ) app_filter ON app_filter.entra_user_id = u.id
+            LEFT JOIN LATERAL (
+                SELECT
+                    up.silas_status,
+                    CASE
+                        WHEN up.silas_status = 'INCOMPLETE' THEN 1
+                        WHEN up.silas_status = 'ACTIVATION_PENDING' THEN 2
+                        WHEN up.silas_status = 'DISABLED' THEN 3
+                        WHEN up.silas_status = 'NO_ROLES_ASSIGNED' THEN 4
+                        WHEN up.silas_status = 'COMPLETE' THEN 5
+                        ELSE 6
+                    END AS silasStatusRank
+                FROM user_profile up
+                WHERE up.entra_user_id = u.id
+        
+                UNION ALL
+                SELECT
+                    NULL AS silas_status,
+                    CASE
+                        WHEN u.enabled = FALSE THEN 3
+                        WHEN u.invitation_status IS NULL
+                             OR u.invitation_status <> 'VERIFICATION_SUCCESS'
+                            THEN 1
+                        ELSE 4
+                    END AS silasStatusRank
+                WHERE NOT EXISTS (
+                    SELECT 1
+                    FROM user_profile upx
+                    WHERE upx.entra_user_id = u.id
+                )
+        
+                ORDER BY silasStatusRank
+                LIMIT 1
+            ) eff ON TRUE
             WHERE (:searchTerm IS NULL OR :searchTerm = '' OR
                    LOWER(CONCAT(u.first_name, ' ', u.last_name)) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR
                    LOWER(u.email) LIKE LOWER(CONCAT('%', :searchTerm, '%')))
-            AND (:firmId IS NULL OR up.firm_id = CAST(:firmId AS uuid))
-            AND (:silasRole IS NULL OR :silasRole = '' OR role_filter.entra_user_id IS NOT NULL)
-            AND (:appId IS NULL OR app_filter.entra_user_id IS NOT NULL)
-            AND (:userType IS NULL OR up.user_type = :userType)
-            AND (:multiFirm IS NULL or u.multi_firm_user = :multiFirm)
-            GROUP BY u.id
+            AND (:firmId IS NULL OR EXISTS (
+                SELECT 1
+                FROM user_profile upf
+                WHERE upf.entra_user_id = u.id
+                  AND upf.firm_id = CAST(:firmId AS uuid)
+            ))
+            AND (:userType IS NULL OR EXISTS (
+                SELECT 1
+                FROM user_profile upt
+                WHERE upt.entra_user_id = u.id
+                  AND upt.user_type = :userType
+            ))
+            AND (:silasRole IS NULL OR :silasRole = '' OR EXISTS (
+                SELECT 1
+                FROM user_profile up2
+                JOIN user_profile_app_role upar ON upar.user_profile_id = up2.id
+                JOIN app_role ar ON ar.id = upar.app_role_id
+                WHERE up2.entra_user_id = u.id
+                  AND ar.authz_role = true
+                  AND ar.name = :silasRole
+            ))
+            AND (:appId IS NULL OR EXISTS (
+                SELECT 1
+                FROM user_profile up3
+                JOIN user_profile_app_role upar ON upar.user_profile_id = up3.id
+                JOIN app_role ar ON ar.id = upar.app_role_id
+                WHERE up3.entra_user_id = u.id
+                  AND ar.app_id = CAST(:appId AS uuid)
+            ))
+            AND (:multiFirm IS NULL OR u.multi_firm_user = :multiFirm)
             """, countQuery = """
             SELECT COUNT(DISTINCT u.id)
             FROM entra_user u
@@ -301,7 +336,7 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
                 OR (:neverActivated IS NOT NULL AND u.invitation_status != 'VERIFICATION_SUCCESS')
             )
             """, nativeQuery = true)
-    Page<UserAuditAccountStatusProjection> findAllUsersForAuditWithAccountStatus(
+    Page<UserAuditSilasStatusProjection> findAllUsersForAuditWithSilasStatus(
             @Param("searchTerm") String searchTerm,
             @Param("firmId") UUID firmId,
             @Param("silasRole") String silasRole,
