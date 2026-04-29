@@ -178,6 +178,10 @@ spec:
               value: "${MULTIFIRM_USER_REPORTING_ENABLED}"
             - name : MULTIFIRM_USER_REPORTING_INTERVAL
               value: "${MULTIFIRM_USER_REPORTING_INTERVAL}"
+            - name: USER_UPTAKE_REPORTING_ENABLED
+              value: "${USER_UPTAKE_REPORTING_ENABLED}"
+            - name: USER_UPTAKE_REPORTING_SCHEDULE
+              value: "${USER_UPTAKE_REPORTING_SCHEDULE}"
             - name: FIRM_CACHE_CLEAR_SCHEDULE
               value: "${FIRM_CACHE_CLEAR_SCHEDULE}"
             - name: APPS_CACHE_CLEAR_SCHEDULE
