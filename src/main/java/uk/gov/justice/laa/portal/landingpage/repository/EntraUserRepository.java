@@ -417,6 +417,7 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
 
 
     @Query("""
+        SELECT COUNT(DISTINCT eu.id)
         FROM EntraUser eu
         LEFT JOIN UserProfile up
             ON up.entraUser.id = eu.id
