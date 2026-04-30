@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -23,7 +24,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -99,6 +99,7 @@ public class AdminController {
     public String showAdministration(
             @RequestParam(defaultValue = "admin-apps") String tab,
             @RequestParam(required = false) String appFilter,
+            @RequestParam(required = false, defaultValue = "") String userTypeFilter,
             Model model, HttpSession session) {
 
         model.addAttribute(ModelAttributes.PAGE_TITLE, SILAS_ADMINISTRATION_TITLE);
@@ -122,13 +123,20 @@ public class AdminController {
                 ? appRoleService.getLaaAppRolesByAppName(appFilter)
                 : appRoleService.getAllLaaAppRoles();
 
+        if (userTypeFilter != null && !userTypeFilter.isBlank()) {
+            roles = roles.stream()
+                    .filter(r -> Objects.equals(r.getUserTypeRestriction(), userTypeFilter))
+                    .toList();
+        }
+
         Map<AppRoleDto, List<AppRoleDto>> roleAssignmentRestrictions = StringUtils.hasText(appFilter)
                 ? roleAssignmentService.getLaaAppRoleAssignmentRestrictionsByAppName(appFilter)
                 : roleAssignmentService.getLaaAppRoleAssignmentRestrictions();
         model.addAttribute("roleAssignmentRestrictions", roleAssignmentRestrictions);
-
         model.addAttribute("roles", roles);
         model.addAttribute("appFilter", appFilter);
+        model.addAttribute("userTypes", UserType.values());
+        model.addAttribute("userTypeFilter", userTypeFilter);
         model.addAttribute("canTriggerAppSync", Boolean.parseBoolean(syncAppsFromEntra)
                 && accessControlService.authenticatedUserHasPermission(Permission.TRIGGER_LAA_APP_SYNC));
         session.setAttribute("appFilter", appFilter);
@@ -813,19 +821,24 @@ public class AdminController {
 
     @GetMapping("/silas-administration/roles/create")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_LAA_APP_ROLE)")
-    public String showRoleCreationForm(Model model, HttpSession session, @RequestParam (required = false) String appFilter) {
+    public String showRoleCreationForm(Model model, RedirectAttributes redirectAttributes, HttpSession session,
+                                       @RequestParam (required = false) String appFilter) {
         RoleCreationDto roleCreationDto = (RoleCreationDto) session.getAttribute("roleCreationDto");
         if (roleCreationDto == null) {
             roleCreationDto = new RoleCreationDto();
         }
 
-        if (appFilter != null) {
-            List<AppDto> allApps = appService.getAllLaaApps();
-            for (AppDto app : allApps) {
-                if (app.getName().equals(appFilter)) {
-                    roleCreationDto.setParentAppId(UUID.fromString(app.getId()));
-                    break;
-                }
+        if (appFilter.isEmpty()) {
+            redirectAttributes.addFlashAttribute("appRolesErrorMessage", "Please select an application to create its "
+                    + "roles");
+            return "redirect:/admin/silas-administration?tab=roles";
+        }
+
+        List<AppDto> allApps = appService.getAllLaaApps();
+        for (AppDto app : allApps) {
+            if (app.getName().equals(appFilter)) {
+                roleCreationDto.setParentAppId(UUID.fromString(app.getId()));
+                break;
             }
         }
 

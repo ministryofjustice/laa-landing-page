@@ -1,0 +1,45 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: add-new-silas-status-column-in-user-profile
+      author: Suresh Kavali
+
+      changes:
+        - addColumn:
+            tableName: user_profile
+            columns:
+              - column:
+                  name: silas_status
+                  type: varchar(255)
+                  defaultValueComputed: "'UNKNOWN'"
+                  constraints:
+                    nullable: false
+
+        - sql:
+            dbms: postgresql
+            sql: |
+              ALTER TABLE user_profile
+              ADD CONSTRAINT user_profile_silas_status_check
+              CHECK (
+                silas_status::text = ANY (
+                  ARRAY[
+                    'COMPLETE',
+                    'INCOMPLETE',
+                    'ACTIVATION_PENDING',
+                    'NO_ROLES_ASSIGNED',
+                    'DISABLED',
+                    'UNKNOWN'
+                  ]::text[]
+                )
+              );
+
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: |
+              ALTER TABLE user_profile
+              DROP CONSTRAINT IF EXISTS user_profile_silas_status_check;
+
+        - dropColumn:
+            tableName: user_profile
+            columnName: silas_status

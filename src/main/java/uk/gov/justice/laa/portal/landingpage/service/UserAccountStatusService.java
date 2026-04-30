@@ -120,6 +120,7 @@ public class UserAccountStatusService {
             // Perform disable
             disabledUser.setDisabledBy(disabledById);
             disabledUser.setEnabled(false);
+            userService.refreshAndUpdatedUserProfilesStatus(false, disabledUser.getInvitationStatus(), disabledUser.getUserProfiles());
             disabledUser.setDisableType(disableType);
             entraUserRepository.saveAndFlush(disabledUser);
 
@@ -191,6 +192,7 @@ public class UserAccountStatusService {
             }
             // Perform disable
             entraUser.setEnabled(false);
+            userService.refreshAndUpdatedUserProfilesStatus(false, entraUser.getInvitationStatus(), entraUser.getUserProfiles());
             entraUser.setDisabledBy(disabledById);
             entraUser.setDisableType(bulkDisableType);
             entraUserRepository.saveAndFlush(entraUser);
@@ -245,6 +247,7 @@ public class UserAccountStatusService {
             // Perform enable
             enabledUser.setDisabledBy(null);
             enabledUser.setEnabled(true);
+            userService.refreshAndUpdatedUserProfilesStatus(true, enabledUser.getInvitationStatus(), enabledUser.getUserProfiles());
             enabledUser.setDisableType(null);
             entraUserRepository.saveAndFlush(enabledUser);
 

@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 
 /**
  * DTO for User Access Audit Table Contains aggregated user information across all their profiles
@@ -54,7 +55,7 @@ public class AuditUserDto implements Serializable {
     /**
      * Account status: Complete, Incomplete, No roles assigned, or Disabled
      */
-    private String accountStatus;
+    private UserProfileSilasStatus accountStatus;
 
     /**
      * Flag indicating if user has multi-firm access

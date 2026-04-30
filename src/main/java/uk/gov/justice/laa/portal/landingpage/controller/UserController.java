@@ -66,6 +66,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserTypeReasonDisable;
@@ -336,10 +337,10 @@ public class UserController {
         final boolean canGrantUserAccess = accessControlService.canGrantUserAccess(user.getId().toString());
         final boolean canEditUserRoleAssignments = accessControlService.canEditUserAppRoleAssignments(user.getId().toString());
 
-        String silasStatus = userService.calculateSilasStatusForUserProfile(user);
-
+        UserProfileSilasStatus silasStatus = userService.calculateSilasStatusForUserProfile(user);
+        
         model.addAttribute("user", user);
-        model.addAttribute("silasStatus", silasStatus);
+        model.addAttribute("silasStatus", silasStatus.name());
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("userOffices", userOffices);
         model.addAttribute("isAccessGranted", isAccessGranted);
