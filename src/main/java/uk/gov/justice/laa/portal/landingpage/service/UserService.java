@@ -502,7 +502,6 @@ public class UserService {
                             up.getOffices().isEmpty() ? 0 : up.getOffices().size());
                     up.getOffices().clear();
                 }
-                up.setEntraUser(null);
                 userProfileRepository.save(up);
             }
             userProfileRepository.flush();
@@ -568,7 +567,7 @@ public class UserService {
         // Remove bidirectional association: profile from entra user and entra user from
         // profile
         entraUser.getUserProfiles().remove(userProfile);
-        userProfile.setEntraUser(null);
+
         userProfileRepository.save(userProfile);
         userProfileRepository.flush();
 
@@ -1505,7 +1504,6 @@ public class UserService {
                         if (profile.getAppRoles() != null) {
                             profile.getAppRoles().clear();
                         }
-                        profile.setEntraUser(null);
                         userProfileRepository.save(profile);
                     }
                     userProfileRepository.flush();

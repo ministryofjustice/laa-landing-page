@@ -50,7 +50,7 @@ public class CcmsRoleGroupsUtil {
      * @return true if the role code starts with XXCCMS_
      */
     public static boolean isCcmsRole(String roleCode) {
-        return roleCode != null && roleCode.startsWith("XXCCMS_");
+        return roleCode != null  && !roleCode.isBlank();
     }
     
     /**
