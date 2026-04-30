@@ -103,10 +103,48 @@ public interface FirmRepository extends JpaRepository<Firm, UUID> {
             f.code AS "Firm Code",
             f.type AS "Firm Type",
             pf.code AS "Parent Firm Code",
-            COUNT(DISTINCT up.id) AS "User Count",
+            COUNT(DISTINCT up.id) AS "Total User Count",
             COUNT(DISTINCT CASE WHEN ar.id IS NOT NULL THEN up.id END) AS "Admin User Count",
             COUNT(DISTINCT CASE WHEN eu.multi_firm_user = TRUE THEN up.id END) AS "Multi-Firm User Count",
-            COUNT(DISTINCT CASE WHEN eu.enabled = false THEN up.id END) AS "Disabled User Count"
+            COUNT(DISTINCT CASE
+            WHEN EXISTS (
+                SELECT 1
+                FROM user_profile_app_role upr2
+                WHERE upr2.user_profile_id = up.id
+            )
+            AND eu.enabled = TRUE
+            AND eu.invitation_status = 'VERIFICATION_SUCCESS'
+            THEN up.id
+        END) AS "Complete User Count",
+        COUNT(DISTINCT CASE
+            WHEN EXISTS (
+                SELECT 1
+                FROM user_profile_app_role upr2
+                WHERE upr2.user_profile_id = up.id
+            )
+            AND eu.invitation_status IS DISTINCT FROM 'VERIFICATION_SUCCESS'
+            THEN up.id
+        END) AS "Activation Pending User Count",
+        COUNT(DISTINCT CASE
+            WHEN NOT EXISTS (
+                SELECT 1
+                FROM user_profile_app_role upr2
+                WHERE upr2.user_profile_id = up.id
+            )
+            AND eu.invitation_status IS DISTINCT FROM 'VERIFICATION_SUCCESS'
+            THEN up.id
+        END) AS "Incomplete User Count",
+        COUNT(DISTINCT CASE
+        WHEN NOT EXISTS (
+                SELECT 1
+                FROM user_profile_app_role upr2
+                WHERE upr2.user_profile_id = up.id
+            )
+            AND eu.enabled = TRUE
+            AND eu.invitation_status = 'VERIFICATION_SUCCESS'
+            THEN up.id
+        END) AS "No Roles Assigned User Count",
+        COUNT(DISTINCT CASE WHEN eu.enabled = false AND eu.invitation_status IS DISTINCT FROM 'VERIFICATION_SUCCESS' THEN up.id END) AS "Disabled User Count"
         FROM firm f
         JOIN user_profile up
             ON up.firm_id = f.id
