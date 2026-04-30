@@ -127,4 +127,61 @@ public interface FirmRepository extends JpaRepository<Firm, UUID> {
             nativeQuery = true
     )
     List<Object[]> findAllFirmExternalUserCount();
+
+    /* ---------------- TOTAL FIRMS EXTERNAL USERS ---------------- */
+
+    @Query("""
+        SELECT COUNT(DISTINCT f.id)
+        FROM Firm f
+        JOIN UserProfile up
+            ON up.firm.id = f.id
+        WHERE up.userType = 'EXTERNAL'
+        """)
+    long countFirmsWithExternalUsers();
+
+    @Query("""
+        SELECT COUNT(DISTINCT f.id)
+        FROM Firm f
+        JOIN UserProfile up
+            ON up.firm.id = f.id
+        JOIN EntraUser eu
+            ON eu.id = up.entraUser.id
+        WHERE up.userType = 'EXTERNAL'
+          AND eu.multiFirmUser = TRUE
+        """)
+    long countFirmsWithMultiFirmExternalUsers();
+
+    /* ---------------- TOTAL FIRMS EXTERNAL USERS ---------------- */
+
+    @Query("""
+        SELECT COUNT(DISTINCT f.id)
+        FROM Firm f
+        JOIN UserProfile up
+            ON up.firm.id = f.id
+        JOIN EntraUser eu
+            ON eu.id = up.entraUser.id
+        WHERE up.userType = 'EXTERNAL'
+          AND eu.enabled = TRUE
+          AND eu.invitationStatus = 'VERIFICATION_SUCCESS'
+        """)
+    long countFirmsWithActiveExternalUsers();
+
+    @Query("""
+        SELECT COUNT(DISTINCT f.id)
+        FROM Firm f
+        JOIN UserProfile up
+            ON up.firm.id = f.id
+        JOIN EntraUser eu
+            ON eu.id = up.entraUser.id
+        WHERE up.userType = 'EXTERNAL'
+          AND eu.enabled = TRUE
+          AND eu.invitationStatus = 'VERIFICATION_SUCCESS'
+          AND eu.multiFirmUser = TRUE
+        """)
+    long countFirmsWithActiveMultiFirmExternalUsers();
+
+
+
+
+
 }
