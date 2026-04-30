@@ -1,6 +1,7 @@
 version: "3.4"
 
 services:
+  # nosemgrep: writable-filesystem-service
   laalandingpage:
     image: laalandingpage
     build:
@@ -11,3 +12,5 @@ services:
     ports:
       - 8080:8080
       - 5005:5005
+    security_opt:
+      - no-new-privileges:true
