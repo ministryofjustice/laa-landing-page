@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -98,6 +99,7 @@ public class AdminController {
     public String showAdministration(
             @RequestParam(defaultValue = "admin-apps") String tab,
             @RequestParam(required = false) String appFilter,
+            @RequestParam(required = false, defaultValue = "") String userTypeFilter,
             Model model, HttpSession session) {
 
         model.addAttribute(ModelAttributes.PAGE_TITLE, SILAS_ADMINISTRATION_TITLE);
@@ -121,13 +123,20 @@ public class AdminController {
                 ? appRoleService.getLaaAppRolesByAppName(appFilter)
                 : appRoleService.getAllLaaAppRoles();
 
+        if (userTypeFilter != null && !userTypeFilter.isBlank()) {
+            roles = roles.stream()
+                    .filter(r -> Objects.equals(r.getUserTypeRestriction(), userTypeFilter))
+                    .toList();
+        }
+
         Map<AppRoleDto, List<AppRoleDto>> roleAssignmentRestrictions = StringUtils.hasText(appFilter)
                 ? roleAssignmentService.getLaaAppRoleAssignmentRestrictionsByAppName(appFilter)
                 : roleAssignmentService.getLaaAppRoleAssignmentRestrictions();
         model.addAttribute("roleAssignmentRestrictions", roleAssignmentRestrictions);
-
         model.addAttribute("roles", roles);
         model.addAttribute("appFilter", appFilter);
+        model.addAttribute("userTypes", UserType.values());
+        model.addAttribute("userTypeFilter", userTypeFilter);
         model.addAttribute("canTriggerAppSync", Boolean.parseBoolean(syncAppsFromEntra)
                 && accessControlService.authenticatedUserHasPermission(Permission.TRIGGER_LAA_APP_SYNC));
         session.setAttribute("appFilter", appFilter);
