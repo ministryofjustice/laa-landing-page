@@ -1198,8 +1198,10 @@ class AdminControllerTest {
         String appName = "Test App";
         when(appService.getAllLaaApps()).thenReturn(apps);
 
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
         // Act
-        String result = adminController.showRoleCreationForm(model, session, appName);
+        String result = adminController.showRoleCreationForm(model, redirectAttributes, session, appName);
 
         // Assert
         assertEquals("silas-administration/create-role", result);
@@ -1208,6 +1210,21 @@ class AdminControllerTest {
         assertThat(model.getAttribute("userTypes")).isEqualTo(UserType.values());
         assertThat(model.getAttribute("firmTypes")).isEqualTo(FirmType.values());
         assertThat(model.getAttribute("appFilter")).isEqualTo(appName);
+    }
+
+    @Test
+    void testShowRoleCreationForm_redirectsToRolesTabWhenAppFilterEmpty() {
+        // Arrange
+        MockHttpSession session = new MockHttpSession();
+        String appName = "";
+
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+        // Act
+        String result = adminController.showRoleCreationForm(model, redirectAttributes, session, appName);
+
+        // Assert
+        assertEquals("redirect:/admin/silas-administration?tab=roles", result);
     }
 
     @Test
@@ -1223,9 +1240,10 @@ class AdminControllerTest {
         List<AppDto> apps = createMockApps();
         String appName = "Test App";
         when(appService.getAllLaaApps()).thenReturn(apps);
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
 
         // Act
-        String result = adminController.showRoleCreationForm(model, session, appName);
+        String result = adminController.showRoleCreationForm(model, redirectAttributes, session, appName);
 
         // Assert
         assertEquals("silas-administration/create-role", result);
