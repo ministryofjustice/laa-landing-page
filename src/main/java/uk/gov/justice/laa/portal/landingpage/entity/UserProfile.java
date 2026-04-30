@@ -56,7 +56,7 @@ public class UserProfile extends AuditableEntity {
     private UUID legacyUserId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "entra_user_id", foreignKey = @ForeignKey(name = "FK_user_profile_user_id"))
+    @JoinColumn(name = "entra_user_id", nullable = false, foreignKey = @ForeignKey(name = "FK_user_profile_user_id"))
     @ToString.Exclude
     @JsonIgnore
     private EntraUser entraUser;
