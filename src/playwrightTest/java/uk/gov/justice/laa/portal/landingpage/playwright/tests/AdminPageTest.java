@@ -172,8 +172,8 @@ public class AdminPageTest extends BaseFrontEndTest {
                 .assertReorderRolesLinkVisible();
 
         Assertions.assertTrue(
-                adminPage.getRolesRowCount() == 5,
-                "Expected Roles table to contain 5 rows"
+                adminPage.getRolesRowCount() == 6,
+                "Expected Roles table to contain 6 rows"
         );
 
         page.locator("select#appFilter").selectOption("Test LAA App Two");
@@ -207,8 +207,8 @@ public class AdminPageTest extends BaseFrontEndTest {
                 .assertReorderRolesLinkVisible();
 
         Assertions.assertTrue(
-                adminPage.getRolesRowCount() == 4,
-                "Expected Roles table to contain 4 rows"
+                adminPage.getRolesRowCount() == 5,
+                "Expected Roles table to contain 5 rows"
         );
 
     }
