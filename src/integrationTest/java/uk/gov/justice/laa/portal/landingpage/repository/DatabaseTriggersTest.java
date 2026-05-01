@@ -11,6 +11,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -104,6 +105,7 @@ class DatabaseTriggersTest extends BaseRepositoryTest {
             .entraUser(user)
             .firm(firm)
             .userProfileStatus(UserProfileStatus.PENDING)
+            .silasStatus(UserProfileSilasStatus.NO_ROLES_ASSIGNED)
             .lastCcmsSyncSuccessful(false)
             .createdBy("Test")
             .createdDate(LocalDateTime.now())

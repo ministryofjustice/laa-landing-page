@@ -35,8 +35,8 @@ class ExternalUserReportingServiceTest {
     void createsCsvWithFullHeaderAndRows() throws Exception {
 
         when(firmRepository.findAllFirmExternalUserCount()).thenReturn(List.of(
-                new Object[]{"Firm A", "FRA", "TypeA", "PARENT1", 5L, 1L, 0L, 0L},
-                new Object[]{"Firm B", null, "TypeB", "PARENT2", 2L, 0L, 0L, 0L}
+                new Object[]{"Firm A", "FRA", "TypeA", "PARENT1", 5L, 1L, 0L, 2L, 1L, 0L, 1L, 1L},
+                new Object[]{"Firm B", null, "TypeB", "PARENT2", 2L, 0L, 0L, 0L, 0L, 1L, 0L, 0L}
         ));
 
         Path systemTemp = Path.of(System.getProperty("java.io.tmpdir"));
@@ -60,12 +60,14 @@ class ExternalUserReportingServiceTest {
 
         assertThat(lines.get(0)).isEqualTo(
                 "\"Firm Name\",\"Firm Code\",\"Firm Type\",\"Parent Firm Code\","
-                        + "\"User Count\",\"Admin User Count\",\"Multi-Firm User Count\",\"Disabled User Count\""
+                        + "\"Total User Count\",\"Admin User Count\",\"Multi-Firm User Count\","
+                        + "\"Complete User Count\",\"Activation Pending User Count\","
+                        + "\"Incomplete User Count\",\"No Roles Assigned User Count\",\"Disabled User Count\""
         );
 
         assertThat(lines).contains(
-                "\"Firm A\",FRA,TypeA,PARENT1,5,1,0,0",
-                "\"Firm B\",,TypeB,PARENT2,2,0,0,0"
+                "\"Firm A\",FRA,TypeA,PARENT1,5,1,0,2,1,0,1,1",
+                "\"Firm B\",,TypeB,PARENT2,2,0,0,0,0,1,0,0"
         );
     }
 }

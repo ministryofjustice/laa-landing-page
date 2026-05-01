@@ -323,6 +323,10 @@ public class ManageUsersPage {
         }
     }
 
+    public void verifyManageAccessButtonVisible() {
+        assertThat(manageAccessButton).isVisible();
+    }
+
     public void verifyServicesNotPresent(List<String> roles) {
         for (String role : roles) {
             Locator row = page.locator("dd:has-text('" + role + "')");
@@ -556,5 +560,29 @@ public class ManageUsersPage {
         final var row = page.locator(".govuk-summary-list__row:has(.govuk-summary-list__key:has-text('" + key + "'))");
         assertTrue(row.isVisible());
         assertTrue(row.allInnerTexts().getFirst().contains(value));
+    }
+
+    public String createProviderAdminUserWithNonMultiFirmAccess(String firmCode) {
+
+        clickCreateUser();
+
+        final String email = fillInUserDetails(false);
+
+        selectMultiFirmAccess(false);
+        searchAndSelectFirmByCode(firmCode);
+        clickContinueFirmSelectPage();
+
+        clickConfirmNewUserButton();
+        clickGoBackToManageUsers();
+
+        return email;
+    }
+
+    public Locator userRowLocator(String email) {
+        return page.locator("tr", new Page.LocatorOptions().setHasText(email));
+    }
+
+    public void clickUserLink(String email) {
+        userRowLocator(email).locator("a").first().click();
     }
 }

@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.dto;
 
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -9,7 +10,7 @@ import java.io.Serializable;
 import java.util.UUID;
 
 public record UserSearchResultsDto(UUID id, boolean activeProfile, UserType userType, UUID legacyUserId,
-                                   UserProfileStatus userProfileStatus, boolean multiFirmUser, String firstName,
+                                   UserProfileStatus userProfileStatus, UserProfileSilasStatus silasStatus, boolean multiFirmUser, String firstName,
                                    String lastName, String fullName, String email, UserStatus userStatus,
                                    String firmName, InvitationStatus invitationStatus, boolean enabled,
-                                   boolean hasAppRoles, String silasStatus) implements Serializable {}
+                                   boolean hasAppRoles) implements Serializable {}

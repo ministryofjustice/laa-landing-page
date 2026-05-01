@@ -232,7 +232,6 @@ public class ExternalUserPollingService {
                     if (entraUser.getUserProfiles() != null) {
                         entraUser.getUserProfiles().remove(userProfile);
                     }
-                    userProfile.setEntraUser(null);
 
                     userProfileRepository.save(userProfile);
                     userProfileRepository.flush();

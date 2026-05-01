@@ -65,3 +65,14 @@
     font-weight: bold;
     padding: 0.4em;
 }
+
+/* Vertically centre the checkbox visual when a hint (description) is present */
+.govuk-checkboxes__item:has(.govuk-checkboxes__hint) .govuk-checkboxes__label::before {
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.govuk-checkboxes__item:has(.govuk-checkboxes__hint) .govuk-checkboxes__label::after {
+    top: calc(50% - 9px);
+    transform: rotate(-45deg);
+}
