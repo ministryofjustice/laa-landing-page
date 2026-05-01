@@ -1,5 +1,5 @@
 -- Manually fix the entra_user_id column to be nullable
--- This is needed because the Liquibase changeset had incorrect precondition logic
+
 
 -- Check current state
 SELECT column_name, is_nullable, column_default
