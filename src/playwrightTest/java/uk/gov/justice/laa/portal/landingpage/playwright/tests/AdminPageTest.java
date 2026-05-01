@@ -399,4 +399,20 @@ public class AdminPageTest extends BaseFrontEndTest {
         PlaywrightAssertions.assertThat(dismiss).isVisible();
         PlaywrightAssertions.assertThat(dismiss).hasAttribute("href", "/admin/silas-administration?tab=apps");
     }
+
+    private static Stream<String> userTypes() {
+        return Stream.of("INTERNAL", "EXTERNAL");
+    }
+
+    @ParameterizedTest(name = "Roles user type filter only returns {0} roles")
+    @MethodSource("userTypes")
+    @DisplayName("Roles and Permissions user type filter only returns selected user type")
+    void rolesFilter_onlyReturnsSelectedUserType(String userType) {
+        AdminPage adminPage = loginAndGetAdminPage(TestUser.SILAS_ADMINISTRATION);
+
+        adminPage.assertRolesTableColumns()
+                .assertUserTypeFilterVisible()
+                .filterRolesByUserType(userType)
+                .assertOnlySelectedUserTypeIsDisplayed(userType);
+    }
 }

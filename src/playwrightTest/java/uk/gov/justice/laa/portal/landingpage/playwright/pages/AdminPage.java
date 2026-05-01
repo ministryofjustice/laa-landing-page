@@ -65,6 +65,7 @@ public class AdminPage {
     private final Locator accessForbiddenMessage;
     private final Locator goToHomepageButton;
     private final Locator signOutAndTryAgainButton;
+    private final Locator userTypeFilterSelect;
 
     public AdminPage(Page page, int port) {
         this.page = page;
@@ -122,6 +123,7 @@ public class AdminPage {
         this.rolesRows = rolesTable.locator("tbody.govuk-table__body tr.govuk-table__row");
         this.reorderRolesLink = rolesAndPermissionsPanel.locator("a.govuk-link:has-text('Reorder application "
                 + "roles')");
+        this.userTypeFilterSelect = rolesAndPermissionsPanel.locator("#userTypeFilter");
 
         //Forbidden Access Page
         this.accessForbiddenHeading = page.locator("h1.govuk-heading-l:has-text('Access forbidden')");
@@ -323,5 +325,40 @@ public class AdminPage {
                         + ". Expected '" + expected + "' but was '" + actual + "'. Full actual: " + actualHeaders);
             }
         }
+    }
+
+    public AdminPage assertUserTypeFilterVisible() {
+        goToRolesAndPermissionsTab();
+        assertThat(userTypeFilterSelect).isVisible();
+        return this;
+    }
+
+    public AdminPage filterRolesByUserType(String userType) {
+        goToRolesAndPermissionsTab();
+
+        assertThat(userTypeFilterSelect).isVisible();
+        userTypeFilterSelect.selectOption(userType);
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        assertThat(rolesAndPermissionsPanel).isVisible();
+
+        return this;
+    }
+
+    public AdminPage assertOnlySelectedUserTypeIsDisplayed(String expectedUserType) {
+        goToRolesAndPermissionsTab();
+
+        int rowCount = rolesRows.count();
+
+        if (rowCount == 0) {
+            throw new AssertionError("Expected at least 1 role to be displayed after filtering by " + expectedUserType);
+        }
+
+        for (int i = 0; i < rowCount; i++) {
+            Locator userTypeCell = rolesRows.nth(i).locator("td.govuk-table__cell").nth(4);
+            assertThat(userTypeCell).hasText(expectedUserType);
+        }
+
+        return this;
     }
 }
