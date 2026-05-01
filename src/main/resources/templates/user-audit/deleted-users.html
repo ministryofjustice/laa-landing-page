@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'users'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>Deleted Users</title>
+</head>
+
+<body>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <a class="govuk-back-link" th:href="@{/admin/users/audit}">
+            Back to User Audit Table
+        </a>
+    </nav>
+
+    <main class="govuk-main-wrapper" id="main-content" th:if="${#authentication.isAuthenticated()}">
+        <div class="govuk-grid-row">
+            <div class="govuk-grid-column-full">
+                <h1 class="govuk-heading-xl">Deleted Users</h1>
+
+                <!-- Search Form -->
+                <form method="get" th:action="@{/admin/users/audit/deleted}" class="govuk-!-margin-bottom-6">
+                    <div class="govuk-form-group">
+                        <label class="govuk-label govuk-label--s" for="search">
+                            Search by email
+                        </label>
+                        <div class="govuk-hint">
+                            Enter full or partial email address
+                        </div>
+                        <div class="govuk-grid-row">
+                            <div class="govuk-grid-column-two-thirds">
+                                <input class="govuk-input" id="search" name="search" type="text"
+                                       th:value="${search}" />
+                            </div>
+                            <div class="govuk-grid-column-one-third">
+                                <button type="submit" class="govuk-button" data-module="govuk-button">
+                                    Search
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Hidden fields to maintain sort state -->
+                    <input type="hidden" name="sort" th:value="${sort}" />
+                    <input type="hidden" name="direction" th:value="${direction}" />
+                </form>
+
+                <!-- Results Summary -->
+                <p class="govuk-body" th:if="${totalDeletedUsers > 0}">
+                    Showing <strong th:text="${#lists.size(deletedUsers)}">0</strong> of
+                    <strong th:text="${totalDeletedUsers}">0</strong> deleted user<span th:if="${totalDeletedUsers != 1}">s</span>
+                </p>
+
+                <p class="govuk-body" th:if="${totalDeletedUsers == 0}">
+                    No deleted users found.
+                </p>
+
+                <!-- Deleted Users Table -->
+                <div class="govuk-!-margin-top-6" th:if="${totalDeletedUsers > 0}">
+                    <table class="govuk-table" aria-label="Deleted users table">
+                        <thead class="govuk-table__head">
+                            <tr class="govuk-table__row">
+                                <th scope="col" class="govuk-table__header">
+                                    Name
+                                </th>
+                                <th scope="col" class="govuk-table__header">
+                                    <a th:href="@{/admin/users/audit/deleted(
+                                            search=${search},
+                                            page=1,
+                                            size=${size},
+                                            sort='userEmail',
+                                            direction=${sort == 'userEmail' and direction == 'asc' ? 'desc' : 'asc'})}"
+                                       class="govuk-link govuk-link--no-visited-state">
+                                        Email
+                                        <span th:if="${sort == 'userEmail' or sort == 'email'}">
+                                            <span th:if="${direction == 'asc'}">▲</span>
+                                            <span th:if="${direction == 'desc'}">▼</span>
+                                        </span>
+                                    </a>
+                                </th>
+                                <th scope="col" class="govuk-table__header">
+                                    <a th:href="@{/admin/users/audit/deleted(
+                                            search=${search},
+                                            page=1,
+                                            size=${size},
+                                            sort='statusChangedBy',
+                                            direction=${sort == 'statusChangedBy' and direction == 'asc' ? 'desc' : 'asc'})}"
+                                       class="govuk-link govuk-link--no-visited-state">
+                                        Deleted by
+                                        <span th:if="${sort == 'statusChangedBy' or sort == 'deletedBy'}">
+                                            <span th:if="${direction == 'asc'}">▲</span>
+                                            <span th:if="${direction == 'desc'}">▼</span>
+                                        </span>
+                                    </a>
+                                </th>
+                                <th scope="col" class="govuk-table__header">
+                                    <a th:href="@{/admin/users/audit/deleted(
+                                            search=${search},
+                                            page=1,
+                                            size=${size},
+                                            sort='statusChangedDate',
+                                            direction=${sort == 'statusChangedDate' and direction == 'asc' ? 'desc' : 'asc'})}"
+                                       class="govuk-link govuk-link--no-visited-state">
+                                        Deletion date
+                                        <span th:if="${sort == 'statusChangedDate' or sort == 'deletedDate'}">
+                                            <span th:if="${direction == 'asc'}">▲</span>
+                                            <span th:if="${direction == 'desc'}">▼</span>
+                                        </span>
+                                    </a>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="govuk-table__body">
+                            <tr class="govuk-table__row" th:each="deletedUser : ${deletedUsers}">
+                                <td class="govuk-table__cell" th:text="${deletedUser.userName}">John Doe</td>
+                                <td class="govuk-table__cell" th:text="${deletedUser.userEmail}">user@example.com</td>
+                                <td class="govuk-table__cell" th:text="${deletedUser.deletedBy}">Admin User</td>
+                                <td class="govuk-table__cell"
+                                    th:text="${#temporals.format(deletedUser.deletedDate, 'dd/MM/yyyy')}">
+                                    01/01/2024
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Pagination -->
+                    <nav class="govuk-pagination" role="navigation" aria-label="Pagination" th:if="${totalPages > 1}">
+                        <div class="govuk-pagination__prev" th:if="${currentPage > 1}">
+                            <a class="govuk-link govuk-pagination__link"
+                               th:href="@{/admin/users/audit/deleted(
+                                   search=${search},
+                                   page=${currentPage - 1},
+                                   size=${size},
+                                   sort=${sort},
+                                   direction=${direction})}"
+                               rel="prev">
+                                <svg class="govuk-pagination__icon govuk-pagination__icon--prev"
+                                     xmlns="http://www.w3.org/2000/svg" height="13" width="15"
+                                     aria-hidden="true" focusable="false" viewBox="0 0 15 13">
+                                    <path d="m6.5938-0.0078125-6.7266 6.7266 6.7441 6.4062 1.377-1.449-4.1856-3.9768h12.896v-2h-12.984l4.2931-4.293-1.414-1.414z"></path>
+                                </svg>
+                                <span class="govuk-pagination__link-title">Previous</span>
+                            </a>
+                        </div>
+
+                        <ul class="govuk-pagination__list">
+                            <!-- First page -->
+                            <li class="govuk-pagination__item" th:if="${currentPage > 2}">
+                                <a class="govuk-link govuk-pagination__link"
+                                   th:href="@{/admin/users/audit/deleted(
+                                       search=${search},
+                                       page=1,
+                                       size=${size},
+                                       sort=${sort},
+                                       direction=${direction})}">1</a>
+                            </li>
+
+                            <!-- Ellipsis before current page -->
+                            <li class="govuk-pagination__item govuk-pagination__item--ellipses"
+                                th:if="${currentPage > 3}">
+                                &ctdot;
+                            </li>
+
+                            <!-- Previous page -->
+                            <li class="govuk-pagination__item" th:if="${currentPage > 1}">
+                                <a class="govuk-link govuk-pagination__link"
+                                   th:href="@{/admin/users/audit/deleted(
+                                       search=${search},
+                                       page=${currentPage - 1},
+                                       size=${size},
+                                       sort=${sort},
+                                       direction=${direction})}"
+                                   th:text="${currentPage - 1}">2</a>
+                            </li>
+
+                            <!-- Current page -->
+                            <li class="govuk-pagination__item govuk-pagination__item--current">
+                                <a class="govuk-link govuk-pagination__link"
+                                   th:href="@{/admin/users/audit/deleted(
+                                       search=${search},
+                                       page=${currentPage},
+                                       size=${size},
+                                       sort=${sort},
+                                       direction=${direction})}"
+                                   aria-label="Current page"
+                                   aria-current="page"
+                                   th:text="${currentPage}">3</a>
+                            </li>
+
+                            <!-- Next page -->
+                            <li class="govuk-pagination__item" th:if="${currentPage < totalPages}">
+                                <a class="govuk-link govuk-pagination__link"
+                                   th:href="@{/admin/users/audit/deleted(
+                                       search=${search},
+                                       page=${currentPage + 1},
+                                       size=${size},
+                                       sort=${sort},
+                                       direction=${direction})}"
+                                   th:text="${currentPage + 1}">4</a>
+                            </li>
+
+                            <!-- Ellipsis after current page -->
+                            <li class="govuk-pagination__item govuk-pagination__item--ellipses"
+                                th:if="${currentPage < totalPages - 2}">
+                                &ctdot;
+                            </li>
+
+                            <!-- Last page -->
+                            <li class="govuk-pagination__item" th:if="${currentPage < totalPages - 1}">
+                                <a class="govuk-link govuk-pagination__link"
+                                   th:href="@{/admin/users/audit/deleted(
+                                       search=${search},
+                                       page=${totalPages},
+                                       size=${size},
+                                       sort=${sort},
+                                       direction=${direction})}"
+                                   th:text="${totalPages}">5</a>
+                            </li>
+                        </ul>
+
+                        <div class="govuk-pagination__next" th:if="${currentPage < totalPages}">
+                            <a class="govuk-link govuk-pagination__link"
+                               th:href="@{/admin/users/audit/deleted(
+                                   search=${search},
+                                   page=${currentPage + 1},
+                                   size=${size},
+                                   sort=${sort},
+                                   direction=${direction})}"
+                               rel="next">
+                                <span class="govuk-pagination__link-title">Next</span>
+                                <svg class="govuk-pagination__icon govuk-pagination__icon--next"
+                                     xmlns="http://www.w3.org/2000/svg" height="13" width="15"
+                                     aria-hidden="true" focusable="false" viewBox="0 0 15 13">
+                                    <path d="m8.107-0.0078125-1.4136 1.414 4.2926 4.293h-12.986v2h12.896l-4.1855 3.9766 1.377 1.4492 6.7441-6.4062-6.7246-6.7266z"></path>
+                                </svg>
+                            </a>
+                        </div>
+                    </nav>
+
+                    <!-- Page info -->
+                    <p class="govuk-body govuk-!-margin-top-4" th:if="${totalPages > 1}">
+                        Page <span th:text="${currentPage}">1</span> of <span th:text="${totalPages}">5</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>
+
