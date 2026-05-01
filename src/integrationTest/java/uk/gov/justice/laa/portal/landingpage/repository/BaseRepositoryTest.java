@@ -23,6 +23,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -107,22 +108,50 @@ public class BaseRepositoryTest {
         return buildLaaUserProfile(entraUser, userType, active, "Global Admin");
     }
 
-    protected UserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType, boolean active, String roleName) {
-        List<AppRole> allAppRoles = appRoleRepository.findAllWithPermissions();
-        AppRole globalAdminAppRole = allAppRoles.stream()
-                .filter(AppRole::isAuthzRole)
-                .filter(role -> role.getName().equals(roleName))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Could not find app role"));
-        return UserProfile.builder().entraUser(entraUser)
-                .userType(userType).appRoles(new HashSet<>(Set.of(globalAdminAppRole)))
-                .createdDate(LocalDateTime.now()).createdBy("Test").activeProfile(active)
+    protected UserProfile buildLaaUserProfile(
+            EntraUser entraUser,
+            UserType userType,
+            boolean active,
+            String roleName
+    ) {
+        Set<AppRole> roles = new HashSet<>();
+
+        if (roleName != null) {
+            List<AppRole> allAppRoles = appRoleRepository.findAllWithPermissions();
+
+            AppRole appRole = allAppRoles.stream()
+                    .filter(AppRole::isAuthzRole)
+                    .filter(role -> role.getName().equals(roleName))
+                    .findFirst()
+                    .orElseThrow(() ->
+                            new RuntimeException("Could not find app role: " + roleName)
+                    );
+
+            roles.add(appRole);
+        }
+
+        return UserProfile.builder()
+                .entraUser(entraUser)
+                .userType(userType)
+                .appRoles(roles)
+                .createdDate(LocalDateTime.now())
+                .createdBy("Test")
+                .activeProfile(active)
                 .userProfileStatus(UserProfileStatus.COMPLETE)
-                .lastCcmsSyncSuccessful(true).build();
+                .silasStatus(UserProfileSilasStatus.COMPLETE)
+                .lastCcmsSyncSuccessful(true)
+                .build();
     }
 
     protected UserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType) {
         return buildLaaUserProfile(entraUser, userType, false, "Global Admin");
+    }
+
+    protected UserProfile buildLaaUserProfileWithoutRoles(
+            EntraUser entraUser,
+            UserType userType
+    ) {
+        return buildLaaUserProfile(entraUser, userType, false, null);
     }
 
     protected String generateEntraId() {
@@ -174,6 +203,7 @@ public class BaseRepositoryTest {
                 .userType(userType).appRoles(new HashSet<>(Set.of(globalAdminAppRole)))
                 .createdDate(LocalDateTime.now()).createdBy("Test").activeProfile(active)
                 .userProfileStatus(UserProfileStatus.COMPLETE)
+                .silasStatus(UserProfileSilasStatus.COMPLETE)
                 .lastCcmsSyncSuccessful(true).build();
     }
 

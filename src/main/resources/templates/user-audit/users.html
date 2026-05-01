@@ -1005,17 +1005,17 @@
                                     </button>
                                 </th>
                                 <th scope="col" class="govuk-table__header govuk-!-width-one-quarter"
-                                    th:aria-sort="${sort == 'accountStatus' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
-                                    <button type="button" class="sort-button" data-sort="accountStatus"
-                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'accountStatus' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}">
+                                    th:aria-sort="${sort == 'silasStatus' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
+                                    <button type="button" class="sort-button" data-sort="silasStatus"
+                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'silasStatus' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}">
                                         SILAS Status
-                                        <img th:if="${sort == 'accountStatus' and direction == 'asc'}"
+                                        <img th:if="${sort == 'silasStatus' and direction == 'asc'}"
                                             th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
                                             alt="Sorted ascending">
-                                        <img th:if="${sort == 'accountStatus' and direction == 'desc'}"
+                                        <img th:if="${sort == 'silasStatus' and direction == 'desc'}"
                                             th:src="@{/assets/images/sort-desc.svg}" width="22" height="22"
                                             alt="Sorted descending">
-                                        <img th:if="${sort != 'accountStatus'}" th:src="@{/assets/images/sort-none.svg}"
+                                        <img th:if="${sort != 'silasStatus'}" th:src="@{/assets/images/sort-none.svg}"
                                             width="22" height="22" alt="">
                                     </button>
                                 </th>
@@ -1068,7 +1068,7 @@
                                 <td class="govuk-table__cell"
                                     th:text="${user.firmAssociation != null and user.firmAssociation != 'None' and user.firmAssociation != 'Unknown' ? user.firmAssociation : ''}">
                                 </td>
-                                <td class="govuk-table__cell" th:text="${user.accountStatus}"></td>
+                                <td class="govuk-table__cell" th:text="${user.accountStatus.getValue()}"></td>
                                 <td class="govuk-table__cell" th:text="${user.isMultiFirmUser ? 'Yes' : 'No'}"></td>
                                 <td class="govuk-table__cell" th:text="${user.profileCount}"></td>
                             </tr>

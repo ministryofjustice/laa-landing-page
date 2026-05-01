@@ -11,7 +11,7 @@
 
 <body>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-        <a class="govuk-back-link" th:href="@{/admin/users/audit/{id}(id=${user.userId})}">
+        <a class="govuk-back-link" th:href="@{/admin/users/audit/{id}(id=${profileId})}">
             Back
         </a>
     </nav>
@@ -159,7 +159,7 @@
             <!-- Action Buttons -->
             <div class="govuk-button-group govuk-!-margin-top-4">
                 <!-- Back Button -->
-                <a class="govuk-button" th:href="@{/admin/users/audit}">
+                <a class="govuk-button" th:href="@{/admin/users/audit/{id}(id=${profileId})}">
                     Back to Identity Information
                 </a>
             </div>

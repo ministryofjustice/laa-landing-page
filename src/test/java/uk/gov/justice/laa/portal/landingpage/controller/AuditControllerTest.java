@@ -43,6 +43,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.repository.DisableUserReasonRepository;
@@ -118,7 +119,7 @@ class AuditControllerTest {
                 .userType("External")
                 .firmAssociation("Test Firm")
                 .firmCode("123456")
-                .accountStatus("Active")
+                .accountStatus(UserProfileSilasStatus.COMPLETE)
                 .isMultiFirmUser(false)
                 .profileCount(1)
                 .build();
@@ -571,6 +572,7 @@ class AuditControllerTest {
         when(userService.getAuditUserDetail(userId, 1, 5)).thenReturn(mockUserDetail);
         Optional<DisableUserReason> optionalDisableUserReason = Optional.of(DisableUserReason.builder().description("UserRequest").name("User Request").build());
         when(disableUserReasonRepository.findDisableUserReasonByEntraDescription(eq("UserRequest"))).thenReturn(optionalDisableUserReason);
+        when(userService.determineStatusBadgeForAuditUser(any(AuditUserDetailDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
         String viewName = auditController.displayUserAuditDetail(userId, 1, 5, false, model);
@@ -624,6 +626,7 @@ class AuditControllerTest {
         when(techServicesClient.getUser(any())).thenReturn(techServicesResponse);
         when(userService.getAuditUserDetail(userId, 1, 5)).thenReturn(mockUserDetail);
         when(disableUserReasonRepository.findDisableUserReasonByEntraDescription(eq("UserRequest"))).thenReturn(Optional.empty());
+        when(userService.determineStatusBadgeForAuditUser(any(AuditUserDetailDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
         String viewName = auditController.displayUserAuditDetail(userId, 1, 5, false, model);
@@ -699,6 +702,7 @@ class AuditControllerTest {
 
         when(techServicesClient.getUser(any())).thenReturn(techServicesResponse);
         when(userService.getAuditUserDetail(userId, 1, 10)).thenReturn(mockUserDetail);
+        when(userService.determineStatusBadgeForAuditUser(any(AuditUserDetailDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
         String viewName = auditController.displayUserAuditDetail(userId, 1, 10, false, model);
@@ -757,6 +761,7 @@ class AuditControllerTest {
 
         when(techServicesClient.getUser(any())).thenReturn(techServicesResponse);
         when(userService.getAuditUserDetail(userId, profilePage, profileSize)).thenReturn(mockUserDetail);
+        when(userService.determineStatusBadgeForAuditUser(any(AuditUserDetailDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
         String viewName = auditController.displayUserAuditDetail(userId, profilePage, profileSize, false, model);
