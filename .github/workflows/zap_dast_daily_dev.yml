@@ -3,6 +3,7 @@ name: ZAP DEV DAST Daily Baseline Scan
 on:
   schedule:
     - cron: '0 8 * * 1-5' # At 08:00 on Monday through Friday
+  workflow_dispatch: # Allow manual trigger of the workflow
 
 permissions:
   contents: none
