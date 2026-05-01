@@ -722,7 +722,7 @@ databaseChangeLog:
       id: 1770936555-16
       author: chris.marron
       context: playwright
-      comment: "Insert internal app role for Roles and Permissions user type filter testing"
+      comment: "Insert internal app roles for Roles and Permissions user type filter testing"
       changes:
         - sql:
             dbms: postgresql
@@ -736,12 +736,22 @@ databaseChangeLog:
                 user_type_restriction,
                 ordinal
               )
-              VALUES (
+              VALUES 
+              (
                 FALSE,
                 '99999999-9999-9999-9999-999999999999',
                 'ffffffff-ffff-ffff-ffff-cccccccccccc',
-                'Test Internal App Role Access',
-                'Test Internal App Role Access',
+                'Test Internal App Role One',
+                'Test Internal App Role One',
                 '{INTERNAL}',
                 2
+              ),
+              (
+                FALSE,
+                '99999999-9999-9999-9999-999999999999',
+                'ffffffff-ffff-ffff-ffff-dddddddddddd',
+                'Test Internal App Role Two',
+                'Test Internal App Role Two',
+                '{INTERNAL}',
+                3
               );
