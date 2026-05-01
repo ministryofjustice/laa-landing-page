@@ -8,6 +8,12 @@ global_settings:
     - rule_id: "CKV_K8S_21" # The default namespace should be used.
       path: "**/*"
       reason: "Namespaces are used for all environments and so this finding is always a false positive"
+    - rule_id: "CKV_K8S_153" # Prevent All NGINX Ingress annotation snippets. See CVE-2021-25742.
+      path: "**/*"
+      reason: "Annotations snippets are used for WAF configuration, as documented by Cloud Platform"
+    - rule_id: "CKV2_GHA_1"
+      path: ".github/workflows/zap_dast_daily_dev.yml"
+      reason: "Workflow has valid schedule trigger, false positive"
 
 scanners:
   bandit:
