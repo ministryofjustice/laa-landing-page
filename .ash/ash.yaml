@@ -17,13 +17,13 @@ global_settings:
     - rule_id: "CKV2_K8S_6" # Minimize the admission of pods which lack an associated NetworkPolicy
       path: "**/*"
       reason: "NetworkPolicy is configured for the namespace in the cloud-platform-environments repo, so this is a false positive"
-    - rule_id: "checkov-CKV_DOCKER_2-27" # Ensure that HEALTHCHECK instructions have been added to container images
+    - rule_id: "checkov-CKV_DOCKER_2" # Ensure that HEALTHCHECK instructions have been added to container images
       path: "**/*"
       reason: "Healthcheck is not required for k8s, as k8s has its own health check mechanisms"
-    - rule_id: "checkov-CKV_K8S_43-7674" # Image should use digest
+    - rule_id: "checkov-CKV_K8S_43" # Image should use digest
       path: "**/*"
       reason: "Image does use digest, which is references as a variable in the k8s deployment manifest. False positive"
-    - rule_id: "checkov-CKV_K8S_35-5175" # Prefer using secrets as files over secrets as environment variables
+    - rule_id: "checkov-CKV_K8S_35" # Prefer using secrets as files over secrets as environment variables
       path: "**/*"
       reason: "Secrets are used as environment variables in this project, and to switch would be significant effort for the minimal gains."
 
