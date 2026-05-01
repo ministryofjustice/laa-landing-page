@@ -2416,6 +2416,7 @@ public class UserService {
             .pageSize(pageSize)
             .build();
     }
+
     public void updateUserProfileSilasStatus() {
         logger.info("Starting user profile status update task");
         int pageSize = 500;

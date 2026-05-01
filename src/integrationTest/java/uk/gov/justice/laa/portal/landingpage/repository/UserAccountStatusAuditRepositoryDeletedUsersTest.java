@@ -299,7 +299,7 @@ class UserAccountStatusAuditRepositoryDeletedUsersTest extends BaseRepositoryTes
                         page2.getContent().stream()
                                 .map(UserAccountStatusAudit::getUserEmail)
                                 .toList()
-                );
+            );
     }
 
     @Test
