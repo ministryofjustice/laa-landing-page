@@ -26,7 +26,7 @@ spec:
       containers:
         - name: laa-landing-page
           image: ${REGISTRY}/${REPOSITORY}:${IMAGE_TAG}
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           securityContext:
             runAsUser: 1000
             runAsNonRoot: true
