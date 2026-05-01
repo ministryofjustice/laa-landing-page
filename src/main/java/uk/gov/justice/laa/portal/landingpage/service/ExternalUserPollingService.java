@@ -197,6 +197,16 @@ public class ExternalUserPollingService {
         }
         
         try {
+            UserAccountStatusAudit deletedAudit = UserAccountStatusAudit.builder()
+                    .entraUser(null)
+                    .userEmail(entraUser.getEmail())
+                    .statusChange(UserAccountStatus.DELETED)
+                    .statusChangedBy("External user sync")
+                    .statusChangedDate(LocalDateTime.now())
+                    .build();
+            userAccountStatusAuditRepository.save(deletedAudit);
+            userAccountStatusAuditRepository.flush();
+
             List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
             if (!auditRecords.isEmpty()) {
                 userAccountStatusAuditRepository.deleteAll(auditRecords);
