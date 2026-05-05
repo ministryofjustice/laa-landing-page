@@ -169,7 +169,7 @@ public class AuditController {
             @RequestParam(name = "profilePage", defaultValue = "1") int profilePage,
             @RequestParam(name = "profileSize", defaultValue = "3") int profileSize,
             @RequestParam(name = "isEntraId", defaultValue = "false") boolean isEntraId,
-            Model model) {
+            Model model, Authentication authentication) {
 
         log.debug(
                 "AuditController.displayUserAuditDetail - userId: '{}', isEntraId: {}, profilePage: {}, profileSize: {}",
@@ -177,6 +177,14 @@ public class AuditController {
 
         AuditUserDetailDto userDetail;
         boolean canDisableUser = false;
+
+        EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
+
+
+        boolean showResendVerificationLink = accessControlService.canSendVerificationEmail(entraUser.getEntraOid());
+        model.addAttribute("showResendVerificationLink", showResendVerificationLink);
+
+        log.info(showResendVerificationLink ? "User {} can send verification email" : "User {} cannot send verification email", userId);
 
         // Determine if this is an EntraUser ID or UserProfile ID
         if (isEntraId) {
