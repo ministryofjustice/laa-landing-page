@@ -21,14 +21,15 @@ spec:
     spec:
       serviceAccountName: irsa-laa-landing-page-${ENV_NAME}
       securityContext:
-        runAsUser: 1000
+        runAsUser: 10000
         runAsNonRoot: true
+      automountServiceAccountToken: false # Prevents the default service account token from being mounted, which is a security best practice when using IRSA
       containers:
         - name: laa-landing-page
           image: ${REGISTRY}/${REPOSITORY}:${IMAGE_TAG}
           imagePullPolicy: Always
           securityContext:
-            runAsUser: 1000
+            runAsUser: 10000
             runAsNonRoot: true
             readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
