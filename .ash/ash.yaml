@@ -11,9 +11,6 @@ global_settings:
     - rule_id: "CKV_K8S_153" # Prevent All NGINX Ingress annotation snippets. See CVE-2021-25742.
       path: "**/*"
       reason: "Annotations snippets are used for WAF configuration, as documented by Cloud Platform"
-    - rule_id: "CKV2_GHA_1"
-      path: ".github/workflows/zap_dast_daily_dev.yml"
-      reason: "Workflow has valid schedule trigger, false positive"
     - rule_id: "CKV2_K8S_6" # Minimize the admission of pods which lack an associated NetworkPolicy
       path: "**/*"
       reason: "NetworkPolicy is configured for the namespace in the cloud-platform-environments repo, so this is a false positive"
