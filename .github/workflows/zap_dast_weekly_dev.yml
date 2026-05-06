@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: '0 8 * * SUN'
 
+permissions:
+  contents: none
+
 jobs:
   zap_scan:
     name: Run Full ZAP DEV DAST Scan Against Live App

@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: '0 3 * * 1-5' # At 03:00 on Monday through Friday
 
+permissions:
+  contents: none
+
 jobs:
   zap_scan:
     name: ZAP PRD DAST Daily Baseline Scan Against Live App
