@@ -231,6 +231,10 @@ public class ExternalUserPollingService {
 
             userProfileRepository.flush();
 
+            // Remove user profiles from user to avoid stale references.
+            if (entraUser.getUserProfiles() != null && !entraUser.getUserProfiles().isEmpty()) {
+                entraUser.getUserProfiles().clear();
+            }
             entraUserRepository.delete(entraUser);
             entraUserRepository.flush();
             
