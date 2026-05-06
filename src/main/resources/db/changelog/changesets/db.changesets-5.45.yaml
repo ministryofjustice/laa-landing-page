@@ -2,6 +2,12 @@ databaseChangeLog:
   - changeSet:
       id: add-disable-type-to-entra-user
       author: stb-3994
+      preConditions:
+        - onFail: MARK_RAN
+          not:
+            columnExists:
+              tableName: entra_user
+              columnName: disable_type
       changes:
         - addColumn:
             tableName: entra_user
@@ -19,6 +25,12 @@ databaseChangeLog:
   - changeSet:
       id: add-disable-type-to-user-account-status-audit
       author: stb-3994
+      preConditions:
+        - onFail: MARK_RAN
+          not:
+            columnExists:
+              tableName: user_account_status_audit
+              columnName: disable_type
       changes:
         - addColumn:
             tableName: user_account_status_audit

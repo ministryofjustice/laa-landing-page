@@ -1,0 +1,23 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: backfill-disable-type-none-for-sync-disabled-users
+      author: paul.snowdon
+
+      changes:
+        - sql:
+            sql: |
+              UPDATE entra_user
+              SET disable_type = 'NONE'
+              WHERE enabled = false
+                AND disable_type IS NULL
+                AND disabled_by IS NULL;
+
+      rollback:
+        - sql:
+            sql: |
+              UPDATE entra_user
+              SET disable_type = NULL
+              WHERE enabled = false
+                AND disable_type = 'NONE'
+                AND disabled_by IS NULL;
