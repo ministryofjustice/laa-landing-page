@@ -252,7 +252,7 @@ public class ExternalUserPollingService {
     private void disableUserWithReason(TechServicesUser user, EntraUser entraUser) {
         try {
             entraUser.setEnabled(false);
-            entraUser.setDisableType(DisableType.NONE);
+            entraUser.setDisableType(DisableType.SYNC);
             entraUserRepository.save(entraUser);
             log.info("Disabled user: {} from API sync",
                     entraUser.getEntraOid());
