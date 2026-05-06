@@ -7,7 +7,7 @@ permissions:
 
 on:
   push:
-    branches: [ main]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
   schedule:
@@ -48,7 +48,7 @@ jobs:
       security-events: write
     steps:
       - name: Download ASH output artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ash_output
           path: .ash/ash_output
