@@ -3,6 +3,9 @@ name: Promote Main into Test
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   merge:
     runs-on: ubuntu-latest
