@@ -696,6 +696,25 @@ public class AccessControlService {
                         Permission.EDIT_EXTERNAL_USER);
     }
 
+    public boolean canResendActivationForAuditUser(String userId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
+
+        Optional<EntraUserDto> optionalUser = userService.getEntraUserById(userId);
+
+        if (optionalUser.isEmpty()) {
+            return false;
+        }
+
+        EntraUserDto accessedUser = optionalUser.get();
+
+        return userService.isInternal(authenticatedUser.getId())
+                && !userService.isInternal(accessedUser.getId())
+                && userHasAnyGivenPermissions(authenticatedUser,
+                Permission.CREATE_EXTERNAL_USER,
+                Permission.EDIT_EXTERNAL_USER);
+    }
+
     public boolean canBulkDisableFirmUsers() {
         return bulkUserDisableFeatureEnabled && authenticatedUserHasAnyGivenPermissions(Permission.BULK_DISABLE_FIRM_USERS);
     }

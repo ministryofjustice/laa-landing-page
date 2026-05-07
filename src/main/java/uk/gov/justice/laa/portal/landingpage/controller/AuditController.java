@@ -178,10 +178,8 @@ public class AuditController {
         AuditUserDetailDto userDetail;
         boolean canDisableUser = false;
 
-        boolean showResendVerificationLink = accessControlService.canSendVerificationEmail(userId.toString());
+        boolean showResendVerificationLink = accessControlService.canResendActivationForAuditUser(userId.toString());
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
-
-        log.info(showResendVerificationLink ? "User {} can send verification email" : "User {} cannot send verification email", userId);
 
         // Determine if this is an EntraUser ID or UserProfile ID
         if (isEntraId) {
