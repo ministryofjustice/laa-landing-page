@@ -37,6 +37,47 @@ jobs:
       verbose: true
       output-dir: '.ash/ash_output'
 
+  syft-image-scan:
+    name: Syft Image Scan
+    runs-on: ubuntu-latest
+    needs: ash
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up JDK
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        with:
+          distribution: 'corretto'
+          java-version: '21'
+
+      - name: Build JAR
+        run: ./gradlew build
+        env:
+          GITHUB_ACTOR: ${{ secrets.GITHUB_ACTOR }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker image
+        run: docker build -t laa-landing-page:scan .
+
+      - name: Run Syft image scan
+        uses: anchore/sbom-action@v0
+        with:
+          image: laa-landing-page:scan
+          format: syft-json
+          output-file: 'syft-image-sbom.json'
+          artifact-name: 'syft-image-sbom'
+
+      - name: Run Syft SPDX output
+        uses: anchore/sbom-action@v0
+        with:
+          image: laa-landing-page:scan
+          format: syft-json
+          output-file: 'syft-image-scan.json'
+          artifact-name: 'syft-image-sbom'
+
   upload-sarif:
     name: Upload ASH SARIF
     needs: ash
