@@ -10245,7 +10245,6 @@ class UserServiceTest {
             // Given
             UUID entraId1 = UUID.randomUUID();
             UUID entraId2 = UUID.randomUUID();
-            List<UUID> entraIds = List.of(entraId1, entraId2);
 
             EntraUser entraUser1 = EntraUser.builder()
                     .id(UUID.randomUUID())
@@ -10275,19 +10274,18 @@ class UserServiceTest {
                     .entraUser(entraUser2)
                     .build();
 
+            entraUser1.setUserProfiles(new HashSet<>(Set.of(profile1)));
+            entraUser2.setUserProfiles(new HashSet<>(Set.of(profile2)));
+
             when(mockEntraUserRepository.findByEntraOid(entraId1.toString())).thenReturn(Optional.of(entraUser1));
             when(mockEntraUserRepository.findByEntraOid(entraId2.toString())).thenReturn(Optional.of(entraUser2));
-            when(mockUserProfileRepository.findAllByEntraUser(entraUser1)).thenReturn(List.of(profile1));
-            when(mockUserProfileRepository.findAllByEntraUser(entraUser2)).thenReturn(List.of(profile2));
             when(mockUserAccountStatusAuditRepository.findByEntraUser(any())).thenReturn(List.of());
-
+            List<UUID> entraIds = List.of(entraId1, entraId2);
             // When
             int result = userService.deleteInternalUsersByEntraIds(entraIds);
 
             // Then
             assertEquals(2, result);
-            verify(mockUserProfileRepository).deleteAll(List.of(profile1));
-            verify(mockUserProfileRepository).deleteAll(List.of(profile2));
             verify(mockEntraUserRepository).delete(entraUser1);
             verify(mockEntraUserRepository).delete(entraUser2);
         }
@@ -10309,8 +10307,9 @@ class UserServiceTest {
                     .entraUser(entraUser)
                     .build();
 
+            entraUser.setUserProfiles(new HashSet<>(Set.of(externalProfile)));
+
             when(mockEntraUserRepository.findByEntraOid(entraId.toString())).thenReturn(Optional.of(entraUser));
-            when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(externalProfile));
 
             // When
             int result = userService.deleteInternalUsersByEntraIds(entraIds);
@@ -10346,7 +10345,6 @@ class UserServiceTest {
             // Given
             UUID entraId1 = UUID.randomUUID();
             UUID entraId2 = UUID.randomUUID();
-            List<UUID> entraIds = List.of(entraId1, entraId2);
 
             EntraUser entraUser2 = EntraUser.builder()
                     .id(UUID.randomUUID())
@@ -10359,11 +10357,13 @@ class UserServiceTest {
                     .entraUser(entraUser2)
                     .build();
 
+            entraUser2.setUserProfiles(new HashSet<>(Set.of(profile2)));
+
             // First user not found, second user exists
             when(mockEntraUserRepository.findByEntraOid(entraId1.toString())).thenReturn(Optional.empty());
             when(mockEntraUserRepository.findByEntraOid(entraId2.toString())).thenReturn(Optional.of(entraUser2));
-            when(mockUserProfileRepository.findAllByEntraUser(entraUser2)).thenReturn(List.of(profile2));
             when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser2)).thenReturn(List.of());
+            List<UUID> entraIds = List.of(entraId1, entraId2);
 
             // When
             int result = userService.deleteInternalUsersByEntraIds(entraIds);
