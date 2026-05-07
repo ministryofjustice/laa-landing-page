@@ -198,12 +198,16 @@ public class ExternalUserPollingService {
         }
 
         try {
+            // Capture user entra OID before deletion for logging
+            String userEntraOid = entraUser.getEntraOid();
+
+            // Delete old audit records BEFORE creating new one
             List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
             if (!auditRecords.isEmpty()) {
                 userAccountStatusAuditRepository.deleteAll(auditRecords);
                 userAccountStatusAuditRepository.flush();
                 log.info("Deleted {} audit records for entra user: {} ",
-                        auditRecords.size(), entraUser.getEntraOid());
+                        auditRecords.size(), userEntraOid);
             }
 
             List<UserProfile> userProfiles = entraUser.getUserProfiles() != null
@@ -233,6 +237,10 @@ public class ExternalUserPollingService {
             userProfileRepository.flush();
 
             // Remove user profiles from user to avoid stale references.
+            // Capture user details for audit record before deletion
+            final String userEmail = entraUser.getEmail();
+            final String userName = entraUser.getFirstName() + " " + entraUser.getLastName();
+
             if (entraUser.getUserProfiles() != null && !entraUser.getUserProfiles().isEmpty()) {
                 entraUser.getUserProfiles().clear();
             }
@@ -240,7 +248,20 @@ public class ExternalUserPollingService {
             entraUserRepository.flush();
 
             log.info("Successfully deleted entra user and all related entities: {}",
-                     entraUser.getEntraOid());
+                     userEntraOid);
+
+
+            // Create audit record AFTER successful deletion
+            UserAccountStatusAudit deletedAudit = UserAccountStatusAudit.builder()
+                    .entraUser(null)
+                    .userEmail(userEmail)
+                    .userName(userName)
+                    .statusChange(UserAccountStatus.DELETED)
+                    .statusChangedBy("External user sync")
+                    .statusChangedDate(LocalDateTime.now())
+                    .build();
+            userAccountStatusAuditRepository.save(deletedAudit);
+            userAccountStatusAuditRepository.flush();
 
         } catch (Exception e) {
             String oid = entraUser.getEntraOid() != null ? entraUser.getEntraOid() : "unknown";
