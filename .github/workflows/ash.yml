@@ -65,7 +65,7 @@ jobs:
       - name: Build Docker image
         run: docker build -t laa-landing-page:scan .
 
-      - name: Run Syft image scan
+      - name: Generate Syft SBOM
         uses: anchore/sbom-action@v0
         with:
           image: laa-landing-page:scan
@@ -73,13 +73,13 @@ jobs:
           output-file: 'syft-image-sbom.json'
           artifact-name: 'syft-image-sbom'
 
-      - name: Run Syft SPDX output
+      - name: Generate Syft SPDX SBOM
         uses: anchore/sbom-action@v0
         with:
           image: laa-landing-page:scan
-          format: syft-json
-          output-file: 'syft-image-scan.json'
-          artifact-name: 'syft-image-sbom'
+          format: spdx-json
+          output-file: 'syft-image-spdx.json'
+          artifact-name: 'syft-image-sbom-spdx'
 
   upload-sarif:
     name: Upload ASH SARIF
