@@ -1,0 +1,11 @@
+# Native Syft configuration file
+package:
+  # Enable specific cataloguers for Java environments
+  catalogers:
+    - java-cataloger
+    - java-archive-cataloger # For nested JARs
+  
+# Search depth for finding manifest files (pom.xml, build.gradle)
+search:
+  scope: all-layers # Useful if scanning container images
+  unindexed-archives: true # Required to find dependencies inside nested JARs
