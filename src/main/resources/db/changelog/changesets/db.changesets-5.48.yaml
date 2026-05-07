@@ -1,0 +1,118 @@
+databaseChangeLog:
+  # Add support for deleted users in user_account_status_audit table
+  - changeSet:
+      id: 1745683200000-1
+      author: yusuf.shah
+      comment: "Add user_email column to user_account_status_audit table to track deleted users"
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - columnExists:
+                tableName: user_account_status_audit
+                columnName: user_email
+      changes:
+        - addColumn:
+            tableName: user_account_status_audit
+            columns:
+              - column:
+                  name: user_email
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: true
+
+  - changeSet:
+      id: 1745683200000-2
+      author: yusuf.shah
+      comment: "Make entra_user_id nullable to support deleted users who no longer have an EntraUser record"
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: "1"
+            sql: "SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'user_account_status_audit' AND column_name = 'entra_user_id' AND is_nullable = 'NO'"
+      changes:
+        - dropNotNullConstraint:
+            tableName: user_account_status_audit
+            columnName: entra_user_id
+            columnDataType: UUID
+
+  - changeSet:
+      id: 1745683200000-3
+      author: yusuf.shah
+      comment: "Update status_change check constraint to include DELETED status"
+      preConditions:
+        - onFail: MARK_RAN
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "ALTER TABLE user_account_status_audit DROP CONSTRAINT IF EXISTS user_account_status_audit_status_change_check"
+        - sql:
+            dbms: postgresql
+            sql: "ALTER TABLE user_account_status_audit ADD CONSTRAINT user_account_status_audit_status_change_check CHECK ((status_change)::text = ANY ((ARRAY['ENABLED'::character varying, 'DISABLED'::character varying, 'DELETED'::character varying])::text[]))"
+
+  - changeSet:
+      id: 1745683200000-4
+      author: yusuf.shah
+      comment: "Add check constraint to ensure either entra_user_id or user_email is not null"
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - sqlCheck:
+                expectedResult: "1"
+                sql: "SELECT COUNT(*) FROM pg_constraint WHERE conname = 'user_account_status_audit_user_reference_check'"
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "ALTER TABLE user_account_status_audit ADD CONSTRAINT user_account_status_audit_user_reference_check CHECK (entra_user_id IS NOT NULL OR user_email IS NOT NULL)"
+
+  - changeSet:
+      id: 1745683200000-5
+      author: yusuf.shah
+      comment: "Populate user_email for existing records"
+      preConditions:
+        - onFail: MARK_RAN
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              UPDATE user_account_status_audit uasa
+              SET user_email = eu.email
+              FROM entra_user eu
+              WHERE uasa.entra_user_id = eu.id
+              AND uasa.user_email IS NULL
+
+  - changeSet:
+      id: 1745683200000-6
+      author: yusuf.shah
+      comment: "Add user_name column to user_account_status_audit table to track deleted user's display name"
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - columnExists:
+                tableName: user_account_status_audit
+                columnName: user_name
+      changes:
+        - addColumn:
+            tableName: user_account_status_audit
+            columns:
+              - column:
+                  name: user_name
+                  type: VARCHAR(511)
+                  constraints:
+                    nullable: true
+
+  - changeSet:
+      id: 1745683200000-7
+      author: yusuf.shah
+      comment: "Populate user_name for existing records from entra_user"
+      preConditions:
+        - onFail: MARK_RAN
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              UPDATE user_account_status_audit uasa
+              SET user_name = eu.first_name || ' ' || eu.last_name
+              FROM entra_user eu
+              WHERE uasa.entra_user_id = eu.id
+              AND uasa.user_name IS NULL
+

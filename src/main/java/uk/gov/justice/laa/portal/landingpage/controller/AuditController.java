@@ -439,4 +439,38 @@ public class AuditController {
     private boolean isLastPage(PaginatedAuditUsers page, int size) {
         return page.getUsers().size() < size;
     }
+
+    /**
+     * Display the Deleted Users page
+     * Shows all deleted users with search and pagination
+     */
+    @GetMapping("/users/audit/deleted")
+    @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions("
+            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_AUDIT_TABLE)")
+    public String displayDeletedUsers(
+            @RequestParam(name = "search", required = false) String searchTerm,
+            @RequestParam(name = "page", defaultValue = "1") int page,
+            @RequestParam(name = "size", defaultValue = "10") int size,
+            @RequestParam(name = "sort", defaultValue = "statusChangedDate") String sort,
+            @RequestParam(name = "direction", defaultValue = "desc") String direction,
+            Model model) {
+
+        log.debug("AuditController.displayDeletedUsers - search: '{}', page: {}, size: {}, sort: {}, direction: {}",
+                searchTerm, page, size, sort, direction);
+
+        uk.gov.justice.laa.portal.landingpage.dto.PaginatedDeletedUsers paginatedDeletedUsers =
+            userService.getDeletedUsers(searchTerm, page, size, sort, direction);
+
+        model.addAttribute("deletedUsers", paginatedDeletedUsers.getDeletedUsers());
+        model.addAttribute("search", searchTerm);
+        model.addAttribute("page", page);
+        model.addAttribute("size", size);
+        model.addAttribute("sort", sort);
+        model.addAttribute("direction", direction);
+        model.addAttribute("totalDeletedUsers", paginatedDeletedUsers.getTotalDeletedUsers());
+        model.addAttribute("totalPages", paginatedDeletedUsers.getTotalPages());
+        model.addAttribute("currentPage", page);
+
+        return "user-audit/deleted-users";
+    }
 }
