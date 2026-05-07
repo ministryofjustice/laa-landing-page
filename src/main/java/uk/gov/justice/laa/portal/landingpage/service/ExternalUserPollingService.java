@@ -197,22 +197,16 @@ public class ExternalUserPollingService {
         }
         
         try {
-            UserAccountStatusAudit deletedAudit = UserAccountStatusAudit.builder()
-                    .entraUser(null)
-                    .userEmail(entraUser.getEmail())
-                    .statusChange(UserAccountStatus.DELETED)
-                    .statusChangedBy("External user sync")
-                    .statusChangedDate(LocalDateTime.now())
-                    .build();
-            userAccountStatusAuditRepository.save(deletedAudit);
-            userAccountStatusAuditRepository.flush();
+            // Capture user entra OID before deletion for logging
+            String userEntraOid = entraUser.getEntraOid();
 
+            // Delete old audit records BEFORE creating new one
             List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
             if (!auditRecords.isEmpty()) {
                 userAccountStatusAuditRepository.deleteAll(auditRecords);
                 userAccountStatusAuditRepository.flush();
                 log.info("Deleted {} audit records for entra user: {} ",
-                        auditRecords.size(), entraUser.getEntraOid());
+                        auditRecords.size(), userEntraOid);
             }
 
             List<UserProfile> userProfiles = entraUser.getUserProfiles() != null 
@@ -245,8 +239,24 @@ public class ExternalUserPollingService {
             entraUserRepository.flush();
             
             log.info("Successfully deleted entra user and all related entities: {}",
-                     entraUser.getEntraOid());
-                    
+                     userEntraOid);
+
+            // Capture user details for audit record
+            String userEmail = entraUser.getEmail();
+            String userName = entraUser.getFirstName() + " " + entraUser.getLastName();
+
+            // Create audit record AFTER successful deletion
+            UserAccountStatusAudit deletedAudit = UserAccountStatusAudit.builder()
+                    .entraUser(null)
+                    .userEmail(userEmail)
+                    .userName(userName)
+                    .statusChange(UserAccountStatus.DELETED)
+                    .statusChangedBy("External user sync")
+                    .statusChangedDate(LocalDateTime.now())
+                    .build();
+            userAccountStatusAuditRepository.save(deletedAudit);
+            userAccountStatusAuditRepository.flush();
+
         } catch (Exception e) {
             String oid = entraUser.getEntraOid() != null ? entraUser.getEntraOid() : "unknown";
             log.error("Error deleting entra user {}: {}",  oid, e.getMessage(), e);

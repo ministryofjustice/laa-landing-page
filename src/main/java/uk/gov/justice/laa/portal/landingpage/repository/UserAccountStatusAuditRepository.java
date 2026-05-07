@@ -6,7 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
 
 import java.util.List;
@@ -25,11 +24,10 @@ public interface UserAccountStatusAuditRepository extends JpaRepository<UserAcco
 
     @Query("""
         SELECT u FROM UserAccountStatusAudit u
-        WHERE u.statusChange = :statusChange
-        AND (:searchTerm IS NULL OR LOWER(u.userEmail) LIKE LOWER(CONCAT('%', CAST(:searchTerm AS String), '%')))
+        WHERE u.statusChange = 'DELETED'
+        AND (:searchTerm IS NULL OR :searchTerm = '' OR LOWER(CAST(u.userEmail AS string)) LIKE LOWER(CONCAT('%', :searchTerm, '%')))
         """)
     Page<UserAccountStatusAudit> findDeletedUsers(
-            @Param("statusChange") UserAccountStatus statusChange,
             @Param("searchTerm") String searchTerm,
             Pageable pageable);
 }

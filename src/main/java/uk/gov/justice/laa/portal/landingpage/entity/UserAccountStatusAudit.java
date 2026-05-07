@@ -49,7 +49,7 @@ public class UserAccountStatusAudit extends BaseEntity {
     private UserAccountStatus statusChange;
 
     @ManyToOne
-    @JoinColumn(name = "entra_user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_disable_user_audit_entra_user_id"))
+    @JoinColumn(name = "entra_user_id", nullable = true, foreignKey = @ForeignKey(name = "fk_disable_user_audit_entra_user_id"))
     @ToString.Exclude
     @JsonIgnore
     private EntraUser entraUser;
