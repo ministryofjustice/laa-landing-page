@@ -16,7 +16,8 @@ import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
  * <table border="1">
  *   <tr><th>disable_type</th><th>FUM</th><th>EUM / EUA</th><th>SR / GA</th></tr>
  *   <tr><td>NULL (unknown/legacy)</td><td>✅</td><td>✅</td><td>✅</td></tr>
- *   <tr><td>NONE (sync)</td><td>❌</td><td>✅</td><td>✅</td></tr>
+ *   <tr><td>NONE (manual sync)</td><td>✅</td><td>✅</td><td>✅</td></tr>
+ *   <tr><td>SYNC (automated sync)</td><td>❌</td><td>✅</td><td>✅</td></tr>
  *   <tr><td>FIRM</td><td>✅ (same-firm check required separately)</td><td>✅</td><td>✅</td></tr>
  *   <tr><td>LAA</td><td>❌</td><td>✅</td><td>✅</td></tr>
  *   <tr><td>PRIVILEGED</td><td>❌</td><td>❌</td><td>✅</td></tr>
@@ -64,8 +65,8 @@ public class UserEnablementPolicy {
                     isEuaLevel || isGlobalAdminOrSecurityResponse;
 
             case NONE ->
-                    // Sync-disabled: EUM/EUA or higher only
-                    isEuaLevel || isGlobalAdminOrSecurityResponse;
+                    // Manual sync / legacy-with-known-type: all roles permitted (identical to null)
+                    true;
 
             case FIRM ->
                     // FUM-disabled: any FUM (same-firm check handled separately), EUM/EUA, or higher
