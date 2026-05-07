@@ -48,10 +48,12 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto.AuditProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.DeletedUserAuditDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
+import uk.gov.justice.laa.portal.landingpage.dto.PaginatedDeletedUsers;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserInfoAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserFirmReassignmentEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
@@ -66,6 +68,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
@@ -470,7 +473,8 @@ public class UserService {
             logger.warn("Failed to delete role assignment in tech services: {}, but continuing to delete user", ex.getMessage());
         }
 
-        // Clean up UserAccountStatusAudit records first to avoid foreign key constraint violations
+
+        // Clean up old UserAccountStatusAudit records to avoid foreign key constraint violations
         List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
         if (!auditRecords.isEmpty()) {
             userAccountStatusAuditRepository.deleteAll(auditRecords);
@@ -508,12 +512,33 @@ public class UserService {
             userProfileRepository.deleteAll(profiles);
             userProfileRepository.flush();
         }
+        // Prepare audit info and capture user details before deletion
+        Optional<EntraUser> actorEntraUserOpt = entraUserRepository.findByEntraOid(actorId);
+        final String deletedByName = actorEntraUserOpt
+            .map(actor -> actor.getFirstName() + " " + actor.getLastName())
+            .orElse("System");
+        final String userEmail = entraUser.getEmail();
+        final String userName = entraUser.getFirstName() + " " + entraUser.getLastName();
+
         // Remove user profiles from user to avoid stale references.
         if (entraUser.getUserProfiles() != null && !entraUser.getUserProfiles().isEmpty()) {
             entraUser.getUserProfiles().clear();
         }
         entraUserRepository.delete(entraUser);
         entraUserRepository.flush();
+
+        // Create audit record after successful deletion
+        UserAccountStatusAudit deletedAudit = UserAccountStatusAudit.builder()
+            .entraUser(null)
+            .userEmail(userEmail)
+            .userName(userName)
+            .statusChange(UserAccountStatus.DELETED)
+            .statusChangedBy(deletedByName)
+            .statusChangedDate(LocalDateTime.now())
+            .build();
+        userAccountStatusAuditRepository.save(deletedAudit);
+        userAccountStatusAuditRepository.flush();
+
         return builder.build();
     }
 
@@ -657,19 +682,44 @@ public class UserService {
                     "Failed to notify Entra of user deletion: " + ex.getMessage(), ex);
         }
 
+        // Capture user entra info for logging and return value
+        final String userEntraOid = entraUser.getEntraOid();
+        final UUID userId = entraUser.getId();
+
+        // Clean up old UserAccountStatusAudit records to avoid foreign key constraint violations
         List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
         if (!auditRecords.isEmpty()) {
             userAccountStatusAuditRepository.deleteAll(auditRecords);
             userAccountStatusAuditRepository.flush();
             logger.info("Deleted {} audit records for user: {}",
-                    auditRecords.size(), entraUser.getId());
+                    auditRecords.size(), userId);
         }
 
         // Delete from local database
         entraUserRepository.delete(entraUser);
         entraUserRepository.flush();
 
-        return DeletedUser.builder().deletedUserEntraOid(entraUser.getEntraOid()).removedRolesCount(0)
+        // Prepare audit info and capture user details for audit record
+        Optional<EntraUser> actorEntraUserOpt = entraUserRepository.findById(actorId);
+        String deletedByName = actorEntraUserOpt
+            .map(actor -> actor.getFirstName() + " " + actor.getLastName())
+            .orElse("System");
+        String userEmail = entraUser.getEmail();
+        String userName = entraUser.getFirstName() + " " + entraUser.getLastName();
+
+        // Create audit record after successful deletion
+        UserAccountStatusAudit deletedAudit = UserAccountStatusAudit.builder()
+            .entraUser(null)
+            .userEmail(userEmail)
+            .userName(userName)
+            .statusChange(UserAccountStatus.DELETED)
+            .statusChangedBy(deletedByName)
+            .statusChangedDate(LocalDateTime.now())
+            .build();
+        userAccountStatusAuditRepository.save(deletedAudit);
+        userAccountStatusAuditRepository.flush();
+
+        return DeletedUser.builder().deletedUserEntraOid(userEntraOid).removedRolesCount(0)
                 .detachedOfficesCount(0).build();
     }
 
@@ -2039,11 +2089,10 @@ public class UserService {
                 .fullName(entraUser.getFirstName() + " " + entraUser.getLastName())
                 .isMultiFirmUser(entraUser.isMultiFirmUser()).userType(userType)
                 .createdDate(entraUser.getCreatedDate()).createdBy(entraUser.getCreatedBy())
-                // TODO: Fetch lastLoginDate from Microsoft Graph API
-                // TODO: Fetch activationStatus from TechServices API or SILAS API
+                // TODO: Fetch lastLoginDate from Microsoft Graph or Silas API
+                .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name() : "UNKNOWN")
+                // TODO: Fetch activationStatus from TechServices API
                 .activationStatus(null)
-                .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
-                        : "UNKNOWN")
                 .profiles(profileDtos).totalProfiles(allProfiles.size()).totalProfilePages(1)
                 .currentProfilePage(1)
                 .entraOid(entraUser.getEntraOid())
@@ -2336,6 +2385,65 @@ public class UserService {
                 userProfileId, oldFirm.getName(), newFirm.getName(), oldLegacyId, userProfile.getLegacyUserId(), performedByEntraUserId, reason);
     }
 
+    /**
+     * Get paginated deleted users with optional email search filtering
+     *
+     * @param searchTerm Optional email search term (can be partial)
+     * @param page Page number (1-based)
+     * @param pageSize Number of results per page
+     * @param sort Sort field (statusChangedDate)
+     * @param direction Sort direction (asc/desc)
+     * @return Paginated deleted users
+     */
+    public PaginatedDeletedUsers getDeletedUsers(
+            String searchTerm, int page, int pageSize, String sort, String direction) {
+
+        String sortField = "statusChangedDate";
+        if (sort != null && !sort.isBlank()) {
+            sortField = switch (sort.toLowerCase()) {
+                case "email", "useremail" -> "userEmail";
+                case "deletedby", "statuschangedby" -> "statusChangedBy";
+                case "deleteddate", "statuschangeddate" -> "statusChangedDate";
+                default -> "statusChangedDate";
+            };
+        }
+
+        // Defensively validate pagination parameters to prevent exceptions
+        page = Math.max(1, page); // Ensure page is at least 1 (1-based indexing)
+        pageSize = Math.max(1, Math.min(100, pageSize)); // Clamp pageSize between 1 and 100
+
+        Sort.Direction sortDirection = "desc".equalsIgnoreCase(direction)
+            ? Sort.Direction.DESC
+            : Sort.Direction.ASC;
+        Sort sortObj = Sort.by(sortDirection, sortField);
+        PageRequest pageRequest = PageRequest.of(page - 1, pageSize, sortObj);
+
+        // Query deleted users
+        Page<UserAccountStatusAudit> auditPage =
+            userAccountStatusAuditRepository.findDeletedUsers(
+                searchTerm,
+                pageRequest);
+
+        // Map to DTOs
+        List<DeletedUserAuditDto> deletedUsers =
+            auditPage.getContent().stream()
+                .map(audit -> DeletedUserAuditDto.builder()
+                    .userName(audit.getUserName())
+                    .userEmail(audit.getUserEmail())
+                    .deletedDate(audit.getStatusChangedDate())
+                    .deletedBy(audit.getStatusChangedBy())
+                    .build())
+                .collect(Collectors.toList());
+
+        return PaginatedDeletedUsers.builder()
+            .deletedUsers(deletedUsers)
+            .totalDeletedUsers(auditPage.getTotalElements())
+            .totalPages(auditPage.getTotalPages())
+            .currentPage(page)
+            .pageSize(pageSize)
+            .build();
+    }
+
     public void updateUserProfileSilasStatus() {
         logger.info("Starting user profile status update task");
         int pageSize = 500;
@@ -2369,3 +2477,4 @@ public class UserService {
         userProfile.setSilasStatus(silasStatus);
     }
 }
+

@@ -297,7 +297,7 @@ class UserServiceTest {
         verify(techServicesClient).deleteRoleAssignment(entraId);
         verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
         verify(mockUserAccountStatusAuditRepository).deleteAll(auditRecords);
-        verify(mockUserAccountStatusAuditRepository).flush();
+        verify(mockUserAccountStatusAuditRepository, times(2)).flush();
         verify(mockRoleChangeNotificationService, times(1))
                 .sendMessage(any(UserProfile.class), eq(Collections.emptySet()), any(Set.class));
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
@@ -349,6 +349,7 @@ class UserServiceTest {
         // Arrange
         UUID entraId = UUID.randomUUID();
         UUID profileId = UUID.randomUUID();
+        String actorId = UUID.randomUUID().toString();
 
         EntraUser entraUser = EntraUser.builder()
                 .id(entraId)
@@ -369,17 +370,28 @@ class UserServiceTest {
 
         EntraUserDto entraUserDto = new MapperConfig().modelMapper().map(entraUser, EntraUserDto.class);
 
+        EntraUser actorUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .entraOid(actorId)
+                .firstName("Actor")
+                .lastName("User")
+                .build();
+
         when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(profile));
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
+        when(mockEntraUserRepository.findByEntraOid(actorId)).thenReturn(Optional.of(actorUser));
+        when(mockUserAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
         when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
 
         // Act
-        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID().toString());
+        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", actorId);
 
         // Assert
         verify(techServicesClient).disableUser(entraUserDto, "RoleChangeorNoLongerRequired");
         verify(techServicesClient).deleteRoleAssignment(entraId);
+        verify(mockEntraUserRepository).findByEntraOid(actorId);
+        verify(mockUserAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
         verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
         verify(mockEntraUserRepository, times(1)).delete(entraUser);
@@ -392,6 +404,7 @@ class UserServiceTest {
         // Arrange
         UUID entraId = UUID.randomUUID();
         UUID profileId = UUID.randomUUID();
+        String actorId = UUID.randomUUID().toString();
 
         EntraUser entraUser = EntraUser.builder()
                 .id(entraId)
@@ -412,19 +425,30 @@ class UserServiceTest {
 
         EntraUserDto entraUserDto = new MapperConfig().modelMapper().map(entraUser, EntraUserDto.class);
 
+        EntraUser actorUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .entraOid(actorId)
+                .firstName("Actor")
+                .lastName("User")
+                .build();
+
         when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(profile));
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
+        when(mockEntraUserRepository.findByEntraOid(actorId)).thenReturn(Optional.of(actorUser));
+        when(mockUserAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
         when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
         org.mockito.Mockito.doThrow(new RuntimeException("tech services down"))
                 .when(techServicesClient).deleteRoleAssignment(entraId);
 
         // Act
-        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID().toString());
+        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", actorId);
 
         // Assert
         verify(techServicesClient).disableUser(entraUserDto, "RoleChangeorNoLongerRequired");
         verify(techServicesClient).deleteRoleAssignment(entraId);
+        verify(mockEntraUserRepository).findByEntraOid(actorId);
+        verify(mockUserAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
         verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
         verify(mockEntraUserRepository, times(1)).delete(entraUser);
@@ -437,6 +461,7 @@ class UserServiceTest {
         // Arrange
         UUID entraId = UUID.randomUUID();
         UUID profileId = UUID.randomUUID();
+        String actorId = UUID.randomUUID().toString();
 
         EntraUser entraUser = EntraUser.builder()
                 .id(entraId)
@@ -457,17 +482,29 @@ class UserServiceTest {
 
         EntraUserDto entraUserDto = new MapperConfig().modelMapper().map(entraUser, EntraUserDto.class);
 
+
+        EntraUser actorUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .entraOid(actorId)
+                .firstName("Actor")
+                .lastName("User")
+                .build();
+
         when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(profile));
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
+        when(mockEntraUserRepository.findByEntraOid(actorId)).thenReturn(Optional.of(actorUser));
+        when(mockUserAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
         when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.error(null));
 
         // Act
-        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID().toString());
+        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", actorId);
 
         // Assert
         verify(techServicesClient).disableUser(entraUserDto, "RoleChangeorNoLongerRequired");
         verify(techServicesClient).deleteRoleAssignment(entraId);
+        verify(mockEntraUserRepository).findByEntraOid(actorId);
+        verify(mockUserAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
         verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
         verify(mockEntraUserRepository, times(1)).delete(entraUser);
