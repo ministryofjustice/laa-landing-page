@@ -5,6 +5,7 @@ build:
   build_mode: ONLINE
 
 global_settings:
+  source_dir: "src/main"
   severity_threshold: MEDIUM
 
   suppressions:
