@@ -15,6 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
@@ -24,6 +25,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -710,6 +712,8 @@ public class AccessControlService {
 
         return userService.isInternal(authenticatedUser.getId())
                 && !userService.isInternal(accessedUser.getId())
+                && accessedUser.isEnabled()
+                && !InvitationStatus.VERIFICATION_SUCCESS.equals(accessedUser.getInvitationStatus())
                 && userHasAnyGivenPermissions(authenticatedUser,
                 Permission.CREATE_EXTERNAL_USER,
                 Permission.EDIT_EXTERNAL_USER);

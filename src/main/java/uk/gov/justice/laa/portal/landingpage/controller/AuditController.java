@@ -169,7 +169,7 @@ public class AuditController {
             @RequestParam(name = "profilePage", defaultValue = "1") int profilePage,
             @RequestParam(name = "profileSize", defaultValue = "3") int profileSize,
             @RequestParam(name = "isEntraId", defaultValue = "false") boolean isEntraId,
-            Model model, Authentication authentication) {
+            Model model) {
 
         log.debug(
                 "AuditController.displayUserAuditDetail - userId: '{}', isEntraId: {}, profilePage: {}, profileSize: {}",
