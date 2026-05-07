@@ -1537,7 +1537,7 @@ public class UserService {
 
                 EntraUser entraUser = optionalEntraUser.get();
 
-                List<UserProfile> profiles = userProfileRepository.findAllByEntraUser(entraUser);
+                Set<UserProfile> profiles = entraUser.getUserProfiles();
                 boolean isInternalUser = profiles.stream()
                         .anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
 
@@ -1561,16 +1561,10 @@ public class UserService {
                         userProfileRepository.save(profile);
                     }
                     userProfileRepository.flush();
-
-                    userProfileRepository.deleteAll(profiles);
-                    userProfileRepository.flush();
                     logger.debug("Deleted {} profiles for internal user: {}", profiles.size(), entraId);
                 }
 
-                // Remove user profiles from user to avoid stale references.
-                if (entraUser.getUserProfiles() != null && !entraUser.getUserProfiles().isEmpty()) {
-                    entraUser.getUserProfiles().clear();
-                }
+                userProfileRepository.deleteAll(entraUser.getUserProfiles());
                 entraUserRepository.delete(entraUser);
                 entraUserRepository.flush();
 
