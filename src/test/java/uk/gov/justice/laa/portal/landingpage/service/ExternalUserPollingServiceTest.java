@@ -787,8 +787,7 @@ class ExternalUserPollingServiceTest {
                 .mailOnly(false)
                 .build();
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(userToDelete));
-        when(userAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
-        when(userAccountStatusAuditRepository.findByEntraUser(userToDelete)).thenThrow(new RuntimeException());
+        when(userAccountStatusAuditRepository.findByEntraUser(userToDelete)).thenThrow(new RuntimeException("Test exception"));
 
         TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
@@ -808,8 +807,10 @@ class ExternalUserPollingServiceTest {
 
         externalUserPollingService.updateSyncMetadata();
 
-        verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
+        // When deletion fails, no audit record should be saved (audit is created AFTER successful deletion)
+        verify(userAccountStatusAuditRepository, never()).save(any(UserAccountStatusAudit.class));
         verify(userAccountStatusAuditRepository).findByEntraUser(userToDelete);
+        // Sync metadata should still be updated (sync continues despite individual user failures)
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
 

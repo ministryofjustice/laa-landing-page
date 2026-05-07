@@ -26,6 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 public class DeletedUsersAuditTableTest extends RoleBasedAccessIntegrationTest {
 
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
     private UserAccountStatusAuditRepository userAccountStatusAuditRepository;
 

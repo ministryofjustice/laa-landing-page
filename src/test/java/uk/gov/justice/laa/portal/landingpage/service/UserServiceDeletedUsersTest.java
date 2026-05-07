@@ -70,7 +70,6 @@ class UserServiceDeletedUsersTest {
         Page<UserAccountStatusAudit> auditPage = new PageImpl<>(auditList, PageRequest.of(0, 10), 2);
 
         when(userAccountStatusAuditRepository.findDeletedUsers(
-                eq(UserAccountStatus.DELETED),
                 isNull(),
                 any(Pageable.class)))
                 .thenReturn(auditPage);
@@ -99,7 +98,6 @@ class UserServiceDeletedUsersTest {
         Page<UserAccountStatusAudit> auditPage = new PageImpl<>(filteredList, PageRequest.of(0, 10), 1);
 
         when(userAccountStatusAuditRepository.findDeletedUsers(
-                eq(UserAccountStatus.DELETED),
                 eq("user1"),
                 any(Pageable.class)))
                 .thenReturn(auditPage);
@@ -120,7 +118,6 @@ class UserServiceDeletedUsersTest {
         Page<UserAccountStatusAudit> emptyPage = new PageImpl<>(Arrays.asList(), PageRequest.of(0, 10), 0);
 
         when(userAccountStatusAuditRepository.findDeletedUsers(
-                eq(UserAccountStatus.DELETED),
                 isNull(),
                 any(Pageable.class)))
                 .thenReturn(emptyPage);
@@ -142,7 +139,6 @@ class UserServiceDeletedUsersTest {
         Page<UserAccountStatusAudit> auditPage = new PageImpl<>(auditList, PageRequest.of(0, 10), 2);
 
         when(userAccountStatusAuditRepository.findDeletedUsers(
-                eq(UserAccountStatus.DELETED),
                 isNull(),
                 any(Pageable.class)))
                 .thenReturn(auditPage);
@@ -156,7 +152,6 @@ class UserServiceDeletedUsersTest {
 
         // Verify the repository was called with correct sort field
         verify(userAccountStatusAuditRepository).findDeletedUsers(
-                eq(UserAccountStatus.DELETED),
                 isNull(),
                 argThat(pageable ->
                     pageable.getSort().getOrderFor("userEmail") != null
@@ -171,7 +166,6 @@ class UserServiceDeletedUsersTest {
         Page<UserAccountStatusAudit> auditPage = new PageImpl<>(auditList, PageRequest.of(0, 10), 2);
 
         when(userAccountStatusAuditRepository.findDeletedUsers(
-                eq(UserAccountStatus.DELETED),
                 isNull(),
                 any(Pageable.class)))
                 .thenReturn(auditPage);
@@ -184,7 +178,6 @@ class UserServiceDeletedUsersTest {
 
         // Verify the repository was called with correct sort field
         verify(userAccountStatusAuditRepository).findDeletedUsers(
-                eq(UserAccountStatus.DELETED),
                 isNull(),
                 argThat(pageable ->
                     pageable.getSort().getOrderFor("statusChangedBy") != null
@@ -199,7 +192,6 @@ class UserServiceDeletedUsersTest {
         Page<UserAccountStatusAudit> auditPage = new PageImpl<>(auditList, PageRequest.of(1, 10), 12);
 
         when(userAccountStatusAuditRepository.findDeletedUsers(
-                eq(UserAccountStatus.DELETED),
                 isNull(),
                 any(Pageable.class)))
                 .thenReturn(auditPage);
@@ -214,7 +206,6 @@ class UserServiceDeletedUsersTest {
 
         // Verify pagination
         verify(userAccountStatusAuditRepository).findDeletedUsers(
-                eq(UserAccountStatus.DELETED),
                 isNull(),
                 argThat(pageable -> pageable.getPageNumber() == 1) // 0-based index
         );

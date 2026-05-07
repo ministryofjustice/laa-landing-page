@@ -87,7 +87,7 @@ class UserAccountStatusAuditRepositoryDeletedUsersTest extends BaseRepositoryTes
         Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "statusChangedDate"));
 
         // Act
-        Page<UserAccountStatusAudit> result = repository.findDeletedUsers(UserAccountStatus.DELETED, null, pageable);
+        Page<UserAccountStatusAudit> result = repository.findDeletedUsers(null, pageable);
 
         // Assert
         assertThat(result.getContent()).hasSize(2);
@@ -96,7 +96,7 @@ class UserAccountStatusAuditRepositoryDeletedUsersTest extends BaseRepositoryTes
                 .extracting(UserAccountStatusAudit::getUserEmail)
                 .containsExactly("deleted1@example.com", "deleted2@example.com");
         assertThat(result.getContent())
-                .allMatch(audit -> audit.getStatusChange() == UserAccountStatus.DELETED);
+                .allMatch(audit -> audit.getStatusChange().equals(UserAccountStatus.DELETED));
     }
 
     @Test
@@ -109,7 +109,7 @@ class UserAccountStatusAuditRepositoryDeletedUsersTest extends BaseRepositoryTes
         Pageable pageable = PageRequest.of(0, 10);
 
         // Act
-        Page<UserAccountStatusAudit> result = repository.findDeletedUsers(UserAccountStatus.DELETED, null, pageable);
+        Page<UserAccountStatusAudit> result = repository.findDeletedUsers(null, pageable);
 
         // Assert
         assertThat(result.getContent()).isEmpty();
@@ -124,7 +124,7 @@ class UserAccountStatusAuditRepositoryDeletedUsersTest extends BaseRepositoryTes
         Pageable pageable = PageRequest.of(0, 10);
 
         // Act
-        Page<UserAccountStatusAudit> result = repository.findDeletedUsers(UserAccountStatus.DELETED, null, pageable);
+        Page<UserAccountStatusAudit> result = repository.findDeletedUsers(null, pageable);
 
         // Assert
         assertThat(result.getContent()).isEmpty();
@@ -145,11 +145,11 @@ class UserAccountStatusAuditRepositoryDeletedUsersTest extends BaseRepositoryTes
 
         // Act
         Page<UserAccountStatusAudit> result = repository.findDeletedUsers(
-                UserAccountStatus.DELETED, "test.user1@example.com", pageable);
+                "test.user1@example.com", pageable);
 
         // Assert
         assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getContent().get(0).getUserEmail()).isEqualTo("test.user1@example.com");
+        assertThat(result.getContent().getFirst().getUserEmail()).isEqualTo("test.user1@example.com");
     }
 
     @Test
@@ -164,7 +164,7 @@ class UserAccountStatusAuditRepositoryDeletedUsersTest extends BaseRepositoryTes
 
         // Act - Search for "smith"
         Page<UserAccountStatusAudit> result = repository.findDeletedUsers(
-                UserAccountStatus.DELETED, "smith", pageable);
+                "smith", pageable);
 
         // Assert
         assertThat(result.getContent()).hasSize(2);
@@ -185,18 +185,18 @@ class UserAccountStatusAuditRepositoryDeletedUsersTest extends BaseRepositoryTes
 
         // Act - Search with lowercase
         Page<UserAccountStatusAudit> resultLowercase = repository.findDeletedUsers(
-                UserAccountStatus.DELETED, "uppercase", pageable);
+                "uppercase", pageable);
 
         // Act - Search with uppercase
         Page<UserAccountStatusAudit> resultUppercase = repository.findDeletedUsers(
-                UserAccountStatus.DELETED, "LOWERCASE", pageable);
+                "LOWERCASE", pageable);
 
         // Assert
         assertThat(resultLowercase.getContent()).hasSize(1);
-        assertThat(resultLowercase.getContent().get(0).getUserEmail()).isEqualTo("UPPERCASE@EXAMPLE.COM");
+        assertThat(resultLowercase.getContent().getFirst().getUserEmail()).isEqualTo("UPPERCASE@EXAMPLE.COM");
 
         assertThat(resultUppercase.getContent()).hasSize(1);
-        assertThat(resultUppercase.getContent().get(0).getUserEmail()).isEqualTo("lowercase@example.com");
+        assertThat(resultUppercase.getContent().getFirst().getUserEmail()).isEqualTo("lowercase@example.com");
     }
 
     @Test
@@ -210,7 +210,7 @@ class UserAccountStatusAuditRepositoryDeletedUsersTest extends BaseRepositoryTes
 
         // Act
         Page<UserAccountStatusAudit> result = repository.findDeletedUsers(
-                UserAccountStatus.DELETED, "nonexistent", pageable);
+                "nonexistent", pageable);
 
         // Assert
         assertThat(result.getContent()).isEmpty();
@@ -229,7 +229,7 @@ class UserAccountStatusAuditRepositoryDeletedUsersTest extends BaseRepositoryTes
 
         // Act
         Page<UserAccountStatusAudit> result = repository.findDeletedUsers(
-                UserAccountStatus.DELETED, null, pageable);
+                null, pageable);
 
         // Assert
         assertThat(result.getContent()).hasSize(3);
@@ -247,7 +247,7 @@ class UserAccountStatusAuditRepositoryDeletedUsersTest extends BaseRepositoryTes
 
         // Act
         Page<UserAccountStatusAudit> result = repository.findDeletedUsers(
-                UserAccountStatus.DELETED, "", pageable);
+                "", pageable);
 
         // Assert - Empty string should match all (or none, depending on implementation)
         assertThat(result).isNotNull();
@@ -273,8 +273,8 @@ class UserAccountStatusAuditRepositoryDeletedUsersTest extends BaseRepositoryTes
         Pageable secondPage = PageRequest.of(1, 10, Sort.by(Sort.Direction.DESC, "statusChangedDate"));
 
         // Act
-        Page<UserAccountStatusAudit> page1 = repository.findDeletedUsers(UserAccountStatus.DELETED, null, firstPage);
-        Page<UserAccountStatusAudit> page2 = repository.findDeletedUsers(UserAccountStatus.DELETED, null, secondPage);
+        Page<UserAccountStatusAudit> page1 = repository.findDeletedUsers(null, firstPage);
+        Page<UserAccountStatusAudit> page2 = repository.findDeletedUsers(null, secondPage);
 
         // Assert page 1
         assertThat(page1.getContent()).hasSize(10);
@@ -312,7 +312,7 @@ class UserAccountStatusAuditRepositoryDeletedUsersTest extends BaseRepositoryTes
         Pageable pageable = PageRequest.of(0, 100);
 
         // Act
-        Page<UserAccountStatusAudit> result = repository.findDeletedUsers(UserAccountStatus.DELETED, null, pageable);
+        Page<UserAccountStatusAudit> result = repository.findDeletedUsers(null, pageable);
 
         // Assert
         assertThat(result.getContent()).hasSize(2);
@@ -331,7 +331,7 @@ class UserAccountStatusAuditRepositoryDeletedUsersTest extends BaseRepositoryTes
         Pageable pageable = PageRequest.of(5, 10); // Request page 5 when only 1 record exists
 
         // Act
-        Page<UserAccountStatusAudit> result = repository.findDeletedUsers(UserAccountStatus.DELETED, null, pageable);
+        Page<UserAccountStatusAudit> result = repository.findDeletedUsers(null, pageable);
 
         // Assert
         assertThat(result.getContent()).isEmpty();
@@ -354,7 +354,7 @@ class UserAccountStatusAuditRepositoryDeletedUsersTest extends BaseRepositoryTes
         Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "userEmail"));
 
         // Act
-        Page<UserAccountStatusAudit> result = repository.findDeletedUsers(UserAccountStatus.DELETED, null, pageable);
+        Page<UserAccountStatusAudit> result = repository.findDeletedUsers(null, pageable);
 
         // Assert
         assertThat(result.getContent()).hasSize(4);
@@ -374,7 +374,7 @@ class UserAccountStatusAuditRepositoryDeletedUsersTest extends BaseRepositoryTes
         Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "userEmail"));
 
         // Act
-        Page<UserAccountStatusAudit> result = repository.findDeletedUsers(UserAccountStatus.DELETED, null, pageable);
+        Page<UserAccountStatusAudit> result = repository.findDeletedUsers(null, pageable);
 
         // Assert
         assertThat(result.getContent())
@@ -397,7 +397,7 @@ class UserAccountStatusAuditRepositoryDeletedUsersTest extends BaseRepositoryTes
         Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "statusChangedDate"));
 
         // Act
-        Page<UserAccountStatusAudit> result = repository.findDeletedUsers(UserAccountStatus.DELETED, null, pageable);
+        Page<UserAccountStatusAudit> result = repository.findDeletedUsers(null, pageable);
 
         // Assert - Most recent first
         assertThat(result.getContent())
@@ -420,7 +420,7 @@ class UserAccountStatusAuditRepositoryDeletedUsersTest extends BaseRepositoryTes
         Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "statusChangedDate"));
 
         // Act
-        Page<UserAccountStatusAudit> result = repository.findDeletedUsers(UserAccountStatus.DELETED, null, pageable);
+        Page<UserAccountStatusAudit> result = repository.findDeletedUsers(null, pageable);
 
         // Assert - Oldest first
         assertThat(result.getContent())
@@ -449,7 +449,7 @@ class UserAccountStatusAuditRepositoryDeletedUsersTest extends BaseRepositoryTes
 
         // Act
         Page<UserAccountStatusAudit> result = repository.findDeletedUsers(
-                UserAccountStatus.DELETED, "test", pageable);
+                "test", pageable);
 
         // Assert
         assertThat(result.getContent()).hasSize(5);
@@ -476,18 +476,18 @@ class UserAccountStatusAuditRepositoryDeletedUsersTest extends BaseRepositoryTes
 
         // Act & Assert - Search for subdomain
         Page<UserAccountStatusAudit> resultSub = repository.findDeletedUsers(
-                UserAccountStatus.DELETED, "sub.example", pageable);
+                "sub.example", pageable);
         assertThat(resultSub.getContent()).hasSize(1);
-        assertThat(resultSub.getContent().get(0).getUserEmail()).isEqualTo("user.name@sub.example.com");
+        assertThat(resultSub.getContent().getFirst().getUserEmail()).isEqualTo("user.name@sub.example.com");
 
         // Act & Assert - Search for underscore
         Page<UserAccountStatusAudit> resultUnderscore = repository.findDeletedUsers(
-                UserAccountStatus.DELETED, "underscore", pageable);
+                "underscore", pageable);
         assertThat(resultUnderscore.getContent()).hasSize(1);
 
         // Act & Assert - Search for numeric
         Page<UserAccountStatusAudit> resultNumeric = repository.findDeletedUsers(
-                UserAccountStatus.DELETED, "123", pageable);
+                "123", pageable);
         assertThat(resultNumeric.getContent()).hasSize(1);
     }
 
@@ -504,7 +504,7 @@ class UserAccountStatusAuditRepositoryDeletedUsersTest extends BaseRepositoryTes
 
         // Act - Search with @ symbol
         Page<UserAccountStatusAudit> result = repository.findDeletedUsers(
-                UserAccountStatus.DELETED, "@example", pageable);
+                "@example", pageable);
 
         // Assert - Should find both
         assertThat(result.getContent()).hasSizeGreaterThanOrEqualTo(2);
@@ -523,11 +523,11 @@ class UserAccountStatusAuditRepositoryDeletedUsersTest extends BaseRepositoryTes
 
         // Act
         Page<UserAccountStatusAudit> result = repository.findDeletedUsers(
-                UserAccountStatus.DELETED, "complete", pageable);
+                "complete", pageable);
 
         // Assert
         assertThat(result.getContent()).hasSize(1);
-        UserAccountStatusAudit audit = result.getContent().get(0);
+        UserAccountStatusAudit audit = result.getContent().getFirst();
 
         assertThat(audit.getId()).isNotNull();
         assertThat(audit.getUserEmail()).isEqualTo("complete@example.com");
