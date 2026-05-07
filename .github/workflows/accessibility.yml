@@ -13,6 +13,9 @@ on:
       - synchronize
       - closed
 
+permissions:
+  contents: read
+
 jobs:
   pa11y:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}  # Only if deploy succeeds

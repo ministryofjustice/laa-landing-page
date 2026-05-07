@@ -1,10 +1,11 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import java.util.List;
+
 import org.springframework.stereotype.Component;
+
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
-
-import java.util.List;
 
 /**
  * Encapsulates the re-enable permission matrix.
@@ -58,6 +59,10 @@ public class UserEnablementPolicy {
         boolean isFirmUserManager = actorRoles.contains(AuthzRole.FIRM_USER_MANAGER.getRoleName());
 
         return switch (disableType) {
+            case SYNC ->
+                    // Sync-disabled: EUM/EUA or higher only
+                    isEuaLevel || isGlobalAdminOrSecurityResponse;
+
             case NONE ->
                     // Sync-disabled: EUM/EUA or higher only
                     isEuaLevel || isGlobalAdminOrSecurityResponse;
