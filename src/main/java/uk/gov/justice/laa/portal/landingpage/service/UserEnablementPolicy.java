@@ -64,8 +64,8 @@ public class UserEnablementPolicy {
                     isEuaLevel || isGlobalAdminOrSecurityResponse;
 
             case NONE ->
-                    // Sync-disabled: EUM/EUA or higher only
-                    isEuaLevel || isGlobalAdminOrSecurityResponse;
+                    // Manual sync / legacy-with-known-type: all roles permitted (identical to null)
+                    true;
 
             case FIRM ->
                     // FUM-disabled: any FUM (same-firm check handled separately), EUM/EUA, or higher

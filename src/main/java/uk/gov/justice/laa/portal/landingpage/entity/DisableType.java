@@ -26,8 +26,8 @@ public enum DisableType {
     SYNC("Sync"),
 
     /**
-     * Disabled without a known actor (legacy / manual process before tracking was introduced).
-     * Only External User Manager / Admin or higher can re-enable.
+     * Disabled by a manual user sync process, or an unattributed disable before full tracking was introduced.
+     * All roles are permitted to re-enable (identical behaviour to a {@code null} disable type).
      */
     NONE("None"),
 
