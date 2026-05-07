@@ -5,7 +5,6 @@ build:
   build_mode: ONLINE
 
 global_settings:
-  source_dir: "src/main"
   severity_threshold: MEDIUM
 
   suppressions:
@@ -55,6 +54,8 @@ scanners:
   syft:
     enabled: true
     options:
+      cataloging-options:
+        - catalog-archives
       additional_outputs:
         - syft-table
         - spdx-json
