@@ -7,8 +7,8 @@ package uk.gov.justice.laa.portal.landingpage.entity;
  *
  * <p>The hierarchy (lowest to highest delegation):
  * <ol>
+ *   <li>{@link #NONE}      – disabled by a manual sync process (or unattributed); all roles permitted to re-enable</li>
  *   <li>{@link #SYNC}      – disabled by an automated sync process; only EUM/EUA or higher can re-enable</li>
- *   <li>{@link #NONE}      – disabled without a known actor (legacy); only EUM/EUA or higher can re-enable</li>
  *   <li>{@link #FIRM}      – disabled by a Firm User Manager; any FUM (same firm), EUM/EUA or higher can re-enable</li>
  *   <li>{@link #LAA}       – disabled by an External User Manager or External User Admin; only EUM/EUA or higher</li>
  *   <li>{@link #PRIVILEGED} – disabled by Security Response or Global Admin; only GA or SR can re-enable</li>
