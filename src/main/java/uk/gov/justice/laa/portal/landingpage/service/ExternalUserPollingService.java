@@ -237,6 +237,10 @@ public class ExternalUserPollingService {
             userProfileRepository.flush();
 
             // Remove user profiles from user to avoid stale references.
+            // Capture user details for audit record before deletion
+            final String userEmail = entraUser.getEmail();
+            final String userName = entraUser.getFirstName() + " " + entraUser.getLastName();
+
             if (entraUser.getUserProfiles() != null && !entraUser.getUserProfiles().isEmpty()) {
                 entraUser.getUserProfiles().clear();
             }
@@ -246,9 +250,6 @@ public class ExternalUserPollingService {
             log.info("Successfully deleted entra user and all related entities: {}",
                      userEntraOid);
 
-            // Capture user details for audit record
-            String userEmail = entraUser.getEmail();
-            String userName = entraUser.getFirstName() + " " + entraUser.getLastName();
 
             // Create audit record AFTER successful deletion
             UserAccountStatusAudit deletedAudit = UserAccountStatusAudit.builder()

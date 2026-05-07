@@ -512,6 +512,14 @@ public class UserService {
             userProfileRepository.deleteAll(profiles);
             userProfileRepository.flush();
         }
+        // Prepare audit info and capture user details before deletion
+        Optional<EntraUser> actorEntraUserOpt = entraUserRepository.findByEntraOid(actorId);
+        final String deletedByName = actorEntraUserOpt
+            .map(actor -> actor.getFirstName() + " " + actor.getLastName())
+            .orElse("System");
+        final String userEmail = entraUser.getEmail();
+        final String userName = entraUser.getFirstName() + " " + entraUser.getLastName();
+
         // Remove user profiles from user to avoid stale references.
         if (entraUser.getUserProfiles() != null && !entraUser.getUserProfiles().isEmpty()) {
             entraUser.getUserProfiles().clear();
@@ -519,15 +527,7 @@ public class UserService {
         entraUserRepository.delete(entraUser);
         entraUserRepository.flush();
 
-        // Prepare audit info and capture user details for audit record
-        Optional<EntraUser> actorEntraUserOpt = entraUserRepository.findByEntraOid(actorId);
-        String deletedByName = actorEntraUserOpt
-            .map(actor -> actor.getFirstName() + " " + actor.getLastName())
-            .orElse("System");
-        String userEmail = entraUser.getEmail();
-        String userName = entraUser.getFirstName() + " " + entraUser.getLastName();
-
-        // Create audit record AFTER successful deletion
+        // Create audit record after successful deletion
         UserAccountStatusAudit deletedAudit = UserAccountStatusAudit.builder()
             .entraUser(null)
             .userEmail(userEmail)
@@ -707,7 +707,7 @@ public class UserService {
         String userEmail = entraUser.getEmail();
         String userName = entraUser.getFirstName() + " " + entraUser.getLastName();
 
-        // Create audit record AFTER successful deletion
+        // Create audit record after successful deletion
         UserAccountStatusAudit deletedAudit = UserAccountStatusAudit.builder()
             .entraUser(null)
             .userEmail(userEmail)
