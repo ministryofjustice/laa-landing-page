@@ -175,12 +175,11 @@ public class AuditController {
                 "AuditController.displayUserAuditDetail - userId: '{}', isEntraId: {}, profilePage: {}, profileSize: {}",
                 userId, isEntraId, profilePage, profileSize);
 
-        AuditUserDetailDto userDetail;
-        boolean canDisableUser = false;
-
         boolean showResendVerificationLink = accessControlService.canResendActivationForAuditUser(userId.toString());
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
 
+        AuditUserDetailDto userDetail;
+        boolean canDisableUser = false;
         // Determine if this is an EntraUser ID or UserProfile ID
         if (isEntraId) {
             // Load user by EntraUser ID (for users without profiles)
