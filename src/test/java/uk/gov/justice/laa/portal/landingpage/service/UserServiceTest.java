@@ -269,7 +269,7 @@ class UserServiceTest {
                 .entraUser(entraUser)
                 .appRoles(new HashSet<>(Set.of(ccmsRole)))
                 .build();
-        entraUser.setUserProfiles(Set.of(profile));
+        entraUser.setUserProfiles(new HashSet<>(Set.of(profile)));
 
         when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(profile));
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
@@ -326,7 +326,7 @@ class UserServiceTest {
                 .entraUser(entraUser)
                 .appRoles(new HashSet<>(Set.of(nonCcmsRole)))
                 .build();
-        entraUser.setUserProfiles(Set.of(profile));
+        entraUser.setUserProfiles(new HashSet<>(Set.of(profile)));
 
         when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(profile));
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
@@ -366,7 +366,7 @@ class UserServiceTest {
                 .entraUser(entraUser)
                 .appRoles(new HashSet<>(Set.of(role1)))
                 .build();
-        entraUser.setUserProfiles(Set.of(profile));
+        entraUser.setUserProfiles(new HashSet<>(Set.of(profile)));
 
         EntraUserDto entraUserDto = new MapperConfig().modelMapper().map(entraUser, EntraUserDto.class);
 
@@ -421,7 +421,7 @@ class UserServiceTest {
                 .entraUser(entraUser)
                 .appRoles(new HashSet<>(Set.of(role1)))
                 .build();
-        entraUser.setUserProfiles(Set.of(profile));
+        entraUser.setUserProfiles(new HashSet<>(Set.of(profile)));
 
         EntraUserDto entraUserDto = new MapperConfig().modelMapper().map(entraUser, EntraUserDto.class);
 
@@ -478,7 +478,7 @@ class UserServiceTest {
                 .entraUser(entraUser)
                 .appRoles(new HashSet<>(Set.of(role1)))
                 .build();
-        entraUser.setUserProfiles(Set.of(profile));
+        entraUser.setUserProfiles(new HashSet<>(Set.of(profile)));
 
         EntraUserDto entraUserDto = new MapperConfig().modelMapper().map(entraUser, EntraUserDto.class);
 

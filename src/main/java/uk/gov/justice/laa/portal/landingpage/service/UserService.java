@@ -512,6 +512,10 @@ public class UserService {
             userProfileRepository.deleteAll(profiles);
             userProfileRepository.flush();
         }
+        // Remove user profiles from user to avoid stale references.
+        if (entraUser.getUserProfiles() != null && !entraUser.getUserProfiles().isEmpty()) {
+            entraUser.getUserProfiles().clear();
+        }
         entraUserRepository.delete(entraUser);
         entraUserRepository.flush();
 
@@ -1563,6 +1567,10 @@ public class UserService {
                     logger.debug("Deleted {} profiles for internal user: {}", profiles.size(), entraId);
                 }
 
+                // Remove user profiles from user to avoid stale references.
+                if (entraUser.getUserProfiles() != null && !entraUser.getUserProfiles().isEmpty()) {
+                    entraUser.getUserProfiles().clear();
+                }
                 entraUserRepository.delete(entraUser);
                 entraUserRepository.flush();
 
