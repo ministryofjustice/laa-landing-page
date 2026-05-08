@@ -17,13 +17,16 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.model.CcmsMessage;
+import uk.gov.justice.laa.portal.landingpage.registry.SqsClientRegistry;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -34,9 +37,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class RoleChangeNotificationService {
 
-    private final SqsClient sqsClient;
+    private final SqsClientRegistry sqsClientRegistry;
     private final ObjectMapper objectMapper;
-    private final String sqsQueueUrl;
     private final UserProfileRepository userProfileRepository;
 
     private static final String USER_TYPE_ATTRIBUTE = "userType";
@@ -45,6 +47,7 @@ public class RoleChangeNotificationService {
      * This method will automatically retry up to 3 times with 0.1 second delays
      *
      * @param userProfile The user profile
+     * @param appEntraOid the app entra oid to determine which queue to send to
      * @param newPuiRoles new roles filtered by PUI
      * @param oldPuiRoles old roled filtered by PUI
      * @return true if successful
@@ -54,9 +57,10 @@ public class RoleChangeNotificationService {
         maxAttempts = 3,
         backoff = @Backoff(delay = 100)
     )
-    public boolean sendMessage(UserProfile userProfile, Set<String> newPuiRoles, Set<String> oldPuiRoles) {
+    public boolean sendMessage(UserProfile userProfile, String appEntraOid, Set<String> newPuiRoles, Set<String> oldPuiRoles) {
+        Optional<String> sqsQueueUrlOpt = sqsClientRegistry.getSqsQueueUrl(appEntraOid);
         // Skip until queue is ready for env
-        if ("none".equalsIgnoreCase(sqsQueueUrl)) {
+        if (sqsQueueUrlOpt.isEmpty() || "NONE".equalsIgnoreCase(sqsQueueUrlOpt.get())) {
             log.info("Skipping CCMS update for user: {}",
                 userProfile.getEntraUser().getEntraOid());
             return false;
@@ -64,7 +68,7 @@ public class RoleChangeNotificationService {
         
         try {
             log.info("Initializing CCMS role change message for user: {}", userProfile.getEntraUser().getEntraOid());
-            sendRoleChangeNotificationToSqs(userProfile, newPuiRoles, oldPuiRoles);
+            sendRoleChangeNotificationToSqs(userProfile, appEntraOid, newPuiRoles, oldPuiRoles);
             return true;
         } catch (Exception e) {
             log.warn("CCMS notification attempt failed for user: {}: {}",
@@ -74,7 +78,16 @@ public class RoleChangeNotificationService {
     }
     
 
-    private void sendRoleChangeNotificationToSqs(UserProfile userProfile, Set<String> newPuiRoles, Set<String> oldPuiRoles) throws Exception {
+    private void sendRoleChangeNotificationToSqs(UserProfile userProfile, String appEntraOid, Set<String> newPuiRoles, Set<String> oldPuiRoles) throws Exception {
+        Optional<SqsClient> sqsClientOpt = sqsClientRegistry.getSqsClient(appEntraOid);
+        Optional<String> sqsQueueUrlOpt = sqsClientRegistry.getSqsQueueUrl(appEntraOid);
+        if (sqsClientOpt.isEmpty() || sqsQueueUrlOpt.isEmpty() || "NONE".equalsIgnoreCase(sqsQueueUrlOpt.get())) {
+            log.info("Skipping CCMS update for user: {}", userProfile.getEntraUser().getEntraOid());
+            return;
+        }
+
+        SqsClient sqsClient = sqsClientOpt.get();
+        String sqsQueueUrl = sqsQueueUrlOpt.get();
         EntraUser entraUser = userProfile.getEntraUser();
         if (!newPuiRoles.equals(oldPuiRoles)) {
             log.info("CCMS roles updated for user: {} with entra oid: {}, generating message", userProfile.getId(), userProfile.getEntraUser().getEntraOid());
@@ -147,27 +160,37 @@ public class RoleChangeNotificationService {
         AtomicInteger unsuccessful = new AtomicInteger();
 
         profiles.forEach(profile -> {
-            boolean notificationSuccess = false;
             try {
-                Set<String> ccmsRoles = profile.getAppRoles().stream()
+                Map<String, Set<String>> ccmsRolesMap = profile.getAppRoles().stream()
                         .filter(AppRole::isLegacySync)
-                        .map(AppRole::getCcmsCode)
-                        .collect(Collectors.toSet());
-                notificationSuccess = sendMessage(profile, ccmsRoles, Collections.emptySet());
+                        .collect(Collectors.groupingBy(role -> role.getApp().getEntraOid(),
+                                Collectors.collectingAndThen(
+                                        Collectors.mapping(AppRole::getCcmsCode, Collectors.toSet()),
+                                        HashSet::new
+                                )));
 
-                log.info("CCMS role sync for user: {} with entra oid: {} {}", profile.getId(), profile.getEntraUser().getEntraOid(), notificationSuccess);
+                boolean notificationSuccess = profile.isLastCcmsSyncSuccessful();
+                boolean ccmsSyncResult = true;
+                for (Map.Entry<String, Set<String>> ccmsRoles : ccmsRolesMap.entrySet()) {
+                    ccmsSyncResult = ccmsSyncResult && sendMessage(profile, ccmsRoles.getKey(), ccmsRoles.getValue(), Collections.emptySet());
+                    notificationSuccess = ccmsSyncResult;
+
+                    log.info("CCMS role sync for user: {} with entra oid: {} {}", profile.getId(), profile.getEntraUser().getEntraOid(), notificationSuccess);
+                }
 
                 profile.setLastCcmsSyncSuccessful(notificationSuccess);
                 userProfileRepository.save(profile);
+
+                if (notificationSuccess) {
+                    successful.incrementAndGet();
+                } else {
+                    unsuccessful.incrementAndGet();
+                }
             } catch (Exception e) {
                 log.error("Error syncing roles for user: {} with entra oid: {}", profile.getId(), profile.getEntraUser().getEntraOid(), e);
-            }
-
-            if (notificationSuccess) {
-                successful.incrementAndGet();
-            } else {
                 unsuccessful.incrementAndGet();
             }
+
         });
 
         log.info("CCMS role sync complete. Successful: {}, Unsuccessful: {}",

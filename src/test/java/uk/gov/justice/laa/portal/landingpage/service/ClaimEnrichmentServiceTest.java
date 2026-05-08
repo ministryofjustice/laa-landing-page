@@ -110,6 +110,7 @@ class ClaimEnrichmentServiceTest {
         app = App.builder()
                 .id(UUID.fromString(APP_ID))
                 .entraAppId(ENTRA_APP_ID)
+                .entraOid(ENTRA_APP_ID)
                 .name(APP_NAME)
                 .enabled(true)
                 .build();
@@ -316,7 +317,7 @@ class ClaimEnrichmentServiceTest {
         CcmsUserDetailsResponse ccmsResponse = new CcmsUserDetailsResponse();
         ccmsResponse.setCcmsUserDetails(ccmsUserDetails);
 
-        when(ccmsUserDetailsService.getUserDetailsByLegacyUserId(LEGACY_USER_ID.toString()))
+        when(ccmsUserDetailsService.getUserDetailsByLegacyUserId(ENTRA_APP_ID, LEGACY_USER_ID.toString()))
                 .thenReturn(ccmsResponse);
 
         ClaimEnrichmentResponse response = claimEnrichmentService.enrichClaim(request);
