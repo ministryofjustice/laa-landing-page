@@ -27,7 +27,9 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
@@ -712,7 +714,6 @@ public class AccessControlService {
 
         return userService.isInternal(authenticatedUser.getId())
                 && !userService.isInternal(accessedUser.getId())
-                && accessedUser.isEnabled()
                 && !InvitationStatus.VERIFICATION_SUCCESS.equals(accessedUser.getInvitationStatus())
                 && userHasAnyGivenPermissions(authenticatedUser,
                 Permission.CREATE_EXTERNAL_USER,
