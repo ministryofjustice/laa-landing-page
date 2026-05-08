@@ -2,7 +2,6 @@ name: ASH Scan
 
 permissions:
   actions: read
-  checks: write
   contents: read
   security-events: write
 
@@ -30,7 +29,7 @@ jobs:
       config: .ash/ash.yaml
       fail-on-findings: false
       collect-junit-xml-report: true
-      collect-sarif-report: false
+      collect-sarif-report: true
       install-grype: true
       install-syft: true
       install-opengrep: true
