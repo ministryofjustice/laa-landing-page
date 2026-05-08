@@ -2,6 +2,7 @@ name: ASH Scan
 
 permissions:
   actions: read
+  checks: write
   contents: read
   security-events: write
 
