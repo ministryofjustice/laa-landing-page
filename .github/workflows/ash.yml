@@ -28,8 +28,8 @@ jobs:
       ash-mode: container
       config: .ash/ash.yaml
       fail-on-findings: false
-      collect-junit-xml-report: true
-      collect-sarif-report: true
+      collect-junit-xml-report: false
+      collect-sarif-report: false
       install-grype: true
       install-syft: true
       install-opengrep: true
