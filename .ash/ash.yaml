@@ -54,6 +54,9 @@ scanners:
   syft:
     enabled: true
     options:
+      scope: all-layers
+      cataloging-options:
+        - catalog-archives
       additional_outputs:
         - syft-table
         - spdx-json

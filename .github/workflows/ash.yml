@@ -28,7 +28,7 @@ jobs:
       ash-mode: container
       config: .ash/ash.yaml
       fail-on-findings: false
-      collect-junit-xml-report: true
+      collect-junit-xml-report: false
       collect-sarif-report: false
       install-grype: true
       install-syft: true
@@ -36,6 +36,50 @@ jobs:
       post-pr-comment: ${{ github.actor != 'dependabot[bot]' && github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork }}
       verbose: true
       output-dir: '.ash/ash_output'
+
+  syft-image-scan:
+    name: Syft Image Scan
+    runs-on: ubuntu-latest
+    needs: ash
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up JDK
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        with:
+          distribution: 'corretto'
+          java-version: '21'
+
+      - name: Build JAR
+        run: ./gradlew build
+        env:
+          GITHUB_ACTOR: ${{ secrets.GITHUB_ACTOR }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ENVIRONMENT: ${{ vars.ENV_NAME }}
+
+      - name: Build Docker image
+        run: docker build -t laa-landing-page:scan .
+
+      - name: Generate Syft SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: laa-landing-page:scan
+          format: syft-json
+          output-file: 'syft-image-sbom.json'
+          artifact-name: 'syft-image-sbom'
+
+      - name: Generate Syft SPDX SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: laa-landing-page:scan
+          format: spdx-json
+          output-file: 'syft-image-spdx.json'
+          artifact-name: 'syft-image-sbom-spdx'
 
   upload-sarif:
     name: Upload ASH SARIF
