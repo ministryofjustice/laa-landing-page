@@ -15,6 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
@@ -24,8 +25,11 @@ import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
@@ -694,6 +698,26 @@ public class AccessControlService {
                 && !userService.isInternal(accessedUser.getId())
                 && userHasAnyGivenPermissions(authenticatedUser, Permission.CREATE_EXTERNAL_USER,
                         Permission.EDIT_EXTERNAL_USER);
+    }
+
+    public boolean canResendActivationForAuditUser(String userId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
+
+        Optional<EntraUserDto> optionalUser = userService.getEntraUserById(userId);
+
+        if (optionalUser.isEmpty()) {
+            return false;
+        }
+
+        EntraUserDto accessedUser = optionalUser.get();
+
+        return userService.isInternal(authenticatedUser.getId())
+                && !userService.isInternal(accessedUser.getId())
+                && !InvitationStatus.VERIFICATION_SUCCESS.equals(accessedUser.getInvitationStatus())
+                && userHasAnyGivenPermissions(authenticatedUser,
+                Permission.CREATE_EXTERNAL_USER,
+                Permission.EDIT_EXTERNAL_USER);
     }
 
     public boolean canBulkDisableFirmUsers() {
