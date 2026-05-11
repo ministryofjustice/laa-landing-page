@@ -701,30 +701,22 @@ public class AccessControlService {
                         Permission.EDIT_EXTERNAL_USER);
     }
 
-    public boolean canResendActivationForAuditUser(String id) {
+    public boolean canResendActivationForAuditUser(String entraUserId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
 
-        EntraUserDto accessedUser;
+        Optional<EntraUserDto> optionalUser = userService.getEntraUserById(entraUserId);
 
-        Optional<UserProfileDto> optionalProfile =
-                userService.getUserProfileById(id);
-
-        if (optionalProfile.isPresent()) {
-            accessedUser = optionalProfile.get().getEntraUser();
-        } else {
-            Optional<EntraUserDto> optionalEntra =
-                    userService.getEntraUserById(id);
-
-            if (optionalEntra.isEmpty()) {
-                return false;
-            }
-
-            accessedUser = optionalEntra.get();
+        if (optionalUser.isEmpty()) {
+            return false;
         }
 
+        EntraUserDto accessedUser = optionalUser.get();
+
+        boolean isAccessedUserInternal = userService.isInternal(entraUserId);
+
         return userService.isInternal(authenticatedUser.getId())
-                && !userService.isInternal(accessedUser.getId())
+                && !isAccessedUserInternal
                 && !InvitationStatus.VERIFICATION_SUCCESS.equals(accessedUser.getInvitationStatus())
                 && userHasAnyGivenPermissions(authenticatedUser,
                 Permission.CREATE_EXTERNAL_USER,

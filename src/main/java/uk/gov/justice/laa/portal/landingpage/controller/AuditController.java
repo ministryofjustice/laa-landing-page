@@ -175,9 +175,6 @@ public class AuditController {
                 "AuditController.displayUserAuditDetail - userId: '{}', isEntraId: {}, profilePage: {}, profileSize: {}",
                 userId, isEntraId, profilePage, profileSize);
 
-        boolean showResendVerificationLink = accessControlService.canResendActivationForAuditUser(userId.toString());
-        model.addAttribute("showResendVerificationLink", showResendVerificationLink);
-
         AuditUserDetailDto userDetail;
         boolean canDisableUser = false;
         // Determine if this is an EntraUser ID or UserProfile ID
@@ -195,6 +192,10 @@ public class AuditController {
                 userDetail = userService.getAuditUserDetailByEntraId(userId);
             }
         }
+
+        boolean showResendVerificationLink = accessControlService.canResendActivationForAuditUser(userDetail.getUserId());
+        model.addAttribute("showResendVerificationLink", showResendVerificationLink);
+
         TechServicesApiResponse<GetUserResponse> entraUserResponse = techServicesClient.getUser(userDetail.getEntraOid());
         if (entraUserResponse.isSuccess()) {
             TechServicesUser user = entraUserResponse.getData().getUser();
