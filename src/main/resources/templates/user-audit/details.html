@@ -93,7 +93,7 @@
                 <div class="govuk-grid-row identity-row">
 
                     <!-- LEFT COLUMN -->
-                    <div class="govuk-grid-column-one-half">
+                    <div class="govuk-grid-column-full">
 
                         <!-- User Details Card (Top Left) -->
                         <div class="govuk-summary-card govuk-!-margin-bottom-6">
@@ -105,6 +105,10 @@
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Email</dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.email}"></dd>
+                                        <dd class="govuk-summary-list__actions">
+                                            <a th:if="${showResendVerificationLink}"  class="govuk-link"
+                                               th:href="@{/admin/users/manage/{id}(id=${profileId},resendVerification=true)}">Resend Activation Code</a>
+                                        </dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">First name</dt>
@@ -170,7 +174,7 @@
                     </div>
 
                     <!-- RIGHT COLUMN -->
-                    <div class="govuk-grid-column-one-half">
+                    <div class="govuk-grid-column-full">
 
                         <!-- Entra Audit Data Card (Full Right Column) -->
                         <div class="govuk-summary-card">

@@ -535,6 +535,7 @@ class AuditControllerTest {
     void displayUserAuditDetail_withValidUserId_returnsDetailView() {
         // Given
         UUID userId = UUID.randomUUID();
+
         AuditUserDetailDto mockUserDetail = AuditUserDetailDto
                 .builder()
                 .userId(userId.toString())
@@ -566,24 +567,49 @@ class AuditControllerTest {
                 .user(techServicesUser)
                 .build();
 
-        TechServicesApiResponse<GetUserResponse> techServicesResponse = TechServicesApiResponse.success(getUserResponse);
+        TechServicesApiResponse<GetUserResponse> techServicesResponse =
+                TechServicesApiResponse.success(getUserResponse);
+
+        when(accessControlService.canResendActivationForAuditUser(userId.toString()))
+                .thenReturn(true);
 
         when(techServicesClient.getUser(any())).thenReturn(techServicesResponse);
         when(userService.getAuditUserDetail(userId, 1, 5)).thenReturn(mockUserDetail);
-        Optional<DisableUserReason> optionalDisableUserReason = Optional.of(DisableUserReason.builder().description("UserRequest").name("User Request").build());
-        when(disableUserReasonRepository.findDisableUserReasonByEntraDescription(eq("UserRequest"))).thenReturn(optionalDisableUserReason);
-        when(userService.determineStatusBadgeForAuditUser(any(AuditUserDetailDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
-        // When
+        Optional<DisableUserReason> optionalDisableUserReason =
+                Optional.of(DisableUserReason.builder()
+                        .description("UserRequest")
+                        .name("User Request")
+                        .build());
+
+        when(disableUserReasonRepository
+                .findDisableUserReasonByEntraDescription(eq("UserRequest")))
+                .thenReturn(optionalDisableUserReason);
+
+        when(userService.determineStatusBadgeForAuditUser(any(AuditUserDetailDto.class)))
+                .thenReturn(UserProfileSilasStatus.COMPLETE);
+
         String viewName = auditController.displayUserAuditDetail(userId, 1, 5, false, model);
 
-        // Then
         assertThat(viewName).isEqualTo("user-audit/details");
+
         assertThat(model.getAttribute("user")).isEqualTo(mockUserDetail);
-        TechServicesUser returnedTechServicesUser = (TechServicesUser) model.getAttribute("entraUser");
+
+        TechServicesUser returnedTechServicesUser =
+                (TechServicesUser) model.getAttribute("entraUser");
+
         assertThat(returnedTechServicesUser).isNotNull();
-        assertThat(model.getAttribute("entraUserDisableReason")).isEqualTo("User Request");
-        verify(userService, times(1)).getAuditUserDetail(userId, 1, 5);
+        assertThat(model.getAttribute("entraUserDisableReason"))
+                .isEqualTo("User Request");
+
+        assertThat(model.getAttribute("showResendVerificationLink"))
+                .isEqualTo(true);
+
+        verify(accessControlService, times(1))
+                .canResendActivationForAuditUser(userId.toString());
+
+        verify(userService, times(1))
+                .getAuditUserDetail(userId, 1, 5);
     }
 
     @Test

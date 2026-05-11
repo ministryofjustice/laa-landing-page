@@ -1,15 +1,15 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
+
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
-
-import java.util.List;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(MockitoExtension.class)
 class UserEnablementPolicyTest {
@@ -35,7 +35,7 @@ class UserEnablementPolicyTest {
             assertThat(policy.canEnable(null, List.of())).isTrue();
         }
 
-        // --- NONE disable type (Manual User Sync / Automatic User Sync) ---
+        // --- NONE disable type (Manual User Sync — all roles permitted) ---
 
         @Test
         void none_gaCanEnable() {
@@ -58,13 +58,45 @@ class UserEnablementPolicyTest {
         }
 
         @Test
-        void none_fumCannotEnable() {
-            assertThat(policy.canEnable(DisableType.NONE, List.of(FUM))).isFalse();
+        void none_fumCanEnable() {
+            assertThat(policy.canEnable(DisableType.NONE, List.of(FUM))).isTrue();
         }
 
         @Test
-        void none_noRoleCannotEnable() {
-            assertThat(policy.canEnable(DisableType.NONE, List.of())).isFalse();
+        void none_noRoleCanEnable() {
+            assertThat(policy.canEnable(DisableType.NONE, List.of())).isTrue();
+        }
+
+        // --- SYNC disable type (Automatic User Sync — EUM/EUA+ only) ---
+
+        @Test
+        void sync_gaCanEnable() {
+            assertThat(policy.canEnable(DisableType.SYNC, List.of(GA))).isTrue();
+        }
+
+        @Test
+        void sync_srCanEnable() {
+            assertThat(policy.canEnable(DisableType.SYNC, List.of(SR))).isTrue();
+        }
+
+        @Test
+        void sync_eumCanEnable() {
+            assertThat(policy.canEnable(DisableType.SYNC, List.of(EUM))).isTrue();
+        }
+
+        @Test
+        void sync_euaCanEnable() {
+            assertThat(policy.canEnable(DisableType.SYNC, List.of(EUA))).isTrue();
+        }
+
+        @Test
+        void sync_fumCannotEnable() {
+            assertThat(policy.canEnable(DisableType.SYNC, List.of(FUM))).isFalse();
+        }
+
+        @Test
+        void sync_noRoleCannotEnable() {
+            assertThat(policy.canEnable(DisableType.SYNC, List.of())).isFalse();
         }
 
         // --- FIRM disable type (Firm User Manager disabled the user) ---

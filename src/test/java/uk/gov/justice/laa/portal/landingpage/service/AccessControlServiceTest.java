@@ -45,6 +45,7 @@ import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.SECURITY_RE
 import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -779,6 +780,41 @@ public class AccessControlServiceTest {
         when(userService.isInternal(userId)).thenReturn(true);
 
         boolean result = accessControlService.canSendVerificationEmail(accessedUserId.toString());
+        Assertions.assertThat(result).isTrue();
+    }
+
+    @Test
+    public void testCanResendActivationForAuditUser() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID userId = UUID.randomUUID();
+        UUID accessedUserId = UUID.randomUUID();
+
+        EntraUserDto accessedUser =
+                EntraUserDto.builder().id(accessedUserId.toString()).enabled(true).invitationStatus(InvitationStatus.INVITE_SENT).build();
+
+        Permission userPermission = Permission.EDIT_EXTERNAL_USER;
+        AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
+        EntraUser authenticatedUser = EntraUser.builder().id(userId).email("internal@email.com")
+                .userProfiles(HashSet.newHashSet(1)).build();
+        UserProfile authenticatedUserProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(authenticatedUser)
+                .appRoles(Set.of(appRole))
+                .userType(UserType.INTERNAL)
+                .build();
+        authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
+
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        when(userService.getEntraUserById(accessedUserId.toString()))
+                .thenReturn(Optional.of(accessedUser));
+        when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
+        when(userService.isInternal(userId)).thenReturn(true);
+
+        boolean result = accessControlService.canResendActivationForAuditUser(accessedUserId.toString());
         Assertions.assertThat(result).isTrue();
     }
 
