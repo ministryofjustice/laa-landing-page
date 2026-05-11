@@ -193,9 +193,6 @@ public class AuditController {
             }
         }
 
-        boolean showResendVerificationLink = accessControlService.canResendActivationForAuditUser(userDetail.getUserId());
-        model.addAttribute("showResendVerificationLink", showResendVerificationLink);
-
         TechServicesApiResponse<GetUserResponse> entraUserResponse = techServicesClient.getUser(userDetail.getEntraOid());
         if (entraUserResponse.isSuccess()) {
             TechServicesUser user = entraUserResponse.getData().getUser();
@@ -211,6 +208,8 @@ public class AuditController {
             model.addAttribute("entraUserDisableReason", disableUserReason);
         }
         canDisableUser = accessControlService.canDisableUser(userDetail.getUserId());
+        boolean showResendVerificationLink = accessControlService.canResendActivationForAuditUser(userDetail.getUserId());
+        model.addAttribute("showResendVerificationLink", showResendVerificationLink);
         AccessControlService.EnablementFlags enablementFlags = disableUserFeatureEnabled
                 ? accessControlService.getEnablementFlags(userDetail.getUserId())
                 : new AccessControlService.EnablementFlags(false, false);
