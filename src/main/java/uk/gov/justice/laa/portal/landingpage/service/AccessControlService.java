@@ -15,6 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
@@ -700,11 +701,11 @@ public class AccessControlService {
                         Permission.EDIT_EXTERNAL_USER);
     }
 
-    public boolean canResendActivationForAuditUser(String userId) {
+    public boolean canResendActivationForAuditUser(String entraUserId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
 
-        Optional<EntraUserDto> optionalUser = userService.getEntraUserById(userId);
+        Optional<EntraUserDto> optionalUser = userService.getEntraUserById(entraUserId);
 
         if (optionalUser.isEmpty()) {
             return false;
@@ -712,8 +713,10 @@ public class AccessControlService {
 
         EntraUserDto accessedUser = optionalUser.get();
 
+        boolean isAccessedUserInternal = userService.isInternal(entraUserId);
+
         return userService.isInternal(authenticatedUser.getId())
-                && !userService.isInternal(accessedUser.getId())
+                && !isAccessedUserInternal
                 && !InvitationStatus.VERIFICATION_SUCCESS.equals(accessedUser.getInvitationStatus())
                 && userHasAnyGivenPermissions(authenticatedUser,
                 Permission.CREATE_EXTERNAL_USER,
