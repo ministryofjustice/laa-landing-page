@@ -15,6 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
@@ -700,17 +701,27 @@ public class AccessControlService {
                         Permission.EDIT_EXTERNAL_USER);
     }
 
-    public boolean canResendActivationForAuditUser(String userId) {
+    public boolean canResendActivationForAuditUser(String id) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
 
-        Optional<EntraUserDto> optionalUser = userService.getEntraUserById(userId);
+        EntraUserDto accessedUser;
 
-        if (optionalUser.isEmpty()) {
-            return false;
+        Optional<UserProfileDto> optionalProfile =
+                userService.getUserProfileById(id);
+
+        if (optionalProfile.isPresent()) {
+            accessedUser = optionalProfile.get().getEntraUser();
+        } else {
+            Optional<EntraUserDto> optionalEntra =
+                    userService.getEntraUserById(id);
+
+            if (optionalEntra.isEmpty()) {
+                return false;
+            }
+
+            accessedUser = optionalEntra.get();
         }
-
-        EntraUserDto accessedUser = optionalUser.get();
 
         return userService.isInternal(authenticatedUser.getId())
                 && !userService.isInternal(accessedUser.getId())
