@@ -264,13 +264,17 @@ public class AuditPage {
     }
 
     public double getExportCsvButtonY() {
+        Assertions.assertTrue(exportCsvButton.isVisible(), "Export CSV button must be visible before comparing position");
         var box = exportCsvButton.boundingBox();
-        return box != null ? box.y : 0;
+        Assertions.assertNotNull(box, "Export CSV button bounding box must not be null");
+        return box.y;
     }
 
     public double getAuditTableY() {
+        Assertions.assertTrue(auditTable.isVisible(), "Audit table must be visible before comparing position");
         var box = auditTable.boundingBox();
-        return box != null ? box.y : 0;
+        Assertions.assertNotNull(box, "Audit table bounding box must not be null");
+        return box.y;
     }
 
     public void clickExportCsvExpectingDownload() {

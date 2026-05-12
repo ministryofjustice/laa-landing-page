@@ -172,12 +172,14 @@ public class AuditPageTest extends BaseFrontEndTest {
     }
 
     @Test
-    @DisplayName("Clicking Export CSV with a firm filter does not show the error banner")
-    void exportCsv_withFirmSelected_doesNotShowErrorBanner() {
+    @DisplayName("Selecting a firm in the autocomplete without submitting still shows the CSV error banner")
+    void exportCsv_withFirmSelectedButNotApplied_showsErrorBanner() {
+        // data-firm-selected is rendered server-side; filling the autocomplete client-side
+        // does not reload the page, so the button still considers no firm selected.
         AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
         auditPage.searchAndSelectFirm("90001");
-        auditPage.clickExportCsvExpectingDownload();
-        auditPage.assertCsvErrorBannerHidden();
+        auditPage.clickExportCsv();
+        auditPage.assertCsvErrorBannerVisible();
     }
 
     @Test
