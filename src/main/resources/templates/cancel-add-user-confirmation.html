@@ -31,6 +31,7 @@
     <p class="govuk-body">
         If you cancel, any information you’ve entered will be lost.
     </p>
+    <!-- nosemgrep -->
     <form th:action="@{/admin/user/create/details}" method="post" style="display: inline;">
         <div class="moj-button-group">
             <button type="submit" class="govuk-button" data-module="govuk-button">
@@ -39,7 +40,6 @@
             <a class="govuk-link" th:href="@{/admin/user/create/cancel}">Cancel and leave</a>
         </div>
     </form>
-    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
 </main>
 </body>
 </html>

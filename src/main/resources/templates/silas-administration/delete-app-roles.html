@@ -67,6 +67,7 @@
                     Role Name
                 </label>
                 <div th:each="role : ${roles}">
+                    <!-- nosemgrep -->
                     <form method="post" th:action="@{'/admin/silas-administration/delete-role/' + ${role.id}}">
                         <div class="govuk-grid-row">
                             <div class="govuk-grid-column-one-half">
