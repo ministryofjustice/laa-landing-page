@@ -2412,15 +2412,16 @@ public class UserService {
         Sort sortObj = Sort.by(sortDirection, sortField);
         PageRequest pageRequest = PageRequest.of(page - 1, pageSize, sortObj);
 
-        // Query deleted users
+        // Query deleted users for the requested page
         Page<UserAccountStatusAudit> auditPage =
             userAccountStatusAuditRepository.findDeletedUsers(
                 searchTerm,
                 pageRequest);
 
-        // Map to DTOs
+        // Map to DTOs, filtering out INTERNAL users from current page
         List<DeletedUserAuditDto> deletedUsers =
             auditPage.getContent().stream()
+                .filter(audit -> !isDeletedUserInternal(audit))
                 .map(audit -> DeletedUserAuditDto.builder()
                     .userName(audit.getUserName())
                     .userEmail(audit.getUserEmail())
@@ -2429,13 +2430,34 @@ public class UserService {
                     .build())
                 .collect(Collectors.toList());
 
+        long totalInternalUsers = 0;
+        if (auditPage.getTotalElements() > 0) {
+            // Create a pageable that fetches all results to count INTERNAL users
+            PageRequest allPagesRequest = PageRequest.of(0, (int) auditPage.getTotalElements(), sortObj);
+            Page<UserAccountStatusAudit> allAuditPages = userAccountStatusAuditRepository.findDeletedUsers(searchTerm, allPagesRequest);
+            totalInternalUsers = allAuditPages.getContent().stream()
+                    .filter(this::isDeletedUserInternal)
+                    .count();
+        }
+
+        long totalDeletedUsersExcludingInternal = auditPage.getTotalElements() - totalInternalUsers;
+        long totalPages = (totalDeletedUsersExcludingInternal + pageSize - 1) / pageSize;
+
         return PaginatedDeletedUsers.builder()
             .deletedUsers(deletedUsers)
-            .totalDeletedUsers(auditPage.getTotalElements())
-            .totalPages(auditPage.getTotalPages())
+            .totalDeletedUsers(totalDeletedUsersExcludingInternal)
+            .totalPages((int) totalPages)
             .currentPage(page)
             .pageSize(pageSize)
             .build();
+    }
+
+    private boolean isDeletedUserInternal(UserAccountStatusAudit audit) {
+        if (audit.getEntraUser() != null) {
+            return audit.getEntraUser().getUserProfiles().stream()
+                    .anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
+        }
+        return false;
     }
 
     public void updateUserProfileSilasStatus() {
