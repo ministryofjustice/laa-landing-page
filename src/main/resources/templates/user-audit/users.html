@@ -963,7 +963,8 @@
                         <a class="govuk-button js-export-csv"
                            id="exportCsvButton"
                            th:attr="data-firm-selected=${firmSearch.getSelectedFirmId() != null or selectedUserType == 'INTERNAL'}, data-users-empty=${#lists.isEmpty(users)}"
-                           th:href="@{/admin/users/audit/download(search=${search},selectedFirmId=${firmSearch.selectedFirmId},silasRole=${selectedSilasRole},selectedAppId=${selectedAppId},selectedUserType=${selectedUserType},selectedFirmName=${firmSearch.firmSearch},neverActivated=${neverActivated})}">
+                           th:href="${firmSearch.getSelectedFirmId() != null or selectedUserType == 'INTERNAL'} ?
+                               @{/admin/users/audit/download(search=${search},selectedFirmId=${firmSearch.selectedFirmId},silasRole=${selectedSilasRole},selectedAppId=${selectedAppId},selectedUserType=${selectedUserType},selectedFirmName=${firmSearch.firmSearch},neverActivated=${neverActivated})} : '#'">
                             Export CSV
                         </a>
                     </th:block>
