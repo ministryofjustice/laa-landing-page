@@ -45,6 +45,8 @@
                      role="alert"
                      aria-labelledby="csv-error-summary-title"
                      data-module="govuk-error-summary"
+                     data-disable-auto-focus="true"
+                     tabindex="-1"
                      hidden>
                     <h2 class="govuk-error-summary__title" id="csv-error-summary-title">
                         There is a problem
@@ -934,7 +936,7 @@
                         e.preventDefault();
                         if (errorBanner) {
                             errorBanner.hidden = false;
-                            errorBanner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            errorBanner.focus();
                         }
                         return;
                     }
