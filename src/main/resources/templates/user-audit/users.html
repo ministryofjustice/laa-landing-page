@@ -941,6 +941,10 @@
                         return;
                     }
 
+                    if (errorBanner) {
+                        errorBanner.hidden = true;
+                    }
+
                     const usersEmpty = exportLink.getAttribute('data-users-empty') === 'true';
                     if (usersEmpty) {
                         showToast();
