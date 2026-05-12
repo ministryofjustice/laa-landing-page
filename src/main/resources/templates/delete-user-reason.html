@@ -34,7 +34,7 @@
     <!-- nosemgrep -->
     <form th:action="@{/admin/users/manage/{id}/delete(id=${user.id})}" method="post" novalidate>
         <div class="govuk-form-group" th:classappend="${fieldErrorMessage} ? ' govuk-form-group--error'">
-            <label class="govuk-label" for="reason" th:if="${fieldErrorMessage == null || fieldErrorMessage == ''}">>Please enter a reason (minimum 10 characters).</label>
+            <label class="govuk-label" for="reason" th:if="${fieldErrorMessage == null || fieldErrorMessage == ''}">Please enter a reason (minimum 10 characters).</label>
             <span class="govuk-error-message" th:if="${fieldErrorMessage}">
                 <span class="govuk-visually-hidden">Error:</span>
                 <span id="reason-error" th:text="${fieldErrorMessage}"></span>
