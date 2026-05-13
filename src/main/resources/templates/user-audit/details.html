@@ -105,7 +105,7 @@
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Email</dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.email}"></dd>
-                                        <dd class="govuk-summary-list__actions">
+                                        <dd class="govuk-summary-list__actions" style="width: 30%">
                                             <a th:if="${showResendVerificationLink}"  class="govuk-link"
                                                th:href="@{/admin/users/manage/{id}(id=${profileId},resendVerification=true)}">Resend Activation Code</a>
                                         </dd>
@@ -113,10 +113,12 @@
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">First name</dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.firstName}"></dd>
+                                        <dd class="govuk-summary-list__actions" style="width: 30%"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Last name</dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.lastName}"></dd>
+                                        <dd class="govuk-summary-list__actions" style="width: 30%"></dd>
                                     </div>
                                 </dl>
                             </div>
