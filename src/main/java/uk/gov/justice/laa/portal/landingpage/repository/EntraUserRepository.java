@@ -18,6 +18,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditFirmProjection;
 import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditProfileCountProjection;
 import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditSilasStatusProjection;
+import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditUserTypeProjection;
 
 @Repository
 public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
@@ -77,7 +78,8 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             AND (:multiFirm IS NULL OR u.multiFirmUser = :multiFirm)
             AND (
                 (:inactiveSinceDateFlag IS NULL AND :neverActivated IS NULL)
-                OR (:neverActivated IS NOT NULL AND u.invitationStatus <> 'VERIFICATION_SUCCESS')
+                OR (:neverActivated IS NOT NULL AND u.invitationStatus <> 'VERIFICATION_SUCCESS' AND
+                            (up.userType IS NULL OR up.userType = 'EXTERNAL'))
             )
             """, countQuery = """
             SELECT COUNT(DISTINCT u.id) FROM EntraUser u
@@ -164,7 +166,8 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             AND (:multiFirm IS NULL or u.multi_firm_user = :multiFirm)
             AND (
                 (:inactiveSinceDateFlag IS NULL AND :neverActivated IS NULL)
-                OR (:neverActivated IS NOT NULL AND u.invitation_status != 'VERIFICATION_SUCCESS')
+                OR (:neverActivated IS NOT NULL AND u.invitation_status != 'VERIFICATION_SUCCESS' AND
+                            (up.user_type IS NULL OR up.user_type = 'EXTERNAL'))
             )
             GROUP BY u.id
             """, nativeQuery = true)
@@ -213,7 +216,8 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             AND (:multiFirm IS NULL or u.multi_firm_user = :multiFirm)
             AND (
                 (:inactiveSinceDateFlag IS NULL AND :neverActivated IS NULL)
-                OR (:neverActivated IS NOT NULL AND u.invitation_status != 'VERIFICATION_SUCCESS')
+                OR (:neverActivated IS NOT NULL AND u.invitation_status != 'VERIFICATION_SUCCESS' AND
+                            (up.user_type IS NULL OR up.user_type = 'EXTERNAL'))
             )
             GROUP BY u.id
             """, nativeQuery = true)
@@ -306,6 +310,15 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
                   AND ar.app_id = CAST(:appId AS uuid)
             ))
             AND (:multiFirm IS NULL OR u.multi_firm_user = :multiFirm)
+            AND (
+                (:inactiveSinceDateFlag IS NULL AND :neverActivated IS NULL)
+                OR (:neverActivated IS NOT NULL AND u.invitation_status != 'VERIFICATION_SUCCESS'
+                                    AND NOT EXISTS (
+                                      SELECT 1
+                                      FROM user_profile up4
+                                      WHERE up4.entra_user_id = u.id
+                                        AND up4.user_type = 'INTERNAL'))
+                                    )
             """, countQuery = """
             SELECT COUNT(DISTINCT u.id)
             FROM entra_user u
@@ -333,7 +346,7 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             AND (:multiFirm IS NULL or u.multi_firm_user = :multiFirm)
             AND (
                 (:inactiveSinceDateFlag IS NULL AND :neverActivated IS NULL)
-                OR (:neverActivated IS NOT NULL AND u.invitation_status != 'VERIFICATION_SUCCESS')
+                OR (:neverActivated IS NOT NULL AND u.invitation_status != 'VERIFICATION_SUCCESS' AND up.user_type != 'INTERNAL')
             )
             """, nativeQuery = true)
     Page<UserAuditSilasStatusProjection> findAllUsersForAuditWithSilasStatus(
@@ -347,6 +360,63 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             @Param("inactiveSinceDate") LocalDateTime inactiveSinceDate,
             @Param("neverActivated") String neverActivated,
             Pageable pageable);
+
+    /**
+     * Query for audit table with user type - returns multi firm user flag and user type alongside user ID
+     */
+    @Query(value = """
+                   SELECT DISTINCT u.id as userId,
+                        CASE
+                            WHEN COALESCE(LOWER(up.user_type), 'external') = 'external' AND COALESCE(u.multi_firm_user, false) = false THEN 1
+                            WHEN COALESCE(LOWER(up.user_type), 'external') = 'external' AND COALESCE(u.multi_firm_user, false) = true THEN 2
+                            ELSE 3
+                        END AS userTypeRank
+                   FROM entra_user u
+                   LEFT JOIN user_profile up ON up.entra_user_id = u.id
+                   LEFT JOIN firm f ON f.id = up.firm_id
+            
+                   LEFT JOIN (
+                       SELECT DISTINCT up_role.entra_user_id
+                       FROM user_profile up_role
+                       JOIN user_profile_app_role upar ON upar.user_profile_id = up_role.id
+                       JOIN app_role ar ON ar.id = upar.app_role_id
+                       WHERE ar.authz_role = true
+                         AND (:silasRole IS NULL OR :silasRole = '' OR ar.name = :silasRole)
+                   ) role_filter ON role_filter.entra_user_id = u.id
+            
+                   LEFT JOIN (
+                       SELECT DISTINCT up_app.entra_user_id
+                       FROM user_profile up_app
+                       JOIN user_profile_app_role upar_app ON upar_app.user_profile_id = up_app.id
+                       JOIN app_role ar_app ON ar_app.id = upar_app.app_role_id
+                       WHERE :appId IS NULL OR ar_app.app_id = CAST(:appId AS uuid)
+                   ) app_filter ON app_filter.entra_user_id = u.id
+            
+                   WHERE (:searchTerm IS NULL OR :searchTerm = '' OR
+                          LOWER(CONCAT(u.first_name, ' ', u.last_name)) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR
+                          LOWER(u.email) LIKE LOWER(CONCAT('%', :searchTerm, '%')))
+                     AND (:firmId IS NULL OR up.firm_id = CAST(:firmId AS uuid))
+                     AND (:silasRole IS NULL OR :silasRole = '' OR role_filter.entra_user_id IS NOT NULL)
+                     AND (:appId IS NULL OR app_filter.entra_user_id IS NOT NULL)
+                     AND (:userType IS NULL OR up.user_type = :userType)
+                     AND (:multiFirm IS NULL OR u.multi_firm_user = :multiFirm)
+                     AND (
+                         (:inactiveSinceDateFlag IS NULL AND :neverActivated IS NULL)
+                         OR (:neverActivated IS NOT NULL AND u.invitation_status != 'VERIFICATION_SUCCESS' AND up.user_type != 'INTERNAL'))
+                   GROUP BY u.id, u.multi_firm_user, up.user_type
+            """, nativeQuery = true)
+    Page<UserAuditUserTypeProjection> findAllUsersForAuditWithUserType(
+            @Param("searchTerm") String searchTerm,
+            @Param("firmId") UUID firmId,
+            @Param("silasRole") String silasRole,
+            @Param("appId") UUID appId,
+            @Param("userType") String userType,
+            @Param("multiFirm") Boolean multiFirm,
+            @Param("inactiveSinceDateFlag") String inactiveSinceDateFlag,
+            @Param("inactiveSinceDate") LocalDateTime inactiveSinceDate,
+            @Param("neverActivated") String neverActivated,
+            Pageable pageable);
+
 
     boolean existsByEntraOidAndEnabledFalse(String id);
 
