@@ -8,6 +8,8 @@
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
+            <option value="$PROJECT_DIR$/laa-silas" />
+            <option value="$PROJECT_DIR$/user-api-dto-library" />
           </set>
         </option>
       </GradleProjectSettings>

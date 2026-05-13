@@ -124,12 +124,32 @@ public class SecurityConfig {
     }
 
     /**
+     * Security filter chain for internal user polling API endpoints.
+     * Stateless, no auth for now (POC). Should be secured before production use.
+     */
+    @Bean
+    @Order(2)
+    public SecurityFilterChain internalUserApiSecurityFilterChain(HttpSecurity http) throws Exception {
+        http.securityMatcher("/api/internal-users/**")
+                .authorizeHttpRequests(authorize -> authorize
+                        .anyRequest().permitAll()
+                )
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable);
+        return http.build();
+    }
+
+    /**
      * Main security filter chain for web application
      * Configures OAuth2 login, CSRF protection, and role-based access control
      * Restrict /actuator/** endpoints to private IPv4 CIDR ranges (no public access)
      */
     @Bean
-    @Order(2)
+    @Order(3)
     public SecurityFilterChain webSecurityFilterChain(HttpSecurity http,
             ClientRegistrationRepository clientRegistrationRepository) throws Exception {
         http.csrf(csrf -> csrf

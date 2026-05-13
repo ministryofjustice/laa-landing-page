@@ -14,3 +14,6 @@ pluginManagement {
 }
 
 rootProject.name = 'laa-landing-page'
+
+include 'user-api-dto-library'
+include 'laa-silas'
