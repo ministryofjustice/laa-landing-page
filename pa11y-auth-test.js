@@ -21,6 +21,12 @@ const puppeteer = require('puppeteer');
     process.exit(1);
   }
 
+  // Validate namespace is a safe Kubernetes name (lowercase alphanumeric and hyphens only)
+  if (!/^[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/.test(namespace)) {
+    console.error(`Invalid NAMESPACE value: '${namespace}'. Must be a valid Kubernetes namespace (lowercase alphanumeric and hyphens).`);
+    process.exit(1);
+  }
+
   const urls = [
     `https://${namespace}.apps.live.cloud-platform.service.justice.gov.uk`,
     `https://${namespace}.apps.live.cloud-platform.service.justice.gov.uk/home`,

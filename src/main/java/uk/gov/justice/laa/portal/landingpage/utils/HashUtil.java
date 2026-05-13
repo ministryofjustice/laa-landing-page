@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.utils;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.UUID;
 
 /**
@@ -26,13 +27,7 @@ public class HashUtil {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] encodedHash = digest.digest(
                     input.getBytes(StandardCharsets.UTF_8));
-
-
-            StringBuilder hexString = new StringBuilder(2 * encodedHash.length);
-            for (byte hash : encodedHash) {
-                hexString.append(String.format("%02x", 0xff & hash));
-            }
-            return hexString.toString();
+            return HexFormat.of().formatHex(encodedHash);
         } catch (NoSuchAlgorithmException nsaEx) {
             throw new RuntimeException("Unable to perform hashing", nsaEx);
         }
