@@ -30,11 +30,7 @@ public class HashUtil {
 
             StringBuilder hexString = new StringBuilder(2 * encodedHash.length);
             for (byte hash : encodedHash) {
-                String hex = Integer.toHexString(0xff & hash);
-                if (hex.length() == 1) {
-                    hexString.append('0');
-                }
-                hexString.append(hex);
+                hexString.append(String.format("%02x", 0xff & hash));
             }
             return hexString.toString();
         } catch (NoSuchAlgorithmException nsaEx) {
@@ -43,4 +39,3 @@ public class HashUtil {
     }
 
 }
-
