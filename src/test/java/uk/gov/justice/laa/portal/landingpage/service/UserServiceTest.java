@@ -117,6 +117,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditSilasStatusProjection;
+import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditUserTypeProjection;
 import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
@@ -5861,9 +5862,9 @@ class UserServiceTest {
 
             EntraUser user2 = EntraUser.builder()
                     .id(user2Id)
-                    .firstName("Jane")
+                    .firstName("Jason")
                     .lastName("Smith")
-                    .email("jane.smith@example.com")
+                    .email("jason.smith@example.com")
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .userStatus(UserStatus.ACTIVE)
                     .multiFirmUser(false)
@@ -5918,15 +5919,17 @@ class UserServiceTest {
             user2.setUserProfiles(Set.of(profile2));
             internalUser.setUserProfiles(Set.of(internalUserProfile));
 
-            Page<EntraUser> userPage = new PageImpl<>(Arrays.asList(user1, user2, internalUser),
-                    PageRequest.of(0, 10), 2);
+            // Return users sorted by name ascending (Jane, Jason, John)
+            Page<EntraUser> userPage = new PageImpl<>(Arrays.asList(internalUser, user2, user1),
+                    PageRequest.of(0, 10), 3);
 
             when(mockEntraUserRepository.findAllUsersForAudit(
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(userPage);
 
+            // Return users in any order - they will be re-ordered by the service to match the page order
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
-                    .thenReturn(Arrays.asList(user1, user2));
+                    .thenReturn(Arrays.asList(user1, user2, internalUser));
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
@@ -5940,20 +5943,21 @@ class UserServiceTest {
             assertThat(result.getPageSize()).isEqualTo(10);
             assertThat(result.getUsers()).hasSize(3);
 
-            assertThat(result.getUsers().get(0).getName()).isEqualTo("John Doe");
-            assertThat(result.getUsers().get(0).getEmail()).isEqualTo("john.doe@example.com");
-            assertThat(result.getUsers().get(0).getUserType()).isEqualTo("External");
-            assertThat(result.getUsers().get(0).getFirmAssociation()).isEqualTo("Test Firm");
-            assertThat(result.getUsers().get(0).isMultiFirmUser()).isFalse();
-            assertThat(result.getUsers().get(0).getProfileCount()).isEqualTo(1);
+            // Users should be in the order returned by findAllUsersForAudit (Jane, Jason, John)
+            assertThat(result.getUsers().get(0).getName()).isEqualTo("Jane Doe");
+            assertThat(result.getUsers().get(0).getEmail()).isEqualTo("jane.doe@example.com");
+            assertThat(result.getUsers().get(0).getUserType()).isEqualTo("Internal");
 
-            assertThat(result.getUsers().get(1).getName()).isEqualTo("Jane Smith");
-            assertThat(result.getUsers().get(1).getEmail()).isEqualTo("jane.smith@example.com");
+            assertThat(result.getUsers().get(1).getName()).isEqualTo("Jason Smith");
+            assertThat(result.getUsers().get(1).getEmail()).isEqualTo("jason.smith@example.com");
             assertThat(result.getUsers().get(1).getUserType()).isEqualTo("External");
 
-            assertThat(result.getUsers().get(2).getName()).isEqualTo("Jane Doe");
-            assertThat(result.getUsers().get(2).getEmail()).isEqualTo("jane.doe@example.com");
-            assertThat(result.getUsers().get(2).getUserType()).isEqualTo("Internal");
+            assertThat(result.getUsers().get(2).getName()).isEqualTo("John Doe");
+            assertThat(result.getUsers().get(2).getEmail()).isEqualTo("john.doe@example.com");
+            assertThat(result.getUsers().get(2).getUserType()).isEqualTo("External");
+            assertThat(result.getUsers().get(2).getFirmAssociation()).isEqualTo("Test Firm");
+            assertThat(result.getUsers().get(2).isMultiFirmUser()).isFalse();
+            assertThat(result.getUsers().get(2).getProfileCount()).isEqualTo(1);
 
             verify(mockEntraUserRepository).findAllUsersForAudit(
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class));
@@ -6968,7 +6972,7 @@ class UserServiceTest {
                     .thenReturn(Arrays.asList(user2, user1));
 
             // When
-            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+            PaginatedAuditUsers result = userService.getAuditUsers(null, null,
                     null, null, null,  1, 10, "name", "desc", false, null, null);
 
             // Then
@@ -7136,30 +7140,38 @@ class UserServiceTest {
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .build();
 
-            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
-                    PageRequest.of(0, 10), 1);
+            Page<UserAuditUserTypeProjection> userTypeProjection = new PageImpl<>(List.of(new UserAuditUserTypeProjection() {
+                @Override
+                public UUID getUserId() {
+                    return userId;
+                }
 
-            when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
-                    .thenReturn(userPage);
+                @Override
+                public int getUserTypeRank() {
+                    return 1;
+                }
+            }), PageRequest.of(0, 10), 1);
 
+            when(mockEntraUserRepository.findAllUsersForAuditWithUserType(
+                    any(), any(), any(), any(), any(), any(), any(), any(), any(), any(PageRequest.class)))
+                    .thenReturn(userTypeProjection);
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user));
 
             // When - using "usertype" as sort field which maps to "multiFirmUser"
-            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+            PaginatedAuditUsers result = userService.getAuditUsers(null, null,
                     null, null, null,  1, 10, "usertype", "desc", false, null, null);
 
             // Then
             assertThat(result).isNotNull();
 
             ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
-            verify(mockEntraUserRepository).findAllUsersForAudit(
+            verify(mockEntraUserRepository).findAllUsersForAuditWithUserType(
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             PageRequest capturedPageRequest = pageRequestCaptor.getValue();
-            assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser")).isNotNull();
-            assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser").getDirection())
+            assertThat(capturedPageRequest.getSort().getOrderFor("userTypeRank")).isNotNull();
+            assertThat(capturedPageRequest.getSort().getOrderFor("userTypeRank").getDirection())
                     .isEqualTo(Sort.Direction.DESC);
         }
 
@@ -7178,13 +7190,21 @@ class UserServiceTest {
                     .userProfiles(new HashSet<>())
                     .build();
 
-            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
-                    PageRequest.of(0, 10), 1);
+            Page<UserAuditUserTypeProjection> userTypeProjection = new PageImpl<>(List.of(new UserAuditUserTypeProjection() {
+                @Override
+                public UUID getUserId() {
+                    return userId;
+                }
 
-            when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(true), eq(null), eq(null), eq(null), any(PageRequest.class)))
-                    .thenReturn(userPage);
+                @Override
+                public int getUserTypeRank() {
+                    return 1;
+                }
+            }), PageRequest.of(0, 10), 1);
 
+            when(mockEntraUserRepository.findAllUsersForAuditWithUserType(
+                    any(), any(), any(), any(), any(), any(), any(), any(), any(), any(PageRequest.class)))
+                    .thenReturn(userTypeProjection);
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user));
 
@@ -7198,12 +7218,12 @@ class UserServiceTest {
             assertThat(result.getUsers().get(0).isMultiFirmUser()).isTrue();
 
             ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
-            verify(mockEntraUserRepository).findAllUsersForAudit(
+            verify(mockEntraUserRepository).findAllUsersForAuditWithUserType(
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(true), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             PageRequest capturedPageRequest = pageRequestCaptor.getValue();
-            assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser")).isNotNull();
-            assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser").getDirection())
+            assertThat(capturedPageRequest.getSort().getOrderFor("userTypeRank")).isNotNull();
+            assertThat(capturedPageRequest.getSort().getOrderFor("userTypeRank").getDirection())
                     .isEqualTo(Sort.Direction.DESC);
 
         }
@@ -7223,18 +7243,26 @@ class UserServiceTest {
                     .userProfiles(new HashSet<>())
                     .build();
 
-            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
-                    PageRequest.of(0, 10), 1);
+            Page<UserAuditUserTypeProjection> userTypeProjection = new PageImpl<>(List.of(new UserAuditUserTypeProjection() {
+                @Override
+                public UUID getUserId() {
+                    return userId;
+                }
 
-            when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), eq(UserType.EXTERNAL), eq(false), eq(null), eq(null), eq(null), any(PageRequest.class)))
-                    .thenReturn(userPage);
+                @Override
+                public int getUserTypeRank() {
+                    return 1;
+                }
+            }), PageRequest.of(0, 10), 1);
 
+            when(mockEntraUserRepository.findAllUsersForAuditWithUserType(
+                    any(), any(), any(), any(), anyString(), any(), any(), any(), any(), any(PageRequest.class)))
+                    .thenReturn(userTypeProjection);
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user));
 
             // When - using "usertype" as sort field which maps to "multiFirmUser"
-            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+            PaginatedAuditUsers result = userService.getAuditUsers(null, null,
                     null, null, UserTypeForm.EXTERNAL,  1, 10, "usertype", "desc", false, null, null);
 
             // Then
@@ -7243,12 +7271,13 @@ class UserServiceTest {
             assertThat(result.getUsers().get(0).isMultiFirmUser()).isFalse();
 
             ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
-            verify(mockEntraUserRepository).findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), eq(UserType.EXTERNAL), eq(false), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+            verify(mockEntraUserRepository).findAllUsersForAuditWithUserType(
+                    eq(null), eq(null), eq(null), eq(null), eq("EXTERNAL"), eq(false), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+            verify(mockEntraUserRepository).findUsersWithProfilesAndRoles(eq(Set.of(userId)));
 
             PageRequest capturedPageRequest = pageRequestCaptor.getValue();
-            assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser")).isNotNull();
-            assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser").getDirection())
+            assertThat(capturedPageRequest.getSort().getOrderFor("userTypeRank")).isNotNull();
+            assertThat(capturedPageRequest.getSort().getOrderFor("userTypeRank").getDirection())
                     .isEqualTo(Sort.Direction.DESC);
 
         }
@@ -7279,13 +7308,21 @@ class UserServiceTest {
 
             user.setUserProfiles(Set.of(profile));
 
-            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
-                    PageRequest.of(0, 10), 1);
+            Page<UserAuditUserTypeProjection> userTypeProjection = new PageImpl<>(List.of(new UserAuditUserTypeProjection() {
+                @Override
+                public UUID getUserId() {
+                    return userId;
+                }
 
-            when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), eq(UserType.INTERNAL), eq(false), eq(null), eq(null), eq(null), any(PageRequest.class)))
-                    .thenReturn(userPage);
+                @Override
+                public int getUserTypeRank() {
+                    return 1;
+                }
+            }), PageRequest.of(0, 10), 1);
 
+            when(mockEntraUserRepository.findAllUsersForAuditWithUserType(
+                    any(), any(), any(), any(), anyString(), any(), any(), any(), any(), any(PageRequest.class)))
+                    .thenReturn(userTypeProjection);
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user));
 
@@ -7299,12 +7336,12 @@ class UserServiceTest {
             assertThat(result.getUsers().get(0).isMultiFirmUser()).isFalse();
 
             ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
-            verify(mockEntraUserRepository).findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), eq(UserType.INTERNAL), eq(false), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+            verify(mockEntraUserRepository).findAllUsersForAuditWithUserType(
+                    eq(null), eq(null), eq(null), eq(null), eq("INTERNAL"), eq(false), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             PageRequest capturedPageRequest = pageRequestCaptor.getValue();
-            assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser")).isNotNull();
-            assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser").getDirection())
+            assertThat(capturedPageRequest.getSort().getOrderFor("userTypeRank")).isNotNull();
+            assertThat(capturedPageRequest.getSort().getOrderFor("userTypeRank").getDirection())
                     .isEqualTo(Sort.Direction.DESC);
 
         }
