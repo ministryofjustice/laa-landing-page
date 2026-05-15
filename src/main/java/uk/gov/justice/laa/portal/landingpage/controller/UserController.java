@@ -649,6 +649,7 @@ public class UserController {
 
         // Store the model in session to handle validation errors later
         session.setAttribute("createUserDetailsModel", model);
+        session.setAttribute("createUserFlowStage", "user/create/details");
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Add user details");
         return "add-user-details";
     }
@@ -723,6 +724,7 @@ public class UserController {
             multiFirmForm.setMultiFirmUser(isMultiFirmUser);
         }
 
+        session.setAttribute("createUserFlowStage", "user/create/multi-firm");
         model.addAttribute("multiFirmForm", multiFirmForm);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Allow multi-firm access");
         return "add-user-multi-firm";
@@ -791,6 +793,7 @@ public class UserController {
         model.addAttribute("firmSearchResultCount", validatedCount);
         model.addAttribute("showSkipFirmSelection", showSkipFirmSelection);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Select firm");
+        session.setAttribute("createUserFlowStage", "user/create/firm");
         return "add-user-firm";
     }
 
@@ -861,6 +864,7 @@ public class UserController {
         model.addAttribute("isMultiFirmUser", isMultiFirmUser != null ? isMultiFirmUser : false);
 
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Check your answers");
+        session.setAttribute("createUserFlowStage", "user/create/check-answers");
         return "add-user-check-answers";
     }
 
@@ -967,12 +971,15 @@ public class UserController {
         session.removeAttribute("user");
         session.removeAttribute("userProfile");
         session.removeAttribute("isMultiFirmUser");
+        session.removeAttribute("createUserFlowStage");
         model.addAttribute(ModelAttributes.PAGE_TITLE, "User created");
         return "add-user-created";
     }
 
     @GetMapping("/user/create/cancel/confirmation")
-    public String confirmCancelCreateUser() {
+    public String confirmCancelCreateUser(HttpSession session, Model model) {
+        String stageUrl = getObjectFromHttpSession(session, "createUserFlowStage", String.class).orElse("user/create/details");
+        model.addAttribute("stageUrl", stageUrl);
         return "cancel-add-user-confirmation";
     }
 
@@ -989,6 +996,7 @@ public class UserController {
         session.removeAttribute("officeData");
         session.removeAttribute("firmSearchForm");
         session.removeAttribute("firmSearchTerm");
+        session.removeAttribute("createUserFlowStage");
         return "redirect:/admin/users";
     }
 
