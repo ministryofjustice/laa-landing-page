@@ -2041,8 +2041,8 @@ public class UserService {
                 ))
                 .entrySet()
                 .stream()
-                .map(entry -> entry.getKey() + " [" +
-                        String.join(", ", entry.getValue()) + "]")
+                .map(entry -> entry.getKey() + " ["
+                        + String.join(", ", entry.getValue()) + "]")
                 .collect(Collectors.joining("; "));
     }
 

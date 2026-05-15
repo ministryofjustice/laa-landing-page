@@ -73,6 +73,9 @@ public class AuditUserDto implements Serializable {
      */
     private String appAccess;
 
+    /**
+     * App access and assigned roles for a user of a selected firm,
+     */
     private String appRolesAccess;
 
     /**
@@ -105,6 +108,4 @@ public class AuditUserDto implements Serializable {
      * ID) is null
      */
     private String entraUserId;
-
-    private String rolesAssigned;
 }
