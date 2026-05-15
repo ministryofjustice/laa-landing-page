@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.dto;
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -72,6 +73,8 @@ public class AuditUserDto implements Serializable {
      */
     private String appAccess;
 
+    private String appRolesAccess;
+
     /**
      * Number of firm profiles the user has
      */
@@ -102,4 +105,6 @@ public class AuditUserDto implements Serializable {
      * ID) is null
      */
     private String entraUserId;
+
+    private String rolesAssigned;
 }
