@@ -98,17 +98,23 @@ public class AuditController {
 
         // Apply user type filtering based on authenticated user's permissions (same logic as UserController)
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
-        boolean canSeeAllUsers = accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)
-                && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
+        boolean canSeeExternalUsers = accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
+        boolean canSeeInternalUsers = accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER);
+        boolean canSeeAllUsers = canSeeExternalUsers && canSeeInternalUsers;
 
         UserTypeForm filteredUserType = criteria.getSelectedUserType();
         UUID filteredFirmId = criteria.getSelectedFirmId();
+        String selectedUserType = criteria.getSelectedUserType() != null ? criteria.getSelectedUserType().name() : "";
 
         if (!canSeeAllUsers) {
-            if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)) {
+            if (canSeeInternalUsers) {
                 filteredUserType = UserTypeForm.INTERNAL;
+                selectedUserType = selectedUserType.equalsIgnoreCase(UserTypeForm.INTERNAL.name()) ? UserTypeForm.INTERNAL.name() : UserTypeForm.ALL.name();
             } else {
-                filteredUserType = UserTypeForm.EXTERNAL;
+                if (filteredUserType == null || filteredUserType == UserTypeForm.ALL || filteredUserType == UserTypeForm.INTERNAL) {
+                    filteredUserType = UserTypeForm.ALL_EXTERNAL;
+                    selectedUserType = UserTypeForm.ALL.name();
+                }
                 Optional<FirmDto> optionalFirm = firmService.getUserFirm(entraUser);
                 if (optionalFirm.isPresent()) {
                     filteredFirmId = optionalFirm.get().getId();
@@ -126,6 +132,9 @@ public class AuditController {
         FirmSearchForm firmSearchForm = new FirmSearchForm(criteria.getFirmSearch(), criteria.getSelectedFirmId());
         // Add attributes to model
         buildDisplayAuditTableModel(criteria, model, paginatedUsers, firmSearchForm);
+        model.addAttribute("canSeeExternalUsers", canSeeExternalUsers);
+        model.addAttribute("canSeeInternalUsers", canSeeInternalUsers);
+        model.addAttribute("selectedUserType", selectedUserType);
 
         return "user-audit/users";
     }
@@ -148,8 +157,6 @@ public class AuditController {
         model.addAttribute("selectedSilasRole", criteria.getSilasRole() != null ? criteria.getSilasRole() : "");
         model.addAttribute("selectedAppId",
                 criteria.getSelectedAppId() != null ? criteria.getSelectedAppId().toString() : "");
-        model.addAttribute("selectedUserType",
-                criteria.getSelectedUserType() != null ? criteria.getSelectedUserType().toString() : "");
         model.addAttribute("selectedFirmName", criteria.getSelectedFirmName());
         model.addAttribute("inactiveSinceDate", criteria.getInactiveSinceDate());
         model.addAttribute("neverActivated", criteria.getNeverActivated() != null ? criteria.getNeverActivated() : false);
@@ -176,7 +183,7 @@ public class AuditController {
                 userId, isEntraId, profilePage, profileSize);
 
         AuditUserDetailDto userDetail;
-        boolean canDisableUser = false;
+        boolean canDisableUser;
         // Determine if this is an EntraUser ID or UserProfile ID
         if (isEntraId) {
             // Load user by EntraUser ID (for users without profiles)
@@ -257,7 +264,7 @@ public class AuditController {
                 userId, isEntraId, profilePage, profileSize);
 
         AuditUserDetailDto userDetail;
-        boolean canDisableUser = false;
+        boolean canDisableUser;
 
         // Determine if this is an EntraUser ID or UserProfile ID
         if (isEntraId) {
