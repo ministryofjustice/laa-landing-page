@@ -3,7 +3,6 @@ package uk.gov.justice.laa.portal.landingpage.dto;
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.List;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
