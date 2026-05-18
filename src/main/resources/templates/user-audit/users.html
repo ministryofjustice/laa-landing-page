@@ -183,9 +183,9 @@
                             </label>
                             <select class="govuk-select" id="userTypeFilter" name="selectedUserType">
                                 <option value="ALL">All user types</option>
-                                <option value="INTERNAL" th:selected="${selectedUserType == 'INTERNAL'}">Internal</option>
-                                <option value="EXTERNAL" th:selected="${selectedUserType == 'EXTERNAL'}">External</option>
-                                <option value="MULTI_FIRM" th:selected="${selectedUserType == 'MULTI_FIRM'}">External Multi-Firm</option>
+                                <option value="INTERNAL" th:if="${canSeeInternalUsers}" th:selected="${selectedUserType == 'INTERNAL'}">Internal</option>
+                                <option value="EXTERNAL" th:if="${canSeeExternalUsers}" th:selected="${selectedUserType == 'EXTERNAL'}">External</option>
+                                <option value="MULTI_FIRM" th:if="${canSeeExternalUsers}" th:selected="${selectedUserType == 'MULTI_FIRM'}">External Multi-Firm</option>
                             </select>
                         </div>
                     </div>

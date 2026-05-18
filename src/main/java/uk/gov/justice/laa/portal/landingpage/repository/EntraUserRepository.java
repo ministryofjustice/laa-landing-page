@@ -71,7 +71,7 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
                 JOIN ar4.app a4
                 WHERE up4.entraUser.id = u.id AND a4.id = :appId
             ))
-            AND (:userType IS NULL OR EXISTS (
+            AND (:userType IS NULL OR (:userType = 'EXTERNAL' AND u.userProfiles IS EMPTY) OR EXISTS (
                 SELECT 1 FROM UserProfile up5
                 WHERE up5.entraUser.id = u.id AND up5.userType = :userType
             ))
@@ -100,7 +100,7 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
                 JOIN ar4.app a4
                 WHERE up4.entraUser.id = u.id AND a4.id = :appId
             ))
-            AND (:userType IS NULL OR EXISTS (
+            AND (:userType IS NULL OR (:userType = 'EXTERNAL' AND u.userProfiles IS EMPTY) OR EXISTS (
                 SELECT 1 FROM UserProfile up5
                 WHERE up5.entraUser.id = u.id AND up5.userType = :userType
             ))
@@ -162,7 +162,7 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             AND (:firmId IS NULL OR up.firm_id = CAST(:firmId AS uuid))
             AND (:silasRole IS NULL OR :silasRole = '' OR role_filter.entra_user_id IS NOT NULL)
             AND (:appId IS NULL OR app_filter.entra_user_id IS NOT NULL)
-            AND (:userType IS NULL OR up.user_type = :userType)
+            AND (:userType IS NULL OR (:userType = 'EXTERNAL' AND up.user_type IS NULL) OR up.user_type = :userType)
             AND (:multiFirm IS NULL or u.multi_firm_user = :multiFirm)
             AND (
                 (:inactiveSinceDateFlag IS NULL AND :neverActivated IS NULL)
@@ -212,7 +212,7 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
             AND (:firmId IS NULL OR up.firm_id = CAST(:firmId AS uuid))
             AND (:silasRole IS NULL OR :silasRole = '' OR role_filter.entra_user_id IS NOT NULL)
             AND (:appId IS NULL OR app_filter.entra_user_id IS NOT NULL)
-            AND (:userType IS NULL OR up.user_type = :userType)
+            AND (:userType IS NULL OR (:userType = 'EXTERNAL' AND up.user_type IS NULL) OR up.user_type = :userType)
             AND (:multiFirm IS NULL or u.multi_firm_user = :multiFirm)
             AND (
                 (:inactiveSinceDateFlag IS NULL AND :neverActivated IS NULL)
@@ -286,12 +286,17 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
                 WHERE upf.entra_user_id = u.id
                   AND upf.firm_id = CAST(:firmId AS uuid)
             ))
-            AND (:userType IS NULL OR EXISTS (
-                SELECT 1
-                FROM user_profile upt
-                WHERE upt.entra_user_id = u.id
-                  AND upt.user_type = :userType
-            ))
+            AND (:userType IS NULL
+                                 OR (:userType = 'EXTERNAL' AND NOT EXISTS (
+                                    SELECT 1
+                                    FROM user_profile upt
+                                    WHERE upt.entra_user_id = u.id))
+                                 OR EXISTS (
+                                    SELECT 1
+                                    FROM user_profile upt
+                                    WHERE upt.entra_user_id = u.id
+                                      AND upt.user_type = :userType
+                                ))
             AND (:silasRole IS NULL OR :silasRole = '' OR EXISTS (
                 SELECT 1
                 FROM user_profile up2
@@ -342,7 +347,7 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
                 WHERE up2.entra_user_id = u.id
                 AND ar.app_id = CAST(:appId AS uuid)
             ))
-            AND (:userType IS NULL OR up.user_type = :userType)
+            AND (:userType IS NULL OR (:userType = 'EXTERNAL' AND up.user_type IS NULL) OR up.user_type = :userType)
             AND (:multiFirm IS NULL or u.multi_firm_user = :multiFirm)
             AND (
                 (:inactiveSinceDateFlag IS NULL AND :neverActivated IS NULL)
@@ -398,7 +403,7 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
                      AND (:firmId IS NULL OR up.firm_id = CAST(:firmId AS uuid))
                      AND (:silasRole IS NULL OR :silasRole = '' OR role_filter.entra_user_id IS NOT NULL)
                      AND (:appId IS NULL OR app_filter.entra_user_id IS NOT NULL)
-                     AND (:userType IS NULL OR up.user_type = :userType)
+                     AND (:userType IS NULL OR (:userType = 'EXTERNAL' AND up.user_type IS NULL) OR up.user_type = :userType)
                      AND (:multiFirm IS NULL OR u.multi_firm_user = :multiFirm)
                      AND (
                          (:inactiveSinceDateFlag IS NULL AND :neverActivated IS NULL)

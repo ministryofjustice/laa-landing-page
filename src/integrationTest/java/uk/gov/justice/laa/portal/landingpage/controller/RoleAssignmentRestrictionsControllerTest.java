@@ -188,7 +188,7 @@ class RoleAssignmentRestrictionsControllerTest extends BaseIntegrationTest {
                 .andExpect(status().isOk()).andExpect(view()
                         .name("silas-administration/edit-role-assignment-restrictions-confirmation"));
 
-        ArgumentCaptor<List<String>> cap = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<String>> cap = ArgumentCaptor.captor();
         verify(roleAssignmentService).updateRoleAssignmentRestrictions(isA(CurrentUserDto.class), eq(targetId), cap.capture());
         List<String> passed = cap.getValue();
         assertThat(passed).containsExactlyInAnyOrder(dtoA.getId(), dtoB.getId());
