@@ -42,7 +42,8 @@ import com.microsoft.graph.models.User;
 import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import uk.gov.justice.laa.portal.landingpage.dto.AccountStatusHistoryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -2452,6 +2453,7 @@ public class UserService {
     }
 
     @Scheduled(cron = "${refresh.user.silas.status.schedule}")
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void updateUserProfileSilasStatus() {
         logger.info("Starting user profile status update task");
         int pageSize = 500;
@@ -2473,10 +2475,12 @@ public class UserService {
         logger.info("User profile status update task completed");
     }
 
+    @Transactional
     public void refreshAndUpdatedUserProfilesStatus(boolean isEnabled, InvitationStatus invitationStatus, Collection<UserProfile> userProfiles) {
         userProfiles.forEach(up -> refreshAndUpdatedUserProfileStatus(isEnabled, invitationStatus, up));
     }
 
+    @Transactional
     public void refreshAndUpdatedUserProfileStatus(boolean isEnabled, InvitationStatus invitationStatus, UserProfile userProfile) {
         String invitationStatusStr = invitationStatus != null ? invitationStatus.name() : "";
         boolean noRoleAssigned = userProfile.getAppRoles() == null || userProfile.getAppRoles().isEmpty();
