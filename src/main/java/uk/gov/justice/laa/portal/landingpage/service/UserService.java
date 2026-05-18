@@ -34,6 +34,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.microsoft.graph.models.DirectoryRole;
@@ -2450,6 +2451,7 @@ public class UserService {
             .build();
     }
 
+    @Scheduled(cron = "${refresh.user.silas.status.schedule}")
     public void updateUserProfileSilasStatus() {
         logger.info("Starting user profile status update task");
         int pageSize = 500;
