@@ -1682,10 +1682,11 @@ public class UserService {
         boolean sortByFirm = sort != null
                 && (sort.equalsIgnoreCase("firm") || sort.equalsIgnoreCase("firmassociation"));
         boolean sortBySilasStatus = sort != null && sort.equalsIgnoreCase("silasstatus");
+        boolean sortByUserType = sort != null && sort.equalsIgnoreCase("usertype");
 
         Page<EntraUser> userPage;
 
-        if (sortByProfileCount || sortByFirm || sortBySilasStatus) {
+        if (sortByProfileCount || sortByFirm || sortBySilasStatus || sortByUserType) {
             // Use special queries for profile count, firm, or account status sorting
             boolean ascending = direction == null || direction.equalsIgnoreCase("asc");
             String sortField;
@@ -1693,8 +1694,10 @@ public class UserService {
                 sortField = "profileCount";
             } else if (sortByFirm) {
                 sortField = "firmName";
-            } else {
+            } else if (sortBySilasStatus) {
                 sortField = "silasStatusRank";
+            } else {
+                sortField = "userTypeRank";
             }
 
             Sort sortObj = ascending ? Sort.by(sortField).ascending() : Sort.by(sortField).descending();
@@ -1710,29 +1713,34 @@ public class UserService {
                 resultPage = entraUserRepository.findAllUsersForAuditWithFirm(
                         searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm,
                         inactiveSinceDateFlag, inactiveSinceDateDt, neverActivatedFlag, pageRequest);
-            } else {
+            } else if (sortBySilasStatus) {
                 resultPage = entraUserRepository.findAllUsersForAuditWithSilasStatus(
+                        searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm,
+                        inactiveSinceDateFlag, inactiveSinceDateDt, neverActivatedFlag, pageRequest);
+            } else {
+                resultPage = entraUserRepository.findAllUsersForAuditWithUserType(
                         searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm,
                         inactiveSinceDateFlag, inactiveSinceDateDt, neverActivatedFlag, pageRequest);
             }
 
             // Extract user IDs in order
-            List<UUID> userIds = resultPage.getContent().stream().map(UserAuditProjection::getUserId).toList();
+            Set<UUID> userIds = resultPage.getContent().stream()
+                    .map(UserAuditProjection::getUserId)
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
 
             // Fetch full user details
             List<EntraUser> users = Collections.emptyList();
             if (!userIds.isEmpty()) {
                 List<EntraUser> fetchedUsers = entraUserRepository
-                        .findUsersWithProfilesAndRoles(new LinkedHashSet<>(userIds));
+                        .findUsersWithProfilesAndRoles(userIds);
 
                 // Sort users to match the order from the query result
-                Map<UUID, Integer> orderMap = new HashMap<>();
-                for (int i = 0; i < userIds.size(); i++) {
-                    orderMap.put(userIds.get(i), i);
-                }
-                users = new ArrayList<>(fetchedUsers);
-                users.sort(Comparator
-                        .comparingInt(u -> orderMap.getOrDefault(u.getId(), Integer.MAX_VALUE)));
+                Map<UUID, EntraUser> orderMap = fetchedUsers.stream()
+                        .collect(Collectors.toMap(EntraUser::getId, Function.identity()));
+                users = userIds.stream()
+                        .map(orderMap::get)
+                        .filter(Objects::nonNull)
+                        .toList();
             }
 
             // Create page with sorted users
@@ -1750,14 +1758,16 @@ public class UserService {
             // Second query: Batch fetch relationships for the paginated users
             if (!userPage.getContent().isEmpty()) {
                 Set<UUID> userIds = userPage.getContent().stream().map(EntraUser::getId)
-                        .collect(Collectors.toSet());
+                        .collect(Collectors.toCollection(LinkedHashSet::new));
                 List<EntraUser> usersWithRelations = entraUserRepository.findUsersWithProfilesAndRoles(userIds);
 
                 // Replace content with fully loaded entities, preserving order
-                Map<UUID, EntraUser> userMap = usersWithRelations.stream()
-                        .collect(Collectors.toMap(EntraUser::getId, u -> u));
-                List<EntraUser> orderedUsers = userPage.getContent().stream()
-                        .map(u -> userMap.getOrDefault(u.getId(), u)).toList();
+                Map<UUID, EntraUser> orderMap = usersWithRelations.stream()
+                        .collect(Collectors.toMap(EntraUser::getId, Function.identity()));
+                List<EntraUser> orderedUsers = userIds.stream()
+                        .map(orderMap::get)
+                        .filter(Objects::nonNull)
+                        .toList();
                 userPage = new PageImpl<>(orderedUsers, userPage.getPageable(),
                         userPage.getTotalElements());
             }
@@ -2358,6 +2368,8 @@ public class UserService {
         // Set new legacy user id
         final UUID oldLegacyId = userProfile.getLegacyUserId();
         userProfile.setLegacyUserId(UUID.randomUUID());
+
+        userProfile.setSilasStatus(calculateSilasStatusForUserProfile(userProfile));
 
         // Save the updated profile
         userProfileRepository.save(userProfile);
