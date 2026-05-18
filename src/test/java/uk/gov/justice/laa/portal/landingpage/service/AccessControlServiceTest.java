@@ -753,7 +753,10 @@ public class AccessControlServiceTest {
         UUID userId = UUID.randomUUID();
         UUID accessedUserId = UUID.randomUUID();
 
-        EntraUserDto accessedUser = EntraUserDto.builder().id(accessedUserId.toString()).build();
+        EntraUserDto accessedUser = EntraUserDto.builder()
+                .id(accessedUserId.toString())
+                .invitationStatus(InvitationStatus.INVITE_SENT)
+                .build();
         UserProfileDto accessedUserProfile = UserProfileDto.builder()
                 .activeProfile(true)
                 .id(accessedUserId)
@@ -819,6 +822,181 @@ public class AccessControlServiceTest {
     }
 
     @Test
+    public void testCannotResendActivationForDisabledAuditUser() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID userId = UUID.randomUUID();
+        UUID accessedUserId = UUID.randomUUID();
+
+        // Disabled user in activation pending state (matching the screenshot scenario)
+        EntraUserDto accessedUser = EntraUserDto.builder()
+                .id(accessedUserId.toString())
+                .enabled(false)
+                .invitationStatus(InvitationStatus.INVITE_SENT)
+                .build();
+
+        Permission userPermission = Permission.EDIT_EXTERNAL_USER;
+        AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
+        EntraUser authenticatedUser = EntraUser.builder().id(userId).email("internal@email.com")
+                .userProfiles(HashSet.newHashSet(1)).build();
+        UserProfile authenticatedUserProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(authenticatedUser)
+                .appRoles(Set.of(appRole))
+                .userType(UserType.INTERNAL)
+                .build();
+        authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
+
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        when(userService.getEntraUserById(accessedUserId.toString()))
+                .thenReturn(Optional.of(accessedUser));
+        when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
+        when(userService.isInternal(userId)).thenReturn(true);
+
+        boolean result = accessControlService.canResendActivationForAuditUser(accessedUserId.toString());
+        Assertions.assertThat(result).isFalse();
+    }
+
+    @Test
+    public void testCannotSendVerificationEmailToActivatedUser() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID userId = UUID.randomUUID();
+        UUID accessedUserId = UUID.randomUUID();
+
+        // User has completed verification (activated)
+        EntraUserDto accessedUser = EntraUserDto.builder()
+                .id(accessedUserId.toString())
+                .enabled(true)
+                .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
+                .build();
+        UserProfileDto accessedUserProfile = UserProfileDto.builder()
+                .activeProfile(true)
+                .id(accessedUserId)
+                .userType(UserType.EXTERNAL)
+                .entraUser(accessedUser)
+                .build();
+
+        Permission userPermission = Permission.EDIT_EXTERNAL_USER;
+        AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
+        EntraUser authenticatedUser = EntraUser.builder().id(userId).email("internal@email.com")
+                .userProfiles(HashSet.newHashSet(1)).build();
+        UserProfile authenticatedUserProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(authenticatedUser)
+                .appRoles(Set.of(appRole))
+                .userType(UserType.INTERNAL)
+                .build();
+        authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
+
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        when(userService.getUserProfileById(accessedUserId.toString()))
+                .thenReturn(Optional.of(accessedUserProfile));
+        when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
+        when(userService.isInternal(userId)).thenReturn(true);
+
+        boolean result = accessControlService.canSendVerificationEmail(accessedUserId.toString());
+        Assertions.assertThat(result).isFalse();
+    }
+
+    @Test
+    public void testCannotSendVerificationEmailToDisabledUser() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID userId = UUID.randomUUID();
+        UUID accessedUserId = UUID.randomUUID();
+
+        // User has been disabled (was activated, then disabled)
+        EntraUserDto accessedUser = EntraUserDto.builder()
+                .id(accessedUserId.toString())
+                .enabled(false)
+                .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
+                .build();
+        UserProfileDto accessedUserProfile = UserProfileDto.builder()
+                .activeProfile(true)
+                .id(accessedUserId)
+                .userType(UserType.EXTERNAL)
+                .entraUser(accessedUser)
+                .build();
+
+        Permission userPermission = Permission.EDIT_EXTERNAL_USER;
+        AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
+        EntraUser authenticatedUser = EntraUser.builder().id(userId).email("internal@email.com")
+                .userProfiles(HashSet.newHashSet(1)).build();
+        UserProfile authenticatedUserProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(authenticatedUser)
+                .appRoles(Set.of(appRole))
+                .userType(UserType.INTERNAL)
+                .build();
+        authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
+
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        when(userService.getUserProfileById(accessedUserId.toString()))
+                .thenReturn(Optional.of(accessedUserProfile));
+        when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
+        when(userService.isInternal(userId)).thenReturn(true);
+
+        boolean result = accessControlService.canSendVerificationEmail(accessedUserId.toString());
+        Assertions.assertThat(result).isFalse();
+    }
+
+    @Test
+    public void testCannotSendVerificationEmailToDisabledUserPendingActivation() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID userId = UUID.randomUUID();
+        UUID accessedUserId = UUID.randomUUID();
+
+        // User is disabled but still in activation pending state (never verified)
+        // This is the scenario from the screenshot - ACTIVATION PENDING + Account Status: Disabled
+        EntraUserDto accessedUser = EntraUserDto.builder()
+                .id(accessedUserId.toString())
+                .enabled(false)
+                .invitationStatus(InvitationStatus.INVITE_SENT)
+                .build();
+        UserProfileDto accessedUserProfile = UserProfileDto.builder()
+                .activeProfile(true)
+                .id(accessedUserId)
+                .userType(UserType.EXTERNAL)
+                .entraUser(accessedUser)
+                .build();
+
+        Permission userPermission = Permission.EDIT_EXTERNAL_USER;
+        AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
+        EntraUser authenticatedUser = EntraUser.builder().id(userId).email("internal@email.com")
+                .userProfiles(HashSet.newHashSet(1)).build();
+        UserProfile authenticatedUserProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(authenticatedUser)
+                .appRoles(Set.of(appRole))
+                .userType(UserType.INTERNAL)
+                .build();
+        authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
+
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        when(userService.getUserProfileById(accessedUserId.toString()))
+                .thenReturn(Optional.of(accessedUserProfile));
+        when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
+        when(userService.isInternal(userId)).thenReturn(true);
+
+        boolean result = accessControlService.canSendVerificationEmail(accessedUserId.toString());
+        Assertions.assertThat(result).isFalse();
+    }
+
+    @Test
     public void testFirmAdminCannotSendVerificationEmail() {
         AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
         SecurityContext securityContext = Mockito.mock(SecurityContext.class);
@@ -852,6 +1030,37 @@ public class AccessControlServiceTest {
         when(userService.getUserProfileById(accessedUserId.toString()))
                 .thenReturn(Optional.of(accessedUserProfile));
         when(userService.isInternal(userId)).thenReturn(false);
+
+        boolean result = accessControlService.canSendVerificationEmail(accessedUserId.toString());
+        Assertions.assertThat(result).isFalse();
+    }
+
+    @Test
+    public void testCannotSendVerificationEmailToDeletedUser() {
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID userId = UUID.randomUUID();
+        UUID accessedUserId = UUID.randomUUID();
+
+        Permission userPermission = Permission.EDIT_EXTERNAL_USER;
+        AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
+        EntraUser authenticatedUser = EntraUser.builder().id(userId).email("internal@email.com")
+                .userProfiles(HashSet.newHashSet(1)).build();
+        UserProfile authenticatedUserProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(authenticatedUser)
+                .appRoles(Set.of(appRole))
+                .userType(UserType.INTERNAL)
+                .build();
+        authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
+
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+        // Deleted users return empty Optional as they're hard-deleted from the database
+        when(userService.getUserProfileById(accessedUserId.toString()))
+                .thenReturn(Optional.empty());
 
         boolean result = accessControlService.canSendVerificationEmail(accessedUserId.toString());
         Assertions.assertThat(result).isFalse();

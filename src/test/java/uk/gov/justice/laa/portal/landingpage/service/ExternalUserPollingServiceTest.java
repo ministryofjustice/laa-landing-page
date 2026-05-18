@@ -26,7 +26,6 @@ import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesErrorRespo
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -61,6 +60,9 @@ class ExternalUserPollingServiceTest {
 
     @Mock
     private TechServicesClient techServicesClient;
+
+    @Mock
+    private UserService userService;
 
     @InjectMocks
     private ExternalUserPollingService externalUserPollingService;
