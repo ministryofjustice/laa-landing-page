@@ -176,3 +176,15 @@ jobs:
           echo "(Showing up to 20 findings. Use the SARIF file for the full report.)"
         done
         set -e
+
+    - name: Upload CodeQL SARIF report artifact
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: codeql-sarif-results
+        path: |
+          ${{ runner.temp }}/results/*.sarif
+          ${{ github.workspace }}/results/*.sarif
+          ${{ github.workspace }}/../results/*.sarif
+          results/*.sarif
+        if-no-files-found: ignore
