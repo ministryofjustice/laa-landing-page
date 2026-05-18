@@ -116,28 +116,63 @@ jobs:
       if: always()
       run: |
         echo "=== CodeQL Scan Results ==="
-        
-        # Search for SARIF files in multiple locations
-        FOUND=0
+        set +e
+        SARIF_FILES=()
         for dir in "${RUNNER_TEMP}/results" "${GITHUB_WORKSPACE}/results" "${GITHUB_WORKSPACE}/../results" "results"; do
           if [ -d "$dir" ]; then
-            echo "Checking directory: $dir"
             for sarif in "$dir"/*.sarif; do
-              if [ -f "$sarif" ]; then
-                FOUND=1
-                echo ""
-                echo "File: $(basename "$sarif")"
-                echo "---"
-                jq -r '.runs[0].results[] | "\(.ruleId // "N/A") [\(.level // "warning")]: \(.message.text) at \(.locations[0].physicalLocation.artifactLocation.uri):\(.locations[0].physicalLocation.region.startLine // "?")"' "$sarif" 2>/dev/null || echo "(Could not parse with jq, showing raw SARIF:)" && head -100 "$sarif"
-              fi
+              [ -f "$sarif" ] || continue
+              SARIF_FILES+=("$sarif")
             done
           fi
         done
-        
-        if [ $FOUND -eq 0 ]; then
-          echo "No SARIF files found. Listing all files in working directory:"
-          ls -la
-          echo ""
-          echo "Searching for .sarif files anywhere in workspace:"
-          find "$GITHUB_WORKSPACE" -name "*.sarif" -type f 2>/dev/null | head -20 || echo "No SARIF files found"
+
+        if [ ${#SARIF_FILES[@]} -eq 0 ]; then
+          echo "No SARIF files found. Searching workspace for .sarif files..."
+          find "$GITHUB_WORKSPACE" -name "*.sarif" -type f 2>/dev/null | sed 's#^#  #' | head -20 || echo "  No SARIF files found"
+          exit 0
         fi
+
+        for sarif in "${SARIF_FILES[@]}"; do
+          echo ""
+          echo "File: $(basename "$sarif")"
+          echo "Path: $sarif"
+          echo "-----"
+          total=$(jq '.runs[0].results | length' "$sarif" 2>/dev/null)
+          if [ -z "$total" ] || [ "$total" -eq 0 ]; then
+            echo "No findings found in SARIF file."
+            continue
+          fi
+
+          echo "Total findings: $total"
+          echo "Severity counts:"
+          jq -r '
+            .runs[0].results
+            | group_by(.level)
+            | map({level: .[0].level // "warning", count: length})
+            | sort_by(-.count)
+            | .[]
+            | "  \(.level): \(.count)"
+          ' "$sarif"
+          echo ""
+          echo "Top findings:"
+          jq -r '
+            def trunc($n): if type == "string" and length > $n then .[0:$n] + "..." else . end;
+            .runs[0].results
+            | .[0:20]
+            | map(
+                [
+                  .ruleId // "N/A",
+                  (.level // "warning"),
+                  (.locations[0].physicalLocation.artifactLocation.uri // "unknown"),
+                  (.locations[0].physicalLocation.region.startLine // "?"),
+                  (.message.text // "") | trunc(120)
+                ]
+                | @tsv
+              )
+            | .[]
+          ' "$sarif" | column -t -s $'\t' || true
+          echo ""
+          echo "(Showing up to 20 findings. Use the SARIF file for the full report.)"
+        done
+        set -e
