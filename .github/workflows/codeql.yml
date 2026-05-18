@@ -183,8 +183,7 @@ jobs:
       with:
         name: codeql-sarif-results
         path: |
-          ${{ runner.temp }}/results/*.sarif
-          ${{ github.workspace }}/results/*.sarif
-          ${{ github.workspace }}/../results/*.sarif
-          results/*.sarif
+          ${{ runner.temp }}/results
+          ${{ github.workspace }}/results
+          results
         if-no-files-found: ignore
