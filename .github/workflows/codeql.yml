@@ -116,19 +116,28 @@ jobs:
       if: always()
       run: |
         echo "=== CodeQL Scan Results ==="
-        RESULTS_DIR="${RUNNER_TEMP}/results"
-        if [ -d "$RESULTS_DIR" ]; then
-          for sarif in "$RESULTS_DIR"/*.sarif; do
-            if [ -f "$sarif" ]; then
-              echo ""
-              echo "File: $(basename "$sarif")"
-              echo "---"
-              jq -r '.runs[0].results[] | "\(.ruleId // "N/A") [\(.level // "warning")]: \(.message.text) at \(.locations[0].physicalLocation.artifactLocation.uri):\(.locations[0].physicalLocation.region.startLine // "?")"' "$sarif" || cat "$sarif"
-            fi
-          done
+        
+        # Search for SARIF files in multiple locations
+        FOUND=0
+        for dir in "${RUNNER_TEMP}/results" "${GITHUB_WORKSPACE}/results" "${GITHUB_WORKSPACE}/../results" "results"; do
+          if [ -d "$dir" ]; then
+            echo "Checking directory: $dir"
+            for sarif in "$dir"/*.sarif; do
+              if [ -f "$sarif" ]; then
+                FOUND=1
+                echo ""
+                echo "File: $(basename "$sarif")"
+                echo "---"
+                jq -r '.runs[0].results[] | "\(.ruleId // "N/A") [\(.level // "warning")]: \(.message.text) at \(.locations[0].physicalLocation.artifactLocation.uri):\(.locations[0].physicalLocation.region.startLine // "?")"' "$sarif" 2>/dev/null || echo "(Could not parse with jq, showing raw SARIF:)" && head -100 "$sarif"
+              fi
+            done
+          fi
+        done
+        
+        if [ $FOUND -eq 0 ]; then
+          echo "No SARIF files found. Listing all files in working directory:"
+          ls -la
           echo ""
-          echo "=== Summary ==="
-          jq -r '.runs[0] | "Language: \(.tool.driver.name), Rules: \(.tool.driver.rules | length), Results: \(.results | length)"' "$RESULTS_DIR"/*.sarif 2>/dev/null | head -1
-        else
-          echo "No results directory found at $RESULTS_DIR"
+          echo "Searching for .sarif files anywhere in workspace:"
+          find "$GITHUB_WORKSPACE" -name "*.sarif" -type f 2>/dev/null | head -20 || echo "No SARIF files found"
         fi
