@@ -113,7 +113,8 @@ public class ExternalUserPollingService {
      * @param users List of users from Tech Services API
      * @param syncTime The sync time to set as lastSyncedOn
      */
-    private void synchronizeUsers(List<TechServicesUser> users, LocalDateTime syncTime) {
+    @Transactional
+    void synchronizeUsers(List<TechServicesUser> users, LocalDateTime syncTime) {
         int updatedCount = 0;
 
         for (TechServicesUser user : users) {
