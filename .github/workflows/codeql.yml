@@ -96,14 +96,16 @@ jobs:
     # to build your code.
     # ℹ️ Command-line programs to run using the OS shell.
     # 📚 See https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepsrun
-    - name: Run manual build steps
+
+    - name: Build JAR
       if: matrix.build-mode == 'manual'
-      shell: bash
-      run: |
-        echo 'Setup JDK 21 and build the Gradle project for CodeQL.'
-        chmod +x ./gradlew
-        ./gradlew clean assemble --no-daemon
-        echo 'CodeQL manual build completed.'
+      run: ./gradlew build
+      env:
+        GITHUB_ACTOR: ${{ secrets.GITHUB_ACTOR }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        SENTRY_ENVIRONMENT: ${{ vars.ENV_NAME }}
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4
