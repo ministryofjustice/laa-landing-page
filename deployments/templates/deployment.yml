@@ -187,6 +187,8 @@ spec:
               value: "${FIRM_CACHE_CLEAR_SCHEDULE}"
             - name: APPS_CACHE_CLEAR_SCHEDULE
               value: "${APPS_CACHE_CLEAR_SCHEDULE}"
+            - name: REFRESH_USER_SILAS_STATUS_SCHEDULE
+              value: "${REFRESH_USER_SILAS_STATUS_SCHEDULE}"
             - name: TECH_SERVICES_CLEAR_CACHE_INTERVAL
               value: "${TECH_SERVICES_CLEAR_CACHE_INTERVAL}"
             - name: TECH_SERVICES_REQ_READ_TIMEOUT
