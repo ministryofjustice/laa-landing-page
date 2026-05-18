@@ -43,6 +43,7 @@ public class ExternalUserPollingService {
     private final DisableUserReasonRepository disableUserReasonRepository;
     private final UserAccountStatusAuditRepository userAccountStatusAuditRepository;
     private final TechServicesClient techServicesClient;
+    private final UserService userService;
 
     @Value("${app.entra.sync.buffer.minutes:5}")
     private int bufferMinutes;
@@ -159,6 +160,9 @@ public class ExternalUserPollingService {
                     if (user.isMailOnly() != entraUser.isMailOnly()) {
                         entraUser.setMailOnly(user.isMailOnly());
                     }
+
+                    // Update Silas Status for the user
+                    userService.refreshAndUpdatedUserProfilesStatus(entraUser.isEnabled(), entraUser.getInvitationStatus(), entraUser.getUserProfiles());
 
                     entraUser.setLastSyncedOn(syncTime);
 
