@@ -177,13 +177,25 @@ jobs:
         done
         set -e
 
+    - name: Collect CodeQL SARIF reports
+      if: always()
+      run: |
+        set -e
+        DEST="$GITHUB_WORKSPACE/codeql-sarif-results"
+        mkdir -p "$DEST"
+        echo "Searching for SARIF files in workspace and runner temp..."
+        find "$GITHUB_WORKSPACE" "$RUNNER_TEMP" -name '*.sarif' -type f -print0 2>/dev/null | while IFS= read -r -d '' sarif; do
+          echo "Found SARIF: $sarif"
+          cp -f "$sarif" "$DEST/"
+        done
+        if [ -z "$(find "$DEST" -maxdepth 1 -type f -name '*.sarif' 2>/dev/null)" ]; then
+          echo "No SARIF files were collected into $DEST"
+        fi
+
     - name: Upload CodeQL SARIF report artifact
       if: always()
       uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
       with:
         name: codeql-sarif-results
-        path: |
-          ${{ runner.temp }}/results
-          ${{ github.workspace }}/results
-          results
+        path: codeql-sarif-results
         if-no-files-found: ignore
