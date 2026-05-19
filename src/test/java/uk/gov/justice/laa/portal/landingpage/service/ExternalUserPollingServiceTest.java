@@ -56,6 +56,9 @@ class ExternalUserPollingServiceTest {
     private DisableUserReasonRepository disableUserReasonRepository;
 
     @Mock
+    private uk.gov.justice.laa.portal.landingpage.repository.DeleteUserReasonRepository deleteUserReasonRepository;
+
+    @Mock
     private UserAccountStatusAuditRepository userAccountStatusAuditRepository;
 
     @Mock

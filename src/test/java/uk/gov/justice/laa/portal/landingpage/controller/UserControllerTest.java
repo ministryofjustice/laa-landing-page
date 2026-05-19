@@ -789,15 +789,15 @@ class UserControllerTest {
                 .build();
         EntraUser currentUser = EntraUser.builder().id(UUID.randomUUID()).entraOid(UUID.randomUUID().toString()).build();
         when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(targetProfile));
-        when(userService.deleteExternalUser(anyString(), anyString(), any(String.class))).thenReturn(DeletedUser.builder().build());
+        when(userService.deleteExternalUser(anyString(), any(UUID.class), any(String.class))).thenReturn(DeletedUser.builder().build());
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
-        String reason = "email typo";
+        String reasonId = UUID.randomUUID().toString();
         // Act
-        String view = userController.deleteExternalUser(userProfileId, reason, authentication, session, model);
+        String view = userController.deleteExternalUser(userProfileId, reasonId, authentication, session, model);
 
         // Assert
         assertThat(view).isEqualTo("delete-user-success");
-        verify(userService).deleteExternalUser(eq(userProfileId), eq(reason.trim()), eq(currentUser.getEntraOid()));
+        verify(userService).deleteExternalUser(eq(userProfileId), any(UUID.class), eq(currentUser.getEntraOid()));
         verify(eventService).logEvent(any(DeleteUserSuccessAuditEvent.class));
     }
 
@@ -821,16 +821,16 @@ class UserControllerTest {
         when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(targetProfile));
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
 
-        String reason = "email typo";
+        String reasonId = UUID.randomUUID().toString();
 
         when(userService.deleteExternalUser(
                 eq(userProfileId),
-                eq(reason.trim()),
+                any(UUID.class),
                 eq(currentUser.getEntraOid())
         )).thenReturn(DeletedUser.builder().encounteredTsErrors(true).build());
 
         // Act
-        String view = userController.deleteExternalUser(userProfileId, reason, authentication, session, model);
+        String view = userController.deleteExternalUser(userProfileId, reasonId, authentication, session, model);
 
         // Assert
         assertThat(view).isEqualTo("errors/error-generic");
@@ -839,7 +839,7 @@ class UserControllerTest {
 
         verify(userService).deleteExternalUser(
                 eq(userProfileId),
-                eq(reason.trim()),
+                any(UUID.class),
                 eq(currentUser.getEntraOid())
         );
         verify(eventService).logEvent(any(DeleteUserAttemptAuditEvent.class));
@@ -860,21 +860,24 @@ class UserControllerTest {
                 .userType(UserType.EXTERNAL)
                 .build();
 
-        EntraUser currentUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        EntraUser currentUser = EntraUser.builder().id(UUID.randomUUID()).entraOid(UUID.randomUUID().toString()).build();
 
         when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(targetProfile));
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
 
-        String reason = "email typo";
+        String reasonId = UUID.randomUUID().toString();
+        UserProfile currentProfile = UserProfile.builder().userType(UserType.INTERNAL).build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(currentProfile);
+        when(userService.getDeleteUserReasons(anyBoolean())).thenReturn(Collections.emptyList());
 
         when(userService.deleteExternalUser(
                 eq(userProfileId),
-                eq(reason.trim()),
+                any(UUID.class),
                 eq(currentUser.getEntraOid())
         )).thenThrow(new RuntimeException("Tech Services unavailable"));
 
         // Act
-        String view = userController.deleteExternalUser(userProfileId, reason, authentication, session, model);
+        String view = userController.deleteExternalUser(userProfileId, reasonId, authentication, session, model);
 
         // Assert
         assertThat(view).isEqualTo("delete-user-reason");
@@ -883,7 +886,7 @@ class UserControllerTest {
 
         verify(userService).deleteExternalUser(
                 eq(userProfileId),
-                eq(reason.trim()),
+                any(UUID.class),
                 eq(currentUser.getEntraOid())
         );
         verify(eventService).logEvent(any(DeleteUserAttemptAuditEvent.class));

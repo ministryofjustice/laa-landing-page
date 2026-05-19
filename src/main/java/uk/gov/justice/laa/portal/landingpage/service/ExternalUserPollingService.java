@@ -7,12 +7,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
+import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraLastSyncMetadata;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.repository.DeleteUserReasonRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.DisableUserReasonRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraLastSyncMetadataRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
@@ -41,6 +43,7 @@ public class ExternalUserPollingService {
     private final EntraUserRepository entraUserRepository;
     private final UserProfileRepository userProfileRepository;
     private final DisableUserReasonRepository disableUserReasonRepository;
+    private final DeleteUserReasonRepository deleteUserReasonRepository;
     private final UserAccountStatusAuditRepository userAccountStatusAuditRepository;
     private final TechServicesClient techServicesClient;
     private final UserService userService;
@@ -205,8 +208,11 @@ public class ExternalUserPollingService {
             // Capture user entra OID before deletion for logging
             String userEntraOid = entraUser.getEntraOid();
 
-            // Delete old audit records BEFORE creating new one
+            // Determine delete reason BEFORE deleting old audit records
             List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
+            DeleteUserReason deleteReason = determineSystemDeleteReason(entraUser, auditRecords);
+
+            // Delete old audit records BEFORE creating new one
             if (!auditRecords.isEmpty()) {
                 userAccountStatusAuditRepository.deleteAll(auditRecords);
                 userAccountStatusAuditRepository.flush();
@@ -263,6 +269,7 @@ public class ExternalUserPollingService {
                     .statusChange(UserAccountStatus.DELETED)
                     .statusChangedBy("External user sync")
                     .statusChangedDate(LocalDateTime.now())
+                    .deleteUserReason(deleteReason)
                     .build();
             userAccountStatusAuditRepository.save(deletedAudit);
             userAccountStatusAuditRepository.flush();
@@ -272,6 +279,35 @@ public class ExternalUserPollingService {
             log.error("Error deleting entra user {}: {}",  oid, e.getMessage(), e);
             throw new RuntimeException("Failed to delete entra user: " + oid, e);
         }
+    }
+
+    private DeleteUserReason determineSystemDeleteReason(EntraUser entraUser,
+            List<UserAccountStatusAudit> auditRecords) {
+        // Priority 1: expired invitation
+        boolean hasExpiredInvitation = auditRecords.stream()
+                .filter(a -> a.getDisableUserReason() != null)
+                .anyMatch(a -> "PendingAcceptance".equals(a.getDisableUserReason().getEntraDescription()));
+        if (hasExpiredInvitation) {
+            return deleteUserReasonRepository.findByCode("ExpiredInvitation").orElse(null);
+        }
+
+        // Priority 2: not active after max lifetime
+        boolean hasNotActive = auditRecords.stream()
+                .filter(a -> a.getDisableUserReason() != null)
+                .anyMatch(a -> "NotActive".equals(a.getDisableUserReason().getEntraDescription()));
+        if (hasNotActive) {
+            return deleteUserReasonRepository.findByCode("NotActiveAfterMaxLifetime").orElse(null);
+        }
+
+        // Priority 3: user has no roles assigned
+        boolean hasNoRoles = entraUser.getUserProfiles() == null
+                || entraUser.getUserProfiles().stream()
+                        .allMatch(p -> p.getAppRoles() == null || p.getAppRoles().isEmpty());
+        if (hasNoRoles) {
+            return deleteUserReasonRepository.findByCode("NoGroupsDelete").orElse(null);
+        }
+
+        return null;
     }
 
     private void disableUserWithReason(TechServicesUser user, EntraUser entraUser) {

@@ -158,6 +158,8 @@ class UserServiceTest {
     private UserAccountStatusAuditRepository mockUserAccountStatusAuditRepository;
     @Mock
     private AccessControlService accessControlService;
+    @Mock
+    private uk.gov.justice.laa.portal.landingpage.repository.DeleteUserReasonRepository mockDeleteUserReasonRepository;
 
     @BeforeEach
     void setUp() {
@@ -176,7 +178,8 @@ class UserServiceTest {
                 mockFirmRepository,
                 mockEventService,
                 notificationService,
-                accessControlService);
+                accessControlService,
+                mockDeleteUserReasonRepository);
     }
 
     @Test
@@ -292,7 +295,7 @@ class UserServiceTest {
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
 
         // Act
-        userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID().toString());
+        userService.deleteExternalUser(profileId.toString(), null, UUID.randomUUID().toString());
 
         // Assert
         verify(techServicesClient).deleteRoleAssignment(entraId);
@@ -334,7 +337,7 @@ class UserServiceTest {
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
 
         // Act
-        userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID().toString());
+        userService.deleteExternalUser(profileId.toString(), null, UUID.randomUUID().toString());
 
         // Assert
         verify(techServicesClient).deleteRoleAssignment(entraId);
@@ -386,7 +389,7 @@ class UserServiceTest {
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
 
         // Act
-        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", actorId);
+        var result = userService.deleteExternalUser(profileId.toString(), null, actorId);
 
         // Assert
         verify(techServicesClient).disableUser(entraUserDto, "RoleChangeorNoLongerRequired");
@@ -443,7 +446,7 @@ class UserServiceTest {
                 .when(techServicesClient).deleteRoleAssignment(entraId);
 
         // Act
-        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", actorId);
+        var result = userService.deleteExternalUser(profileId.toString(), null, actorId);
 
         // Assert
         verify(techServicesClient).disableUser(entraUserDto, "RoleChangeorNoLongerRequired");
@@ -499,7 +502,7 @@ class UserServiceTest {
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.error(null));
 
         // Act
-        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", actorId);
+        var result = userService.deleteExternalUser(profileId.toString(), null, actorId);
 
         // Assert
         verify(techServicesClient).disableUser(entraUserDto, "RoleChangeorNoLongerRequired");
@@ -529,7 +532,7 @@ class UserServiceTest {
 
         // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> userService.deleteExternalUser(profileId.toString(), "reason", UUID.randomUUID().toString()));
+                () -> userService.deleteExternalUser(profileId.toString(), null, UUID.randomUUID().toString()));
         assertThat(ex.getMessage()).contains("Deletion is only permitted for external users");
         verify(techServicesClient, never()).deleteRoleAssignment(any());
     }
@@ -548,7 +551,7 @@ class UserServiceTest {
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
 
         // Act
-        var result = userService.deleteEntraUserWithoutProfile(entraId.toString(), "duplicate user", UUID.randomUUID());
+        var result = userService.deleteEntraUserWithoutProfile(entraId.toString(), null, UUID.randomUUID());
 
         // Assert
         verify(techServicesClient).disableUser(any(EntraUserDto.class), eq("RoleChangeorNoLongerRequired"));

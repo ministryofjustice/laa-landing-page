@@ -1,0 +1,137 @@
+databaseChangeLog:
+  # Create delete_user_reason reference table
+  - changeSet:
+      id: 1747562400000-1
+      author: paul.snowdon
+      comment: "Create delete_user_reason reference table with all standardised delete
+        reasons"
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - tableExists:
+                tableName: delete_user_reason
+      changes:
+        - createTable:
+            tableName: delete_user_reason
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: delete_user_reason_pkey
+              - column:
+                  name: code
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: label
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: editable_by_internal_user
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: editable_by_external_user
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: delete_user_reason
+            columnNames: code
+            constraintName: uq_delete_user_reason_code
+
+  # Seed all 13 delete reasons
+  - changeSet:
+      id: 1747562400000-2
+      author: paul.snowdon
+      comment: "Seed delete_user_reason reference data"
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: "0"
+            sql: "SELECT COUNT(*) FROM delete_user_reason"
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO delete_user_reason (id, code, label,
+              editable_by_internal_user, editable_by_external_user) VALUES
+              (gen_random_uuid(), 'CyberRisk',                      'Cyber
+              risk',                          true,  false), (gen_random_uuid(),
+              'LeftFirm',                       'Left
+              Firm',                           true,  true), (gen_random_uuid(),
+              'ProviderDiscretion',             'Provider
+              Discretion',                 false, true), (gen_random_uuid(),
+              'ContractEnded',                  'Contract
+              ended',                      false, false), (gen_random_uuid(),
+              'RoleChangeorNoLongerRequired',   'Role change or no longer
+              required',   true,  false), (gen_random_uuid(),
+              'FirmClosureorMerger',            'Firm closure or
+              merger',              true,  false), (gen_random_uuid(),
+              'ComplianceBreach',               'Compliance
+              breach',                   true,  false), (gen_random_uuid(),
+              'DuplicateAccount',               'Duplicate
+              account',                   true,  false), (gen_random_uuid(),
+              'UserRequest',                    'User
+              request',                        true,  false),
+              (gen_random_uuid(), 'ExpiredInvitation',              'Expired
+              Invitation',                  false, false), (gen_random_uuid(),
+              'NotActiveAfterMaxLifetime',      'Not Active After Max
+              Lifetime',       false, false), (gen_random_uuid(),
+              'NoGroupsDelete',                 'No Groups
+              Delete',                    false, false), (gen_random_uuid(),
+              'SystemIssue',                    'System
+              Issue',                        true,  false);
+
+  # Add delete_user_reason_id FK column to user_account_status_audit
+  - changeSet:
+      id: 1747562400000-3
+      author: paul.snowdon
+      comment: "Add delete_user_reason_id FK column to user_account_status_audit table"
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - columnExists:
+                tableName: user_account_status_audit
+                columnName: delete_user_reason_id
+      changes:
+        - addColumn:
+            tableName: user_account_status_audit
+            columns:
+              - column:
+                  name: delete_user_reason_id
+                  type: UUID
+                  constraints:
+                    nullable: true
+
+  # Add FK constraint from user_account_status_audit to delete_user_reason
+  - changeSet:
+      id: 1747562400000-4
+      author: paul.snowdon
+      comment: "Add FK constraint from user_account_status_audit.delete_user_reason_id
+        to delete_user_reason.id"
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - foreignKeyConstraintExists:
+                foreignKeyName: fk_user_account_status_audit_delete_user_reason_id
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: user_account_status_audit
+            baseColumnNames: delete_user_reason_id
+            referencedTableName: delete_user_reason
+            referencedColumnNames: id
+            constraintName: fk_user_account_status_audit_delete_user_reason_id
+            deferrable: false
+            initiallyDeferred: false
+            onDelete: NO ACTION
+            onUpdate: NO ACTION
+            validate: true

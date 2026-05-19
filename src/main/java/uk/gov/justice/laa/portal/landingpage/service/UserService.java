@@ -83,8 +83,10 @@ import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.DeleteUserReasonRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
@@ -118,6 +120,7 @@ public class UserService {
     private final EventService eventService;
     private final NotificationService notificationService;
     private final AccessControlService accessControlService;
+    private final DeleteUserReasonRepository deleteUserReasonRepository;
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
@@ -129,7 +132,8 @@ public class UserService {
            RoleChangeNotificationService roleChangeNotificationService, FirmService firmService,
            FirmRepository firmRepository, EventService eventService,
            NotificationService notificationService,
-           @Lazy AccessControlService accessControlService) {
+           @Lazy AccessControlService accessControlService,
+           DeleteUserReasonRepository deleteUserReasonRepository) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -145,6 +149,7 @@ public class UserService {
         this.eventService = eventService;
         this.notificationService = notificationService;
         this.accessControlService = accessControlService;
+        this.deleteUserReasonRepository = deleteUserReasonRepository;
     }
 
     public boolean hasUserFirmAlreadyAssigned(String email, UUID firmId) {
@@ -434,8 +439,16 @@ public class UserService {
      * @param actorId       the entra oid of the actor performing the deletion (for
      *                      logging)
      */
+    public List<DeleteUserReason> getDeleteUserReasons(boolean isInternalUser) {
+        if (isInternalUser) {
+            return deleteUserReasonRepository.findAllByEditableByInternalUser(true);
+        } else {
+            return deleteUserReasonRepository.findAllByEditableByExternalUser(true);
+        }
+    }
+
     @Transactional
-    public DeletedUser deleteExternalUser(String userProfileId, String reason, String actorId) {
+    public DeletedUser deleteExternalUser(String userProfileId, UUID deleteReasonId, String actorId) {
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
         if (optionalUserProfile.isEmpty()) {
             throw new RuntimeException("User profile not found: " + userProfileId);
@@ -454,9 +467,14 @@ public class UserService {
 
         EntraUserDto entraUserDto = mapper.map(entraUser, EntraUserDto.class);
 
+        DeleteUserReason deleteUserReason = (deleteReasonId != null)
+                ? deleteUserReasonRepository.findById(deleteReasonId).orElse(null)
+                : null;
+
         logger.info(
-                "Deleting external user. actorEntraId={}, userProfileId={}, entraUserId={}, reason=\"{}\"",
-                actorId, userProfileId, entraUser.getId(), reason);
+                "Deleting external user. actorEntraId={}, userProfileId={}, entraUserId={}, reason={}",
+                actorId, userProfileId, entraUser.getId(),
+                deleteUserReason != null ? deleteUserReason.getCode() : "none");
 
 
         // first send update to tech services
@@ -536,6 +554,7 @@ public class UserService {
             .statusChange(UserAccountStatus.DELETED)
             .statusChangedBy(deletedByName)
             .statusChangedDate(LocalDateTime.now())
+            .deleteUserReason(deleteUserReason)
             .build();
         userAccountStatusAuditRepository.save(deletedAudit);
         userAccountStatusAuditRepository.flush();
@@ -647,7 +666,7 @@ public class UserService {
      * @throws RuntimeException if user not found, has profiles, or is internal user
      */
     @Transactional
-    public DeletedUser deleteEntraUserWithoutProfile(String entraUserId, String reason,
+    public DeletedUser deleteEntraUserWithoutProfile(String entraUserId, UUID deleteReasonId,
             UUID actorId) {
         EntraUser entraUser = entraUserRepository.findById(UUID.fromString(entraUserId))
                 .orElseThrow(() -> new RuntimeException("Entra user not found: " + entraUserId));
@@ -668,9 +687,14 @@ public class UserService {
             throw new RuntimeException("Cannot delete internal users");
         }
 
+        DeleteUserReason deleteUserReason = (deleteReasonId != null)
+                ? deleteUserReasonRepository.findById(deleteReasonId).orElse(null)
+                : null;
+
         logger.info(
-                "Deleting Entra user without profile. actorId={}, entraUserId={}, reason=\"{}\"",
-                actorId, entraUserId, entraUser.getEmail(), reason);
+                "Deleting Entra user without profile. actorId={}, entraUserId={}, reason={}",
+                actorId, entraUserId,
+                deleteUserReason != null ? deleteUserReason.getCode() : "none");
 
         // Notify Tech Services to remove Entra group memberships
         try {
@@ -716,6 +740,7 @@ public class UserService {
             .statusChange(UserAccountStatus.DELETED)
             .statusChangedBy(deletedByName)
             .statusChangedDate(LocalDateTime.now())
+            .deleteUserReason(deleteUserReason)
             .build();
         userAccountStatusAuditRepository.save(deletedAudit);
         userAccountStatusAuditRepository.flush();
@@ -2439,6 +2464,9 @@ public class UserService {
                     .userEmail(audit.getUserEmail())
                     .deletedDate(audit.getStatusChangedDate())
                     .deletedBy(audit.getStatusChangedBy())
+                    .deleteReason(audit.getDeleteUserReason() != null
+                            ? audit.getDeleteUserReason().getLabel()
+                            : null)
                     .build())
                 .collect(Collectors.toList());
 

@@ -21,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -924,7 +925,7 @@ class AuditControllerTest {
     void deleteUserWithoutProfile_withValidReason_shouldDeleteAndReturnSuccess() {
         // Given
         String entraUserId = UUID.randomUUID().toString();
-        String reason = "User no longer needs access";
+        String reasonId = UUID.randomUUID().toString();
         UUID currentUserId = UUID.randomUUID();
 
         AuditUserDetailDto userDetail = AuditUserDetailDto.builder()
@@ -957,18 +958,18 @@ class AuditControllerTest {
         when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId)))
                 .thenReturn(userDetail);
         when(loginService.getCurrentEntraUser(any())).thenReturn(currentUser);
-        when(userService.deleteEntraUserWithoutProfile(entraUserId, reason, UUID.fromString(entraUserId)))
+        when(userService.deleteEntraUserWithoutProfile(eq(entraUserId), any(UUID.class), any(UUID.class)))
                 .thenReturn(deletedUser);
 
         // When
         String viewName = auditController.deleteUserWithoutProfile(
-                entraUserId, reason, null, null, model);
+                entraUserId, reasonId, null, null, model);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/delete-user-success");
         assertThat(model.getAttribute("deletedUserFullName")).isEqualTo("Jane Smith");
         assertThat(model.getAttribute("pageTitle")).isEqualTo("User deleted");
-        verify(userService).deleteEntraUserWithoutProfile(entraUserId, reason, UUID.fromString(entraUserId));
+        verify(userService).deleteEntraUserWithoutProfile(eq(entraUserId), any(UUID.class), any(UUID.class));
         verify(eventService).logEvent(any(uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent.class));
     }
 
@@ -990,6 +991,7 @@ class AuditControllerTest {
 
         when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId)))
                 .thenReturn(userDetail);
+        when(userService.getDeleteUserReasons(true)).thenReturn(Collections.emptyList());
 
         // When
         String viewName = auditController.deleteUserWithoutProfile(
@@ -999,9 +1001,9 @@ class AuditControllerTest {
         assertThat(viewName).isEqualTo("user-audit/delete-user-without-profile-reason");
         assertThat(model.getAttribute("user")).isEqualTo(userDetail);
         assertThat(model.getAttribute("fieldErrorMessage"))
-                .isEqualTo("Please enter a reason (minimum 10 characters).");
+                .isEqualTo("Please select a valid reason.");
         assertThat(model.getAttribute("pageTitle")).isEqualTo("Remove access - Bob Jones");
-        verify(userService, times(0)).deleteEntraUserWithoutProfile(anyString(), anyString(), any());
+        verify(userService, times(0)).deleteEntraUserWithoutProfile(anyString(), any(UUID.class), any());
     }
 
     @Test
@@ -1021,6 +1023,7 @@ class AuditControllerTest {
 
         when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId)))
                 .thenReturn(userDetail);
+        when(userService.getDeleteUserReasons(true)).thenReturn(Collections.emptyList());
 
         // When
         String viewName = auditController.deleteUserWithoutProfile(
@@ -1029,15 +1032,15 @@ class AuditControllerTest {
         // Then
         assertThat(viewName).isEqualTo("user-audit/delete-user-without-profile-reason");
         assertThat(model.getAttribute("fieldErrorMessage"))
-                .isEqualTo("Please enter a reason (minimum 10 characters).");
-        verify(userService, times(0)).deleteEntraUserWithoutProfile(anyString(), anyString(), any());
+                .isEqualTo("Please select a reason.");
+        verify(userService, times(0)).deleteEntraUserWithoutProfile(anyString(), any(UUID.class), any());
     }
 
     @Test
     void deleteUserWithoutProfile_whenDeleteFails_shouldReturnErrorView() {
         // Given
         String entraUserId = UUID.randomUUID().toString();
-        String reason = "Valid deletion reason";
+        String reasonId = UUID.randomUUID().toString();
         UUID currentUserId = UUID.randomUUID();
 
         AuditUserDetailDto userDetail = AuditUserDetailDto.builder()
@@ -1062,12 +1065,13 @@ class AuditControllerTest {
         when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId)))
                 .thenReturn(userDetail);
         when(loginService.getCurrentEntraUser(any())).thenReturn(currentUser);
-        when(userService.deleteEntraUserWithoutProfile(entraUserId, reason, currentUserId))
+        when(userService.getDeleteUserReasons(true)).thenReturn(Collections.emptyList());
+        when(userService.deleteEntraUserWithoutProfile(eq(entraUserId), any(UUID.class), any(UUID.class)))
                 .thenThrow(new RuntimeException("Failed to delete user from Entra"));
 
         // When
         String viewName = auditController.deleteUserWithoutProfile(
-                entraUserId, reason, null, null, model);
+                entraUserId, reasonId, null, null, model);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/delete-user-without-profile-reason");

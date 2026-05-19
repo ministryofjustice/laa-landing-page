@@ -31,14 +31,27 @@
 
     <p class="govuk-body">This user has no firm profile or service assignments. This will remove the user's account from SiLAS right away and notify Microsoft Entra to remove their access. Their account may still be active for a short time until Microsoft fully processes the deletion.</p>
 
-    <form th:action="@{'/admin/users/audit/entra/' + ${user.userId} + '/delete'}" method="post" novalidate>
+    <form th:action="@{'/admin/users/audit/entra/' + ${user.userId} + '/delete'}" method="post" novalidate
+          th:object="${deleteUserReasonForm}">
         <div class="govuk-form-group" th:classappend="${fieldErrorMessage} ? ' govuk-form-group--error'">
-            <label class="govuk-label" for="reason" th:if="${fieldErrorMessage == null || fieldErrorMessage == ''}">Please enter a reason (minimum 10 characters).</label>
-            <span class="govuk-error-message" th:if="${fieldErrorMessage}">
-                <span class="govuk-visually-hidden">Error:</span>
-                <span th:text="${fieldErrorMessage}"></span>
-            </span>
-            <textarea class="govuk-textarea" id="reason" name="reason" rows="7" th:classappend="${fieldErrorMessage} ? 'govuk-textarea--error' : ''" th:attr="aria-describedby=${fieldErrorMessage} ? 'reason-error' : null"></textarea>
+            <fieldset class="govuk-fieldset">
+                <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
+                    Select a reason for removing access
+                </legend>
+                <span class="govuk-error-message" th:if="${fieldErrorMessage}">
+                    <span class="govuk-visually-hidden">Error:</span>
+                    <span th:text="${fieldErrorMessage}"></span>
+                </span>
+                <div class="govuk-radios" data-module="govuk-radios">
+                    <div class="govuk-radios__item" th:each="reason : ${deleteReasons}">
+                        <input class="govuk-radios__input" type="radio"
+                               th:id="${reason.id}" name="reasonId"
+                               th:value="${reason.id}">
+                        <label class="govuk-label govuk-radios__label" th:for="${reason.id}"
+                               th:text="${reason.label}"></label>
+                    </div>
+                </div>
+            </fieldset>
         </div>
 
         <div class="moj-button-group">
