@@ -180,17 +180,34 @@ jobs:
     - name: Collect CodeQL SARIF reports
       if: always()
       run: |
-        set -e
+        set +e
+        echo "Checking CodeQL environment variables..."
+        env | grep CODEQL | sort
+        echo ""
+        echo "Checking for SARIF files in common locations..."
+        find "$GITHUB_WORKSPACE" "$RUNNER_TEMP" -name '*.sarif' -type f 2>/dev/null | while read -r f; do
+          echo "Found: $f"
+        done
+        echo ""
+        
         DEST="$GITHUB_WORKSPACE/codeql-sarif-results"
         mkdir -p "$DEST"
-        echo "Searching for SARIF files in workspace and runner temp..."
-        find "$GITHUB_WORKSPACE" "$RUNNER_TEMP" -name '*.sarif' -type f -print0 2>/dev/null | while IFS= read -r -d '' sarif; do
-          echo "Found SARIF: $sarif"
-          cp -f "$sarif" "$DEST/"
+        
+        # Try to find and copy SARIF files from various locations
+        for searchdir in "$RUNNER_TEMP/results" "$GITHUB_WORKSPACE/results" "$HOME/codeql-results" "/home/runner/codeql-results"; do
+          if [ -d "$searchdir" ]; then
+            echo "Searching in: $searchdir"
+            find "$searchdir" -name '*.sarif' -type f 2>/dev/null | while read -r sarif; do
+              echo "Copying: $sarif"
+              cp -f "$sarif" "$DEST/"
+            done
+          fi
         done
-        if [ -z "$(find "$DEST" -maxdepth 1 -type f -name '*.sarif' 2>/dev/null)" ]; then
-          echo "No SARIF files were collected into $DEST"
-        fi
+        
+        # List what was collected
+        echo ""
+        echo "SARIF files collected in $DEST:"
+        ls -la "$DEST/" || echo "Directory is empty"
 
     - name: Upload CodeQL SARIF report artifact
       if: always()
