@@ -43,7 +43,7 @@ jobs:
       actions: read
       contents: read
     env:
-      MIN_LEVEL: note   # change to: error | warning | note
+      MIN_LEVEL: warning   # change to: error | warning | note
 
     strategy:
       fail-fast: false
@@ -141,6 +141,7 @@ jobs:
           *) ALLOWED='["error","warning"]' ;;
         esac
 
+        total_findings=0
         for sarif in "${SARIF_FILES[@]}"; do
           echo ""
           echo "File: $(basename "$sarif")"
@@ -179,14 +180,14 @@ jobs:
             | .[]
           ' "$sarif" | column -t -s $'\t' || true
 
-          # optional: fail the job if any findings above threshold
-          # if [ "$filtered_total" -gt 0 ]; then
-          #   echo "::error::$filtered_total code scanning issues at or above $MIN_LEVEL"
-          #   exit 1
-          # fi
-
+          total_findings=$((total_findings + filtered_total))
           echo ""
         done
+
+        if [ "$total_findings" -gt 0 ]; then
+          echo "::error::$total_findings code scanning issues at or above $MIN_LEVEL were found. Failing workflow."
+          exit 1
+        fi
         set -e
 
     - name: Collect CodeQL SARIF reports
