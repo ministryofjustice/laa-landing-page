@@ -1,13 +1,22 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
-import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraLastSyncMetadata;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
@@ -21,16 +30,8 @@ import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUsersResponse;
-import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
-
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
 
 @Service
 @RequiredArgsConstructor
@@ -211,7 +212,7 @@ public class ExternalUserPollingService {
 
             // Determine delete reason BEFORE deleting old audit records
             List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
-            DeleteUserReason deleteReason = determineSystemDeleteReason(entraUser, auditRecords);
+            final DeleteUserReason deleteReason = determineSystemDeleteReason(entraUser, auditRecords);
 
             // Delete old audit records BEFORE creating new one
             if (!auditRecords.isEmpty()) {
