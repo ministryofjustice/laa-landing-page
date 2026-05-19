@@ -135,3 +135,20 @@ databaseChangeLog:
             onDelete: NO ACTION
             onUpdate: NO ACTION
             validate: true
+
+  - changeSet:
+      id: remove-ium-security-response-role-assignment
+      author: niall.mcmahon
+      changes:
+        - sql:
+            sql: |
+              DELETE FROM role_assignment
+              WHERE assigning_role_id = (SELECT id FROM app_role where authz_role = true and name = 'Internal User Manager')
+              AND assignable_role_id = (SELECT id FROM app_role where authz_role = true and name = 'Security Response');
+            dbms: postgresql
+        - sql:
+            sql: |
+              DELETE FROM role_assignment
+              WHERE assigning_role_id = (SELECT id FROM app_role where authz_role = true and name = 'Security Response')
+              AND assignable_role_id = (SELECT id FROM app_role where authz_role = true and name = 'Security Response');
+            dbms: postgresql
