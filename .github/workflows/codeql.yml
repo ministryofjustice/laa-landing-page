@@ -116,8 +116,6 @@ jobs:
         output: codeql-results
     - name: Report CodeQL results
       if: always()
-      env:
-        MIN_LEVEL: warning    # change to: error | warning | note
       run: |
         echo "=== CodeQL Scan Results (threshold: $MIN_LEVEL) ==="
         set +e
