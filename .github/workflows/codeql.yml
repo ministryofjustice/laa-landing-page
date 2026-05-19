@@ -43,7 +43,7 @@ jobs:
       actions: read
       contents: read
     env:
-      MIN_LEVEL: warning    # change to: error | warning | note
+      MIN_LEVEL: note   # change to: error | warning | note
 
     strategy:
       fail-fast: false
@@ -195,7 +195,7 @@ jobs:
       if: always()
       run: |
         set +e
-        DEST="$GITHUB_WORKSPACE/codeql-sarif-results"
+        DEST="$GITHUB_WORKSPACE/codeql-sarif-results-${{ matrix.language }}"
         mkdir -p "$DEST"
         
         echo "Searching for SARIF files..."
@@ -212,6 +212,6 @@ jobs:
       if: always()
       uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
       with:
-        name: codeql-sarif-results
-        path: codeql-sarif-results
+        name: codeql-sarif-results-${{ matrix.language }}
+        path: codeql-sarif-results-${{ matrix.language }}
         if-no-files-found: ignore
