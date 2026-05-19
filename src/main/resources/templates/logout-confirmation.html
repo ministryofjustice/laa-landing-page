@@ -28,6 +28,7 @@
     <h1 class="govuk-heading-l">
         Are you sure you want to sign out for <span th:text="${currentUser.name}"></span>?
     </h1>
+    <!-- nosemgrep -->
     <form th:action="@{/logout}" method="post" style="display: inline;">
         <div class="moj-button-group">
                 <button type="submit" class="govuk-button" data-module="govuk-button">
@@ -36,7 +37,6 @@
             <a class="govuk-link" th:href="@{/home}">Cancel</a>
         </div>
     </form>
-        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
 </main>
 </body>
 </html>

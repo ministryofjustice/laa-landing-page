@@ -85,22 +85,26 @@
                 <div class="moj-page-header-actions">
                     <div class="moj-page-header-actions__title" style="display: flex; align-items: center; gap: 1rem;">
                         <h1 class="govuk-heading-xl" th:text="${user.fullName}"></h1>
-                            <th:block th:if="${silasStatus == 'Disabled'}">
+                        <th:block th:if="${silasStatus == 'DISABLED'}">
                                 <span class="govuk-tag govuk-tag--red govuk-!-font-weight-bold govuk-!-margin-top-1">DISABLED</span>
                             </th:block>
-                            <th:block th:if="${silasStatus == 'Incomplete'}">
+                            <th:block th:if="${silasStatus == 'INCOMPLETE'}">
                                 <span class="govuk-tag govuk-tag--blue govuk-!-font-weight-bold govuk-!-margin-top-1">INCOMPLETE</span>
                             </th:block>
-                            <th:block th:if="${silasStatus == 'Complete'}">
+                            <th:block th:if="${silasStatus == 'COMPLETE'}">
                                 <span class="govuk-tag govuk-tag--green govuk-!-font-weight-bold govuk-!-margin-top-1">COMPLETE</span>
                             </th:block>
-                            <th:block th:if="${silasStatus == 'Activation pending'}">
+                            <th:block th:if="${silasStatus == 'ACTIVATION_PENDING'}">
                                 <span class="govuk-tag govuk-tag--grey govuk-!-font-weight-bold govuk-!-margin-top-1" style="min-width: 200px">ACTIVATION PENDING</span>
                             </th:block>
-                            <th:block th:if="${silasStatus == 'No roles assigned'}">
+                            <th:block th:if="${silasStatus == 'NO_ROLES_ASSIGNED'}">
                                 <span class="govuk-tag govuk-tag--purple govuk-!-font-weight-bold govuk-!-margin-top-1" style="min-width: 200px">NO ROLES ASSIGNED</span>
                             </th:block>
+                            <th:block th:if="${silasStatus == 'UNKNOWN'}">
+                                <span class="govuk-tag govuk-tag--grey govuk-!-font-weight-bold govuk-!-margin-top-1" style="min-width: 200px">UNKNOWN</span>
+                            </th:block>
                     </div>
+                    <!-- nosemgrep -->
                     <form class="form" th:if="${!isAccessGranted and canGrantUserAccess}"
                         th:action="@{/admin/users/manage/{id}/grant-access(id=${user.id})}" method="post">
                         <div class="moj-page-header-actions__actions">
@@ -160,14 +164,7 @@
                                         <a class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
                                            th:href="@{/admin/users/edit/{id}/details(id=${user.id})}">Edit user</a>
                                     </li>
-                                    <li th:if="${canDisableUser or canEnableUser}" class="govuk-summary-card__action">
-                                        <a th:if="${canDisableUser}" class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
-                                           th:href="@{/admin/users/manage/{id}/disable(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">Disable user</a>
-                                        <a th:if="${canEnableUser}" class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
-                                           th:href="@{/admin/users/manage/{id}/enable(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">
-                                            Enable user
-                                        </a>
-                                    </li>
+
                                     <li th:if="${canDeleteUser}" class="govuk-summary-card__action">
                                         <a class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
                                            th:href="@{/admin/users/manage/{id}/delete(id=${user.id})}">Delete user</a>
@@ -235,6 +232,20 @@
                                                th:href="@{/admin/users/edit/{id}/convert-to-multi-firm(id=${user.id})}">
                                                 Convert to multi-firm
                                             </a>
+                                        </dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row" th:if="${canDisableUser or canEnableUser or cannotEnableUser}">
+                                        <dt class="govuk-summary-list__key">Account status</dt>
+                                        <dd class="govuk-summary-list__value">
+                                            <strong class="govuk-tag govuk-tag--green" th:if="${user.entraUser.enabled}">Enabled</strong>
+                                            <strong class="govuk-tag govuk-tag--red" th:unless="${user.entraUser.enabled}">Disabled</strong>
+                                        </dd>
+                                        <dd class="govuk-summary-list__actions">
+                                            <a th:if="${canDisableUser}" class="govuk-link"
+                                               th:href="@{/admin/users/manage/{id}/disable(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">Disable user</a>
+                                            <a th:if="${canEnableUser}" class="govuk-link"
+                                               th:href="@{/admin/users/manage/{id}/enable(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">Enable user</a>
+                                            <span th:if="${cannotEnableUser}">You cannot enable this user</span>
                                         </dd>
                                     </div>
                                 </dl>

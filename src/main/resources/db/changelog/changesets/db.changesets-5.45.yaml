@@ -1,0 +1,55 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-disable-type-to-entra-user
+      author: stb-3994
+      changes:
+        - addColumn:
+            tableName: entra_user
+            columns:
+              - column:
+                  name: disable_type
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: true
+      rollback:
+        - dropColumn:
+            tableName: entra_user
+            columnName: disable_type
+
+  - changeSet:
+      id: add-disable-type-to-user-account-status-audit
+      author: stb-3994
+      changes:
+        - addColumn:
+            tableName: user_account_status_audit
+            columns:
+              - column:
+                  name: disable_type
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: true
+      rollback:
+        - dropColumn:
+            tableName: user_account_status_audit
+            columnName: disable_type
+
+  - changeSet:
+      id: fix-silas-admin-role-data-cleanup
+      author: stb-3994
+
+      changes:
+        - sql:
+            sql: |
+              DELETE FROM user_profile_app_role
+                WHERE app_role_id IN (SELECT id FROM app_role ar
+                                      WHERE ar.name = 'SiLAS Administration');
+        - sql:
+            sql: |
+              DELETE FROM role_permission
+              WHERE app_role_id IN (SELECT id FROM app_role ar
+                                WHERE ar.name = 'SiLAS Administration');
+
+      rollback:
+        - sql:
+            sql: |
+              SELECT 1;

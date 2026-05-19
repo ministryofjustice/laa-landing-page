@@ -10,6 +10,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
@@ -27,6 +28,7 @@ public class UserProfileDto implements Serializable {
     private UserType userType;
     private String legacyUserId;
     private UserProfileStatus userProfileStatus;
+    private UserProfileSilasStatus silasStatus;
 
     // Related entities as DTOs
     private EntraUserDto entraUser;

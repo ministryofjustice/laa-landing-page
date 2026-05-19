@@ -49,15 +49,27 @@ public class UserAccountStatusAudit extends BaseEntity {
     private UserAccountStatus statusChange;
 
     @ManyToOne
-    @JoinColumn(name = "entra_user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_disable_user_audit_entra_user_id"))
+    @JoinColumn(name = "entra_user_id", nullable = true, foreignKey = @ForeignKey(name = "fk_disable_user_audit_entra_user_id"))
     @ToString.Exclude
     @JsonIgnore
     private EntraUser entraUser;
+
+    @Column(name = "user_email", nullable = true, length = 255, columnDefinition = "VARCHAR(255)")
+    @Size(max = 255, message = "User email must not exceed 255 characters")
+    private String userEmail;
+
+    @Column(name = "user_name", nullable = true, length = 511, columnDefinition = "VARCHAR(511)")
+    @Size(max = 511, message = "User name must not exceed 511 characters")
+    private String userName;
 
     @ManyToOne
     @JoinColumn(name = "disable_user_reason_id", nullable = true, foreignKey = @ForeignKey(name = "fk_disable_user_audit_disable_user_reason_id"))
     @ToString.Exclude
     @JsonIgnore
     private DisableUserReason disableUserReason;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "disable_type", nullable = true, length = 20)
+    private DisableType disableType;
 
 }

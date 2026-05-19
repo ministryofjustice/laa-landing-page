@@ -19,6 +19,12 @@ on:
         description: 'Snyk Organization ID'
       SNYK_SLACK_WEBHOOK_URL:
         required: false
+
+permissions:
+  contents: read
+  actions: read
+  security-events: write
+
 jobs:
   vulnerability-scan:
     runs-on: ubuntu-latest

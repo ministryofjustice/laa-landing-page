@@ -99,6 +99,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -115,7 +116,8 @@ import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditAccountStatusProjection;
+import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditSilasStatusProjection;
+import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditUserTypeProjection;
 import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
@@ -268,7 +270,7 @@ class UserServiceTest {
                 .entraUser(entraUser)
                 .appRoles(new HashSet<>(Set.of(ccmsRole)))
                 .build();
-        entraUser.setUserProfiles(Set.of(profile));
+        entraUser.setUserProfiles(new HashSet<>(Set.of(profile)));
 
         when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(profile));
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
@@ -296,7 +298,7 @@ class UserServiceTest {
         verify(techServicesClient).deleteRoleAssignment(entraId);
         verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
         verify(mockUserAccountStatusAuditRepository).deleteAll(auditRecords);
-        verify(mockUserAccountStatusAuditRepository).flush();
+        verify(mockUserAccountStatusAuditRepository, times(2)).flush();
         verify(mockRoleChangeNotificationService, times(1))
                 .sendMessage(any(UserProfile.class), eq(Collections.emptySet()), any(Set.class));
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
@@ -325,7 +327,7 @@ class UserServiceTest {
                 .entraUser(entraUser)
                 .appRoles(new HashSet<>(Set.of(nonCcmsRole)))
                 .build();
-        entraUser.setUserProfiles(Set.of(profile));
+        entraUser.setUserProfiles(new HashSet<>(Set.of(profile)));
 
         when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(profile));
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
@@ -348,6 +350,7 @@ class UserServiceTest {
         // Arrange
         UUID entraId = UUID.randomUUID();
         UUID profileId = UUID.randomUUID();
+        String actorId = UUID.randomUUID().toString();
 
         EntraUser entraUser = EntraUser.builder()
                 .id(entraId)
@@ -364,21 +367,32 @@ class UserServiceTest {
                 .entraUser(entraUser)
                 .appRoles(new HashSet<>(Set.of(role1)))
                 .build();
-        entraUser.setUserProfiles(Set.of(profile));
+        entraUser.setUserProfiles(new HashSet<>(Set.of(profile)));
 
         EntraUserDto entraUserDto = new MapperConfig().modelMapper().map(entraUser, EntraUserDto.class);
 
+        EntraUser actorUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .entraOid(actorId)
+                .firstName("Actor")
+                .lastName("User")
+                .build();
+
         when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(profile));
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
+        when(mockEntraUserRepository.findByEntraOid(actorId)).thenReturn(Optional.of(actorUser));
+        when(mockUserAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
         when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
 
         // Act
-        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID().toString());
+        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", actorId);
 
         // Assert
         verify(techServicesClient).disableUser(entraUserDto, "RoleChangeorNoLongerRequired");
         verify(techServicesClient).deleteRoleAssignment(entraId);
+        verify(mockEntraUserRepository).findByEntraOid(actorId);
+        verify(mockUserAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
         verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
         verify(mockEntraUserRepository, times(1)).delete(entraUser);
@@ -391,6 +405,7 @@ class UserServiceTest {
         // Arrange
         UUID entraId = UUID.randomUUID();
         UUID profileId = UUID.randomUUID();
+        String actorId = UUID.randomUUID().toString();
 
         EntraUser entraUser = EntraUser.builder()
                 .id(entraId)
@@ -407,23 +422,34 @@ class UserServiceTest {
                 .entraUser(entraUser)
                 .appRoles(new HashSet<>(Set.of(role1)))
                 .build();
-        entraUser.setUserProfiles(Set.of(profile));
+        entraUser.setUserProfiles(new HashSet<>(Set.of(profile)));
 
         EntraUserDto entraUserDto = new MapperConfig().modelMapper().map(entraUser, EntraUserDto.class);
 
+        EntraUser actorUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .entraOid(actorId)
+                .firstName("Actor")
+                .lastName("User")
+                .build();
+
         when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(profile));
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
+        when(mockEntraUserRepository.findByEntraOid(actorId)).thenReturn(Optional.of(actorUser));
+        when(mockUserAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
         when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
         org.mockito.Mockito.doThrow(new RuntimeException("tech services down"))
                 .when(techServicesClient).deleteRoleAssignment(entraId);
 
         // Act
-        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID().toString());
+        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", actorId);
 
         // Assert
         verify(techServicesClient).disableUser(entraUserDto, "RoleChangeorNoLongerRequired");
         verify(techServicesClient).deleteRoleAssignment(entraId);
+        verify(mockEntraUserRepository).findByEntraOid(actorId);
+        verify(mockUserAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
         verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
         verify(mockEntraUserRepository, times(1)).delete(entraUser);
@@ -436,6 +462,7 @@ class UserServiceTest {
         // Arrange
         UUID entraId = UUID.randomUUID();
         UUID profileId = UUID.randomUUID();
+        String actorId = UUID.randomUUID().toString();
 
         EntraUser entraUser = EntraUser.builder()
                 .id(entraId)
@@ -452,21 +479,33 @@ class UserServiceTest {
                 .entraUser(entraUser)
                 .appRoles(new HashSet<>(Set.of(role1)))
                 .build();
-        entraUser.setUserProfiles(Set.of(profile));
+        entraUser.setUserProfiles(new HashSet<>(Set.of(profile)));
 
         EntraUserDto entraUserDto = new MapperConfig().modelMapper().map(entraUser, EntraUserDto.class);
 
+
+        EntraUser actorUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .entraOid(actorId)
+                .firstName("Actor")
+                .lastName("User")
+                .build();
+
         when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(profile));
         when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
+        when(mockEntraUserRepository.findByEntraOid(actorId)).thenReturn(Optional.of(actorUser));
+        when(mockUserAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
         when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.error(null));
 
         // Act
-        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID().toString());
+        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", actorId);
 
         // Assert
         verify(techServicesClient).disableUser(entraUserDto, "RoleChangeorNoLongerRequired");
         verify(techServicesClient).deleteRoleAssignment(entraId);
+        verify(mockEntraUserRepository).findByEntraOid(actorId);
+        verify(mockUserAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
         verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
         verify(mockEntraUserRepository, times(1)).delete(entraUser);
@@ -3336,7 +3375,7 @@ class UserServiceTest {
                 "email", "entraUser.email",
                 "eMAIl", "entraUser.email",
                 "lAstName", "entraUser.lastName",
-                "USERSTATUS", "userProfileStatus");
+                "USERSTATUS", "silasStatus");
 
         String sort = "aSc";
         for (Map.Entry<String, String> entry : fieldMappings.entrySet()) {
@@ -3453,6 +3492,7 @@ class UserServiceTest {
         UserProfile userProfile = UserProfile.builder()
                 .id(UUID.fromString(userId))
                 .userProfileStatus(UserProfileStatus.PENDING)
+                .entraUser(EntraUser.builder().id(UUID.randomUUID()).enabled(true).build())
                 .build();
         when(mockUserProfileRepository.findById(UUID.fromString(userId)))
                 .thenReturn(Optional.of(userProfile));
@@ -3860,8 +3900,8 @@ class UserServiceTest {
                 showMultiFirmUsers);
 
         UserSearchResultsDto userSearchResultsDto = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
-                UUID.randomUUID(), UserProfileStatus.COMPLETE, false, "Test", "User", "Test User",
-                "test@example.com", UserStatus.ACTIVE, "Test Firm", InvitationStatus.INVITE_SENT, true, true, "Complete");
+                UUID.randomUUID(), UserProfileStatus.COMPLETE, UserProfileSilasStatus.COMPLETE, false, "Test", "User", "Test User",
+                "test@example.com", UserStatus.ACTIVE, "Test Firm", InvitationStatus.INVITE_SENT, true, true);
 
         Page<UserSearchResultsDto> userSearchResultsPage = new PageImpl<>(
                 List.of(userSearchResultsDto),
@@ -3964,8 +4004,8 @@ class UserServiceTest {
                 showMultiFirmUsers);
 
         UserSearchResultsDto userSearchResultsDto = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
-                UUID.randomUUID(), UserProfileStatus.COMPLETE, false, "Test", "Name", "Test User",
-                "test@example.com", UserStatus.ACTIVE, "Test Firm",  InvitationStatus.INVITE_SENT, true, true, "Complete");
+                UUID.randomUUID(), UserProfileStatus.COMPLETE, UserProfileSilasStatus.COMPLETE, false, "Test", "Name", "Test User",
+                "test@example.com", UserStatus.ACTIVE, "Test Firm",  InvitationStatus.INVITE_SENT, true, true);
 
         Page<UserSearchResultsDto> userProfilePage = new PageImpl<>(
                 List.of(userSearchResultsDto),
@@ -5329,8 +5369,8 @@ class UserServiceTest {
             List<UserSearchResultsDto> searchResults = new ArrayList<>();
             for (int i = 0; i < count; i++) {
                 UserSearchResultsDto result = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
-                        UUID.randomUUID(), UserProfileStatus.COMPLETE, false, "User" + i, "Test" + i, "Test User",
-                        "user" + i + "@example.com", UserStatus.ACTIVE, "Firm" + i,  InvitationStatus.INVITE_SENT, true, true, "Complete");
+                        UUID.randomUUID(), UserProfileStatus.COMPLETE, UserProfileSilasStatus.COMPLETE, false, "User" + i, "Test" + i, "Test User",
+                        "user" + i + "@example.com", UserStatus.ACTIVE, "Firm" + i,  InvitationStatus.INVITE_SENT, true, true);
 
                 searchResults.add(result);
             }
@@ -5822,9 +5862,9 @@ class UserServiceTest {
 
             EntraUser user2 = EntraUser.builder()
                     .id(user2Id)
-                    .firstName("Jane")
+                    .firstName("Jason")
                     .lastName("Smith")
-                    .email("jane.smith@example.com")
+                    .email("jason.smith@example.com")
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .userStatus(UserStatus.ACTIVE)
                     .multiFirmUser(false)
@@ -5879,15 +5919,17 @@ class UserServiceTest {
             user2.setUserProfiles(Set.of(profile2));
             internalUser.setUserProfiles(Set.of(internalUserProfile));
 
-            Page<EntraUser> userPage = new PageImpl<>(Arrays.asList(user1, user2, internalUser),
-                    PageRequest.of(0, 10), 2);
+            // Return users sorted by name ascending (Jane, Jason, John)
+            Page<EntraUser> userPage = new PageImpl<>(Arrays.asList(internalUser, user2, user1),
+                    PageRequest.of(0, 10), 3);
 
             when(mockEntraUserRepository.findAllUsersForAudit(
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(userPage);
 
+            // Return users in any order - they will be re-ordered by the service to match the page order
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
-                    .thenReturn(Arrays.asList(user1, user2));
+                    .thenReturn(Arrays.asList(user1, user2, internalUser));
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
@@ -5901,20 +5943,21 @@ class UserServiceTest {
             assertThat(result.getPageSize()).isEqualTo(10);
             assertThat(result.getUsers()).hasSize(3);
 
-            assertThat(result.getUsers().get(0).getName()).isEqualTo("John Doe");
-            assertThat(result.getUsers().get(0).getEmail()).isEqualTo("john.doe@example.com");
-            assertThat(result.getUsers().get(0).getUserType()).isEqualTo("External");
-            assertThat(result.getUsers().get(0).getFirmAssociation()).isEqualTo("Test Firm");
-            assertThat(result.getUsers().get(0).isMultiFirmUser()).isFalse();
-            assertThat(result.getUsers().get(0).getProfileCount()).isEqualTo(1);
+            // Users should be in the order returned by findAllUsersForAudit (Jane, Jason, John)
+            assertThat(result.getUsers().get(0).getName()).isEqualTo("Jane Doe");
+            assertThat(result.getUsers().get(0).getEmail()).isEqualTo("jane.doe@example.com");
+            assertThat(result.getUsers().get(0).getUserType()).isEqualTo("Internal");
 
-            assertThat(result.getUsers().get(1).getName()).isEqualTo("Jane Smith");
-            assertThat(result.getUsers().get(1).getEmail()).isEqualTo("jane.smith@example.com");
+            assertThat(result.getUsers().get(1).getName()).isEqualTo("Jason Smith");
+            assertThat(result.getUsers().get(1).getEmail()).isEqualTo("jason.smith@example.com");
             assertThat(result.getUsers().get(1).getUserType()).isEqualTo("External");
 
-            assertThat(result.getUsers().get(2).getName()).isEqualTo("Jane Doe");
-            assertThat(result.getUsers().get(2).getEmail()).isEqualTo("jane.doe@example.com");
-            assertThat(result.getUsers().get(2).getUserType()).isEqualTo("Internal");
+            assertThat(result.getUsers().get(2).getName()).isEqualTo("John Doe");
+            assertThat(result.getUsers().get(2).getEmail()).isEqualTo("john.doe@example.com");
+            assertThat(result.getUsers().get(2).getUserType()).isEqualTo("External");
+            assertThat(result.getUsers().get(2).getFirmAssociation()).isEqualTo("Test Firm");
+            assertThat(result.getUsers().get(2).isMultiFirmUser()).isFalse();
+            assertThat(result.getUsers().get(2).getProfileCount()).isEqualTo(1);
 
             verify(mockEntraUserRepository).findAllUsersForAudit(
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class));
@@ -6320,7 +6363,7 @@ class UserServiceTest {
             assertThat(result.getUsers()).hasSize(1);
             assertThat(result.getUsers().get(0).getUserType()).isEqualTo("External");
             assertThat(result.getUsers().get(0).getFirmAssociation()).isEqualTo("Unknown");
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Incomplete");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.INCOMPLETE);
         }
 
         @Test
@@ -6374,7 +6417,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Disabled");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.DISABLED);
         }
 
         @Test
@@ -6429,7 +6472,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("No roles assigned");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.NO_ROLES_ASSIGNED);
         }
 
         @Test
@@ -6483,7 +6526,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Incomplete");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.INCOMPLETE);
         }
 
         @Test
@@ -6537,7 +6580,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("No roles assigned");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.NO_ROLES_ASSIGNED);
         }
 
         @Test
@@ -6593,7 +6636,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Activation pending");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.ACTIVATION_PENDING);
         }
 
         @Test
@@ -6647,7 +6690,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Incomplete");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.INCOMPLETE);
         }
 
         @Test
@@ -6700,7 +6743,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("No roles assigned");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.NO_ROLES_ASSIGNED);
         }
 
         @Test
@@ -6753,7 +6796,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Activation pending");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.ACTIVATION_PENDING);
         }
 
         @Test
@@ -6806,7 +6849,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Incomplete");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.INCOMPLETE);
         }
 
         @Test
@@ -6840,7 +6883,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo("Incomplete");
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.INCOMPLETE);
             assertThat(result.getUsers().get(0).getEntraStatus()).isEqualTo("UNKNOWN");
         }
 
@@ -6929,7 +6972,7 @@ class UserServiceTest {
                     .thenReturn(Arrays.asList(user2, user1));
 
             // When
-            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+            PaginatedAuditUsers result = userService.getAuditUsers(null, null,
                     null, null, null,  1, 10, "name", "desc", false, null, null);
 
             // Then
@@ -7024,24 +7067,29 @@ class UserServiceTest {
         void getAuditUsers_whenSortingByStatusAscending_appliesCorrectSort() {
             // Given
             UUID userId = UUID.randomUUID();
-            UserAuditAccountStatusProjection projection = new UserAuditAccountStatusProjection() {
+            UserAuditSilasStatusProjection projection = new UserAuditSilasStatusProjection() {
                 @Override
                 public UUID getUserId() {
                     return userId;
                 }
 
                 @Override
-                public String getAccountStatus() {
+                public String getSilasStatus() {
                     return "Active";
+                }
+
+                @Override
+                public Integer getSilasStatusRank() {
+                    return 1;
                 }
             };
 
-            Page<UserAuditAccountStatusProjection> projectionPage = new PageImpl<>(
+            Page<UserAuditSilasStatusProjection> projectionPage = new PageImpl<>(
                     List.of(projection),
-                    PageRequest.of(0, 10, Sort.by("accountStatus").ascending()),
+                    PageRequest.of(0, 10, Sort.by("silasStatusRank").ascending()),
                     1);
 
-            when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
+            when(mockEntraUserRepository.findAllUsersForAuditWithSilasStatus(
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(projectionPage);
 
@@ -7059,21 +7107,21 @@ class UserServiceTest {
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(new ArrayList<>(List.of(user)));
 
-            // When - using "accountstatus" as the sort field
+            // When - using "silasStatus" as the sort field
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "accountstatus", "asc", false, null, null);
+                    null, null, null,  1, 10, "silasStatus", "asc", false, null, null);
 
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
 
             ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
-            verify(mockEntraUserRepository).findAllUsersForAuditWithAccountStatus(
+            verify(mockEntraUserRepository).findAllUsersForAuditWithSilasStatus(
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             PageRequest capturedPageRequest = pageRequestCaptor.getValue();
-            assertThat(capturedPageRequest.getSort().getOrderFor("accountStatus")).isNotNull();
-            assertThat(capturedPageRequest.getSort().getOrderFor("accountStatus").getDirection())
+            assertThat(capturedPageRequest.getSort().getOrderFor("silasStatusRank")).isNotNull();
+            assertThat(capturedPageRequest.getSort().getOrderFor("silasStatusRank").getDirection())
                     .isEqualTo(Sort.Direction.ASC);
         }
 
@@ -7092,30 +7140,38 @@ class UserServiceTest {
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .build();
 
-            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
-                    PageRequest.of(0, 10), 1);
+            Page<UserAuditUserTypeProjection> userTypeProjection = new PageImpl<>(List.of(new UserAuditUserTypeProjection() {
+                @Override
+                public UUID getUserId() {
+                    return userId;
+                }
 
-            when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
-                    .thenReturn(userPage);
+                @Override
+                public int getUserTypeRank() {
+                    return 1;
+                }
+            }), PageRequest.of(0, 10), 1);
 
+            when(mockEntraUserRepository.findAllUsersForAuditWithUserType(
+                    any(), any(), any(), any(), any(), any(), any(), any(), any(), any(PageRequest.class)))
+                    .thenReturn(userTypeProjection);
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user));
 
             // When - using "usertype" as sort field which maps to "multiFirmUser"
-            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+            PaginatedAuditUsers result = userService.getAuditUsers(null, null,
                     null, null, null,  1, 10, "usertype", "desc", false, null, null);
 
             // Then
             assertThat(result).isNotNull();
 
             ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
-            verify(mockEntraUserRepository).findAllUsersForAudit(
+            verify(mockEntraUserRepository).findAllUsersForAuditWithUserType(
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             PageRequest capturedPageRequest = pageRequestCaptor.getValue();
-            assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser")).isNotNull();
-            assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser").getDirection())
+            assertThat(capturedPageRequest.getSort().getOrderFor("userTypeRank")).isNotNull();
+            assertThat(capturedPageRequest.getSort().getOrderFor("userTypeRank").getDirection())
                     .isEqualTo(Sort.Direction.DESC);
         }
 
@@ -7134,13 +7190,21 @@ class UserServiceTest {
                     .userProfiles(new HashSet<>())
                     .build();
 
-            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
-                    PageRequest.of(0, 10), 1);
+            Page<UserAuditUserTypeProjection> userTypeProjection = new PageImpl<>(List.of(new UserAuditUserTypeProjection() {
+                @Override
+                public UUID getUserId() {
+                    return userId;
+                }
 
-            when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), eq(null), eq(true), eq(null), eq(null), eq(null), any(PageRequest.class)))
-                    .thenReturn(userPage);
+                @Override
+                public int getUserTypeRank() {
+                    return 1;
+                }
+            }), PageRequest.of(0, 10), 1);
 
+            when(mockEntraUserRepository.findAllUsersForAuditWithUserType(
+                    any(), any(), any(), any(), any(), any(), any(), any(), any(), any(PageRequest.class)))
+                    .thenReturn(userTypeProjection);
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user));
 
@@ -7154,12 +7218,12 @@ class UserServiceTest {
             assertThat(result.getUsers().get(0).isMultiFirmUser()).isTrue();
 
             ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
-            verify(mockEntraUserRepository).findAllUsersForAudit(
+            verify(mockEntraUserRepository).findAllUsersForAuditWithUserType(
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(true), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             PageRequest capturedPageRequest = pageRequestCaptor.getValue();
-            assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser")).isNotNull();
-            assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser").getDirection())
+            assertThat(capturedPageRequest.getSort().getOrderFor("userTypeRank")).isNotNull();
+            assertThat(capturedPageRequest.getSort().getOrderFor("userTypeRank").getDirection())
                     .isEqualTo(Sort.Direction.DESC);
 
         }
@@ -7179,18 +7243,26 @@ class UserServiceTest {
                     .userProfiles(new HashSet<>())
                     .build();
 
-            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
-                    PageRequest.of(0, 10), 1);
+            Page<UserAuditUserTypeProjection> userTypeProjection = new PageImpl<>(List.of(new UserAuditUserTypeProjection() {
+                @Override
+                public UUID getUserId() {
+                    return userId;
+                }
 
-            when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), eq(UserType.EXTERNAL), eq(false), eq(null), eq(null), eq(null), any(PageRequest.class)))
-                    .thenReturn(userPage);
+                @Override
+                public int getUserTypeRank() {
+                    return 1;
+                }
+            }), PageRequest.of(0, 10), 1);
 
+            when(mockEntraUserRepository.findAllUsersForAuditWithUserType(
+                    any(), any(), any(), any(), anyString(), any(), any(), any(), any(), any(PageRequest.class)))
+                    .thenReturn(userTypeProjection);
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user));
 
             // When - using "usertype" as sort field which maps to "multiFirmUser"
-            uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
+            PaginatedAuditUsers result = userService.getAuditUsers(null, null,
                     null, null, UserTypeForm.EXTERNAL,  1, 10, "usertype", "desc", false, null, null);
 
             // Then
@@ -7199,12 +7271,13 @@ class UserServiceTest {
             assertThat(result.getUsers().get(0).isMultiFirmUser()).isFalse();
 
             ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
-            verify(mockEntraUserRepository).findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), eq(UserType.EXTERNAL), eq(false), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+            verify(mockEntraUserRepository).findAllUsersForAuditWithUserType(
+                    eq(null), eq(null), eq(null), eq(null), eq("EXTERNAL"), eq(false), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+            verify(mockEntraUserRepository).findUsersWithProfilesAndRoles(eq(Set.of(userId)));
 
             PageRequest capturedPageRequest = pageRequestCaptor.getValue();
-            assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser")).isNotNull();
-            assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser").getDirection())
+            assertThat(capturedPageRequest.getSort().getOrderFor("userTypeRank")).isNotNull();
+            assertThat(capturedPageRequest.getSort().getOrderFor("userTypeRank").getDirection())
                     .isEqualTo(Sort.Direction.DESC);
 
         }
@@ -7235,13 +7308,21 @@ class UserServiceTest {
 
             user.setUserProfiles(Set.of(profile));
 
-            Page<EntraUser> userPage = new PageImpl<>(List.of(user),
-                    PageRequest.of(0, 10), 1);
+            Page<UserAuditUserTypeProjection> userTypeProjection = new PageImpl<>(List.of(new UserAuditUserTypeProjection() {
+                @Override
+                public UUID getUserId() {
+                    return userId;
+                }
 
-            when(mockEntraUserRepository.findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), eq(UserType.INTERNAL), eq(false), eq(null), eq(null), eq(null), any(PageRequest.class)))
-                    .thenReturn(userPage);
+                @Override
+                public int getUserTypeRank() {
+                    return 1;
+                }
+            }), PageRequest.of(0, 10), 1);
 
+            when(mockEntraUserRepository.findAllUsersForAuditWithUserType(
+                    any(), any(), any(), any(), anyString(), any(), any(), any(), any(), any(PageRequest.class)))
+                    .thenReturn(userTypeProjection);
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user));
 
@@ -7255,12 +7336,12 @@ class UserServiceTest {
             assertThat(result.getUsers().get(0).isMultiFirmUser()).isFalse();
 
             ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
-            verify(mockEntraUserRepository).findAllUsersForAudit(
-                    eq(null), eq(null), eq(null), eq(null), eq(UserType.INTERNAL), eq(false), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
+            verify(mockEntraUserRepository).findAllUsersForAuditWithUserType(
+                    eq(null), eq(null), eq(null), eq(null), eq("INTERNAL"), eq(false), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             PageRequest capturedPageRequest = pageRequestCaptor.getValue();
-            assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser")).isNotNull();
-            assertThat(capturedPageRequest.getSort().getOrderFor("multiFirmUser").getDirection())
+            assertThat(capturedPageRequest.getSort().getOrderFor("userTypeRank")).isNotNull();
+            assertThat(capturedPageRequest.getSort().getOrderFor("userTypeRank").getDirection())
                     .isEqualTo(Sort.Direction.DESC);
 
         }
@@ -8734,16 +8815,16 @@ class UserServiceTest {
 
             // Mock projection results (ordered by account status: Active, Disabled,
             // Pending)
-            UserAuditAccountStatusProjection proj1 = createAccountStatusProjection(userId1, "Active");
-            UserAuditAccountStatusProjection proj2 = createAccountStatusProjection(userId2, "Disabled");
-            UserAuditAccountStatusProjection proj3 = createAccountStatusProjection(userId3, "Pending");
+            UserAuditSilasStatusProjection proj1 = createAccountStatusProjection(userId1, "Active");
+            UserAuditSilasStatusProjection proj2 = createAccountStatusProjection(userId2, "Disabled");
+            UserAuditSilasStatusProjection proj3 = createAccountStatusProjection(userId3, "Pending");
 
-            Page<UserAuditAccountStatusProjection> projectionPage = new PageImpl<>(
+            Page<UserAuditSilasStatusProjection> projectionPage = new PageImpl<>(
                     List.of(proj1, proj2, proj3),
-                    PageRequest.of(0, 10, Sort.by("accountStatus").ascending()),
+                    PageRequest.of(0, 10, Sort.by("silasStatusRank").ascending()),
                     3);
 
-            when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
+            when(mockEntraUserRepository.findAllUsersForAuditWithSilasStatus(
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(projectionPage);
 
@@ -8757,7 +8838,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null, 1, 10, "accountStatus", "asc", false, null, null);
+                    null, null, null, 1, 10, "silasStatus", "asc", false, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -8767,14 +8848,14 @@ class UserServiceTest {
 
             // Verify repository was called with correct parameters
             ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
-            verify(mockEntraUserRepository).findAllUsersForAuditWithAccountStatus(
+            verify(mockEntraUserRepository).findAllUsersForAuditWithSilasStatus(
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             PageRequest capturedRequest = pageRequestCaptor.getValue();
             assertThat(capturedRequest.getPageNumber()).isEqualTo(0);
             assertThat(capturedRequest.getPageSize()).isEqualTo(10);
-            assertThat(capturedRequest.getSort().getOrderFor("accountStatus")).isNotNull();
-            assertThat(capturedRequest.getSort().getOrderFor("accountStatus").getDirection())
+            assertThat(capturedRequest.getSort().getOrderFor("silasStatusRank")).isNotNull();
+            assertThat(capturedRequest.getSort().getOrderFor("silasStatusRank").getDirection())
                     .isEqualTo(Sort.Direction.ASC);
         }
 
@@ -8785,16 +8866,16 @@ class UserServiceTest {
             UUID userId2 = UUID.randomUUID();
             UUID userId3 = UUID.randomUUID();
 
-            UserAuditAccountStatusProjection proj1 = createAccountStatusProjection(userId1, "Pending");
-            UserAuditAccountStatusProjection proj2 = createAccountStatusProjection(userId2, "Disabled");
-            UserAuditAccountStatusProjection proj3 = createAccountStatusProjection(userId3, "Active");
+            UserAuditSilasStatusProjection proj1 = createAccountStatusProjection(userId1, "Pending");
+            UserAuditSilasStatusProjection proj2 = createAccountStatusProjection(userId2, "Disabled");
+            UserAuditSilasStatusProjection proj3 = createAccountStatusProjection(userId3, "Active");
 
-            Page<UserAuditAccountStatusProjection> projectionPage = new PageImpl<>(
+            Page<UserAuditSilasStatusProjection> projectionPage = new PageImpl<>(
                     List.of(proj1, proj2, proj3),
-                    PageRequest.of(0, 10, Sort.by("accountStatus").descending()),
+                    PageRequest.of(0, 10, Sort.by("silasStatusRank").descending()),
                     3);
 
-            when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
+            when(mockEntraUserRepository.findAllUsersForAuditWithSilasStatus(
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(projectionPage);
 
@@ -8807,7 +8888,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "accountStatus", "desc", false, null, null);
+                    null, null, null,  1, 10, "silasStatus", "desc", false, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -8815,29 +8896,29 @@ class UserServiceTest {
             assertThat(result.getTotalUsers()).isEqualTo(3);
 
             ArgumentCaptor<PageRequest> pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
-            verify(mockEntraUserRepository).findAllUsersForAuditWithAccountStatus(
+            verify(mockEntraUserRepository).findAllUsersForAuditWithSilasStatus(
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), pageRequestCaptor.capture());
 
             PageRequest capturedRequest = pageRequestCaptor.getValue();
-            assertThat(capturedRequest.getSort().getOrderFor("accountStatus").getDirection())
+            assertThat(capturedRequest.getSort().getOrderFor("silasStatusRank").getDirection())
                     .isEqualTo(Sort.Direction.DESC);
         }
 
         @Test
         void shouldHandleEmptyResultsWithAccountStatusSort() {
             // Given
-            Page<UserAuditAccountStatusProjection> emptyPage = new PageImpl<>(
+            Page<UserAuditSilasStatusProjection> emptyPage = new PageImpl<>(
                     Collections.emptyList(),
-                    PageRequest.of(0, 10, Sort.by("accountStatus").ascending()),
+                    PageRequest.of(0, 10, Sort.by("silasStatusRank").ascending()),
                     0);
 
-            when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
+            when(mockEntraUserRepository.findAllUsersForAuditWithSilasStatus(
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(emptyPage);
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "accountStatus", "asc", false, null, null);
+                    null, null, null,  1, 10, "silasStatus", "asc", false, null, null);
 
             // Then
             assertThat(result).isNotNull();
@@ -8852,16 +8933,16 @@ class UserServiceTest {
             UUID id2 = UUID.randomUUID();
             UUID id3 = UUID.randomUUID();
 
-            UserAuditAccountStatusProjection proj1 = createAccountStatusProjection(id1, "Active");
-            UserAuditAccountStatusProjection proj2 = createAccountStatusProjection(id2, "Disabled");
-            UserAuditAccountStatusProjection proj3 = createAccountStatusProjection(id3, "Pending");
+            UserAuditSilasStatusProjection proj1 = createAccountStatusProjection(id1, "Active");
+            UserAuditSilasStatusProjection proj2 = createAccountStatusProjection(id2, "Disabled");
+            UserAuditSilasStatusProjection proj3 = createAccountStatusProjection(id3, "Pending");
 
-            Page<UserAuditAccountStatusProjection> projectionPage = new PageImpl<>(
+            Page<UserAuditSilasStatusProjection> projectionPage = new PageImpl<>(
                     List.of(proj1, proj2, proj3),
-                    PageRequest.of(0, 10, Sort.by("accountStatus").ascending()),
+                    PageRequest.of(0, 10, Sort.by("silasStatusRank").ascending()),
                     3);
 
-            when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
+            when(mockEntraUserRepository.findAllUsersForAuditWithSilasStatus(
                     eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(projectionPage);
 
@@ -8875,7 +8956,7 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers(null, null,
-                    null, null, null,  1, 10, "accountStatus", "asc", false, null, null);
+                    null, null, null,  1, 10, "silasStatus", "asc", false, null, null);
 
             // Then
             assertThat(result.getUsers()).hasSize(3);
@@ -8893,14 +8974,14 @@ class UserServiceTest {
             UUID appId = UUID.randomUUID();
 
             UUID userId1 = UUID.randomUUID();
-            UserAuditAccountStatusProjection proj1 = createAccountStatusProjection(userId1, "Active");
+            UserAuditSilasStatusProjection proj1 = createAccountStatusProjection(userId1, "Active");
 
-            Page<UserAuditAccountStatusProjection> projectionPage = new PageImpl<>(
+            Page<UserAuditSilasStatusProjection> projectionPage = new PageImpl<>(
                     List.of(proj1),
-                    PageRequest.of(0, 10, Sort.by("accountStatus").ascending()),
+                    PageRequest.of(0, 10, Sort.by("silasStatusRank").ascending()),
                     1);
 
-            when(mockEntraUserRepository.findAllUsersForAuditWithAccountStatus(
+            when(mockEntraUserRepository.findAllUsersForAuditWithSilasStatus(
                     eq("John"), eq(firmId), eq("PUI_CASE_WORKER"),
                     eq(appId), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(projectionPage);
@@ -8911,27 +8992,41 @@ class UserServiceTest {
 
             // When
             uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers result = userService.getAuditUsers("John",
-                    firmId, "PUI_CASE_WORKER", appId, null,  1, 10, "accountStatus", "asc", false, null, null);
+                    firmId, "PUI_CASE_WORKER", appId, null,  1, 10, "silasStatus", "asc", false, null, null);
 
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getTotalUsers()).isEqualTo(1);
-            verify(mockEntraUserRepository).findAllUsersForAuditWithAccountStatus(
+            verify(mockEntraUserRepository).findAllUsersForAuditWithSilasStatus(
                     eq("John"), eq(firmId), eq("PUI_CASE_WORKER"),
                     eq(appId), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class));
         }
 
         // Helper methods
-        private UserAuditAccountStatusProjection createAccountStatusProjection(UUID userId, String accountStatus) {
-            return new UserAuditAccountStatusProjection() {
+        private UserAuditSilasStatusProjection createAccountStatusProjection(UUID userId, String silasStatus) {
+            return new UserAuditSilasStatusProjection() {
                 @Override
                 public UUID getUserId() {
                     return userId;
                 }
 
                 @Override
-                public String getAccountStatus() {
-                    return accountStatus;
+                public String getSilasStatus() {
+                    return silasStatus;
+                }
+
+                @Override
+                public Integer getSilasStatusRank() {
+                    switch (silasStatus) {
+                        case "Active":
+                            return 1;
+                        case "Disabled":
+                            return 2;
+                        case "Pending":
+                            return 3;
+                        default:
+                            return 99;
+                    }
                 }
             };
         }
@@ -10187,7 +10282,6 @@ class UserServiceTest {
             // Given
             UUID entraId1 = UUID.randomUUID();
             UUID entraId2 = UUID.randomUUID();
-            List<UUID> entraIds = List.of(entraId1, entraId2);
 
             EntraUser entraUser1 = EntraUser.builder()
                     .id(UUID.randomUUID())
@@ -10217,19 +10311,18 @@ class UserServiceTest {
                     .entraUser(entraUser2)
                     .build();
 
+            entraUser1.setUserProfiles(new HashSet<>(Set.of(profile1)));
+            entraUser2.setUserProfiles(new HashSet<>(Set.of(profile2)));
+
             when(mockEntraUserRepository.findByEntraOid(entraId1.toString())).thenReturn(Optional.of(entraUser1));
             when(mockEntraUserRepository.findByEntraOid(entraId2.toString())).thenReturn(Optional.of(entraUser2));
-            when(mockUserProfileRepository.findAllByEntraUser(entraUser1)).thenReturn(List.of(profile1));
-            when(mockUserProfileRepository.findAllByEntraUser(entraUser2)).thenReturn(List.of(profile2));
             when(mockUserAccountStatusAuditRepository.findByEntraUser(any())).thenReturn(List.of());
-
+            List<UUID> entraIds = List.of(entraId1, entraId2);
             // When
             int result = userService.deleteInternalUsersByEntraIds(entraIds);
 
             // Then
             assertEquals(2, result);
-            verify(mockUserProfileRepository).deleteAll(List.of(profile1));
-            verify(mockUserProfileRepository).deleteAll(List.of(profile2));
             verify(mockEntraUserRepository).delete(entraUser1);
             verify(mockEntraUserRepository).delete(entraUser2);
         }
@@ -10251,8 +10344,9 @@ class UserServiceTest {
                     .entraUser(entraUser)
                     .build();
 
+            entraUser.setUserProfiles(new HashSet<>(Set.of(externalProfile)));
+
             when(mockEntraUserRepository.findByEntraOid(entraId.toString())).thenReturn(Optional.of(entraUser));
-            when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(externalProfile));
 
             // When
             int result = userService.deleteInternalUsersByEntraIds(entraIds);
@@ -10288,7 +10382,6 @@ class UserServiceTest {
             // Given
             UUID entraId1 = UUID.randomUUID();
             UUID entraId2 = UUID.randomUUID();
-            List<UUID> entraIds = List.of(entraId1, entraId2);
 
             EntraUser entraUser2 = EntraUser.builder()
                     .id(UUID.randomUUID())
@@ -10301,11 +10394,13 @@ class UserServiceTest {
                     .entraUser(entraUser2)
                     .build();
 
+            entraUser2.setUserProfiles(new HashSet<>(Set.of(profile2)));
+
             // First user not found, second user exists
             when(mockEntraUserRepository.findByEntraOid(entraId1.toString())).thenReturn(Optional.empty());
             when(mockEntraUserRepository.findByEntraOid(entraId2.toString())).thenReturn(Optional.of(entraUser2));
-            when(mockUserProfileRepository.findAllByEntraUser(entraUser2)).thenReturn(List.of(profile2));
             when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser2)).thenReturn(List.of());
+            List<UUID> entraIds = List.of(entraId1, entraId2);
 
             // When
             int result = userService.deleteInternalUsersByEntraIds(entraIds);

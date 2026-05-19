@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraLastSyncMetadata;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -35,14 +36,15 @@ import java.util.Optional;
 public class ExternalUserPollingService {
 
     private static final String ENTRA_USER_SYNC_ID = "ENTRA_USER_SYNC";
-    
+
     private final EntraLastSyncMetadataRepository entraLastSyncMetadataRepository;
     private final EntraUserRepository entraUserRepository;
     private final UserProfileRepository userProfileRepository;
     private final DisableUserReasonRepository disableUserReasonRepository;
     private final UserAccountStatusAuditRepository userAccountStatusAuditRepository;
     private final TechServicesClient techServicesClient;
-    
+    private final UserService userService;
+
     @Value("${app.entra.sync.buffer.minutes:5}")
     private int bufferMinutes;
 
@@ -55,7 +57,7 @@ public class ExternalUserPollingService {
     @Transactional
     public void updateSyncMetadata() {
         LocalDateTime toTime = LocalDateTime.now();
-        
+
         try {
             Optional<EntraLastSyncMetadata> existingMetadata = entraLastSyncMetadataRepository.findById(ENTRA_USER_SYNC_ID);
 
@@ -77,7 +79,7 @@ public class ExternalUserPollingService {
             log.info("Calling Tech Services API to get users from {} to {} (gap: {} minutes)",
                      fromDateTime, toDateTime, ChronoUnit.MINUTES.between(fromTime, toTime));
             TechServicesApiResponse<GetUsersResponse> response = techServicesClient.getUsers(fromDateTime, toDateTime);
-            
+
             if (response.isSuccess()) {
                 GetUsersResponse usersResponse = response.getData();
                 int userCount = usersResponse.getUsers() != null ? usersResponse.getUsers().size() : 0;
@@ -86,7 +88,7 @@ public class ExternalUserPollingService {
                 if (userCount > 0) {
                     synchronizeUsers(usersResponse.getUsers(), toTime);
                 }
-                
+
                 updateSyncMetadataOnSuccess(existingMetadata, toTime, "Successfully saved EntraLastSyncMetadata: updatedAt={}, lastSuccessfulTo={}");
             } else {
                 String errorMessage = response.getError().getMessage();
@@ -107,17 +109,18 @@ public class ExternalUserPollingService {
     /**
      * Synchronizes user data from Tech Services API response to local EntraUser records.
      * Updates firstName, lastName, enabled, mailOnly, and lastSyncedOn fields.
-     * 
+     *
      * @param users List of users from Tech Services API
      * @param syncTime The sync time to set as lastSyncedOn
      */
-    private void synchronizeUsers(List<TechServicesUser> users, LocalDateTime syncTime) {
+    @Transactional
+    void synchronizeUsers(List<TechServicesUser> users, LocalDateTime syncTime) {
         int updatedCount = 0;
-        
+
         for (TechServicesUser user : users) {
             try {
                 Optional<EntraUser> entraUserOptional = entraUserRepository.findByEntraOid(user.getId());
-                
+
                 if (entraUserOptional.isPresent()) {
                     EntraUser entraUser = entraUserOptional.get();
 
@@ -159,6 +162,9 @@ public class ExternalUserPollingService {
                         entraUser.setMailOnly(user.isMailOnly());
                     }
 
+                    // Update Silas Status for the user
+                    userService.refreshAndUpdatedUserProfilesStatus(entraUser.isEnabled(), entraUser.getInvitationStatus(), entraUser.getUserProfiles());
+
                     entraUser.setLastSyncedOn(syncTime);
 
                     entraUserRepository.save(entraUser);
@@ -169,7 +175,7 @@ public class ExternalUserPollingService {
                 log.error("Error synchronizing user {}: {}", user.getId(), e.getMessage(), e);
             }
         }
-        
+
         log.info("User synchronization completed: {} users updated",
                 updatedCount);
     }
@@ -195,18 +201,22 @@ public class ExternalUserPollingService {
             log.warn("Cannot delete null EntraUser");
             return;
         }
-        
+
         try {
+            // Capture user entra OID before deletion for logging
+            String userEntraOid = entraUser.getEntraOid();
+
+            // Delete old audit records BEFORE creating new one
             List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
             if (!auditRecords.isEmpty()) {
                 userAccountStatusAuditRepository.deleteAll(auditRecords);
                 userAccountStatusAuditRepository.flush();
                 log.info("Deleted {} audit records for entra user: {} ",
-                        auditRecords.size(), entraUser.getEntraOid());
+                        auditRecords.size(), userEntraOid);
             }
 
-            List<UserProfile> userProfiles = entraUser.getUserProfiles() != null 
-                ? new ArrayList<>(entraUser.getUserProfiles()) 
+            List<UserProfile> userProfiles = entraUser.getUserProfiles() != null
+                ? new ArrayList<>(entraUser.getUserProfiles())
                 : new ArrayList<>();
 
             for (UserProfile userProfile : userProfiles) {
@@ -214,15 +224,14 @@ public class ExternalUserPollingService {
                     if (userProfile.getAppRoles() != null) {
                         userProfile.getAppRoles().clear();
                     }
-                    
+
                     if (userProfile.getOffices() != null) {
                         userProfile.getOffices().clear();
                     }
-                    
+
                     if (entraUser.getUserProfiles() != null) {
                         entraUser.getUserProfiles().remove(userProfile);
                     }
-                    userProfile.setEntraUser(null);
 
                     userProfileRepository.save(userProfile);
                     userProfileRepository.flush();
@@ -232,12 +241,33 @@ public class ExternalUserPollingService {
 
             userProfileRepository.flush();
 
+            // Remove user profiles from user to avoid stale references.
+            // Capture user details for audit record before deletion
+            final String userEmail = entraUser.getEmail();
+            final String userName = entraUser.getFirstName() + " " + entraUser.getLastName();
+
+            if (entraUser.getUserProfiles() != null && !entraUser.getUserProfiles().isEmpty()) {
+                entraUser.getUserProfiles().clear();
+            }
             entraUserRepository.delete(entraUser);
             entraUserRepository.flush();
-            
+
             log.info("Successfully deleted entra user and all related entities: {}",
-                     entraUser.getEntraOid());
-                    
+                     userEntraOid);
+
+
+            // Create audit record AFTER successful deletion
+            UserAccountStatusAudit deletedAudit = UserAccountStatusAudit.builder()
+                    .entraUser(null)
+                    .userEmail(userEmail)
+                    .userName(userName)
+                    .statusChange(UserAccountStatus.DELETED)
+                    .statusChangedBy("External user sync")
+                    .statusChangedDate(LocalDateTime.now())
+                    .build();
+            userAccountStatusAuditRepository.save(deletedAudit);
+            userAccountStatusAuditRepository.flush();
+
         } catch (Exception e) {
             String oid = entraUser.getEntraOid() != null ? entraUser.getEntraOid() : "unknown";
             log.error("Error deleting entra user {}: {}",  oid, e.getMessage(), e);
@@ -248,6 +278,7 @@ public class ExternalUserPollingService {
     private void disableUserWithReason(TechServicesUser user, EntraUser entraUser) {
         try {
             entraUser.setEnabled(false);
+            entraUser.setDisableType(DisableType.SYNC);
             entraUserRepository.save(entraUser);
             log.info("Disabled user: {} from API sync",
                     entraUser.getEntraOid());
@@ -269,7 +300,7 @@ public class ExternalUserPollingService {
                 log.info("Disabled user: {} - Reason: {} from API sync",
                         entraUser.getEntraOid(), disableReason.getName());
             }
-                    
+
         } catch (Exception e) {
             log.error("Error disabling entra user {}: {}",
                     entraUser.getEntraOid(), e.getMessage(), e);
@@ -314,16 +345,16 @@ public class ExternalUserPollingService {
 
     private void updateSyncMetadataOnSuccess(Optional<EntraLastSyncMetadata> existingMetadata, LocalDateTime toTime, String logMessage) {
         LocalDateTime syncCompletedTime = LocalDateTime.now();
-        
-        EntraLastSyncMetadata metadata = existingMetadata.orElseGet(() -> 
+
+        EntraLastSyncMetadata metadata = existingMetadata.orElseGet(() ->
             EntraLastSyncMetadata.builder()
                     .id(ENTRA_USER_SYNC_ID)
                     .build()
         );
-        
+
         metadata.setUpdatedAt(syncCompletedTime);
         metadata.setLastSuccessfulTo(toTime);
-        
+
         entraLastSyncMetadataRepository.save(metadata);
         log.info(logMessage, syncCompletedTime, toTime);
     }

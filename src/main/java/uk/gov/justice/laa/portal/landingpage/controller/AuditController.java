@@ -2,7 +2,6 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -12,7 +11,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -40,9 +38,9 @@ import uk.gov.justice.laa.portal.landingpage.dto.AuditTableSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
-import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -97,30 +95,36 @@ public class AuditController {
             Model model, Authentication authentication) {
 
         log.debug("AuditController.displayAuditTable - {}", criteria);
-        
+
         // Apply user type filtering based on authenticated user's permissions (same logic as UserController)
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
-        boolean canSeeAllUsers = accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)
-                && accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
-        
+        boolean canSeeExternalUsers = accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
+        boolean canSeeInternalUsers = accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER);
+        boolean canSeeAllUsers = canSeeExternalUsers && canSeeInternalUsers;
+
         UserTypeForm filteredUserType = criteria.getSelectedUserType();
         UUID filteredFirmId = criteria.getSelectedFirmId();
-        
+        String selectedUserType = criteria.getSelectedUserType() != null ? criteria.getSelectedUserType().name() : "";
+
         if (!canSeeAllUsers) {
-            if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)) {
+            if (canSeeInternalUsers) {
                 filteredUserType = UserTypeForm.INTERNAL;
+                selectedUserType = selectedUserType.equalsIgnoreCase(UserTypeForm.INTERNAL.name()) ? UserTypeForm.INTERNAL.name() : UserTypeForm.ALL.name();
             } else {
-                filteredUserType = UserTypeForm.EXTERNAL;
+                if (filteredUserType == null || filteredUserType == UserTypeForm.ALL || filteredUserType == UserTypeForm.INTERNAL) {
+                    filteredUserType = UserTypeForm.ALL_EXTERNAL;
+                    selectedUserType = UserTypeForm.ALL.name();
+                }
                 Optional<FirmDto> optionalFirm = firmService.getUserFirm(entraUser);
                 if (optionalFirm.isPresent()) {
                     filteredFirmId = optionalFirm.get().getId();
                 }
             }
         }
-        
+
         // Get audit users with security-filtered user type and firm restriction
         PaginatedAuditUsers paginatedUsers = userService.getAuditUsers(
-                criteria.getSearch(), filteredFirmId, 
+                criteria.getSearch(), filteredFirmId,
                 criteria.getSilasRole(), criteria.getSelectedAppId(), filteredUserType,
                 criteria.getPage(), criteria.getSize(), criteria.getSort(), criteria.getDirection(), false,
                 criteria.getInactiveSinceDate(), criteria.getNeverActivated());
@@ -128,6 +132,9 @@ public class AuditController {
         FirmSearchForm firmSearchForm = new FirmSearchForm(criteria.getFirmSearch(), criteria.getSelectedFirmId());
         // Add attributes to model
         buildDisplayAuditTableModel(criteria, model, paginatedUsers, firmSearchForm);
+        model.addAttribute("canSeeExternalUsers", canSeeExternalUsers);
+        model.addAttribute("canSeeInternalUsers", canSeeInternalUsers);
+        model.addAttribute("selectedUserType", selectedUserType);
 
         return "user-audit/users";
     }
@@ -150,8 +157,6 @@ public class AuditController {
         model.addAttribute("selectedSilasRole", criteria.getSilasRole() != null ? criteria.getSilasRole() : "");
         model.addAttribute("selectedAppId",
                 criteria.getSelectedAppId() != null ? criteria.getSelectedAppId().toString() : "");
-        model.addAttribute("selectedUserType",
-                criteria.getSelectedUserType() != null ? criteria.getSelectedUserType().toString() : "");
         model.addAttribute("selectedFirmName", criteria.getSelectedFirmName());
         model.addAttribute("inactiveSinceDate", criteria.getInactiveSinceDate());
         model.addAttribute("neverActivated", criteria.getNeverActivated() != null ? criteria.getNeverActivated() : false);
@@ -178,8 +183,7 @@ public class AuditController {
                 userId, isEntraId, profilePage, profileSize);
 
         AuditUserDetailDto userDetail;
-        boolean canDisableUser = false;
-
+        boolean canDisableUser;
         // Determine if this is an EntraUser ID or UserProfile ID
         if (isEntraId) {
             // Load user by EntraUser ID (for users without profiles)
@@ -195,6 +199,7 @@ public class AuditController {
                 userDetail = userService.getAuditUserDetailByEntraId(userId);
             }
         }
+
         TechServicesApiResponse<GetUserResponse> entraUserResponse = techServicesClient.getUser(userDetail.getEntraOid());
         if (entraUserResponse.isSuccess()) {
             TechServicesUser user = entraUserResponse.getData().getUser();
@@ -210,14 +215,23 @@ public class AuditController {
             model.addAttribute("entraUserDisableReason", disableUserReason);
         }
         canDisableUser = accessControlService.canDisableUser(userDetail.getUserId());
+        boolean showResendVerificationLink = accessControlService.canResendActivationForAuditUser(userDetail.getUserId());
+        model.addAttribute("showResendVerificationLink", showResendVerificationLink);
+        AccessControlService.EnablementFlags enablementFlags = disableUserFeatureEnabled
+                ? accessControlService.getEnablementFlags(userDetail.getUserId())
+                : new AccessControlService.EnablementFlags(false, false);
+        boolean canEnableUser = enablementFlags.canEnable();
+        boolean cannotEnableUser = enablementFlags.blockedByHierarchy();
 
         // Add attributes to model
         model.addAttribute("user", userDetail);
-        model.addAttribute("silasStatus", userService.determineStatusBadgeForAuditUser(userDetail));
+        model.addAttribute("silasStatus", userService.determineStatusBadgeForAuditUser(userDetail).name());
         model.addAttribute("profileId", userId); // Add profile ID for pagination links
         model.addAttribute("profilePage", profilePage);
         model.addAttribute("profileSize", profileSize);
         model.addAttribute("canDisableUser", disableUserFeatureEnabled && canDisableUser);
+        model.addAttribute("canEnableUser", canEnableUser);
+        model.addAttribute("cannotEnableUser", cannotEnableUser);
         model.addAttribute("userIsEnabled", userDetail.isEnabled());
 
         return "user-audit/details";
@@ -250,7 +264,7 @@ public class AuditController {
                 userId, isEntraId, profilePage, profileSize);
 
         AuditUserDetailDto userDetail;
-        boolean canDisableUser = false;
+        boolean canDisableUser;
 
         // Determine if this is an EntraUser ID or UserProfile ID
         if (isEntraId) {
@@ -433,5 +447,39 @@ public class AuditController {
 
     private boolean isLastPage(PaginatedAuditUsers page, int size) {
         return page.getUsers().size() < size;
+    }
+
+    /**
+     * Display the Deleted Users page
+     * Shows all deleted users with search and pagination
+     */
+    @GetMapping("/users/audit/deleted")
+    @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions("
+            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_AUDIT_TABLE)")
+    public String displayDeletedUsers(
+            @RequestParam(name = "search", required = false) String searchTerm,
+            @RequestParam(name = "page", defaultValue = "1") int page,
+            @RequestParam(name = "size", defaultValue = "10") int size,
+            @RequestParam(name = "sort", defaultValue = "statusChangedDate") String sort,
+            @RequestParam(name = "direction", defaultValue = "desc") String direction,
+            Model model) {
+
+        log.debug("AuditController.displayDeletedUsers - search: '{}', page: {}, size: {}, sort: {}, direction: {}",
+                searchTerm, page, size, sort, direction);
+
+        uk.gov.justice.laa.portal.landingpage.dto.PaginatedDeletedUsers paginatedDeletedUsers =
+            userService.getDeletedUsers(searchTerm, page, size, sort, direction);
+
+        model.addAttribute("deletedUsers", paginatedDeletedUsers.getDeletedUsers());
+        model.addAttribute("search", searchTerm);
+        model.addAttribute("page", page);
+        model.addAttribute("size", size);
+        model.addAttribute("sort", sort);
+        model.addAttribute("direction", direction);
+        model.addAttribute("totalDeletedUsers", paginatedDeletedUsers.getTotalDeletedUsers());
+        model.addAttribute("totalPages", paginatedDeletedUsers.getTotalPages());
+        model.addAttribute("currentPage", page);
+
+        return "user-audit/deleted-users";
     }
 }

@@ -1,0 +1,105 @@
+name: ASH Scan
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+jobs:
+  ash:
+    uses: awslabs/automated-security-helper/.github/workflows/run-ash-security-scan.yml@v3
+    permissions:
+      actions: read # Required for CodeQL action API access during SARIF upload in the called workflow
+      contents: read # Required to read the repository contents in order to scan them with ASH
+      checks: write # Required for writing CI check runs
+      pull-requests: write # Required for writing comments with scan results to pull requests
+      security-events: write # Required for collection of SARIF code scanning results for GitHub Advanced Security checks
+    with:
+      ash-version: v3
+      ash-mode: container
+      config: .ash/ash.yaml
+      fail-on-findings: false
+      collect-junit-xml-report: false
+      collect-sarif-report: false
+      install-grype: true
+      install-syft: true
+      install-opengrep: true
+      post-pr-comment: ${{ github.actor != 'dependabot[bot]' && github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork }}
+      verbose: true
+      output-dir: '.ash/ash_output'
+
+  syft-image-scan:
+    name: Syft Image Scan
+    runs-on: ubuntu-latest
+    needs: ash
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up JDK
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        with:
+          distribution: 'corretto'
+          java-version: '21'
+
+      - name: Build JAR
+        run: ./gradlew build
+        env:
+          GITHUB_ACTOR: ${{ secrets.GITHUB_ACTOR }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ENVIRONMENT: ${{ vars.ENV_NAME }}
+
+      - name: Build Docker image
+        run: docker build -t laa-landing-page:scan .
+
+      - name: Generate Syft SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: laa-landing-page:scan
+          format: syft-json
+          output-file: 'syft-image-sbom.json'
+          artifact-name: 'syft-image-sbom'
+
+      - name: Generate Syft SPDX SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: laa-landing-page:scan
+          format: spdx-json
+          output-file: 'syft-image-spdx.json'
+          artifact-name: 'syft-image-sbom-spdx'
+
+  upload-sarif:
+    name: Upload ASH SARIF
+    needs: ash
+    if: ${{ github.actor != 'dependabot[bot]' && github.event_name != 'pull_request' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - name: Download ASH output artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: ash_output
+          path: .ash/ash_output
+
+      - name: Upload ASH SARIF file
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: .ash/ash_output/reports/ash.sarif
+          wait-for-processing: true
+          category: ash

@@ -34,6 +34,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.microsoft.graph.models.DirectoryRole;
@@ -41,17 +42,20 @@ import com.microsoft.graph.models.User;
 import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import uk.gov.justice.laa.portal.landingpage.dto.AccountStatusHistoryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto.AuditProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.DeletedUserAuditDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
+import uk.gov.justice.laa.portal.landingpage.dto.PaginatedDeletedUsers;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserInfoAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserFirmReassignmentEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
@@ -66,8 +70,10 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -290,6 +296,8 @@ public class UserService {
                 newPuiRoles, oldPuiRoles);
         userProfile.setLastCcmsSyncSuccessful(notificationSuccess);
 
+        refreshAndUpdatedUserProfileStatus(userProfile.getEntraUser().isEnabled(), userProfile.getEntraUser().getInvitationStatus(), userProfile);
+
         // Save user profile with ccms sync status
         userProfileRepository.save(userProfile);
         techServicesClient.updateRoleAssignment(userProfile.getEntraUser().getId());
@@ -467,7 +475,8 @@ public class UserService {
             logger.warn("Failed to delete role assignment in tech services: {}, but continuing to delete user", ex.getMessage());
         }
 
-        // Clean up UserAccountStatusAudit records first to avoid foreign key constraint violations
+
+        // Clean up old UserAccountStatusAudit records to avoid foreign key constraint violations
         List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
         if (!auditRecords.isEmpty()) {
             userAccountStatusAuditRepository.deleteAll(auditRecords);
@@ -499,15 +508,39 @@ public class UserService {
                             up.getOffices().isEmpty() ? 0 : up.getOffices().size());
                     up.getOffices().clear();
                 }
-                up.setEntraUser(null);
                 userProfileRepository.save(up);
             }
             userProfileRepository.flush();
             userProfileRepository.deleteAll(profiles);
             userProfileRepository.flush();
         }
+        // Prepare audit info and capture user details before deletion
+        Optional<EntraUser> actorEntraUserOpt = entraUserRepository.findByEntraOid(actorId);
+        final String deletedByName = actorEntraUserOpt
+            .map(actor -> actor.getFirstName() + " " + actor.getLastName())
+            .orElse("System");
+        final String userEmail = entraUser.getEmail();
+        final String userName = entraUser.getFirstName() + " " + entraUser.getLastName();
+
+        // Remove user profiles from user to avoid stale references.
+        if (entraUser.getUserProfiles() != null && !entraUser.getUserProfiles().isEmpty()) {
+            entraUser.getUserProfiles().clear();
+        }
         entraUserRepository.delete(entraUser);
         entraUserRepository.flush();
+
+        // Create audit record after successful deletion
+        UserAccountStatusAudit deletedAudit = UserAccountStatusAudit.builder()
+            .entraUser(null)
+            .userEmail(userEmail)
+            .userName(userName)
+            .statusChange(UserAccountStatus.DELETED)
+            .statusChangedBy(deletedByName)
+            .statusChangedDate(LocalDateTime.now())
+            .build();
+        userAccountStatusAuditRepository.save(deletedAudit);
+        userAccountStatusAuditRepository.flush();
+
         return builder.build();
     }
 
@@ -565,7 +598,7 @@ public class UserService {
         // Remove bidirectional association: profile from entra user and entra user from
         // profile
         entraUser.getUserProfiles().remove(userProfile);
-        userProfile.setEntraUser(null);
+
         userProfileRepository.save(userProfile);
         userProfileRepository.flush();
 
@@ -651,19 +684,44 @@ public class UserService {
                     "Failed to notify Entra of user deletion: " + ex.getMessage(), ex);
         }
 
+        // Capture user entra info for logging and return value
+        final String userEntraOid = entraUser.getEntraOid();
+        final UUID userId = entraUser.getId();
+
+        // Clean up old UserAccountStatusAudit records to avoid foreign key constraint violations
         List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
         if (!auditRecords.isEmpty()) {
             userAccountStatusAuditRepository.deleteAll(auditRecords);
             userAccountStatusAuditRepository.flush();
             logger.info("Deleted {} audit records for user: {}",
-                    auditRecords.size(), entraUser.getId());
+                    auditRecords.size(), userId);
         }
 
         // Delete from local database
         entraUserRepository.delete(entraUser);
         entraUserRepository.flush();
 
-        return DeletedUser.builder().deletedUserEntraOid(entraUser.getEntraOid()).removedRolesCount(0)
+        // Prepare audit info and capture user details for audit record
+        Optional<EntraUser> actorEntraUserOpt = entraUserRepository.findById(actorId);
+        String deletedByName = actorEntraUserOpt
+            .map(actor -> actor.getFirstName() + " " + actor.getLastName())
+            .orElse("System");
+        String userEmail = entraUser.getEmail();
+        String userName = entraUser.getFirstName() + " " + entraUser.getLastName();
+
+        // Create audit record after successful deletion
+        UserAccountStatusAudit deletedAudit = UserAccountStatusAudit.builder()
+            .entraUser(null)
+            .userEmail(userEmail)
+            .userName(userName)
+            .statusChange(UserAccountStatus.DELETED)
+            .statusChangedBy(deletedByName)
+            .statusChangedDate(LocalDateTime.now())
+            .build();
+        userAccountStatusAuditRepository.save(deletedAudit);
+        userAccountStatusAuditRepository.flush();
+
+        return DeletedUser.builder().deletedUserEntraOid(userEntraOid).removedRolesCount(0)
                 .detachedOfficesCount(0).build();
     }
 
@@ -695,56 +753,27 @@ public class UserService {
         PaginatedUsers paginatedUsers = new PaginatedUsers();
         paginatedUsers.setTotalUsers(userPage.getTotalElements());
 
-        // Calculate Silas status for each user
-        List<UserSearchResultsDto> usersWithStatus = userPage.stream()
-                .map(this::addSilasStatusToUser)
-                .toList();
-
-        paginatedUsers.setUsers(usersWithStatus);
+        paginatedUsers.setUsers(userPage.toList());
         paginatedUsers.setTotalPages(userPage.getTotalPages());
         return paginatedUsers;
     }
 
-    /**
-     * Add calculated SILAS status to a UserSearchResultsDto
-     */
-    private UserSearchResultsDto addSilasStatusToUser(UserSearchResultsDto user) {
-        String silasStatus = calculateUserSilasStatus(user);
-
-        return new UserSearchResultsDto(
-                user.id(),
-                user.activeProfile(),
-                user.userType(),
-                user.legacyUserId(),
-                user.userProfileStatus(),
-                user.multiFirmUser(),
-                user.firstName(),
-                user.lastName(),
-                user.fullName(),
-                user.email(),
-                user.userStatus(),
-                user.firmName(),
-                user.invitationStatus(),
-                user.enabled(),
-                user.hasAppRoles(),
-                silasStatus
-        );
-    }
-
-    private String calculateUserSilasStatus(UserSearchResultsDto user) {
-        boolean noRolesAssigned = !user.hasAppRoles();
-        boolean isPending = UserProfileStatus.PENDING.equals(user.userProfileStatus());
-        boolean isEnabled = user.enabled();
-        String invitationStatus = user.invitationStatus() != null ? user.invitationStatus().name() : "";
-        return determineStatusBadge(invitationStatus, noRolesAssigned, isPending, isEnabled);
-    }
-
-    public String calculateSilasStatusForUserProfile(UserProfileDto user) {
+    public UserProfileSilasStatus calculateSilasStatusForUserProfile(UserProfile user) {
         boolean noRolesAssigned = user.getAppRoles() == null || user.getAppRoles().isEmpty();
         boolean isPending = UserProfileStatus.PENDING.equals(user.getUserProfileStatus());
         boolean isEnabled = user.getEntraUser().isEnabled();
         String invitationStatus = user.getEntraUser().getInvitationStatus() != null ? user.getEntraUser().getInvitationStatus().name() : "";
-        return determineStatusBadge(invitationStatus, noRolesAssigned, isPending, isEnabled);
+        boolean isInternalUser = UserType.INTERNAL.equals(user.getUserType());
+        return determineStatusBadge(invitationStatus, noRolesAssigned, isPending, isEnabled, isInternalUser);
+    }
+
+    public UserProfileSilasStatus calculateSilasStatusForUserProfile(UserProfileDto user) {
+        boolean noRolesAssigned = user.getAppRoles() == null || user.getAppRoles().isEmpty();
+        boolean isPending = UserProfileStatus.PENDING.equals(user.getUserProfileStatus());
+        boolean isEnabled = user.getEntraUser().isEnabled();
+        String invitationStatus = user.getEntraUser().getInvitationStatus() != null ? user.getEntraUser().getInvitationStatus().name() : "";
+        boolean isInternalUser = UserType.INTERNAL.equals(user.getUserType());
+        return determineStatusBadge(invitationStatus, noRolesAssigned, isPending, isEnabled, isInternalUser);
     }
 
     /**
@@ -788,7 +817,7 @@ public class UserService {
             case "FIRSTNAME" -> Sort.by(order, "entraUser.firstName");
             case "LASTNAME" -> Sort.by(order, "entraUser.lastName");
             case "EMAIL" -> Sort.by(order, "entraUser.email");
-            case "USERSTATUS" -> Sort.by(order, "userProfileStatus");
+            case "USERSTATUS" -> Sort.by(order, "silasStatus");
             case "USERTYPE" -> Sort.by(order, "userType", "entraUser.multiFirmUser");
             case "FIRMNAME" -> Sort.by(order, "firm.name");
             default -> throw new IllegalArgumentException("Invalid field: " + field);
@@ -893,6 +922,7 @@ public class UserService {
                     .userType(UserType.EXTERNAL).appRoles(appRoles).createdDate(LocalDateTime.now())
                     .createdBy(createdBy).firm(firm).entraUser(entraUser)
                     .userProfileStatus(UserProfileStatus.PENDING).build();
+            userProfile.setSilasStatus(calculateSilasStatusForUserProfile(userProfile));
 
             entraUser.setUserProfiles(Set.of(userProfile));
         }
@@ -963,6 +993,7 @@ public class UserService {
                 .activeProfile(activeProfile).userType(UserType.EXTERNAL)
                 .createdDate(LocalDateTime.now()).createdBy(createdBy).appRoles(appRoles).firm(firm)
                 .offices(offices).userProfileStatus(UserProfileStatus.COMPLETE).build();
+        userProfile.setSilasStatus(calculateSilasStatusForUserProfile(userProfile));
 
         if (entraUser.getUserProfiles() == null) {
             entraUser.setUserProfiles(Set.of(userProfile));
@@ -1376,6 +1407,7 @@ public class UserService {
         if (optionalUser.isPresent()) {
             UserProfile user = optionalUser.get();
             user.setUserProfileStatus(UserProfileStatus.COMPLETE);
+            user.setSilasStatus(calculateSilasStatusForUserProfile(user));
             user.setLastModifiedBy(currentUserName);
             user.setLastModified(LocalDateTime.now());
             userProfileRepository.saveAndFlush(user);
@@ -1426,6 +1458,7 @@ public class UserService {
                     .userProfileStatus(UserProfileStatus.COMPLETE).userType(UserType.INTERNAL)
                     .createdDate(LocalDateTime.now()).createdBy(createdBy).entraUser(entraUser)
                     .build();
+            userProfile.setSilasStatus(calculateSilasStatusForUserProfile(userProfile));
 
             entraUser.setEntraOid(user.getEntraOid());
             entraUser.setUserProfiles(Set.of(userProfile));
@@ -1506,7 +1539,7 @@ public class UserService {
 
                 EntraUser entraUser = optionalEntraUser.get();
 
-                List<UserProfile> profiles = userProfileRepository.findAllByEntraUser(entraUser);
+                Set<UserProfile> profiles = entraUser.getUserProfiles();
                 boolean isInternalUser = profiles.stream()
                         .anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
 
@@ -1527,16 +1560,13 @@ public class UserService {
                         if (profile.getAppRoles() != null) {
                             profile.getAppRoles().clear();
                         }
-                        profile.setEntraUser(null);
                         userProfileRepository.save(profile);
                     }
-                    userProfileRepository.flush();
-
-                    userProfileRepository.deleteAll(profiles);
                     userProfileRepository.flush();
                     logger.debug("Deleted {} profiles for internal user: {}", profiles.size(), entraId);
                 }
 
+                userProfileRepository.deleteAll(entraUser.getUserProfiles());
                 entraUserRepository.delete(entraUser);
                 entraUserRepository.flush();
 
@@ -1653,11 +1683,12 @@ public class UserService {
         boolean sortByProfileCount = sort != null && sort.equalsIgnoreCase("profilecount");
         boolean sortByFirm = sort != null
                 && (sort.equalsIgnoreCase("firm") || sort.equalsIgnoreCase("firmassociation"));
-        boolean sortByAccountStatus = sort != null && sort.equalsIgnoreCase("accountstatus");
+        boolean sortBySilasStatus = sort != null && sort.equalsIgnoreCase("silasstatus");
+        boolean sortByUserType = sort != null && sort.equalsIgnoreCase("usertype");
 
         Page<EntraUser> userPage;
 
-        if (sortByProfileCount || sortByFirm || sortByAccountStatus) {
+        if (sortByProfileCount || sortByFirm || sortBySilasStatus || sortByUserType) {
             // Use special queries for profile count, firm, or account status sorting
             boolean ascending = direction == null || direction.equalsIgnoreCase("asc");
             String sortField;
@@ -1665,8 +1696,10 @@ public class UserService {
                 sortField = "profileCount";
             } else if (sortByFirm) {
                 sortField = "firmName";
+            } else if (sortBySilasStatus) {
+                sortField = "silasStatusRank";
             } else {
-                sortField = "accountStatus";
+                sortField = "userTypeRank";
             }
 
             Sort sortObj = ascending ? Sort.by(sortField).ascending() : Sort.by(sortField).descending();
@@ -1682,29 +1715,34 @@ public class UserService {
                 resultPage = entraUserRepository.findAllUsersForAuditWithFirm(
                         searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm,
                         inactiveSinceDateFlag, inactiveSinceDateDt, neverActivatedFlag, pageRequest);
+            } else if (sortBySilasStatus) {
+                resultPage = entraUserRepository.findAllUsersForAuditWithSilasStatus(
+                        searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm,
+                        inactiveSinceDateFlag, inactiveSinceDateDt, neverActivatedFlag, pageRequest);
             } else {
-                resultPage = entraUserRepository.findAllUsersForAuditWithAccountStatus(
+                resultPage = entraUserRepository.findAllUsersForAuditWithUserType(
                         searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm,
                         inactiveSinceDateFlag, inactiveSinceDateDt, neverActivatedFlag, pageRequest);
             }
 
             // Extract user IDs in order
-            List<UUID> userIds = resultPage.getContent().stream().map(UserAuditProjection::getUserId).toList();
+            Set<UUID> userIds = resultPage.getContent().stream()
+                    .map(UserAuditProjection::getUserId)
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
 
             // Fetch full user details
             List<EntraUser> users = Collections.emptyList();
             if (!userIds.isEmpty()) {
                 List<EntraUser> fetchedUsers = entraUserRepository
-                        .findUsersWithProfilesAndRoles(new LinkedHashSet<>(userIds));
+                        .findUsersWithProfilesAndRoles(userIds);
 
                 // Sort users to match the order from the query result
-                Map<UUID, Integer> orderMap = new HashMap<>();
-                for (int i = 0; i < userIds.size(); i++) {
-                    orderMap.put(userIds.get(i), i);
-                }
-                users = new ArrayList<>(fetchedUsers);
-                users.sort(Comparator
-                        .comparingInt(u -> orderMap.getOrDefault(u.getId(), Integer.MAX_VALUE)));
+                Map<UUID, EntraUser> orderMap = fetchedUsers.stream()
+                        .collect(Collectors.toMap(EntraUser::getId, Function.identity()));
+                users = userIds.stream()
+                        .map(orderMap::get)
+                        .filter(Objects::nonNull)
+                        .toList();
             }
 
             // Create page with sorted users
@@ -1722,14 +1760,16 @@ public class UserService {
             // Second query: Batch fetch relationships for the paginated users
             if (!userPage.getContent().isEmpty()) {
                 Set<UUID> userIds = userPage.getContent().stream().map(EntraUser::getId)
-                        .collect(Collectors.toSet());
+                        .collect(Collectors.toCollection(LinkedHashSet::new));
                 List<EntraUser> usersWithRelations = entraUserRepository.findUsersWithProfilesAndRoles(userIds);
 
                 // Replace content with fully loaded entities, preserving order
-                Map<UUID, EntraUser> userMap = usersWithRelations.stream()
-                        .collect(Collectors.toMap(EntraUser::getId, u -> u));
-                List<EntraUser> orderedUsers = userPage.getContent().stream()
-                        .map(u -> userMap.getOrDefault(u.getId(), u)).toList();
+                Map<UUID, EntraUser> orderMap = usersWithRelations.stream()
+                        .collect(Collectors.toMap(EntraUser::getId, Function.identity()));
+                List<EntraUser> orderedUsers = userIds.stream()
+                        .map(orderMap::get)
+                        .filter(Objects::nonNull)
+                        .toList();
                 userPage = new PageImpl<>(orderedUsers, userPage.getPageable(),
                         userPage.getTotalElements());
             }
@@ -1768,7 +1808,7 @@ public class UserService {
         String firmCode = determineFirmCode(profiles, csvExport);
 
         // Get account status
-        String accountStatus = determineAccountStatus(user, profiles);
+        UserProfileSilasStatus accountStatus = determineAccountStatus(user, profiles);
 
         // Get profile count
         int profileCount = profiles.size();
@@ -1896,7 +1936,7 @@ public class UserService {
      * "Complete", "No roles assigned"
      * "Incomplete"
      */
-    private String determineAccountStatus(EntraUser user, List<UserProfile> profiles) {
+    private UserProfileSilasStatus determineAccountStatus(EntraUser user, List<UserProfile> profiles) {
         // Check if user has any pending profiles
         boolean hasPending = profiles.isEmpty() || profiles.stream()
                 .anyMatch(profile -> profile.getUserProfileStatus() == null || profile.getUserProfileStatus() == UserProfileStatus.PENDING);
@@ -1907,38 +1947,40 @@ public class UserService {
                 );
 
         String invitationStatus = user.getInvitationStatus() != null ? user.getInvitationStatus().name() : "";
-        return determineStatusBadge(invitationStatus, noRolesAssigned, hasPending, user.isEnabled());
+        boolean isInternalUser = profiles.stream().filter(UserProfile::isActiveProfile).anyMatch(profile -> profile.getUserType() == UserType.INTERNAL);
+        return determineStatusBadge(invitationStatus, noRolesAssigned, hasPending, user.isEnabled(), isInternalUser);
     }
 
-    public String determineStatusBadgeForAuditUser(AuditUserDetailDto userDetail) {
+    public UserProfileSilasStatus determineStatusBadgeForAuditUser(AuditUserDetailDto userDetail) {
         boolean noRolesAssigned = userDetail.getProfiles().isEmpty() || userDetail.getProfiles().stream()
                 .anyMatch(userProfile ->
                         userProfile.getRoles() == null || userProfile.getRoles().isEmpty()
                 );
-        return determineStatusBadge(userDetail.getActivationStatus(), noRolesAssigned, userDetail.isPending(), userDetail.isEnabled());
+        boolean isInternalUser = "Internal".equalsIgnoreCase(userDetail.getUserType());
+        return determineStatusBadge(userDetail.getActivationStatus(), noRolesAssigned, userDetail.isPending(), userDetail.isEnabled(), isInternalUser);
     }
 
-    private String determineStatusBadge(String invitationStatus, boolean noRolesAssigned,
-                                        boolean isPending, boolean isEnabled) {
+    private UserProfileSilasStatus determineStatusBadge(String invitationStatus, boolean noRolesAssigned,
+                                        boolean isPending, boolean isEnabled, boolean isInternalUser) {
         // awaiting verification badges take priority over disabled badge
-        if (!InvitationStatus.VERIFICATION_SUCCESS.name().equals(invitationStatus)) {
+        if (!isInternalUser && !InvitationStatus.VERIFICATION_SUCCESS.name().equals(invitationStatus)) {
             if (noRolesAssigned || isPending) {
-                return "Incomplete";
+                return UserProfileSilasStatus.INCOMPLETE;
             } else {
-                return "Activation pending";
+                return UserProfileSilasStatus.ACTIVATION_PENDING;
             }
         }
 
         // At this point, invitationStatus == VERIFICATION_SUCCESS
         if (!isEnabled) {
-            return "Disabled";
+            return UserProfileSilasStatus.DISABLED;
         }
 
         if (isPending || noRolesAssigned) {
-            return "No roles assigned";
+            return UserProfileSilasStatus.NO_ROLES_ASSIGNED;
         }
 
-        return "Complete";
+        return UserProfileSilasStatus.COMPLETE;
     }
 
     /**
@@ -1995,7 +2037,7 @@ public class UserService {
             case "usertype" -> "multiFirmUser";
             // Sort by firm name (uses LEFT JOIN with firm)
             case "firm", "firmassociation" -> "f.name";
-            case "accountstatus" -> "userStatus"; // Sort by userStatus enum
+            case "accountstatus" -> "silasStatus"; // Sort by userStatus enum
             case "ismultifirmuser" -> "multiFirmUser"; // Sort by multiFirmUser boolean
             case "profilecount" -> "profilecount"; // Special case - handled separately
             default -> "firstName"; // Default to first name
@@ -2053,11 +2095,10 @@ public class UserService {
                 .fullName(entraUser.getFirstName() + " " + entraUser.getLastName())
                 .isMultiFirmUser(entraUser.isMultiFirmUser()).userType(userType)
                 .createdDate(entraUser.getCreatedDate()).createdBy(entraUser.getCreatedBy())
-                // TODO: Fetch lastLoginDate from Microsoft Graph API
-                // TODO: Fetch activationStatus from TechServices API or SILAS API
+                // TODO: Fetch lastLoginDate from Microsoft Graph or Silas API
+                .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name() : "UNKNOWN")
+                // TODO: Fetch activationStatus from TechServices API
                 .activationStatus(null)
-                .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
-                        : "UNKNOWN")
                 .profiles(profileDtos).totalProfiles(allProfiles.size()).totalProfilePages(1)
                 .currentProfilePage(1)
                 .entraOid(entraUser.getEntraOid())
@@ -2239,6 +2280,7 @@ public class UserService {
                         .statusChange(convertToSentenceCase(record.getStatusChange().toString()))
                         .disableReason(record.getDisableUserReason() != null ? record.getDisableUserReason().getName() : null)
                         .statusChangedBy(record.getStatusChangedBy())
+                        .disableType(record.getDisableType() != null ? record.getDisableType().getDisplayName() : null)
                         .build())
                 .toList();
     }
@@ -2329,6 +2371,8 @@ public class UserService {
         final UUID oldLegacyId = userProfile.getLegacyUserId();
         userProfile.setLegacyUserId(UUID.randomUUID());
 
+        userProfile.setSilasStatus(calculateSilasStatusForUserProfile(userProfile));
+
         // Save the updated profile
         userProfileRepository.save(userProfile);
 
@@ -2349,4 +2393,100 @@ public class UserService {
                 userProfileId, oldFirm.getName(), newFirm.getName(), oldLegacyId, userProfile.getLegacyUserId(), performedByEntraUserId, reason);
     }
 
+    /**
+     * Get paginated deleted users with optional email search filtering
+     *
+     * @param searchTerm Optional email search term (can be partial)
+     * @param page Page number (1-based)
+     * @param pageSize Number of results per page
+     * @param sort Sort field (statusChangedDate)
+     * @param direction Sort direction (asc/desc)
+     * @return Paginated deleted users
+     */
+    public PaginatedDeletedUsers getDeletedUsers(
+            String searchTerm, int page, int pageSize, String sort, String direction) {
+
+        String sortField = "statusChangedDate";
+        if (sort != null && !sort.isBlank()) {
+            sortField = switch (sort.toLowerCase()) {
+                case "email", "useremail" -> "userEmail";
+                case "deletedby", "statuschangedby" -> "statusChangedBy";
+                case "deleteddate", "statuschangeddate" -> "statusChangedDate";
+                default -> "statusChangedDate";
+            };
+        }
+
+        // Defensively validate pagination parameters to prevent exceptions
+        page = Math.max(1, page); // Ensure page is at least 1 (1-based indexing)
+        pageSize = Math.max(1, Math.min(100, pageSize)); // Clamp pageSize between 1 and 100
+
+        Sort.Direction sortDirection = "desc".equalsIgnoreCase(direction)
+            ? Sort.Direction.DESC
+            : Sort.Direction.ASC;
+        Sort sortObj = Sort.by(sortDirection, sortField);
+        PageRequest pageRequest = PageRequest.of(page - 1, pageSize, sortObj);
+
+        // Query deleted users
+        Page<UserAccountStatusAudit> auditPage =
+            userAccountStatusAuditRepository.findDeletedUsers(
+                searchTerm,
+                pageRequest);
+
+        // Map to DTOs
+        List<DeletedUserAuditDto> deletedUsers =
+            auditPage.getContent().stream()
+                .map(audit -> DeletedUserAuditDto.builder()
+                    .userName(audit.getUserName())
+                    .userEmail(audit.getUserEmail())
+                    .deletedDate(audit.getStatusChangedDate())
+                    .deletedBy(audit.getStatusChangedBy())
+                    .build())
+                .collect(Collectors.toList());
+
+        return PaginatedDeletedUsers.builder()
+            .deletedUsers(deletedUsers)
+            .totalDeletedUsers(auditPage.getTotalElements())
+            .totalPages(auditPage.getTotalPages())
+            .currentPage(page)
+            .pageSize(pageSize)
+            .build();
+    }
+
+    @Scheduled(cron = "${refresh.user.silas.status.schedule}")
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void updateUserProfileSilasStatus() {
+        logger.info("Starting user profile status update task");
+        int pageSize = 500;
+        int pageNumber = 0;
+
+        Page<UserProfile> page;
+
+        do {
+            page = userProfileRepository.findAll(PageRequest.of(pageNumber, pageSize));
+
+            for (UserProfile userProfile : page.getContent()) {
+                userProfile.setSilasStatus(calculateSilasStatusForUserProfile(userProfile));
+            }
+
+            userProfileRepository.saveAll(page.getContent());
+
+            pageNumber++;
+        } while (page.hasNext());
+        logger.info("User profile status update task completed");
+    }
+
+    @Transactional
+    public void refreshAndUpdatedUserProfilesStatus(boolean isEnabled, InvitationStatus invitationStatus, Collection<UserProfile> userProfiles) {
+        userProfiles.forEach(up -> refreshAndUpdatedUserProfileStatus(isEnabled, invitationStatus, up));
+    }
+
+    @Transactional
+    public void refreshAndUpdatedUserProfileStatus(boolean isEnabled, InvitationStatus invitationStatus, UserProfile userProfile) {
+        String invitationStatusStr = invitationStatus != null ? invitationStatus.name() : "";
+        boolean noRoleAssigned = userProfile.getAppRoles() == null || userProfile.getAppRoles().isEmpty();
+        boolean isInternalUser = userProfile.getUserType() == UserType.INTERNAL;
+        UserProfileSilasStatus silasStatus = determineStatusBadge(invitationStatusStr, noRoleAssigned, false, isEnabled, isInternalUser);
+        userProfile.setSilasStatus(silasStatus);
+    }
 }
+

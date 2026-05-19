@@ -26,7 +26,6 @@ import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesErrorRespo
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -61,6 +60,9 @@ class ExternalUserPollingServiceTest {
 
     @Mock
     private TechServicesClient techServicesClient;
+
+    @Mock
+    private UserService userService;
 
     @InjectMocks
     private ExternalUserPollingService externalUserPollingService;
@@ -447,6 +449,8 @@ class ExternalUserPollingServiceTest {
         profile2.setEntraUser(existingUser);
         
         when(entraUserRepository.findByEntraOid("deleted-user-with-profiles")).thenReturn(Optional.of(existingUser));
+        when(userAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
+        when(userAccountStatusAuditRepository.findByEntraUser(existingUser)).thenReturn(Collections.emptyList());
 
         TechServicesUser deletedUser = TechServicesUser.builder()
                 .id("deleted-user-with-profiles")
@@ -466,6 +470,7 @@ class ExternalUserPollingServiceTest {
 
         externalUserPollingService.updateSyncMetadata();
 
+        verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
         verify(userProfileRepository).save(profile1);
         verify(userProfileRepository).save(profile2);
         verify(userProfileRepository).delete(profile1);
@@ -504,6 +509,8 @@ class ExternalUserPollingServiceTest {
         profile2.setEntraUser(existingUser);
 
         when(entraUserRepository.findByEntraOid("deleted-user-with-profiles")).thenReturn(Optional.of(existingUser));
+        when(userAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
+        when(userAccountStatusAuditRepository.findByEntraUser(existingUser)).thenReturn(Collections.emptyList());
 
         TechServicesUser deletedUser = TechServicesUser.builder()
                 .id("deleted-user-with-profiles")
@@ -522,6 +529,7 @@ class ExternalUserPollingServiceTest {
 
         externalUserPollingService.updateSyncMetadata();
 
+        verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
         verify(userProfileRepository).save(profile1);
         verify(userProfileRepository).save(profile2);
         verify(userProfileRepository).delete(profile1);
@@ -588,6 +596,8 @@ class ExternalUserPollingServiceTest {
                 .mailOnly(false)
                 .build();
         when(entraUserRepository.findByEntraOid("user-to-delete")).thenReturn(Optional.of(userToDelete));
+        when(userAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
+        when(userAccountStatusAuditRepository.findByEntraUser(userToDelete)).thenReturn(Collections.emptyList());
 
         TechServicesUser updateUser = TechServicesUser.builder()
                 .id("user-to-update")
@@ -618,6 +628,7 @@ class ExternalUserPollingServiceTest {
 
         verify(entraUserRepository, times(2)).save(userToUpdate);
 
+        verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
         verify(entraUserRepository).delete(userToDelete);
         verify(entraUserRepository).flush();
         
@@ -734,6 +745,7 @@ class ExternalUserPollingServiceTest {
                 .id(java.util.UUID.randomUUID())
                 .entraUser(userToDelete)
                 .build();
+        when(userAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
         when(userAccountStatusAuditRepository.findByEntraUser(userToDelete)).thenReturn(List.of(auditRecord));
 
         TechServicesUser apiUser = TechServicesUser.builder()
@@ -754,9 +766,10 @@ class ExternalUserPollingServiceTest {
 
         externalUserPollingService.updateSyncMetadata();
 
+        verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
         verify(userAccountStatusAuditRepository).findByEntraUser(userToDelete);
         verify(userAccountStatusAuditRepository).deleteAll(List.of(auditRecord));
-        verify(userAccountStatusAuditRepository).flush();
+        verify(userAccountStatusAuditRepository, times(2)).flush();
         verify(entraUserRepository).delete(userToDelete);
         verify(entraUserRepository).flush();
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
@@ -776,7 +789,7 @@ class ExternalUserPollingServiceTest {
                 .mailOnly(false)
                 .build();
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(userToDelete));
-        when(userAccountStatusAuditRepository.findByEntraUser(userToDelete)).thenThrow(new RuntimeException());
+        when(userAccountStatusAuditRepository.findByEntraUser(userToDelete)).thenThrow(new RuntimeException("Test exception"));
 
         TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
@@ -796,7 +809,10 @@ class ExternalUserPollingServiceTest {
 
         externalUserPollingService.updateSyncMetadata();
 
+        // When deletion fails, no audit record should be saved (audit is created AFTER successful deletion)
+        verify(userAccountStatusAuditRepository, never()).save(any(UserAccountStatusAudit.class));
         verify(userAccountStatusAuditRepository).findByEntraUser(userToDelete);
+        // Sync metadata should still be updated (sync continues despite individual user failures)
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
 

@@ -1,0 +1,10 @@
+databaseChangeLog:
+  - changeSet:
+      id: make-entra_user_id-column-on-user_profile-not-null
+      author: your-name
+
+      changes:
+        - addNotNullConstraint:
+            tableName: user_profile
+            columnName: entra_user_id
+            columnDataType: uuid

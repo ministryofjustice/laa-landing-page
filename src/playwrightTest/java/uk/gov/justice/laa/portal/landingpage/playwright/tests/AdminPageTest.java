@@ -172,8 +172,8 @@ public class AdminPageTest extends BaseFrontEndTest {
                 .assertReorderRolesLinkVisible();
 
         Assertions.assertTrue(
-                adminPage.getRolesRowCount() == 5,
-                "Expected Roles table to contain 5 rows"
+                adminPage.getRolesRowCount() == 7,
+                "Expected Roles table to contain 7 rows"
         );
 
         page.locator("select#appFilter").selectOption("Test LAA App Two");
@@ -207,8 +207,8 @@ public class AdminPageTest extends BaseFrontEndTest {
                 .assertReorderRolesLinkVisible();
 
         Assertions.assertTrue(
-                adminPage.getRolesRowCount() == 4,
-                "Expected Roles table to contain 4 rows"
+                adminPage.getRolesRowCount() == 6,
+                "Expected Roles table to contain 6 rows"
         );
 
     }
@@ -398,5 +398,21 @@ public class AdminPageTest extends BaseFrontEndTest {
                 new Locator.GetByRoleOptions().setName("Dismiss success message"));
         PlaywrightAssertions.assertThat(dismiss).isVisible();
         PlaywrightAssertions.assertThat(dismiss).hasAttribute("href", "/admin/silas-administration?tab=apps");
+    }
+
+    private static Stream<String> userTypes() {
+        return Stream.of("INTERNAL", "EXTERNAL");
+    }
+
+    @ParameterizedTest(name = "Roles user type filter only returns {0} roles")
+    @MethodSource("userTypes")
+    @DisplayName("Roles and Permissions user type filter only returns selected user type")
+    void rolesFilter_onlyReturnsSelectedUserType(String userType) {
+        AdminPage adminPage = loginAndGetAdminPage(TestUser.SILAS_ADMINISTRATION);
+
+        adminPage.assertRolesTableColumns()
+                .assertUserTypeFilterVisible()
+                .filterRolesByUserType(userType)
+                .assertOnlySelectedUserTypeIsDisplayed(userType);
     }
 }

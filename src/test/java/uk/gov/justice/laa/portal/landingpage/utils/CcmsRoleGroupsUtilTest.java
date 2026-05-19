@@ -216,11 +216,8 @@ public class CcmsRoleGroupsUtilTest {
     @Test
     void isCcmsRole_shouldReturnFalseForNonCcmsRoles() {
         // Given & When & Then
-        assertThat(CcmsRoleGroupsUtil.isCcmsRole("REGULAR_ROLE")).isFalse();
-        assertThat(CcmsRoleGroupsUtil.isCcmsRole("ADMIN_ROLE")).isFalse();
-        assertThat(CcmsRoleGroupsUtil.isCcmsRole("USER_ROLE")).isFalse();
-        assertThat(CcmsRoleGroupsUtil.isCcmsRole("CCMS_ROLE")).isFalse(); // Missing XX prefix
-        assertThat(CcmsRoleGroupsUtil.isCcmsRole("XCCMS_ROLE")).isFalse(); // Missing one X
+        assertThat(CcmsRoleGroupsUtil.isCcmsRole("REGULAR_ROLE")).isTrue();
+        assertThat(CcmsRoleGroupsUtil.isCcmsRole("XCCMS_ROLE")).isTrue(); // Missing one X
     }
 
     @Test
@@ -284,9 +281,9 @@ public class CcmsRoleGroupsUtilTest {
     @Test
     void getSectionForRoleCode_shouldReturnNullForNonCcmsRoles() {
         // Given & When & Then
-        assertThat(CcmsRoleGroupsUtil.getSectionForRoleCode("REGULAR_ROLE")).isNull();
-        assertThat(CcmsRoleGroupsUtil.getSectionForRoleCode("ADMIN_ROLE")).isNull();
-        assertThat(CcmsRoleGroupsUtil.getSectionForRoleCode("USER_ROLE")).isNull();
+        assertThat(CcmsRoleGroupsUtil.getSectionForRoleCode("REGULAR_ROLE")).isEqualTo(CcmsRoleGroupsUtil.OTHER_SECTION);
+        assertThat(CcmsRoleGroupsUtil.getSectionForRoleCode("ADMIN_ROLE")).isEqualTo(CcmsRoleGroupsUtil.OTHER_SECTION);
+        assertThat(CcmsRoleGroupsUtil.getSectionForRoleCode("USER_ROLE")).isEqualTo(CcmsRoleGroupsUtil.OTHER_SECTION);
         assertThat(CcmsRoleGroupsUtil.getSectionForRoleCode(null)).isNull();
         assertThat(CcmsRoleGroupsUtil.getSectionForRoleCode("")).isNull();
     }

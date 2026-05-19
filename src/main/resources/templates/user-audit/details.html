@@ -93,7 +93,7 @@
                 <div class="govuk-grid-row identity-row">
 
                     <!-- LEFT COLUMN -->
-                    <div class="govuk-grid-column-one-half">
+                    <div class="govuk-grid-column-full">
 
                         <!-- User Details Card (Top Left) -->
                         <div class="govuk-summary-card govuk-!-margin-bottom-6">
@@ -105,14 +105,20 @@
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Email</dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.email}"></dd>
+                                        <dd class="govuk-summary-list__actions" style="width: 30%">
+                                            <a th:if="${showResendVerificationLink}"  class="govuk-link"
+                                               th:href="@{/admin/users/manage/{id}(id=${profileId},resendVerification=true)}">Resend Activation Code</a>
+                                        </dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">First name</dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.firstName}"></dd>
+                                        <dd style="width: 30%"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Last name</dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.lastName}"></dd>
+                                        <dd style="width: 30%"></dd>
                                     </div>
                                 </dl>
                             </div>
@@ -146,19 +152,19 @@
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">SILAS Status</dt>
                                         <dd class="govuk-summary-list__value">
-                                            <th:block th:if="${silasStatus == 'Disabled'}">
+                                            <th:block th:if="${silasStatus == 'DISABLED'}">
                                                 <strong class="govuk-tag govuk-tag--red">Disabled</strong>
                                             </th:block>
-                                            <th:block th:if="${silasStatus == 'Incomplete'}">
+                                            <th:block th:if="${silasStatus == 'INCOMPLETE'}">
                                                 <strong class="govuk-tag govuk-tag--blue govuk-!-margin-top-1">Incomplete</strong>
                                             </th:block>
-                                            <th:block th:if="${silasStatus == 'Complete'}">
+                                            <th:block th:if="${silasStatus == 'COMPLETE'}">
                                                 <strong class="govuk-tag govuk-tag--green govuk-!-margin-top-1">Complete</strong>
                                             </th:block>
-                                            <th:block th:if="${silasStatus == 'Activation pending'}">
+                                            <th:block th:if="${silasStatus == 'ACTIVATION_PENDING'}">
                                                 <strong class="govuk-tag govuk-tag--grey govuk-!-margin-top-1">Activation pending</strong>
                                             </th:block>
-                                            <th:block th:if="${silasStatus == 'No roles assigned'}">
+                                            <th:block th:if="${silasStatus == 'NO_ROLES_ASSIGNED'}">
                                                 <strong class="govuk-tag govuk-tag--purple govuk-!-margin-top-1">No roles assigned</strong>
                                             </th:block>
                                         </dd>
@@ -170,12 +176,23 @@
                     </div>
 
                     <!-- RIGHT COLUMN -->
-                    <div class="govuk-grid-column-one-half">
+                    <div class="govuk-grid-column-full">
 
                         <!-- Entra Audit Data Card (Full Right Column) -->
                         <div class="govuk-summary-card">
                             <div class="govuk-summary-card__title-wrapper">
                                 <h3 class="govuk-summary-card__title">Entra Audit data</h3>
+                                <ul th:if="${canDisableUser or canEnableUser or cannotEnableUser}" class="govuk-summary-card__actions">
+                                    <li th:if="${canDisableUser and userIsEnabled}" class="govuk-summary-card__action">
+                                        <a class="govuk-link" th:href="@{/admin/users/manage/{id}/disable(id=${user.userId}, referer='audit')}">Disable user</a>
+                                    </li>
+                                    <li th:if="${canEnableUser and !userIsEnabled}" class="govuk-summary-card__action">
+                                        <a class="govuk-link" th:href="@{/admin/users/manage/{id}/enable(id=${user.userId}, referer='audit')}">Enable user</a>
+                                    </li>
+                                    <li th:if="${cannotEnableUser and !userIsEnabled}" class="govuk-summary-card__action">
+                                        <span>You cannot enable this user</span>
+                                    </li>
+                                </ul>
                             </div>
                             <div class="govuk-summary-card__content">
                                 <dl class="govuk-summary-list">
@@ -398,6 +415,68 @@
                                 </dl>
                             </div>
                         </div>
+
+                        <!-- Services Card -->
+                        <div class="govuk-summary-card">
+                            <div class="govuk-summary-card__title-wrapper">
+                                <h3 class="govuk-summary-card__title">Services</h3>
+                            </div>
+                            <div class="govuk-summary-card__content">
+                                <dl class="govuk-summary-list">
+                                    <!-- Display roles -->
+                                    <div class="govuk-summary-list__row" th:each="appAssignment : ${profile.getRolesGroupByAppName}">
+                                        <dt class="govuk-summary-list__key"th:text="${appAssignment.key}" />
+
+                                        <dd class="govuk-summary-list__value">
+                                            <div th:each="appRole : ${appAssignment.value}">
+                                                <span th:text="${appRole}"></span>
+                                            </div>
+                                        </dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row"
+                                        th:if="${profile.roles == null || profile.roles.isEmpty()}">
+                                        <dt class="govuk-summary-list__key">No services assigned</dt>
+                                        <dd class="govuk-summary-list__value"></dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </div>
+
+                        <!-- Account status history Card -->
+                        <div class="govuk-summary-card">
+                            <div class="govuk-summary-card__title-wrapper">
+                                <h3 class="govuk-summary-card__title">Account status history</h3>
+                            </div>
+                            <div class="govuk-summary-card__content" th:each="record : ${user.accountStatusHistory}">
+                                <dl class="govuk-summary-list">
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Date</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.statusChangedDate}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Status</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.statusChange}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Disable reason</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.disableReason}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row">
+                                        <dt class="govuk-summary-list__key">Changed by</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.statusChangedBy}">
+                                    </div>
+                                    <div class="govuk-summary-list__row" th:if="${record.disableType != null}">
+                                        <dt class="govuk-summary-list__key">Disable type</dt>
+                                        <dd class="govuk-summary-list__value" th:text="${record.disableType}"></dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row"
+                                         th:if="${user.accountStatusHistory == null || user.accountStatusHistory.size() == 0}">
+                                        <dt class="govuk-summary-list__key">No account status history available</dt>
+                                        <dd class="govuk-summary-list__value"></dd>
+                                    </div>
+                                </dl>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -413,17 +492,6 @@
                         th:if="${user.hasNoProfile and @accessControlService.canDeleteUserWithoutProfile(user.userId)}"
                         th:href="@{/admin/users/audit/entra/{id}/delete(id=${user.userId})}">
                         Delete User
-                    </a>
-                    <!-- Disable Button - Only for users without profiles -->
-                    <a class="govuk-button govuk-button--warning"
-                       th:if="${canDisableUser && userIsEnabled}"
-                       th:href="@{/admin/users/manage/{id}/disable(id=${user.userId}, referer='audit')}">
-                        Disable User
-                    </a>
-                    <a class="govuk-button govuk-button--warning"
-                       th:if="${canDisableUser && !userIsEnabled}"
-                       th:href="@{/admin/users/manage/{id}/enable(id=${user.userId}, referer='audit')}">
-                        Enable User
                     </a>
                 </div>
             </div>

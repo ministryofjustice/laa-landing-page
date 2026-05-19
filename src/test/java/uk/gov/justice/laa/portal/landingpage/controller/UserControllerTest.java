@@ -87,6 +87,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -107,6 +108,7 @@ import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
+import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
@@ -155,6 +157,8 @@ class UserControllerTest {
     @Mock
     private AppRoleService appRoleService;
     @Mock
+    private AppService appService;
+    @Mock
     private UserAccountStatusService disableUserService;
     @Mock
     private NotificationService notificationService;
@@ -165,8 +169,10 @@ class UserControllerTest {
     void setUp() {
         userController = new UserController(loginService, userService, officeService, eventService, firmService,
                 new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService,
-                appRoleService, disableUserService, notificationService);
+                appRoleService, appService, disableUserService, notificationService);
         userController.disableUserFeatureEnabled = true;
+        lenient().when(accessControlService.getEnablementFlags(any()))
+                .thenReturn(new AccessControlService.EnablementFlags(false, false));
         model = new ExtendedModelMap();
         firmSearchForm = FirmSearchForm.builder().build();
     }
@@ -352,11 +358,11 @@ class UserControllerTest {
         // Arrange
         PaginatedUsers mockPaginatedUsers = new PaginatedUsers();
         UserSearchResultsDto userSearchResultsDto1 = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
-                UUID.randomUUID(), UserProfileStatus.COMPLETE, false, "Test", "User", "Test User",
-                "test@example.com", UserStatus.ACTIVE, "Test Firm",  InvitationStatus.INVITE_SENT, true, true, "Incomplete");
+                UUID.randomUUID(), UserProfileStatus.COMPLETE, UserProfileSilasStatus.INCOMPLETE, false, "Test", "User", "Test User",
+                "test@example.com", UserStatus.ACTIVE, "Test Firm",  InvitationStatus.INVITE_SENT, true, true);
         UserSearchResultsDto userSearchResultsDto2 = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
-                UUID.randomUUID(), UserProfileStatus.COMPLETE, false, "Test", "User", "Test User",
-                "test@example.com", UserStatus.ACTIVE, "Test Firm",  InvitationStatus.INVITE_SENT, true, true, "Complete");
+                UUID.randomUUID(), UserProfileStatus.COMPLETE, UserProfileSilasStatus.COMPLETE, false, "Test", "User", "Test User",
+                "test@example.com", UserStatus.ACTIVE, "Test Firm",  InvitationStatus.INVITE_SENT, true, true);
         mockPaginatedUsers.setUsers(List.of(userSearchResultsDto1, userSearchResultsDto2));
         mockPaginatedUsers.setNextPageLink("nextLink123");
         mockPaginatedUsers.setPreviousPageLink("prevLink456");
@@ -589,6 +595,7 @@ class UserControllerTest {
 
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // Act
         String view = userController.manageUser(userId, false, model, session, authentication);
@@ -637,6 +644,7 @@ class UserControllerTest {
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(false);
         when(accessControlService.authenticatedUserHasPermission(eq(Permission.EDIT_USER_DETAILS))).thenReturn(true);
         userController.editUserDetailFeatureEnabled = true;
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
         // Act
         String view = userController.manageUser(userId, false, model, session, authentication);
 
@@ -689,6 +697,7 @@ class UserControllerTest {
                 .entraUser(editorEntraUser)
                 .appRoles(Set.of())
                 .offices(Set.of())
+                .silasStatus(UserProfileSilasStatus.COMPLETE)
                 .userType(UserType.INTERNAL)
                 .build();
 
@@ -700,6 +709,7 @@ class UserControllerTest {
             Map<String, Object> userListFilters = new HashMap<>();
             userListFilters.put(filterKey, nonDefaultUserListFilters.get(filterKey));
             when(session.getAttribute("userListFilters")).thenReturn(userListFilters);
+            when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
             String view = userController.manageUser(userId, false, model, session, authentication);
 
@@ -746,6 +756,7 @@ class UserControllerTest {
                 .thenReturn(TechServicesApiResponse.success(SendUserVerificationEmailResponse.builder().success(true)
                         .message("Activation code has been generated and sent successfully via email.")
                         .build()));
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // Act
         String view = userController.manageUser(mockUser.getId().toString(), true, model, session, authentication);
@@ -914,6 +925,7 @@ class UserControllerTest {
 
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // Act
         String view = userController.manageUser(userId, false, model, session, authentication);
@@ -964,6 +976,7 @@ class UserControllerTest {
 
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // Act
         String view = userController.manageUser(userId, false, model, session, authentication);
@@ -1645,9 +1658,9 @@ class UserControllerTest {
         String app1Id = "app1";
         String app2Id = "app2";
         String app3Id = "app3";
-        
+
         MockHttpSession session = new MockHttpSession();
-        
+
         // Mock AppDto objects with ordinals for sorting (only for selected apps)
         AppDto app1 = AppDto.builder().id(app1Id).ordinal(1).build();
         AppDto app3 = AppDto.builder().id(app3Id).ordinal(3).build();
@@ -1658,22 +1671,22 @@ class UserControllerTest {
         session.setAttribute("selectedApps", List.of(app1Id, app2Id, app3Id));
         Map<Integer, List<String>> existingRoles = new HashMap<>();
         existingRoles.put(0, List.of("role1", "role2")); // app1 roles
-        existingRoles.put(1, List.of("role3"));          // app2 roles  
+        existingRoles.put(1, List.of("role3"));          // app2 roles
         existingRoles.put(2, List.of("role4", "role5")); // app3 roles
         session.setAttribute("editUserAllSelectedRoles", existingRoles);
-        
+
         // When - user deselects app2, keeping only app1 and app3
         List<String> newApps = List.of(app1Id, app3Id);
         UUID userId = UUID.randomUUID();
         RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), newApps, session);
-        
+
         // Then
         assertThat(redirectView.getUrl()).isEqualTo(String.format("/admin/users/edit/%s/roles", userId));
-        
+
         @SuppressWarnings("unchecked")
         List<String> updatedApps = (List<String>) session.getAttribute("selectedApps");
         assertThat(updatedApps).containsExactly(app1Id, app3Id);
-        
+
         @SuppressWarnings("unchecked")
         Map<Integer, List<String>> updatedRoles = (Map<Integer, List<String>>) session.getAttribute("editUserAllSelectedRoles");
         assertThat(updatedRoles).hasSize(2);
@@ -1688,9 +1701,9 @@ class UserControllerTest {
         UUID userId = UUID.randomUUID();
         String app1Id = "app1";
         String app2Id = "app2";
-        
+
         MockHttpSession session = new MockHttpSession();
-        
+
         // Mock AppDto objects with ordinals for sorting
         AppDto app1 = AppDto.builder().id(app1Id).ordinal(1).build();
         AppDto app2 = AppDto.builder().id(app2Id).ordinal(2).build();
@@ -1699,17 +1712,17 @@ class UserControllerTest {
 
         // Setup initial state: no previous selectedApps or role data
         List<String> newApps = List.of(app1Id, app2Id);
-        
+
         // When
         RedirectView redirectView = userController.setSelectedAppsEdit(userId.toString(), newApps, session);
-        
+
         // Then
         assertThat(redirectView.getUrl()).isEqualTo(String.format("/admin/users/edit/%s/roles", userId));
-        
+
         @SuppressWarnings("unchecked")
         List<String> updatedApps = (List<String>) session.getAttribute("selectedApps");
         assertThat(updatedApps).containsExactly(app1Id, app2Id);
-        
+
         // Should not have created editUserAllSelectedRoles since there was no existing data to clean
         assertThat(session.getAttribute("editUserAllSelectedRoles")).isNull();
     }
@@ -1741,11 +1754,11 @@ class UserControllerTest {
         AppDto app2 = AppDto.builder().id(appId2.toString()).name("app2").enabled(true).build();
         AppDto app3 = AppDto.builder().id(appId3.toString()).name("app3").enabled(true).build();
         AppRoleDto app1Role1Dto = AppRoleDto.builder().id(role1.toString())
-                .app(app1).name("role1").build();
+                .app(app1).name("role1").description("role1").build();
         AppRoleDto app1Role2Dto = AppRoleDto.builder().id(role2.toString())
-                .app(app1).name("role2").build();
+                .app(app1).name("role2").description("role2").build();
         AppRoleDto app1Role3Dto = AppRoleDto.builder().id(role2.toString())
-                .app(app1).name("role3").build();
+                .app(app1).name("role3").description("role3").build();
         Map<String, AppRoleDto> app1Roles = Map.of(role1.toString(), app1Role1Dto, role2.toString(), app1Role2Dto,
                 role3.toString(), app1Role3Dto);
         testSession.setAttribute("editUserAllSelectedRoles", existingRoles);
@@ -1847,11 +1860,11 @@ class UserControllerTest {
         AppDto app2 = AppDto.builder().id(appId2.toString()).name("app2").enabled(true).build();
         AppDto app3 = AppDto.builder().id(appId3.toString()).name("app3").enabled(true).build();
         AppRoleDto app1Role1Dto = AppRoleDto.builder().id(role1.toString())
-                .app(app1).name("role1").build();
+                .app(app1).name("role1").description("role1").build();
         AppRoleDto app1Role2Dto = AppRoleDto.builder().id(role2.toString())
-                .app(app1).name("role2").build();
+                .app(app1).name("role2").description("role2").build();
         AppRoleDto app1Role3Dto = AppRoleDto.builder().id(role2.toString())
-                .app(app1).name("role3").build();
+                .app(app1).name("role3").description("role3").build();
         Map<String, AppRoleDto> app1Roles = Map.of(role1.toString(), app1Role1Dto, role2.toString(), app1Role2Dto,
                 role3.toString(), app1Role3Dto);
         testSession.setAttribute("editUserAllSelectedRoles", existingRoles);
@@ -3270,9 +3283,11 @@ class UserControllerTest {
                         .address(OfficeDto.AddressDto.builder().addressLine1("Test Address").build())
                         .build()))
                 .userType(UserType.EXTERNAL)
+                .silasStatus(UserProfileSilasStatus.COMPLETE)
                 .build();
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById("id1")).thenReturn(Optional.of(userProfile));
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         String view = userController.manageUser("id1", false, model, session, authentication);
 
@@ -3314,6 +3329,7 @@ class UserControllerTest {
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById("internal-user-id")).thenReturn(Optional.of(userProfile));
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
         String view = userController.manageUser("internal-user-id", false, model, session, authentication);
@@ -3354,6 +3370,7 @@ class UserControllerTest {
         when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER)).thenReturn(false);
         when(accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE)).thenReturn(false);
         when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_USER_OFFICE)).thenReturn(false);
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
         String view = userController.manageUser("external-user-id", false, model, session, authentication);
@@ -3389,6 +3406,7 @@ class UserControllerTest {
                         .code("Test Office")
                         .address(OfficeDto.AddressDto.builder().addressLine1("Test Address").build())
                         .build()))
+                .silasStatus(UserProfileSilasStatus.COMPLETE)
                 .userType(UserType.EXTERNAL)
                 .build();
 
@@ -3399,6 +3417,7 @@ class UserControllerTest {
         when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER)).thenReturn(true);
         when(accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_OFFICE)).thenReturn(true);
         when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_USER_OFFICE)).thenReturn(true);
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
         String view = userController.manageUser("external-user-id", false, model, session, authentication);
@@ -3431,6 +3450,7 @@ class UserControllerTest {
                 .entraUser(editorEntraUser)
                 .appRoles(Set.of())
                 .offices(Set.of())
+                .silasStatus(UserProfileSilasStatus.COMPLETE)
                 .userType(UserType.INTERNAL)
                 .build();
 
@@ -3438,6 +3458,7 @@ class UserControllerTest {
         when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(userProfile));
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
         String view = userController.manageUser("external-user-id", false, model, session, authentication);
@@ -3485,6 +3506,7 @@ class UserControllerTest {
         when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(accessControlService.canDeleteFirmProfile("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(accessControlService.canViewAllFirmsOfMultiFirmUser()).thenReturn(true);
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
         String view = userController.manageUser("external-user-id", false, model, session, authentication);
@@ -3520,6 +3542,7 @@ class UserControllerTest {
                 .appRoles(Set.of())
                 .offices(Set.of())
                 .userType(UserType.INTERNAL)
+                .silasStatus(UserProfileSilasStatus.COMPLETE)
                 .build();
 
         UUID entraUserId = UUID.fromString("550e8400-e29b-41d4-a716-446655440002");
@@ -3533,6 +3556,7 @@ class UserControllerTest {
         when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(accessControlService.canDeleteFirmProfile("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(accessControlService.canViewAllFirmsOfMultiFirmUser()).thenReturn(false);
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
         String view = userController.manageUser("external-user-id", false, model, session, authentication);
@@ -3569,6 +3593,7 @@ class UserControllerTest {
                 .entraUser(editorEntraUser)
                 .appRoles(Set.of())
                 .offices(Set.of())
+                .silasStatus(UserProfileSilasStatus.COMPLETE)
                 .userType(UserType.EXTERNAL)
                 .build();
 
@@ -3578,6 +3603,7 @@ class UserControllerTest {
         when(userService.isAccessGranted(profileId.toString())).thenReturn(true);
         when(userService.getProfileCountByEntraUserId(entraUserId)).thenReturn(2L);
         when(accessControlService.canEditUser(profileId.toString())).thenReturn(true);
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
         // Use lenient() since this won't be called when viewing own profile
         lenient().when(accessControlService.canDeleteFirmProfile(profileId.toString())).thenReturn(true);
         when(accessControlService.canViewAllFirmsOfMultiFirmUser()).thenReturn(true);
@@ -3634,6 +3660,7 @@ class UserControllerTest {
         when(accessControlService.canDeleteFirmProfile(viewedProfileId.toString())).thenReturn(true);
         when(accessControlService.canViewAllFirmsOfMultiFirmUser()).thenReturn(true);
         when(accessControlService.canConvertUserToMultiFirm(entraUserId.toString())).thenReturn(false);
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
         String view = userController.manageUser(viewedProfileId.toString(), false, model, session, authentication);
@@ -4123,11 +4150,13 @@ class UserControllerTest {
                 .id(UUID.randomUUID()) // Add ID to prevent null pointer
                 .userType(UserType.EXTERNAL) // Add type to prevent null pointer
                 .entraUser(user)
+                .silasStatus(UserProfileSilasStatus.COMPLETE)
                 .appRoles(List.of()) // Empty list instead of null
                 .offices(List.of()) // Empty list instead of null
                 .build();
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
         String view = userController.manageUser(userId, false, model, session, authentication);
@@ -4173,6 +4202,7 @@ class UserControllerTest {
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
         when(userService.isAccessGranted(any())).thenReturn(false);
         when(accessControlService.canEditUser(any())).thenReturn(true);
+        when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
         String view = userController.manageUser(userId, false, model, session, authentication);
@@ -5395,7 +5425,7 @@ class UserControllerTest {
         assertThat(ccmsRolesBySection.get("Provider")).isEmpty();
         assertThat(ccmsRolesBySection.get("Chambers")).isEmpty();
         assertThat(ccmsRolesBySection.get("Advocate")).isEmpty();
-        assertThat(ccmsRolesBySection.get("Other")).isEmpty();
+        assertThat(ccmsRolesBySection.get("Other")).isNotEmpty();
     }
 
     @Test
@@ -5545,7 +5575,7 @@ class UserControllerTest {
     }
 
     @Test
-    void editUserRoles_shouldNotDetectCcmsForRegularApp() {
+    void editUserRoles_shouldDetectCcmsForRegularApp() {
         // Given
         final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
@@ -5557,11 +5587,11 @@ class UserControllerTest {
 
         AppRoleDto regularRole1 = new AppRoleDto();
         regularRole1.setId(UUID.randomUUID().toString());
-        regularRole1.setCcmsCode("REGULAR_ROLE1"); // Not a CCMS role
+        regularRole1.setCcmsCode("REGULAR_ROLE1");
 
         AppRoleDto regularRole2 = new AppRoleDto();
         regularRole2.setId(UUID.randomUUID().toString());
-        regularRole2.setCcmsCode("REGULAR_ROLE2"); // Not a CCMS role
+        regularRole2.setCcmsCode("REGULAR_ROLE2");
 
         final List<AppRoleDto> roles = List.of(regularRole1, regularRole2);
         MockHttpSession testSession = new MockHttpSession();
@@ -5581,12 +5611,12 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("edit-user-roles");
-        assertThat(model.getAttribute("isCcmsApp")).isEqualTo(false);
-        assertThat(model.getAttribute("ccmsRolesBySection")).isNull();
+        assertThat(model.getAttribute("isCcmsApp")).isEqualTo(true);
+        assertThat(model.getAttribute("ccmsRolesBySection")).isNotNull();
     }
 
     @Test
-    void editUserRoles_shouldNotDetectCcmsForRegularAppWithCcmsInName() {
+    void editUserRoles_shouldDetectCcmsForRegularAppWithCcmsInName() {
         // Given
         final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
@@ -5598,11 +5628,11 @@ class UserControllerTest {
 
         AppRoleDto regularRole1 = new AppRoleDto();
         regularRole1.setId(UUID.randomUUID().toString());
-        regularRole1.setCcmsCode("REQUESTS TO TRANSFER CCMS CASES_VIEWER_EXTERN_1"); // Not a CCMS role
+        regularRole1.setCcmsCode("REQUESTS TO TRANSFER CCMS CASES_VIEWER_EXTERN_1");
 
         AppRoleDto regularRole2 = new AppRoleDto();
         regularRole2.setId(UUID.randomUUID().toString());
-        regularRole2.setCcmsCode("REQUESTS TO TRANSFER CCMS CASES_VIEWER_EXTERN_2"); // Not a CCMS role
+        regularRole2.setCcmsCode("REQUESTS TO TRANSFER CCMS CASES_VIEWER_EXTERN_2");
 
         final List<AppRoleDto> roles = List.of(regularRole1, regularRole2);
         MockHttpSession testSession = new MockHttpSession();
@@ -5622,8 +5652,8 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("edit-user-roles");
-        assertThat(model.getAttribute("isCcmsApp")).isEqualTo(false);
-        assertThat(model.getAttribute("ccmsRolesBySection")).isNull();
+        assertThat(model.getAttribute("isCcmsApp")).isEqualTo(true);
+        assertThat(model.getAttribute("ccmsRolesBySection")).isNotNull();
     }
 
     @Test
@@ -5682,14 +5712,14 @@ class UserControllerTest {
         assertThat(ccmsRolesBySection.get("Provider")).containsExactly(ccmsRoleViewModel);
         // Regular role should not appear in CCMS sections
         assertThat(ccmsRolesBySection.values().stream().flatMap(List::stream).collect(Collectors.toList()))
-                .containsExactly(ccmsRoleViewModel);
+                .contains(ccmsRoleViewModel, roleViewModel);
         Map<String, Boolean> ccmsRolesBySectionFlags = (Map<String, Boolean>) model
                 .getAttribute("ccmsRoleDisplayFlags");
         assertThat(ccmsRolesBySection).isNotNull();
         assertThat(ccmsRolesBySectionFlags.get("Provider")).isTrue();
         assertThat(ccmsRolesBySectionFlags.get("Chambers")).isFalse();
         assertThat(ccmsRolesBySectionFlags.get("Advocate")).isFalse();
-        assertThat(ccmsRolesBySectionFlags.get("Other")).isFalse();
+        assertThat(ccmsRolesBySectionFlags.get("Other")).isTrue();
     }
 
     // ===== CCMS-SPECIFIC TESTS FOR grantAccessEditUserRoles =====
@@ -5739,7 +5769,7 @@ class UserControllerTest {
         assertThat(ccmsRolesBySection.get("Provider")).isEmpty();
         assertThat(ccmsRolesBySection.get("Chambers")).isEmpty();
         assertThat(ccmsRolesBySection.get("Advocate")).isEmpty();
-        assertThat(ccmsRolesBySection.get("Other")).isEmpty();
+        assertThat(ccmsRolesBySection.get("Other")).isNotEmpty();
     }
 
     @Test
@@ -5911,7 +5941,7 @@ class UserControllerTest {
     }
 
     @Test
-    void grantAccessEditUserRoles_shouldNotDetectCcmsForRegularApp() {
+    void grantAccessEditUserRoles_shouldDetectCcmsForRegularApp() {
         // Given
         final String userId = "user123";
         UserProfileDto user = new UserProfileDto();
@@ -5947,8 +5977,8 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("grant-access-user-roles");
-        assertThat(model.getAttribute("isCcmsApp")).isEqualTo(false);
-        assertThat(model.getAttribute("ccmsRolesBySection")).isNull();
+        assertThat(model.getAttribute("isCcmsApp")).isEqualTo(true);
+        assertThat(model.getAttribute("ccmsRolesBySection")).isNotNull();
     }
 
     @Test
@@ -7913,7 +7943,7 @@ class UserControllerTest {
             AppDto ccmsApp = new AppDto();
             ccmsApp.setId(UUID.randomUUID().toString());
             ccmsApp.setName("Apply for civil legal aid using CCMS");
-            
+
             testSession.setAttribute("selectedApps", List.of(ccmsApp.getId()));
 
             List<AppRoleDto> roles = List.of(
