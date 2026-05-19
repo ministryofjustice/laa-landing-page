@@ -42,6 +42,8 @@ jobs:
       # only required for workflows in private repositories
       actions: read
       contents: read
+    env:
+      MIN_LEVEL: warning    # change to: error | warning | note
 
     strategy:
       fail-fast: false
@@ -112,11 +114,12 @@ jobs:
       with:
         category: "/language:${{matrix.language}}"
         output: codeql-results
-
     - name: Report CodeQL results
       if: always()
+      env:
+        MIN_LEVEL: warning    # change to: error | warning | note
       run: |
-        echo "=== CodeQL Scan Results ==="
+        echo "=== CodeQL Scan Results (threshold: $MIN_LEVEL) ==="
         set +e
         SARIF_FILES=()
         for dir in "$GITHUB_WORKSPACE/codeql-results" "$RUNNER_TEMP/results" "$GITHUB_WORKSPACE/results"; do
@@ -133,32 +136,37 @@ jobs:
           exit 0
         fi
 
+        case "$MIN_LEVEL" in
+          error) ALLOWED='["error"]' ;;
+          warning) ALLOWED='["error","warning"]' ;;
+          note) ALLOWED='["error","warning","note"]' ;;
+          *) ALLOWED='["error","warning"]' ;;
+        esac
+
         for sarif in "${SARIF_FILES[@]}"; do
           echo ""
           echo "File: $(basename "$sarif")"
           echo "Path: $sarif"
           echo "-----"
-          total=$(jq '.runs[0].results | length' "$sarif" 2>/dev/null)
-          if [ -z "$total" ] || [ "$total" -eq 0 ]; then
-            echo "No findings found in SARIF file."
+
+          filtered_total=$(jq -r --argjson allowed "$ALLOWED" '
+            (.runs[0].results // [])
+            | map(select(($allowed | index(.level))))
+            | length
+          ' "$sarif" 2>/dev/null || echo 0)
+
+          if [ -z "$filtered_total" ] || [ "$filtered_total" -eq 0 ]; then
+            echo "No findings at or above level: $MIN_LEVEL"
             continue
           fi
 
-          echo "Total findings: $total"
-          echo "Severity counts:"
-          jq -r '
-            .runs[0].results
-            | group_by(.level)
-            | map({level: .[0].level // "warning", count: length})
-            | sort_by(-.count)
-            | .[]
-            | "  \(.level): \(.count)"
-          ' "$sarif"
+          echo "Findings at or above $MIN_LEVEL: $filtered_total"
           echo ""
-          echo "Top findings:"
-          jq -r '
+          echo "Top findings (up to 20):"
+          jq -r --argjson allowed "$ALLOWED" '
             def trunc($n): if type == "string" and length > $n then .[0:$n] + "..." else . end;
             .runs[0].results
+            | map(select(($allowed | index(.level))))
             | .[0:20]
             | map(
                 [
@@ -172,8 +180,14 @@ jobs:
               )
             | .[]
           ' "$sarif" | column -t -s $'\t' || true
+
+          # optional: fail the job if any findings above threshold
+          # if [ "$filtered_total" -gt 0 ]; then
+          #   echo "::error::$filtered_total code scanning issues at or above $MIN_LEVEL"
+          #   exit 1
+          # fi
+
           echo ""
-          echo "(Showing up to 20 findings. Use the SARIF file for the full report.)"
         done
         set -e
 
