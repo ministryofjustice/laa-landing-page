@@ -1,14 +1,14 @@
 package uk.gov.justice.laa.portal.landingpage.playwright.pages;
 
-import com.microsoft.playwright.Locator;
-import com.microsoft.playwright.Page;
+import java.util.List;
 
-import com.microsoft.playwright.options.LoadState;
 import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
+import com.microsoft.playwright.Locator;
+import com.microsoft.playwright.Page;
+import com.microsoft.playwright.options.LoadState;
 
 
 public class AuditPage {
@@ -48,6 +48,12 @@ public class AuditPage {
 
     private final Locator resultsSummary;
     private final Locator tableHeaders;
+
+    // CSV Export
+    private final Locator exportCsvButton;
+    private final Locator csvErrorBanner;
+    private final Locator viewDeletedUsersLink;
+    private final Locator auditTable;
 
     public AuditPage(Page page, int port) {
         this.page = page;
@@ -97,6 +103,11 @@ public class AuditPage {
         // Results Summary
         this.resultsSummary = page.locator(".moj-pagination__results");
 
+        // CSV Export
+        this.exportCsvButton = page.locator("#exportCsvButton");
+        this.csvErrorBanner = page.locator("#csv-export-error-summary");
+        this.viewDeletedUsersLink = page.locator("a:has-text('View all deleted users')");
+        this.auditTable = page.locator("#audit-table");
     }
 
     public void assertUserIsPresent(String email) {
@@ -200,6 +211,77 @@ public class AuditPage {
         );
     }
 
+    public void assertExportCsvButtonVisible() {
+        log.info("Asserting Export CSV button is visible");
+        Assertions.assertTrue(exportCsvButton.isVisible(), "Expected Export CSV button to be visible");
+    }
+
+    public void assertExportCsvButtonNotDisabled() {
+        log.info("Asserting Export CSV button is not disabled");
+        Assertions.assertFalse(
+                exportCsvButton.isDisabled(),
+                "Export CSV button should not be disabled"
+        );
+        Assertions.assertFalse(
+                exportCsvButton.getAttribute("class").contains("govuk-button--disabled"),
+                "Export CSV button should not have the disabled class"
+        );
+    }
+
+    public void clickExportCsv() {
+        log.info("Clicking Export CSV button");
+        exportCsvButton.click();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void assertCsvErrorBannerVisible() {
+        log.info("Asserting CSV error banner is visible");
+        Assertions.assertTrue(
+                csvErrorBanner.isVisible(),
+                "Expected CSV export error summary banner to be visible"
+        );
+    }
+
+    public void assertCsvErrorBannerHidden() {
+        log.info("Asserting CSV error banner is hidden");
+        Assertions.assertFalse(
+                csvErrorBanner.isVisible(),
+                "Expected CSV export error summary banner to be hidden"
+        );
+    }
+
+    public void assertCsvErrorBannerContainsText(String expectedText) {
+        log.info("Asserting CSV error banner contains text: {}", expectedText);
+        Assertions.assertTrue(
+                csvErrorBanner.innerText().contains(expectedText),
+                "Expected CSV error banner to contain: " + expectedText
+        );
+    }
+
+    public void assertViewDeletedUsersLinkVisible() {
+        log.info("Asserting 'View all deleted users' link is visible");
+        Assertions.assertTrue(viewDeletedUsersLink.isVisible(), "Expected 'View all deleted users' link to be visible");
+    }
+
+    public double getExportCsvButtonY() {
+        Assertions.assertTrue(exportCsvButton.isVisible(), "Export CSV button must be visible before comparing position");
+        var box = exportCsvButton.boundingBox();
+        Assertions.assertNotNull(box, "Export CSV button bounding box must not be null");
+        return box.y;
+    }
+
+    public double getAuditTableY() {
+        Assertions.assertTrue(auditTable.isVisible(), "Audit table must be visible before comparing position");
+        var box = auditTable.boundingBox();
+        Assertions.assertNotNull(box, "Audit table bounding box must not be null");
+        return box.y;
+    }
+
+    public void clickExportCsvExpectingDownload() {
+        log.info("Clicking Export CSV button (expecting download, not error banner)");
+        // Use Playwright download interception to avoid actually saving the file
+        page.waitForDownload(exportCsvButton::click);
+    }
+
 
 }
-
