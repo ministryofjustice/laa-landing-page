@@ -21,6 +21,19 @@
                 <h1 class="govuk-heading-l">
                     Check your answers and confirm
                 </h1>
+                <div th:if="${errorMessage}">
+                    <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
+                         aria-describedby="error-summary-description" data-module="govuk-error-summary">
+                        <h2 class="govuk-error-summary__title" id="error-summary-title">
+                            There is a problem
+                        </h2>
+                        <div class="govuk-error-summary__body" id="error-summary-description">
+                            <ul th:if="${errorMessage}" class="govuk-list govuk-error-summary__list">
+                                <li><a href="#" th:text="${errorMessage}"></a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
                 <form th:action="@{/admin/users/grant-access/{id}/check-answers(id=${user.id})}" th:method="post">
 
                     <!-- User permissions section -->
@@ -98,7 +111,7 @@
                         assigned.
                     </p>
                     <div class="govuk-button-group">
-                        <button type="submit" class="govuk-button" data-module="govuk-button">
+                        <button type="submit" class="govuk-button" data-module="govuk-button" th:disabled="${errorMessage != null}">
                             Confirm
                         </button>
                         <a th:href="@{/admin/users/grant-access/{id}/cancel/confirmation(id=${user.id})}" class="govuk-link">Cancel</a>
