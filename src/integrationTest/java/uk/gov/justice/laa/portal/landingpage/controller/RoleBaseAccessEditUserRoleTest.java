@@ -264,6 +264,21 @@ public class RoleBaseAccessEditUserRoleTest extends RoleBasedAccessIntegrationTe
 
     @Test
     @Transactional
+    public void testInternalUserManagerCannotAssignSecurityResponseRoleToThemselves() throws Exception {
+        EntraUser loggedInUser = internalUserManagers.getFirst();
+        assignAuthzRoleToUser(loggedInUser, loggedInUser, AuthzRole.SECURITY_RESPONSE.getRoleName(), false, false, false);
+    }
+
+    @Test
+    @Transactional
+    public void testSecurityResponseCannotAssignSecurityResponseRole() throws Exception {
+        EntraUser loggedInUser = securityResponseUsers.getFirst();
+        EntraUser editedUser = internalUsersNoRoles.getFirst();
+        assignAuthzRoleToUser(loggedInUser, editedUser, AuthzRole.SECURITY_RESPONSE.getRoleName(), false, false, false);
+    }
+
+    @Test
+    @Transactional
     public void testExternalUserRolesCannotBeAssignedToInternalUsers() throws Exception {
         // Build test app
         App testExternalApp = buildLaaApp("Test External App", generateEntraId(), "TestExternalAppSecurityGroupOid");

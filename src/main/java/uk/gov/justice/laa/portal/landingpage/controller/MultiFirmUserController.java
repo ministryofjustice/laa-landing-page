@@ -384,6 +384,7 @@ public class MultiFirmUserController {
 
         model.addAttribute("userProfile", userProfile);
         model.addAttribute("user", entraUser);
+        // nosemgrep: java.spring.security.injection.tainted-sql-string.tainted-sql-string — not SQL; setting a view model page title attribute
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Delete firm access - " + entraUser.getFullName());
 
         return "multi-firm-user/delete-profile-confirm";
