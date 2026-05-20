@@ -922,6 +922,42 @@ class AuditControllerTest {
     }
 
     @Test
+    void deleteUserWithoutProfileConfirm_populatesDeleteReasonsInModel() {
+        // Given
+        String entraUserId = UUID.randomUUID().toString();
+        AuditUserDetailDto userDetail = AuditUserDetailDto.builder()
+                .userId(null)
+                .firstName("John")
+                .lastName("Doe")
+                .fullName("John Doe")
+                .email("john.doe@example.com")
+                .profiles(Collections.emptyList())
+                .hasNoProfile(true)
+                .build();
+
+        uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason reason =
+                uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason.builder()
+                        .code("CyberRisk").label("Cyber risk").build();
+        reason.setId(UUID.randomUUID());
+
+        when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId))).thenReturn(userDetail);
+        when(userService.getDeleteUserReasons(true)).thenReturn(List.of(reason));
+
+        // When
+        String viewName = auditController.deleteUserWithoutProfileConfirm(entraUserId, model);
+
+        // Then
+        assertThat(viewName).isEqualTo("user-audit/delete-user-without-profile-reason");
+        @SuppressWarnings("unchecked")
+        List<uk.gov.justice.laa.portal.landingpage.viewmodel.DeleteUserReasonViewModel> reasons =
+                (List<uk.gov.justice.laa.portal.landingpage.viewmodel.DeleteUserReasonViewModel>) model.getAttribute("deleteReasons");
+        assertThat(reasons).hasSize(1);
+        assertThat(reasons.get(0).getCode()).isEqualTo("CyberRisk");
+        assertThat(model.getAttribute("deleteUserReasonForm")).isNotNull();
+        verify(userService).getDeleteUserReasons(true);
+    }
+
+    @Test
     void deleteUserWithoutProfile_withValidReason_shouldDeleteAndReturnSuccess() {
         // Given
         String entraUserId = UUID.randomUUID().toString();

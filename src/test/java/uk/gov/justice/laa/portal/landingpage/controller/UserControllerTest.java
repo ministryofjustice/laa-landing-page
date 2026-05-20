@@ -775,6 +775,43 @@ class UserControllerTest {
     }
 
     @Test
+    void deleteExternalUserConfirm_populatesDeleteReasonsInModel() {
+        // Arrange
+        String userProfileId = UUID.randomUUID().toString();
+        EntraUserDto entraUserDto = new EntraUserDto();
+        entraUserDto.setFullName("Target User");
+        UserProfileDto targetProfile = UserProfileDto.builder()
+                .id(UUID.fromString(userProfileId))
+                .entraUser(entraUserDto)
+                .userType(UserType.EXTERNAL)
+                .build();
+
+        UserProfile currentProfile = UserProfile.builder().userType(UserType.INTERNAL).build();
+        uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason reason =
+                uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason.builder()
+                        .code("CyberRisk").label("Cyber risk").build();
+        reason.setId(UUID.randomUUID());
+
+        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(targetProfile));
+        when(loginService.getCurrentProfile(authentication)).thenReturn(currentProfile);
+        when(userService.getDeleteUserReasons(true)).thenReturn(List.of(reason));
+
+        // Act
+        String view = userController.deleteExternalUserConfirm(userProfileId, model, authentication);
+
+        // Assert
+        assertThat(view).isEqualTo("delete-user-reason");
+        assertThat(model.getAttribute("deleteReasons")).isNotNull();
+        @SuppressWarnings("unchecked")
+        List<uk.gov.justice.laa.portal.landingpage.viewmodel.DeleteUserReasonViewModel> reasons =
+                (List<uk.gov.justice.laa.portal.landingpage.viewmodel.DeleteUserReasonViewModel>) model.getAttribute("deleteReasons");
+        assertThat(reasons).hasSize(1);
+        assertThat(reasons.get(0).getCode()).isEqualTo("CyberRisk");
+        assertThat(model.getAttribute("deleteUserReasonForm")).isNotNull();
+        verify(userService).getDeleteUserReasons(true);
+    }
+
+    @Test
     void deleteExternalUser_whenServiceSucceeds_returnsSuccessViewAndLogsAuditEvent() {
         // Arrange
         String userProfileId = UUID.randomUUID().toString();
