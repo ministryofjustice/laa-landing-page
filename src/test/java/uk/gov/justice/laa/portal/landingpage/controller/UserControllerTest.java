@@ -6352,7 +6352,6 @@ class UserControllerTest {
         MockHttpSession testSession = new MockHttpSession();
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
-        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
 
         // When
         String view = userController.grantAccessProcessCheckAnswers(userId, authentication, redirectAttributes, testSession);
@@ -6427,7 +6426,6 @@ class UserControllerTest {
         testSession.setAttribute("allSelectedRoles", Set.of("Role 1"));
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
-        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().build());
         when(accessControlService.canAssignExternalAppRoles(userId)).thenReturn(false);
         // When
@@ -6454,7 +6452,6 @@ class UserControllerTest {
         testSession.setAttribute("allSelectedRoles", Set.of("Role 1"));
 
         when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
-        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
         when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().build());
         when(accessControlService.canAssignInternalAppRoles(userId)).thenReturn(false);
         // When

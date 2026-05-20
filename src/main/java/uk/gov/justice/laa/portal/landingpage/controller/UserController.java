@@ -2512,7 +2512,6 @@ public class UserController {
                                           Model model,
                                           HttpSession session,
                                           Authentication authentication) {
-        UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         UserType userType = user.getUserType();
         // Get user's current app roles from session
@@ -2523,16 +2522,6 @@ public class UserController {
         Set<String> allSelectedRoles = allSelectedRolesOptional.get();
 
         List<AppRoleDto> userAppRoles = appRoleService.getByIds(allSelectedRoles);
-        List<AppRoleDto> editableUserAppRoles = userAppRoles.stream()
-                .filter(role -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, role.getApp()))
-                .toList();
-
-        // Group roles by app name and sort by app name
-        Map<String, List<AppRoleDto>> groupedAppRoles = editableUserAppRoles.stream().sorted()
-                .collect(Collectors.groupingBy(
-                        appRole -> appRole.getApp().getName(),
-                        LinkedHashMap::new, // Preserve insertion order
-                        Collectors.toList()));
 
         // get all offices from session
         Optional<List<String>> selectedOfficesOptional = getListFromHttpSession(session, "selectedOffices", String.class);
@@ -2553,6 +2542,17 @@ public class UserController {
                 && !user.getEntraUser().isCcmsEbsUser()) {
             errorMessage = "This user has not been migrated, so is unable to access CCMS. Remove any CCMS or PUI role before saving.";
         }
+        UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
+        List<AppRoleDto> editableUserAppRoles = userAppRoles.stream()
+                .filter(role -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, role.getApp()))
+                .toList();
+        // Group roles by app name and sort by app name
+        Map<String, List<AppRoleDto>> groupedAppRoles = editableUserAppRoles.stream().sorted()
+                .collect(Collectors.groupingBy(
+                        appRole -> appRole.getApp().getName(),
+                        LinkedHashMap::new, // Preserve insertion order
+                        Collectors.toList()));
+
         // Sort the map by app name
         Map<String, List<AppRoleDto>> sortedGroupedAppRoles = groupedAppRoles.entrySet().stream()
                 .collect(Collectors.toMap(
@@ -2616,7 +2616,6 @@ public class UserController {
                                                  RedirectAttributes redirectAttributes, HttpSession session) {
         try {
             UserProfileDto userProfileDto = userService.getUserProfileById(id).orElseThrow();
-            CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             UserType userType = userProfileDto.getUserType();
             UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
 
@@ -2645,6 +2644,7 @@ public class UserController {
             }
 
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
+            CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
                 Map<String, String> updateResult = userService.updateUserRoles(id, allSelectedRoles, nonEditableRoles,
                         currentUserDto.getUserId());
