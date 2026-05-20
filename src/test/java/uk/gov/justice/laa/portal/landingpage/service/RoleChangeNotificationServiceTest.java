@@ -7,6 +7,7 @@ import ch.qos.logback.core.read.ListAppender;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -30,16 +31,17 @@ import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
-import org.springframework.test.util.ReflectionTestUtils;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 import software.amazon.awssdk.services.sqs.model.SendMessageResponse;
 
+import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.registry.SqsClientRegistry;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -50,6 +52,8 @@ class RoleChangeNotificationServiceTest {
     private static final String QUEUE_URL_NONE = "none";
     private ListAppender<ILoggingEvent> logAppender;
     @Mock
+    private SqsClientRegistry sqsClientRegistry;
+    @Mock
     private SqsClient sqsClient;
     @Mock
     private ObjectMapper objectMapper;
@@ -57,11 +61,8 @@ class RoleChangeNotificationServiceTest {
     private UserProfileRepository userProfileRepository;
     private RoleChangeNotificationService roleChangeNotificationService;
     private UserProfile userProfile;
-    private EntraUser entraUser;
-    private Firm firm;
     private AppRole puiRole1;
     private AppRole puiRole2;
-    private AppRole nonPuiRole;
     private Set<String> oldPuiRoles;
     private Set<String> newPuiRoles;
     private Set<String> emptyRoles;
@@ -73,8 +74,8 @@ class RoleChangeNotificationServiceTest {
         logAppender.start();
         logger.addAppender(logAppender);
         logger.setLevel(ch.qos.logback.classic.Level.DEBUG);
-        roleChangeNotificationService = new RoleChangeNotificationService(sqsClient, objectMapper, QUEUE_URL, userProfileRepository);
-        entraUser = EntraUser.builder()
+        roleChangeNotificationService = new RoleChangeNotificationService(sqsClientRegistry, objectMapper, userProfileRepository);
+        EntraUser entraUser = EntraUser.builder()
                 .id(UUID.randomUUID())
                 .entraOid("test-entra-oid")
                 .firstName("John")
@@ -82,14 +83,22 @@ class RoleChangeNotificationServiceTest {
                 .email("john.doe@example.com")
                 .build();
 
-        firm = Firm.builder()
+        Firm firm = Firm.builder()
                 .id(UUID.randomUUID())
                 .code("FIRM001")
                 .name("Test Firm")
                 .build();
 
+        App puiApp = App.builder()
+                .id(UUID.randomUUID())
+                .name("PUI_APP")
+                .entraOid("pui-app-entra-oid")
+                .description("PUI App Description")
+                .build();
+
         puiRole1 = AppRole.builder()
                 .id(UUID.randomUUID())
+                .app(puiApp)
                 .name("PUI_ROLE_1")
                 .description("PUI Role 1 Description")
                 .ccmsCode("CCMS_PUI_001")
@@ -98,14 +107,16 @@ class RoleChangeNotificationServiceTest {
 
         puiRole2 = AppRole.builder()
                 .id(UUID.randomUUID())
+                .app(puiApp)
                 .name("PUI_ROLE_2")
                 .description("PUI Role 2 Description")
                 .ccmsCode("CCMS_PUI_002")
                 .legacySync(true)
                 .build();
 
-        nonPuiRole = AppRole.builder()
+        AppRole nonPuiRole = AppRole.builder()
                 .id(UUID.randomUUID())
+                .app(puiApp)
                 .name("NON_PUI_ROLE")
                 .description("Non-PUI Role Description")
                 .ccmsCode("NON_CCMS_001")
@@ -132,9 +143,11 @@ class RoleChangeNotificationServiceTest {
 
     @Test
     void shouldNotSendMessage_whenPuiRolesUnchangedForExternalUser() {
+        when(sqsClientRegistry.getSqsClient(any())).thenReturn(Optional.of(sqsClient));
+        when(sqsClientRegistry.getSqsQueueUrl(any())).thenReturn(Optional.of(QUEUE_URL));
         Set<String> unchangedRoles = Set.of(puiRole1.getCcmsCode());
 
-        boolean result = roleChangeNotificationService.sendMessage(userProfile, unchangedRoles, unchangedRoles);
+        boolean result = roleChangeNotificationService.sendMessage(userProfile, "test", unchangedRoles, unchangedRoles);
 
         assertThat(result).isTrue();
         verify(sqsClient, never()).sendMessage(any(SendMessageRequest.class));
@@ -142,12 +155,14 @@ class RoleChangeNotificationServiceTest {
 
     @Test
     void shouldSendMessage_whenUserIsInternal() throws Exception {
+        when(sqsClientRegistry.getSqsClient(any())).thenReturn(Optional.of(sqsClient));
+        when(sqsClientRegistry.getSqsQueueUrl(any())).thenReturn(Optional.of(QUEUE_URL));
         userProfile.setUserType(UserType.INTERNAL);
         when(objectMapper.writeValueAsString(any())).thenReturn("{\"test\":\"message\"}");
         when(sqsClient.sendMessage(any(SendMessageRequest.class)))
                 .thenReturn(SendMessageResponse.builder().messageId("test-message-id").build());
 
-        boolean result = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
+        boolean result = roleChangeNotificationService.sendMessage(userProfile, "test", newPuiRoles, oldPuiRoles);
 
         assertThat(result).isTrue();
         verify(sqsClient).sendMessage(argThat((SendMessageRequest request) -> {
@@ -161,11 +176,13 @@ class RoleChangeNotificationServiceTest {
 
     @Test
     void shouldSendCorrectSqsMessage_whenPuiRolesChanged() throws Exception {
+        when(sqsClientRegistry.getSqsClient(any())).thenReturn(Optional.of(sqsClient));
+        when(sqsClientRegistry.getSqsQueueUrl(any())).thenReturn(Optional.of(QUEUE_URL));
         when(objectMapper.writeValueAsString(any())).thenReturn("{\"test\":\"message\"}");
         when(sqsClient.sendMessage(any(SendMessageRequest.class)))
                 .thenReturn(SendMessageResponse.builder().messageId("test-message-id").build());
 
-        boolean result = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
+        boolean result = roleChangeNotificationService.sendMessage(userProfile, "test", newPuiRoles, oldPuiRoles);
 
         assertThat(result).isTrue();
         verify(sqsClient).sendMessage(argThat((SendMessageRequest request) -> {
@@ -187,11 +204,13 @@ class RoleChangeNotificationServiceTest {
 
     @Test
     void shouldHandleEmptyOldRoles() throws Exception {
+        when(sqsClientRegistry.getSqsClient(any())).thenReturn(Optional.of(sqsClient));
+        when(sqsClientRegistry.getSqsQueueUrl(any())).thenReturn(Optional.of(QUEUE_URL));
         when(objectMapper.writeValueAsString(any())).thenReturn("{\"test\":\"message\"}");
         when(sqsClient.sendMessage(any(SendMessageRequest.class)))
                 .thenReturn(SendMessageResponse.builder().messageId("test-message-id").build());
 
-        boolean result = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, emptyRoles);
+        boolean result = roleChangeNotificationService.sendMessage(userProfile, "test", newPuiRoles, emptyRoles);
 
         assertThat(result).isTrue();
         verify(sqsClient).sendMessage(any(SendMessageRequest.class));
@@ -199,11 +218,13 @@ class RoleChangeNotificationServiceTest {
 
     @Test
     void shouldHandleEmptyNewRoles() throws Exception {
+        when(sqsClientRegistry.getSqsClient(any())).thenReturn(Optional.of(sqsClient));
+        when(sqsClientRegistry.getSqsQueueUrl(any())).thenReturn(Optional.of(QUEUE_URL));
         when(objectMapper.writeValueAsString(any())).thenReturn("{\"test\":\"message\"}");
         when(sqsClient.sendMessage(any(SendMessageRequest.class)))
                 .thenReturn(SendMessageResponse.builder().messageId("test-message-id").build());
 
-        boolean result = roleChangeNotificationService.sendMessage(userProfile, emptyRoles, oldPuiRoles);
+        boolean result = roleChangeNotificationService.sendMessage(userProfile, "test", emptyRoles, oldPuiRoles);
 
         assertThat(result).isTrue();
         verify(sqsClient).sendMessage(any(SendMessageRequest.class));
@@ -211,7 +232,9 @@ class RoleChangeNotificationServiceTest {
 
     @Test
     void shouldNotSendMessage_whenBothRoleSetsAreEmpty() {
-        boolean result = roleChangeNotificationService.sendMessage(userProfile, emptyRoles, emptyRoles);
+        when(sqsClientRegistry.getSqsClient(any())).thenReturn(Optional.of(sqsClient));
+        when(sqsClientRegistry.getSqsQueueUrl(any())).thenReturn(Optional.of(QUEUE_URL));
+        boolean result = roleChangeNotificationService.sendMessage(userProfile, "test", emptyRoles, emptyRoles);
 
         assertThat(result).isTrue();
         verify(sqsClient, never()).sendMessage(any(SendMessageRequest.class));
@@ -219,9 +242,9 @@ class RoleChangeNotificationServiceTest {
 
     @Test
     void shouldSkipSqsOperations_whenQueueUrlIsNone() {
-        ReflectionTestUtils.setField(roleChangeNotificationService, "sqsQueueUrl", QUEUE_URL_NONE);
+        when(sqsClientRegistry.getSqsQueueUrl(any())).thenReturn(Optional.of("none"));
 
-        boolean result = roleChangeNotificationService.sendMessage(userProfile, newPuiRoles, oldPuiRoles);
+        boolean result = roleChangeNotificationService.sendMessage(userProfile, "test", newPuiRoles, oldPuiRoles);
 
         assertThat(result).isFalse();
         verify(sqsClient, never()).sendMessage(any(SendMessageRequest.class));
@@ -243,6 +266,8 @@ class RoleChangeNotificationServiceTest {
 
         SendMessageResponse response = SendMessageResponse.builder().messageId("test-message-id").build();
 
+        when(sqsClientRegistry.getSqsClient(any())).thenReturn(Optional.of(sqsClient));
+        when(sqsClientRegistry.getSqsQueueUrl(any())).thenReturn(Optional.of(QUEUE_URL));
         when(userProfileRepository.findUserProfilesForCcmsSync()).thenReturn(List.of(userProfile, userProfile2));
         when(sqsClient.sendMessage(any(SendMessageRequest.class))).thenReturn(response);
 
@@ -269,9 +294,7 @@ class RoleChangeNotificationServiceTest {
 
     @Test
     void shouldSetLastSyncToFalseWhenSendMessageReturnsFalse() {
-        // Arrange
-        ReflectionTestUtils.setField(roleChangeNotificationService, "sqsQueueUrl", QUEUE_URL_NONE);
-
+        when(sqsClientRegistry.getSqsQueueUrl(any())).thenReturn(Optional.of("NONE"));
         when(userProfileRepository.findUserProfilesForCcmsSync()).thenReturn(List.of(userProfile));
 
         // Act
@@ -292,7 +315,8 @@ class RoleChangeNotificationServiceTest {
     @Test
     void shouldHandleExceptionCases() {
         // Arrange
-        AppRole appRole = AppRole.builder().ccmsCode("CCMS_ROLE").legacySync(true).build();
+        App app = App.builder().id(UUID.randomUUID()).name("APP_NAME").entraOid("APP_ENTRA_OID").description("APP_DESCRIPTION").build();
+        AppRole appRole = AppRole.builder().app(app).ccmsCode("CCMS_ROLE").legacySync(true).build();
         EntraUser entraUser = EntraUser.builder().entraOid("OID123").firstName("first").lastName("last").email("test@email.com").build();
         Firm firm = Firm.builder().code("FIRM001").build();
         UserProfile profile = UserProfile.builder()
@@ -304,6 +328,8 @@ class RoleChangeNotificationServiceTest {
                 .firm(firm)
                 .build();
 
+        when(sqsClientRegistry.getSqsClient(any())).thenReturn(Optional.of(sqsClient));
+        when(sqsClientRegistry.getSqsQueueUrl(any())).thenReturn(Optional.of(QUEUE_URL));
         when(userProfileRepository.findUserProfilesForCcmsSync()).thenReturn(List.of(profile));
         when(sqsClient.sendMessage(any(SendMessageRequest.class))).thenThrow(new RuntimeException());
 

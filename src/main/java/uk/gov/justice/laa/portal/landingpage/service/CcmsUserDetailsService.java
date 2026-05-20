@@ -1,7 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -10,23 +10,29 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import uk.gov.justice.laa.portal.landingpage.dto.CcmsUserDetailsResponse;
+import uk.gov.justice.laa.portal.landingpage.registry.CcmsUdaRegistry;
+
+import java.util.Optional;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class CcmsUserDetailsService {
 
     private static final String CCMS_UDA_GET_USER_DETAILS_ENDPOINT = "%s/api/v1/user-details/silas/%s";
 
-    @Value("${ccms.uda.base-url}")
-    private String udaBaseUrl;
+    private final CcmsUdaRegistry ccmsUdaRegistry;
 
-    @Value("${ccms.uda.api.key}")
-    private String udaApiKey;
-
-    public CcmsUserDetailsResponse getUserDetailsByLegacyUserId(String legacyUserId) {
-        if (("NONE").equalsIgnoreCase(udaApiKey) || ("NONE").equalsIgnoreCase(udaBaseUrl)) {
+    public CcmsUserDetailsResponse getUserDetailsByLegacyUserId(String appEntraOid, String legacyUserId) {
+        Optional<String> udaBaseUrlOpt = ccmsUdaRegistry.getUdaBaseUrl(appEntraOid);
+        Optional<String> udaApiKeyOpt = ccmsUdaRegistry.getUdaApiKey(appEntraOid);
+        if (udaBaseUrlOpt.isEmpty() || ("NONE").equalsIgnoreCase(udaBaseUrlOpt.get())
+                || udaApiKeyOpt.isEmpty() || ("NONE").equalsIgnoreCase(udaApiKeyOpt.get())) {
             return null;
         }
+
+        String udaBaseUrl = udaBaseUrlOpt.get();
+        String udaApiKey = udaApiKeyOpt.get();
 
         String url = String.format(CCMS_UDA_GET_USER_DETAILS_ENDPOINT, udaBaseUrl, legacyUserId);
 
