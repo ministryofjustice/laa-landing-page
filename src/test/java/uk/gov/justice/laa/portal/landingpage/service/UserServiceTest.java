@@ -9688,6 +9688,8 @@ class UserServiceTest {
 
         AuditUserDto csvDto = csvResult.getUsers().get(0);
         assertThat(csvDto.getAppAccess()).isEqualTo("Portal");
+        assertThat(csvDto.getAppRolesAccess()).isEqualTo("Portal [Firm User Manager, Viewer]");
+
         assertThat(csvDto.isProviderAdmin()).isTrue();
 
 
