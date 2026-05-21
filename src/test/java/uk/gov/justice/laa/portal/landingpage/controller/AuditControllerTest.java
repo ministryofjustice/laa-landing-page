@@ -983,7 +983,7 @@ class AuditControllerTest {
                 .email("admin@example.com")
                 .build();
 
-        uk.gov.justice.laa.portal.landingpage.model.DeletedUser deletedUser = uk.gov.justice.laa.portal.landingpage.model.DeletedUser
+        final uk.gov.justice.laa.portal.landingpage.model.DeletedUser deletedUser = uk.gov.justice.laa.portal.landingpage.model.DeletedUser
                 .builder()
                 .deletedUserId(UUID.fromString(entraUserId))
                 .deletedUserEntraOid(entraUserId)

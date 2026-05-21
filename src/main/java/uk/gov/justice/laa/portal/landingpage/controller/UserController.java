@@ -61,6 +61,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
+import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
@@ -480,7 +481,10 @@ public class UserController {
         UserProfile currentProfile = loginService.getCurrentProfile(authentication);
         boolean isInternalUser = currentProfile != null && currentProfile.getUserType() == UserType.INTERNAL;
         final UUID resolvedReasonId = deleteReasonId;
-        if (userService.getDeleteUserReasons(isInternalUser).stream().noneMatch(r -> r.getId().equals(resolvedReasonId))) {
+        Optional<DeleteUserReason> matchedReason = userService.getDeleteUserReasons(isInternalUser).stream()
+                .filter(r -> r.getId().equals(resolvedReasonId))
+                .findFirst();
+        if (matchedReason.isEmpty()) {
             model.addAttribute("user", optionalUser.get());
             model.addAttribute("fieldErrorMessage", "Please select a valid reason.");
             model.addAttribute(ModelAttributes.PAGE_TITLE, "Remove access - " + optionalUser.get().getFullName());
@@ -489,21 +493,21 @@ public class UserController {
         }
 
         EntraUser current = loginService.getCurrentEntraUser(authentication);
-        String deleteReasonLabel = userService.findDeleteUserReasonLabel(deleteReasonId);
+        String deleteReasonLabel = matchedReason.get().getLabel();
         try {
             DeletedUser deletedUser = userService.deleteExternalUser(id, deleteReasonId, current.getEntraOid());
 
             if (deletedUser.isEncounteredTsErrors()) {
                 DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(
                         optionalUser.get().getEntraUser().getId(),
-                        deleteReasonLabel, current.getId(), "The user account has been deleted but there were some issues during the deletion process. Please contact support.");
+                        deleteReasonLabel, UUID.fromString(current.getEntraOid()), "The user account has been deleted but there were some issues during the deletion process. Please contact support.");
                 eventService.logEvent(deleteUserAttemptAuditEvent);
                 model.addAttribute("errorMessage", "An unexpected error occurred while deleting user. Please contact support.");
                 return "errors/error-generic";
             }
 
             DeleteUserSuccessAuditEvent deleteUserAuditEvent = new DeleteUserSuccessAuditEvent(
-                    deletedUser.getDeleteReasonLabel(), current.getId(), deletedUser);
+                    deletedUser.getDeleteReasonLabel(), UUID.fromString(current.getEntraOid()), deletedUser);
             eventService.logEvent(deleteUserAuditEvent);
         } catch (IllegalArgumentException ex) {
             model.addAttribute("user", optionalUser.get());
@@ -515,7 +519,7 @@ public class UserController {
             log.error("Failed to delete external user {}: {}", id, ex.getMessage(), ex);
             DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(
                     optionalUser.get().getEntraUser().getId(),
-                    deleteReasonLabel, current.getId(), ex.getMessage());
+                    deleteReasonLabel, UUID.fromString(current.getEntraOid()), ex.getMessage());
             eventService.logEvent(deleteUserAttemptAuditEvent);
             model.addAttribute("user", optionalUser.get());
             model.addAttribute("globalErrorMessage", "User delete failed, please try again later");

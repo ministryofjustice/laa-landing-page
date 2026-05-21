@@ -42,6 +42,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
+import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -365,7 +366,10 @@ public class AuditController {
         }
 
         final UUID resolvedReasonId = deleteReasonId;
-        if (userService.getDeleteUserReasons(true).stream().noneMatch(r -> r.getId().equals(resolvedReasonId))) {
+        Optional<DeleteUserReason> matchedReason = userService.getDeleteUserReasons(true).stream()
+                .filter(r -> r.getId().equals(resolvedReasonId))
+                .findFirst();
+        if (matchedReason.isEmpty()) {
             model.addAttribute("user", userDetail);
             model.addAttribute("fieldErrorMessage", "Please select a valid reason.");
             model.addAttribute(ModelAttributes.PAGE_TITLE,
@@ -375,11 +379,11 @@ public class AuditController {
         }
 
         EntraUser current = loginService.getCurrentEntraUser(authentication);
-        String deleteReasonLabel = userService.findDeleteUserReasonLabel(deleteReasonId);
+        String deleteReasonLabel = matchedReason.get().getLabel();
         try {
             DeletedUser deletedUser = userService.deleteEntraUserWithoutProfile(id, deleteReasonId, current.getId());
             DeleteUserSuccessAuditEvent deleteUserAuditEvent = new DeleteUserSuccessAuditEvent(
-                    deletedUser.getDeleteReasonLabel(), current.getId(), deletedUser);
+                    deletedUser.getDeleteReasonLabel(), UUID.fromString(current.getEntraOid()), deletedUser);
             eventService.logEvent(deleteUserAuditEvent);
         } catch (IllegalArgumentException ex) {
             model.addAttribute("user", userDetail);
@@ -391,7 +395,7 @@ public class AuditController {
         } catch (RuntimeException ex) {
             log.error("Failed to delete user without profile {}: {}", id, ex.getMessage(), ex);
             DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(id, deleteReasonLabel,
-                    current.getId(),
+                    UUID.fromString(current.getEntraOid()),
                     ex.getMessage());
             eventService.logEvent(deleteUserAttemptAuditEvent);
             model.addAttribute("user", userDetail);
