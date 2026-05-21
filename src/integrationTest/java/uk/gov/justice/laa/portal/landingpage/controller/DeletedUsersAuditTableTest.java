@@ -262,6 +262,25 @@ public class DeletedUsersAuditTableTest extends RoleBasedAccessIntegrationTest {
     }
 
     @Test
+    public void testDeletedUsersTableSortByDeleteReason() throws Exception {
+        EntraUser globalAdmin = globalAdmins.getFirst();
+
+        createDeletedUserAudit(externalUsersNoRoles.get(0), "user1@test.com",
+                globalAdmin.getEntraOid(), LocalDateTime.now());
+
+        MvcResult result = mockMvc.perform(get("/admin/users/audit/deleted")
+                        .param("sort", "deleteReason")
+                        .param("direction", "asc")
+                        .with(userOauth2Login(globalAdmin)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        Map<String, Object> model = result.getModelAndView().getModel();
+        assertThat(model.get("sort")).isEqualTo("deleteReason");
+        assertThat(model.get("direction")).isEqualTo("asc");
+    }
+
+    @Test
     public void testDeletedUsersTableWithNoResults() throws Exception {
         EntraUser globalAdmin = globalAdmins.getFirst();
 

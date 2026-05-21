@@ -2437,6 +2437,7 @@ public class UserService {
                 case "email", "useremail" -> "userEmail";
                 case "deletedby", "statuschangedby" -> "statusChangedBy";
                 case "deleteddate", "statuschangeddate" -> "statusChangedDate";
+                case "deletereason", "deleteusereasonlabel" -> "deleteUserReason.label";
                 default -> "statusChangedDate";
             };
         }
@@ -2517,4 +2518,3 @@ public class UserService {
         userProfile.setSilasStatus(silasStatus);
     }
 }
-
