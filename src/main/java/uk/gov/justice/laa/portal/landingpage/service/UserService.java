@@ -433,20 +433,16 @@ public class UserService {
     }
 
     public List<DeleteUserReason> getDeleteUserReasons(boolean isInternalUser) {
+        List<DeleteUserReason> deleteUserReasons;
         if (isInternalUser) {
-            return deleteUserReasonRepository.findAllByEditableByInternalUser(true);
+            deleteUserReasons = deleteUserReasonRepository.findAllByEditableByInternalUser(true);
         } else {
-            return deleteUserReasonRepository.findAllByEditableByExternalUser(true);
+            deleteUserReasons = deleteUserReasonRepository.findAllByEditableByExternalUser(true);
         }
-    }
-
-    public String findDeleteUserReasonLabel(UUID deleteReasonId) {
-        if (deleteReasonId == null) {
-            return null;
-        }
-        return deleteUserReasonRepository.findById(deleteReasonId)
-                .map(DeleteUserReason::getLabel)
-                .orElse(deleteReasonId.toString());
+        return deleteUserReasons.stream()
+                .sorted(Comparator.comparing(DeleteUserReason::getLabel,
+                        Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))
+                .collect(Collectors.toList());
     }
 
     /**
