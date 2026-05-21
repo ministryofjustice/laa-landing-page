@@ -92,12 +92,6 @@ public class FirmDirectoryController {
         return SEARCH_PAGE;
     }
 
-    @GetMapping("/search")
-    public ResponseEntity<List<FirmDto>> searchFirmDirectory(@RequestParam String q) {
-        List<FirmDto> results = firmService.searchFirms(q);
-        return ResponseEntity.ok(results);
-    }
-
     @GetMapping("/{id}")
     public String displayFirmDetails(
             @PathVariable UUID id,

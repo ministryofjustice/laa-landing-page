@@ -641,7 +641,7 @@
 
             function searchFirms(query) {
                 updateStatus('Searching...');
-                fetch(`/admin/firmDirectory/search?q=${encodeURIComponent(query)}`, {
+                fetch(`/admin/user/firms/search?q=${encodeURIComponent(query)}`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
