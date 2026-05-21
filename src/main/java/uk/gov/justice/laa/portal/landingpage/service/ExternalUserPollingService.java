@@ -339,7 +339,6 @@ public class ExternalUserPollingService {
             return existingReason.get();
         }
 
-        // Log warning if reason not found - should not happen with proper Entra integration
         log.warn("Disable reason '{}' not found in database. This indicates a configuration issue.", reasonFromApi);
         throw new IllegalStateException("Disable reason not found: " + reasonFromApi);
     }
