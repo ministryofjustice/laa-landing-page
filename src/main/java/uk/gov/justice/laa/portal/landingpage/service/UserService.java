@@ -440,6 +440,15 @@ public class UserService {
         }
     }
 
+    public String findDeleteUserReasonLabel(UUID deleteReasonId) {
+        if (deleteReasonId == null) {
+            return null;
+        }
+        return deleteUserReasonRepository.findById(deleteReasonId)
+                .map(DeleteUserReason::getLabel)
+                .orElse(deleteReasonId.toString());
+    }
+
     /**
      * Delete an EXTERNAL user and all related local records.
      *

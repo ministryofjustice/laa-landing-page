@@ -34,11 +34,11 @@
     <!-- nosemgrep -->
     <form th:action="@{'/admin/users/audit/entra/' + ${user.userId} + '/delete'}" method="post" novalidate>
         <div class="govuk-form-group" th:classappend="${fieldErrorMessage} ? ' govuk-form-group--error'">
-            <fieldset class="govuk-fieldset">
+            <fieldset class="govuk-fieldset" th:attrappend="aria-describedby=${fieldErrorMessage != null ? 'reasonId-error' : null}">
                 <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
                     Select a reason for removing access
                 </legend>
-                <span class="govuk-error-message" th:if="${fieldErrorMessage}">
+                <span class="govuk-error-message" id="reasonId-error" th:if="${fieldErrorMessage}">
                     <span class="govuk-visually-hidden">Error:</span>
                     <span th:text="${fieldErrorMessage}"></span>
                 </span>

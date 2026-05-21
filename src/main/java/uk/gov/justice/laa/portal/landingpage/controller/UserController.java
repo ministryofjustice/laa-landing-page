@@ -478,13 +478,14 @@ public class UserController {
         }
 
         EntraUser current = loginService.getCurrentEntraUser(authentication);
+        String deleteReasonLabel = userService.findDeleteUserReasonLabel(deleteReasonId);
         try {
             DeletedUser deletedUser = userService.deleteExternalUser(id, deleteReasonId, current.getEntraOid());
 
             if (deletedUser.isEncounteredTsErrors()) {
                 DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(
                         optionalUser.get().getEntraUser().getId(),
-                        reasonId, current.getId(), "The user account has been deleted but there were some issues during the deletion process. Please contact support.");
+                        deleteReasonLabel, current.getId(), "The user account has been deleted but there were some issues during the deletion process. Please contact support.");
                 eventService.logEvent(deleteUserAttemptAuditEvent);
                 model.addAttribute("errorMessage", "An unexpected error occurred while deleting user. Please contact support.");
                 return "errors/error-generic";
@@ -497,7 +498,7 @@ public class UserController {
             log.error("Failed to delete external user {}: {}", id, ex.getMessage(), ex);
             DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(
                     optionalUser.get().getEntraUser().getId(),
-                    reasonId, current.getId(), ex.getMessage());
+                    deleteReasonLabel, current.getId(), ex.getMessage());
             eventService.logEvent(deleteUserAttemptAuditEvent);
             model.addAttribute("user", optionalUser.get());
             model.addAttribute("globalErrorMessage", "User delete failed, please try again later");
