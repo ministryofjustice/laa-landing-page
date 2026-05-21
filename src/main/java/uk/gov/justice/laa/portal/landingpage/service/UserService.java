@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.function.Function;
@@ -1866,6 +1867,7 @@ public class UserService {
         // Get selected firm user roles
         boolean userRole = determineIsProviderAdminForSelectedFirm(profiles, firmId);
 
+        String getAppRolesAcess = determineAppRolesAccess(profiles, firmId);
         String getAppAccess = determineAppAccess(profiles, firmId);
 
         // Get firm code
@@ -1873,7 +1875,7 @@ public class UserService {
 
         return AuditUserDto.builder().name(user.getFirstName() + " " + user.getLastName())
                 .email(user.getEmail()).firmAssociation(firmAssociation).firmCode(firmCode).appAccess(getAppAccess)
-                .isMultiFirmUser(user.isMultiFirmUser()).isProviderAdmin(userRole).build();
+                .isMultiFirmUser(user.isMultiFirmUser()).isProviderAdmin(userRole).appRolesAccess(getAppRolesAcess).build();
     }
 
     /**
@@ -2047,6 +2049,31 @@ public class UserService {
                 .sorted()
                 .collect(Collectors.joining(", "));
     }
+
+    /**
+     * Determine what app access a user has for the filtered firm along with the roles assigned for that app
+     */
+    public String determineAppRolesAccess(List<UserProfile> profiles, UUID firmId) {
+        return profiles.stream()
+                .filter(p -> UserType.INTERNAL.equals(p.getUserType())
+                        || firmId.equals(p.getFirm().getId()))
+                .flatMap(profile -> profile.getAppRoles().stream())
+                .filter(ar -> ar.getApp() != null)
+                .collect(Collectors.groupingBy(
+                        ar -> ar.getApp().getName(),
+                        TreeMap::new,
+                        Collectors.mapping(
+                                AppRole::getName,
+                                Collectors.toCollection(TreeSet::new)
+                        )
+                ))
+                .entrySet()
+                .stream()
+                .map(entry -> entry.getKey() + " ["
+                        + String.join(", ", entry.getValue()) + "]")
+                .collect(Collectors.joining("; "));
+    }
+
 
     /**
      * Map audit table sort field to entity field
