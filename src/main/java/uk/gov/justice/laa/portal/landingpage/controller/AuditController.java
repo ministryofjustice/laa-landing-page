@@ -367,8 +367,8 @@ public class AuditController {
         EntraUser current = loginService.getCurrentEntraUser(authentication);
         try {
             DeletedUser deletedUser = userService.deleteEntraUserWithoutProfile(id, deleteReasonId, current.getId());
-            DeleteUserSuccessAuditEvent deleteUserAuditEvent = new DeleteUserSuccessAuditEvent(reasonId,
-                    current.getId(), deletedUser);
+            DeleteUserSuccessAuditEvent deleteUserAuditEvent = new DeleteUserSuccessAuditEvent(
+                    deletedUser.getDeleteReasonLabel(), current.getId(), deletedUser);
             eventService.logEvent(deleteUserAuditEvent);
         } catch (RuntimeException ex) {
             log.error("Failed to delete user without profile {}: {}", id, ex.getMessage(), ex);

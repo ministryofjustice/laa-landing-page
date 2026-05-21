@@ -340,7 +340,7 @@ public class UserController {
         final boolean canEditUserRoleAssignments = accessControlService.canEditUserAppRoleAssignments(user.getId().toString());
 
         UserProfileSilasStatus silasStatus = userService.calculateSilasStatusForUserProfile(user);
-        
+
         model.addAttribute("user", user);
         model.addAttribute("silasStatus", silasStatus.name());
         model.addAttribute("userAppRoles", userAppRoles);
@@ -491,7 +491,7 @@ public class UserController {
             }
 
             DeleteUserSuccessAuditEvent deleteUserAuditEvent = new DeleteUserSuccessAuditEvent(
-                    reasonId, UUID.fromString(current.getEntraOid()), deletedUser);
+                    deletedUser.getDeleteReasonLabel(), current.getId(), deletedUser);
             eventService.logEvent(deleteUserAuditEvent);
         } catch (RuntimeException ex) {
             log.error("Failed to delete external user {}: {}", id, ex.getMessage(), ex);

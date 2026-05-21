@@ -152,3 +152,41 @@ databaseChangeLog:
               WHERE assigning_role_id = (SELECT id FROM app_role where authz_role = true and name = 'Security Response')
               AND assignable_role_id = (SELECT id FROM app_role where authz_role = true and name = 'Security Response');
             dbms: postgresql
+
+  # Add PendingAcceptance disable reason for ExternalUserPollingService detection
+  - changeSet:
+      id: 1747562400000-5
+      author: paul.snowdon
+      comment: "Add PendingAcceptance disable_user_reason entry so
+        ExternalUserPollingService can detect expired invitations"
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: "0"
+            sql: "SELECT COUNT(*) FROM disable_user_reason WHERE name = 'PendingAcceptance'"
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO disable_user_reason (id, name, description, entra_description,
+              user_selectable) VALUES (gen_random_uuid(), 'PendingAcceptance',
+              'Invitation expired before user accepted.', 'PendingAcceptance',
+              false)"
+
+  # Add NotActive disable reason for ExternalUserPollingService detection
+  - changeSet:
+      id: 1747562400000-6
+      author: paul.snowdon
+      comment: "Add NotActive disable_user_reason entry so ExternalUserPollingService
+        can detect inactivity before max lifetime"
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: "0"
+            sql: "SELECT COUNT(*) FROM disable_user_reason WHERE name = 'NotActive'"
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO disable_user_reason (id, name, description, entra_description,
+              user_selectable) VALUES (gen_random_uuid(), 'NotActive', 'Account
+              disabled due to inactivity before reaching max lifetime.',
+              'NotActive', false)"

@@ -32,8 +32,7 @@
     <p class="govuk-body">This will remove the user's access in SiLAS right away and start the process to remove their access in Microsoft Entra. Their account may still be active for a short time until Microsoft fully deletes it.</p>
 
     <!-- nosemgrep -->
-    <form th:action="@{/admin/users/manage/{id}/delete(id=${user.id})}" method="post" novalidate
-          th:object="${deleteUserReasonForm}">
+    <form th:action="@{/admin/users/manage/{id}/delete(id=${user.id})}" method="post" novalidate>
         <div class="govuk-form-group" th:classappend="${fieldErrorMessage} ? ' govuk-form-group--error'">
             <fieldset class="govuk-fieldset">
                 <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">

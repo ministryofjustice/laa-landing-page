@@ -432,14 +432,6 @@ public class UserService {
                 .map(user -> mapper.map(user, UserProfileDto.class));
     }
 
-    /**
-     * Delete an EXTERNAL user and all related local records.
-     *
-     * @param userProfileId the ID of the user profile (UUID as String)
-     * @param reason        the reason for deletion, used for logging/audit
-     * @param actorId       the entra oid of the actor performing the deletion (for
-     *                      logging)
-     */
     public List<DeleteUserReason> getDeleteUserReasons(boolean isInternalUser) {
         if (isInternalUser) {
             return deleteUserReasonRepository.findAllByEditableByInternalUser(true);
@@ -448,6 +440,15 @@ public class UserService {
         }
     }
 
+    /**
+     * Delete an EXTERNAL user and all related local records.
+     *
+     * @param userProfileId  the ID of the user profile (UUID as String)
+     * @param deleteReasonId the UUID of the structured delete reason
+     * @param actorId        the entra oid of the actor performing the deletion (for
+     *                       logging)
+     * @return DeletedUser containing deletion metadata
+     */
     @Transactional
     public DeletedUser deleteExternalUser(String userProfileId, UUID deleteReasonId, String actorId) {
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
@@ -469,7 +470,8 @@ public class UserService {
         EntraUserDto entraUserDto = mapper.map(entraUser, EntraUserDto.class);
 
         DeleteUserReason deleteUserReason = (deleteReasonId != null)
-                ? deleteUserReasonRepository.findById(deleteReasonId).orElse(null)
+                ? deleteUserReasonRepository.findById(deleteReasonId)
+                        .orElseThrow(() -> new IllegalArgumentException("Unknown delete reason id: " + deleteReasonId))
                 : null;
 
         logger.info(
@@ -507,7 +509,8 @@ public class UserService {
         List<UserProfile> profiles = userProfileRepository.findAllByEntraUser(entraUser);
         DeletedUser.DeletedUserBuilder builder = new DeletedUser().toBuilder()
                 .deletedUserEntraOid(userProfile.getEntraUser().getEntraOid())
-                .deletedUserId(userProfile.getId()).encounteredTsErrors(encounteredTsError);
+                .deletedUserId(userProfile.getId()).encounteredTsErrors(encounteredTsError)
+                .deleteReasonLabel(deleteUserReason != null ? deleteUserReason.getLabel() : null);
         if (profiles != null && !profiles.isEmpty()) {
             for (UserProfile up : profiles) {
                 Set<String> puiRoles = new HashSet<>();
@@ -659,10 +662,10 @@ public class UserService {
      * Tech Services to
      * remove Entra group memberships and deletes from local database
      *
-     * @param entraUserId the ID of the EntraUser to delete (UUID as String)
-     * @param reason      the reason for deletion, used for logging/audit
-     * @param actorId     the UUID of the actor performing the deletion (for
-     *                    logging)
+     * @param entraUserId    the ID of the EntraUser to delete (UUID as String)
+     * @param deleteReasonId the UUID of the structured delete reason
+     * @param actorId        the UUID of the actor performing the deletion (for
+     *                       logging)
      * @return DeletedUser containing deletion metadata
      * @throws RuntimeException if user not found, has profiles, or is internal user
      */
@@ -689,7 +692,8 @@ public class UserService {
         }
 
         DeleteUserReason deleteUserReason = (deleteReasonId != null)
-                ? deleteUserReasonRepository.findById(deleteReasonId).orElse(null)
+                ? deleteUserReasonRepository.findById(deleteReasonId)
+                        .orElseThrow(() -> new IllegalArgumentException("Delete user reason not found: " + deleteReasonId))
                 : null;
 
         logger.info(
@@ -747,7 +751,9 @@ public class UserService {
         userAccountStatusAuditRepository.flush();
 
         return DeletedUser.builder().deletedUserEntraOid(userEntraOid).removedRolesCount(0)
-                .detachedOfficesCount(0).build();
+                .detachedOfficesCount(0)
+                .deleteReasonLabel(deleteUserReason != null ? deleteUserReason.getLabel() : null)
+                .build();
     }
 
     public Optional<UserType> getUserTypeByUserId(String userId) {
