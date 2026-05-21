@@ -22,6 +22,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -198,6 +199,7 @@ public class DemoDataPopulator {
     protected UserProfile buildLaaUserProfile(EntraUser entraUser, UserType userType) {
         return UserProfile.builder().entraUser(entraUser).activeProfile(true)
                 .userProfileStatus(UserProfileStatus.COMPLETE)
+                .silasStatus(UserProfileSilasStatus.COMPLETE)
                 .userType(userType).appRoles(HashSet.newHashSet(11))
                 .build();
     }
