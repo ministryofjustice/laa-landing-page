@@ -829,6 +829,13 @@ class UserControllerTest {
         when(userService.deleteExternalUser(anyString(), any(UUID.class), any(String.class))).thenReturn(DeletedUser.builder().build());
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
         String reasonId = UUID.randomUUID().toString();
+        UserProfile currentProfile = UserProfile.builder().userType(UserType.EXTERNAL).build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(currentProfile);
+        uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason deleteReason =
+                uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason.builder()
+                        .code("Reason").label("Test reason").build();
+        deleteReason.setId(UUID.fromString(reasonId));
+        when(userService.getDeleteUserReasons(anyBoolean())).thenReturn(List.of(deleteReason));
         // Act
         String view = userController.deleteExternalUser(userProfileId, reasonId, authentication, session, model);
 
@@ -859,6 +866,13 @@ class UserControllerTest {
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
 
         String reasonId = UUID.randomUUID().toString();
+        UserProfile currentProfile = UserProfile.builder().userType(UserType.EXTERNAL).build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(currentProfile);
+        uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason deleteReason =
+                uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason.builder()
+                        .code("Reason").label("Test reason").build();
+        deleteReason.setId(UUID.fromString(reasonId));
+        when(userService.getDeleteUserReasons(anyBoolean())).thenReturn(List.of(deleteReason));
 
         when(userService.deleteExternalUser(
                 eq(userProfileId),
@@ -905,7 +919,11 @@ class UserControllerTest {
         String reasonId = UUID.randomUUID().toString();
         UserProfile currentProfile = UserProfile.builder().userType(UserType.INTERNAL).build();
         when(loginService.getCurrentProfile(authentication)).thenReturn(currentProfile);
-        when(userService.getDeleteUserReasons(anyBoolean())).thenReturn(Collections.emptyList());
+        uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason deleteReason =
+                uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason.builder()
+                        .code("Reason").label("Test reason").build();
+        deleteReason.setId(UUID.fromString(reasonId));
+        when(userService.getDeleteUserReasons(anyBoolean())).thenReturn(List.of(deleteReason));
 
         when(userService.deleteExternalUser(
                 eq(userProfileId),

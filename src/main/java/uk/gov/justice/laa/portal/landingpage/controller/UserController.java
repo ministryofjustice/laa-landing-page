@@ -477,6 +477,17 @@ public class UserController {
             return "delete-user-reason";
         }
 
+        UserProfile currentProfile = loginService.getCurrentProfile(authentication);
+        boolean isInternalUser = currentProfile != null && currentProfile.getUserType() == UserType.INTERNAL;
+        final UUID resolvedReasonId = deleteReasonId;
+        if (userService.getDeleteUserReasons(isInternalUser).stream().noneMatch(r -> r.getId().equals(resolvedReasonId))) {
+            model.addAttribute("user", optionalUser.get());
+            model.addAttribute("fieldErrorMessage", "Please select a valid reason.");
+            model.addAttribute(ModelAttributes.PAGE_TITLE, "Remove access - " + optionalUser.get().getFullName());
+            populateDeleteReasonsModel(model, authentication);
+            return "delete-user-reason";
+        }
+
         EntraUser current = loginService.getCurrentEntraUser(authentication);
         String deleteReasonLabel = userService.findDeleteUserReasonLabel(deleteReasonId);
         try {
@@ -494,6 +505,12 @@ public class UserController {
             DeleteUserSuccessAuditEvent deleteUserAuditEvent = new DeleteUserSuccessAuditEvent(
                     deletedUser.getDeleteReasonLabel(), current.getId(), deletedUser);
             eventService.logEvent(deleteUserAuditEvent);
+        } catch (IllegalArgumentException ex) {
+            model.addAttribute("user", optionalUser.get());
+            model.addAttribute("fieldErrorMessage", "Please select a valid reason.");
+            model.addAttribute(ModelAttributes.PAGE_TITLE, "Remove access - " + optionalUser.get().getFullName());
+            populateDeleteReasonsModel(model, authentication);
+            return "delete-user-reason";
         } catch (RuntimeException ex) {
             log.error("Failed to delete external user {}: {}", id, ex.getMessage(), ex);
             DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(

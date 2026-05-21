@@ -994,6 +994,11 @@ class AuditControllerTest {
         when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId)))
                 .thenReturn(userDetail);
         when(loginService.getCurrentEntraUser(any())).thenReturn(currentUser);
+        uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason deleteReason =
+                uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason.builder()
+                        .code("Reason").label("Test reason").build();
+        deleteReason.setId(UUID.fromString(reasonId));
+        when(userService.getDeleteUserReasons(true)).thenReturn(List.of(deleteReason));
         when(userService.deleteEntraUserWithoutProfile(eq(entraUserId), any(UUID.class), any(UUID.class)))
                 .thenReturn(deletedUser);
 
@@ -1098,10 +1103,15 @@ class AuditControllerTest {
                 .email("admin@example.com")
                 .build();
 
+        uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason deleteReason =
+                uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason.builder()
+                        .code("Reason").label("Test reason").build();
+        deleteReason.setId(UUID.fromString(reasonId));
+
         when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId)))
                 .thenReturn(userDetail);
         when(loginService.getCurrentEntraUser(any())).thenReturn(currentUser);
-        when(userService.getDeleteUserReasons(true)).thenReturn(Collections.emptyList());
+        when(userService.getDeleteUserReasons(true)).thenReturn(List.of(deleteReason));
         when(userService.deleteEntraUserWithoutProfile(eq(entraUserId), any(UUID.class), any(UUID.class)))
                 .thenThrow(new RuntimeException("Failed to delete user from Entra"));
 

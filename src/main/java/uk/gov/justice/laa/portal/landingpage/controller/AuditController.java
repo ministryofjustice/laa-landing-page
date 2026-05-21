@@ -364,6 +364,16 @@ public class AuditController {
             return "user-audit/delete-user-without-profile-reason";
         }
 
+        final UUID resolvedReasonId = deleteReasonId;
+        if (userService.getDeleteUserReasons(true).stream().noneMatch(r -> r.getId().equals(resolvedReasonId))) {
+            model.addAttribute("user", userDetail);
+            model.addAttribute("fieldErrorMessage", "Please select a valid reason.");
+            model.addAttribute(ModelAttributes.PAGE_TITLE,
+                    "Remove access - " + userDetail.getFullName());
+            populateDeleteReasonsModel(model);
+            return "user-audit/delete-user-without-profile-reason";
+        }
+
         EntraUser current = loginService.getCurrentEntraUser(authentication);
         String deleteReasonLabel = userService.findDeleteUserReasonLabel(deleteReasonId);
         try {
@@ -371,6 +381,13 @@ public class AuditController {
             DeleteUserSuccessAuditEvent deleteUserAuditEvent = new DeleteUserSuccessAuditEvent(
                     deletedUser.getDeleteReasonLabel(), current.getId(), deletedUser);
             eventService.logEvent(deleteUserAuditEvent);
+        } catch (IllegalArgumentException ex) {
+            model.addAttribute("user", userDetail);
+            model.addAttribute("fieldErrorMessage", "Please select a valid reason.");
+            model.addAttribute(ModelAttributes.PAGE_TITLE,
+                    "Remove access - " + userDetail.getFullName());
+            populateDeleteReasonsModel(model);
+            return "user-audit/delete-user-without-profile-reason";
         } catch (RuntimeException ex) {
             log.error("Failed to delete user without profile {}: {}", id, ex.getMessage(), ex);
             DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(id, deleteReasonLabel,
