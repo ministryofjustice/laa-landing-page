@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.function.Function;
@@ -42,7 +43,8 @@ import com.microsoft.graph.models.User;
 import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import uk.gov.justice.laa.portal.landingpage.dto.AccountStatusHistoryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -284,15 +286,25 @@ public class UserService {
             return result;
         }
 
-        Set<String> oldPuiRoles = filterByPuiRoles(userProfile.getAppRoles());
-        Set<String> newPuiRoles = filterByPuiRoles(newRoles);
+        Map<String, Set<String>> oldPuiRoles = filterByPuiRoles(userProfile.getAppRoles());
+        Map<String, Set<String>> newPuiRoles = filterByPuiRoles(newRoles);
+
+        Set<String> allPuiAppOids = new HashSet<>(oldPuiRoles.keySet());
+        allPuiAppOids.addAll(newPuiRoles.keySet());
 
         // Update roles
         userProfile.setAppRoles(newRoles);
+        boolean notificationSuccess = userProfile.isLastCcmsSyncSuccessful();
+        boolean ccmsSyncResult = true;
 
-        // Try to send role change notification with retry logic before saving
-        boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile,
-                newPuiRoles, oldPuiRoles);
+        for (String ccmsAppEntraOid : allPuiAppOids) {
+            // Try to send role change notification with retry logic before saving
+            ccmsSyncResult = ccmsSyncResult && roleChangeNotificationService.sendMessage(userProfile,
+                    ccmsAppEntraOid, newPuiRoles.getOrDefault(ccmsAppEntraOid, Collections.emptySet()),
+                    oldPuiRoles.getOrDefault(ccmsAppEntraOid, Collections.emptySet()));
+            notificationSuccess = ccmsSyncResult;
+        }
+
         userProfile.setLastCcmsSyncSuccessful(notificationSuccess);
 
         refreshAndUpdatedUserProfileStatus(userProfile.getEntraUser().isEnabled(), userProfile.getEntraUser().getInvitationStatus(), userProfile);
@@ -372,13 +384,18 @@ public class UserService {
         return "";
     }
 
-    private Set<String> filterByPuiRoles(Set<AppRole> roles) {
+    private Map<String, Set<String>> filterByPuiRoles(Set<AppRole> roles) {
         if (roles == null || roles.isEmpty()) {
-            return new HashSet<>();
+            return new HashMap<>();
         }
 
-        return roles.stream().filter(AppRole::isLegacySync).filter(Objects::nonNull)
-                .map(AppRole::getCcmsCode).collect(Collectors.toSet());
+        return roles.stream().filter(AppRole::isLegacySync)
+                .filter(ar -> ar.getApp().getEntraOid() != null)
+                .collect(Collectors.groupingBy(role -> role.getApp().getEntraOid(),
+                        Collectors.collectingAndThen(
+                                Collectors.mapping(AppRole::getCcmsCode, Collectors.toSet()),
+                                HashSet::new
+                        )));
     }
 
     public TechServicesApiResponse<SendUserVerificationEmailResponse> sendVerificationEmail(
@@ -491,15 +508,17 @@ public class UserService {
                 .deletedUserId(userProfile.getId()).encounteredTsErrors(encounteredTsError);
         if (profiles != null && !profiles.isEmpty()) {
             for (UserProfile up : profiles) {
-                Set<String> puiRoles = new HashSet<>();
+                Map<String, Set<String>> puiRoles;
                 if (up.getAppRoles() != null) {
                     builder.removedRolesCount(
                             up.getAppRoles().isEmpty() ? 0 : up.getAppRoles().size());
                     puiRoles = filterByPuiRoles(up.getAppRoles());
                     up.getAppRoles().clear();
                     if (!puiRoles.isEmpty()) {
-                        roleChangeNotificationService.sendMessage(up, Collections.emptySet(),
-                                puiRoles);
+                        for (Map.Entry<String, Set<String>> roles : puiRoles.entrySet()) {
+                            roleChangeNotificationService.sendMessage(userProfile, roles.getKey(),
+                                    Collections.emptySet(), roles.getValue());
+                        }
                     }
                 }
                 if (up.getOffices() != null) {
@@ -579,13 +598,15 @@ public class UserService {
                 actorId, userProfileId, entraUser.getId(), firmName);
 
         // Handle PUI role changes notification (like in deleteExternalUser)
-        Set<String> puiRoles = new HashSet<>();
+        Map<String, Set<String>> puiRoles;
         if (userProfile.getAppRoles() != null && !userProfile.getAppRoles().isEmpty()) {
             puiRoles = filterByPuiRoles(userProfile.getAppRoles());
             userProfile.getAppRoles().clear();
             if (!puiRoles.isEmpty()) {
-                roleChangeNotificationService.sendMessage(userProfile, Collections.emptySet(),
-                        puiRoles);
+                for (Map.Entry<String, Set<String>> roles : puiRoles.entrySet()) {
+                    roleChangeNotificationService.sendMessage(userProfile, roles.getKey(),
+                            Collections.emptySet(), roles.getValue());
+                }
             }
         }
 
@@ -1001,11 +1022,18 @@ public class UserService {
         }
 
         userProfile = userProfileRepository.save(userProfile); //save to generate legacy user id for ccms sync
-        Set<String> newPuiRoles = appRoles != null ? filterByPuiRoles(appRoles) : Collections.emptySet();
+        Map<String, Set<String>> newPuiRoles = appRoles != null ? filterByPuiRoles(appRoles) : Collections.emptyMap();
 
         // Try to send role change notification with retry logic before saving
-        boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile,
-                newPuiRoles, Collections.emptySet());
+        boolean notificationSuccess = userProfile.isLastCcmsSyncSuccessful();
+        boolean ccmsSyncResult = true;
+
+        for (Map.Entry<String, Set<String>> roles : newPuiRoles.entrySet()) {
+            ccmsSyncResult = ccmsSyncResult && roleChangeNotificationService.sendMessage(userProfile, roles.getKey(),
+                    roles.getValue(), Collections.emptySet());
+            notificationSuccess = ccmsSyncResult;
+        }
+
         userProfile.setLastCcmsSyncSuccessful(notificationSuccess);
 
         // Save user profile with ccms sync status
@@ -1839,6 +1867,7 @@ public class UserService {
         // Get selected firm user roles
         boolean userRole = determineIsProviderAdminForSelectedFirm(profiles, firmId);
 
+        String getAppRolesAcess = determineAppRolesAccess(profiles, firmId);
         String getAppAccess = determineAppAccess(profiles, firmId);
 
         // Get firm code
@@ -1846,7 +1875,7 @@ public class UserService {
 
         return AuditUserDto.builder().name(user.getFirstName() + " " + user.getLastName())
                 .email(user.getEmail()).firmAssociation(firmAssociation).firmCode(firmCode).appAccess(getAppAccess)
-                .isMultiFirmUser(user.isMultiFirmUser()).isProviderAdmin(userRole).build();
+                .isMultiFirmUser(user.isMultiFirmUser()).isProviderAdmin(userRole).appRolesAccess(getAppRolesAcess).build();
     }
 
     /**
@@ -2020,6 +2049,31 @@ public class UserService {
                 .sorted()
                 .collect(Collectors.joining(", "));
     }
+
+    /**
+     * Determine what app access a user has for the filtered firm along with the roles assigned for that app
+     */
+    public String determineAppRolesAccess(List<UserProfile> profiles, UUID firmId) {
+        return profiles.stream()
+                .filter(p -> UserType.INTERNAL.equals(p.getUserType())
+                        || firmId.equals(p.getFirm().getId()))
+                .flatMap(profile -> profile.getAppRoles().stream())
+                .filter(ar -> ar.getApp() != null)
+                .collect(Collectors.groupingBy(
+                        ar -> ar.getApp().getName(),
+                        TreeMap::new,
+                        Collectors.mapping(
+                                AppRole::getName,
+                                Collectors.toCollection(TreeSet::new)
+                        )
+                ))
+                .entrySet()
+                .stream()
+                .map(entry -> entry.getKey() + " ["
+                        + String.join(", ", entry.getValue()) + "]")
+                .collect(Collectors.joining("; "));
+    }
+
 
     /**
      * Map audit table sort field to entity field
@@ -2452,6 +2506,7 @@ public class UserService {
     }
 
     @Scheduled(cron = "${refresh.user.silas.status.schedule}")
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void updateUserProfileSilasStatus() {
         logger.info("Starting user profile status update task");
         int pageSize = 500;
@@ -2473,10 +2528,12 @@ public class UserService {
         logger.info("User profile status update task completed");
     }
 
+    @Transactional
     public void refreshAndUpdatedUserProfilesStatus(boolean isEnabled, InvitationStatus invitationStatus, Collection<UserProfile> userProfiles) {
         userProfiles.forEach(up -> refreshAndUpdatedUserProfileStatus(isEnabled, invitationStatus, up));
     }
 
+    @Transactional
     public void refreshAndUpdatedUserProfileStatus(boolean isEnabled, InvitationStatus invitationStatus, UserProfile userProfile) {
         String invitationStatusStr = invitationStatus != null ? invitationStatus.name() : "";
         boolean noRoleAssigned = userProfile.getAppRoles() == null || userProfile.getAppRoles().isEmpty();

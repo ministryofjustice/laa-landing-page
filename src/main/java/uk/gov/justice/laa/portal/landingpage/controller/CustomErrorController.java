@@ -21,13 +21,16 @@ public class CustomErrorController implements ErrorController {
     /**
      * Handle all error requests and route to appropriate error page
      */
+    // Spring Boot ErrorController must accept all HTTP methods — errors can be dispatched from any original request
+    // method (GET, POST, PUT, DELETE, etc.). This handler only renders error views and performs no state changes,
+    // so there is no CSRF risk. nosemgrep: java.spring.security.unrestricted-request-mapping.unrestricted-request-mapping
     @RequestMapping("/error")
     public String handleError(HttpServletRequest request, Model model) {
         Object status = request.getAttribute(RequestDispatcher.ERROR_STATUS_CODE);
         Object exception = request.getAttribute(RequestDispatcher.ERROR_EXCEPTION);
         String requestUri = (String) request.getAttribute(RequestDispatcher.ERROR_REQUEST_URI);
-        
-        log.debug("Error occurred - Status: {}, URI: {}, Exception: {}", status, requestUri, 
+
+        log.debug("Error occurred - Status: {}, URI: {}, Exception: {}", status, requestUri,
                 exception != null ? exception.getClass().getSimpleName() : "None");
 
         if (status != null) {

@@ -9,7 +9,7 @@ const puppeteer = require('puppeteer');
   console.log('NAMESPACE:', process.env.NAMESPACE ? '[SET]' : '[MISSING]');
   console.log('ENTRA_USERNAME:', process.env.ENTRA_USERNAME ? '[SET]' : '[MISSING]');
   console.log('ENTRA_PASSWORD:', process.env.ENTRA_PASSWORD ? '[SET]' : '[MISSING]');
-  
+
   ['NAMESPACE', 'ENTRA_USERNAME', 'ENTRA_PASSWORD'].forEach((key) => {
     if (!process.env[key]) {
       console.error(`Missing required env var: ${key}`);
@@ -18,6 +18,12 @@ const puppeteer = require('puppeteer');
 
   if (!namespace || !username || !password) {
     console.error("One or more required environment variables (NAMESPACE, ENTRA_USERNAME, ENTRA_PASSWORD) are missing.");
+    process.exit(1);
+  }
+
+  // Validate namespace is a safe Kubernetes name (lowercase alphanumeric and hyphens only)
+  if (!/^[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/.test(namespace)) {
+    console.error(`Invalid NAMESPACE value: '${namespace}'. Must be a valid Kubernetes namespace (lowercase alphanumeric and hyphens).`);
     process.exit(1);
   }
 
@@ -34,6 +40,7 @@ const puppeteer = require('puppeteer');
   const page = await browser.newPage();
   try {
     console.log('Step 1: Navigating to login page...');
+    // nosemgrep: javascript.puppeteer.security.audit.puppeteer-goto-injection.puppeteer-goto-injection — namespace is a controlled CI environment variable, not end-user input; URL is constrained to a known domain
     await page.goto(`https://${namespace}.apps.live.cloud-platform.service.justice.gov.uk`, { waitUntil: 'networkidle2' });
 
     // === FIRST LOGIN ATTEMPT ===
@@ -59,7 +66,7 @@ const puppeteer = require('puppeteer');
     try {
         console.log('Step 7: Checking for "Stay signed in?" prompt...');
         await page.waitForSelector('#idBtn_Back', { timeout: 5000 });
-  
+
         console.log('"Stay signed in?" prompt detected. Clicking "No"...');
         await page.click('#idBtn_Back');
         await page.waitForNavigation({ waitUntil: 'networkidle2' });
@@ -112,13 +119,13 @@ const puppeteer = require('puppeteer');
     console.log('Accessibility results:');
     console.log(results);
 
-  
+
   } catch (error) {
     console.error('Login automation failed:', error);
     await page.screenshot({ path: 'login-failure.png' });
     process.exit(1);
-  }  
-  
+  }
+
 
   // Loop through URLs after login
   for (const url of urls) {

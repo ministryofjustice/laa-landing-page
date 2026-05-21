@@ -669,4 +669,5 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID> {
         """)
     long countActivationPendingExternalMultiFirmUsers();
 
+    List<EntraUser> findEntraUserByCcmsEbsUserIsTrue();
 }

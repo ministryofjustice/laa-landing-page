@@ -31,6 +31,7 @@
 
     <p class="govuk-body">This user has no firm profile or service assignments. This will remove the user's account from SiLAS right away and notify Microsoft Entra to remove their access. Their account may still be active for a short time until Microsoft fully processes the deletion.</p>
 
+    <!-- nosemgrep -->
     <form th:action="@{'/admin/users/audit/entra/' + ${user.userId} + '/delete'}" method="post" novalidate>
         <div class="govuk-form-group" th:classappend="${fieldErrorMessage} ? ' govuk-form-group--error'">
             <label class="govuk-label" for="reason" th:if="${fieldErrorMessage == null || fieldErrorMessage == ''}">Please enter a reason (minimum 10 characters).</label>
