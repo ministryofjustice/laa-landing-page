@@ -32,7 +32,7 @@
         If you cancel, any information you’ve entered will be lost.
     </p>
     <!-- nosemgrep -->
-    <form th:action="@{/admin/user/create/details}" method="post" style="display: inline;">
+    <form th:action="@{|/admin/${stageUrl}|}" method="get" style="display: inline;">
         <div class="moj-button-group">
             <button type="submit" class="govuk-button" data-module="govuk-button">
                 Continue creating a new user
