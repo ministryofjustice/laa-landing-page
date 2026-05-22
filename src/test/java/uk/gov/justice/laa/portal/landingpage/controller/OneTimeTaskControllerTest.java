@@ -56,14 +56,16 @@ class OneTimeTaskControllerTest {
     }
 
     @Test
-    void ccmsRoleSync_getRequest_returns405MethodNotAllowed() throws Exception {
+    void ccmsRoleSync_getRequest_isAllowed() throws Exception {
         mockMvc.perform(get("/admin/ccms-role-sync"))
-                .andExpect(status().isMethodNotAllowed());
+                .andExpect(status().is3xxRedirection())
+                .andExpect(result -> assertEquals("/admin/users", result.getResponse().getRedirectedUrl()));
     }
 
     @Test
-    void updateProfileStatus_getRequest_returns405MethodNotAllowed() throws Exception {
+    void updateProfileStatus_getRequest_isAllowed() throws Exception {
         mockMvc.perform(get("/admin/update-profile-status"))
-                .andExpect(status().isMethodNotAllowed());
+                .andExpect(status().is3xxRedirection())
+                .andExpect(result -> assertEquals("/admin/users", result.getResponse().getRedirectedUrl()));
     }
 }
