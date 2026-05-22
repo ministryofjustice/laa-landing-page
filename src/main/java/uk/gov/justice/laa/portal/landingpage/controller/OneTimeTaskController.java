@@ -2,7 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
@@ -22,7 +22,7 @@ public class OneTimeTaskController {
 
     private final UserService userService;
 
-    @PostMapping("/ccms-role-sync")
+    @GetMapping("/ccms-role-sync")
     @PreAuthorize("@accessControlService"
             + ".authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).TRIGGER_CCMS_ROLE_SYNC)")
     public RedirectView oneTimeTasks(RedirectAttributes redirectAttributes) {
@@ -33,7 +33,7 @@ public class OneTimeTaskController {
         return new RedirectView("/admin/users");
     }
 
-    @PostMapping("/update-profile-status")
+    @GetMapping("/update-profile-status")
     @PreAuthorize("@accessControlService"
             + ".authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).UPDATE_USER_PROFILE_SILAS_STATUS)")
     public RedirectView updateUserProfileSilasStatus(RedirectAttributes redirectAttributes) {
