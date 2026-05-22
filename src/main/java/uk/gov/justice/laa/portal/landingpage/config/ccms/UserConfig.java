@@ -4,7 +4,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import uk.gov.justice.laa.portal.landingpage.utils.MaskUtil;
 
 @Data
 @Slf4j
@@ -14,31 +13,16 @@ public class UserConfig {
     @NotNull
     private Api api;
 
-    @Override
-    public String toString() {
-        return "UserConfig{" + "management=" + management.toString() + ", api=" + api.toString() + '}';
-    }
-
     @Data
     public static class Management {
         @NotNull
         private ApiDetails api;
-
-        @Override
-        public String toString() {
-            return "Management{" + "api=" + api.toString() + '}';
-        }
     }
 
     @Data
     public static class Api {
         @NotNull
         private Sqs sqs;
-
-        @Override
-        public String toString() {
-            return "Api{" + "sqs=" + sqs.toString() + '}';
-        }
     }
 
     @Data
@@ -91,11 +75,6 @@ public class UserConfig {
 
             return String.format("https://sqs.%s.amazonaws.com/%s/%s", region, accountId, queueName);
         }
-
-        @Override
-        public String toString() {
-            return "Sqs{" + "arn='" + MaskUtil.mask(arn) + '\'' + '}';
-        }
     }
 
     @Data
@@ -104,10 +83,6 @@ public class UserConfig {
         private String baseUrl;
         @NotBlank
         private String key;
-
-        @Override
-        public String toString() {
-            return "ApiDetails{" + "baseUrl='" + MaskUtil.mask(baseUrl) + '\'' + ", key='" + MaskUtil.mask(key) + '\'' + '}';
-        }
     }
+
 }
