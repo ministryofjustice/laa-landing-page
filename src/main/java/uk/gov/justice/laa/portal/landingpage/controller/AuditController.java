@@ -381,8 +381,14 @@ public class AuditController {
     public ResponseEntity<byte[]> downloadAuditCsv(@ModelAttribute AuditTableSearchCriteria criteria) {
 
         if (criteria.getSelectedFirmId() == null && criteria.getSelectedUserType() != UserTypeForm.INTERNAL) {
-            log.warn("Invalid search criteria provided for CSV export - selectedFirmId: {}, selectedUserType: {}",
-                    criteria.getSelectedFirmId(), criteria.getSelectedUserType());
+            log.warn("Invalid criteria provided for CSV export - firm ID must always be provided when external user type is selected. selectedUserType: {}",
+                    criteria.getSelectedUserType());
+            throw new RuntimeException("Invalid Search criteria provided");
+        }
+
+        if (criteria.getSelectedFirmId() != null && criteria.getSelectedUserType() == UserTypeForm.INTERNAL) {
+            log.warn("Invalid criteria provided for CSV export - firm ID should not be provided when internal user type is selected. selectedFirmId: {}",
+                    criteria.getSelectedFirmId());
             throw new RuntimeException("Invalid Search criteria provided");
         }
 
