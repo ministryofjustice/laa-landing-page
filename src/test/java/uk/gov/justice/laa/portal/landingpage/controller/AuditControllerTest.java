@@ -1246,7 +1246,7 @@ class AuditControllerTest {
     }
 
     @Test
-    void downloadInternalUserWithFirmSelectionAuditCsv_shouldReturnSuccess() {
+    void downloadInternalUserWithFirmSelectionAuditCsv_shouldReturnException() {
 
         UUID selectedFirmId = UUID.randomUUID();
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
@@ -1256,18 +1256,29 @@ class AuditControllerTest {
         criteria.setSelectedUserType(UserTypeForm.INTERNAL.name());
         criteria.setSelectedFirmId(selectedFirmId.toString());
 
-        List<AuditUserDto> page1Users = Collections.emptyList();
+        assertThatThrownBy(() -> auditController.downloadAuditCsv(criteria))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Invalid Search criteria provided");
+    }
 
+    @Test
+    void downloadAuditCsvWithNoSearchText_shouldSucceedWhenFirmSelected() {
 
-        PaginatedAuditUsers page1 = PaginatedAuditUsers.builder()
-                .users(page1Users)
+        UUID selectedFirmId = UUID.randomUUID();
+        AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
+        // search is intentionally null – firm is selected, no text filter entered
+        criteria.setSort("name");
+        criteria.setDirection("asc");
+        criteria.setSelectedFirmId(selectedFirmId.toString());
+
+        List<AuditUserDto> users = List.of(AuditUserDto.builder().name("P1").email("p1@example.com").build());
+        PaginatedAuditUsers page = PaginatedAuditUsers.builder()
+                .users(users)
                 .currentPage(1)
                 .pageSize(500)
                 .build();
 
-        when(userService.getAuditUsers(
-                eq("TestSearch"), any(), any(), any(), any(), eq(1), eq(500), eq("name"), eq("asc"), eq(true), any(), any())).thenReturn(page1);
-
+        when(userService.getAuditUsers(eq(""), any(), any(), any(), any(), eq(1), eq(500), eq("name"), eq("asc"), eq(true), any(), any())).thenReturn(page);
 
         byte[] csvBytes = "Name,Email\nP1,p1@example.com\n".getBytes(java.nio.charset.StandardCharsets.UTF_8);
         AuditExportService.AuditCsvExport export = new AuditExportService.AuditCsvExport("audit.csv", csvBytes);
@@ -1277,14 +1288,6 @@ class AuditControllerTest {
 
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
         assertThat(response.getBody()).isEqualTo(csvBytes);
-
-        HttpHeaders headers = response.getHeaders();
-        assertThat(headers.getContentType()).isEqualTo(MediaType.parseMediaType("text/csv"));
-        assertThat(headers.getContentDisposition().getType()).isEqualTo("attachment");
-        assertThat(headers.getContentDisposition().getFilename()).isEqualTo("audit.csv");
-
-        verify(userService, times(1)).getAuditUsers("TestSearch", selectedFirmId,
-                null, null, UserTypeForm.INTERNAL, 1, 500, "name", "asc", true, null, null);
         verify(auditExportService, times(1)).downloadAuditCsv(any(), any(), any());
     }
 
@@ -1296,6 +1299,34 @@ class AuditControllerTest {
         criteria.setSort("name");
         criteria.setDirection("asc");
         criteria.setSelectedUserType(UserTypeForm.EXTERNAL.name());
+
+        assertThatThrownBy(() -> auditController.downloadAuditCsv(criteria))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Invalid Search criteria provided");
+    }
+
+    @Test
+    void downloadAuditCsvWithNoSearchTextAndNoFirmSelection_shouldReturnException() {
+
+        AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
+        // No search text, no firm selected, no INTERNAL user type
+        criteria.setSort("name");
+        criteria.setDirection("asc");
+
+        assertThatThrownBy(() -> auditController.downloadAuditCsv(criteria))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Invalid Search criteria provided");
+    }
+
+    @Test
+    void downloadInternalUserAuditCsvWithFirmSelected_shouldReturnException() {
+
+        UUID selectedFirmId = UUID.randomUUID();
+        AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
+        criteria.setSort("name");
+        criteria.setDirection("asc");
+        criteria.setSelectedUserType(UserTypeForm.INTERNAL.name());
+        criteria.setSelectedFirmId(selectedFirmId.toString());
 
         assertThatThrownBy(() -> auditController.downloadAuditCsv(criteria))
                 .isInstanceOf(RuntimeException.class)
