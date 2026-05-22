@@ -378,11 +378,12 @@ public class AuditController {
         }
 
         EntraUser current = loginService.getCurrentEntraUser(authentication);
+        UUID currentEntraOidUuid = UUID.fromString(current.getEntraOid());
         String deleteReasonLabel = matchedReason.get().getLabel();
         try {
             DeletedUser deletedUser = userService.deleteEntraUserWithoutProfile(id, deleteReasonId, current.getId());
             DeleteUserSuccessAuditEvent deleteUserAuditEvent = new DeleteUserSuccessAuditEvent(
-                    deletedUser.getDeleteReasonLabel(), current.getId(), deletedUser);
+                    deletedUser.getDeleteReasonLabel(), currentEntraOidUuid, deletedUser);
             eventService.logEvent(deleteUserAuditEvent);
         } catch (IllegalArgumentException ex) {
             model.addAttribute("user", userDetail);
@@ -394,7 +395,7 @@ public class AuditController {
         } catch (RuntimeException ex) {
             log.error("Failed to delete user without profile {}: {}", id, ex.getMessage(), ex);
             DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(id, deleteReasonLabel,
-                    current.getId(),
+                    currentEntraOidUuid,
                     ex.getMessage());
             eventService.logEvent(deleteUserAttemptAuditEvent);
             model.addAttribute("user", userDetail);

@@ -492,6 +492,7 @@ public class UserController {
         }
 
         EntraUser current = loginService.getCurrentEntraUser(authentication);
+        UUID currentEntraOidUuid = UUID.fromString(current.getEntraOid());
         String deleteReasonLabel = matchedReason.get().getLabel();
         try {
             DeletedUser deletedUser = userService.deleteExternalUser(id, deleteReasonId, current.getEntraOid());
@@ -499,14 +500,14 @@ public class UserController {
             if (deletedUser.isEncounteredTsErrors()) {
                 DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(
                         optionalUser.get().getEntraUser().getId(),
-                        deleteReasonLabel, current.getId(), "The user account has been deleted but there were some issues during the deletion process. Please contact support.");
+                        deleteReasonLabel, currentEntraOidUuid, "The user account has been deleted but there were some issues during the deletion process. Please contact support.");
                 eventService.logEvent(deleteUserAttemptAuditEvent);
                 model.addAttribute("errorMessage", "An unexpected error occurred while deleting user. Please contact support.");
                 return "errors/error-generic";
             }
 
             DeleteUserSuccessAuditEvent deleteUserAuditEvent = new DeleteUserSuccessAuditEvent(
-                    deletedUser.getDeleteReasonLabel(), current.getId(), deletedUser);
+                    deletedUser.getDeleteReasonLabel(), currentEntraOidUuid, deletedUser);
             eventService.logEvent(deleteUserAuditEvent);
         } catch (IllegalArgumentException ex) {
             model.addAttribute("user", optionalUser.get());
@@ -518,7 +519,7 @@ public class UserController {
             log.error("Failed to delete external user {}: {}", id, ex.getMessage(), ex);
             DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(
                     optionalUser.get().getEntraUser().getId(),
-                    deleteReasonLabel, current.getId(), ex.getMessage());
+                    deleteReasonLabel, currentEntraOidUuid, ex.getMessage());
             eventService.logEvent(deleteUserAttemptAuditEvent);
             model.addAttribute("user", optionalUser.get());
             model.addAttribute("globalErrorMessage", "User delete failed, please try again later");
