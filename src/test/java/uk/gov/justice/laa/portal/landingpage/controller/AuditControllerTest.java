@@ -1331,4 +1331,17 @@ class AuditControllerTest {
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Invalid Search criteria provided");
     }
+
+    @Test
+    void downloadAuditCsvWithNoSearchTextAndNoFirmSelection_shouldReturnException() {
+
+        AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
+        // No search text, no firm selected, no INTERNAL user type
+        criteria.setSort("name");
+        criteria.setDirection("asc");
+
+        assertThatThrownBy(() -> auditController.downloadAuditCsv(criteria))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Invalid Search criteria provided");
+    }
 }
