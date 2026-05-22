@@ -299,9 +299,10 @@ public class UserService {
 
         for (String ccmsAppEntraOid : allPuiAppOids) {
             // Try to send role change notification with retry logic before saving
-            ccmsSyncResult = ccmsSyncResult && roleChangeNotificationService.sendMessage(userProfile,
+            boolean currentSyncResult = roleChangeNotificationService.sendMessage(userProfile,
                     ccmsAppEntraOid, newPuiRoles.getOrDefault(ccmsAppEntraOid, Collections.emptySet()),
                     oldPuiRoles.getOrDefault(ccmsAppEntraOid, Collections.emptySet()));
+            ccmsSyncResult = ccmsSyncResult && currentSyncResult;
             notificationSuccess = ccmsSyncResult;
         }
 
@@ -1029,8 +1030,9 @@ public class UserService {
         boolean ccmsSyncResult = true;
 
         for (Map.Entry<String, Set<String>> roles : newPuiRoles.entrySet()) {
-            ccmsSyncResult = ccmsSyncResult && roleChangeNotificationService.sendMessage(userProfile, roles.getKey(),
+            boolean currentSyncResult = roleChangeNotificationService.sendMessage(userProfile, roles.getKey(),
                     roles.getValue(), Collections.emptySet());
+            ccmsSyncResult = ccmsSyncResult && currentSyncResult;
             notificationSuccess = ccmsSyncResult;
         }
 
