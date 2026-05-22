@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,8 +24,12 @@ public class CustomErrorController implements ErrorController {
      */
     // Spring Boot ErrorController must accept all HTTP methods — errors can be dispatched from any original request
     // method (GET, POST, PUT, DELETE, etc.). This handler only renders error views and performs no state changes,
-    // so there is no CSRF risk. nosemgrep: java.spring.security.unrestricted-request-mapping.unrestricted-request-mapping
-    @RequestMapping("/error")
+    // so there is no CSRF risk.
+    @RequestMapping(value = "/error", method = {
+        RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT,
+        RequestMethod.DELETE, RequestMethod.PATCH, RequestMethod.HEAD,
+        RequestMethod.OPTIONS, RequestMethod.TRACE
+    })
     public String handleError(HttpServletRequest request, Model model) {
         Object status = request.getAttribute(RequestDispatcher.ERROR_STATUS_CODE);
         Object exception = request.getAttribute(RequestDispatcher.ERROR_EXCEPTION);
