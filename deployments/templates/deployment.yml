@@ -221,6 +221,8 @@ spec:
               value: "${CCMS_UDA_API_BASE_URL}"
             - name: CCMS_UDA_API_KEY
               value: "${CCMS_UDA_API_KEY}"
+            - name: CIVIL_APPLY_APP_ENTRA_OBJECT_ID
+              value: "${CIVIL_APPLY_APP_ENTRA_OBJECT_ID}"
             - name: CCMS_APP_TWO_ENTRA_OBJECT_ID
               value: "${CCMS_APP_TWO_ENTRA_OBJECT_ID}"
             - name: CCMS_APP_TWO_USER_MANAGEMENT_API_BASE_URL
