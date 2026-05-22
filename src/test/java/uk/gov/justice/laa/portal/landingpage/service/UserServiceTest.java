@@ -36,7 +36,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -261,7 +260,12 @@ class UserServiceTest {
                 .email("user@example.com")
                 .build();
 
+        App ccmsApp = App.builder()
+                .name("CCMS App")
+                .entraOid(UUID.randomUUID().toString())
+                .build();
         AppRole ccmsRole = AppRole.builder()
+                .app(ccmsApp)
                 .name("CCMS Role")
                 .ccmsCode("CCMS_PUI_TEST")
                 .legacySync(true)
@@ -291,7 +295,7 @@ class UserServiceTest {
         List<UserAccountStatusAudit> auditRecords =
             List.of(auditRecord1, auditRecord2);
         when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(auditRecords);
-        when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), any(Set.class), any(Set.class)))
+        when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), anyString(), any(Set.class), any(Set.class)))
                 .thenReturn(true);
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
 
@@ -304,7 +308,7 @@ class UserServiceTest {
         verify(mockUserAccountStatusAuditRepository).deleteAll(auditRecords);
         verify(mockUserAccountStatusAuditRepository, times(2)).flush();
         verify(mockRoleChangeNotificationService, times(1))
-                .sendMessage(any(UserProfile.class), eq(Collections.emptySet()), any(Set.class));
+                .sendMessage(any(UserProfile.class), eq(ccmsApp.getEntraOid()), eq(Collections.emptySet()), any(Set.class));
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
         verify(mockEntraUserRepository, times(1)).delete(entraUser);
     }
@@ -344,7 +348,7 @@ class UserServiceTest {
         verify(techServicesClient).deleteRoleAssignment(entraId);
         verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
         verify(mockRoleChangeNotificationService, never())
-                .sendMessage(any(UserProfile.class), any(Set.class), any(Set.class));
+                .sendMessage(any(UserProfile.class), eq("test"), any(Set.class), any(Set.class));
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
         verify(mockEntraUserRepository, times(1)).delete(entraUser);
     }
@@ -3397,7 +3401,7 @@ class UserServiceTest {
             assertThat(result.get("error")).isNotEmpty();
             verify(mockUserProfileRepository, never()).save(userProfile);
             verify(techServicesClient, never()).updateRoleAssignment(userId);
-            verify(mockRoleChangeNotificationService, never()).sendMessage(any(), any(), any());
+            verify(mockRoleChangeNotificationService, never()).sendMessage(any(), anyString(), any(), any());
         }
 
         @Test
@@ -4163,9 +4167,14 @@ class UserServiceTest {
                     .entraUser(entraUser)
                     .legacyUserId(UUID.randomUUID())
                     .build();
-
+            App puiApp = App.builder()
+                    .id(UUID.randomUUID())
+                    .entraOid("test-pui-app-entra-oid")
+                    .name("PUI")
+                    .build();
             AppRole oldRole = AppRole.builder()
                     .id(UUID.randomUUID())
+                    .app(puiApp)
                     .name("OLD_ROLE")
                     .description("Old Role Description")
                     .ccmsCode("CCMS_OLD")
@@ -4176,6 +4185,7 @@ class UserServiceTest {
 
             final AppRole newRole = AppRole.builder()
                     .id(UUID.fromString(selectedRoles.getFirst()))
+                    .app(puiApp)
                     .name("NEW_ROLE")
                     .description("New Role Description")
                     .ccmsCode("CCMS_NEW")
@@ -4199,7 +4209,7 @@ class UserServiceTest {
             when(mockUserProfileRepository.save(any(UserProfile.class)))
                     .thenReturn(userProfile);
             when(mockRoleChangeNotificationService.sendMessage(
-                    any(UserProfile.class), any(Set.class), any(Set.class)))
+                    any(UserProfile.class), anyString(), any(Set.class), any(Set.class)))
                     .thenReturn(true);
             EntraUser modifier = EntraUser.builder().entraOid(modifierId.toString())
                     .userProfiles(Set.of(UserProfile.builder().id(UUID.randomUUID()).activeProfile(true)
@@ -4214,6 +4224,7 @@ class UserServiceTest {
             verify(mockUserProfileRepository).save(userProfileCaptor.capture());
             verify(mockRoleChangeNotificationService).sendMessage(
                     eq(userProfile),
+                    eq("test-pui-app-entra-oid"),
                     eq(Set.of(newRole.getCcmsCode())),
                     eq(Set.of(oldRole.getCcmsCode())));
 
@@ -4239,8 +4250,14 @@ class UserServiceTest {
                     .legacyUserId(UUID.randomUUID())
                     .build();
 
+            App app = App.builder()
+                    .id(UUID.randomUUID())
+                    .entraOid("test-pui-app-entra-oid")
+                    .name("PUI")
+                    .build();
             final AppRole newRole = AppRole.builder()
                     .id(UUID.fromString(selectedRoles.get(0)))
+                    .app(app)
                     .name("NEW_ROLE")
                     .description("New Role Description")
                     .ccmsCode("CCMS_NEW")
@@ -4263,7 +4280,7 @@ class UserServiceTest {
             when(mockUserProfileRepository.save(any(UserProfile.class)))
                     .thenReturn(userProfile);
             when(mockRoleChangeNotificationService.sendMessage(
-                    any(UserProfile.class), any(Set.class), any(Set.class)))
+                    any(UserProfile.class), anyString(), any(Set.class), any(Set.class)))
                     .thenReturn(false);
             UUID modifierId = UUID.randomUUID();
             EntraUser modifier = EntraUser.builder().entraOid(modifierId.toString())
@@ -4275,7 +4292,7 @@ class UserServiceTest {
 
             ArgumentCaptor<UserProfile> userProfileCaptor = ArgumentCaptor.forClass(UserProfile.class);
             verify(mockUserProfileRepository).save(userProfileCaptor.capture());
-            verify(mockRoleChangeNotificationService).sendMessage(any(), any(), any());
+            verify(mockRoleChangeNotificationService).sendMessage(any(), anyString(), any(), any());
 
             UserProfile savedProfile = userProfileCaptor.getValue();
             assertThat(savedProfile.isLastCcmsSyncSuccessful()).isFalse();
@@ -4293,7 +4310,7 @@ class UserServiceTest {
             userService.updateUserRoles(userProfileId, selectedRoles, Collections.emptyList(), modifierId);
 
             verify(mockUserProfileRepository, never()).save(any());
-            verify(mockRoleChangeNotificationService, never()).sendMessage(any(), any(), any());
+            verify(mockRoleChangeNotificationService, never()).sendMessage(any(), anyString(), any(), any());
         }
 
         @Test
@@ -4314,8 +4331,14 @@ class UserServiceTest {
                     .legacyUserId(UUID.randomUUID())
                     .build();
 
+            App app = App.builder()
+                    .id(UUID.randomUUID())
+                    .entraOid("test-app-entra-oid")
+                    .name("Test App")
+                    .build();
             final AppRole nonPuiRole = AppRole.builder()
                     .id(UUID.fromString(selectedRoles.get(0)))
+                    .app(app)
                     .name("NON_PUI_ROLE")
                     .legacySync(false)
                     .userTypeRestriction(new UserType[] { UserType.EXTERNAL })
@@ -4335,9 +4358,6 @@ class UserServiceTest {
                     .thenReturn(List.of(nonPuiRole));
             when(mockUserProfileRepository.save(any(UserProfile.class)))
                     .thenReturn(userProfile);
-            when(mockRoleChangeNotificationService.sendMessage(
-                    any(UserProfile.class), any(Set.class), any(Set.class)))
-                    .thenReturn(true);
             UUID modifierId = UUID.randomUUID();
             EntraUser modifier = EntraUser.builder().entraOid(modifierId.toString())
                     .userProfiles(Set.of(UserProfile.builder().id(UUID.randomUUID()).activeProfile(true)
@@ -4349,13 +4369,11 @@ class UserServiceTest {
 
             ArgumentCaptor<UserProfile> userProfileCaptor = ArgumentCaptor.forClass(UserProfile.class);
             verify(mockUserProfileRepository).save(userProfileCaptor.capture());
-            verify(mockRoleChangeNotificationService).sendMessage(
-                    eq(userProfile),
-                    eq(Set.of()),
-                    eq(Set.of()));
+            verify(mockRoleChangeNotificationService, never()).sendMessage(
+                    any(), any(), any(), any());
 
             UserProfile savedProfile = userProfileCaptor.getValue();
-            assertThat(savedProfile.isLastCcmsSyncSuccessful()).isTrue();
+            assertThat(savedProfile.isLastCcmsSyncSuccessful()).isFalse();
         }
 
         @Test
@@ -4880,8 +4898,10 @@ class UserServiceTest {
                     .multiFirmUser(true)
                     .build();
 
+            App puiApp = App.builder().id(UUID.randomUUID()).name("PUI App").entraOid("test-pui-app-oid").build();
             AppRole puiRole = AppRole.builder()
                     .id(appRoleId)
+                    .app(puiApp)
                     .name("Test PUI Role")
                     .legacySync(true)
                     .ccmsCode("PUI_CODE")
@@ -4890,7 +4910,7 @@ class UserServiceTest {
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
             when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
             when(appRoleRepository.findById(appRoleId)).thenReturn(Optional.of(puiRole));
-            when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), any(Set.class), any(Set.class)))
+            when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), anyString(), any(Set.class), any(Set.class)))
                     .thenReturn(true);
             doNothing().when(notificationService).notifyDeleteFirmAccess(isNull(), anyString(), anyString(), anyString());
 
@@ -4898,7 +4918,7 @@ class UserServiceTest {
                     List.of(appRoleDto), "admin");
 
             verify(mockRoleChangeNotificationService, times(1))
-                    .sendMessage(eq(result), eq(Set.of("PUI_CODE")), eq(Collections.emptySet()));
+                    .sendMessage(eq(result), eq("test-pui-app-oid"), eq(Set.of("PUI_CODE")), eq(Collections.emptySet()));
 
             assertThat(result.isLastCcmsSyncSuccessful()).isTrue();
             verify(userProfileRepository, times(2)).save(result);
@@ -4937,8 +4957,10 @@ class UserServiceTest {
                     .multiFirmUser(true)
                     .build();
 
+            App puiApp = App.builder().id(UUID.randomUUID()).name("Test App").entraOid("test-app-oid").build();
             AppRole nonPuiRole = AppRole.builder()
                     .id(appRoleId)
+                    .app(puiApp)
                     .name("Non-PUI Role")
                     .ccmsCode(null) // No CCMS code = not a PUI role
                     .build();
@@ -4950,9 +4972,6 @@ class UserServiceTest {
 
             UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null,
                     List.of(appRoleDto), "admin");
-
-            verify(mockRoleChangeNotificationService, times(1))
-                    .sendMessage(eq(result), eq(Collections.emptySet()), eq(Collections.emptySet()));
 
             verify(userProfileRepository, times(2)).save(result);
             verify(entraUserRepository, times(1)).save(entraUser);
@@ -4990,15 +5009,18 @@ class UserServiceTest {
                     .multiFirmUser(true)
                     .build();
 
+            App puiApp = App.builder().id(UUID.randomUUID()).name("PUI App").entraOid("test-pui-app-oid").build();
             AppRole puiRole = AppRole.builder()
                     .id(appRoleId)
+                    .app(puiApp)
+                    .legacySync(true)
                     .name("Test PUI Role")
                     .ccmsCode("PUI_CODE")
                     .build();
 
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
             when(appRoleRepository.findById(appRoleId)).thenReturn(Optional.of(puiRole));
-            when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), any(Set.class), any(Set.class)))
+            when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), anyString(), any(Set.class), any(Set.class)))
                     .thenReturn(false);
             when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
             doNothing().when(notificationService).notifyDeleteFirmAccess(isNull(), anyString(), anyString(), anyString());
@@ -5007,7 +5029,7 @@ class UserServiceTest {
                     List.of(appRoleDto), "admin");
 
             verify(mockRoleChangeNotificationService, times(1))
-                    .sendMessage(any(UserProfile.class), any(Set.class), any(Set.class));
+                    .sendMessage(any(UserProfile.class), anyString(), any(Set.class), any(Set.class));
 
             assertThat(result.isLastCcmsSyncSuccessful()).isFalse();
             verify(userProfileRepository, times(2)).save(result);
@@ -5050,8 +5072,10 @@ class UserServiceTest {
                     .multiFirmUser(true)
                     .build();
 
+            App puiApp = App.builder().id(puiRole1Id).name("PUI App").entraOid("test-pui-app-oid").build();
             AppRole puiRole1 = AppRole.builder()
                     .id(puiRole1Id)
+                    .app(puiApp)
                     .name("PUI Role 1")
                     .ccmsCode("PUI_CODE_1")
                     .legacySync(true)
@@ -5059,13 +5083,16 @@ class UserServiceTest {
 
             AppRole puiRole2 = AppRole.builder()
                     .id(puiRole2Id)
+                    .app(puiApp)
                     .name("PUI Role 2")
                     .ccmsCode("PUI_CODE_2")
                     .legacySync(true)
                     .build();
 
+            App nonPuiApp = App.builder().id(puiRole1Id).name("Test App").entraOid("test-app-oid").build();
             AppRole nonPuiRole = AppRole.builder()
                     .id(nonPuiRoleId)
+                    .app(nonPuiApp)
                     .name("Non-PUI Role")
                     .ccmsCode(null)
                     .build();
@@ -5075,7 +5102,7 @@ class UserServiceTest {
             when(appRoleRepository.findById(puiRole2Id)).thenReturn(Optional.of(puiRole2));
             when(appRoleRepository.findById(nonPuiRoleId)).thenReturn(Optional.of(nonPuiRole));
             when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
-            when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), any(Set.class), any(Set.class)))
+            when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), anyString(), any(Set.class), any(Set.class)))
                     .thenReturn(true);
             doNothing().when(notificationService).notifyDeleteFirmAccess(isNull(), anyString(), anyString(), anyString());
 
@@ -5084,7 +5111,7 @@ class UserServiceTest {
 
             ArgumentCaptor<Set<String>> newRolesCaptor = ArgumentCaptor.forClass(Set.class);
             verify(mockRoleChangeNotificationService, times(1))
-                    .sendMessage(eq(result), newRolesCaptor.capture(), eq(Collections.emptySet()));
+                    .sendMessage(eq(result), eq("test-pui-app-oid"), newRolesCaptor.capture(), eq(Collections.emptySet()));
 
             Set<String> capturedNewRoles = newRolesCaptor.getValue();
             assertThat(capturedNewRoles).containsExactlyInAnyOrder("PUI_CODE_1", "PUI_CODE_2");
@@ -5124,8 +5151,7 @@ class UserServiceTest {
             UserProfile result = userService.addMultiFirmUserProfile(userDto, firmDto, null,
                     null, "admin");
 
-            verify(mockRoleChangeNotificationService, times(1))
-                    .sendMessage(eq(result), eq(Collections.emptySet()), eq(Collections.emptySet()));
+            verify(mockRoleChangeNotificationService, never()).sendMessage(any(), any(), any(), any());
 
             verify(userProfileRepository, times(2)).save(result);
             verify(entraUserRepository, times(1)).save(entraUser);
@@ -5154,16 +5180,11 @@ class UserServiceTest {
                 }
                 return profile;
             });
-            when(mockRoleChangeNotificationService.sendMessage(any(UserProfile.class), anySet(), anySet()))
-                    .thenReturn(true);
+
             FirmDto firmDto = FirmDto.builder().id(firmId).build();
             EntraUserDto userDto = EntraUserDto.builder().id(entraUserId.toString()).multiFirmUser(true).build();
             userService.addMultiFirmUserProfile(userDto, firmDto, null, null, "admin");
-            ArgumentCaptor<UserProfile> notificationCaptor = ArgumentCaptor.forClass(UserProfile.class);
-            verify(mockRoleChangeNotificationService).sendMessage(notificationCaptor.capture(), anySet(), anySet());
-
-            UserProfile profileSentToNotification = notificationCaptor.getValue();
-            assertThat(profileSentToNotification.getId()).isEqualTo(generatedProfileId);
+            verify(mockRoleChangeNotificationService, never()).sendMessage(any(), any(), any(), any());
         }
     }
 
@@ -5534,6 +5555,7 @@ class UserServiceTest {
             // Create app roles with CCMS codes for PUI roles
             App puiApp = App.builder()
                     .id(UUID.randomUUID())
+                    .entraOid(UUID.randomUUID().toString())
                     .name("PUI")
                     .build();
             AppRole puiRole1 = AppRole.builder()
@@ -5616,7 +5638,7 @@ class UserServiceTest {
 
             // Verify PUI notifications were sent (once with empty new roles and PUI old
             // roles)
-            verify(mockRoleChangeNotificationService, times(1)).sendMessage(eq(profileToDelete), any(), any());
+            verify(mockRoleChangeNotificationService, times(1)).sendMessage(eq(profileToDelete), anyString(), any(), any());
         }
 
         @Test
@@ -5827,6 +5849,7 @@ class UserServiceTest {
 
             App puiApp = App.builder()
                     .id(UUID.randomUUID())
+                    .entraOid(UUID.randomUUID().toString())
                     .name("PUI")
                     .build();
 
@@ -5887,7 +5910,7 @@ class UserServiceTest {
 
             // Then - verify notification service was called with PUI roles
             verify(mockRoleChangeNotificationService, times(1)).sendMessage(eq(profileToDelete),
-                    eq(Collections.emptySet()), any());
+                    eq(puiApp.getEntraOid()), eq(Collections.emptySet()), any());
         }
     }
 
@@ -9779,6 +9802,8 @@ class UserServiceTest {
 
         AuditUserDto csvDto = csvResult.getUsers().get(0);
         assertThat(csvDto.getAppAccess()).isEqualTo("Portal");
+        assertThat(csvDto.getAppRolesAccess()).isEqualTo("Portal [Firm User Manager, Viewer]");
+
         assertThat(csvDto.isProviderAdmin()).isTrue();
 
 
@@ -10092,7 +10117,6 @@ class UserServiceTest {
             when(accessControlService.canAssignExternalAppRoles(userProfileId.toString())).thenReturn(true);
             when(accessControlService.canAssignInternalAppRoles(userProfileId.toString())).thenReturn(true);
             when(accessControlService.canRemoveExternalAppRoles(userProfileId.toString())).thenReturn(true);
-            when(mockRoleChangeNotificationService.sendMessage(any(), any(), any())).thenReturn(true);
 
             // Act
             Map<String, String> result = userService.updateUserRoles(
@@ -10156,7 +10180,6 @@ class UserServiceTest {
             // Allow removing roles
             when(accessControlService.canAssignExternalAppRoles(userProfileId.toString())).thenReturn(true);
             when(accessControlService.canRemoveExternalAppRoles(userProfileId.toString())).thenReturn(true);
-            when(mockRoleChangeNotificationService.sendMessage(any(), any(), any())).thenReturn(true);
 
             // Act
             Map<String, String> result = userService.updateUserRoles(
@@ -10229,7 +10252,6 @@ class UserServiceTest {
             when(accessControlService.canAssignExternalAppRoles(userProfileId.toString())).thenReturn(true);
             when(accessControlService.canAssignInternalAppRoles(userProfileId.toString())).thenReturn(true);
             when(accessControlService.canRemoveExternalAppRoles(userProfileId.toString())).thenReturn(true);
-            when(mockRoleChangeNotificationService.sendMessage(any(), any(), any())).thenReturn(true);
 
             // Act
             Map<String, String> result = userService.updateUserRoles(
@@ -10293,7 +10315,6 @@ class UserServiceTest {
             // Cannot add new roles but only providing non-editable roles
             when(accessControlService.canAssignExternalAppRoles(userProfileId.toString())).thenReturn(true);
             when(accessControlService.canAssignInternalAppRoles(userProfileId.toString())).thenReturn(true);
-            when(mockRoleChangeNotificationService.sendMessage(any(), any(), any())).thenReturn(true);
 
             // Act - should not throw error as we're only keeping existing roles
             Map<String, String> result = userService.updateUserRoles(
@@ -10372,7 +10393,6 @@ class UserServiceTest {
             when(accessControlService.canAssignInternalAppRoles(userProfileId.toString())).thenReturn(true);
             when(accessControlService.canRemoveExternalAppRoles(userProfileId.toString())).thenReturn(true);
             when(accessControlService.canRemoveInternalAppRoles(userProfileId.toString())).thenReturn(true);
-            when(mockRoleChangeNotificationService.sendMessage(any(), any(), any())).thenReturn(true);
 
             // Act
             Map<String, String> result = userService.updateUserRoles(

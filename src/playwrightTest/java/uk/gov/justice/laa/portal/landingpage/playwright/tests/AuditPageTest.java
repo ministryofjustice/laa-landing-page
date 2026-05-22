@@ -1,16 +1,17 @@
 package uk.gov.justice.laa.portal.landingpage.playwright.tests;
 
+import java.util.List;
+import java.util.stream.Stream;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+
 import uk.gov.justice.laa.portal.landingpage.playwright.common.BaseFrontEndTest;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.TestUser;
 import uk.gov.justice.laa.portal.landingpage.playwright.pages.AuditPage;
-
-import java.util.List;
-import java.util.stream.Stream;
 
 public class AuditPageTest extends BaseFrontEndTest {
 
@@ -122,5 +123,69 @@ public class AuditPageTest extends BaseFrontEndTest {
                 TestUser.NO_ROLES
         );
     }
-}
 
+    // -----------------------------------------------------------------------
+    // CSV Export tests
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Export CSV button is visible and enabled above the audit table")
+    void exportCsvButton_isVisibleAndEnabled() {
+        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+        auditPage.assertExportCsvButtonVisible();
+        auditPage.assertExportCsvButtonNotDisabled();
+    }
+
+    @Test
+    @DisplayName("Export CSV button is above the audit table")
+    void exportCsvButton_isAboveAuditTable() {
+        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+        double buttonY = auditPage.getExportCsvButtonY();
+        double tableY = auditPage.getAuditTableY();
+        Assertions.assertTrue(
+                buttonY < tableY,
+                "Export CSV button should appear above the audit table"
+        );
+    }
+
+    @Test
+    @DisplayName("CSV error banner is not shown on initial page load")
+    void csvErrorBanner_isHiddenOnLoad() {
+        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+        auditPage.assertCsvErrorBannerHidden();
+    }
+
+    @Test
+    @DisplayName("Clicking Export CSV without a firm filter shows the error banner")
+    void exportCsv_withoutFirm_showsErrorBanner() {
+        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+        auditPage.clickExportCsv();
+        auditPage.assertCsvErrorBannerVisible();
+    }
+
+    @Test
+    @DisplayName("Error banner shows exact required message when no firm is selected")
+    void exportCsv_withoutFirm_errorBannerHasCorrectText() {
+        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+        auditPage.clickExportCsv();
+        auditPage.assertCsvErrorBannerContainsText("Filter results to a single firm to enable CSV export.");
+    }
+
+    @Test
+    @DisplayName("Selecting a firm in the autocomplete without submitting still shows the CSV error banner")
+    void exportCsv_withFirmSelectedButNotApplied_showsErrorBanner() {
+        // data-firm-selected is rendered server-side; filling the autocomplete client-side
+        // does not reload the page, so the button still considers no firm selected.
+        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+        auditPage.searchAndSelectFirm("90001");
+        auditPage.clickExportCsv();
+        auditPage.assertCsvErrorBannerVisible();
+    }
+
+    @Test
+    @DisplayName("'View all deleted users' link is visible above the audit table")
+    void viewDeletedUsersLink_isVisible() {
+        AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
+        auditPage.assertViewDeletedUsersLinkVisible();
+    }
+}

@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -703,6 +704,7 @@ public class UserController {
 
         // Store the model in session to handle validation errors later
         session.setAttribute("createUserDetailsModel", model);
+        session.setAttribute("createUserFlowStage", "user/create/details");
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Add user details");
         return "add-user-details";
     }
@@ -777,6 +779,7 @@ public class UserController {
             multiFirmForm.setMultiFirmUser(isMultiFirmUser);
         }
 
+        session.setAttribute("createUserFlowStage", "user/create/multi-firm");
         model.addAttribute("multiFirmForm", multiFirmForm);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Allow multi-firm access");
         return "add-user-multi-firm";
@@ -845,6 +848,7 @@ public class UserController {
         model.addAttribute("firmSearchResultCount", validatedCount);
         model.addAttribute("showSkipFirmSelection", showSkipFirmSelection);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Select firm");
+        session.setAttribute("createUserFlowStage", "user/create/firm");
         return "add-user-firm";
     }
 
@@ -915,6 +919,7 @@ public class UserController {
         model.addAttribute("isMultiFirmUser", isMultiFirmUser != null ? isMultiFirmUser : false);
 
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Check your answers");
+        session.setAttribute("createUserFlowStage", "user/create/check-answers");
         return "add-user-check-answers";
     }
 
@@ -1021,12 +1026,15 @@ public class UserController {
         session.removeAttribute("user");
         session.removeAttribute("userProfile");
         session.removeAttribute("isMultiFirmUser");
+        session.removeAttribute("createUserFlowStage");
         model.addAttribute(ModelAttributes.PAGE_TITLE, "User created");
         return "add-user-created";
     }
 
     @GetMapping("/user/create/cancel/confirmation")
-    public String confirmCancelCreateUser() {
+    public String confirmCancelCreateUser(HttpSession session, Model model) {
+        String stageUrl = getObjectFromHttpSession(session, "createUserFlowStage", String.class).orElse("user/create/details");
+        model.addAttribute("stageUrl", stageUrl);
         return "cancel-add-user-confirmation";
     }
 
@@ -1043,6 +1051,7 @@ public class UserController {
         session.removeAttribute("officeData");
         session.removeAttribute("firmSearchForm");
         session.removeAttribute("firmSearchTerm");
+        session.removeAttribute("createUserFlowStage");
         return "redirect:/admin/users";
     }
 
@@ -1574,6 +1583,7 @@ public class UserController {
                         userRole.setRoleName(role.getDescription());
                         userRole.setAppName(role.getApp().getName());
                         userRole.setUrl(url);
+                        userRole.setLegacySync(role.isLegacySync());
                         selectedAppRole.add(userRole);
                     }
                 } else {
@@ -1594,6 +1604,12 @@ public class UserController {
                     selectedAppRole.add(userRole);
                 }
             }
+        }
+        // If any apps are marked as legacy sync, make sure user exists in ccms.
+        if (user.getUserType() == UserType.INTERNAL && selectedAppRole.stream().anyMatch(UserRole::isLegacySync)
+                && !user.getEntraUser().isCcmsEbsUser()) {
+            final String ccmsErrorMsg = "This user has not been migrated, so is unable to access CCMS. Remove any CCMS or PUI role before saving.";
+            errorMessage = errorMessage == null ? ccmsErrorMsg : errorMessage + "\n" + ccmsErrorMsg;
         }
         if (errorMessage != null) {
             model.addAttribute("errorMessage", errorMessage);
@@ -1629,6 +1645,14 @@ public class UserController {
                 .toList();
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
         UserProfile editorProfile = loginService.getCurrentProfile(authentication);
+        List<UUID> roleUuids = allSelectedRoles.stream().map(UUID::fromString).toList();
+        Collection<AppRoleDto> roles = userService.getRolesByIdIn(roleUuids).values();
+        if (user.getUserType() == UserType.INTERNAL && roles.stream().anyMatch(AppRoleDto::isLegacySync)
+            && !user.getEntraUser().isCcmsEbsUser()) {
+            log.error("Role update blocked for user profile ID {}."
+                    + "A POST request was attempted to add CCMS/PUI roles to a non-migrated user. This may have been done to bypass UI validation.", user.getId());
+            throw new RuntimeException();
+        }
         if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
             Map<String, String> updateResult = userService.updateUserRoles(id, allSelectedRoles,
                     nonEditableRoles, currentUserDto.getUserId());
@@ -2550,7 +2574,6 @@ public class UserController {
                                           Model model,
                                           HttpSession session,
                                           Authentication authentication) {
-        UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         UserType userType = user.getUserType();
         // Get user's current app roles from session
@@ -2561,16 +2584,6 @@ public class UserController {
         Set<String> allSelectedRoles = allSelectedRolesOptional.get();
 
         List<AppRoleDto> userAppRoles = appRoleService.getByIds(allSelectedRoles);
-        List<AppRoleDto> editableUserAppRoles = userAppRoles.stream()
-                .filter(role -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, role.getApp()))
-                .toList();
-
-        // Group roles by app name and sort by app name
-        Map<String, List<AppRoleDto>> groupedAppRoles = editableUserAppRoles.stream().sorted()
-                .collect(Collectors.groupingBy(
-                        appRole -> appRole.getApp().getName(),
-                        LinkedHashMap::new, // Preserve insertion order
-                        Collectors.toList()));
 
         // get all offices from session
         Optional<List<String>> selectedOfficesOptional = getListFromHttpSession(session, "selectedOffices", String.class);
@@ -2586,6 +2599,22 @@ public class UserController {
             userOffices = officeService.getOfficesByIds(selectedOffices);
 
         }
+        String errorMessage = null;
+        if (user.getUserType() == UserType.INTERNAL && userAppRoles.stream().anyMatch(AppRoleDto::isLegacySync)
+                && !user.getEntraUser().isCcmsEbsUser()) {
+            errorMessage = "This user has not been migrated, so is unable to access CCMS. Remove any CCMS or PUI role before saving.";
+        }
+        UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
+        List<AppRoleDto> editableUserAppRoles = userAppRoles.stream()
+                .filter(role -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, role.getApp()))
+                .toList();
+        // Group roles by app name and sort by app name
+        Map<String, List<AppRoleDto>> groupedAppRoles = editableUserAppRoles.stream().sorted()
+                .collect(Collectors.groupingBy(
+                        appRole -> appRole.getApp().getName(),
+                        LinkedHashMap::new, // Preserve insertion order
+                        Collectors.toList()));
+
         // Sort the map by app name
         Map<String, List<AppRoleDto>> sortedGroupedAppRoles = groupedAppRoles.entrySet().stream()
                 .collect(Collectors.toMap(
@@ -2601,6 +2630,7 @@ public class UserController {
         model.addAttribute("externalUser", user.getUserType() == UserType.EXTERNAL);
         model.addAttribute("hasAllOffices", selectedOffices.contains(ALL));
         model.addAttribute("hasNoOffices", selectedOffices.contains(NO_OFFICES));
+        model.addAttribute("errorMessage", errorMessage);
 
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Check your answers - " + user.getFullName());
 
@@ -2648,7 +2678,6 @@ public class UserController {
                                                  RedirectAttributes redirectAttributes, HttpSession session) {
         try {
             UserProfileDto userProfileDto = userService.getUserProfileById(id).orElseThrow();
-            CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             UserType userType = userProfileDto.getUserType();
             UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
 
@@ -2668,7 +2697,16 @@ public class UserController {
             List<String> nonEditableRoles = getListFromHttpSession(session, "nonEditableRoles", String.class)
                     .orElseGet(ArrayList::new);
 
+            List<AppRoleDto> roles = appRoleService.getByIds(allSelectedRoles);
+            if (userProfileDto.getUserType() == UserType.INTERNAL && roles.stream().anyMatch(AppRoleDto::isLegacySync)
+                    && !userProfileDto.getEntraUser().isCcmsEbsUser()) {
+                log.error("Role update blocked for user profile ID {}."
+                        + "A POST request was attempted to add CCMS/PUI roles to a non-migrated user. This may have been done to bypass UI validation.", userProfileDto.getId());
+                throw new RuntimeException();
+            }
+
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
+            CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
             if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
                 Map<String, String> updateResult = userService.updateUserRoles(id, allSelectedRoles, nonEditableRoles,
                         currentUserDto.getUserId());
