@@ -75,7 +75,6 @@ import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncomple
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm;
-import uk.gov.justice.laa.portal.landingpage.forms.DeleteUserReasonForm;
 import uk.gov.justice.laa.portal.landingpage.forms.DisableUserReasonForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmReassignmentForm;
@@ -500,14 +499,14 @@ public class UserController {
             if (deletedUser.isEncounteredTsErrors()) {
                 DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(
                         optionalUser.get().getEntraUser().getId(),
-                        deleteReasonLabel, UUID.fromString(current.getEntraOid()), "The user account has been deleted but there were some issues during the deletion process. Please contact support.");
+                        deleteReasonLabel, current.getId(), "The user account has been deleted but there were some issues during the deletion process. Please contact support.");
                 eventService.logEvent(deleteUserAttemptAuditEvent);
                 model.addAttribute("errorMessage", "An unexpected error occurred while deleting user. Please contact support.");
                 return "errors/error-generic";
             }
 
             DeleteUserSuccessAuditEvent deleteUserAuditEvent = new DeleteUserSuccessAuditEvent(
-                    deletedUser.getDeleteReasonLabel(), UUID.fromString(current.getEntraOid()), deletedUser);
+                    deletedUser.getDeleteReasonLabel(), current.getId(), deletedUser);
             eventService.logEvent(deleteUserAuditEvent);
         } catch (IllegalArgumentException ex) {
             model.addAttribute("user", optionalUser.get());
@@ -519,7 +518,7 @@ public class UserController {
             log.error("Failed to delete external user {}: {}", id, ex.getMessage(), ex);
             DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(
                     optionalUser.get().getEntraUser().getId(),
-                    deleteReasonLabel, UUID.fromString(current.getEntraOid()), ex.getMessage());
+                    deleteReasonLabel, current.getId(), ex.getMessage());
             eventService.logEvent(deleteUserAttemptAuditEvent);
             model.addAttribute("user", optionalUser.get());
             model.addAttribute("globalErrorMessage", "User delete failed, please try again later");
@@ -561,7 +560,6 @@ public class UserController {
                 })
                 .toList();
         model.addAttribute("deleteReasons", deleteReasons);
-        model.addAttribute("deleteUserReasonForm", new DeleteUserReasonForm());
     }
 
     @GetMapping("/users/manage/{id}/disable")

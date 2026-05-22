@@ -807,7 +807,6 @@ class UserControllerTest {
                 (List<uk.gov.justice.laa.portal.landingpage.viewmodel.DeleteUserReasonViewModel>) model.getAttribute("deleteReasons");
         assertThat(reasons).hasSize(1);
         assertThat(reasons.get(0).getCode()).isEqualTo("CyberRisk");
-        assertThat(model.getAttribute("deleteUserReasonForm")).isNotNull();
         verify(userService).getDeleteUserReasons(true);
     }
 
