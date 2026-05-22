@@ -1289,6 +1289,36 @@ class AuditControllerTest {
     }
 
     @Test
+    void downloadAuditCsvWithNoSearchText_shouldSucceedWhenFirmSelected() {
+
+        UUID selectedFirmId = UUID.randomUUID();
+        AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
+        // search is intentionally null – firm is selected, no text filter entered
+        criteria.setSort("name");
+        criteria.setDirection("asc");
+        criteria.setSelectedFirmId(selectedFirmId.toString());
+
+        List<AuditUserDto> users = List.of(AuditUserDto.builder().name("P1").email("p1@example.com").build());
+        PaginatedAuditUsers page = PaginatedAuditUsers.builder()
+                .users(users)
+                .currentPage(1)
+                .pageSize(500)
+                .build();
+
+        when(userService.getAuditUsers(eq(""), any(), any(), any(), any(), eq(1), eq(500), eq("name"), eq("asc"), eq(true), any(), any())).thenReturn(page);
+
+        byte[] csvBytes = "Name,Email\nP1,p1@example.com\n".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        AuditExportService.AuditCsvExport export = new AuditExportService.AuditCsvExport("audit.csv", csvBytes);
+        when(auditExportService.downloadAuditCsv(any(), any(), any())).thenReturn(export);
+
+        ResponseEntity<byte[]> response = auditController.downloadAuditCsv(criteria);
+
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(response.getBody()).isEqualTo(csvBytes);
+        verify(auditExportService, times(1)).downloadAuditCsv(any(), any(), any());
+    }
+
+    @Test
     void downloadExternalUserWithNoFirmSelectionAuditCsv_shouldReturnException() {
 
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
