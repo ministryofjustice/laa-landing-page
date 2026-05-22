@@ -61,6 +61,9 @@ class ExternalUserPollingServiceTest {
     @Mock
     private TechServicesClient techServicesClient;
 
+    @Mock
+    private UserService userService;
+
     @InjectMocks
     private ExternalUserPollingService externalUserPollingService;
 
