@@ -10,8 +10,9 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+    types: [ opened, reopened, synchronize, edited ]
   schedule:
-    - cron: '0 0 * * 0'
+    - cron: '20 03 * * 6'
   workflow_dispatch:
 
 jobs:
@@ -27,7 +28,7 @@ jobs:
       ash-version: v3
       ash-mode: container
       config: .ash/ash.yaml
-      fail-on-findings: false
+      fail-on-findings: true
       collect-junit-xml-report: false
       collect-sarif-report: false
       install-grype: true
