@@ -21,4 +21,5 @@ public class DeletedUser implements Serializable {
     private UUID deletedUserId;
     private String deletedUserEntraOid;
     private boolean encounteredTsErrors;
+    private String deleteReasonLabel;
 }

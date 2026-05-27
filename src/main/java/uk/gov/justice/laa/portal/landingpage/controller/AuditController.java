@@ -42,6 +42,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
+import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -62,6 +63,7 @@ import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
+import uk.gov.justice.laa.portal.landingpage.viewmodel.DeleteUserReasonViewModel;
 
 @Slf4j
 @Controller
@@ -324,7 +326,7 @@ public class AuditController {
         model.addAttribute("user", userDetail);
         model.addAttribute(ModelAttributes.PAGE_TITLE,
                 "Remove access - " + userDetail.getFullName());
-
+        populateDeleteReasonsModel(model);
         return "user-audit/delete-user-without-profile-reason";
     }
 
@@ -334,39 +336,73 @@ public class AuditController {
     @PostMapping("/users/audit/entra/{id}/delete")
     @PreAuthorize("@accessControlService.canDeleteUserWithoutProfile(#id)")
     public String deleteUserWithoutProfile(@PathVariable String id,
-            @RequestParam("reason") String reason, Authentication authentication,
+            @RequestParam("reasonId") String reasonId, Authentication authentication,
             HttpSession session, Model model) {
 
-        log.debug("AuditController.deleteUserWithoutProfile - entraUserId: '{}', reason: '{}'", id,
-                reason);
+        log.debug("AuditController.deleteUserWithoutProfile - entraUserId: '{}', reasonId: '{}'", id,
+                reasonId);
 
         AuditUserDetailDto userDetail = userService.getAuditUserDetailByEntraId(UUID.fromString(id));
 
-        if (reason == null || reason.trim().length() < 10) {
+        UUID deleteReasonId = null;
+        if (reasonId == null || reasonId.isBlank()) {
             model.addAttribute("user", userDetail);
-            model.addAttribute("fieldErrorMessage",
-                    "Please enter a reason (minimum 10 characters).");
+            model.addAttribute("fieldErrorMessage", "Please select a reason.");
             model.addAttribute(ModelAttributes.PAGE_TITLE,
                     "Remove access - " + userDetail.getFullName());
+            populateDeleteReasonsModel(model);
+            return "user-audit/delete-user-without-profile-reason";
+        }
+        try {
+            deleteReasonId = UUID.fromString(reasonId);
+        } catch (IllegalArgumentException e) {
+            model.addAttribute("user", userDetail);
+            model.addAttribute("fieldErrorMessage", "Please select a valid reason.");
+            model.addAttribute(ModelAttributes.PAGE_TITLE,
+                    "Remove access - " + userDetail.getFullName());
+            populateDeleteReasonsModel(model);
+            return "user-audit/delete-user-without-profile-reason";
+        }
+
+        final UUID resolvedReasonId = deleteReasonId;
+        Optional<DeleteUserReason> matchedReason = userService.getDeleteUserReasons(true).stream()
+                .filter(r -> r.getId().equals(resolvedReasonId))
+                .findFirst();
+        if (matchedReason.isEmpty()) {
+            model.addAttribute("user", userDetail);
+            model.addAttribute("fieldErrorMessage", "Please select a valid reason.");
+            model.addAttribute(ModelAttributes.PAGE_TITLE,
+                    "Remove access - " + userDetail.getFullName());
+            populateDeleteReasonsModel(model);
             return "user-audit/delete-user-without-profile-reason";
         }
 
         EntraUser current = loginService.getCurrentEntraUser(authentication);
+        UUID currentEntraOidUuid = UUID.fromString(current.getEntraOid());
+        String deleteReasonLabel = matchedReason.get().getLabel();
         try {
-            DeletedUser deletedUser = userService.deleteEntraUserWithoutProfile(id, reason.trim(), UUID.fromString(current.getEntraOid()));
-            DeleteUserSuccessAuditEvent deleteUserAuditEvent = new DeleteUserSuccessAuditEvent(reason.trim(),
-                    UUID.fromString(current.getEntraOid()), deletedUser);
+            DeletedUser deletedUser = userService.deleteEntraUserWithoutProfile(id, deleteReasonId, current.getId());
+            DeleteUserSuccessAuditEvent deleteUserAuditEvent = new DeleteUserSuccessAuditEvent(
+                    deletedUser.getDeleteReasonLabel(), currentEntraOidUuid, deletedUser);
             eventService.logEvent(deleteUserAuditEvent);
+        } catch (IllegalArgumentException ex) {
+            model.addAttribute("user", userDetail);
+            model.addAttribute("fieldErrorMessage", "Please select a valid reason.");
+            model.addAttribute(ModelAttributes.PAGE_TITLE,
+                    "Remove access - " + userDetail.getFullName());
+            populateDeleteReasonsModel(model);
+            return "user-audit/delete-user-without-profile-reason";
         } catch (RuntimeException ex) {
             log.error("Failed to delete user without profile {}: {}", id, ex.getMessage(), ex);
-            DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(id, reason.trim(),
-                    UUID.fromString(current.getEntraOid()),
+            DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(id, deleteReasonLabel,
+                    currentEntraOidUuid,
                     ex.getMessage());
             eventService.logEvent(deleteUserAttemptAuditEvent);
             model.addAttribute("user", userDetail);
             model.addAttribute("globalErrorMessage", "User delete failed, please try again later");
             model.addAttribute(ModelAttributes.PAGE_TITLE,
                     "Remove access - " + userDetail.getFullName());
+            populateDeleteReasonsModel(model);
             return "user-audit/delete-user-without-profile-reason";
         }
 
@@ -374,6 +410,20 @@ public class AuditController {
         model.addAttribute(ModelAttributes.PAGE_TITLE, "User deleted");
 
         return "user-audit/delete-user-success";
+    }
+
+    private void populateDeleteReasonsModel(Model model) {
+        List<DeleteUserReasonViewModel> deleteReasons = userService.getDeleteUserReasons(true)
+                .stream()
+                .map(r -> {
+                    DeleteUserReasonViewModel vm = new DeleteUserReasonViewModel();
+                    vm.setId(r.getId());
+                    vm.setCode(r.getCode());
+                    vm.setLabel(r.getLabel());
+                    return vm;
+                })
+                .toList();
+        model.addAttribute("deleteReasons", deleteReasons);
     }
 
     @GetMapping(value = "/users/audit/download", produces = "text/csv")
