@@ -85,8 +85,10 @@ import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.DeleteUserReasonRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
@@ -120,18 +122,20 @@ public class UserService {
     private final EventService eventService;
     private final NotificationService notificationService;
     private final AccessControlService accessControlService;
+    private final DeleteUserReasonRepository deleteUserReasonRepository;
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
-                       EntraUserRepository entraUserRepository, AppRepository appRepository,
-                       AppRoleRepository appRoleRepository, ModelMapper mapper,
-                       OfficeRepository officeRepository,
-                       TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
-                       UserAccountStatusAuditRepository userAccountStatusAuditRepository,
-                       RoleChangeNotificationService roleChangeNotificationService, FirmService firmService,
-                       FirmRepository firmRepository, EventService eventService,
-                       NotificationService notificationService,
-                       @Lazy AccessControlService accessControlService) {
+           EntraUserRepository entraUserRepository, AppRepository appRepository,
+           AppRoleRepository appRoleRepository, ModelMapper mapper,
+           OfficeRepository officeRepository,
+           TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
+           UserAccountStatusAuditRepository userAccountStatusAuditRepository,
+           RoleChangeNotificationService roleChangeNotificationService, FirmService firmService,
+           FirmRepository firmRepository, EventService eventService,
+           NotificationService notificationService,
+           @Lazy AccessControlService accessControlService,
+           DeleteUserReasonRepository deleteUserReasonRepository) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -147,6 +151,7 @@ public class UserService {
         this.eventService = eventService;
         this.notificationService = notificationService;
         this.accessControlService = accessControlService;
+        this.deleteUserReasonRepository = deleteUserReasonRepository;
     }
 
     public boolean hasUserFirmAlreadyAssigned(String email, UUID firmId) {
@@ -444,16 +449,30 @@ public class UserService {
                 .map(user -> mapper.map(user, UserProfileDto.class));
     }
 
+    public List<DeleteUserReason> getDeleteUserReasons(boolean isInternalUser) {
+        List<DeleteUserReason> deleteUserReasons;
+        if (isInternalUser) {
+            deleteUserReasons = deleteUserReasonRepository.findAllByEditableByInternalUser(true);
+        } else {
+            deleteUserReasons = deleteUserReasonRepository.findAllByEditableByExternalUser(true);
+        }
+        return deleteUserReasons.stream()
+                .sorted(Comparator.comparing(DeleteUserReason::getLabel,
+                        Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))
+                .collect(Collectors.toList());
+    }
+
     /**
      * Delete an EXTERNAL user and all related local records.
      *
-     * @param userProfileId the ID of the user profile (UUID as String)
-     * @param reason        the reason for deletion, used for logging/audit
-     * @param actorId       the entra oid of the actor performing the deletion (for
-     *                      logging)
+     * @param userProfileId  the ID of the user profile (UUID as String)
+     * @param deleteReasonId the UUID of the structured delete reason
+     * @param actorId        the entra oid of the actor performing the deletion (for
+     *                       logging)
+     * @return DeletedUser containing deletion metadata
      */
     @Transactional
-    public DeletedUser deleteExternalUser(String userProfileId, String reason, String actorId) {
+    public DeletedUser deleteExternalUser(String userProfileId, UUID deleteReasonId, String actorId) {
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
         if (optionalUserProfile.isEmpty()) {
             throw new RuntimeException("User profile not found: " + userProfileId);
@@ -472,9 +491,15 @@ public class UserService {
 
         EntraUserDto entraUserDto = mapper.map(entraUser, EntraUserDto.class);
 
+        DeleteUserReason deleteUserReason = (deleteReasonId != null)
+                ? deleteUserReasonRepository.findById(deleteReasonId)
+                        .orElseThrow(() -> new IllegalArgumentException("Unknown delete reason id: " + deleteReasonId))
+                : null;
+
         logger.info(
-                "Deleting external user. actorEntraId={}, userProfileId={}, entraUserId={}, reason=\"{}\"",
-                actorId, userProfileId, entraUser.getId(), reason);
+                "Deleting external user. actorEntraId={}, userProfileId={}, entraUserId={}, reason={}",
+                actorId, userProfileId, entraUser.getId(),
+                deleteUserReason != null ? deleteUserReason.getCode() : "none");
 
 
         // first send update to tech services
@@ -506,7 +531,8 @@ public class UserService {
         List<UserProfile> profiles = userProfileRepository.findAllByEntraUser(entraUser);
         DeletedUser.DeletedUserBuilder builder = new DeletedUser().toBuilder()
                 .deletedUserEntraOid(userProfile.getEntraUser().getEntraOid())
-                .deletedUserId(userProfile.getId()).encounteredTsErrors(encounteredTsError);
+                .deletedUserId(userProfile.getId()).encounteredTsErrors(encounteredTsError)
+                .deleteReasonLabel(deleteUserReason != null ? deleteUserReason.getLabel() : null);
         if (profiles != null && !profiles.isEmpty()) {
             for (UserProfile up : profiles) {
                 Map<String, Set<String>> puiRoles;
@@ -556,6 +582,7 @@ public class UserService {
             .statusChange(UserAccountStatus.DELETED)
             .statusChangedBy(deletedByName)
             .statusChangedDate(LocalDateTime.now())
+            .deleteUserReason(deleteUserReason)
             .build();
         userAccountStatusAuditRepository.save(deletedAudit);
         userAccountStatusAuditRepository.flush();
@@ -661,15 +688,15 @@ public class UserService {
      * Tech Services to
      * remove Entra group memberships and deletes from local database
      *
-     * @param entraUserId the ID of the EntraUser to delete (UUID as String)
-     * @param reason      the reason for deletion, used for logging/audit
-     * @param actorId     the UUID of the actor performing the deletion (for
-     *                    logging)
+     * @param entraUserId    the ID of the EntraUser to delete (UUID as String)
+     * @param deleteReasonId the UUID of the structured delete reason
+     * @param actorId        the UUID of the actor performing the deletion (for
+     *                       logging)
      * @return DeletedUser containing deletion metadata
      * @throws RuntimeException if user not found, has profiles, or is internal user
      */
     @Transactional
-    public DeletedUser deleteEntraUserWithoutProfile(String entraUserId, String reason,
+    public DeletedUser deleteEntraUserWithoutProfile(String entraUserId, UUID deleteReasonId,
             UUID actorId) {
         EntraUser entraUser = entraUserRepository.findById(UUID.fromString(entraUserId))
                 .orElseThrow(() -> new RuntimeException("Entra user not found: " + entraUserId));
@@ -690,9 +717,15 @@ public class UserService {
             throw new RuntimeException("Cannot delete internal users");
         }
 
+        DeleteUserReason deleteUserReason = (deleteReasonId != null)
+                ? deleteUserReasonRepository.findById(deleteReasonId)
+                        .orElseThrow(() -> new IllegalArgumentException("Delete user reason not found: " + deleteReasonId))
+                : null;
+
         logger.info(
-                "Deleting Entra user without profile. actorId={}, entraUserId={}, reason=\"{}\"",
-                actorId, entraUserId, entraUser.getEmail(), reason);
+                "Deleting Entra user without profile. actorId={}, entraUserId={}, reason={}",
+                actorId, entraUserId,
+                deleteUserReason != null ? deleteUserReason.getCode() : "none");
 
         // Notify Tech Services to remove Entra group memberships
         try {
@@ -738,12 +771,15 @@ public class UserService {
             .statusChange(UserAccountStatus.DELETED)
             .statusChangedBy(deletedByName)
             .statusChangedDate(LocalDateTime.now())
+            .deleteUserReason(deleteUserReason)
             .build();
         userAccountStatusAuditRepository.save(deletedAudit);
         userAccountStatusAuditRepository.flush();
 
         return DeletedUser.builder().deletedUserEntraOid(userEntraOid).removedRolesCount(0)
-                .detachedOfficesCount(0).build();
+                .detachedOfficesCount(0)
+                .deleteReasonLabel(deleteUserReason != null ? deleteUserReason.getLabel() : null)
+                .build();
     }
 
     public Optional<UserType> getUserTypeByUserId(String userId) {
@@ -2423,6 +2459,7 @@ public class UserService {
                 case "email", "useremail" -> "userEmail";
                 case "deletedby", "statuschangedby" -> "statusChangedBy";
                 case "deleteddate", "statuschangeddate" -> "statusChangedDate";
+                case "deletereason", "deleteusereasonlabel" -> "deleteUserReason.label";
                 default -> "statusChangedDate";
             };
         }
@@ -2451,6 +2488,9 @@ public class UserService {
                     .userEmail(audit.getUserEmail())
                     .deletedDate(audit.getStatusChangedDate())
                     .deletedBy(audit.getStatusChangedBy())
+                    .deleteReason(audit.getDeleteUserReason() != null
+                            ? audit.getDeleteUserReason().getLabel()
+                            : null)
                     .build())
                 .collect(Collectors.toList());
 
@@ -2546,4 +2586,3 @@ public class UserService {
     }
 
 }
-

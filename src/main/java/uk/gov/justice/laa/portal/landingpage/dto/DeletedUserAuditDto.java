@@ -37,5 +37,10 @@ public class DeletedUserAuditDto implements Serializable {
      * Name of the person who deleted the user (First Name + Last Name)
      */
     private String deletedBy;
+
+    /**
+     * Label of the structured delete reason, if set
+     */
+    private String deleteReason;
 }
 

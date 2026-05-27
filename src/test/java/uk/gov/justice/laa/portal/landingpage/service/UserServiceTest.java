@@ -87,6 +87,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
+import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.EventType;
@@ -156,6 +157,8 @@ class UserServiceTest {
     private UserAccountStatusAuditRepository mockUserAccountStatusAuditRepository;
     @Mock
     private AccessControlService accessControlService;
+    @Mock
+    private uk.gov.justice.laa.portal.landingpage.repository.DeleteUserReasonRepository mockDeleteUserReasonRepository;
 
     @BeforeEach
     void setUp() {
@@ -174,7 +177,8 @@ class UserServiceTest {
                 mockFirmRepository,
                 mockEventService,
                 notificationService,
-                accessControlService);
+                accessControlService,
+                mockDeleteUserReasonRepository);
     }
 
     @Test
@@ -295,7 +299,7 @@ class UserServiceTest {
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
 
         // Act
-        userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID().toString());
+        userService.deleteExternalUser(profileId.toString(), null, UUID.randomUUID().toString());
 
         // Assert
         verify(techServicesClient).deleteRoleAssignment(entraId);
@@ -337,7 +341,7 @@ class UserServiceTest {
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
 
         // Act
-        userService.deleteExternalUser(profileId.toString(), "duplicate user", UUID.randomUUID().toString());
+        userService.deleteExternalUser(profileId.toString(), null, UUID.randomUUID().toString());
 
         // Assert
         verify(techServicesClient).deleteRoleAssignment(entraId);
@@ -389,7 +393,7 @@ class UserServiceTest {
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
 
         // Act
-        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", actorId);
+        var result = userService.deleteExternalUser(profileId.toString(), null, actorId);
 
         // Assert
         verify(techServicesClient).disableUser(entraUserDto, "RoleChangeorNoLongerRequired");
@@ -446,7 +450,7 @@ class UserServiceTest {
                 .when(techServicesClient).deleteRoleAssignment(entraId);
 
         // Act
-        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", actorId);
+        var result = userService.deleteExternalUser(profileId.toString(), null, actorId);
 
         // Assert
         verify(techServicesClient).disableUser(entraUserDto, "RoleChangeorNoLongerRequired");
@@ -502,7 +506,7 @@ class UserServiceTest {
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.error(null));
 
         // Act
-        var result = userService.deleteExternalUser(profileId.toString(), "duplicate user", actorId);
+        var result = userService.deleteExternalUser(profileId.toString(), null, actorId);
 
         // Assert
         verify(techServicesClient).disableUser(entraUserDto, "RoleChangeorNoLongerRequired");
@@ -532,7 +536,7 @@ class UserServiceTest {
 
         // Act & Assert
         RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> userService.deleteExternalUser(profileId.toString(), "reason", UUID.randomUUID().toString()));
+                () -> userService.deleteExternalUser(profileId.toString(), null, UUID.randomUUID().toString()));
         assertThat(ex.getMessage()).contains("Deletion is only permitted for external users");
         verify(techServicesClient, never()).deleteRoleAssignment(any());
     }
@@ -551,12 +555,122 @@ class UserServiceTest {
         when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
 
         // Act
-        var result = userService.deleteEntraUserWithoutProfile(entraId.toString(), "duplicate user", UUID.randomUUID());
+        var result = userService.deleteEntraUserWithoutProfile(entraId.toString(), null, UUID.randomUUID());
 
         // Assert
         verify(techServicesClient).disableUser(any(EntraUserDto.class), eq("RoleChangeorNoLongerRequired"));
         verify(techServicesClient).deleteRoleAssignment(entraId);
         assertThat(result).isNotNull();
+    }
+
+    @Test
+    void getDeleteUserReasons_forInternalUser_returnsInternalEditableReasons() {
+        // Arrange
+        DeleteUserReason reason1 = DeleteUserReason.builder().code("CyberRisk").label("Cyber risk")
+                .editableByInternalUser(true).editableByExternalUser(false).build();
+        DeleteUserReason reason2 = DeleteUserReason.builder().code("SystemIssue").label("System Issue")
+                .editableByInternalUser(true).editableByExternalUser(false).build();
+        when(mockDeleteUserReasonRepository.findAllByEditableByInternalUser(true)).thenReturn(List.of(reason1, reason2));
+
+        // Act
+        List<DeleteUserReason> result = userService.getDeleteUserReasons(true);
+
+        // Assert
+        assertThat(result).hasSize(2);
+        assertThat(result).extracting(DeleteUserReason::getCode).containsExactlyInAnyOrder("CyberRisk", "SystemIssue");
+        verify(mockDeleteUserReasonRepository).findAllByEditableByInternalUser(true);
+    }
+
+    @Test
+    void getDeleteUserReasons_forExternalUser_returnsExternalEditableReasons() {
+        // Arrange
+        DeleteUserReason reason = DeleteUserReason.builder().code("LeftFirm").label("Left Firm")
+                .editableByInternalUser(true).editableByExternalUser(true).build();
+        when(mockDeleteUserReasonRepository.findAllByEditableByExternalUser(true)).thenReturn(List.of(reason));
+
+        // Act
+        List<DeleteUserReason> result = userService.getDeleteUserReasons(false);
+
+        // Assert
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getCode()).isEqualTo("LeftFirm");
+        verify(mockDeleteUserReasonRepository).findAllByEditableByExternalUser(true);
+    }
+
+    @Test
+    void deleteExternalUser_withValidReasonId_attachesReasonToAuditRecord() {
+        // Arrange
+        UUID entraId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        String actorId = UUID.randomUUID().toString();
+        final UUID reasonId = UUID.randomUUID();
+
+        final DeleteUserReason deleteReason = DeleteUserReason.builder()
+                .code("DuplicateAccount").label("Duplicate account").build();
+
+        EntraUser entraUser = EntraUser.builder()
+                .id(entraId)
+                .email("user@example.com")
+                .entraOid(entraId.toString())
+                .build();
+
+        UserProfile profile = UserProfile.builder()
+                .id(profileId)
+                .activeProfile(true)
+                .userType(UserType.EXTERNAL)
+                .entraUser(entraUser)
+                .appRoles(new HashSet<>())
+                .build();
+        entraUser.setUserProfiles(new HashSet<>(Set.of(profile)));
+
+        EntraUser actorUser = EntraUser.builder()
+                .id(UUID.randomUUID()).entraOid(actorId)
+                .firstName("Actor").lastName("User").build();
+
+        when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(profile));
+        when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
+        when(mockEntraUserRepository.findByEntraOid(actorId)).thenReturn(Optional.of(actorUser));
+        when(mockDeleteUserReasonRepository.findById(reasonId)).thenReturn(Optional.of(deleteReason));
+        when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
+        when(mockUserAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
+        when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
+
+        // Act
+        userService.deleteExternalUser(profileId.toString(), reasonId, actorId);
+
+        // Assert
+        ArgumentCaptor<UserAccountStatusAudit> auditCaptor = ArgumentCaptor.forClass(UserAccountStatusAudit.class);
+        verify(mockUserAccountStatusAuditRepository).save(auditCaptor.capture());
+        assertThat(auditCaptor.getValue().getDeleteUserReason()).isEqualTo(deleteReason);
+    }
+
+    @Test
+    void deleteEntraUserWithoutProfile_withValidReasonId_attachesReasonToAuditRecord() {
+        // Arrange
+        UUID entraId = UUID.randomUUID();
+        UUID reasonId = UUID.randomUUID();
+
+        DeleteUserReason deleteReason = DeleteUserReason.builder()
+                .code("UserRequest").label("User request").build();
+
+        EntraUser entraUser = EntraUser.builder()
+                .id(entraId)
+                .email("user@example.com")
+                .build();
+
+        when(mockEntraUserRepository.findById(entraId)).thenReturn(Optional.of(entraUser));
+        when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(Collections.emptyList());
+        when(mockDeleteUserReasonRepository.findById(reasonId)).thenReturn(Optional.of(deleteReason));
+        when(mockUserAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
+        when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
+
+        // Act
+        userService.deleteEntraUserWithoutProfile(entraId.toString(), reasonId, UUID.randomUUID());
+
+        // Assert
+        ArgumentCaptor<UserAccountStatusAudit> auditCaptor = ArgumentCaptor.forClass(UserAccountStatusAudit.class);
+        verify(mockUserAccountStatusAuditRepository).save(auditCaptor.capture());
+        assertThat(auditCaptor.getValue().getDeleteUserReason()).isEqualTo(deleteReason);
     }
 
     @Test
