@@ -72,4 +72,10 @@ public class UserAccountStatusAudit extends BaseEntity {
     @Column(name = "disable_type", nullable = true, length = 20)
     private DisableType disableType;
 
+    @ManyToOne
+    @JoinColumn(name = "delete_user_reason_id", nullable = true, foreignKey = @ForeignKey(name = "fk_user_account_status_audit_delete_user_reason_id"))
+    @ToString.Exclude
+    @JsonIgnore
+    private DeleteUserReason deleteUserReason;
+
 }

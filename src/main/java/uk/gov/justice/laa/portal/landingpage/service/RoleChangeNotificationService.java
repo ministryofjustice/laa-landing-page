@@ -172,7 +172,8 @@ public class RoleChangeNotificationService {
                 boolean notificationSuccess = profile.isLastCcmsSyncSuccessful();
                 boolean ccmsSyncResult = true;
                 for (Map.Entry<String, Set<String>> ccmsRoles : ccmsRolesMap.entrySet()) {
-                    ccmsSyncResult = ccmsSyncResult && sendMessage(profile, ccmsRoles.getKey(), ccmsRoles.getValue(), Collections.emptySet());
+                    boolean currentSyncResult = sendMessage(profile, ccmsRoles.getKey(), ccmsRoles.getValue(), Collections.emptySet());
+                    ccmsSyncResult = ccmsSyncResult && currentSyncResult;
                     notificationSuccess = ccmsSyncResult;
 
                     log.info("CCMS role sync for user: {} with entra oid: {} {}", profile.getId(), profile.getEntraUser().getEntraOid(), notificationSuccess);

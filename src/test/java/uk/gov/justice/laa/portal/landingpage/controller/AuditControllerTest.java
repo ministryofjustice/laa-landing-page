@@ -21,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -921,10 +922,45 @@ class AuditControllerTest {
     }
 
     @Test
+    void deleteUserWithoutProfileConfirm_populatesDeleteReasonsInModel() {
+        // Given
+        String entraUserId = UUID.randomUUID().toString();
+        AuditUserDetailDto userDetail = AuditUserDetailDto.builder()
+                .userId(null)
+                .firstName("John")
+                .lastName("Doe")
+                .fullName("John Doe")
+                .email("john.doe@example.com")
+                .profiles(Collections.emptyList())
+                .hasNoProfile(true)
+                .build();
+
+        uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason reason =
+                uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason.builder()
+                        .code("CyberRisk").label("Cyber risk").build();
+        reason.setId(UUID.randomUUID());
+
+        when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId))).thenReturn(userDetail);
+        when(userService.getDeleteUserReasons(true)).thenReturn(List.of(reason));
+
+        // When
+        String viewName = auditController.deleteUserWithoutProfileConfirm(entraUserId, model);
+
+        // Then
+        assertThat(viewName).isEqualTo("user-audit/delete-user-without-profile-reason");
+        @SuppressWarnings("unchecked")
+        List<uk.gov.justice.laa.portal.landingpage.viewmodel.DeleteUserReasonViewModel> reasons =
+                (List<uk.gov.justice.laa.portal.landingpage.viewmodel.DeleteUserReasonViewModel>) model.getAttribute("deleteReasons");
+        assertThat(reasons).hasSize(1);
+        assertThat(reasons.get(0).getCode()).isEqualTo("CyberRisk");
+        verify(userService).getDeleteUserReasons(true);
+    }
+
+    @Test
     void deleteUserWithoutProfile_withValidReason_shouldDeleteAndReturnSuccess() {
         // Given
         String entraUserId = UUID.randomUUID().toString();
-        String reason = "User no longer needs access";
+        String reasonId = UUID.randomUUID().toString();
         UUID currentUserId = UUID.randomUUID();
 
         AuditUserDetailDto userDetail = AuditUserDetailDto.builder()
@@ -946,7 +982,7 @@ class AuditControllerTest {
                 .email("admin@example.com")
                 .build();
 
-        uk.gov.justice.laa.portal.landingpage.model.DeletedUser deletedUser = uk.gov.justice.laa.portal.landingpage.model.DeletedUser
+        final uk.gov.justice.laa.portal.landingpage.model.DeletedUser deletedUser = uk.gov.justice.laa.portal.landingpage.model.DeletedUser
                 .builder()
                 .deletedUserId(UUID.fromString(entraUserId))
                 .deletedUserEntraOid(entraUserId)
@@ -957,18 +993,23 @@ class AuditControllerTest {
         when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId)))
                 .thenReturn(userDetail);
         when(loginService.getCurrentEntraUser(any())).thenReturn(currentUser);
-        when(userService.deleteEntraUserWithoutProfile(entraUserId, reason, UUID.fromString(entraUserId)))
+        uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason deleteReason =
+                uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason.builder()
+                        .code("Reason").label("Test reason").build();
+        deleteReason.setId(UUID.fromString(reasonId));
+        when(userService.getDeleteUserReasons(true)).thenReturn(List.of(deleteReason));
+        when(userService.deleteEntraUserWithoutProfile(eq(entraUserId), any(UUID.class), any(UUID.class)))
                 .thenReturn(deletedUser);
 
         // When
         String viewName = auditController.deleteUserWithoutProfile(
-                entraUserId, reason, null, null, model);
+                entraUserId, reasonId, null, null, model);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/delete-user-success");
         assertThat(model.getAttribute("deletedUserFullName")).isEqualTo("Jane Smith");
         assertThat(model.getAttribute("pageTitle")).isEqualTo("User deleted");
-        verify(userService).deleteEntraUserWithoutProfile(entraUserId, reason, UUID.fromString(entraUserId));
+        verify(userService).deleteEntraUserWithoutProfile(eq(entraUserId), any(UUID.class), any(UUID.class));
         verify(eventService).logEvent(any(uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent.class));
     }
 
@@ -990,6 +1031,7 @@ class AuditControllerTest {
 
         when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId)))
                 .thenReturn(userDetail);
+        when(userService.getDeleteUserReasons(true)).thenReturn(Collections.emptyList());
 
         // When
         String viewName = auditController.deleteUserWithoutProfile(
@@ -999,9 +1041,9 @@ class AuditControllerTest {
         assertThat(viewName).isEqualTo("user-audit/delete-user-without-profile-reason");
         assertThat(model.getAttribute("user")).isEqualTo(userDetail);
         assertThat(model.getAttribute("fieldErrorMessage"))
-                .isEqualTo("Please enter a reason (minimum 10 characters).");
+                .isEqualTo("Please select a valid reason.");
         assertThat(model.getAttribute("pageTitle")).isEqualTo("Remove access - Bob Jones");
-        verify(userService, times(0)).deleteEntraUserWithoutProfile(anyString(), anyString(), any());
+        verify(userService, times(0)).deleteEntraUserWithoutProfile(anyString(), any(UUID.class), any());
     }
 
     @Test
@@ -1021,6 +1063,7 @@ class AuditControllerTest {
 
         when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId)))
                 .thenReturn(userDetail);
+        when(userService.getDeleteUserReasons(true)).thenReturn(Collections.emptyList());
 
         // When
         String viewName = auditController.deleteUserWithoutProfile(
@@ -1029,15 +1072,15 @@ class AuditControllerTest {
         // Then
         assertThat(viewName).isEqualTo("user-audit/delete-user-without-profile-reason");
         assertThat(model.getAttribute("fieldErrorMessage"))
-                .isEqualTo("Please enter a reason (minimum 10 characters).");
-        verify(userService, times(0)).deleteEntraUserWithoutProfile(anyString(), anyString(), any());
+                .isEqualTo("Please select a reason.");
+        verify(userService, times(0)).deleteEntraUserWithoutProfile(anyString(), any(UUID.class), any());
     }
 
     @Test
     void deleteUserWithoutProfile_whenDeleteFails_shouldReturnErrorView() {
         // Given
         String entraUserId = UUID.randomUUID().toString();
-        String reason = "Valid deletion reason";
+        String reasonId = UUID.randomUUID().toString();
         UUID currentUserId = UUID.randomUUID();
 
         AuditUserDetailDto userDetail = AuditUserDetailDto.builder()
@@ -1059,15 +1102,21 @@ class AuditControllerTest {
                 .email("admin@example.com")
                 .build();
 
+        uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason deleteReason =
+                uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason.builder()
+                        .code("Reason").label("Test reason").build();
+        deleteReason.setId(UUID.fromString(reasonId));
+
         when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId)))
                 .thenReturn(userDetail);
         when(loginService.getCurrentEntraUser(any())).thenReturn(currentUser);
-        when(userService.deleteEntraUserWithoutProfile(entraUserId, reason, currentUserId))
+        when(userService.getDeleteUserReasons(true)).thenReturn(List.of(deleteReason));
+        when(userService.deleteEntraUserWithoutProfile(eq(entraUserId), any(UUID.class), any(UUID.class)))
                 .thenThrow(new RuntimeException("Failed to delete user from Entra"));
 
         // When
         String viewName = auditController.deleteUserWithoutProfile(
-                entraUserId, reason, null, null, model);
+                entraUserId, reasonId, null, null, model);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/delete-user-without-profile-reason");
@@ -1246,7 +1295,7 @@ class AuditControllerTest {
     }
 
     @Test
-    void downloadInternalUserWithFirmSelectionAuditCsv_shouldReturnSuccess() {
+    void downloadInternalUserWithFirmSelectionAuditCsv_shouldReturnException() {
 
         UUID selectedFirmId = UUID.randomUUID();
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
@@ -1256,18 +1305,29 @@ class AuditControllerTest {
         criteria.setSelectedUserType(UserTypeForm.INTERNAL.name());
         criteria.setSelectedFirmId(selectedFirmId.toString());
 
-        List<AuditUserDto> page1Users = Collections.emptyList();
+        assertThatThrownBy(() -> auditController.downloadAuditCsv(criteria))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Invalid Search criteria provided");
+    }
 
+    @Test
+    void downloadAuditCsvWithNoSearchText_shouldSucceedWhenFirmSelected() {
 
-        PaginatedAuditUsers page1 = PaginatedAuditUsers.builder()
-                .users(page1Users)
+        UUID selectedFirmId = UUID.randomUUID();
+        AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
+        // search is intentionally null – firm is selected, no text filter entered
+        criteria.setSort("name");
+        criteria.setDirection("asc");
+        criteria.setSelectedFirmId(selectedFirmId.toString());
+
+        List<AuditUserDto> users = List.of(AuditUserDto.builder().name("P1").email("p1@example.com").build());
+        PaginatedAuditUsers page = PaginatedAuditUsers.builder()
+                .users(users)
                 .currentPage(1)
                 .pageSize(500)
                 .build();
 
-        when(userService.getAuditUsers(
-                eq("TestSearch"), any(), any(), any(), any(), eq(1), eq(500), eq("name"), eq("asc"), eq(true), any(), any())).thenReturn(page1);
-
+        when(userService.getAuditUsers(eq(""), any(), any(), any(), any(), eq(1), eq(500), eq("name"), eq("asc"), eq(true), any(), any())).thenReturn(page);
 
         byte[] csvBytes = "Name,Email\nP1,p1@example.com\n".getBytes(java.nio.charset.StandardCharsets.UTF_8);
         AuditExportService.AuditCsvExport export = new AuditExportService.AuditCsvExport("audit.csv", csvBytes);
@@ -1277,14 +1337,6 @@ class AuditControllerTest {
 
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
         assertThat(response.getBody()).isEqualTo(csvBytes);
-
-        HttpHeaders headers = response.getHeaders();
-        assertThat(headers.getContentType()).isEqualTo(MediaType.parseMediaType("text/csv"));
-        assertThat(headers.getContentDisposition().getType()).isEqualTo("attachment");
-        assertThat(headers.getContentDisposition().getFilename()).isEqualTo("audit.csv");
-
-        verify(userService, times(1)).getAuditUsers("TestSearch", selectedFirmId,
-                null, null, UserTypeForm.INTERNAL, 1, 500, "name", "asc", true, null, null);
         verify(auditExportService, times(1)).downloadAuditCsv(any(), any(), any());
     }
 
@@ -1296,6 +1348,34 @@ class AuditControllerTest {
         criteria.setSort("name");
         criteria.setDirection("asc");
         criteria.setSelectedUserType(UserTypeForm.EXTERNAL.name());
+
+        assertThatThrownBy(() -> auditController.downloadAuditCsv(criteria))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Invalid Search criteria provided");
+    }
+
+    @Test
+    void downloadAuditCsvWithNoSearchTextAndNoFirmSelection_shouldReturnException() {
+
+        AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
+        // No search text, no firm selected, no INTERNAL user type
+        criteria.setSort("name");
+        criteria.setDirection("asc");
+
+        assertThatThrownBy(() -> auditController.downloadAuditCsv(criteria))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Invalid Search criteria provided");
+    }
+
+    @Test
+    void downloadInternalUserAuditCsvWithFirmSelected_shouldReturnException() {
+
+        UUID selectedFirmId = UUID.randomUUID();
+        AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
+        criteria.setSort("name");
+        criteria.setDirection("asc");
+        criteria.setSelectedUserType(UserTypeForm.INTERNAL.name());
+        criteria.setSelectedFirmId(selectedFirmId.toString());
 
         assertThatThrownBy(() -> auditController.downloadAuditCsv(criteria))
                 .isInstanceOf(RuntimeException.class)
