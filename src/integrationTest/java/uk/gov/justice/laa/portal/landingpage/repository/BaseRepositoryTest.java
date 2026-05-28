@@ -48,9 +48,14 @@ public class BaseRepositoryTest {
     }
 
     protected EntraUser buildEntraUser(String entraId, String email, String firstName, String lastName) {
+        return buildEntraUser(entraId, email, firstName, lastName, false);
+    }
+
+    protected EntraUser buildEntraUser(String entraId, String email, String firstName, String lastName, boolean multiFirmUser) {
         return EntraUser.builder().email(email).entraOid(entraId)
                 .userProfiles(HashSet.newHashSet(11))
                 .firstName(firstName).lastName(lastName)
+                .multiFirmUser(multiFirmUser)
                 .userStatus(UserStatus.ACTIVE)
                 .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                 .createdDate(LocalDateTime.now()).createdBy("Test").build();
