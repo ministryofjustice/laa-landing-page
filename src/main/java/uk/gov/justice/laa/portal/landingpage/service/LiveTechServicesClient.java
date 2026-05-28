@@ -369,6 +369,11 @@ public class LiveTechServicesClient implements TechServicesClient {
                             user.getEntraOid(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
                     return TechServicesApiResponse.error(errorResponse);
                 }
+                if (HttpStatus.NOT_FOUND.equals(httpEx.getStatusCode())) {
+                    logger.warn("User {} not found in tech services during disable request, the root cause is {} ({}) ",
+                            user.getEntraOid(), errorResponse.getMessage(), errorResponse.getCode());
+                    return TechServicesApiResponse.error(errorResponse);
+                }
                 logger.error("Failed to disable user {}, the root cause is {} ({}) ",
                         user.getEntraOid(), errorResponse.getMessage(), errorResponse.getCode(), httpEx);
                 return TechServicesApiResponse.error(errorResponse);

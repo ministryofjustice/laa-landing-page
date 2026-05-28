@@ -1215,6 +1215,33 @@ public class LiveTechServicesClientTest {
     }
 
     @Test
+    public void testDisableUserReturnsWarnWhenUserNotFound() {
+        AccessToken token = new AccessToken("token", null);
+
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(cacheManager.getCache(anyString())).thenReturn(new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE));
+        String errorBody = """
+                {
+                    "success": false,
+                    "code": "USER_NOT_FOUND",
+                    "message": "User not found"
+                }""";
+        HttpClientErrorException exception = HttpClientErrorException.create(HttpStatus.NOT_FOUND,
+                "Not Found", null, errorBody.getBytes(), null);
+
+        EntraUserDto user = EntraUserDto.builder()
+                .entraOid(UUID.randomUUID().toString())
+                .build();
+
+        when(restClient.patch()).thenThrow(exception);
+        TechServicesApiResponse<ChangeAccountEnabledResponse> response = liveTechServicesClient.disableUser(user, "Test reason");
+
+        assertThat(response.isSuccess()).isFalse();
+        assertLogMessage(Level.WARN, "User " + user.getEntraOid() + " not found in tech services during disable request");
+        verify(restClient, times(1)).patch();
+    }
+
+    @Test
     void testGetUsers_Success() {
         AccessToken token = new AccessToken("token", null);
         when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
