@@ -1,11 +1,21 @@
 databaseChangeLog:
+  # Add Entra JML disable reasons: NotActive and PendingAcceptance
+  - changeSet:
+      id: add-entra-jml-disable-reasons
+      author: yusuf.shah
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO disable_user_reason (id, name, description, entra_description, user_selectable) VALUES (gen_random_uuid(), 'Not Active', 'User account is not active in Entra', 'NotActive', false)"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO disable_user_reason (id, name, description, entra_description, user_selectable) VALUES (gen_random_uuid(), 'Pending Acceptance', 'User has not yet accepted their invitation', 'PendingAcceptance', false)"
+
   # Add system_generated column to delete_user_reason table
   - changeSet:
       id: 1748476800000-1
       author: paul.snowdon
-      comment:
-        "Add system_generated boolean column to delete_user_reason to classify
-        reasons as system-generated vs UI-selectable (AC2)"
+      comment: "Add system_generated boolean column to delete_user_reason to classify reasons as system-generated vs UI-selectable (AC2)"
       preConditions:
         - onFail: MARK_RAN
         - not:
@@ -27,10 +37,7 @@ databaseChangeLog:
   - changeSet:
       id: 1748476800000-2
       author: paul.snowdon
-      comment:
-        "Set system_generated = true for ExpiredInvitation, NotActiveAfterMaxLifetime
-        and NoGroupsDelete — these are assigned by ExternalUserPollingService, not
-        selectable in the UI"
+      comment: "Set system_generated = true for ExpiredInvitation, NotActiveAfterMaxLifetime and NoGroupsDelete - these are assigned by ExternalUserPollingService, not selectable in the UI"
       changes:
         - sql:
             dbms: postgresql
