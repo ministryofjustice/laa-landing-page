@@ -311,7 +311,7 @@ public class AuditController {
                 .map(TechServicesUser.GuestUserStatus::getDisabledReason)
                 .flatMap(disableUserReasonRepository::findDisableUserReasonByEntraDescription)
                 .map(DisableUserReason::getName)
-                .orElse("Inactivity");
+                .orElse("Unknown");
     }
 
     /**

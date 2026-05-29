@@ -372,12 +372,12 @@ public class ExternalUserPollingService {
                         || reason.getEntraDescription().equalsIgnoreCase(reasonFromApi))
                 .findFirst();
 
-        return existingReason.orElseGet(() -> disableUserReasonRepository.findAll()
-                .stream()
-                .filter(reason -> "Inactivity".equals(reason.getName()))
-                .findFirst()
-                .get());
+        if (existingReason.isPresent()) {
+            return existingReason.get();
+        }
 
+        log.warn("Disable reason '{}' not found in database. This indicates a configuration issue.", reasonFromApi);
+        throw new IllegalStateException("Disable reason not found: " + reasonFromApi);
     }
 
     private void updateSyncMetadataOnSuccess(Optional<EntraLastSyncMetadata> existingMetadata, LocalDateTime toTime, String logMessage) {
