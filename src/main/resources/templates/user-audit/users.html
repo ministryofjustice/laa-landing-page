@@ -39,13 +39,24 @@
             <div class="govuk-grid-column-full">
                 <h1 class="govuk-heading-l">User Access Audit Table</h1>
 
-                <!-- Deleted Users Button -->
-                <div class="govuk-!-margin-bottom-6">
-                    <a th:href="@{/admin/users/audit/deleted}"
-                       class="govuk-button govuk-button--secondary"
-                       data-module="govuk-button">
-                        View Deleted Users
-                    </a>
+                <!-- CSV export error summary -->
+                <div id="csv-export-error-summary"
+                     class="govuk-error-summary"
+                     role="alert"
+                     aria-labelledby="csv-error-summary-title"
+                     aria-describedby="csv-error-summary-description"
+                     data-module="govuk-error-summary"
+                     data-disable-auto-focus="true"
+                     tabindex="-1"
+                     hidden>
+                    <h2 class="govuk-error-summary__title" id="csv-error-summary-title">
+                        There is a problem
+                    </h2>
+                    <div class="govuk-error-summary__body" id="csv-error-summary-description">
+                        <ul class="govuk-list govuk-error-summary__list">
+                            <li><a href="#firmSearch">Filter results to a single firm to enable CSV export.</a></li>
+                        </ul>
+                    </div>
                 </div>
 
                 <!-- Search Card -->
@@ -532,10 +543,6 @@
                 overflow-wrap: anywhere;
             }
 
-            #export-csv-error[hidden] {
-                display: none !important;
-            }
-
             @media (max-width: 1200px) {
 
                 .govuk-table__header,
@@ -905,14 +912,16 @@
                 });
             });
 
-            // Checks for empty csv
+            // Handles CSV export button: shows error banner when no firm selected, toast when results empty
             document.addEventListener('DOMContentLoaded', function () {
                 const exportLink = document.querySelector('.js-export-csv');
                 const toast = document.getElementById('csv-empty-toast');
+                const errorBanner = document.getElementById('csv-export-error-summary');
 
-                if (!exportLink || !toast) return;
+                if (!exportLink) return;
 
                 function showToast() {
+                    if (!toast) return;
                     toast.hidden = false;
                     toast.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -923,29 +932,49 @@
                 }
 
                 exportLink.addEventListener('click', function (e) {
-                    const usersEmpty = exportLink.getAttribute('data-users-empty') === 'true';
+                    const firmSelected = exportLink.getAttribute('data-firm-selected') === 'true';
 
+                    if (!firmSelected) {
+                        e.preventDefault();
+                        if (errorBanner) {
+                            errorBanner.hidden = false;
+                            errorBanner.focus();
+                        }
+                        return;
+                    }
+
+                    if (errorBanner) {
+                        errorBanner.hidden = true;
+                    }
+
+                    const usersEmpty = exportLink.getAttribute('data-users-empty') === 'true';
                     if (usersEmpty) {
                         showToast();
                     }
                 });
             });
 
-
-            document.addEventListener('DOMContentLoaded', function () {
-                const button = document.getElementById('exportCsvButton');
-                const error = document.getElementById('export-csv-error');
-
-                if (button) {
-                    button.addEventListener('click', function (event) {
-                        event.preventDefault();
-                        error.hidden = false;
-                        button.classList.add('govuk-button--warning');
-                    });
-                }
-            });
-
         </script>
+
+        <!-- Export CSV and action buttons -->
+        <div class="govuk-grid-row govuk-!-margin-top-4">
+            <div class="govuk-grid-column-full">
+                <div class="moj-button-group">
+                    <th:block th:if="${exportCsv}">
+                        <a class="govuk-button js-export-csv"
+                           id="exportCsvButton"
+                           th:attr="data-firm-selected=${firmSearch.getSelectedFirmId() != null or selectedUserType == 'INTERNAL'}, data-users-empty=${#lists.isEmpty(users)}"
+                           th:href="${firmSearch.getSelectedFirmId() != null or selectedUserType == 'INTERNAL'} ?
+                               @{/admin/users/audit/download(search=${search},selectedFirmId=${firmSearch.selectedFirmId},silasRole=${selectedSilasRole},selectedAppId=${selectedAppId},selectedUserType=${selectedUserType},selectedFirmName=${firmSearch.firmSearch},neverActivated=${neverActivated})} : '#'">
+                            Export CSV
+                        </a>
+                    </th:block>
+                    <a th:href="@{/admin/users/audit/deleted}" class="govuk-button govuk-button--secondary govuk-!-margin-left-4 govuk-!-margin-bottom-0">
+                        View all deleted users
+                    </a>
+                </div>
+            </div>
+        </div>
 
         <!-- Audit Table -->
         <div class="govuk-grid-row govuk-!-margin-top-6" id="audit-table">
@@ -1086,27 +1115,6 @@
                     </table>
                 </div>
             </div>
-        </div>
-
-        <!-- Export CSV -->
-        <div class="moj-button-group moj-button-group--inline moj-button-group--with-divider"
-             th:if="${exportCsv and firmSearch.getSelectedFirmId() == null and selectedUserType != 'INTERNAL'}">
-            <a href="#" class="govuk-button" id="exportCsvButton" aria-describedby="export-csv-error">
-                Export as CSV
-            </a>
-            <span id="export-csv-error" class="govuk-error-message govuk-!-margin-left-2" hidden>
-        <span class="govuk-visually-hidden">Error:</span>
-        You need to filter results to a single firm to enable CSV export.
-    </span>
-        </div>
-
-        <div class="moj-nutton-group moj-button-group--inline moj-button-group--with-divider"
-             th:if="${exportCsv and (firmSearch.getSelectedFirmId() != null or selectedUserType == 'INTERNAL')}">
-            <a class="govuk-button js-export-csv"
-               th:attr="data-users-empty=${#lists.isEmpty(users)}"
-               th:href="@{/admin/users/audit/download(search=${search},selectedFirmId=${firmSearch.selectedFirmId}, silasRole=${selectedSilasRole},selectedAppId=${selectedAppId},selectedUserType=${selectedUserType}, selectedFirmName=${firmSearch.firmSearch}, neverActivated=${neverActivated})}">
-                Export as CSV
-            </a>
         </div>
 
         <!-- Pagination -->

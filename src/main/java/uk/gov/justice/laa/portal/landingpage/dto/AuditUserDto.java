@@ -73,6 +73,11 @@ public class AuditUserDto implements Serializable {
     private String appAccess;
 
     /**
+     * App access and assigned roles for a user of a selected firm,
+     */
+    private String appRolesAccess;
+
+    /**
      * Number of firm profiles the user has
      */
     private int profileCount;

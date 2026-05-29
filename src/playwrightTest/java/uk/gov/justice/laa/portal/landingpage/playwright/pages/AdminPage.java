@@ -361,4 +361,9 @@ public class AdminPage {
 
         return this;
     }
+
+    public Locator getRoleAssignRestrictionsRows() {
+        goToRoleAssignmentRestrictionsTab();
+        return roleAssignRestrictionsRows;
+    }
 }

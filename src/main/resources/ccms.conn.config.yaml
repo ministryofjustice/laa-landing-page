@@ -14,7 +14,49 @@ ccms:
         api:
           key: ${CCMS_UDA_API_KEY}
 
+    - app-entra-object-id: ${CCMS_EBS_APP_ENTRA_OBJECT_ID}
+      user:
+        management:
+          api:
+            base-url: ${CCMS_USER_MANAGEMENT_API_BASE_URL}
+            key: ${CCMS_USER_MANAGEMENT_API_KEY}
+        api:
+          sqs:
+            arn: ${CCMS_USER_API_SQS_ARN}
+      uda:
+        base-url: ${CCMS_UDA_API_BASE_URL}
+        api:
+          key: ${CCMS_UDA_API_KEY}
+
+    - app-entra-object-id: ${CIVIL_APPLY_APP_ENTRA_OBJECT_ID}
+      user:
+        management:
+          api:
+            base-url: ${CCMS_USER_MANAGEMENT_API_BASE_URL}
+            key: ${CCMS_USER_MANAGEMENT_API_KEY}
+        api:
+          sqs:
+            arn: ${CCMS_USER_API_SQS_ARN}
+      uda:
+        base-url: ${CCMS_UDA_API_BASE_URL}
+        api:
+          key: ${CCMS_UDA_API_KEY}
+
     - app-entra-object-id: ${CCMS_APP_TWO_ENTRA_OBJECT_ID}
+      user:
+        management:
+          api:
+            base-url: ${CCMS_APP_TWO_USER_MANAGEMENT_API_BASE_URL}
+            key: ${CCMS_APP_TWO_USER_MANAGEMENT_API_KEY}
+        api:
+          sqs:
+            arn: ${CCMS_APP_TWO_USER_API_SQS_ARN}
+      uda:
+        base-url: ${CCMS_APP_TWO_UDA_API_BASE_URL}
+        api:
+          key: ${CCMS_APP_TWO_UDA_API_KEY}
+
+    - app-entra-object-id: ${CCMS_EBS_APP_TWO_ENTRA_OBJECT_ID}
       user:
         management:
           api:
