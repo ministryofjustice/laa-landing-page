@@ -1,0 +1,40 @@
+databaseChangeLog:
+  # Add system_generated column to delete_user_reason table
+  - changeSet:
+      id: 1748476800000-1
+      author: paul.snowdon
+      comment:
+        "Add system_generated boolean column to delete_user_reason to classify
+        reasons as system-generated vs UI-selectable (AC2)"
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - columnExists:
+                tableName: delete_user_reason
+                columnName: system_generated
+      changes:
+        - addColumn:
+            tableName: delete_user_reason
+            columns:
+              - column:
+                  name: system_generated
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+
+  # Mark the three system-assigned delete reasons as system_generated = true
+  - changeSet:
+      id: 1748476800000-2
+      author: paul.snowdon
+      comment:
+        "Set system_generated = true for ExpiredInvitation, NotActiveAfterMaxLifetime
+        and NoGroupsDelete — these are assigned by ExternalUserPollingService, not
+        selectable in the UI"
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: >
+              UPDATE delete_user_reason
+              SET system_generated = true
+              WHERE code IN ('ExpiredInvitation', 'NotActiveAfterMaxLifetime', 'NoGroupsDelete');

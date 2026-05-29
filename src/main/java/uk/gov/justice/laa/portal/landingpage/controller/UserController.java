@@ -451,7 +451,7 @@ public class UserController {
     @PostMapping("/users/manage/{id}/delete")
     @PreAuthorize("@accessControlService.canDeleteUser(#id)")
     public String deleteExternalUser(@PathVariable String id,
-            @RequestParam("reasonId") String reasonId,
+            @RequestParam(value = "reasonId", required = false) String reasonId,
             Authentication authentication,
             HttpSession session,
             Model model) {

@@ -1555,7 +1555,7 @@ class ExternalUserPollingServiceTest {
                 .build();
 
         DeleteUserReason expiredInvitationReason = DeleteUserReason.builder()
-                .code("ExpiredInvitation").label("Expired Invitation").build();
+                .code("ExpiredInvitation").label("Expired Invitation").systemGenerated(true).build();
 
         when(entraUserRepository.findByEntraOid("oid-expired-invite")).thenReturn(Optional.of(entraUser));
         when(userAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(List.of(auditRecord));
@@ -1568,6 +1568,7 @@ class ExternalUserPollingServiceTest {
         ArgumentCaptor<UserAccountStatusAudit> auditCaptor = ArgumentCaptor.forClass(UserAccountStatusAudit.class);
         verify(userAccountStatusAuditRepository).save(auditCaptor.capture());
         assertThat(auditCaptor.getValue().getDeleteUserReason()).isEqualTo(expiredInvitationReason);
+        assertThat(auditCaptor.getValue().getDeleteUserReason().isSystemGenerated()).isTrue();
     }
 
     @Test
@@ -1591,7 +1592,7 @@ class ExternalUserPollingServiceTest {
                 .build();
 
         DeleteUserReason notActiveDeleteReason = DeleteUserReason.builder()
-                .code("NotActiveAfterMaxLifetime").label("Not Active After Max Lifetime").build();
+                .code("NotActiveAfterMaxLifetime").label("Not Active After Max Lifetime").systemGenerated(true).build();
 
         when(entraUserRepository.findByEntraOid("oid-not-active")).thenReturn(Optional.of(entraUser));
         when(userAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(List.of(auditRecord));
@@ -1604,6 +1605,7 @@ class ExternalUserPollingServiceTest {
         ArgumentCaptor<UserAccountStatusAudit> auditCaptor = ArgumentCaptor.forClass(UserAccountStatusAudit.class);
         verify(userAccountStatusAuditRepository).save(auditCaptor.capture());
         assertThat(auditCaptor.getValue().getDeleteUserReason()).isEqualTo(notActiveDeleteReason);
+        assertThat(auditCaptor.getValue().getDeleteUserReason().isSystemGenerated()).isTrue();
     }
 
     @Test
@@ -1623,7 +1625,7 @@ class ExternalUserPollingServiceTest {
         profileWithNoRoles.setEntraUser(entraUser);
 
         DeleteUserReason noGroupsReason = DeleteUserReason.builder()
-                .code("NoGroupsDelete").label("No Groups Delete").build();
+                .code("NoGroupsDelete").label("No Groups Delete").systemGenerated(true).build();
 
         when(entraUserRepository.findByEntraOid("oid-no-roles")).thenReturn(Optional.of(entraUser));
         when(userAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
@@ -1636,6 +1638,7 @@ class ExternalUserPollingServiceTest {
         ArgumentCaptor<UserAccountStatusAudit> auditCaptor = ArgumentCaptor.forClass(UserAccountStatusAudit.class);
         verify(userAccountStatusAuditRepository).save(auditCaptor.capture());
         assertThat(auditCaptor.getValue().getDeleteUserReason()).isEqualTo(noGroupsReason);
+        assertThat(auditCaptor.getValue().getDeleteUserReason().isSystemGenerated()).isTrue();
     }
 
     @Test
