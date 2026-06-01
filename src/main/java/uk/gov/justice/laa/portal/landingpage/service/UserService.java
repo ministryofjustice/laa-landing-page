@@ -37,14 +37,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.microsoft.graph.models.DirectoryRole;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 import uk.gov.justice.laa.portal.landingpage.dto.AccountStatusHistoryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -65,6 +65,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
+import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
@@ -85,7 +86,6 @@ import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
-import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.DeleteUserReasonRepository;
@@ -2020,7 +2020,7 @@ public class UserService {
     public boolean determineIsProviderAdminForSelectedFirm(List<UserProfile> profiles, UUID firmId) {
         return profiles.stream()
                 .filter(p -> UserType.EXTERNAL.equals(p.getUserType()))
-                .filter(p -> firmId.equals(p.getFirm().getId()))
+                .filter(p -> p.getFirm() != null && firmId.equals(p.getFirm().getId()))
                 .anyMatch(profile ->
                         profile.getAppRoles().stream()
                                 .anyMatch(role -> role.getName().equals("Firm User Manager"))
@@ -2033,7 +2033,7 @@ public class UserService {
     public String determineAppAccess(List<UserProfile> profiles, UUID firmId) {
         return profiles.stream()
                 .filter(p -> UserType.INTERNAL.equals(p.getUserType())
-                        || firmId.equals(p.getFirm().getId()))
+                        || (p.getFirm() != null && firmId.equals(p.getFirm().getId())))
                 .flatMap(profile -> profile.getAppRoles().stream())
                 .map(AppRole::getApp)
                 .filter(Objects::nonNull)
@@ -2050,7 +2050,7 @@ public class UserService {
     public String determineAppRolesAccess(List<UserProfile> profiles, UUID firmId) {
         return profiles.stream()
                 .filter(p -> UserType.INTERNAL.equals(p.getUserType())
-                        || firmId.equals(p.getFirm().getId()))
+                        || (p.getFirm() != null && firmId.equals(p.getFirm().getId())))
                 .flatMap(profile -> profile.getAppRoles().stream())
                 .filter(ar -> ar.getApp() != null)
                 .collect(Collectors.groupingBy(

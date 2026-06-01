@@ -8,18 +8,15 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
-import org.springframework.security.core.Authentication;
-
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -33,6 +30,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 
@@ -45,11 +43,14 @@ import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditTableSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.repository.DisableUserReasonRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
@@ -1156,6 +1157,7 @@ class AuditControllerTest {
                 .pageSize(500)
                 .build();
 
+        when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
         when(userService.getAuditUsers(
                 eq("TestSearch"), any(), any(), any(), any(), eq(1), eq(500), eq("name"), eq("asc"), eq(true), any())).thenReturn(page1);
 
@@ -1166,7 +1168,7 @@ class AuditControllerTest {
         AuditExportService.AuditCsvExport export = new AuditExportService.AuditCsvExport("audit.csv", csvBytes);
         when(auditExportService.downloadAuditCsv(any(), any(), any())).thenReturn(export);
 
-        ResponseEntity<byte[]> response = auditController.downloadAuditCsv(criteria);
+        ResponseEntity<byte[]> response = auditController.downloadAuditCsv(criteria, mockAuthentication);
 
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
         assertThat(response.getBody()).isEqualTo(csvBytes);
@@ -1212,6 +1214,7 @@ class AuditControllerTest {
                 .pageSize(500)
                 .build();
 
+        when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
         when(userService.getAuditUsers(
                 eq("TestSearch"), any(), any(), any(), any(), eq(1), eq(500), eq("name"), eq("asc"), eq(true), any())).thenReturn(page1);
 
@@ -1222,7 +1225,7 @@ class AuditControllerTest {
         AuditExportService.AuditCsvExport export = new AuditExportService.AuditCsvExport("audit.csv", csvBytes);
         when(auditExportService.downloadAuditCsv(any(), any(), any())).thenReturn(export);
 
-        ResponseEntity<byte[]> response = auditController.downloadAuditCsv(criteria);
+        ResponseEntity<byte[]> response = auditController.downloadAuditCsv(criteria, mockAuthentication);
 
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
         assertThat(response.getBody()).isEqualTo(csvBytes);
@@ -1266,6 +1269,7 @@ class AuditControllerTest {
                 .pageSize(500)
                 .build();
 
+        when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
         when(userService.getAuditUsers(
                 eq("TestSearch"), any(), any(), any(), any(), eq(1), eq(500), eq("name"), eq("asc"), eq(true), any())).thenReturn(page1);
 
@@ -1276,7 +1280,7 @@ class AuditControllerTest {
         AuditExportService.AuditCsvExport export = new AuditExportService.AuditCsvExport("audit.csv", csvBytes);
         when(auditExportService.downloadAuditCsv(any(), any(), any())).thenReturn(export);
 
-        ResponseEntity<byte[]> response = auditController.downloadAuditCsv(criteria);
+        ResponseEntity<byte[]> response = auditController.downloadAuditCsv(criteria, mockAuthentication);
 
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
         assertThat(response.getBody()).isEqualTo(csvBytes);
@@ -1304,7 +1308,8 @@ class AuditControllerTest {
         criteria.setSelectedUserType(UserTypeForm.INTERNAL.name());
         criteria.setSelectedFirmId(selectedFirmId.toString());
 
-        assertThatThrownBy(() -> auditController.downloadAuditCsv(criteria))
+        when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
+        assertThatThrownBy(() -> auditController.downloadAuditCsv(criteria, mockAuthentication))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Invalid Search criteria provided");
     }
@@ -1326,13 +1331,14 @@ class AuditControllerTest {
                 .pageSize(500)
                 .build();
 
+        when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
         when(userService.getAuditUsers(eq(""), any(), any(), any(), any(), eq(1), eq(500), eq("name"), eq("asc"), eq(true), any())).thenReturn(page);
 
         byte[] csvBytes = "Name,Email\nP1,p1@example.com\n".getBytes(java.nio.charset.StandardCharsets.UTF_8);
         AuditExportService.AuditCsvExport export = new AuditExportService.AuditCsvExport("audit.csv", csvBytes);
         when(auditExportService.downloadAuditCsv(any(), any(), any())).thenReturn(export);
 
-        ResponseEntity<byte[]> response = auditController.downloadAuditCsv(criteria);
+        ResponseEntity<byte[]> response = auditController.downloadAuditCsv(criteria, mockAuthentication);
 
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
         assertThat(response.getBody()).isEqualTo(csvBytes);
@@ -1348,7 +1354,8 @@ class AuditControllerTest {
         criteria.setDirection("asc");
         criteria.setSelectedUserType(UserTypeForm.EXTERNAL.name());
 
-        assertThatThrownBy(() -> auditController.downloadAuditCsv(criteria))
+        when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
+        assertThatThrownBy(() -> auditController.downloadAuditCsv(criteria, mockAuthentication))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Invalid Search criteria provided");
     }
@@ -1361,7 +1368,8 @@ class AuditControllerTest {
         criteria.setSort("name");
         criteria.setDirection("asc");
 
-        assertThatThrownBy(() -> auditController.downloadAuditCsv(criteria))
+        when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
+        assertThatThrownBy(() -> auditController.downloadAuditCsv(criteria, mockAuthentication))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Invalid Search criteria provided");
     }
@@ -1376,7 +1384,92 @@ class AuditControllerTest {
         criteria.setSelectedUserType(UserTypeForm.INTERNAL.name());
         criteria.setSelectedFirmId(selectedFirmId.toString());
 
-        assertThatThrownBy(() -> auditController.downloadAuditCsv(criteria))
+        when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
+        assertThatThrownBy(() -> auditController.downloadAuditCsv(criteria, mockAuthentication))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Invalid Search criteria provided");
+    }
+
+    @Test
+    void displayAuditTable_externalSingleFirmUser_firmAutoAppliedInModel() {
+        // Given - user can only see external users; their firm is auto-applied server-side
+        UUID autoFirmId = UUID.randomUUID();
+        EntraUser entraUser = EntraUser.builder().build();
+
+        when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)).thenReturn(false);
+        when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER)).thenReturn(true);
+        when(loginService.getCurrentEntraUser(mockAuthentication)).thenReturn(entraUser);
+        when(firmService.getUserFirm(entraUser)).thenReturn(Optional.of(FirmDto.builder().id(autoFirmId).name("Auto Firm").build()));
+        when(userService.getAuditUsers(anyString(), eq(autoFirmId), any(), any(), any(), anyInt(), anyInt(),
+                anyString(), anyString(), eq(false), any())).thenReturn(mockPaginatedUsers);
+        when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
+
+        AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
+
+        // When
+        String viewName = auditController.displayAuditTable(criteria, model, mockAuthentication);
+
+        // Then - the FirmSearchForm in the model must carry the auto-applied firm ID
+        // so the export button's data-firm-selected evaluates to true
+        assertThat(viewName).isEqualTo("user-audit/users");
+        FirmSearchForm firmSearch = (FirmSearchForm) model.getAttribute("firmSearch");
+        assertThat(firmSearch).isNotNull();
+        assertThat(firmSearch.getSelectedFirmId()).isEqualTo(autoFirmId);
+    }
+
+    @Test
+    void downloadAuditCsvForExternalSingleFirmUser_shouldAutoApplyFirmAndSucceed() {
+        // Given - user can only see external users; no firm ID or user type in criteria
+        UUID autoFirmId = UUID.randomUUID();
+        EntraUser entraUser = EntraUser.builder().build();
+
+        when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)).thenReturn(false);
+        when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER)).thenReturn(true);
+        when(loginService.getCurrentEntraUser(mockAuthentication)).thenReturn(entraUser);
+        when(firmService.getUserFirm(entraUser)).thenReturn(Optional.of(FirmDto.builder().id(autoFirmId).name("Test Firm").build()));
+
+        AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
+        criteria.setSort("name");
+        criteria.setDirection("asc");
+
+        AuditUserDto user = AuditUserDto.builder().name("Jane Doe").email("jane@example.com").build();
+        PaginatedAuditUsers singlePage = PaginatedAuditUsers.builder()
+                .users(List.of(user)).currentPage(1).pageSize(500).build();
+
+        when(userService.getAuditUsers(eq(""), eq(autoFirmId), any(), any(), any(),
+                eq(1), eq(500), eq("name"), eq("asc"), eq(true), any())).thenReturn(singlePage);
+
+        byte[] csvBytes = "Name,Email\nJane Doe,jane@example.com\n".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        AuditExportService.AuditCsvExport export = new AuditExportService.AuditCsvExport("audit.csv", csvBytes);
+        when(auditExportService.downloadAuditCsv(any(), any(), any())).thenReturn(export);
+
+        // When
+        ResponseEntity<byte[]> response = auditController.downloadAuditCsv(criteria, mockAuthentication);
+
+        // Then
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(response.getBody()).isEqualTo(csvBytes);
+        verify(userService, times(1)).getAuditUsers("", autoFirmId, null, null,
+                UserTypeForm.ALL_EXTERNAL, 1, 500, "name", "asc", true, null);
+        verify(auditExportService, times(1)).downloadAuditCsv(any(), any(), any());
+    }
+
+    @Test
+    void downloadAuditCsvForExternalSingleFirmUser_noFirmAvailable_shouldThrow() {
+        // Given - user can only see external users, but no firm can be resolved
+        EntraUser entraUser = EntraUser.builder().build();
+
+        when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)).thenReturn(false);
+        when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER)).thenReturn(true);
+        when(loginService.getCurrentEntraUser(mockAuthentication)).thenReturn(entraUser);
+        when(firmService.getUserFirm(entraUser)).thenReturn(Optional.empty());
+
+        AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
+        criteria.setSort("name");
+        criteria.setDirection("asc");
+
+        // When / Then
+        assertThatThrownBy(() -> auditController.downloadAuditCsv(criteria, mockAuthentication))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Invalid Search criteria provided");
     }

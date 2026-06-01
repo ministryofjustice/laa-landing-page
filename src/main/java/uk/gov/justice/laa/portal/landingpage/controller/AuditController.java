@@ -130,8 +130,9 @@ public class AuditController {
                 criteria.getSilasRole(), criteria.getSelectedAppId(), filteredUserType,
                 criteria.getPage(), criteria.getSize(), criteria.getSort(), criteria.getDirection(), false,
                 criteria.getNeverActivated());
-        // Build firm search form
-        FirmSearchForm firmSearchForm = new FirmSearchForm(criteria.getFirmSearch(), criteria.getSelectedFirmId());
+        // Build firm search form using the effective (access-control-applied) firm ID so that the
+        // export button correctly reflects the auto-applied firm for external single-firm users.
+        FirmSearchForm firmSearchForm = new FirmSearchForm(criteria.getFirmSearch(), filteredFirmId);
         // Add attributes to model
         buildDisplayAuditTableModel(criteria, model, paginatedUsers, firmSearchForm);
         model.addAttribute("canSeeExternalUsers", canSeeExternalUsers);
@@ -428,15 +429,42 @@ public class AuditController {
 
     @GetMapping(value = "/users/audit/download", produces = "text/csv")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission('EXPORT_AUDIT_DATA')")
-    public ResponseEntity<byte[]> downloadAuditCsv(@ModelAttribute AuditTableSearchCriteria criteria) {
+    public ResponseEntity<byte[]> downloadAuditCsv(@ModelAttribute AuditTableSearchCriteria criteria,
+            Authentication authentication) {
 
-        if (criteria.getSelectedFirmId() == null && criteria.getSelectedUserType() != UserTypeForm.INTERNAL) {
+        // Apply the same access-control firm/type restrictions as displayAuditTable so that
+        // external single-firm users (whose firm is auto-applied server-side) can export CSV.
+        boolean canSeeExternalUsers = accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
+        boolean canSeeInternalUsers = accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER);
+        boolean canSeeAllUsers = canSeeExternalUsers && canSeeInternalUsers;
+
+        UUID effectiveFirmId = criteria.getSelectedFirmId();
+        UserTypeForm effectiveUserType = criteria.getSelectedUserType();
+
+        if (!canSeeAllUsers) {
+            if (canSeeInternalUsers) {
+                effectiveUserType = UserTypeForm.INTERNAL;
+            } else {
+                if (effectiveUserType == null || effectiveUserType == UserTypeForm.ALL || effectiveUserType == UserTypeForm.INTERNAL) {
+                    effectiveUserType = UserTypeForm.ALL_EXTERNAL;
+                }
+                if (effectiveFirmId == null) {
+                    EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
+                    Optional<FirmDto> optionalFirm = firmService.getUserFirm(entraUser);
+                    if (optionalFirm.isPresent()) {
+                        effectiveFirmId = optionalFirm.get().getId();
+                    }
+                }
+            }
+        }
+
+        if (effectiveFirmId == null && effectiveUserType != UserTypeForm.INTERNAL) {
             log.warn("Invalid criteria provided for CSV export - firm ID must always be provided when external user type is selected. selectedUserType: {}",
                     criteria.getSelectedUserType());
             throw new RuntimeException("Invalid Search criteria provided");
         }
 
-        if (criteria.getSelectedFirmId() != null && criteria.getSelectedUserType() == UserTypeForm.INTERNAL) {
+        if (effectiveFirmId != null && effectiveUserType == UserTypeForm.INTERNAL) {
             log.warn("Invalid criteria provided for CSV export - firm ID should not be provided when internal user type is selected. selectedFirmId: {}",
                     criteria.getSelectedFirmId());
             throw new RuntimeException("Invalid Search criteria provided");
@@ -445,31 +473,33 @@ public class AuditController {
         final int pageSize = 500;
         int page = 1;
 
-        String userId = authenticatedUser.getCurrentUser()
-                .map(CurrentUserDto::getUserId)
-                .map(Object::toString)
-                .orElse("unknown");
-
         List<String> filterSummary = Stream.of(
                         criteria.getSilasRole(),
-                        criteria.getSelectedUserType() == null ? "" : String.valueOf(criteria.getSelectedUserType()),
+                        effectiveUserType == null ? "" : String.valueOf(effectiveUserType),
                         criteria.getSelectedAppId() == null ? "" : String.valueOf(criteria.getSelectedAppId())
                 )
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
-        String firmCode = criteria.getSelectedFirmId() == null ? ""
-                : firmRepository.findById(criteria.getSelectedFirmId()).map(Firm::getCode).orElse("");
+        String firmCode = "";
+        String firmName = criteria.getSelectedFirmName();
+        if (effectiveFirmId != null) {
+            Optional<Firm> firm = firmRepository.findById(effectiveFirmId);
+            firmCode = firm.map(Firm::getCode).orElse("");
+            if (firmName == null || firmName.isBlank()) {
+                firmName = firm.map(Firm::getName).orElse("");
+            }
+        }
         List<AuditUserDto> firmData = new ArrayList<>(pageSize);
 
         PaginatedAuditUsers result;
         do {
             result = userService.getAuditUsers(
                     criteria.getSearch(),
-                    criteria.getSelectedFirmId(),
+                    effectiveFirmId,
                     criteria.getSilasRole(),
                     criteria.getSelectedAppId(),
-                    criteria.getSelectedUserType(),
+                    effectiveUserType,
                     page,
                     pageSize,
                     criteria.getSort(),
@@ -487,7 +517,11 @@ public class AuditController {
             log.info("No audit users found for search criteria: {}", Arrays.toString(filterSummary.toArray()));
         }
 
-        AuditCsvExport export = auditExportService.downloadAuditCsv(firmData, firmCode, criteria.getSelectedFirmName());
+        AuditCsvExport export = auditExportService.downloadAuditCsv(firmData, firmCode, firmName);
+        String userId = authenticatedUser.getCurrentUser()
+                .map(CurrentUserDto::getUserId)
+                .map(Object::toString)
+                .orElse("unknown");
         log.info("CSV Audit Export complete - actor= {}, timestamp= {}, Firm Code= {}, Filter Summary (Silas Role, "
                 + "UserType, App Id)= {}, "
                 + "row count= {}", userId, LocalDateTime.now(), firmCode, filterSummary, result.getUsers().size());
