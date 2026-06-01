@@ -129,7 +129,7 @@ public class AuditController {
                 criteria.getSearch(), filteredFirmId,
                 criteria.getSilasRole(), criteria.getSelectedAppId(), filteredUserType,
                 criteria.getPage(), criteria.getSize(), criteria.getSort(), criteria.getDirection(), false,
-                criteria.getInactiveSinceDate(), criteria.getNeverActivated());
+                criteria.getNeverActivated());
         // Build firm search form
         FirmSearchForm firmSearchForm = new FirmSearchForm(criteria.getFirmSearch(), criteria.getSelectedFirmId());
         // Add attributes to model
@@ -475,7 +475,6 @@ public class AuditController {
                     criteria.getSort(),
                     criteria.getDirection(),
                     true,
-                    criteria.getInactiveSinceDate(),
                     criteria.getNeverActivated()
             );
 

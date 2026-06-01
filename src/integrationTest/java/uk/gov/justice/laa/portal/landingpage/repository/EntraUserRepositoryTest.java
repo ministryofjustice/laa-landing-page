@@ -1,11 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.repository;
 
-import java.lang.reflect.Constructor;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import org.assertj.core.api.Assertions;
 import static org.junit.jupiter.api.Assertions.assertThrows;
