@@ -129,7 +129,7 @@ public class AuditController {
                 criteria.getSearch(), filteredFirmId,
                 criteria.getSilasRole(), criteria.getSelectedAppId(), filteredUserType,
                 criteria.getPage(), criteria.getSize(), criteria.getSort(), criteria.getDirection(), false,
-                criteria.getInactiveSinceDate(), criteria.getNeverActivated());
+                criteria.getNeverActivated());
         // Build firm search form
         FirmSearchForm firmSearchForm = new FirmSearchForm(criteria.getFirmSearch(), criteria.getSelectedFirmId());
         // Add attributes to model
@@ -311,7 +311,7 @@ public class AuditController {
                 .map(TechServicesUser.GuestUserStatus::getDisabledReason)
                 .flatMap(disableUserReasonRepository::findDisableUserReasonByEntraDescription)
                 .map(DisableUserReason::getName)
-                .orElse("Inactivity");
+                .orElse("Unknown");
     }
 
     /**
@@ -336,7 +336,7 @@ public class AuditController {
     @PostMapping("/users/audit/entra/{id}/delete")
     @PreAuthorize("@accessControlService.canDeleteUserWithoutProfile(#id)")
     public String deleteUserWithoutProfile(@PathVariable String id,
-            @RequestParam("reasonId") String reasonId, Authentication authentication,
+            @RequestParam(value = "reasonId", required = false) String reasonId, Authentication authentication,
             HttpSession session, Model model) {
 
         log.debug("AuditController.deleteUserWithoutProfile - entraUserId: '{}', reasonId: '{}'", id,
@@ -475,7 +475,6 @@ public class AuditController {
                     criteria.getSort(),
                     criteria.getDirection(),
                     true,
-                    criteria.getInactiveSinceDate(),
                     criteria.getNeverActivated()
             );
 

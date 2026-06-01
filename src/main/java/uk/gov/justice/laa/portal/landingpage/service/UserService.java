@@ -1,7 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import java.io.IOException;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -34,6 +33,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -94,7 +94,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditProjection;
+import uk.gov.justice.laa.portal.landingpage.repository.projection.AuditUserSearchProjection;
 import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
@@ -1732,16 +1732,14 @@ public class UserService {
      * @param direction  Sort direction (asc/desc)
      * @return Paginated audit users
      */
+    @Transactional(readOnly = true)
     public PaginatedAuditUsers getAuditUsers(
             String searchTerm, UUID firmId, String silasRole, UUID appId, UserTypeForm userTypeForm,
-            int page, int pageSize, String sort, String direction, boolean csvExport,
-            LocalDate inactiveSinceDate, Boolean neverActivated) {
+            int page, int pageSize, String sort, String direction, boolean csvExport, Boolean neverActivated) {
         Boolean multiFirm = userTypeForm == null ? null : userTypeForm.getMultiFirm();
         UserType userType = userTypeForm == null ? null : userTypeForm.getUserType();
         String userTypeStr = userType == null ? null : userType.name();
         String neverActivatedFlag = Boolean.TRUE.equals(neverActivated) ? "true" : null;
-        String inactiveSinceDateFlag = inactiveSinceDate != null ? "active" : null;
-        LocalDateTime inactiveSinceDateDt = inactiveSinceDate != null ? inactiveSinceDate.atStartOfDay() : null;
 
         // Check if sorting by profile count, firm, or account status (special cases -
         // require different queries)
@@ -1750,101 +1748,59 @@ public class UserService {
                 && (sort.equalsIgnoreCase("firm") || sort.equalsIgnoreCase("firmassociation"));
         boolean sortBySilasStatus = sort != null && sort.equalsIgnoreCase("silasstatus");
         boolean sortByUserType = sort != null && sort.equalsIgnoreCase("usertype");
+        boolean sortByMultiFirmFlag = sort != null && sort.equalsIgnoreCase("isMultiFirmUser");
 
         Page<EntraUser> userPage;
 
-        if (sortByProfileCount || sortByFirm || sortBySilasStatus || sortByUserType) {
-            // Use special queries for profile count, firm, or account status sorting
-            boolean ascending = direction == null || direction.equalsIgnoreCase("asc");
-            String sortField;
-            if (sortByProfileCount) {
-                sortField = "profileCount";
-            } else if (sortByFirm) {
-                sortField = "firmName";
-            } else if (sortBySilasStatus) {
-                sortField = "silasStatusRank";
-            } else {
-                sortField = "userTypeRank";
-            }
-
-            Sort sortObj = ascending ? Sort.by(sortField).ascending() : Sort.by(sortField).descending();
-            PageRequest pageRequest = PageRequest.of(page - 1, pageSize, sortObj);
-            // UserType must be treated as a string because we are using native queries
-
-            Page<? extends UserAuditProjection> resultPage;
-            if (sortByProfileCount) {
-                resultPage = entraUserRepository.findAllUsersForAuditWithProfileCount(
-                        searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm,
-                        inactiveSinceDateFlag, inactiveSinceDateDt, neverActivatedFlag, pageRequest);
-            } else if (sortByFirm) {
-                resultPage = entraUserRepository.findAllUsersForAuditWithFirm(
-                        searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm,
-                        inactiveSinceDateFlag, inactiveSinceDateDt, neverActivatedFlag, pageRequest);
-            } else if (sortBySilasStatus) {
-                resultPage = entraUserRepository.findAllUsersForAuditWithSilasStatus(
-                        searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm,
-                        inactiveSinceDateFlag, inactiveSinceDateDt, neverActivatedFlag, pageRequest);
-            } else {
-                resultPage = entraUserRepository.findAllUsersForAuditWithUserType(
-                        searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm,
-                        inactiveSinceDateFlag, inactiveSinceDateDt, neverActivatedFlag, pageRequest);
-            }
-
-            // Extract user IDs in order
-            Set<UUID> userIds = resultPage.getContent().stream()
-                    .map(UserAuditProjection::getUserId)
-                    .collect(Collectors.toCollection(LinkedHashSet::new));
-
-            // Fetch full user details
-            List<EntraUser> users = Collections.emptyList();
-            if (!userIds.isEmpty()) {
-                List<EntraUser> fetchedUsers = entraUserRepository
-                        .findUsersWithProfilesAndRoles(userIds);
-
-                // Sort users to match the order from the query result
-                Map<UUID, EntraUser> orderMap = fetchedUsers.stream()
-                        .collect(Collectors.toMap(EntraUser::getId, Function.identity()));
-                users = userIds.stream()
-                        .map(orderMap::get)
-                        .filter(Objects::nonNull)
-                        .toList();
-            }
-
-            // Create page with sorted users
-            userPage = new PageImpl<>(users, pageRequest, resultPage.getTotalElements());
+        // Use special queries for profile count, firm, or account status sorting
+        String sortField;
+        if (sort == null || sort.isBlank()) {
+            sortField = "NAME";
+        } else if (sortByProfileCount) {
+            sortField = "PROFILE_COUNT";
+        } else if (sortByFirm) {
+            sortField = "FIRM_NAME";
+        } else if (sortBySilasStatus) {
+            sortField = "STATUS_RANK";
+        } else if (sortByUserType) {
+            sortField = "USER_TYPE_RANK";
+        } else if (sortByMultiFirmFlag) {
+            sortField = "MULTI_FIRM";
         } else {
-            // Map sort field to entity field
-            String mappedSort = mapAuditSortField(sort != null ? sort : "name");
-            Sort sortObj = getAuditSort(mappedSort, direction);
-            PageRequest pageRequest = PageRequest.of(page - 1, pageSize, sortObj);
-
-            userPage = entraUserRepository.findAllUsersForAudit(
-                    searchTerm, firmId, silasRole, appId, userType, multiFirm,
-                    inactiveSinceDateFlag, inactiveSinceDateDt, neverActivatedFlag, pageRequest);
-
-            // Second query: Batch fetch relationships for the paginated users
-            if (!userPage.getContent().isEmpty()) {
-                Set<UUID> userIds = userPage.getContent().stream().map(EntraUser::getId)
-                        .collect(Collectors.toCollection(LinkedHashSet::new));
-                List<EntraUser> usersWithRelations = entraUserRepository.findUsersWithProfilesAndRoles(userIds);
-
-                // Replace content with fully loaded entities, preserving order
-                Map<UUID, EntraUser> orderMap = usersWithRelations.stream()
-                        .collect(Collectors.toMap(EntraUser::getId, Function.identity()));
-                List<EntraUser> orderedUsers = userIds.stream()
-                        .map(orderMap::get)
-                        .filter(Objects::nonNull)
-                        .toList();
-                userPage = new PageImpl<>(orderedUsers, userPage.getPageable(),
-                        userPage.getTotalElements());
-            }
+            sortField = sort.toUpperCase();
         }
+
+        Page<AuditUserSearchProjection> resultPage = getPagedUsersWithPredictions(sortField, searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm,
+                null, neverActivatedFlag, page - 1, pageSize, direction);
+
+        // Extract user IDs in order
+        Set<UUID> userIds = resultPage.getContent().stream()
+                .map(AuditUserSearchProjection::getUserId)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        // Fetch full user details
+        List<EntraUser> users = Collections.emptyList();
+        if (!userIds.isEmpty()) {
+            List<EntraUser> fetchedUsers = entraUserRepository
+                    .findUsersWithProfilesAndRoles(userIds);
+
+            // Sort users to match the order from the query result
+            Map<UUID, EntraUser> orderMap = fetchedUsers.stream()
+                    .collect(Collectors.toMap(EntraUser::getId, Function.identity()));
+            users = userIds.stream()
+                    .map(orderMap::get)
+                    .filter(Objects::nonNull)
+                    .toList();
+        }
+
+        // Create page with sorted users
+        userPage = new PageImpl<>(users, resultPage.getPageable(), resultPage.getTotalElements());
 
         // Map to DTOs
         List<AuditUserDto> auditUsers;
         if (csvExport) {
             auditUsers =
-                userPage.getContent().stream().map(user -> mapToAuditUserDtoForCsv(user, csvExport, firmId)).toList();
+                    userPage.getContent().stream().map(user -> mapToAuditUserDtoForCsv(user, csvExport, firmId)).toList();
         } else {
             auditUsers =
                     userPage.getContent().stream().map(user -> mapToAuditUserDto(user, csvExport)).toList();
@@ -2583,4 +2539,50 @@ public class UserService {
         UserProfileSilasStatus silasStatus = determineStatusBadge(invitationStatusStr, noRoleAssigned, false, isEnabled, isInternalUser);
         userProfile.setSilasStatus(silasStatus);
     }
+
+    @Transactional(readOnly = true)
+    public Page<AuditUserSearchProjection> getPagedUsersWithPredictions(
+            String sortType,
+            String searchTerm,
+            UUID firmId,
+            String silasRole,
+            UUID appId,
+            String userType,
+            Boolean multiFirm,
+            Boolean inactiveSinceDateFlag,
+            String neverActivated,
+            int page,
+            int size,
+            String sortDirection
+    ) {
+        // 1. Build Pageable object (Our custom query interprets the sort direction internally using 'predictionValue')
+        Sort.Direction direction = "DESC".equalsIgnoreCase(sortDirection) ? Sort.Direction.DESC : Sort.Direction.ASC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, "predictionValue"));
+
+        Boolean neverActivatedFlag = "true".equals(neverActivated) ? Boolean.TRUE : null;
+        // 2. Fetch the raw object array tuples from our unified repository setup
+        Page<Object[]> rawPage = entraUserRepository.findAuditUsersWithDynamicProjection(
+                sortType, searchTerm, firmId, silasRole, appId, userType,
+                multiFirm, inactiveSinceDateFlag, neverActivatedFlag, pageable
+        );
+
+        // 3. Map the raw database tuples safely to our Response DTO
+        List<AuditUserSearchProjection> mappedContent = rawPage.getContent().stream().map(tuple -> {
+            UUID userId = tuple[0] instanceof UUID ? (UUID) tuple[0] : UUID.fromString(tuple[0].toString());
+
+            // "STATUS_RANK" layout yields 3 columns: [userId, silasStatus, silasStatusRank]
+            if ("STATUS_RANK".equalsIgnoreCase(sortType) && tuple.length > 2) {
+                String silasStatus = tuple[1] != null ? tuple[1].toString() : null;
+                Object rankValue = tuple[2];
+                return new AuditUserSearchProjection(userId, silasStatus, rankValue);
+            }
+
+            // Standard 2-column layout layouts: [userId, predictionValue]
+            Object predictionValue = tuple[1];
+            return new AuditUserSearchProjection(userId, predictionValue);
+        }).toList();
+
+        return new PageImpl<>(mappedContent, pageable, rawPage.getTotalElements());
+    }
+
 }
