@@ -1109,16 +1109,17 @@
                                 </td>
                                 <td class="govuk-table__cell">
                                     <th:block
-                                            th:if="${user.invitationStatus.name() == 'VERIFICATION_SUCCESS' and !user.enabled}">
+                                            th:if="${user.invitationStatus != null and user.invitationStatus.name() == 'VERIFICATION_SUCCESS' and !user.enabled}">
                                         <strong class="govuk-tag govuk-tag--red">Disabled</strong>
                                     </th:block>
                                     <th:block
-                                            th:if="${user.invitationStatus.name() == 'VERIFICATION_SUCCESS' and user.enabled}">
+                                            th:if="${user.invitationStatus != null and user.invitationStatus.name() == 'VERIFICATION_SUCCESS' and user.enabled}">
                                         <strong class="govuk-tag govuk-tag--green govuk-!-margin-top-1">
                                             Enabled
                                         </strong>
                                     </th:block>
-                                    <th:block th:if="${user.invitationStatus.name() != 'VERIFICATION_SUCCESS'}">
+                                    <th:block
+                                            th:if="${user.invitationStatus == null || user.invitationStatus.name() != 'VERIFICATION_SUCCESS'}">
                                         <strong class="govuk-tag govuk-tag--grey govuk-!-margin-top-1">
                                             Awaiting Verification
                                         </strong>
