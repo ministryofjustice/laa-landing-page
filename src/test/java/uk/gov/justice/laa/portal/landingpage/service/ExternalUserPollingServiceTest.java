@@ -37,8 +37,8 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.repository.DisableUserReasonRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.EntraLastSyncMetadataRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraLastSyncMetadataRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUsersResponse;
@@ -296,14 +296,14 @@ class ExternalUserPollingServiceTest {
         when(entraUserRepository.findByEntraOid("user456")).thenReturn(Optional.of(userToDisable));
 
         // Mock disable reason repository
-        DisableUserReason inactivityReason = DisableUserReason.builder()
+        DisableUserReason notActiveReason = DisableUserReason.builder()
                 .id(java.util.UUID.randomUUID())
-                .name("Inactivity")
-                .description("Disabled due to inactivity")
-                .entraDescription("Inactivity")
+                .name("Not Active")
+                .description("User account is not active in Entra")
+                .entraDescription("NotActive")
                 .userSelectable(false)
                 .build();
-        when(disableUserReasonRepository.findAll()).thenReturn(List.of(inactivityReason));
+        when(disableUserReasonRepository.findAll()).thenReturn(List.of(notActiveReason));
 
         TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
@@ -323,7 +323,7 @@ class ExternalUserPollingServiceTest {
                 .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
                         .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
-                                .disabledReason("NoGroupsDisable")
+                                .disabledReason("NotActive")
                                 .build())
                         .build())
                 .build();
@@ -992,11 +992,11 @@ class ExternalUserPollingServiceTest {
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
         when(entraUserRepository.save(existingUser)).thenThrow(new RuntimeException("Database error"));
 
-        DisableUserReason inactivityReason = DisableUserReason.builder()
+        DisableUserReason notActiveReason = DisableUserReason.builder()
                 .id(java.util.UUID.randomUUID())
-                .name("Inactivity")
-                .description("Disabled due to inactivity")
-                .entraDescription("Inactivity")
+                .name("Not Active")
+                .description("User account is not active in Entra")
+                .entraDescription("NotActive")
                 .userSelectable(false)
                 .build();
 
@@ -1046,7 +1046,7 @@ class ExternalUserPollingServiceTest {
                 .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
                         .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
-                                .disabledReason("NoGroupsDisable")
+                                .disabledReason("NotActive")
                                 .build())
                         .build())
                 .build();
@@ -1256,14 +1256,14 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(enabledUser));
 
-        DisableUserReason inactivityReason = DisableUserReason.builder()
+        DisableUserReason notActiveReason = DisableUserReason.builder()
                 .id(java.util.UUID.randomUUID())
-                .name("Inactivity")
-                .description("Disabled due to inactivity")
-                .entraDescription("Inactivity")
+                .name("Not Active")
+                .description("User account is not active in Entra")
+                .entraDescription("NotActive")
                 .userSelectable(false)
                 .build();
-        when(disableUserReasonRepository.findAll()).thenReturn(List.of(inactivityReason));
+        when(disableUserReasonRepository.findAll()).thenReturn(List.of(notActiveReason));
 
         TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
@@ -1274,7 +1274,7 @@ class ExternalUserPollingServiceTest {
                 .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
                         .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
-                                .disabledReason("NoGroupsDisable")
+                                .disabledReason("NotActive")
                                 .build())
                         .build())
                 .build();
@@ -1317,7 +1317,7 @@ class ExternalUserPollingServiceTest {
                 .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
                         .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
-                                .disabledReason("NoGroupsDisable")
+                                .disabledReason("NotActive")
                                 .build())
                         .build())
                 .build();
@@ -1555,7 +1555,7 @@ class ExternalUserPollingServiceTest {
                 .build();
 
         DeleteUserReason expiredInvitationReason = DeleteUserReason.builder()
-                .code("ExpiredInvitation").label("Expired Invitation").build();
+                .code("ExpiredInvitation").label("Expired Invitation").systemGenerated(true).build();
 
         when(entraUserRepository.findByEntraOid("oid-expired-invite")).thenReturn(Optional.of(entraUser));
         when(userAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(List.of(auditRecord));
@@ -1568,6 +1568,7 @@ class ExternalUserPollingServiceTest {
         ArgumentCaptor<UserAccountStatusAudit> auditCaptor = ArgumentCaptor.forClass(UserAccountStatusAudit.class);
         verify(userAccountStatusAuditRepository).save(auditCaptor.capture());
         assertThat(auditCaptor.getValue().getDeleteUserReason()).isEqualTo(expiredInvitationReason);
+        assertThat(auditCaptor.getValue().getDeleteUserReason().isSystemGenerated()).isTrue();
     }
 
     @Test
@@ -1591,7 +1592,7 @@ class ExternalUserPollingServiceTest {
                 .build();
 
         DeleteUserReason notActiveDeleteReason = DeleteUserReason.builder()
-                .code("NotActiveAfterMaxLifetime").label("Not Active After Max Lifetime").build();
+                .code("NotActiveAfterMaxLifetime").label("Not Active After Max Lifetime").systemGenerated(true).build();
 
         when(entraUserRepository.findByEntraOid("oid-not-active")).thenReturn(Optional.of(entraUser));
         when(userAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(List.of(auditRecord));
@@ -1604,6 +1605,7 @@ class ExternalUserPollingServiceTest {
         ArgumentCaptor<UserAccountStatusAudit> auditCaptor = ArgumentCaptor.forClass(UserAccountStatusAudit.class);
         verify(userAccountStatusAuditRepository).save(auditCaptor.capture());
         assertThat(auditCaptor.getValue().getDeleteUserReason()).isEqualTo(notActiveDeleteReason);
+        assertThat(auditCaptor.getValue().getDeleteUserReason().isSystemGenerated()).isTrue();
     }
 
     @Test
@@ -1623,7 +1625,7 @@ class ExternalUserPollingServiceTest {
         profileWithNoRoles.setEntraUser(entraUser);
 
         DeleteUserReason noGroupsReason = DeleteUserReason.builder()
-                .code("NoGroupsDelete").label("No Groups Delete").build();
+                .code("NoGroupsDelete").label("No Groups Delete").systemGenerated(true).build();
 
         when(entraUserRepository.findByEntraOid("oid-no-roles")).thenReturn(Optional.of(entraUser));
         when(userAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
@@ -1636,6 +1638,7 @@ class ExternalUserPollingServiceTest {
         ArgumentCaptor<UserAccountStatusAudit> auditCaptor = ArgumentCaptor.forClass(UserAccountStatusAudit.class);
         verify(userAccountStatusAuditRepository).save(auditCaptor.capture());
         assertThat(auditCaptor.getValue().getDeleteUserReason()).isEqualTo(noGroupsReason);
+        assertThat(auditCaptor.getValue().getDeleteUserReason().isSystemGenerated()).isTrue();
     }
 
     @Test
