@@ -10,3 +10,4 @@ databaseChangeLog:
         - sql:
             dbms: postgresql
             sql: "INSERT INTO disable_user_reason (id, name, description, entra_description, user_selectable) VALUES (gen_random_uuid(), 'Pending Acceptance', 'User has not yet accepted their invitation', 'PendingAcceptance', false)"
+
