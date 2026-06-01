@@ -96,9 +96,11 @@ import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRe
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.projection.AuditUserSearchProjection;
 import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.GetUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
 
 /**
  * userService
@@ -938,6 +940,53 @@ public class UserService {
             throw new TechServicesClientException(registerUserResponse.getError().getMessage(),
                     registerUserResponse.getError().getCode(),
                     registerUserResponse.getError().getErrors());
+        }
+
+        if (registerUserResponse.getData().getMessage().contains("User already exists")) {
+            TechServicesApiResponse<GetUserResponse> getUserResponse = techServicesClient.getUser(registerUserResponse.getData().getCreatedUser().getId());
+            TechServicesUser techServicesUser = getUserResponse.getData().getUser();
+
+            if (techServicesUser != null && user.getEmail().equalsIgnoreCase(techServicesUser.getMail())) {
+                user.setEntraOid(techServicesUser.getId());
+            } else {
+                throw new RuntimeException("User creation failed");
+            }
+
+            if (techServicesUser.getGivenName() != null && !techServicesUser.getGivenName().equals(user.getFirstName())) {
+                user.setFirstName(techServicesUser.getGivenName());
+            }
+
+            if (techServicesUser.getSurname() != null && !techServicesUser.getSurname().equals(user.getLastName())) {
+                user.setLastName(techServicesUser.getSurname());
+            }
+
+            if (techServicesUser.getEmail() != null && !techServicesUser.getEmail().equals(user.getEmail())) {
+                user.setEmail(techServicesUser.getEmail());
+            }
+
+            if (techServicesUser.isAccountEnabled() != user.isEnabled()) {
+                user.setEnabled(techServicesUser.isAccountEnabled());
+            }
+
+            if (techServicesUser.isMailOnly() != user.isMailOnly()) {
+                user.setMailOnly(techServicesUser.isMailOnly());
+            }
+
+            if (techServicesUser.getCustomSecurityAttributes() != null
+                    && techServicesUser.getCustomSecurityAttributes().getGuestUserStatus() != null) {
+                TechServicesUser.GuestUserStatus guestUserStatus = techServicesUser.getCustomSecurityAttributes().getGuestUserStatus();
+                user.setInvitationStatus(guestUserStatus.getInvitationProgress());
+            }
+
+//            if (techServicesUser.getCustomSecurityAttributes() != null
+//                    && techServicesUser.getCustomSecurityAttributes().getGuestUserStatus() != null) {
+//                TechServicesUser.GuestUserStatus guestUserStatus = techServicesUser.getCustomSecurityAttributes().getGuestUserStatus();
+//                user.setDisbled.(guestUserStatus.getDisabledReason());
+//            }
+
+            // Missing Last Synced on, Disabled by and Disabled Type
+
+            return persistNewUser(user, firm, isUserManager, createdBy, isMultiFirmUser);
         }
 
         RegisterUserResponse.CreatedUser createdUser = registerUserResponse.getData().getCreatedUser();
