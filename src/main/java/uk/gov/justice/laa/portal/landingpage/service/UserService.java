@@ -2020,7 +2020,7 @@ public class UserService {
     public boolean determineIsProviderAdminForSelectedFirm(List<UserProfile> profiles, UUID firmId) {
         return profiles.stream()
                 .filter(p -> UserType.EXTERNAL.equals(p.getUserType()))
-                .filter(p -> p.getFirm() != null && firmId.equals(p.getFirm().getId()))
+                .filter(p -> firmId != null && p.getFirm() != null && firmId.equals(p.getFirm().getId()))
                 .anyMatch(profile ->
                         profile.getAppRoles().stream()
                                 .anyMatch(role -> role.getName().equals("Firm User Manager"))
@@ -2033,7 +2033,7 @@ public class UserService {
     public String determineAppAccess(List<UserProfile> profiles, UUID firmId) {
         return profiles.stream()
                 .filter(p -> UserType.INTERNAL.equals(p.getUserType())
-                        || (p.getFirm() != null && firmId.equals(p.getFirm().getId())))
+                        || (firmId != null && p.getFirm() != null && firmId.equals(p.getFirm().getId())))
                 .flatMap(profile -> profile.getAppRoles().stream())
                 .map(AppRole::getApp)
                 .filter(Objects::nonNull)
@@ -2050,7 +2050,7 @@ public class UserService {
     public String determineAppRolesAccess(List<UserProfile> profiles, UUID firmId) {
         return profiles.stream()
                 .filter(p -> UserType.INTERNAL.equals(p.getUserType())
-                        || (p.getFirm() != null && firmId.equals(p.getFirm().getId())))
+                        || (firmId != null && p.getFirm() != null && firmId.equals(p.getFirm().getId())))
                 .flatMap(profile -> profile.getAppRoles().stream())
                 .filter(ar -> ar.getApp() != null)
                 .collect(Collectors.groupingBy(

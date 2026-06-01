@@ -428,7 +428,7 @@ public class AuditController {
     }
 
     @GetMapping(value = "/users/audit/download", produces = "text/csv")
-    @PreAuthorize("@accessControlService.authenticatedUserHasPermission('EXPORT_AUDIT_DATA')")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EXPORT_AUDIT_DATA)")
     public ResponseEntity<byte[]> downloadAuditCsv(@ModelAttribute AuditTableSearchCriteria criteria,
             Authentication authentication) {
 
@@ -448,25 +448,23 @@ public class AuditController {
                 if (effectiveUserType == null || effectiveUserType == UserTypeForm.ALL || effectiveUserType == UserTypeForm.INTERNAL) {
                     effectiveUserType = UserTypeForm.ALL_EXTERNAL;
                 }
-                if (effectiveFirmId == null) {
-                    EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
-                    Optional<FirmDto> optionalFirm = firmService.getUserFirm(entraUser);
-                    if (optionalFirm.isPresent()) {
-                        effectiveFirmId = optionalFirm.get().getId();
-                    }
+                EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
+                Optional<FirmDto> optionalFirm = firmService.getUserFirm(entraUser);
+                if (optionalFirm.isPresent()) {
+                    effectiveFirmId = optionalFirm.get().getId();
                 }
             }
         }
 
         if (effectiveFirmId == null && effectiveUserType != UserTypeForm.INTERNAL) {
-            log.warn("Invalid criteria provided for CSV export - firm ID must always be provided when external user type is selected. selectedUserType: {}",
-                    criteria.getSelectedUserType());
+            log.warn("Invalid criteria provided for CSV export - firm ID must always be provided when external user type is selected. effectiveUserType: {}",
+                    effectiveUserType);
             throw new RuntimeException("Invalid Search criteria provided");
         }
 
         if (effectiveFirmId != null && effectiveUserType == UserTypeForm.INTERNAL) {
-            log.warn("Invalid criteria provided for CSV export - firm ID should not be provided when internal user type is selected. selectedFirmId: {}",
-                    criteria.getSelectedFirmId());
+            log.warn("Invalid criteria provided for CSV export - firm ID should not be provided when internal user type is selected. effectiveFirmId: {}",
+                    effectiveFirmId);
             throw new RuntimeException("Invalid Search criteria provided");
         }
 
