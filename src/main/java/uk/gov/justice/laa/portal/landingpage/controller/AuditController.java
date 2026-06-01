@@ -336,7 +336,7 @@ public class AuditController {
     @PostMapping("/users/audit/entra/{id}/delete")
     @PreAuthorize("@accessControlService.canDeleteUserWithoutProfile(#id)")
     public String deleteUserWithoutProfile(@PathVariable String id,
-            @RequestParam("reasonId") String reasonId, Authentication authentication,
+            @RequestParam(value = "reasonId", required = false) String reasonId, Authentication authentication,
             HttpSession session, Model model) {
 
         log.debug("AuditController.deleteUserWithoutProfile - entraUserId: '{}', reasonId: '{}'", id,
