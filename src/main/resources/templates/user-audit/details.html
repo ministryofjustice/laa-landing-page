@@ -153,15 +153,15 @@
                                         <dt class="govuk-summary-list__key">SiLAS Account Status</dt>
                                         <dd class="govuk-summary-list__value">
                                             <th:block
-                                                    th:if="${silasStatus == 'DISABLED' || silasStatus == 'INCOMPLETE'}">
+                                                    th:if="${userActivated and !user.enabled}">
                                                 <strong class="govuk-tag govuk-tag--red">Disabled</strong>
                                             </th:block>
                                             <th:block
-                                                    th:if="${silasStatus == 'COMPLETE' || silasStatus == 'NO_ROLES_ASSIGNED'}">
+                                                    th:if="${userActivated and user.enabled}">
                                                 <strong class="govuk-tag govuk-tag--green govuk-!-margin-top-1">Enabled
                                                 </strong>
                                             </th:block>
-                                            <th:block th:if="${silasStatus == 'ACTIVATION_PENDING'}">
+                                            <th:block th:if="${!userActivated}">
                                                 <strong
                                                         class="govuk-tag govuk-tag--grey govuk-!-margin-top-1">Awaiting Verification
                                                 </strong>

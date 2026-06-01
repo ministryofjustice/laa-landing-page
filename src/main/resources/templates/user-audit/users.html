@@ -1107,21 +1107,23 @@
                                 <td class="govuk-table__cell"
                                     th:text="${user.firmAssociation != null and user.firmAssociation != 'None' and user.firmAssociation != 'Unknown' ? user.firmAssociation : ''}">
                                 </td>
-                                <td class="govuk-table__cell" th:switch="${user.accountStatus.name()}">
-                                    <strong th:case="'DISABLED'" class="govuk-tag govuk-tag--red">Disabled</strong>
-                                    <strong th:case="'INCOMPLETE'" class="govuk-tag govuk-tag--red">Disabled</strong>
-                                    <strong th:case="'COMPLETE'"
-                                            class="govuk-tag govuk-tag--green govuk-!-margin-top-1">Enabled</strong>
-                                    <strong th:case="'NO_ROLES_ASSIGNED'"
-                                            class="govuk-tag govuk-tag--green govuk-!-margin-top-1">Enabled</strong>
-                                    <strong th:case="'ACTIVATION_PENDING'"
-                                            class="govuk-tag govuk-tag--grey govuk-!-margin-top-1">Awaiting
-                                        Verification</strong>
-                                    <strong th:case="*"
-                                            class="govuk-tag govuk-tag--grey"
-                                            th:text="${user.accountStatus.value}">
-                                        Unknown
-                                    </strong>
+                                <td class="govuk-table__cell">
+                                    <th:block
+                                            th:if="${user.invitationStatus.name() == 'VERIFICATION_SUCCESS' and !user.enabled}">
+                                        <strong class="govuk-tag govuk-tag--red">Disabled</strong>
+                                    </th:block>
+                                    <th:block
+                                            th:if="${user.invitationStatus.name() == 'VERIFICATION_SUCCESS' and user.enabled}">
+                                        <strong class="govuk-tag govuk-tag--green govuk-!-margin-top-1">
+                                            Enabled
+                                        </strong>
+                                    </th:block>
+                                    <th:block th:if="${user.invitationStatus.name() != 'VERIFICATION_SUCCESS'}">
+                                        <strong class="govuk-tag govuk-tag--grey govuk-!-margin-top-1">
+                                            Awaiting Verification
+                                        </strong>
+                                    </th:block>
+
                                 </td>
                                 <td class="govuk-table__cell" th:text="${user.isMultiFirmUser ? 'Yes' : 'No'}"></td>
                                 <td class="govuk-table__cell" th:text="${user.profileCount}"></td>

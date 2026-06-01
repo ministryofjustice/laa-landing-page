@@ -65,6 +65,8 @@ import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiRespons
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.DeleteUserReasonViewModel;
 
+import static uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus.VERIFICATION_SUCCESS;
+
 @Slf4j
 @Controller
 @RequiredArgsConstructor
@@ -235,6 +237,8 @@ public class AuditController {
         model.addAttribute("canEnableUser", canEnableUser);
         model.addAttribute("cannotEnableUser", cannotEnableUser);
         model.addAttribute("userIsEnabled", userDetail.isEnabled());
+        model.addAttribute("userActivated",
+                Objects.equals(userDetail.getUserType(), "Internal") || Objects.equals(userDetail.getActivationStatus(), VERIFICATION_SUCCESS.name()));
 
         return "user-audit/details";
     }
