@@ -17,4 +17,6 @@ public interface DeleteUserReasonRepository extends JpaRepository<DeleteUserReas
     List<DeleteUserReason> findAllByEditableByInternalUser(boolean editableByInternalUser);
 
     List<DeleteUserReason> findAllByEditableByExternalUser(boolean editableByExternalUser);
+
+    List<DeleteUserReason> findAllBySystemGenerated(boolean systemGenerated);
 }
