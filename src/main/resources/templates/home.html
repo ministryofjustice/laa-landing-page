@@ -57,7 +57,7 @@
             <div class="govuk-grid-column-full">
                 <h1 class="govuk-heading-xl">Your legal aid services</h1>
 
-                <div th:if="${isAdminUser}" class="govuk-!-margin-bottom-6">
+                <div th:if="${isAdminUser}">
                     <h2 class="govuk-heading-l">Admin services</h2>
 
                     <div class="govuk-grid-row">
@@ -94,20 +94,18 @@
                     </div>
                 </div>
 
-                <div th:if="${hasSilasAdminRole}" class="govuk-!-margin-bottom-6">
-                    <div class="govuk-grid-row">
-                        <div class="govuk-grid-column-full">
-                            <div class="moj-ticket-panel__content moj-ticket-panel__content--blue">
-                                <h3 class="govuk-heading-m">
-                                    <a href="/admin/silas-administration" class="govuk-link govuk-link--no-visited-state">SiLAS Administration</a>
-                                </h3>
-                                <p class="govuk-body">Manage SiLAS metadata around roles and applications</p>
-                            </div>
+                <div th:if="${hasSilasAdminRole}" class="govuk-grid-row govuk-!-margin-top-4">
+                    <div class="govuk-grid-column-full">
+                        <div class="moj-ticket-panel__content moj-ticket-panel__content--blue">
+                            <h3 class="govuk-heading-m">
+                                <a href="/admin/silas-administration" class="govuk-link govuk-link--no-visited-state">SiLAS Administration</a>
+                            </h3>
+                            <p class="govuk-body">Manage SiLAS metadata around roles and applications</p>
                         </div>
                     </div>
                 </div>
 
-                <h2 class="govuk-heading-l">Legal aid services</h2>
+                <h2 class="govuk-heading-l govuk-!-margin-top-6">Legal aid services</h2>
 
                 <div th:if="${userHasNoRoles}" class="govuk-grid-row">
                     <div class="govuk-grid-column-full">
@@ -146,8 +144,8 @@
                 </div>
 
                 <div th:unless="${userHasNoRoles}">
-                    <div th:each="app : ${laaApplications}">
-                        <div class="govuk-grid-row">
+                    <div th:each="app, iterStat : ${laaApplications}">
+                        <div class="govuk-grid-row" th:classappend="${!iterStat.first ? 'govuk-!-margin-top-4' : ''}">
                             <div class="govuk-grid-column-full">
                                 <div class="moj-ticket-panel__content moj-ticket-panel__content--blue">
                                     <h3 class="govuk-heading-m">
