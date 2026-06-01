@@ -942,7 +942,7 @@ public class UserService {
                     registerUserResponse.getError().getErrors());
         }
 
-        if (registerUserResponse.getData().getMessage().contains("User already exists")) {
+        if (registerUserResponse.getData().getMessage() != null && registerUserResponse.getData().getMessage().contains("User already exists")) {
             TechServicesApiResponse<GetUserResponse> getUserResponse = techServicesClient.getUser(registerUserResponse.getData().getCreatedUser().getId());
             TechServicesUser techServicesUser = getUserResponse.getData().getUser();
 
@@ -977,12 +977,6 @@ public class UserService {
                 TechServicesUser.GuestUserStatus guestUserStatus = techServicesUser.getCustomSecurityAttributes().getGuestUserStatus();
                 user.setInvitationStatus(guestUserStatus.getInvitationProgress());
             }
-
-//            if (techServicesUser.getCustomSecurityAttributes() != null
-//                    && techServicesUser.getCustomSecurityAttributes().getGuestUserStatus() != null) {
-//                TechServicesUser.GuestUserStatus guestUserStatus = techServicesUser.getCustomSecurityAttributes().getGuestUserStatus();
-//                user.setDisbled.(guestUserStatus.getDisabledReason());
-//            }
 
             // Missing Last Synced on, Disabled by and Disabled Type
 
