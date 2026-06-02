@@ -623,7 +623,7 @@ class AuditControllerTest {
                         .build());
 
         when(disableUserReasonRepository
-                .findDisableUserReasonByEntraDescription(eq("UserRequest")))
+                .findFirstByEntraDescription(eq("UserRequest")))
                 .thenReturn(optionalDisableUserReason);
 
         when(userService.determineStatusBadgeForAuditUser(any(AuditUserDetailDto.class)))
@@ -691,7 +691,7 @@ class AuditControllerTest {
 
         when(techServicesClient.getUser(any())).thenReturn(techServicesResponse);
         when(userService.getAuditUserDetail(userId, 1, 5)).thenReturn(mockUserDetail);
-        when(disableUserReasonRepository.findDisableUserReasonByEntraDescription(eq("UserRequest"))).thenReturn(Optional.empty());
+        when(disableUserReasonRepository.findFirstByEntraDescription(eq("UserRequest"))).thenReturn(Optional.empty());
         when(userService.determineStatusBadgeForAuditUser(any(AuditUserDetailDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
@@ -879,7 +879,7 @@ class AuditControllerTest {
         when(techServicesClient.getUser(any())).thenReturn(techServicesResponse);
         when(userService.getAuditUserDetail(userId, 1, 5)).thenReturn(mockUserDetail);
         Optional<DisableUserReason> optionalDisableUserReason = Optional.of(DisableUserReason.builder().description("UserRequest").name("User Request").build());
-        when(disableUserReasonRepository.findDisableUserReasonByEntraDescription(eq("UserRequest"))).thenReturn(optionalDisableUserReason);
+        when(disableUserReasonRepository.findFirstByEntraDescription(eq("UserRequest"))).thenReturn(optionalDisableUserReason);
 
         // When
         String viewName = auditController.displayFullUserAuditDetail(userId, 1, 5, false, model);

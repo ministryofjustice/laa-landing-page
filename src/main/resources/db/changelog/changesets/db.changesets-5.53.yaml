@@ -1,0 +1,35 @@
+databaseChangeLog:
+  # Remove duplicate PendingAcceptance entries created by changesets-5.49 and changesets-5.51
+  - changeSet:
+      id: remove-duplicate-pending-acceptance
+      author: paul.snowdon
+      comment: "Remove duplicate PendingAcceptance disable_user_reason entries.
+        Keep the entry from changesets-5.51 (name='Pending Acceptance') and remove
+        the entry from changesets-5.49 (name='PendingAcceptance')"
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: "2"
+            sql: "SELECT COUNT(*) FROM disable_user_reason WHERE entra_description = 'PendingAcceptance'"
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM disable_user_reason WHERE name = 'PendingAcceptance' AND description = 'Invitation expired before user accepted.'"
+
+  # Add unique constraint on entra_description to prevent future duplicates
+  - changeSet:
+      id: add-unique-constraint-entra-description
+      author: paul.snowdon
+      comment: "Add unique constraint on entra_description column to prevent
+        duplicate entries with the same Entra description"
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - indexExists:
+                tableName: disable_user_reason
+                indexName: disable_user_reason_entra_description_unique
+      changes:
+        - addUniqueConstraint:
+            tableName: disable_user_reason
+            columnNames: entra_description
+            constraintName: disable_user_reason_entra_description_unique

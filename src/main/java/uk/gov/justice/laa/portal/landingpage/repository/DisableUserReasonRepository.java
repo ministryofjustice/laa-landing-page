@@ -12,6 +12,6 @@ public interface DisableUserReasonRepository extends JpaRepository<DisableUserRe
 
     Optional<DisableUserReason> findByName(String name);
 
-    Optional<DisableUserReason> findDisableUserReasonByEntraDescription(String entraDescription);
+    Optional<DisableUserReason> findFirstByEntraDescription(String entraDescription);
 
 }

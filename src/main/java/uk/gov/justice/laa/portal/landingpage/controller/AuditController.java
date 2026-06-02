@@ -313,7 +313,7 @@ public class AuditController {
                 .map(TechServicesUser::getCustomSecurityAttributes)
                 .map(TechServicesUser.CustomSecurityAttributes::getGuestUserStatus)
                 .map(TechServicesUser.GuestUserStatus::getDisabledReason)
-                .flatMap(disableUserReasonRepository::findDisableUserReasonByEntraDescription)
+                .flatMap(disableUserReasonRepository::findFirstByEntraDescription)
                 .map(DisableUserReason::getName)
                 .orElse("Unknown");
     }
