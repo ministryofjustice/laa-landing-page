@@ -9,12 +9,12 @@ databaseChangeLog:
       preConditions:
         - onFail: MARK_RAN
         - sqlCheck:
-            expectedResult: "2"
-            sql: "SELECT COUNT(*) FROM disable_user_reason WHERE entra_description = 'PendingAcceptance'"
+            expectedResult: "1"
+            sql: "SELECT CASE WHEN COUNT(*) > 1 THEN 1 ELSE 0 END FROM disable_user_reason WHERE entra_description = 'PendingAcceptance'"
       changes:
         - sql:
             dbms: postgresql
-            sql: "DELETE FROM disable_user_reason WHERE name = 'PendingAcceptance' AND description = 'Invitation expired before user accepted.'"
+            sql: "DELETE FROM disable_user_reason WHERE entra_description = 'PendingAcceptance' AND name = 'PendingAcceptance'"
 
   # Add unique constraint on entra_description to prevent future duplicates
   - changeSet:
