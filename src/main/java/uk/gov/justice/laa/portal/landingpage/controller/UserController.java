@@ -65,6 +65,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
+import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
@@ -402,6 +403,8 @@ public class UserController {
         boolean canConvertToMultiFirm = externalUser
                 && accessControlService.canConvertUserToMultiFirm(user.getEntraUser().getId());
         model.addAttribute("canConvertUserToMultiFirm", canConvertToMultiFirm);
+        model.addAttribute("userActivated", isInternalUser
+                || user.getEntraUser().getInvitationStatus() == InvitationStatus.VERIFICATION_SUCCESS);
 
 
         // Multi-firm user information

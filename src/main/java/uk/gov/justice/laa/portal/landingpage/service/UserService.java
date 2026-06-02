@@ -1994,11 +1994,7 @@ public class UserService {
         }
 
         // At this point, invitationStatus == VERIFICATION_SUCCESS
-        if (!isEnabled) {
-            return UserProfileSilasStatus.DISABLED;
-        }
-
-        if (isPending || noRolesAssigned) {
+        if (noRolesAssigned) {
             return UserProfileSilasStatus.NO_ROLES_ASSIGNED;
         }
 

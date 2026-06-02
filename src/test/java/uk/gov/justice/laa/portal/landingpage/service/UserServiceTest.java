@@ -6614,7 +6614,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.DISABLED);
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.NO_ROLES_ASSIGNED);
         }
 
         @Test
