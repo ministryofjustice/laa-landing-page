@@ -1,0 +1,13 @@
+databaseChangeLog:
+  # Add Entra JML disable reasons: NotActive and PendingAcceptance
+  - changeSet:
+      id: add-entra-jml-disable-reasons
+      author: yusuf.shah
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO disable_user_reason (id, name, description, entra_description, user_selectable) VALUES (gen_random_uuid(), 'Not Active', 'User account is not active in Entra', 'NotActive', false)"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO disable_user_reason (id, name, description, entra_description, user_selectable) VALUES (gen_random_uuid(), 'Pending Acceptance', 'User has not yet accepted their invitation', 'PendingAcceptance', false)"
+

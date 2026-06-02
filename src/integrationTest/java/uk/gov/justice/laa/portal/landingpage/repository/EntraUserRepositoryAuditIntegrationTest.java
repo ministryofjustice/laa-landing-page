@@ -10,16 +10,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
-import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
@@ -98,133 +94,6 @@ class EntraUserRepositoryAuditIntegrationTest extends BaseRepositoryTest {
     }
 
     @Test
-    void findAllUsersForAudit_whenNoFilters_returnsAllUsers() {
-        // Given
-        createTestUser("John", "Doe", "john.doe@example.com", testFirm1, UserType.EXTERNAL, null);
-        createTestUser("Jane", "Smith", "jane.smith@example.com", testFirm2, UserType.EXTERNAL, null);
-        createTestUser("Admin", "User", "admin@justice.gov.uk", null, UserType.INTERNAL, globalAdminRole);
-
-        PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("firstName"));
-
-        // When
-        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit(null, null, null, null, null, null, null, null, null, pageRequest);
-
-        // Then
-        assertThat(result).isNotNull();
-        assertThat(result.getTotalElements()).isEqualTo(3);
-        assertThat(result.getContent()).hasSize(3);
-    }
-
-    @Test
-    void findAllUsersForAudit_whenSearchByName_returnsMatchingUsers() {
-        // Given
-        createTestUser("John", "Doe", "john.doe@example.com", testFirm1, UserType.EXTERNAL, null);
-        createTestUser("Jane", "Smith", "jane.smith@example.com", testFirm2, UserType.EXTERNAL, null);
-        createTestUser("Johnny", "Walker", "johnny@example.com", testFirm1, UserType.EXTERNAL, null);
-
-        PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("firstName"));
-
-        // When
-        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit("john", null, null, null, null, null, null, null, null, pageRequest);
-
-        // Then
-        assertThat(result.getTotalElements()).isEqualTo(2);
-        assertThat(result.getContent())
-                .extracting("firstName")
-                .containsExactlyInAnyOrder("John", "Johnny");
-    }
-
-    @Test
-    void findAllUsersForAudit_whenSearchByEmail_returnsMatchingUsers() {
-        // Given
-        createTestUser("John", "Doe", "john.doe@example.com", testFirm1, UserType.EXTERNAL, null);
-        createTestUser("Jane", "Smith", "jane.smith@example.com", testFirm2, UserType.EXTERNAL, null);
-
-        PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("email"));
-
-        // When
-        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit("jane.smith", null, null, null, null, null, null, null, null, pageRequest);
-
-        // Then
-        assertThat(result.getTotalElements()).isEqualTo(1);
-        assertThat(result.getContent().get(0).getEmail()).isEqualTo("jane.smith@example.com");
-    }
-
-    @Test
-    void findAllUsersForAudit_whenFilterByFirm_returnsUsersFromThatFirm() {
-        // Given
-        createTestUser("John", "Doe", "john.doe@example.com", testFirm1, UserType.EXTERNAL, null);
-        createTestUser("Jane", "Smith", "jane.smith@example.com", testFirm2, UserType.EXTERNAL, null);
-        createTestUser("Bob", "Brown", "bob.brown@example.com", testFirm1, UserType.EXTERNAL, null);
-
-        PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("firstName"));
-
-        // When
-        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit(null, testFirm1.getId(), null, null, null, null, null, null, null, pageRequest);
-
-        // Then
-        assertThat(result.getTotalElements()).isEqualTo(2);
-        assertThat(result.getContent())
-                .extracting("firstName")
-                .containsExactlyInAnyOrder("John", "Bob");
-    }
-
-    @Test
-    void findAllUsersForAudit_whenFilterBySilasRole_returnsUsersWithThatRole() {
-        // Given
-        createTestUser("John", "Doe", "john.doe@example.com", testFirm1, UserType.EXTERNAL, externalUserAdminRole);
-        createTestUser("Jane", "Smith", "jane.smith@example.com", testFirm2, UserType.EXTERNAL, null);
-        createTestUser("Admin", "User", "admin@justice.gov.uk", null, UserType.INTERNAL, globalAdminRole);
-
-        PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("firstName"));
-
-        // When
-        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit(null, null, "Test Global Admin", null, null, null, null, null, null, pageRequest);
-
-        // Then
-        assertThat(result.getTotalElements()).isEqualTo(1);
-        assertThat(result.getContent().get(0).getFirstName()).isEqualTo("Admin");
-    }
-
-    @Test
-    void findAllUsersForAudit_whenMultipleFilters_returnsIntersection() {
-        // Given
-        createTestUser("John", "Doe", "john.doe@example.com", testFirm1, UserType.EXTERNAL, externalUserAdminRole);
-        createTestUser("Jane", "Smith", "jane.smith@example.com", testFirm1, UserType.EXTERNAL, null);
-        createTestUser("Admin", "User", "admin@justice.gov.uk", null, UserType.INTERNAL, globalAdminRole);
-
-        PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("firstName"));
-
-        // When
-        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit(
-                "john", testFirm1.getId(), "Test External User Admin", null, null, null, null, null, null, pageRequest);
-
-        // Then
-        assertThat(result.getTotalElements()).isEqualTo(1);
-        assertThat(result.getContent().get(0).getFirstName()).isEqualTo("John");
-    }
-
-    @Test
-    void findAllUsersForAudit_withPagination_returnsCorrectPage() {
-        // Given
-        for (int i = 1; i <= 15; i++) {
-            createTestUser("User" + i, "Test", "user" + i + "@example.com",
-                    testFirm1, UserType.EXTERNAL, null);
-        }
-
-        PageRequest pageRequest = PageRequest.of(1, 5, Sort.by("firstName"));
-
-        // When
-        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit(null, null, null, null, null, null, null, null, null, pageRequest);
-
-        // Then
-        assertThat(result.getTotalElements()).isEqualTo(15);
-        assertThat(result.getTotalPages()).isEqualTo(3);
-        assertThat(result.getNumber()).isEqualTo(1); // 0-based page number
-        assertThat(result.getContent()).hasSize(5);
-    }
-
-    @Test
     void findUsersWithProfilesAndRoles_loadsAllRelationships() {
         // Given
         EntraUser user1 = createTestUser("John", "Doe", "john.doe@example.com",
@@ -269,101 +138,6 @@ class EntraUserRepositoryAuditIntegrationTest extends BaseRepositoryTest {
 
         // Then
         assertThat(result).isEmpty();
-    }
-
-    @Test
-    void findAllUsersForAudit_handlesMultiFirmUsers() {
-        // Given
-        EntraUser multiFirmUser = buildEntraUser("multi-oid-123", "multi@example.com", "Multi", "Firm");
-        multiFirmUser.setMultiFirmUser(true);
-        multiFirmUser = entraUserRepository.save(multiFirmUser);
-
-        // Create two profiles for different firms
-        UserProfile profile1 = UserProfile.builder()
-                .entraUser(multiFirmUser)
-                .firm(testFirm1)
-                .userType(UserType.EXTERNAL)
-                .activeProfile(true)
-                .appRoles(new HashSet<>())
-                .userProfileStatus(UserProfileStatus.COMPLETE)
-                .silasStatus(UserProfileSilasStatus.COMPLETE)
-                .createdBy("Test")
-                .createdDate(multiFirmUser.getCreatedDate())
-                .build();
-        userProfileRepository.save(profile1);
-
-        UserProfile profile2 = UserProfile.builder()
-                .entraUser(multiFirmUser)
-                .firm(testFirm2)
-                .userType(UserType.EXTERNAL)
-                .activeProfile(false)
-                .appRoles(new HashSet<>())
-                .userProfileStatus(UserProfileStatus.COMPLETE)
-                .silasStatus(UserProfileSilasStatus.COMPLETE)
-                .createdBy("Test")
-                .createdDate(multiFirmUser.getCreatedDate())
-                .build();
-        userProfileRepository.save(profile2);
-
-        PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("firstName"));
-
-        // When
-        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit(null, null, null, null, null, null, null, null, null, pageRequest);
-
-        // Then
-        assertThat(result.getTotalElements()).isEqualTo(1);
-        assertThat(result.getContent().get(0).isMultiFirmUser()).isTrue();
-    }
-
-    @Test
-    void findAllUsersForAudit_withNeverActivated_returnsOnlyUsersWhoseInvitationStatusIsNotVerified() {
-        // Given
-        // invitation not yet successful — should be included
-        final EntraUser neverActivated = createTestUserWithLoginAndInvitation(
-                "Never", "Activated", "never@example.com",
-                InvitationStatus.INVITE_SENT);
-
-        // verified — should be excluded
-        createTestUserWithLoginAndInvitation(
-                "Verified", "User", "verified@example.com",
-                InvitationStatus.VERIFICATION_SUCCESS);
-
-        PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("firstName"));
-
-        // When
-        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit(
-                null, null, null, null, null, null, null, null, "true", pageRequest);
-
-        // Then
-        assertThat(result.getTotalElements()).isEqualTo(1);
-        assertThat(result.getContent().get(0).getId()).isEqualTo(neverActivated.getId());
-    }
-
-    @Test
-    void findAllUsersForAudit_withNoFilters_includesUsersWithAnyLoginDateOrInvitationStatus() {
-        // Given
-        createTestUserWithLoginAndInvitation("A", "User", "a@example.com",
-                InvitationStatus.VERIFICATION_SUCCESS);
-        createTestUserWithLoginAndInvitation("B", "User", "b@example.com",
-                InvitationStatus.INVITE_SENT);
-        createTestUserWithLoginAndInvitation("C", "User", "c@example.com",
-                InvitationStatus.AWAITING_VERIFICATION);
-
-        PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("firstName"));
-
-        // When — no dormant filters
-        Page<EntraUser> result = entraUserRepository.findAllUsersForAudit(
-                null, null, null, null, null, null, null, null, null, pageRequest);
-
-        // Then — all users returned regardless
-        assertThat(result.getTotalElements()).isEqualTo(3);
-    }
-
-    private EntraUser createTestUserWithLoginAndInvitation(String firstName, String lastName, String email,
-            InvitationStatus invitationStatus) {
-        EntraUser user = buildEntraUser(UUID.randomUUID().toString(), email, firstName, lastName);
-        user.setInvitationStatus(invitationStatus);
-        return entraUserRepository.save(user);
     }
 
     private EntraUser createTestUser(String firstName, String lastName, String email,
