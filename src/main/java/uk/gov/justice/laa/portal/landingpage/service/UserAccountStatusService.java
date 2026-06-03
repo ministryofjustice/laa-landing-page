@@ -1,30 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.modelmapper.ModelMapper;
-import org.springframework.stereotype.Service;
-import uk.gov.justice.laa.portal.landingpage.dto.BulkDisableUserAuditEvent;
-import uk.gov.justice.laa.portal.landingpage.dto.DisableUserReasonDto;
-import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
-import uk.gov.justice.laa.portal.landingpage.entity.CountFirms;
-import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
-import uk.gov.justice.laa.portal.landingpage.entity.Firm;
-import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
-import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.entity.UserTypeReasonDisable;
-import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
-import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.DisableUserReasonRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
-import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
-import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
-
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -32,6 +7,32 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+
+import org.modelmapper.ModelMapper;
+import org.springframework.stereotype.Service;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import uk.gov.justice.laa.portal.landingpage.dto.BulkDisableUserAuditEvent;
+import uk.gov.justice.laa.portal.landingpage.dto.DisableUserReasonDto;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.CountFirms;
+import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
+import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserTypeReasonDisable;
+import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
+import uk.gov.justice.laa.portal.landingpage.repository.DisableUserReasonRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 
 @Service
 @RequiredArgsConstructor
@@ -72,6 +73,12 @@ public class UserAccountStatusService {
         }
 
         return disableUserReasonDtos;
+    }
+
+    public String getDisableUserReasonNameByEntraDescription(String entraDescription) {
+        return disableUserReasonRepository.findFirstByEntraDescription(entraDescription)
+                .map(DisableUserReason::getName)
+                .orElse("Unknown");
     }
 
     @SuppressWarnings("checkstyle:VariableDeclarationUsageDistance")

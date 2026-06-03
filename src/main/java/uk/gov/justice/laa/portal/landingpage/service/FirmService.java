@@ -252,6 +252,10 @@ public class FirmService {
         return firmRepository.getReferenceById(id);
     }
 
+    public String getFirmCodeById(UUID id) {
+        return firmRepository.findById(id).map(Firm::getCode).orElse("");
+    }
+
     public List<Firm> getFilteredChildFirms(Firm parentFirm, String query) {
         List<Firm> childFirms = parentFirm.getChildFirms() == null
                 ? List.of()
