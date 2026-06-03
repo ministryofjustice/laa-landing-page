@@ -1608,12 +1608,6 @@ public class UserController {
                 }
             }
         }
-        // If any apps are marked as legacy sync, make sure user exists in ccms.
-        if (user.getUserType() == UserType.INTERNAL && selectedAppRole.stream().anyMatch(UserRole::isLegacySync)
-                && !user.getEntraUser().isCcmsEbsUser()) {
-            final String ccmsErrorMsg = "This user has not been migrated, so is unable to access CCMS. Remove any CCMS or PUI role before saving.";
-            errorMessage = errorMessage == null ? ccmsErrorMsg : errorMessage + "\n" + ccmsErrorMsg;
-        }
         if (errorMessage != null) {
             model.addAttribute("errorMessage", errorMessage);
         }
@@ -1652,9 +1646,8 @@ public class UserController {
         Collection<AppRoleDto> roles = userService.getRolesByIdIn(roleUuids).values();
         if (user.getUserType() == UserType.INTERNAL && roles.stream().anyMatch(AppRoleDto::isLegacySync)
             && !user.getEntraUser().isCcmsEbsUser()) {
-            log.error("Role update blocked for user profile ID {}."
-                    + "A POST request was attempted to add CCMS/PUI roles to a non-migrated user. This may have been done to bypass UI validation.", user.getId());
-            throw new RuntimeException();
+            final String ccmsErrorMsg = "This user has not been migrated, so is unable to access CCMS. Remove any CCMS or PUI role before saving.";
+            return String.format("redirect:/admin/users/edit/%s/roles-check-answer?errorMessage=%s", uuid, ccmsErrorMsg);
         }
         if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
             Map<String, String> updateResult = userService.updateUserRoles(id, allSelectedRoles,
@@ -2574,6 +2567,7 @@ public class UserController {
     @GetMapping("/users/grant-access/{id}/check-answers")
     @PreAuthorize("@accessControlService.canGrantUserAccess(#id)")
     public String grantAccessCheckAnswers(@PathVariable String id,
+                                          @RequestParam(value = "errorMessage", required = false) String errorMessage,
                                           Model model,
                                           HttpSession session,
                                           Authentication authentication) {
@@ -2601,11 +2595,6 @@ public class UserController {
                 || selectedOffices.contains(NO_OFFICES))) {
             userOffices = officeService.getOfficesByIds(selectedOffices);
 
-        }
-        String errorMessage = null;
-        if (user.getUserType() == UserType.INTERNAL && userAppRoles.stream().anyMatch(AppRoleDto::isLegacySync)
-                && !user.getEntraUser().isCcmsEbsUser()) {
-            errorMessage = "This user has not been migrated, so is unable to access CCMS. Remove any CCMS or PUI role before saving.";
         }
         UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         List<AppRoleDto> editableUserAppRoles = userAppRoles.stream()
@@ -2703,9 +2692,8 @@ public class UserController {
             List<AppRoleDto> roles = appRoleService.getByIds(allSelectedRoles);
             if (userProfileDto.getUserType() == UserType.INTERNAL && roles.stream().anyMatch(AppRoleDto::isLegacySync)
                     && !userProfileDto.getEntraUser().isCcmsEbsUser()) {
-                log.error("Role update blocked for user profile ID {}."
-                        + "A POST request was attempted to add CCMS/PUI roles to a non-migrated user. This may have been done to bypass UI validation.", userProfileDto.getId());
-                throw new RuntimeException();
+                String ccmsErrorMsg = "This user has not been migrated, so is unable to access CCMS. Remove any CCMS or PUI role before saving.";
+                return String.format("redirect:/admin/users/grant-access/%s/check-answers?errorMessage=%s", id, ccmsErrorMsg);
             }
 
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
