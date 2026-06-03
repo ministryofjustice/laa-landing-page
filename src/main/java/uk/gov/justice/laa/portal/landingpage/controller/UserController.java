@@ -343,11 +343,15 @@ public class UserController {
 
         UserProfileSilasStatus silasStatus = userService.calculateSilasStatusForUserProfile(user);
 
+        // Check if user has any roles assigned
+        final boolean userHasRoles = !userAppRoles.isEmpty();
+
         model.addAttribute("user", user);
         model.addAttribute("silasStatus", silasStatus.name());
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("userOffices", userOffices);
         model.addAttribute("isAccessGranted", isAccessGranted);
+        model.addAttribute("userHasRoles", userHasRoles);
         boolean externalUser = UserType.EXTERNAL == user.getUserType();
         model.addAttribute("externalUser", externalUser);
 
