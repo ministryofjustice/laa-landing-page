@@ -43,15 +43,12 @@ import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
-import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import static uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus.VERIFICATION_SUCCESS;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
-import uk.gov.justice.laa.portal.landingpage.repository.DisableUserReasonRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AuditExportService;
 import uk.gov.justice.laa.portal.landingpage.service.AuditExportService.AuditCsvExport;
@@ -59,13 +56,12 @@ import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.TechServicesClient;
+import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.DeleteUserReasonViewModel;
-
-import static uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus.VERIFICATION_SUCCESS;
 
 @Slf4j
 @Controller
@@ -78,11 +74,10 @@ public class AuditController {
     private final EventService eventService;
     private final AccessControlService accessControlService;
     private final AuditExportService auditExportService;
-    private final FirmRepository firmRepository;
     private final FirmService firmService;
     private final AuthenticatedUser authenticatedUser;
     private final TechServicesClient techServicesClient;
-    private final DisableUserReasonRepository disableUserReasonRepository;
+    private final UserAccountStatusService userAccountStatusService;
 
     @Value("${feature.flag.disable.user}")
     private boolean disableUserFeatureEnabled;
@@ -313,8 +308,7 @@ public class AuditController {
                 .map(TechServicesUser::getCustomSecurityAttributes)
                 .map(TechServicesUser.CustomSecurityAttributes::getGuestUserStatus)
                 .map(TechServicesUser.GuestUserStatus::getDisabledReason)
-                .flatMap(disableUserReasonRepository::findDisableUserReasonByEntraDescription)
-                .map(DisableUserReason::getName)
+                .map(userAccountStatusService::getDisableUserReasonNameByEntraDescription)
                 .orElse("Unknown");
     }
 
@@ -463,7 +457,7 @@ public class AuditController {
                 .collect(Collectors.toList());
 
         String firmCode = criteria.getSelectedFirmId() == null ? ""
-                : firmRepository.findById(criteria.getSelectedFirmId()).map(Firm::getCode).orElse("");
+                : firmService.getFirmCodeById(criteria.getSelectedFirmId());
         List<AuditUserDto> firmData = new ArrayList<>(pageSize);
 
         PaginatedAuditUsers result;

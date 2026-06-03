@@ -80,7 +80,8 @@ class DataProviderServiceIntegrationTest {
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
         .withDatabaseName("test_db")
         .withUsername("postgres")
-        .withPassword("password");
+        .withPassword("password")
+        .withStartupTimeout(java.time.Duration.ofMinutes(3));
 
     @Autowired
     private DataProviderService dataProviderService;
