@@ -39,4 +39,8 @@ public class DeleteUserReason extends BaseEntity {
     @Column(name = "editable_by_external_user", nullable = false)
     @Builder.Default
     private boolean editableByExternalUser = false;
+
+    @Column(name = "system_generated", nullable = false)
+    @Builder.Default
+    private boolean systemGenerated = false;
 }

@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 
 /**
@@ -107,4 +108,14 @@ public class AuditUserDto implements Serializable {
      * ID) is null
      */
     private String entraUserId;
+
+    /**
+     * Invitation status for a user
+     */
+    private InvitationStatus invitationStatus;
+
+    /**
+     * Whether the user's account is enabled.
+     */
+    private boolean enabled;
 }

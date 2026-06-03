@@ -43,15 +43,12 @@ import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
-import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import static uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus.VERIFICATION_SUCCESS;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
-import uk.gov.justice.laa.portal.landingpage.repository.DisableUserReasonRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AuditExportService;
 import uk.gov.justice.laa.portal.landingpage.service.AuditExportService.AuditCsvExport;
@@ -59,6 +56,7 @@ import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.TechServicesClient;
+import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
@@ -76,11 +74,10 @@ public class AuditController {
     private final EventService eventService;
     private final AccessControlService accessControlService;
     private final AuditExportService auditExportService;
-    private final FirmRepository firmRepository;
     private final FirmService firmService;
     private final AuthenticatedUser authenticatedUser;
     private final TechServicesClient techServicesClient;
-    private final DisableUserReasonRepository disableUserReasonRepository;
+    private final UserAccountStatusService userAccountStatusService;
 
     @Value("${feature.flag.disable.user}")
     private boolean disableUserFeatureEnabled;
@@ -236,6 +233,8 @@ public class AuditController {
         model.addAttribute("canEnableUser", canEnableUser);
         model.addAttribute("cannotEnableUser", cannotEnableUser);
         model.addAttribute("userIsEnabled", userDetail.isEnabled());
+        model.addAttribute("userActivated",
+                Objects.equals(userDetail.getUserType(), "Internal") || Objects.equals(userDetail.getActivationStatus(), VERIFICATION_SUCCESS.name()));
 
         return "user-audit/details";
     }
@@ -310,8 +309,7 @@ public class AuditController {
                 .map(TechServicesUser::getCustomSecurityAttributes)
                 .map(TechServicesUser.CustomSecurityAttributes::getGuestUserStatus)
                 .map(TechServicesUser.GuestUserStatus::getDisabledReason)
-                .flatMap(disableUserReasonRepository::findDisableUserReasonByEntraDescription)
-                .map(DisableUserReason::getName)
+                .map(userAccountStatusService::getDisableUserReasonNameByEntraDescription)
                 .orElse("Unknown");
     }
 
@@ -337,7 +335,7 @@ public class AuditController {
     @PostMapping("/users/audit/entra/{id}/delete")
     @PreAuthorize("@accessControlService.canDeleteUserWithoutProfile(#id)")
     public String deleteUserWithoutProfile(@PathVariable String id,
-            @RequestParam("reasonId") String reasonId, Authentication authentication,
+            @RequestParam(value = "reasonId", required = false) String reasonId, Authentication authentication,
             HttpSession session, Model model) {
 
         log.debug("AuditController.deleteUserWithoutProfile - entraUserId: '{}', reasonId: '{}'", id,
@@ -482,10 +480,9 @@ public class AuditController {
         String firmCode = "";
         String firmName = criteria.getSelectedFirmName();
         if (effectiveFirmId != null) {
-            Optional<Firm> firm = firmRepository.findById(effectiveFirmId);
-            firmCode = firm.map(Firm::getCode).orElse("");
+            firmCode = firmService.getFirmCodeById(effectiveFirmId);
             if (firmName == null || firmName.isBlank()) {
-                firmName = firm.map(Firm::getName).orElse("");
+                firmName = firmService.getFirmNameById(effectiveFirmId);
             }
         }
         List<AuditUserDto> firmData = new ArrayList<>(pageSize);

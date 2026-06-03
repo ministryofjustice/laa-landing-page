@@ -1047,10 +1047,11 @@
                                     </button>
                                 </th>
                                 <th scope="col" class="govuk-table__header govuk-!-width-one-quarter"
+                                    style="padding-right: 35px"
                                     th:aria-sort="${sort == 'silasStatus' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="silasStatus"
                                         th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'silasStatus' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}, data-never-activated=${neverActivated}">
-                                        SILAS Status
+                                        SILAS Account Status
                                         <img th:if="${sort == 'silasStatus' and direction == 'asc'}"
                                             th:src="@{/assets/images/sort-asc.svg}" width="22" height="22"
                                             alt="Sorted ascending">
@@ -1110,7 +1111,26 @@
                                 <td class="govuk-table__cell"
                                     th:text="${user.firmAssociation != null and user.firmAssociation != 'None' and user.firmAssociation != 'Unknown' ? user.firmAssociation : ''}">
                                 </td>
-                                <td class="govuk-table__cell" th:text="${user.accountStatus.getValue()}"></td>
+                                <td class="govuk-table__cell">
+                                    <th:block
+                                            th:if="${!user.enabled and (user.userType == 'Internal' or (user.invitationStatus != null and user.invitationStatus.name() == 'VERIFICATION_SUCCESS'))}">
+                                        <strong class="govuk-tag govuk-tag--red">
+                                            Disabled
+                                        </strong>
+                                    </th:block>
+                                    <th:block
+                                            th:if="${user.enabled and (user.userType == 'Internal' or (user.invitationStatus != null and user.invitationStatus.name() == 'VERIFICATION_SUCCESS'))}">
+                                        <strong class="govuk-tag govuk-tag--green govuk-!-margin-top-1">
+                                            Enabled
+                                        </strong>
+                                    </th:block>
+                                    <th:block
+                                            th:if="${user.userType != 'Internal' and (user.invitationStatus == null or user.invitationStatus.name() != 'VERIFICATION_SUCCESS')}">
+                                        <strong class="govuk-tag govuk-tag--grey govuk-!-margin-top-1">
+                                            Awaiting Verification
+                                        </strong>
+                                    </th:block>
+                                </td>
                                 <td class="govuk-table__cell" th:text="${user.isMultiFirmUser ? 'Yes' : 'No'}"></td>
                                 <td class="govuk-table__cell" th:text="${user.profileCount}"></td>
                             </tr>

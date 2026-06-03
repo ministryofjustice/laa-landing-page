@@ -169,11 +169,24 @@ public class ManageUsersTest extends BaseFrontEndTest {
     @DisplayName("Verify Disable User link is accessible for EUM")
     void verifyUserDetailsPageShowsDisableUserLink() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+        manageUsersPage.searchForUser("playwright-firmtwouserviewer@playwrighttest.com");
         manageUsersPage.clickFirstUserLink();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         manageUsersPage.verifyUserDetailsPopulated();
         // Disable link visible
         assertTrue(page.locator("#user-details .govuk-summary-list__actions a.govuk-link:has-text(\"Disable user\")").isVisible());
+    }
+
+    @Test
+    @DisplayName("Verify Disable User link is not visible for unverified users")
+    void verifyUserDetailsPageDonotShowsDisableUserLinkForUnVerifiedUsers() {
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+        manageUsersPage.searchForUser("externaluser-incomplete3@playwrighttest.com");
+        manageUsersPage.clickFirstUserLink();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        manageUsersPage.verifyUserDetailsPopulated();
+        // Disable link visible
+        assertFalse(page.locator("#user-details .govuk-summary-list__actions a.govuk-link:has-text(\"Disable user\")").isVisible());
     }
 
     @Test
@@ -501,7 +514,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
 
         Locator row = manageUsersPage.userRowLocator(email);
 
-        assertTrue(row.locator(".moj-badge.moj-badge--blue").isVisible());
+        assertTrue(row.locator(".govuk-tag.govuk-tag--red").isVisible());
 
         manageUsersPage.clickUserLink(email);
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
@@ -537,7 +550,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
 
         manageUsersPage.clickNextPageLink();
 
-        assertTrue(row.locator(".moj-badge.moj-badge--grey").isVisible());
+        assertTrue(row.locator(".govuk-tag.govuk-tag--blue").isVisible());
     }
 
     @Test

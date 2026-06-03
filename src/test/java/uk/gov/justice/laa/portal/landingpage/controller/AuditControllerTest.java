@@ -5,7 +5,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -52,14 +54,13 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
-import uk.gov.justice.laa.portal.landingpage.repository.DisableUserReasonRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AuditExportService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.TechServicesClient;
+import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
@@ -87,9 +88,6 @@ class AuditControllerTest {
     private AuthenticatedUser authenticatedUser;
 
     @Mock
-    private FirmRepository firmRepository;
-
-    @Mock
     private AuditExportService auditExportService;
 
     @Mock
@@ -102,7 +100,7 @@ class AuditControllerTest {
     private Authentication mockAuthentication;
 
     @Mock
-    private DisableUserReasonRepository disableUserReasonRepository;
+    private UserAccountStatusService userAccountStatusService;
 
     private PaginatedAuditUsers mockPaginatedUsers;
     private List<AppRoleDto> mockSilasRoles;
@@ -111,7 +109,7 @@ class AuditControllerTest {
     @BeforeEach
     void setUp() {
         auditController = new AuditController(userService, loginService, eventService, accessControlService,
-                auditExportService, firmRepository, firmService, authenticatedUser, techServicesClient, disableUserReasonRepository);
+                auditExportService, firmService, authenticatedUser, techServicesClient, userAccountStatusService);
         model = new ExtendedModelMap();
 
         // Setup mock audit users
@@ -617,15 +615,9 @@ class AuditControllerTest {
         when(techServicesClient.getUser(any())).thenReturn(techServicesResponse);
         when(userService.getAuditUserDetail(userId, 1, 5)).thenReturn(mockUserDetail);
 
-        Optional<DisableUserReason> optionalDisableUserReason =
-                Optional.of(DisableUserReason.builder()
-                        .description("UserRequest")
-                        .name("User Request")
-                        .build());
-
-        when(disableUserReasonRepository
-                .findDisableUserReasonByEntraDescription(eq("UserRequest")))
-                .thenReturn(optionalDisableUserReason);
+        when(userAccountStatusService
+                .getDisableUserReasonNameByEntraDescription(eq("UserRequest")))
+                .thenReturn("User Request");
 
         when(userService.determineStatusBadgeForAuditUser(any(AuditUserDetailDto.class)))
                 .thenReturn(UserProfileSilasStatus.COMPLETE);
@@ -692,7 +684,7 @@ class AuditControllerTest {
 
         when(techServicesClient.getUser(any())).thenReturn(techServicesResponse);
         when(userService.getAuditUserDetail(userId, 1, 5)).thenReturn(mockUserDetail);
-        when(disableUserReasonRepository.findDisableUserReasonByEntraDescription(eq("UserRequest"))).thenReturn(Optional.empty());
+        when(userAccountStatusService.getDisableUserReasonNameByEntraDescription(eq("UserRequest"))).thenReturn("Unknown");
         when(userService.determineStatusBadgeForAuditUser(any(AuditUserDetailDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
@@ -879,8 +871,12 @@ class AuditControllerTest {
 
         when(techServicesClient.getUser(any())).thenReturn(techServicesResponse);
         when(userService.getAuditUserDetail(userId, 1, 5)).thenReturn(mockUserDetail);
-        Optional<DisableUserReason> optionalDisableUserReason = Optional.of(DisableUserReason.builder().description("UserRequest").name("User Request").build());
-        when(disableUserReasonRepository.findDisableUserReasonByEntraDescription(eq("UserRequest"))).thenReturn(optionalDisableUserReason);
+        when(userAccountStatusService
+                .getDisableUserReasonNameByEntraDescription(eq("UserRequest")))
+                .thenReturn("User Request");
+
+        when(userService.determineStatusBadgeForAuditUser(any(AuditUserDetailDto.class)))
+                .thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
         String viewName = auditController.displayFullUserAuditDetail(userId, 1, 5, false, model);
