@@ -1843,7 +1843,7 @@ public class UserService {
                 .email(user.getEmail()).userId(userId).entraUserId(user.getId().toString())
                 .userType(userType).firmAssociation(firmAssociation).firmCode(firmCode).accountStatus(accountStatus)
                 .isMultiFirmUser(user.isMultiFirmUser()).profileCount(profileCount)
-                .createdDate(user.getCreatedDate()).createdBy(user.getCreatedBy())
+                .createdDate(user.getCreatedDate()).createdBy(user.getCreatedBy()).invitationStatus(user.getInvitationStatus()).enabled(user.isEnabled())
                 // TODO: Fetch lastLoginDate from Microsoft Graph or Silas API
                 .entraStatus(user.getUserStatus() != null ? user.getUserStatus().name() : "UNKNOWN")
                 // TODO: Fetch activationStatus from TechServices API
@@ -1994,11 +1994,7 @@ public class UserService {
         }
 
         // At this point, invitationStatus == VERIFICATION_SUCCESS
-        if (!isEnabled) {
-            return UserProfileSilasStatus.DISABLED;
-        }
-
-        if (isPending || noRolesAssigned) {
+        if (noRolesAssigned) {
             return UserProfileSilasStatus.NO_ROLES_ASSIGNED;
         }
 

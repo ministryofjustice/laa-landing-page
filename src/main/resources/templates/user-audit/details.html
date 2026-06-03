@@ -128,6 +128,17 @@
                         <div class="govuk-summary-card">
                             <div class="govuk-summary-card__title-wrapper">
                                 <h3 class="govuk-summary-card__title">SiLAS Audit Data</h3>
+                                <ul th:if="${canDisableUser or canEnableUser or cannotEnableUser}" class="govuk-summary-card__actions">
+                                    <li th:if="${canDisableUser and userIsEnabled}" class="govuk-summary-card__action">
+                                        <a class="govuk-link" th:href="@{/admin/users/manage/{id}/disable(id=${user.userId}, referer='audit')}">Disable user</a>
+                                    </li>
+                                    <li th:if="${canEnableUser and !userIsEnabled}" class="govuk-summary-card__action">
+                                        <a class="govuk-link" th:href="@{/admin/users/manage/{id}/enable(id=${user.userId}, referer='audit')}">Enable user</a>
+                                    </li>
+                                    <li th:if="${cannotEnableUser and !userIsEnabled}" class="govuk-summary-card__action">
+                                        <span>You cannot enable this user</span>
+                                    </li>
+                                </ul>
                             </div>
                             <div class="govuk-summary-card__content">
                                 <dl class="govuk-summary-list">
@@ -150,22 +161,21 @@
                                         <dd class="govuk-summary-list__value" th:text="${user.disabledBy == 'null' ? 'User sync' : user.disabledBy}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">SILAS Status</dt>
+                                        <dt class="govuk-summary-list__key">SiLAS Account Status</dt>
                                         <dd class="govuk-summary-list__value">
-                                            <th:block th:if="${silasStatus == 'DISABLED'}">
+                                            <th:block
+                                                    th:if="${userActivated and !user.enabled}">
                                                 <strong class="govuk-tag govuk-tag--red">Disabled</strong>
                                             </th:block>
-                                            <th:block th:if="${silasStatus == 'INCOMPLETE'}">
-                                                <strong class="govuk-tag govuk-tag--blue govuk-!-margin-top-1">Incomplete</strong>
+                                            <th:block
+                                                    th:if="${userActivated and user.enabled}">
+                                                <strong class="govuk-tag govuk-tag--green govuk-!-margin-top-1">Enabled
+                                                </strong>
                                             </th:block>
-                                            <th:block th:if="${silasStatus == 'COMPLETE'}">
-                                                <strong class="govuk-tag govuk-tag--green govuk-!-margin-top-1">Complete</strong>
-                                            </th:block>
-                                            <th:block th:if="${silasStatus == 'ACTIVATION_PENDING'}">
-                                                <strong class="govuk-tag govuk-tag--grey govuk-!-margin-top-1">Activation pending</strong>
-                                            </th:block>
-                                            <th:block th:if="${silasStatus == 'NO_ROLES_ASSIGNED'}">
-                                                <strong class="govuk-tag govuk-tag--purple govuk-!-margin-top-1">No roles assigned</strong>
+                                            <th:block th:if="${!userActivated}">
+                                                <strong
+                                                        class="govuk-tag govuk-tag--grey govuk-!-margin-top-1">Awaiting Verification
+                                                </strong>
                                             </th:block>
                                         </dd>
                                     </div>
@@ -182,34 +192,9 @@
                         <div class="govuk-summary-card">
                             <div class="govuk-summary-card__title-wrapper">
                                 <h3 class="govuk-summary-card__title">Entra Audit data</h3>
-                                <ul th:if="${canDisableUser or canEnableUser or cannotEnableUser}" class="govuk-summary-card__actions">
-                                    <li th:if="${canDisableUser and userIsEnabled}" class="govuk-summary-card__action">
-                                        <a class="govuk-link" th:href="@{/admin/users/manage/{id}/disable(id=${user.userId}, referer='audit')}">Disable user</a>
-                                    </li>
-                                    <li th:if="${canEnableUser and !userIsEnabled}" class="govuk-summary-card__action">
-                                        <a class="govuk-link" th:href="@{/admin/users/manage/{id}/enable(id=${user.userId}, referer='audit')}">Enable user</a>
-                                    </li>
-                                    <li th:if="${cannotEnableUser and !userIsEnabled}" class="govuk-summary-card__action">
-                                        <span>You cannot enable this user</span>
-                                    </li>
-                                </ul>
                             </div>
                             <div class="govuk-summary-card__content">
                                 <dl class="govuk-summary-list">
-                                    <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Account Status</dt>
-                                        <dd class="govuk-summary-list__value">
-                                            <th:block th:if="${entraVerificationStatus != 'VERIFICATION_SUCCESS'}">
-                                                <strong class="govuk-tag govuk-tag--grey" th:if="${entraUser != null}" style="white-space: nowrap;">Awaiting Verification</strong>
-                                                <strong class="govuk-tag govuk-tag--grey" th:if="${entraUser == null}">Unknown</strong>
-                                            </th:block>
-                                            <th:block th:if="${entraVerificationStatus == 'VERIFICATION_SUCCESS'}">
-                                                <strong class="govuk-tag govuk-tag--green" th:if="${entraUser != null && entraUser.accountEnabled}">Active</strong>
-                                                <strong class="govuk-tag govuk-tag--red" th:if="${entraUser != null && !entraUser.accountEnabled}">Disabled</strong>
-                                                <strong class="govuk-tag govuk-tag--grey" th:if="${entraUser == null}">Unknown</strong>
-                                            </th:block>
-                                        </dd>
-                                    </div>
                                     <div class="govuk-summary-list__row" th:if="${entraUser != null && !entraUser.accountEnabled}">
                                         <dt class="govuk-summary-list__key">Disable Reason</dt>
                                         <dd class="govuk-summary-list__value" th:if="${entraUser.customSecurityAttributes == null || entraUser.customSecurityAttributes.guestUserStatus == null || entraUser.customSecurityAttributes.guestUserStatus.disabledReason == null}">Unknown</dd>

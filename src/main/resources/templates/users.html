@@ -816,7 +816,7 @@
                                 style="width: 15%; min-width: 90px;">
                                 <button type="button" class="sort-button" data-sort="userStatus"
                                     th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'userStatus' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-show-multi-firm-users=${showMultiFirmUsers}">
-                                    SILAS Status
+                                    User Status
                                     <img th:if="${sort == 'userStatus' and direction == 'asc'}"
                                         th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
                                     <img th:if="${sort == 'userStatus' and direction == 'desc'}"
@@ -850,23 +850,28 @@
                                 </span>
                             </td>
                             <td class="govuk-table__cell">
-                                <th:block th:if="${user.silasStatus().name() == 'DISABLED'}">
-                                    <span class="moj-badge moj-badge--red">DISABLED</span>
-                                </th:block>
                                 <th:block th:if="${user.silasStatus().name() == 'INCOMPLETE'}">
-                                    <span class="moj-badge moj-badge--blue">INCOMPLETE</span>
+                                    <span class="govuk-tag govuk-tag--red">
+                                        Incomplete
+                                    </span>
                                 </th:block>
                                 <th:block th:if="${user.silasStatus().name() == 'COMPLETE'}">
-                                    <span class="moj-badge moj-badge--green">COMPLETE</span>
+                                    <span class="govuk-tag govuk-tag--green">
+                                        Complete
+                                    </span>
                                 </th:block>
                                 <th:block th:if="${user.silasStatus().name() == 'ACTIVATION_PENDING'}">
-                                    <span class="moj-badge moj-badge--grey">ACTIVATION PENDING</span>
+                                    <span class="govuk-tag govuk-tag--blue">
+                                        Activation Pending
+                                    </span>
                                 </th:block>
                                 <th:block th:if="${user.silasStatus().name() == 'NO_ROLES_ASSIGNED'}">
-                                    <span class="moj-badge moj-badge--purple">NO ROLES ASSIGNED</span>
+                                    <span class="govuk-tag govuk-tag--orange">
+                                        No roles assigned
+                                    </span>
                                 </th:block>
                                 <th:block th:if="${user.silasStatus().name() == 'UNKNOWN'}">
-                                    <span class="moj-badge moj-badge--grey">UNKNOWN</span>
+                                    <span class="govuk-tag govuk-tag--grey">Unknown</span>
                                 </th:block>
                             </td>
                         </tr>
