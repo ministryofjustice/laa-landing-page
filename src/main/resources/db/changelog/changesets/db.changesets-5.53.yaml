@@ -3,6 +3,7 @@ databaseChangeLog:
   - changeSet:
       id: remove-duplicate-pending-acceptance
       author: paul.snowdon
+      validCheckSum: ANY
       comment: "Remove duplicate PendingAcceptance disable_user_reason entries.
         Keep the entry from changesets-5.51 (name='Pending Acceptance') and remove
         the entry from changesets-5.49 (name='PendingAcceptance')"
