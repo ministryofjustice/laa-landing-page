@@ -101,8 +101,11 @@ import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
+import uk.gov.justice.laa.portal.landingpage.service.SilasCreateUserClient;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
+import uk.gov.justice.laa.portal.dto.createuser.CreateUserResult;
+import uk.gov.justice.laa.portal.dto.createuser.EmailCheckResult;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
@@ -139,6 +142,7 @@ public class UserController {
     private final AppService appService;
     private final UserAccountStatusService userAccountStatusService;
     private final NotificationService notificationService;
+    private final SilasCreateUserClient silasCreateUserClient;
 
 
     @Value("${feature.flag.disable.user}")
@@ -146,6 +150,9 @@ public class UserController {
 
     @Value("${feature.flag.edit.user.details}")
     public boolean editUserDetailFeatureEnabled;
+
+    @Value("${feature.flag.silas.create.user:false}")
+    public boolean silasCreateUserEnabled;
 
     @GetMapping("/users")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
@@ -723,19 +730,32 @@ public class UserController {
             user = new EntraUserDto();
         }
         if (Objects.nonNull(userDetailsForm.getEmail()) && !userDetailsForm.getEmail().isEmpty()) {
-            if (userService.userExistsByEmail(userDetailsForm.getEmail())) {
-                // Check if the existing user is a multi-firm user
-                if (userService.isMultiFirmUserByEmail(userDetailsForm.getEmail())) {
+            if (silasCreateUserEnabled) {
+                // CQRS path: delegate email validation to SiLAS -> User API
+                EmailCheckResult emailCheck = silasCreateUserClient.validateEmail(userDetailsForm.getEmail());
+                if (!emailCheck.isAvailable()) {
                     result.rejectValue("email", "error.email",
-                            "This email address is already registered as a multi-firm user");
-                } else {
-                    result.rejectValue("email", "error.email", "Email address already exists");
+                            emailCheck.getMessage() != null ? emailCheck.getMessage() : "Email address already exists");
                 }
-            }
+                if (!emailCheck.isValidDomain()) {
+                    result.rejectValue("email", "email.invalidDomain",
+                            "The email address domain is not valid or cannot receive emails.");
+                }
+            } else {
+                // Current monolith path
+                if (userService.userExistsByEmail(userDetailsForm.getEmail())) {
+                    if (userService.isMultiFirmUserByEmail(userDetailsForm.getEmail())) {
+                        result.rejectValue("email", "error.email",
+                                "This email address is already registered as a multi-firm user");
+                    } else {
+                        result.rejectValue("email", "error.email", "Email address already exists");
+                    }
+                }
 
-            if (!emailValidationService.isValidEmailDomain(userDetailsForm.getEmail())) {
-                result.rejectValue("email", "email.invalidDomain",
-                        "The email address domain is not valid or cannot receive emails.");
+                if (!emailValidationService.isValidEmailDomain(userDetailsForm.getEmail())) {
+                    result.rejectValue("email", "email.invalidDomain",
+                            "The email address domain is not valid or cannot receive emails.");
+                }
             }
         }
 
@@ -949,38 +969,69 @@ public class UserController {
             });
 
             CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-            try {
-                EntraUser entraUser = userService.createUser(user, selectedFirm,
-                        userManager, currentUserDto.getName(), isMultiFirmUser != null ? isMultiFirmUser : false);
 
-                // Multi-firm users only have entra_user entry, no user_profile
-                // Non-multi-firm users get a user_profile with firm assignment
-                if (Boolean.TRUE.equals(isMultiFirmUser)) {
-                    // Multi-firm user - no profile created
-                    session.setAttribute("userProfile", null);
-                } else {
-                    // Regular user - profile created with firm
-                    session.setAttribute("userProfile",
-                            mapper.map(entraUser.getUserProfiles().stream().findFirst(), UserProfileDto.class));
+            if (silasCreateUserEnabled) {
+                // CQRS path: delegate user creation to SiLAS -> User API
+                UUID firmId = selectedFirm.getId();
+                Set<String> actorPermissions = accessControlService.getAuthenticatedUserPermissions(authentication);
+                boolean isActorInternal = accessControlService.isAuthenticatedUserInternal(authentication);
+
+                CreateUserResult createResult = silasCreateUserClient.executeCreateUser(
+                        user.getFirstName(), user.getLastName(), user.getEmail(),
+                        userManager, isMultiFirmUser != null ? isMultiFirmUser : false,
+                        firmId, currentUserDto.getName(),
+                        isActorInternal, actorPermissions);
+
+                if (!createResult.isSuccess()) {
+                    log.debug("SiLAS create user failed: {}", createResult.getMessage());
+                    model.addAttribute("errorMessage", createResult.getMessage());
+                    model.addAttribute("user", user);
+                    model.addAttribute("firm", selectedFirm);
+                    boolean isUserManager = (boolean) session.getAttribute("isUserManager");
+                    model.addAttribute("isUserManager", isUserManager);
+                    model.addAttribute(ModelAttributes.PAGE_TITLE, "Check your answers");
+                    return "add-user-check-answers";
                 }
 
-                String firmDescription = Boolean.TRUE.equals(isMultiFirmUser)
-                        ? "(Multi-firm user)"
-                        : selectedFirm.getId().toString();
-                CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser,
-                        firmDescription, userManager);
-                eventService.logEvent(createUserAuditEvent);
-            } catch (TechServicesClientException techServicesClientException) {
-                log.debug("Error creating user: {}", techServicesClientException.getMessage());
-                model.addAttribute("errorMessage", techServicesClientException.getMessage());
-                model.addAttribute("errors", techServicesClientException.getErrors());
+                // Set session attributes for confirmation page
+                if (Boolean.TRUE.equals(isMultiFirmUser)) {
+                    session.setAttribute("userProfile", null);
+                }
+            } else {
+                // Current monolith path
+                try {
+                    EntraUser entraUser = userService.createUser(user, selectedFirm,
+                            userManager, currentUserDto.getName(), isMultiFirmUser != null ? isMultiFirmUser : false);
 
-                model.addAttribute("user", user);
-                model.addAttribute("firm", selectedFirm);
-                boolean isUserManager = (boolean) session.getAttribute("isUserManager");
-                model.addAttribute("isUserManager", isUserManager);
-                model.addAttribute(ModelAttributes.PAGE_TITLE, "Check your answers");
-                return "add-user-check-answers";
+                    // Multi-firm users only have entra_user entry, no user_profile
+                    // Non-multi-firm users get a user_profile with firm assignment
+                    if (Boolean.TRUE.equals(isMultiFirmUser)) {
+                        // Multi-firm user - no profile created
+                        session.setAttribute("userProfile", null);
+                    } else {
+                        // Regular user - profile created with firm
+                        session.setAttribute("userProfile",
+                                mapper.map(entraUser.getUserProfiles().stream().findFirst(), UserProfileDto.class));
+                    }
+
+                    String firmDescription = Boolean.TRUE.equals(isMultiFirmUser)
+                            ? "(Multi-firm user)"
+                            : selectedFirm.getId().toString();
+                    CreateUserAuditEvent createUserAuditEvent = new CreateUserAuditEvent(currentUserDto, entraUser,
+                            firmDescription, userManager);
+                    eventService.logEvent(createUserAuditEvent);
+                } catch (TechServicesClientException techServicesClientException) {
+                    log.debug("Error creating user: {}", techServicesClientException.getMessage());
+                    model.addAttribute("errorMessage", techServicesClientException.getMessage());
+                    model.addAttribute("errors", techServicesClientException.getErrors());
+
+                    model.addAttribute("user", user);
+                    model.addAttribute("firm", selectedFirm);
+                    boolean isUserManager = (boolean) session.getAttribute("isUserManager");
+                    model.addAttribute("isUserManager", isUserManager);
+                    model.addAttribute(ModelAttributes.PAGE_TITLE, "Check your answers");
+                    return "add-user-check-answers";
+                }
             }
 
         } else {

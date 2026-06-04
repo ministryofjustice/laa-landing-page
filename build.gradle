@@ -58,6 +58,7 @@ configurations {
 }
 
 dependencies {
+    implementation project(':user-api-dto-library')
     implementation 'io.sentry:sentry-opentelemetry-agentless-spring:8.16.0'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'

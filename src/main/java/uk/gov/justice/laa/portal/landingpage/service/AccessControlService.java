@@ -46,19 +46,25 @@ public class AccessControlService {
 
     private final UserEnablementPolicy userEnablementPolicy;
 
+    private final OpaAuthzClient opaAuthzClient;
+
     @Value("${feature.flag.bulk.disable.user}")
     private boolean bulkUserDisableFeatureEnabled;
+
+    @Value("${feature.flag.opa.authz:false}")
+    private boolean opaAuthzEnabled;
 
     private static final Logger log = LoggerFactory.getLogger(AccessControlService.class);
 
     public AccessControlService(UserService userService, LoginService loginService,
             FirmService firmService, EntraUserRepository entraUserRepository,
-            UserEnablementPolicy userEnablementPolicy) {
+            UserEnablementPolicy userEnablementPolicy, OpaAuthzClient opaAuthzClient) {
         this.userService = userService;
         this.loginService = loginService;
         this.firmService = firmService;
         this.entraUserRepository = entraUserRepository;
         this.userEnablementPolicy = userEnablementPolicy;
+        this.opaAuthzClient = opaAuthzClient;
     }
 
     public boolean canAccessUser(String userProfileId) {
@@ -710,9 +716,31 @@ public class AccessControlService {
 
         EntraUserDto accessedUser = optionalUser.get();
 
+        boolean isActorInternal = userService.isInternal(authenticatedUser.getId());
         boolean isAccessedUserInternal = userService.isInternal(entraUserId);
 
-        return userService.isInternal(authenticatedUser.getId())
+        if (opaAuthzEnabled) {
+            Set<String> actorPermissions = authenticatedUser.getUserProfiles().stream()
+                    .filter(UserProfile::isActiveProfile)
+                    .flatMap(profile -> profile.getAppRoles().stream())
+                    .filter(AppRole::isAuthzRole)
+                    .flatMap(appRole -> appRole.getPermissions().stream())
+                    .map(Permission::name)
+                    .collect(Collectors.toSet());
+
+            String invitationStatus = accessedUser.getInvitationStatus() != null
+                    ? accessedUser.getInvitationStatus().name()
+                    : "";
+
+            return opaAuthzClient.canResendActivationForAuditUser(
+                    isActorInternal,
+                    actorPermissions,
+                    isAccessedUserInternal,
+                    accessedUser.isEnabled(),
+                    invitationStatus);
+        }
+
+        return isActorInternal
                 && !isAccessedUserInternal
                 && accessedUser.isEnabled()
                 && !InvitationStatus.VERIFICATION_SUCCESS.equals(accessedUser.getInvitationStatus())
@@ -723,6 +751,30 @@ public class AccessControlService {
 
     public boolean canBulkDisableFirmUsers() {
         return bulkUserDisableFeatureEnabled && authenticatedUserHasAnyGivenPermissions(Permission.BULK_DISABLE_FIRM_USERS);
+    }
+
+    /**
+     * Get the set of permission names for the authenticated user.
+     * Used by the SiLAS CQRS flow to pass actor permissions to OPA.
+     */
+    public Set<String> getAuthenticatedUserPermissions(Authentication authentication) {
+        EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
+        return authenticatedUser.getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile)
+                .flatMap(profile -> profile.getAppRoles().stream())
+                .filter(AppRole::isAuthzRole)
+                .flatMap(appRole -> appRole.getPermissions().stream())
+                .map(Permission::name)
+                .collect(Collectors.toSet());
+    }
+
+    /**
+     * Check if the authenticated user is an internal user.
+     * Used by the SiLAS CQRS flow to pass actor context to OPA.
+     */
+    public boolean isAuthenticatedUserInternal(Authentication authentication) {
+        EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
+        return userService.isInternal(authenticatedUser.getId());
     }
 
 }

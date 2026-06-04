@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentResponse;
 import uk.gov.justice.laa.portal.landingpage.dto.ClaimEnrichmentRequest;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraServicePrincipalDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserPayloadDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CcmsUserDetailsResponse;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
@@ -46,9 +47,17 @@ public class ClaimEnrichmentService {
         String userPrincipalName = userDetails.getUserPrincipalName();
         String userId = userDetails.getId();
         String appEntraId = request.getData().getAuthenticationContext().getClientServicePrincipal().getAppId();
+        EntraServicePrincipalDto resourceServicePrincipal = request.getData().getAuthenticationContext().getResourceServicePrincipal();
         List<Firm> externalFirms = List.of();
-        
-        log.info("Claim enrichment initiated for OID: {}", userId);
+
+        boolean isOboFlow = resourceServicePrincipal != null
+                && resourceServicePrincipal.getAppId() != null
+                && !resourceServicePrincipal.getAppId().equals(appEntraId);
+
+        log.info("Claim enrichment initiated for OID: {}, clientAppId: {}, resourceAppId: {}, isOboFlow: {}",
+                userId, appEntraId,
+                resourceServicePrincipal != null ? resourceServicePrincipal.getAppId() : "N/A",
+                isOboFlow);
 
         try {
             // 1. Get the EntraUser from database
