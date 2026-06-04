@@ -6200,7 +6200,7 @@ class UserControllerTest {
         when(roleAssignmentService.canUserAssignRolesForApp(any(), any())).thenReturn(true);
 
         // When
-        String view = userController.grantAccessCheckAnswers(userId, model, testSession, authentication);
+        String view = userController.grantAccessCheckAnswers(userId, null, model, testSession, authentication);
 
         // Then
         assertThat(view).isEqualTo("grant-access-check-answers");
@@ -6258,7 +6258,7 @@ class UserControllerTest {
         when(roleAssignmentService.canUserAssignRolesForApp(any(), any())).thenReturn(true);
 
         // When
-        String view = userController.grantAccessCheckAnswers(userId, model, testSession, authentication);
+        String view = userController.grantAccessCheckAnswers(userId, null, model, testSession, authentication);
 
         // Then
         assertThat(view).isEqualTo("grant-access-check-answers");
@@ -6325,7 +6325,7 @@ class UserControllerTest {
         when(roleAssignmentService.canUserAssignRolesForApp(any(), any())).thenReturn(true);
 
         // When
-        String view = userController.grantAccessCheckAnswers(userId, model, testSession, authentication);
+        String view = userController.grantAccessCheckAnswers(userId, null, model, testSession, authentication);
 
         // Then
         assertThat(view).isEqualTo("grant-access-check-answers");

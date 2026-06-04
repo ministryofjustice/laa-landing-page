@@ -948,7 +948,30 @@ public class UserService {
             throw new RuntimeException("User creation failed");
         }
 
-        return persistNewUser(user, firm, isUserManager, createdBy, isMultiFirmUser);
+        EntraUser newUser = persistNewUser(user, firm, isUserManager, createdBy, isMultiFirmUser);
+        if (registerUserResponse.getData().getMessage().contains("User already exists") && !createdUser.isAccountEnabled()) {
+            enableUserOnRecreate(newUser);
+        }
+        return newUser;
+    }
+
+    private void enableUserOnRecreate(EntraUser newUser) {
+        TechServicesApiResponse<ChangeAccountEnabledResponse> enableUserResponse = techServicesClient.enableUser(mapper.map(newUser, EntraUserDto.class));
+
+        if (!enableUserResponse.isSuccess()) {
+            throw new TechServicesClientException(enableUserResponse.getError().getMessage(),
+                    enableUserResponse.getError().getCode(),
+                    enableUserResponse.getError().getErrors());
+        }
+
+        // Add audit entry
+        UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
+                .entraUser(newUser)
+                .statusChange(UserAccountStatus.ENABLED)
+                .statusChangedBy(newUser.getCreatedBy())
+                .statusChangedDate(LocalDateTime.now())
+                .build();
+        userAccountStatusAuditRepository.saveAndFlush(userAccountStatusAudit);
     }
 
     private EntraUser persistNewUser(EntraUserDto newUser, FirmDto firmDto, boolean isUserManager,
