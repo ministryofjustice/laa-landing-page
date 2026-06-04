@@ -32,7 +32,11 @@ databaseChangeLog:
       changes:
         - sql:
             dbms: postgresql
-            sql: "DELETE FROM disable_user_reason WHERE entra_description = 'NotActive' AND name = 'NotActive'"
+            sql: >-
+              UPDATE user_account_status_audit
+              SET disable_user_reason_id = (SELECT id FROM disable_user_reason WHERE entra_description = 'NotActive' AND name = 'Not Active')
+              WHERE disable_user_reason_id = (SELECT id FROM disable_user_reason WHERE entra_description = 'NotActive' AND name = 'NotActive');
+              DELETE FROM disable_user_reason WHERE entra_description = 'NotActive' AND name = 'NotActive'
 
   # Add unique constraint on entra_description to prevent future duplicates
   - changeSet:
