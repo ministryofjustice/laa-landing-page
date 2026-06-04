@@ -21,7 +21,6 @@ databaseChangeLog:
   - changeSet:
       id: remove-duplicate-not-active
       author: paul.snowdon
-      validCheckSum: ANY
       comment: "Remove duplicate NotActive disable_user_reason entries.
         Keep the entry from changesets-5.51 (name='Not Active') and remove
         the entry from changesets-5.49 (name='NotActive').
