@@ -34,6 +34,28 @@ databaseChangeLog:
             dbms: postgresql
             sql: "DELETE FROM disable_user_reason WHERE entra_description = 'NotActive' AND name = 'NotActive'"
 
+  # Fix FK references before removing duplicate NotActive entry (for envs where the delete failed due to FK constraint)
+  - changeSet:
+      id: fix-not-active-fk-references
+      author: paul.snowdon
+      comment:
+        "Reassign user_account_status_audit FK references from the duplicate
+        NotActive entry to the canonical Not Active entry, then delete the duplicate.
+        Required for environments where remove-duplicate-not-active failed due to FK constraint."
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: "1"
+            sql: "SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END FROM disable_user_reason WHERE entra_description = 'NotActive' AND name = 'NotActive'"
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: >-
+              UPDATE user_account_status_audit
+              SET disable_user_reason_id = (SELECT id FROM disable_user_reason WHERE entra_description = 'NotActive' AND name = 'Not Active')
+              WHERE disable_user_reason_id = (SELECT id FROM disable_user_reason WHERE entra_description = 'NotActive' AND name = 'NotActive');
+              DELETE FROM disable_user_reason WHERE entra_description = 'NotActive' AND name = 'NotActive'
+
   # Add unique constraint on entra_description to prevent future duplicates
   - changeSet:
       id: add-unique-constraint-entra-description
