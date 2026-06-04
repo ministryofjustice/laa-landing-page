@@ -46,7 +46,7 @@ public interface FirmRepository extends JpaRepository<Firm, UUID> {
 
     @Query(
             value = """
-                    SELECT DISTINCT f
+                    SELECT f
                     FROM Firm f
                     WHERE (:searchTerm IS NULL OR :searchTerm = '' OR
                            LOWER(f.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR
@@ -55,7 +55,7 @@ public interface FirmRepository extends JpaRepository<Firm, UUID> {
                       AND (:includeDisabled = true OR f.enabled = true)
                     """,
             countQuery = """
-                    SELECT COUNT(DISTINCT f.id)
+                    SELECT COUNT(f.id)
                     FROM Firm f
                     WHERE (:searchTerm IS NULL OR :searchTerm = '' OR
                            LOWER(f.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR
