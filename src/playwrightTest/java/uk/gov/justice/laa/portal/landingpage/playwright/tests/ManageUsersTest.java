@@ -593,7 +593,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
     void globalAdminCanUseManageAccessForUserWithoutRoles() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
         manageUsersPage.clickCreateUser();
-        final String email = manageUsersPage.fillInUserDetails(false);  // false = not a Provider Admin
+        final String email = manageUsersPage.fillInUserDetails(false);
         manageUsersPage.selectMultiFirmAccess(false);
         manageUsersPage.searchAndSelectFirmByCode("90001");
         manageUsersPage.clickContinueFirmSelectPage();
@@ -604,7 +604,6 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickFirstUserLink();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-        //Verify Manage Access button is visible for user without roles
         assertTrue(
                 page.locator(".govuk-button:has-text('Manage Access')").isVisible(),
                 "Manage Access button should be visible for user without roles"
@@ -625,10 +624,9 @@ public class ManageUsersTest extends BaseFrontEndTest {
     @Test
     @DisplayName("Provider Admin with default roles shows Change link not Manage Access button")
     void providerAdminWithDefaultRolesShowsChangeLink() {
-        // Create Provider Admin user (will have "Firm User Manager" role assigned by default)
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
         manageUsersPage.clickCreateUser();
-        final String email = manageUsersPage.fillInUserDetails(true);  // true = Provider Admin
+        final String email = manageUsersPage.fillInUserDetails(true);
         manageUsersPage.selectMultiFirmAccess(false);
         manageUsersPage.searchAndSelectFirmByCode("90001");
         manageUsersPage.clickContinueFirmSelectPage();
@@ -642,7 +640,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         //Verify Manage Access button is not visible
         assertFalse(
                 page.locator(".govuk-button:has-text('Manage Access')").isVisible(),
-                "Manage Access button should NOT be visible for Provider Admin with default roles"
+                "Manage Access button should not be visible for Provider Admin with default roles"
         );
 
         manageUsersPage.clickServicesTab();
@@ -662,7 +660,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
     void nonProviderAdminWithoutRolesShowsManageAccessButton() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
         manageUsersPage.clickCreateUser();
-        final String email = manageUsersPage.fillInUserDetails(false);  // false = NOT Provider Admin
+        final String email = manageUsersPage.fillInUserDetails(false);
         manageUsersPage.selectMultiFirmAccess(false);
         manageUsersPage.searchAndSelectFirmByCode("90001");
         manageUsersPage.clickContinueFirmSelectPage();
@@ -681,7 +679,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickServicesTab();
         assertFalse(
                 page.locator("#services .govuk-link:has-text('Change')").isVisible(),
-                "Change link should NOT be visible in Services tab for user without roles"
+                "Change link should not be visible in Services tab for user without roles"
         );
 
         assertTrue(
