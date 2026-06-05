@@ -42,8 +42,8 @@
                 </a>
             </div>
             <div class="govuk-summary-card__content">
-                <dl class="govuk-summary-list" th:if="${selectedAuthzApps != null and !selectedAuthzApps.isEmpty()}">
-                    <div class="govuk-summary-list__row">
+                <dl class="govuk-summary-list">
+                    <div class="govuk-summary-list__row" th:if="${selectedAuthzApps != null and !selectedAuthzApps.isEmpty()}">
                         <dd class="govuk-summary-list__key">
                             <span>Admin Services</span>
                         </dd>
@@ -53,9 +53,7 @@
                             </div>
                         </dd>
                     </div>
-                </dl>
-                <dl class="govuk-summary-list" th:if="${selectedNonAuthzApps != null and !selectedNonAuthzApps.isEmpty()}">
-                    <div class="govuk-summary-list__row">
+                    <div class="govuk-summary-list__row" th:if="${selectedNonAuthzApps != null and !selectedNonAuthzApps.isEmpty()}">
                         <dd class="govuk-summary-list__key">
                             <span>Legal Aid Services</span>
                         </dd>
