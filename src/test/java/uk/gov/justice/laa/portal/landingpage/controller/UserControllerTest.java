@@ -1830,11 +1830,12 @@ class UserControllerTest {
 
         // Then - should complete editing and redirect to manage user
         assertThat(view).isEqualTo("edit-user-roles-check-answer");
-        List<UserRole> selectedAppRole = (List<UserRole>) model.getAttribute("selectedAppRole");
-        assertThat(selectedAppRole).hasSize(3);
-        assertThat(selectedAppRole.get(0).getAppName()).isEqualTo("app1");
-        assertThat(selectedAppRole.get(1).getRoleName()).isEqualTo("role2");
-        assertThat(selectedAppRole.get(2).getRoleName()).isEqualTo("No Role selected");
+        Map<String, List<UserRole>> selectedAppRolesGrouped = (Map<String, List<UserRole>>) model.getAttribute("selectedAppRolesGrouped");
+        assertThat(selectedAppRolesGrouped).hasSize(2);
+        assertThat(selectedAppRolesGrouped.get("app1")).isNotNull();
+        assertThat(selectedAppRolesGrouped.get("app1").size()).isEqualTo(2);
+        assertThat(selectedAppRolesGrouped.get("app2")).isNotNull();
+        assertThat(selectedAppRolesGrouped.get("app2").size()).isEqualTo(1);
     }
 
     @Test
@@ -1883,11 +1884,11 @@ class UserControllerTest {
 
         // Then - should complete editing and redirect to manage user
         assertThat(view).isEqualTo("edit-user-roles-check-answer");
-        List<UserRole> selectedAppRole = (List<UserRole>) model.getAttribute("selectedAppRole");
-        assertThat(selectedAppRole).hasSize(3);
-        assertThat(selectedAppRole.get(0).getAppName()).isEqualTo("app1");
-        assertThat(selectedAppRole.get(1).getAppName()).isEqualTo("app3");
-        assertThat(selectedAppRole.get(2).getRoleName()).isEqualTo("No Role selected");
+        Map<String, List<UserRole>> selectedAppRolesGrouped = (Map<String, List<UserRole>>) model.getAttribute("selectedAppRolesGrouped");
+        assertThat(selectedAppRolesGrouped).hasSize(3);
+        assertThat(selectedAppRolesGrouped.get("app1")).isNotNull();
+        assertThat(selectedAppRolesGrouped.get("app2")).isNotNull();
+        assertThat(selectedAppRolesGrouped.get("app3")).isNotNull();
     }
 
     @Test
@@ -1936,12 +1937,10 @@ class UserControllerTest {
 
         // Then - should complete editing and redirect to manage user
         assertThat(view).isEqualTo("edit-user-roles-check-answer");
-        List<UserRole> selectedAppRole = (List<UserRole>) model.getAttribute("selectedAppRole");
-        assertThat(selectedAppRole).hasSize(3);
-        assertThat(selectedAppRole.get(0).getAppName()).isEqualTo("app1");
-        assertThat(selectedAppRole.get(1).getRoleName()).isEqualTo("role2");
-        assertThat(selectedAppRole.get(2).getRoleName()).isEqualTo("No Role selected");
-        assertThat(selectedAppRole.get(2).getAppName()).isEqualTo("Unknown app");
+        Map<String, List<UserRole>> selectedAppRolesGrouped = (Map<String, List<UserRole>>) model.getAttribute("selectedAppRolesGrouped");
+        assertThat(selectedAppRolesGrouped).hasSize(2);
+        assertThat(selectedAppRolesGrouped.get("Unknown app")).isNotNull();
+        assertThat(selectedAppRolesGrouped.get("app1")).isNotNull();
         String error = model.getAttribute("errorMessage").toString();
         assertThat(error).isEqualTo("Unknown app selected, please re-select apps");
     }

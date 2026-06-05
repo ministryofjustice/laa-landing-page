@@ -1567,9 +1567,16 @@ public class UserController {
                 .flatMap(List::stream)
                 .map(UUID::fromString)
                 .toList();
+
+        Map<String, Long> totalAssignableRolesForApps = roleAssignmentService.filterRoles(editorUserProfile.getAppRoles(), roleIds).stream()
+                .collect(Collectors.groupingBy(
+                        role -> role.getApp().getId(),
+                        Collectors.counting()
+                ));
+
         Map<String, AppRoleDto> roles = userService.getRolesByIdIn(roleIds);
         String backUrl = "";
-        List<UserRole> selectedAppRole = new ArrayList<>();
+        List<UserRole> selectedAppRoles = new ArrayList<>();
         if (editUserAllSelectedRoles.isEmpty()) {
             backUrl = "/admin/users/edit/" + id + "/apps";
         } else {
@@ -1583,11 +1590,15 @@ public class UserController {
                     for (String selectedRole : selectedRoles) {
                         AppRoleDto role = roles.get(selectedRole);
                         UserRole userRole = new UserRole();
-                        userRole.setRoleName(role.getDescription());
+                        userRole.setRoleName(role.getName());
                         userRole.setAppName(role.getApp().getName());
                         userRole.setUrl(url);
                         userRole.setLegacySync(role.isLegacySync());
-                        selectedAppRole.add(userRole);
+                        userRole.setAuthzRole(role.isAuthzRole());
+                        userRole.setAppIndex(key);
+                        Long totalAppRoles = totalAssignableRolesForApps.get(role.getApp().getId());
+                        userRole.setTotalAppRoles(totalAppRoles != null ? totalAppRoles : 0);
+                        selectedAppRoles.add(userRole);
                     }
                 } else {
                     UserRole userRole = new UserRole();
@@ -1604,15 +1615,19 @@ public class UserController {
                     }
                     userRole.setRoleName("No Role selected");
                     userRole.setUrl(url);
-                    selectedAppRole.add(userRole);
+                    selectedAppRoles.add(userRole);
                 }
             }
         }
         if (errorMessage != null) {
             model.addAttribute("errorMessage", errorMessage);
         }
+        Map<String, List<UserRole>> selectedAppRolesGrouped = selectedAppRoles.stream()
+                .collect(Collectors.groupingBy(UserRole::getAppName));
         model.addAttribute("user", user);
-        model.addAttribute("selectedAppRole", selectedAppRole);
+        model.addAttribute("selectedAuthzApps", selectedAppRoles.stream().filter(UserRole::isAuthzRole).map(UserRole::getAppName).collect(Collectors.toSet()));
+        model.addAttribute("selectedNonAuthzApps", selectedAppRoles.stream().filter(userRole -> !userRole.isAuthzRole()).map(UserRole::getAppName).collect(Collectors.toSet()));
+        model.addAttribute("selectedAppRolesGrouped", selectedAppRolesGrouped);
         model.addAttribute("backUrl", backUrl);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user services - " + user.getFullName());
         return "edit-user-roles-check-answer";
