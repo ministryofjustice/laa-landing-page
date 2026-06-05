@@ -40,7 +40,7 @@ public class CreateUserService {
     }
 
     /**
-     * Step 2: Validate email — CQRS Query to User API.
+     * Step 2: Validate email - CQRS Query to User API.
      * Returns validation result without mutating any state.
      */
     public EmailCheckResult validateEmail(String email) {
@@ -55,7 +55,7 @@ public class CreateUserService {
     }
 
     /**
-     * Step 4: Execute create user — CQRS Command to User API.
+     * Step 4: Execute create user - CQRS Command to User API.
      * User API handles TechServices registration + DB persistence.
      */
     public CreateUserResult executeCreateUser(String firstName, String lastName, String email,

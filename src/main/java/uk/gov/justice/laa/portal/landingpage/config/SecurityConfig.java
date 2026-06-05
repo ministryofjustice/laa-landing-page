@@ -124,13 +124,13 @@ public class SecurityConfig {
     }
 
     /**
-     * Security filter chain for internal user polling API endpoints.
-     * Stateless, no auth for now (POC). Should be secured before production use.
+     * Security filter chain for CQRS create-user API endpoints.
+     * Called by SiLAS (service-to-service). Stateless, no auth for now (POC).
      */
     @Bean
     @Order(2)
-    public SecurityFilterChain internalUserApiSecurityFilterChain(HttpSecurity http) throws Exception {
-        http.securityMatcher("/api/internal-users/**")
+    public SecurityFilterChain createUserApiSecurityFilterChain(HttpSecurity http) throws Exception {
+        http.securityMatcher("/api/create-user/**")
                 .authorizeHttpRequests(authorize -> authorize
                         .anyRequest().permitAll()
                 )

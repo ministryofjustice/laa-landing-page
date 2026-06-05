@@ -32,39 +32,29 @@ public class InternalUserPolling {
     @Value("${app.distributed.db.locking.period}")
     private int distributedDbLockingPeriod;
 
-    @Value("${feature.flag.internal.user.polling.v2:false}")
-    private boolean pollingV2Enabled;
-
     @Scheduled(cron = "${internal.user.polling.schedule}")
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void poll() {
-        if (!pollingEnabled) {
-            log.debug("Internal user polling is disabled via configuration");
-            return;
-        }
-
-        if (pollingV2Enabled) {
-            log.info("Internal user polling v2 is enabled - skipping legacy polling. " +
-                    "The internal-user-polling-service handles scheduling.");
-            return;
-        }
-
-        log.debug("Starting internal user polling process (legacy)...");
-        if (enableDistributedDbLocking) {
-            try {
-                boolean acquired = lockService.tryOnceWithLock(POLLING_LOCK_KEY, Duration.ofMinutes(distributedDbLockingPeriod), () -> {
-                    log.debug("Acquired lock for internal user polling");
-                    internalUserPollingService.pollForNewUsers();
-                    log.debug("Completed internal user polling");
-                });
-                if (!acquired) {
-                    log.debug("Could not acquire lock for internal user polling. Another instance might be running.");
+        if (pollingEnabled) {
+            log.debug("Starting internal user polling process...");
+            if (enableDistributedDbLocking) {
+                try {
+                    boolean acquired = lockService.tryOnceWithLock(POLLING_LOCK_KEY, Duration.ofMinutes(distributedDbLockingPeriod), () -> {
+                        log.debug("Acquired lock for internal user polling");
+                        internalUserPollingService.pollForNewUsers();
+                        log.debug("Completed internal user polling");
+                    });
+                    if (!acquired) {
+                        log.debug("Could not acquire lock for internal user polling. Another instance might be running.");
+                    }
+                } catch (Exception e) {
+                    log.error("Error during internal user polling", e);
                 }
-            } catch (Exception e) {
-                log.error("Error during internal user polling", e);
+            } else {
+                internalUserPollingService.pollForNewUsers();
             }
         } else {
-            internalUserPollingService.pollForNewUsers();
+            log.debug("Internal user polling is disabled via configuration");
         }
     }
 }
