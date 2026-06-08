@@ -26,6 +26,7 @@ public class AppRoleDto implements Comparable<AppRoleDto>, Serializable {
     private UserType[] userTypeRestriction;
     private boolean changeNotAllowed;
     private boolean legacySync;
+    private boolean authzRole;
 
     @Override
     public int compareTo(@NotNull AppRoleDto o) {
