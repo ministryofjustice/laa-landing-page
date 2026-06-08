@@ -45,10 +45,7 @@ jobs:
 
       - name: Generate Deployment the Files
         run: |
-          cat deployments/templates/deployment.yml | envsubst > deployments/deployment.yml
           cat deployments/templates/landing-page-ingress.yml | envsubst > deployments/landing-page-ingress.yml
-          cat deployments/templates/service.yml | envsubst > deployments/service.yml
-          cat deployments/templates/servicemonitor.yml | envsubst > deployments/servicemonitor.yml
         env:
           SENTRY_SAMPLE_RATE: ${{ vars.SENTRY_SAMPLE_RATE }}
           BASE_URL_HOMEPAGE: ${{ secrets.BASE_URL_HOMEPAGE }}
@@ -147,7 +144,7 @@ jobs:
 
       - name: Deploy Ingress
         run: |
-          kubectl -n ${KUBE_NAMESPACE} apply -f temp/landing-page-ingress-revert.yml
+          kubectl -n ${KUBE_NAMESPACE} apply -f deployments/ --dry-run=client
         env:
           KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
 
