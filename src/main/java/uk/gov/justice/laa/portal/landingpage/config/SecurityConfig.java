@@ -191,10 +191,15 @@ public class SecurityConfig {
                         .requestMatcher(AnyRequestMatcher.INSTANCE)
                 )
                 .contentSecurityPolicy(contentSecurityPolicyConfig -> contentSecurityPolicyConfig
-                        .policyDirectives("default-src * self blob: data: gap:; style-src * self 'unsafe-inline' blob: data: gap:;"
-                                + " script-src * 'self' 'unsafe-eval' 'unsafe-inline' blob: data: gap:; object-src * 'self' blob: data: gap:;"
-                                + " img-src * self 'unsafe-inline' blob: data: gap:; connect-src self * 'unsafe-inline' blob: data: gap:;"
-                                + " frame-src * self blob: data: gap:; frame-ancestors 'none';"))
+                        .policyDirectives("default-src 'self';"
+                                + " script-src 'self' 'unsafe-inline' https://code.jquery.com;"
+                                + " style-src 'self' 'unsafe-inline';"
+                                + " img-src 'self' data:;"
+                                + " connect-src 'self';"
+                                + " font-src 'self';"
+                                + " object-src 'none';"
+                                + " frame-src 'none';"
+                                + " frame-ancestors 'none';"))
                 .addHeaderWriter(new StaticHeadersWriter("Cross-Origin-Embedder-Policy-Report-Only", "require-corp"))
         );
         return http.build();
