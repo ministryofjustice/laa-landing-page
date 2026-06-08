@@ -687,6 +687,7 @@ public class MultiFirmUserController {
             allSelectedRolesByPage = new HashMap<>();
         }
 
+        // Add the roles for the currently selected app to a map for lookup.
         allSelectedRolesByPage.put(selectedAppIndex, rolesForm.getRoles());
         if (selectedAppIndex >= selectedApps.size() - 1) {
             List<String> allSelectedRoles = allSelectedRolesByPage.values().stream().filter(Objects::nonNull)
