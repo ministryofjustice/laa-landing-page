@@ -140,10 +140,15 @@ jobs:
         env:
           KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
 
-      - name: Deploy Ingress
+
+      - name: Echo deploymnet.yml
         run: |
-          kubectl -n ${KUBE_NAMESPACE} apply -f temp/landing-page-ingress-test.yml
-        env:
-          KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
+          cat deployments/landing-page-ingress.yml
+
+      # - name: Deploy Ingress
+      #   run: |
+      #     kubectl -n ${KUBE_NAMESPACE} apply -f temp/landing-page-ingress-revert.yml
+      #   env:
+      #     KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
 
 
