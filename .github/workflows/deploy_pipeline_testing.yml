@@ -140,6 +140,10 @@ jobs:
         env:
           KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
 
-
+      - name: Deploy Ingress
+        run: |
+          kubectl -n ${KUBE_NAMESPACE} apply -f temp/landing-page-ingress-test.yml --dry-run=client
+        env:
+          KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
 
 
