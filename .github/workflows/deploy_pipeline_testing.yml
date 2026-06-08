@@ -18,7 +18,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  ecr:
+  k8s-deploy:
     runs-on: ubuntu-latest
     environment: development
     permissions:
@@ -142,7 +142,7 @@ jobs:
 
       - name: Deploy Ingress
         run: |
-          kubectl -n ${KUBE_NAMESPACE} apply -f temp/landing-page-ingress-test.yml --dry-run=client
+          kubectl -n ${KUBE_NAMESPACE} apply -f temp/landing-page-ingress-test.yml
         env:
           KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
 
