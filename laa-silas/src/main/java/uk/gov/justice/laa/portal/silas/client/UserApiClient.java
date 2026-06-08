@@ -13,6 +13,7 @@ import uk.gov.justice.laa.portal.dto.createuser.FirmSummaryDto;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -20,6 +21,38 @@ import java.util.List;
 public class UserApiClient {
 
     private final RestClient userApiRestClient;
+
+    /**
+     * Query: Get a firm by ID.
+     */
+    public FirmSummaryDto getFirmById(UUID firmId) {
+        log.debug("CQRS Query: fetching firm by ID '{}'", firmId);
+        try {
+            return userApiRestClient.get()
+                    .uri("/api/create-user/query/firm/{firmId}", firmId)
+                    .retrieve()
+                    .body(FirmSummaryDto.class);
+        } catch (Exception e) {
+            log.error("Failed to fetch firm {} via User API: {}", firmId, e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /**
+     * Query: Search firms by name.
+     */
+    public List<FirmSummaryDto> searchFirms(String searchTerm, int maxResults) {
+        log.debug("CQRS Query: searching firms with term '{}'", searchTerm);
+        try {
+            return userApiRestClient.get()
+                    .uri("/api/create-user/query/firms?search={search}&maxResults={max}", searchTerm, maxResults)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<>() {});
+        } catch (Exception e) {
+            log.error("Failed to search firms via User API: {}", e.getMessage(), e);
+            return Collections.emptyList();
+        }
+    }
 
     /**
      * Query: Check email availability and domain validity.
@@ -38,22 +71,6 @@ public class UserApiClient {
                     .validDomain(false)
                     .message("Email validation service unavailable")
                     .build();
-        }
-    }
-
-    /**
-     * Query: Search firms by name.
-     */
-    public List<FirmSummaryDto> searchFirms(String searchTerm, int maxResults) {
-        log.debug("CQRS Query: searching firms with term '{}'", searchTerm);
-        try {
-            return userApiRestClient.get()
-                    .uri("/api/create-user/query/firms?search={search}&maxResults={max}", searchTerm, maxResults)
-                    .retrieve()
-                    .body(new ParameterizedTypeReference<>() {});
-        } catch (Exception e) {
-            log.error("Failed to search firms via User API: {}", e.getMessage(), e);
-            return Collections.emptyList();
         }
     }
 

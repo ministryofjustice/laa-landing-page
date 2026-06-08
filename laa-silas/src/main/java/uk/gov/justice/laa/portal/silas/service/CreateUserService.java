@@ -40,7 +40,14 @@ public class CreateUserService {
     }
 
     /**
-     * Step 2: Validate email - CQRS Query to User API.
+     * Step 2a: Get firm by ID - CQRS Query to User API.
+     */
+    public FirmSummaryDto getFirmById(UUID firmId) {
+        return userApiClient.getFirmById(firmId);
+    }
+
+    /**
+     * Step 2b: Validate email - CQRS Query to User API.
      * Returns validation result without mutating any state.
      */
     public EmailCheckResult validateEmail(String email) {

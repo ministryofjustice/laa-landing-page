@@ -106,6 +106,7 @@ import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.dto.createuser.CreateUserResult;
 import uk.gov.justice.laa.portal.dto.createuser.EmailCheckResult;
+import uk.gov.justice.laa.portal.dto.createuser.FirmSummaryDto;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
