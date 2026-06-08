@@ -840,6 +840,7 @@ public class MultiFirmUserController {
 
         Map<String, List<UserRole>> rolesByApp = selectedAppRole.stream()
                 .collect(Collectors.groupingBy(UserRole::getAppName));
+        model.addAttribute("rolesByApp", rolesByApp);
 
         List<UserRole> uniqueApps = new ArrayList<>();
         Set<String> seenAppNames = new HashSet<>();
@@ -854,7 +855,6 @@ public class MultiFirmUserController {
         model.addAttribute("uniqueApps", uniqueApps);
         model.addAttribute("externalUser", true);
         model.addAttribute("isMultiFirmUser", true);
-        model.addAttribute("rolesByApp", rolesByApp);
         model.addAttribute("isInternalUser", currentUserProfile.getUserType() == UserType.INTERNAL);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile - Check your answers - " + user.getFullName());
 
