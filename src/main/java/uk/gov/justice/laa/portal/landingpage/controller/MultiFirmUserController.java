@@ -1,7 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -687,7 +686,7 @@ public class MultiFirmUserController {
         if (allSelectedRolesByPage == null) {
             allSelectedRolesByPage = new HashMap<>();
         }
-        // Add the roles for the currently selected app to a map for lookup.
+
         allSelectedRolesByPage.put(selectedAppIndex, rolesForm.getRoles());
         if (selectedAppIndex >= selectedApps.size() - 1) {
             List<String> allSelectedRoles = allSelectedRolesByPage.values().stream().filter(Objects::nonNull)
@@ -807,16 +806,32 @@ public class MultiFirmUserController {
         model.addAttribute("userOffices", userOfficeDtos);
         model.addAttribute("firm", firmDto);
 
-        List<AppRoleDto> appRoleDtoList = appRoleService.getByIds(appRolesByPage.values().stream()
-                .filter(Objects::nonNull).flatMap(List::stream).toList())
-                .stream().sorted(Comparator.comparingInt(AppRoleDto::getOrdinal)).toList();
-        List<UserRole> selectedAppRole = appRoleDtoList.stream()
-                .map(appRoleDto -> UserRole.builder().appName(appRoleDto.getApp().getName()).appType(appRoleDto.getApp().getAppType())
-                        .roleName(appRoleDto.getName()).serviceUrl("/admin/multi-firm/user/add/profile/select/apps").url("/admin/multi" +
-                                "-firm/user" +
-                                "/add" +
-                                "/profile/select/roles").build())
-                .toList();
+        List<String> allRoleIds = appRolesByPage.values().stream()
+                .filter(Objects::nonNull).flatMap(List::stream).toList();
+        List<AppRoleDto> allAppRoleDtos = appRoleService.getByIds(allRoleIds);
+        Map<String, AppRoleDto> rolesMap = allAppRoleDtos.stream()
+                .collect(Collectors.toMap(AppRoleDto::getId, role -> role));
+
+        List<UserRole> selectedAppRole = new ArrayList<>();
+        for (Integer appIndex : appRolesByPage.keySet()) {
+            List<String> roleIds = appRolesByPage.get(appIndex);
+            String url = "/admin/multi-firm/user/add/profile/select/roles?selectedAppIndex=" + appIndex;
+
+            if (Objects.nonNull(roleIds) && !roleIds.isEmpty()) {
+                for (String roleId : roleIds) {
+                    AppRoleDto role = rolesMap.get(roleId);
+                    if (role != null) {
+                        UserRole userRole = new UserRole();
+                        userRole.setAppName(role.getApp().getName());
+                        userRole.setAppType(role.getApp().getAppType());
+                        userRole.setRoleName(role.getName());
+                        userRole.setAppIndex(appIndex);
+                        userRole.setUrl(url);
+                        selectedAppRole.add(userRole);
+                    }
+                }
+            }
+        }
         Optional<EntraUserDto> userOptional = getObjectFromHttpSession(session, "entraUser", EntraUserDto.class);
         if (userOptional.isEmpty()) {
             return "redirect:/admin/journey-completed";
@@ -826,8 +841,17 @@ public class MultiFirmUserController {
         Map<String, List<UserRole>> rolesByApp = selectedAppRole.stream()
                 .collect(Collectors.groupingBy(UserRole::getAppName));
 
+        List<UserRole> uniqueApps = new ArrayList<>();
+        Set<String> seenAppNames = new HashSet<>();
+        for (UserRole role : selectedAppRole) {
+            if (!seenAppNames.contains(role.getAppName())) {
+                uniqueApps.add(role);
+                seenAppNames.add(role.getAppName());
+            }
+        }
+
         model.addAttribute("user", user);
-        model.addAttribute("selectedAppRole", selectedAppRole);
+        model.addAttribute("uniqueApps", uniqueApps);
         model.addAttribute("externalUser", true);
         model.addAttribute("isMultiFirmUser", true);
         model.addAttribute("rolesByApp", rolesByApp);

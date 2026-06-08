@@ -47,6 +47,14 @@
                             <h2 class="govuk-summary-card__title">
                                 User details
                             </h2>
+                            <ul class="govuk-summary-card__actions">
+                                <li class="govuk-summary-card__action">
+                                    <a class="govuk-link"
+                                       th:href="@{'/admin/multi-firm/user/add/profile'}">
+                                        Change
+                                    </a>
+                                </li>
+                            </ul>
                         </div>
                         <div class="govuk-summary-card__content">
                             <dl class="govuk-summary-list">
@@ -88,7 +96,7 @@
                         </div>
                         <div class="govuk-summary-card__content">
                             <dl class="govuk-summary-list"
-                                th:if="${selectedAppRole != null and !selectedAppRole.isEmpty()}">
+                                th:if="${uniqueApps != null and !uniqueApps.isEmpty()}">
 
                                 <!-- Admin Services -->
                                 <div class="govuk-summary-list__row">
@@ -98,18 +106,18 @@
 
                                     <dd class="govuk-summary-list__value">
                                         <ul class="govuk-list">
-                                            <li th:each="appRole : ${selectedAppRole}"
-                                                th:if="${appRole.appType.name() == 'AUTHZ'}"
-                                                th:text="${appRole.appName}">
+                                            <li th:each="app : ${uniqueApps}"
+                                                th:if="${app.appType.name() == 'AUTHZ'}"
+                                                th:text="${app.appName}">
                                             </li>
                                         </ul>
                                     </dd>
 
                                     <dd class="govuk-summary-list__actions">
                                         <ul class="govuk-list">
-                                            <li th:each="appRole : ${selectedAppRole}"
-                                                th:if="${appRole.appType.name() == 'AUTHZ'}">
-                                                <a th:href="${appRole.serviceUrl}" class="govuk-link"></a>
+                                            <li th:each="app : ${uniqueApps}"
+                                                th:if="${app.appType.name() == 'AUTHZ'}">
+                                                <a th:href="${app.serviceUrl}" class="govuk-link"></a>
                                         </ul>
                                     </dd>
                                 </div>
@@ -122,25 +130,25 @@
 
                                     <dd class="govuk-summary-list__value">
                                         <ul class="govuk-list">
-                                            <li th:each="appRole : ${selectedAppRole}"
-                                                th:if="${appRole.appType.name() != 'AUTHZ'}"
-                                                th:text="${appRole.appName}">
+                                            <li th:each="app : ${uniqueApps}"
+                                                th:if="${app.appType.name() != 'AUTHZ'}"
+                                                th:text="${app.appName}">
                                             </li>
                                         </ul>
                                     </dd>
 
                                     <dd class="govuk-summary-list__actions">
                                         <ul class="govuk-list">
-                                            <li th:each="appRole : ${selectedAppRole}"
-                                                th:if="${appRole.appType.name() != 'AUTHZ'}">
-                                                <a th:href="${appRole.getServiceUrl()}"></a>
+                                            <li th:each="app : ${uniqueApps}"
+                                                th:if="${app.appType.name() != 'AUTHZ'}">
+                                                <a th:href="${app.getServiceUrl()}"></a>
                                             </li>
                                         </ul>
                                     </dd>
                                 </div>
 
                                 </dl>
-                            <div class="govuk-summary-list" th:if="${(selectedAppRole == null or selectedAppRole.isEmpty())}">
+                            <div class="govuk-summary-list" th:if="${(uniqueApps == null or uniqueApps.isEmpty())}">
                                 <div class="govuk-summary-list__row">
                                     <dd class="govuk-summary-list__value">
                                         <span>No service assigned</span>
@@ -175,7 +183,7 @@
                                     </dd>
 
                                     <dd class="govuk-summary-list__actions">
-                                        <a th:href="${entry.value[0].url}" class="govuk-link">Change</a>
+                                        <a th:href="@{${entry.value[0].url}}" class="govuk-link">Change</a>
                                     </dd>
 
                                 </div>
