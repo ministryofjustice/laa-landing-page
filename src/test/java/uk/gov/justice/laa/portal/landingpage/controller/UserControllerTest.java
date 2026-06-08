@@ -80,6 +80,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
@@ -4824,8 +4825,8 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/offices");
-        assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNull();
-        assertThat(testSession.getAttribute("grantAccessAllSelectedRoles")).isNull();
+        assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNotNull();
+        assertThat(testSession.getAttribute("grantAccessAllSelectedRoles")).isNotNull();
     }
 
     @Test
@@ -4875,8 +4876,8 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/offices");
-        assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNull();
-        assertThat(testSession.getAttribute("grantAccessAllSelectedRoles")).isNull();
+        assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNotNull();
+        assertThat(testSession.getAttribute("grantAccessAllSelectedRoles")).isNotNull();
         List<String> nonEditableAppRoles = (List<String>) testSession.getAttribute("nonEditableRoles");
         assertThat(nonEditableAppRoles).isNotEmpty();
         assertThat(nonEditableAppRoles).containsExactly("role1", "role2");
@@ -6172,6 +6173,7 @@ class UserControllerTest {
         AppDto app = new AppDto();
         app.setId("app1");
         app.setName("Test App");
+        app.setAppType(AppType.LAA);
         appRole.setApp(app);
 
         List<AppRoleDto> userAppRoles = List.of(appRole);
@@ -6205,7 +6207,9 @@ class UserControllerTest {
         assertThat(view).isEqualTo("grant-access-check-answers");
         assertThat(model.getAttribute("user")).isEqualTo(user);
         assertThat(model.getAttribute("userAppRoles")).isEqualTo(userAppRoles);
-        assertThat(model.getAttribute("userOffices")).isEqualTo(userOffices);
+        assertThat(model.getAttribute("officesByCity")).isNotNull();
+        assertThat(((Map<String, List<OfficeDto>>) model.getAttribute("officesByCity")).values())
+                .containsExactly(userOffices);
         assertThat(model.getAttribute("externalUser")).isEqualTo(true);
     }
 
@@ -6217,9 +6221,9 @@ class UserControllerTest {
         user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
         user.setUserType(UserType.EXTERNAL);
 
-        AppDto app1 = AppDto.builder().name("app-one").ordinal(2).build();
-        AppDto app2 = AppDto.builder().name("app-two").ordinal(1).build();
-        AppDto app3 = AppDto.builder().name("app-three").ordinal(3).build();
+        AppDto app1 = AppDto.builder().name("app-one").ordinal(2).appType(AppType.LAA).build();
+        AppDto app2 = AppDto.builder().name("app-two").ordinal(1).appType(AppType.LAA).build();
+        AppDto app3 = AppDto.builder().name("app-three").ordinal(3).appType(AppType.LAA).build();
 
         AppRoleDto a1r1 = AppRoleDto.builder().name("a1r1").app(app1).ordinal(3).build();
         AppRoleDto a1r2 = AppRoleDto.builder().name("a1r2").app(app1).ordinal(4).build();
@@ -6288,9 +6292,9 @@ class UserControllerTest {
         user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
         user.setUserType(UserType.EXTERNAL);
 
-        AppDto app1 = AppDto.builder().name("app-one").ordinal(2).build();
-        AppDto app2 = AppDto.builder().name("app-two").ordinal(1).build();
-        AppDto app3 = AppDto.builder().name("app-three").ordinal(3).build();
+        AppDto app1 = AppDto.builder().name("app-one").ordinal(2).appType(AppType.LAA).build();
+        AppDto app2 = AppDto.builder().name("app-two").ordinal(1).appType(AppType.LAA).build();
+        AppDto app3 = AppDto.builder().name("app-three").ordinal(3).appType(AppType.LAA).build();
 
         AppRoleDto a1r1 = AppRoleDto.builder().name("a1r1").app(app1).ordinal(3).build();
         AppRoleDto a1r2 = AppRoleDto.builder().name("a1r2").app(app1).ordinal(4).build();

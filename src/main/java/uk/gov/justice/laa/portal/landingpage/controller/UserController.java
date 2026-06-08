@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -62,6 +63,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
+import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
@@ -2107,6 +2109,12 @@ public class UserController {
         model.addAttribute("apps", editableApps);
         model.addAttribute("groupedApps", appService.buildGroupedApps(editableApps));
 
+        // Clear role selections
+        session.removeAttribute("grantAccessUserRolesModel");
+        session.removeAttribute("grantAccessAllSelectedRoles");
+        session.removeAttribute("allSelectedRoles");
+        session.removeAttribute("nonEditableRoles");
+
         // Store the model in session to handle validation errors later
         session.setAttribute("grantAccessUserAppsModel", model);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Select services - " + user.getFullName());
@@ -2383,10 +2391,6 @@ public class UserController {
         allSelectedRolesByPage.put(selectedAppIndex, rolesForm.getRoles());
         if (selectedAppIndex >= selectedApps.size() - 1) {
             UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
-            // Clear the grantAccessUserRolesModel and page roles from session to avoid
-            // stale data
-            session.removeAttribute("grantAccessUserRolesModel");
-            session.removeAttribute("grantAccessAllSelectedRoles");
             // Flatten the map to a single list of all selected roles across all pages.
             Set<String> allSelectedRoles = allSelectedRolesByPage.values().stream().filter(Objects::nonNull)
                     .flatMap(List::stream)
@@ -2630,10 +2634,46 @@ public class UserController {
                         (e1, e2) -> e1,
                         LinkedHashMap::new));
 
+        Map<AppType, Set<String>> appsGroupByType = userAppRoles.stream()
+                .sorted()
+                .collect(Collectors.groupingBy(
+                        appRole -> appRole.getApp().getAppType(),
+                        LinkedHashMap::new,
+                        Collectors.mapping(
+                                appRole -> appRole.getApp().getName(),
+                                Collectors.toSet()
+                        )
+                ));
+
+        Map<String, List<OfficeDto>> officesByCity = userOffices.stream()
+                .sorted(Comparator.comparing(officeDto -> {
+                    String city = officeDto.getAddress() == null ? "Other cities"
+                            : officeDto.getAddress().getCity();
+                    return (city == null || city.isBlank()) ? "Other cities" : city;
+                }, (city1, city2) -> {
+                    if ("Other cities".equals(city1)) {
+                        return 1;
+                    }
+                    if ("Other cities".equals(city2)) {
+                        return -1;
+                    }
+                    return city1.compareToIgnoreCase(city2);
+                }))
+                .collect(Collectors.groupingBy(
+                        officeDto -> {
+                            String city = officeDto.getAddress() == null ? "Other cities"
+                                    : officeDto.getAddress().getCity();
+                            return (city == null || city.isBlank()) ? "Other cities" : city;
+                        },
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                ));
+
         model.addAttribute("user", user);
         model.addAttribute("userAppRoles", editableUserAppRoles);
         model.addAttribute("groupedAppRoles", sortedGroupedAppRoles);
-        model.addAttribute("userOffices", userOffices);
+        model.addAttribute("appsGroupByType", appsGroupByType);
+        model.addAttribute("officesByCity", officesByCity);
         model.addAttribute("externalUser", user.getUserType() == UserType.EXTERNAL);
         model.addAttribute("hasAllOffices", selectedOffices.contains(ALL));
         model.addAttribute("hasNoOffices", selectedOffices.contains(NO_OFFICES));
@@ -2766,6 +2806,8 @@ public class UserController {
         session.removeAttribute("grantAccessUserRolesModel");
         session.removeAttribute("grantAccessAllSelectedRoles");
         session.removeAttribute("selectedOffices");
+        session.removeAttribute("allSelectedRoles");
+        session.removeAttribute("nonEditableRoles");
 
         return "redirect:/admin/users/grant-access/" + id + "/confirmation";
     }
@@ -2820,8 +2862,9 @@ public class UserController {
         session.removeAttribute("selectedOffices");
         session.removeAttribute("allSelectedRoles");
         session.removeAttribute("selectedApps");
-        session.removeAttribute("grantAccessSelectedApps");
         session.removeAttribute("nonEditableRoles");
+        session.removeAttribute("selectedOffices");
+        session.removeAttribute("allSelectedRoles");
 
         // Clear any success messages
         session.removeAttribute("successMessage");
