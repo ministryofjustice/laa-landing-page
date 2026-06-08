@@ -85,7 +85,7 @@ class SecurityConfigTest {
         assertThat(coep).isEqualTo("require-corp");
     }
 
-/*
+    /*
     @Test
     void adminEndpointsRequireAdminRole() throws Exception {
         // Without admin role - should be redirected
