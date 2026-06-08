@@ -27,6 +27,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.IpAddressMatcher;
@@ -193,7 +194,8 @@ public class SecurityConfig {
                         .policyDirectives("default-src * self blob: data: gap:; style-src * self 'unsafe-inline' blob: data: gap:;"
                                 + " script-src * 'self' 'unsafe-eval' 'unsafe-inline' blob: data: gap:; object-src * 'self' blob: data: gap:;"
                                 + " img-src * self 'unsafe-inline' blob: data: gap:; connect-src self * 'unsafe-inline' blob: data: gap:;"
-                                + " frame-src * self blob: data: gap:;"))
+                                + " frame-src * self blob: data: gap:; frame-ancestors 'none';"))
+                .addHeaderWriter(new StaticHeadersWriter("Cross-Origin-Embedder-Policy-Report-Only", "require-corp"))
         );
         return http.build();
     }
