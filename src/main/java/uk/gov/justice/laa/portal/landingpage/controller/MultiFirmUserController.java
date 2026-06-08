@@ -811,8 +811,11 @@ public class MultiFirmUserController {
                 .filter(Objects::nonNull).flatMap(List::stream).toList())
                 .stream().sorted(Comparator.comparingInt(AppRoleDto::getOrdinal)).toList();
         List<UserRole> selectedAppRole = appRoleDtoList.stream()
-                .map(appRoleDto -> UserRole.builder().appName(appRoleDto.getName())
-                        .roleName(appRoleDto.getName()).url("/admin/multi-firm/user/add/profile/select/roles").build())
+                .map(appRoleDto -> UserRole.builder().appName(appRoleDto.getApp().getName()).appType(appRoleDto.getApp().getAppType())
+                        .roleName(appRoleDto.getName()).serviceUrl("/admin/multi-firm/user/add/profile/select/apps").url("/admin/multi" +
+                                "-firm/user" +
+                                "/add" +
+                                "/profile/select/roles").build())
                 .toList();
         Optional<EntraUserDto> userOptional = getObjectFromHttpSession(session, "entraUser", EntraUserDto.class);
         if (userOptional.isEmpty()) {
@@ -820,10 +823,14 @@ public class MultiFirmUserController {
         }
         EntraUserDto user = userOptional.get();
 
+        Map<String, List<UserRole>> rolesByApp = selectedAppRole.stream()
+                .collect(Collectors.groupingBy(UserRole::getAppName));
+
         model.addAttribute("user", user);
         model.addAttribute("selectedAppRole", selectedAppRole);
         model.addAttribute("externalUser", true);
         model.addAttribute("isMultiFirmUser", true);
+        model.addAttribute("rolesByApp", rolesByApp);
         model.addAttribute("isInternalUser", currentUserProfile.getUserType() == UserType.INTERNAL);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Add profile - Check your answers - " + user.getFullName());
 
