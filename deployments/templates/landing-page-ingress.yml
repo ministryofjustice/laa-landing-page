@@ -22,11 +22,16 @@ metadata:
       SecDebugLogLevel 1
       SecRule REQUEST_URI "@beginsWith /api/v1/claims/enrich" "id:10001,phase:2,pass,nolog,ctl:ruleRemoveById=942100,ctl:ruleRemoveById=942151"
     nginx.ingress.kubernetes.io/server-snippet: |
+      set $http1_reject 0;
       if ($server_protocol = "HTTP/1.1") {
-        if ($uri !~ "^/api/v1/claims/enrich") {
-          error_log /dev/stderr notice;
-          return 426;
-        }
+        set $http1_reject 1;
+      }
+      if ($uri ~ "^/api/v1/claims/enrich") {
+        set $http1_reject 0;
+      }
+      if ($http1_reject = 1) {
+        error_log /dev/stderr notice;
+        return 426;
       }
 spec:
   ingressClassName: ${INGRESS_CLASS_NAME}
