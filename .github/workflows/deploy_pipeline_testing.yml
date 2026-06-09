@@ -148,7 +148,7 @@ jobs:
 
       - name: Deploy Ingress
         run: |
-          kubectl -n ${KUBE_NAMESPACE} apply -f deployments/ --dry-run=client
+          kubectl -n ${KUBE_NAMESPACE} apply -f deployments/
         env:
           KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
 
