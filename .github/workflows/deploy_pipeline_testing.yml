@@ -45,7 +45,11 @@ jobs:
 
       - name: Generate Deployment the Files
         run: |
-          cat deployments/templates/landing-page-ingress.yml | envsubst > deployments/landing-page-ingress.yml
+          # Get all env vars, filter out KUBERNETES_SERVICE, and format with leading dollar signs
+          ALLOWED_VARS=$(printenv | cut -d= -f1 | grep -v '^server_protocol$' | sed 's/^/$/' | tr '\n' ' ')
+
+          # Pass the dynamic list into envsubst
+          envsubst "$ALLOWED_VARS" < deployments/templates/landing-page-ingress.yml  > deployments/landing-page-ingress.yml
         env:
           SENTRY_SAMPLE_RATE: ${{ vars.SENTRY_SAMPLE_RATE }}
           BASE_URL_HOMEPAGE: ${{ secrets.BASE_URL_HOMEPAGE }}
@@ -144,7 +148,7 @@ jobs:
 
       - name: Deploy Ingress
         run: |
-          kubectl -n ${KUBE_NAMESPACE} apply -f deployments/ 
+          kubectl -n ${KUBE_NAMESPACE} apply -f deployments/ --dry-run=client
         env:
           KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
 
