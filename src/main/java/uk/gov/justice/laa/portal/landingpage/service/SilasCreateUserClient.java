@@ -53,21 +53,6 @@ public class SilasCreateUserClient {
     }
 
     /**
-     * Get firm by ID via SiLAS (which queries User API).
-     */
-    public FirmSummaryDto getFirmById(UUID firmId) {
-        try {
-            return silasRestClient.get()
-                    .uri("/api/create-user/firm/{firmId}", firmId)
-                    .retrieve()
-                    .body(FirmSummaryDto.class);
-        } catch (Exception e) {
-            log.error("SiLAS firm lookup failed for ID {}: {}", firmId, e.getMessage(), e);
-            return null;
-        }
-    }
-
-    /**
      * Validate email via SiLAS (which queries User API).
      */
     public EmailCheckResult validateEmail(String email) {

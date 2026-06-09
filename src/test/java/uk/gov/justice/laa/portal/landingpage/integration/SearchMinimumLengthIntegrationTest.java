@@ -21,6 +21,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
+import uk.gov.justice.laa.portal.landingpage.service.SilasCreateUserClient;
 
 /**
  * Unit tests to verify search minimum length validation works correctly.
@@ -33,12 +34,13 @@ public class SearchMinimumLengthIntegrationTest {
     
     @Mock private FirmService firmService;
     @Mock private LoginService loginService;
+    @Mock private SilasCreateUserClient silasCreateUserClient;
     @Mock private Authentication authentication;
 
     @BeforeEach
     void setUp() {
         firmSearchController = new FirmSearchController(
-            loginService, firmService
+            loginService, firmService, silasCreateUserClient
         );
     }
 

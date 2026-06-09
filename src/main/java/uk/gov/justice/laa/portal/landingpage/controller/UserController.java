@@ -703,7 +703,15 @@ public class UserController {
 
     @GetMapping("/user/create/details")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).CREATE_EXTERNAL_USER)")
-    public String createUser(UserDetailsForm userDetailsForm, HttpSession session, Model model) {
+    public String createUser(UserDetailsForm userDetailsForm, HttpSession session, Model model, Authentication authentication) {
+        if (silasCreateUserEnabled) {
+            Set<String> actorPermissions = accessControlService.getAuthenticatedUserPermissions(authentication);
+            boolean isActorInternal = accessControlService.isAuthenticatedUserInternal(authentication);
+            if (!silasCreateUserClient.isAuthorized(isActorInternal, actorPermissions)) {
+                log.warn("OPA denied access to create user flow");
+                throw new AccessDeniedException("Not authorized to create users");
+            }
+        }
         EntraUserDto user = (EntraUserDto) session.getAttribute("user");
         if (Objects.isNull(user)) {
             user = new EntraUserDto();
@@ -895,33 +903,58 @@ public class UserController {
         session.removeAttribute("firm");
 
         if (firmSearchForm.getSelectedFirmId() != null) {
-            try {
-                FirmDto selectedFirm = firmService.getFirm(firmSearchForm.getSelectedFirmId());
+            if (silasCreateUserEnabled) {
+                FirmDto selectedFirm = new FirmDto();
+                selectedFirm.setId(firmSearchForm.getSelectedFirmId());
+                selectedFirm.setName(firmSearchForm.getFirmSearch());
                 selectedFirm.setSkipFirmSelection(firmSearchForm.isSkipFirmSelection());
                 session.setAttribute("firm", selectedFirm);
-            } catch (Exception e) {
-                log.error("Error retrieving selected firm: {}", e.getMessage());
-                result.rejectValue("firmSearch", "error.firm", "Invalid firm selection. Please try again.");
-                return "add-user-firm";
+            } else {
+                try {
+                    FirmDto selectedFirm = firmService.getFirm(firmSearchForm.getSelectedFirmId());
+                    selectedFirm.setSkipFirmSelection(firmSearchForm.isSkipFirmSelection());
+                    session.setAttribute("firm", selectedFirm);
+                } catch (Exception e) {
+                    log.error("Error retrieving selected firm: {}", e.getMessage());
+                    result.rejectValue("firmSearch", "error.firm", "Invalid firm selection. Please try again.");
+                    return "add-user-firm";
+                }
             }
         } else if (firmSearchForm.getFirmSearch() != null && !firmSearchForm.getFirmSearch().isBlank()) {
-            // Fallback: search by name if no specific firm was selected
-            List<FirmDto> firms = firmService.getAllFirmsFromCache();
-            FirmDto selectedFirm = firms.stream()
-                    .filter(firm -> firm.getName().toLowerCase().contains(firmSearchForm.getFirmSearch().toLowerCase()))
-                    .sorted((s1, s2) -> Integer.compare(relevance(s2, firmSearchForm.getFirmSearch()),
-                            relevance(s1, firmSearchForm.getFirmSearch())))
-                    .findFirst()
-                    .orElse(null);
+            if (silasCreateUserEnabled) {
+                List<FirmSummaryDto> firms = silasCreateUserClient.searchFirms(firmSearchForm.getFirmSearch(), 1);
+                if (firms.isEmpty()) {
+                    result.rejectValue("firmSearch", "error.firm",
+                            "No firm found with that name. Please select from the dropdown.");
+                    return "add-user-firm";
+                }
+                FirmSummaryDto match = firms.get(0);
+                FirmDto selectedFirm = new FirmDto();
+                selectedFirm.setId(match.getId());
+                selectedFirm.setName(match.getName());
+                selectedFirm.setCode(match.getCode());
+                firmSearchForm.setFirmSearch(match.getName());
+                firmSearchForm.setSelectedFirmId(match.getId());
+                session.setAttribute("firm", selectedFirm);
+            } else {
+                // Fallback: search by name if no specific firm was selected
+                List<FirmDto> firms = firmService.getAllFirmsFromCache();
+                FirmDto selectedFirm = firms.stream()
+                        .filter(firm -> firm.getName().toLowerCase().contains(firmSearchForm.getFirmSearch().toLowerCase()))
+                        .sorted((s1, s2) -> Integer.compare(relevance(s2, firmSearchForm.getFirmSearch()),
+                                relevance(s1, firmSearchForm.getFirmSearch())))
+                        .findFirst()
+                        .orElse(null);
 
-            if (selectedFirm == null) {
-                result.rejectValue("firmSearch", "error.firm",
-                        "No firm found with that name. Please select from the dropdown.");
-                return "add-user-firm";
+                if (selectedFirm == null) {
+                    result.rejectValue("firmSearch", "error.firm",
+                            "No firm found with that name. Please select from the dropdown.");
+                    return "add-user-firm";
+                }
+                firmSearchForm.setFirmSearch(selectedFirm.getName());
+                firmSearchForm.setSelectedFirmId(selectedFirm.getId());
+                session.setAttribute("firm", selectedFirm);
             }
-            firmSearchForm.setFirmSearch(selectedFirm.getName());
-            firmSearchForm.setSelectedFirmId(selectedFirm.getId());
-            session.setAttribute("firm", selectedFirm);
         }
 
         session.setAttribute("firmSearchForm", firmSearchForm);

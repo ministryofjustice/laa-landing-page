@@ -1066,7 +1066,7 @@ class UserControllerTest {
         when(session.getAttribute("user")).thenReturn(null);
         when(session.getAttribute("selectedUserType")).thenReturn(null);
         UserDetailsForm userDetailsForm = new UserDetailsForm();
-        String view = userController.createUser(userDetailsForm, session, model);
+        String view = userController.createUser(userDetailsForm, session, model, authentication);
         assertThat(model.getAttribute("user")).isNotNull();
         assertThat(view).isEqualTo("add-user-details");
     }
@@ -1078,7 +1078,7 @@ class UserControllerTest {
         when(session.getAttribute("user")).thenReturn(mockUser);
         when(session.getAttribute("selectedUserType")).thenReturn(UserType.EXTERNAL);
         UserDetailsForm userDetailsForm = new UserDetailsForm();
-        String view = userController.createUser(userDetailsForm, session, model);
+        String view = userController.createUser(userDetailsForm, session, model, authentication);
         assertThat(model.getAttribute("user")).isNotNull();
         EntraUserDto sessionUser = (EntraUserDto) session.getAttribute("user");
         assertThat(sessionUser.getFullName()).isEqualTo("Test User");
@@ -3736,7 +3736,7 @@ class UserControllerTest {
         when(session.getAttribute("selectedUserType")).thenReturn(null);
 
         UserDetailsForm form = new UserDetailsForm();
-        String view = userController.createUser(form, session, model);
+        String view = userController.createUser(form, session, model, authentication);
 
         assertThat(view).isEqualTo("add-user-details");
         assertThat(model.getAttribute("user")).isNotNull();
@@ -3999,7 +3999,7 @@ class UserControllerTest {
         testSession.setAttribute("selectedUserType", existingUserType);
 
         // When
-        String view = userController.createUser(new UserDetailsForm(), testSession, model);
+        String view = userController.createUser(new UserDetailsForm(), testSession, model, authentication);
 
         // Then
         assertThat(view).isEqualTo("add-user-details");

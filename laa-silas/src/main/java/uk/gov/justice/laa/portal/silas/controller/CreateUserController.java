@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -61,18 +60,6 @@ public class CreateUserController {
     public ResponseEntity<EmailCheckResult> validateEmail(@RequestParam String email) {
         EmailCheckResult result = createUserService.validateEmail(email);
         return ResponseEntity.ok(result);
-    }
-
-    /**
-     * Get firm by ID - delegates to User API query endpoint.
-     */
-    @GetMapping("/firm/{firmId}")
-    public ResponseEntity<FirmSummaryDto> getFirmById(@PathVariable UUID firmId) {
-        FirmSummaryDto firm = createUserService.getFirmById(firmId);
-        if (firm == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(firm);
     }
 
     /**

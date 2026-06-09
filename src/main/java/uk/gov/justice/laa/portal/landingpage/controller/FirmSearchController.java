@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -9,10 +10,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import uk.gov.justice.laa.portal.dto.createuser.FirmSummaryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
+import uk.gov.justice.laa.portal.landingpage.service.SilasCreateUserClient;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,6 +31,10 @@ public class FirmSearchController {
 
     private final LoginService loginService;
     private final FirmService firmService;
+    private final SilasCreateUserClient silasCreateUserClient;
+
+    @Value("${feature.flag.silas.create.user:false}")
+    private boolean silasCreateUserEnabled;
 
     @GetMapping("/user/firms/search")
     @ResponseBody
@@ -55,6 +62,20 @@ public class FirmSearchController {
         }
 
         int validatedCount = Math.max(10, Math.min(count, 100));
+
+        if (silasCreateUserEnabled) {
+            List<FirmSummaryDto> firms = silasCreateUserClient.searchFirms(query.trim(), validatedCount);
+            return firms.stream()
+                    .map(firm -> {
+                        Map<String, String> firmData = new HashMap<>();
+                        firmData.put("id", firm.getId().toString());
+                        firmData.put("name", firm.getName());
+                        firmData.put("code", firm.getCode() != null ? firm.getCode() : "");
+                        return firmData;
+                    })
+                    .collect(Collectors.toList());
+        }
+
         List<FirmDto> firms = firmService.searchFirms(query.trim());
 
         List<Map<String, String>> result = firms.stream()
