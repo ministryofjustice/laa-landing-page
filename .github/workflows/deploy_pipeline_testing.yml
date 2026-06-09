@@ -45,8 +45,8 @@ jobs:
 
       - name: Generate Deployment the Files
         run: |
-          # Get all env vars, filter out KUBERNETES_SERVICE, and format with leading dollar signs
-          ALLOWED_VARS=$(printenv | cut -d= -f1 | grep -v '^server_protocol$' | sed 's/^/$/' | tr '\n' ' ')
+          # Get all env vars, filter out server_protocol and uri, and format with leading dollar signs
+          ALLOWED_VARS=$(printenv | cut -d= -f1 | grep -v -E '^(server_protocol|uri)$' | sed 's/^/$/' | tr '\n' ' ')
 
           # Pass the dynamic list into envsubst
           envsubst "$ALLOWED_VARS" < deployments/templates/landing-page-ingress.yml  > deployments/landing-page-ingress.yml
@@ -148,7 +148,7 @@ jobs:
 
       - name: Deploy Ingress
         run: |
-          kubectl -n ${KUBE_NAMESPACE} apply -f temp/landing-page-ingress-revert.yml
+          kubectl -n ${KUBE_NAMESPACE} apply -f deployments/ --dry-run=client
         env:
           KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
 
