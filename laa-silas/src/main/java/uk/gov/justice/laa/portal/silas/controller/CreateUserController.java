@@ -54,7 +54,7 @@ public class CreateUserController {
     }
 
     /**
-     * Validate email — delegates to User API query endpoint.
+     * Validate email - delegates to User API query endpoint.
      */
     @GetMapping("/validate-email")
     public ResponseEntity<EmailCheckResult> validateEmail(@RequestParam String email) {
@@ -63,7 +63,7 @@ public class CreateUserController {
     }
 
     /**
-     * Search firms — delegates to User API query endpoint.
+     * Search firms - delegates to User API query endpoint.
      */
     @GetMapping("/search-firms")
     public ResponseEntity<List<FirmSummaryDto>> searchFirms(
@@ -74,7 +74,7 @@ public class CreateUserController {
     }
 
     /**
-     * Execute create user — validates authorization via OPA, then issues
+     * Execute create user - validates authorization via OPA, then issues
      * CQRS command to User API.
      */
     @PostMapping("/execute")

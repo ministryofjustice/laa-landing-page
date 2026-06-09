@@ -22,7 +22,7 @@ public class CustomErrorController implements ErrorController {
     /**
      * Handle all error requests and route to appropriate error page
      */
-    // Spring Boot ErrorController must accept all HTTP methods — errors can be dispatched from any original request
+    // Spring Boot ErrorController must accept all HTTP methods - errors can be dispatched from any original request
     // method (GET, POST, PUT, DELETE, etc.). This handler only renders error views and performs no state changes,
     // so there is no CSRF risk.
     @RequestMapping(value = "/error", method = {

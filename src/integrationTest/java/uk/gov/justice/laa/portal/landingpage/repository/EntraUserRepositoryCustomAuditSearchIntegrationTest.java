@@ -261,10 +261,10 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
     @Test
     void findAuditUsersWithDynamicProjection_withNeverActivated_returnsOnlyUsersWhoseInvitationStatusIsNotVerified() {
         // Given
-        // invitation not yet successful — should be included
+        // invitation not yet successful - should be included
         createTestUserWithLoginAndInvitation("Never", "Activated", "never@example.com", InvitationStatus.INVITE_SENT);
 
-        // verified — should be excluded
+        // verified - should be excluded
         createTestUserWithLoginAndInvitation("Verified", "User", "verified@example.com", InvitationStatus.VERIFICATION_SUCCESS);
 
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("firstName"));
@@ -287,11 +287,11 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
 
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("firstName"));
 
-        // When — no dormant filters
+        // When - no dormant filters
         Page<Object[]> result = repository.findAuditUsersWithDynamicProjection(null, null, null,
                 null, null, null, null, null, null, pageRequest);
 
-        // Then — all users returned regardless
+        // Then - all users returned regardless
         assertThat(result.getTotalElements()).isEqualTo(3);
     }
 

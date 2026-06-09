@@ -24,10 +24,10 @@ check_result() {
     fi
 
     if [ "$actual" == "$expected" ]; then
-        echo -e "  ${GREEN}✓ PASS${NC} — result: $actual"
+        echo -e "  ${GREEN}✓ PASS${NC} - result: $actual"
         pass=$((pass + 1))
     else
-        echo -e "  ${RED}✗ FAIL${NC} — expected: $expected, got: $actual"
+        echo -e "  ${RED}✗ FAIL${NC} - expected: $expected, got: $actual"
         echo "  Response: $response"
         fail=$((fail + 1))
     fi
@@ -36,7 +36,7 @@ check_result() {
 echo "=== OPA POC: canResendActivationForAuditUser ==="
 echo ""
 
-# Test 1: Should ALLOW — internal actor with CREATE_EXTERNAL_USER
+# Test 1: Should ALLOW - internal actor with CREATE_EXTERNAL_USER
 echo "Test 1: Internal actor, CREATE_EXTERNAL_USER permission, valid target"
 response=$(curl -s -X POST "$BASE_URL" \
   -H "Content-Type: application/json" \
@@ -48,7 +48,7 @@ response=$(curl -s -X POST "$BASE_URL" \
   }')
 check_result "Test 1" "true" "$response"
 
-# Test 2: Should ALLOW — internal actor with EDIT_EXTERNAL_USER
+# Test 2: Should ALLOW - internal actor with EDIT_EXTERNAL_USER
 echo "Test 2: Internal actor, EDIT_EXTERNAL_USER permission, valid target"
 response=$(curl -s -X POST "$BASE_URL" \
   -H "Content-Type: application/json" \
@@ -60,7 +60,7 @@ response=$(curl -s -X POST "$BASE_URL" \
   }')
 check_result "Test 2" "true" "$response"
 
-# Test 3: Should DENY — external actor
+# Test 3: Should DENY - external actor
 echo "Test 3: External actor (should be DENIED)"
 response=$(curl -s -X POST "$BASE_URL" \
   -H "Content-Type: application/json" \
@@ -72,7 +72,7 @@ response=$(curl -s -X POST "$BASE_URL" \
   }')
 check_result "Test 3" "false" "$response"
 
-# Test 4: Should DENY — target is internal
+# Test 4: Should DENY - target is internal
 echo "Test 4: Target is internal (should be DENIED)"
 response=$(curl -s -X POST "$BASE_URL" \
   -H "Content-Type: application/json" \
@@ -84,7 +84,7 @@ response=$(curl -s -X POST "$BASE_URL" \
   }')
 check_result "Test 4" "false" "$response"
 
-# Test 5: Should DENY — target already verified
+# Test 5: Should DENY - target already verified
 echo "Test 5: Target already verified (should be DENIED)"
 response=$(curl -s -X POST "$BASE_URL" \
   -H "Content-Type: application/json" \
@@ -96,7 +96,7 @@ response=$(curl -s -X POST "$BASE_URL" \
   }')
 check_result "Test 5" "false" "$response"
 
-# Test 6: Should DENY — target is disabled
+# Test 6: Should DENY - target is disabled
 echo "Test 6: Target is disabled (should be DENIED)"
 response=$(curl -s -X POST "$BASE_URL" \
   -H "Content-Type: application/json" \
@@ -108,7 +108,7 @@ response=$(curl -s -X POST "$BASE_URL" \
   }')
 check_result "Test 6" "false" "$response"
 
-# Test 7: Should DENY — actor has wrong permissions
+# Test 7: Should DENY - actor has wrong permissions
 echo "Test 7: Actor has wrong permissions (should be DENIED)"
 response=$(curl -s -X POST "$BASE_URL" \
   -H "Content-Type: application/json" \

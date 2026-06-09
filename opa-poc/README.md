@@ -1,4 +1,4 @@
-# OPA POC — AccessControlService Policy
+# OPA POC - AccessControlService Policy
 
 Proof-of-concept demonstrating `canResendActivationForAuditUser` from `AccessControlService.java` implemented as an OPA (Open Policy Agent) Rego policy.
 
@@ -73,7 +73,7 @@ curl -X POST http://localhost:8181/v1/data/authz/can_resend_activation_for_audit
 {"result": true}
 ```
 
-**Response** (denied — empty result means `false`):
+**Response** (denied - empty result means `false`):
 ```json
 {}
 ```
@@ -90,10 +90,10 @@ curl -X POST http://localhost:8181/v1/data/authz/can_resend_activation_for_audit
 
 ## Key differences from Java
 
-1. **No DB calls** — the caller (Spring app) loads context from DB and passes it as `input`
-2. **Stateless** — OPA doesn't know about users, it only evaluates the input it receives
-3. **Testable offline** — `opa test` runs tests in milliseconds without Spring context
-4. **Hot-reloadable** — change a `.rego` file, OPA picks it up immediately (no redeploy)
+1. **No DB calls** - the caller (Spring app) loads context from DB and passes it as `input`
+2. **Stateless** - OPA doesn't know about users, it only evaluates the input it receives
+3. **Testable offline** - `opa test` runs tests in milliseconds without Spring context
+4. **Hot-reloadable** - change a `.rego` file, OPA picks it up immediately (no redeploy)
 
 ## Next steps
 

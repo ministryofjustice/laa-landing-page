@@ -48,7 +48,7 @@ public class CreateUserService {
     }
 
     /**
-     * Step 3: Search firms — CQRS Query to User API.
+     * Step 3: Search firms - CQRS Query to User API.
      */
     public List<FirmSummaryDto> searchFirms(String searchTerm, int maxResults) {
         return userApiClient.searchFirms(searchTerm, maxResults);

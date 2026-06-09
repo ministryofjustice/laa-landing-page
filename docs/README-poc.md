@@ -1,4 +1,4 @@
-# POC: Create User Flow — CQRS + OPA + SiLAS
+# POC: Create User Flow - CQRS + OPA + SiLAS
 
 This document describes the proof-of-concept (POC) that replaces the monolithic create user flow
 with a CQRS-style architecture, OPA-based authorisation, and a dedicated orchestration service (SiLAS).
@@ -69,7 +69,7 @@ laa-landing-page  (port 8080)   ← CQRS API endpoints
 | Class | Purpose |
 |---|---|
 | `SilasCreateUserClient` | HTTP client that calls SiLAS `/api/create-user/*`. Used by UI controllers when flag is on. |
-| `AccessControlService` | Supplies `getAuthenticatedUserPermissions()` and `isAuthenticatedUserInternal()` — actor context passed to SiLAS. |
+| `AccessControlService` | Supplies `getAuthenticatedUserPermissions()` and `isAuthenticatedUserInternal()` - actor context passed to SiLAS. |
 | `OpaConfig` | Spring `@Configuration` that creates `silasRestClient` and `opaRestClient` beans. |
 
 ---
@@ -232,7 +232,7 @@ docker run --rm \
 | Flag value | Behaviour |
 |---|---|
 | `feature.flag.silas.create.user=true` | All create user steps route via SiLAS → OPA → User API CQRS |
-| `feature.flag.silas.create.user=false` | Original monolithic flow — UserService, FirmService, EmailValidationService used directly |
+| `feature.flag.silas.create.user=false` | Original monolithic flow - UserService, FirmService, EmailValidationService used directly |
 
 The flag can also be set at runtime via the env var `FEATURE_FLAG_SILAS_CREATE_USER`.
 
