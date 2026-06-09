@@ -16,6 +16,7 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -59,6 +60,7 @@ import uk.gov.justice.laa.portal.landingpage.service.TechServicesClient;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUserResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.DeleteUserReasonViewModel;
@@ -176,11 +178,18 @@ public class AuditController {
             @RequestParam(name = "profilePage", defaultValue = "1") int profilePage,
             @RequestParam(name = "profileSize", defaultValue = "3") int profileSize,
             @RequestParam(name = "isEntraId", defaultValue = "false") boolean isEntraId,
+            @RequestParam(value = "resendVerification", required = false) boolean resendVerification,
             Model model) {
 
         log.debug(
                 "AuditController.displayUserAuditDetail - userId: '{}', isEntraId: {}, profilePage: {}, profileSize: {}",
                 userId, isEntraId, profilePage, profileSize);
+
+        // Handle verification email resend if requested
+        if (resendVerification) {
+            handleResendVerification(String.valueOf(userId), model);
+        }
+
 
         AuditUserDetailDto userDetail;
         boolean canDisableUser;
@@ -565,5 +574,24 @@ public class AuditController {
         model.addAttribute("currentPage", page);
 
         return "user-audit/deleted-users";
+    }
+
+    private void handleResendVerification(String id, Model model) {
+        if (!accessControlService.canSendVerificationEmail(id)) {
+            throw new AccessDeniedException("User does not have permission to send verification email.");
+        }
+
+        try {
+            TechServicesApiResponse<SendUserVerificationEmailResponse> response = userService
+                    .sendVerificationEmail(id);
+            if (response.isSuccess()) {
+                model.addAttribute("successMessage", response.getData().getMessage());
+            } else {
+                model.addAttribute("errorMessage", response.getError().getMessage());
+            }
+        } catch (RuntimeException runtimeException) {
+            log.error("Error sending activation code for user profile: {}", id, runtimeException);
+            throw runtimeException;
+        }
     }
 }
