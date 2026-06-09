@@ -29,6 +29,7 @@ metadata:
       if ($uri ~ "^/api/v1/claims/enrich") {
         set $http1_reject 0;
       }
+      access_log /dev/stderr upstream_log if=$http1_reject;
       if ($http1_reject = 1) {
         error_log /dev/stderr notice;
         return 426;
