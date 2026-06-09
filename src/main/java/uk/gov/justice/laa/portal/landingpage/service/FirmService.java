@@ -16,6 +16,7 @@ import org.springframework.cache.CacheManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.JpaSort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -60,10 +61,17 @@ public class FirmService {
     public PaginatedFirmDirectory getFirmsPage(String searchTerm, String firmType,
                                                int page, int pageSize, String sort, String direction) {
 
-        PageRequest pageRequest = PageRequest.of(
-                page - 1,
-                pageSize,
-                Sort.by(Sort.Direction.fromString(direction), sort));
+        Sort.Direction sortDirection = Sort.Direction.fromString(direction);
+        Sort sortOrder;
+
+        if ("code".equals(sort)) {
+            // Cast to BIGINT for numeric sorting instead of lexicographic
+            sortOrder = JpaSort.unsafe(sortDirection, "CAST(f.code AS long)");
+        } else {
+            sortOrder = Sort.by(sortDirection, sort);
+        }
+
+        PageRequest pageRequest = PageRequest.of(page - 1, pageSize, sortOrder);
 
         FirmType type = firmType == null ? null : FirmType.valueOf(firmType);
         // Only include enabled firms
@@ -254,6 +262,10 @@ public class FirmService {
 
     public String getFirmCodeById(UUID id) {
         return firmRepository.findById(id).map(Firm::getCode).orElse("");
+    }
+
+    public String getFirmNameById(UUID id) {
+        return firmRepository.findById(id).map(Firm::getName).orElse("");
     }
 
     public List<Firm> getFilteredChildFirms(Firm parentFirm, String query) {

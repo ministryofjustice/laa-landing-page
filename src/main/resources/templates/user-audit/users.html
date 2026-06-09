@@ -712,6 +712,9 @@
 
                         item.addEventListener('click', function () {
                             selectFirm(firm);
+                            setTimeout(() => {
+                                document.getElementById('search-form').submit();
+                            }, 100);
                         });
 
                         item.addEventListener('mouseenter', function () {

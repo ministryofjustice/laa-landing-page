@@ -80,6 +80,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
@@ -1830,11 +1831,12 @@ class UserControllerTest {
 
         // Then - should complete editing and redirect to manage user
         assertThat(view).isEqualTo("edit-user-roles-check-answer");
-        List<UserRole> selectedAppRole = (List<UserRole>) model.getAttribute("selectedAppRole");
-        assertThat(selectedAppRole).hasSize(3);
-        assertThat(selectedAppRole.get(0).getAppName()).isEqualTo("app1");
-        assertThat(selectedAppRole.get(1).getRoleName()).isEqualTo("role2");
-        assertThat(selectedAppRole.get(2).getRoleName()).isEqualTo("No Role selected");
+        Map<String, List<UserRole>> selectedAppRolesGrouped = (Map<String, List<UserRole>>) model.getAttribute("selectedAppRolesGrouped");
+        assertThat(selectedAppRolesGrouped).hasSize(2);
+        assertThat(selectedAppRolesGrouped.get("app1")).isNotNull();
+        assertThat(selectedAppRolesGrouped.get("app1").size()).isEqualTo(2);
+        assertThat(selectedAppRolesGrouped.get("app2")).isNotNull();
+        assertThat(selectedAppRolesGrouped.get("app2").size()).isEqualTo(1);
     }
 
     @Test
@@ -1883,11 +1885,11 @@ class UserControllerTest {
 
         // Then - should complete editing and redirect to manage user
         assertThat(view).isEqualTo("edit-user-roles-check-answer");
-        List<UserRole> selectedAppRole = (List<UserRole>) model.getAttribute("selectedAppRole");
-        assertThat(selectedAppRole).hasSize(3);
-        assertThat(selectedAppRole.get(0).getAppName()).isEqualTo("app1");
-        assertThat(selectedAppRole.get(1).getAppName()).isEqualTo("app3");
-        assertThat(selectedAppRole.get(2).getRoleName()).isEqualTo("No Role selected");
+        Map<String, List<UserRole>> selectedAppRolesGrouped = (Map<String, List<UserRole>>) model.getAttribute("selectedAppRolesGrouped");
+        assertThat(selectedAppRolesGrouped).hasSize(3);
+        assertThat(selectedAppRolesGrouped.get("app1")).isNotNull();
+        assertThat(selectedAppRolesGrouped.get("app2")).isNotNull();
+        assertThat(selectedAppRolesGrouped.get("app3")).isNotNull();
     }
 
     @Test
@@ -1936,12 +1938,10 @@ class UserControllerTest {
 
         // Then - should complete editing and redirect to manage user
         assertThat(view).isEqualTo("edit-user-roles-check-answer");
-        List<UserRole> selectedAppRole = (List<UserRole>) model.getAttribute("selectedAppRole");
-        assertThat(selectedAppRole).hasSize(3);
-        assertThat(selectedAppRole.get(0).getAppName()).isEqualTo("app1");
-        assertThat(selectedAppRole.get(1).getRoleName()).isEqualTo("role2");
-        assertThat(selectedAppRole.get(2).getRoleName()).isEqualTo("No Role selected");
-        assertThat(selectedAppRole.get(2).getAppName()).isEqualTo("Unknown app");
+        Map<String, List<UserRole>> selectedAppRolesGrouped = (Map<String, List<UserRole>>) model.getAttribute("selectedAppRolesGrouped");
+        assertThat(selectedAppRolesGrouped).hasSize(2);
+        assertThat(selectedAppRolesGrouped.get("Unknown app")).isNotNull();
+        assertThat(selectedAppRolesGrouped.get("app1")).isNotNull();
         String error = model.getAttribute("errorMessage").toString();
         assertThat(error).isEqualTo("Unknown app selected, please re-select apps");
     }
@@ -4825,8 +4825,8 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/offices");
-        assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNull();
-        assertThat(testSession.getAttribute("grantAccessAllSelectedRoles")).isNull();
+        assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNotNull();
+        assertThat(testSession.getAttribute("grantAccessAllSelectedRoles")).isNotNull();
     }
 
     @Test
@@ -4876,8 +4876,8 @@ class UserControllerTest {
 
         // Then
         assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/offices");
-        assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNull();
-        assertThat(testSession.getAttribute("grantAccessAllSelectedRoles")).isNull();
+        assertThat(testSession.getAttribute("grantAccessUserRolesModel")).isNotNull();
+        assertThat(testSession.getAttribute("grantAccessAllSelectedRoles")).isNotNull();
         List<String> nonEditableAppRoles = (List<String>) testSession.getAttribute("nonEditableRoles");
         assertThat(nonEditableAppRoles).isNotEmpty();
         assertThat(nonEditableAppRoles).containsExactly("role1", "role2");
@@ -6173,6 +6173,7 @@ class UserControllerTest {
         AppDto app = new AppDto();
         app.setId("app1");
         app.setName("Test App");
+        app.setAppType(AppType.LAA);
         appRole.setApp(app);
 
         List<AppRoleDto> userAppRoles = List.of(appRole);
@@ -6206,7 +6207,9 @@ class UserControllerTest {
         assertThat(view).isEqualTo("grant-access-check-answers");
         assertThat(model.getAttribute("user")).isEqualTo(user);
         assertThat(model.getAttribute("userAppRoles")).isEqualTo(userAppRoles);
-        assertThat(model.getAttribute("userOffices")).isEqualTo(userOffices);
+        assertThat(model.getAttribute("officesByCity")).isNotNull();
+        assertThat(((Map<String, List<OfficeDto>>) model.getAttribute("officesByCity")).values())
+                .containsExactly(userOffices);
         assertThat(model.getAttribute("externalUser")).isEqualTo(true);
     }
 
@@ -6218,9 +6221,9 @@ class UserControllerTest {
         user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
         user.setUserType(UserType.EXTERNAL);
 
-        AppDto app1 = AppDto.builder().name("app-one").ordinal(2).build();
-        AppDto app2 = AppDto.builder().name("app-two").ordinal(1).build();
-        AppDto app3 = AppDto.builder().name("app-three").ordinal(3).build();
+        AppDto app1 = AppDto.builder().name("app-one").ordinal(2).appType(AppType.LAA).build();
+        AppDto app2 = AppDto.builder().name("app-two").ordinal(1).appType(AppType.LAA).build();
+        AppDto app3 = AppDto.builder().name("app-three").ordinal(3).appType(AppType.LAA).build();
 
         AppRoleDto a1r1 = AppRoleDto.builder().name("a1r1").app(app1).ordinal(3).build();
         AppRoleDto a1r2 = AppRoleDto.builder().name("a1r2").app(app1).ordinal(4).build();
@@ -6289,9 +6292,9 @@ class UserControllerTest {
         user.setId(UUID.fromString("123e4567-e89b-12d3-a456-426614174000"));
         user.setUserType(UserType.EXTERNAL);
 
-        AppDto app1 = AppDto.builder().name("app-one").ordinal(2).build();
-        AppDto app2 = AppDto.builder().name("app-two").ordinal(1).build();
-        AppDto app3 = AppDto.builder().name("app-three").ordinal(3).build();
+        AppDto app1 = AppDto.builder().name("app-one").ordinal(2).appType(AppType.LAA).build();
+        AppDto app2 = AppDto.builder().name("app-two").ordinal(1).appType(AppType.LAA).build();
+        AppDto app3 = AppDto.builder().name("app-three").ordinal(3).appType(AppType.LAA).build();
 
         AppRoleDto a1r1 = AppRoleDto.builder().name("a1r1").app(app1).ordinal(3).build();
         AppRoleDto a1r2 = AppRoleDto.builder().name("a1r2").app(app1).ordinal(4).build();
