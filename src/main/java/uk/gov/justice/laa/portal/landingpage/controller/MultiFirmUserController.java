@@ -44,6 +44,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
+import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
@@ -230,7 +231,13 @@ public class MultiFirmUserController {
     }
 
     @GetMapping("/user/add/profile")
-    public String addUserProfile(Model model, HttpSession session, Authentication authentication) {
+    public String addUserProfile(Model model, HttpSession session, Authentication authentication,
+                                 @RequestParam (required = false) Boolean clearSession) {
+
+        if (Boolean.TRUE.equals(clearSession)) {
+            session.invalidate();
+        }
+
         String targetFirmId = (String) session.getAttribute("delegateTargetFirmId");
         if (targetFirmId == null) {
             // If current user's firm has children, select a target firm first
@@ -805,6 +812,18 @@ public class MultiFirmUserController {
 
         session.setAttribute("userProfile", currentUserProfileDto);
         model.addAttribute("userOffices", userOfficeDtos);
+
+        // Group offices by city, with null/empty cities mapped to "Other cities"
+        Map<String, List<OfficeDto>> officesByCity = userOfficeDtos.stream()
+                .collect(Collectors.groupingBy(
+                        office -> {
+                            String city = office.getAddress() != null ? office.getAddress().getCity() : null;
+                            return (city == null || city.isEmpty()) ? "Other cities" : city;
+                        },
+                        java.util.LinkedHashMap::new,
+                        Collectors.toList()
+                ));
+        model.addAttribute("officesByCity", officesByCity);
         model.addAttribute("firm", firmDto);
 
         List<String> allRoleIds = appRolesByPage.values().stream()
@@ -813,13 +832,31 @@ public class MultiFirmUserController {
         Map<String, AppRoleDto> rolesMap = allAppRoleDtos.stream()
                 .collect(Collectors.toMap(AppRoleDto::getId, role -> role));
 
+
+        List<String> selectedAppIds = getListFromHttpSession(session, "addProfileSelectedApps", String.class)
+                .orElse(List.of());
+
+        Firm targetFirm = targetFirmId != null ? firmService.getById(UUID.fromString(targetFirmId)) : currentUserProfile.getFirm();
+        FirmType targetFirmType = targetFirm != null ? targetFirm.getType() : null;
+
+        // Calculate total assignable roles for each app
+        Map<String, Long> totalAssignableRolesForApps = new HashMap<>();
+        for (String appId : selectedAppIds) {
+            List<AppRoleDto> availableRoles = userService.getAppRolesByAppIdAndUserType(appId, UserType.EXTERNAL, targetFirmType);
+            List<AppRoleDto> assignableRoles = roleAssignmentService.filterRoles(currentUserProfile.getAppRoles(),
+                    availableRoles.stream().map(role -> UUID.fromString(role.getId())).toList());
+            if (!assignableRoles.isEmpty()) {
+                totalAssignableRolesForApps.put(appId, (long) assignableRoles.size());
+            }
+        }
+
         List<UserRole> selectedAppRole = new ArrayList<>();
         for (Integer appIndex : appRolesByPage.keySet()) {
-            List<String> roleIds = appRolesByPage.get(appIndex);
+            List<String> roleIdsList = appRolesByPage.get(appIndex);
             String url = "/admin/multi-firm/user/add/profile/select/roles?selectedAppIndex=" + appIndex;
 
-            if (Objects.nonNull(roleIds) && !roleIds.isEmpty()) {
-                for (String roleId : roleIds) {
+            if (Objects.nonNull(roleIdsList) && !roleIdsList.isEmpty()) {
+                for (String roleId : roleIdsList) {
                     AppRoleDto role = rolesMap.get(roleId);
                     if (role != null) {
                         UserRole userRole = new UserRole();
@@ -828,6 +865,8 @@ public class MultiFirmUserController {
                         userRole.setRoleName(role.getName());
                         userRole.setAppIndex(appIndex);
                         userRole.setUrl(url);
+                        Long totalAppRoles = totalAssignableRolesForApps.get(role.getApp().getId());
+                        userRole.setTotalAppRoles(totalAppRoles != null ? totalAppRoles : 0);
                         selectedAppRole.add(userRole);
                     }
                 }
@@ -852,8 +891,21 @@ public class MultiFirmUserController {
             }
         }
 
+        Map<AppType, List<UserRole>> appsByType = uniqueApps.stream()
+                .collect(Collectors.groupingBy(UserRole::getAppType));
+
+        //
+        Map<AppType, List<UserRole>> sortedAppsByType = new java.util.LinkedHashMap<>();
+        if (appsByType.containsKey(AppType.AUTHZ)) {
+            sortedAppsByType.put(AppType.AUTHZ, appsByType.get(AppType.AUTHZ));
+        }
+        if (appsByType.containsKey(AppType.LAA)) {
+            sortedAppsByType.put(AppType.LAA, appsByType.get(AppType.LAA));
+        }
+
         model.addAttribute("user", user);
         model.addAttribute("uniqueApps", uniqueApps);
+        model.addAttribute("appsByType", sortedAppsByType);
         model.addAttribute("externalUser", true);
         model.addAttribute("isMultiFirmUser", true);
         model.addAttribute("isInternalUser", currentUserProfile.getUserType() == UserType.INTERNAL);
