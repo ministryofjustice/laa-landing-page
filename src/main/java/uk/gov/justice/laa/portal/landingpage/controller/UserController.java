@@ -1857,7 +1857,16 @@ public class UserController {
             }
         }
         Model modelFromSession = (Model) session.getAttribute("editUserOfficesModel");
+        Map<String, List<OfficeModel>> officesByCity = selectOfficesDisplay.stream()
+                .collect(Collectors.groupingBy(
+                        office -> office.getAddress() != null && office.getAddress().getCity() != null
+                                ? office.getAddress().getCity()
+                                : "Unknown",
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                ));
         model.addAttribute("userOffices", selectOfficesDisplay);
+        model.addAttribute("officesByCity", officesByCity);
         model.addAttribute("user", modelFromSession.getAttribute("user"));
         model.addAttribute("hasAllOffices", selectedOffices.getFirst().equals(ALL));
         model.addAttribute("hasNoOffices", selectedOffices.getFirst().equals(NO_OFFICES));
