@@ -233,8 +233,6 @@ public class MultiFirmUserController {
     @GetMapping("/user/add/profile")
     public String addUserProfile(Model model, HttpSession session, Authentication authentication) {
 
-        clearSessionAttributes(session);
-
         String targetFirmId = (String) session.getAttribute("delegateTargetFirmId");
         if (targetFirmId == null) {
             // If current user's firm has children, select a target firm first
