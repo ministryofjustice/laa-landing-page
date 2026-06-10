@@ -269,7 +269,7 @@ public class MultiFirmUserControllerTest {
     public void addUserProfile() {
         when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder()
                 .firm(Firm.builder().build()).build());
-        String result = controller.addUserProfile(model, session, authentication, false);
+        String result = controller.addUserProfile(model, session, authentication);
         assertThat(result).isEqualTo("multi-firm-user/select-user");
 
         assertThat(model.getAttribute("multiFirmUserForm")).isNotNull();
@@ -284,7 +284,7 @@ public class MultiFirmUserControllerTest {
         session.setAttribute("multiFirmUserForm", form);
         when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder()
                 .firm(Firm.builder().build()).build());
-        String result = controller.addUserProfile(model, session, authentication, false);
+        String result = controller.addUserProfile(model, session, authentication);
         assertThat(result).isEqualTo("multi-firm-user/select-user");
 
         assertThat(model.getAttribute("multiFirmUserForm")).isNotNull();
@@ -2173,7 +2173,7 @@ public class MultiFirmUserControllerTest {
         Firm parent = Firm.builder().id(UUID.randomUUID()).name("Parent").childFirms(Set.of(child)).build();
         when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().firm(parent).build());
 
-        String view = controller.addUserProfile(model, session, authentication, false);
+        String view = controller.addUserProfile(model, session, authentication);
         assertThat(view).isEqualTo("multi-firm-user/select-user");
         assertThat(model.getAttribute("backUrl")).isEqualTo("/admin/multi-firm/user/add/profile/select/firm");
     }
@@ -2183,7 +2183,7 @@ public class MultiFirmUserControllerTest {
         when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder()
                 .firm(Firm.builder().build()).build());
 
-        String view = controller.addUserProfile(model, session, authentication, false);
+        String view = controller.addUserProfile(model, session, authentication);
         assertThat(view).isEqualTo("multi-firm-user/select-user");
         assertThat(model.getAttribute("backUrl")).isEqualTo("/admin/users");
     }

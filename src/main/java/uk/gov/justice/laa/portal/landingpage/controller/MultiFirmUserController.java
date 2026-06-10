@@ -231,12 +231,9 @@ public class MultiFirmUserController {
     }
 
     @GetMapping("/user/add/profile")
-    public String addUserProfile(Model model, HttpSession session, Authentication authentication,
-                                 @RequestParam (required = false) Boolean clearSession) {
+    public String addUserProfile(Model model, HttpSession session, Authentication authentication) {
 
-        if (Boolean.TRUE.equals(clearSession)) {
-            session.invalidate();
-        }
+        clearSessionAttributes(session);
 
         String targetFirmId = (String) session.getAttribute("delegateTargetFirmId");
         if (targetFirmId == null) {
