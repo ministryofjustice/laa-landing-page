@@ -1126,7 +1126,7 @@
                                     </th:block>
                                     <th:block
                                             th:if="${user.userType != 'Internal' and (user.invitationStatus == null or user.invitationStatus.name() != 'VERIFICATION_SUCCESS')}">
-                                        <strong class="govuk-tag govuk-tag--grey govuk-!-margin-top-1">
+                                        <strong class="govuk-tag govuk-tag--grey govuk-!-margin-top-1" style="white-space: nowrap; padding-right: 20px;">
                                             Awaiting Verification
                                         </strong>
                                     </th:block>
