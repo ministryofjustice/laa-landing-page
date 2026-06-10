@@ -808,7 +808,6 @@ public class MultiFirmUserController {
         List<OfficeDto> userOfficeDtos = userOfficeIds.contains("ALL") ? List.of()
                 : officeService.getOfficesByIds(userOfficeIds);
         String targetFirmId = (String) session.getAttribute("delegateTargetFirmId");
-        FirmDto firmDto = targetFirmId != null ? firmService.getFirm(UUID.fromString(targetFirmId)) : currentUserProfileDto.getFirm();
 
         session.setAttribute("userProfile", currentUserProfileDto);
         model.addAttribute("userOffices", userOfficeDtos);
@@ -823,6 +822,7 @@ public class MultiFirmUserController {
                         java.util.LinkedHashMap::new,
                         Collectors.toList()
                 ));
+        FirmDto firmDto = targetFirmId != null ? firmService.getFirm(UUID.fromString(targetFirmId)) : currentUserProfileDto.getFirm();
         model.addAttribute("officesByCity", officesByCity);
         model.addAttribute("firm", firmDto);
 
@@ -876,7 +876,6 @@ public class MultiFirmUserController {
         if (userOptional.isEmpty()) {
             return "redirect:/admin/journey-completed";
         }
-        EntraUserDto user = userOptional.get();
 
         Map<String, List<UserRole>> rolesByApp = selectedAppRole.stream()
                 .collect(Collectors.groupingBy(UserRole::getAppName));
@@ -903,6 +902,7 @@ public class MultiFirmUserController {
             sortedAppsByType.put(AppType.LAA, appsByType.get(AppType.LAA));
         }
 
+        EntraUserDto user = userOptional.get();
         model.addAttribute("user", user);
         model.addAttribute("uniqueApps", uniqueApps);
         model.addAttribute("appsByType", sortedAppsByType);

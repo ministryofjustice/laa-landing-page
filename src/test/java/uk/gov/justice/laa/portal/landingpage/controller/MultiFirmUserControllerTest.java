@@ -1587,8 +1587,6 @@ public class MultiFirmUserControllerTest {
     @Test
     void shouldGroupAppsByTypeAndOfficesByCity() {
 
-        UUID role1Id = UUID.randomUUID();
-        UUID role2Id = UUID.randomUUID();
         UUID app1Id = UUID.randomUUID();
         UUID app2Id = UUID.randomUUID();
 
@@ -1596,21 +1594,23 @@ public class MultiFirmUserControllerTest {
         session.setAttribute("addProfileSelectedApps", List.of(app1Id.toString(), app2Id.toString()));
 
         Map<Integer, List<String>> appRolesMap = new HashMap<>();
+        UUID role1Id = UUID.randomUUID();
         appRolesMap.put(0, List.of(role1Id.toString()));
+        UUID role2Id = UUID.randomUUID();
         appRolesMap.put(1, List.of(role2Id.toString()));
         session.setAttribute("addUserProfileAllSelectedRoles", appRolesMap);
 
         // Create apps with different types
-        AppDto authzApp = AppDto.builder().id(app1Id.toString()).name("Admin App").appType(AppType.AUTHZ).build();
-        AppDto laaApp = AppDto.builder().id(app2Id.toString()).name("LAA App").appType(AppType.LAA).build();
+        final AppDto authzApp = AppDto.builder().id(app1Id.toString()).name("Admin App").appType(AppType.AUTHZ).build();
+        final AppDto laaApp = AppDto.builder().id(app2Id.toString()).name("LAA App").appType(AppType.LAA).build();
 
-        AppRoleDto role1 = AppRoleDto.builder()
+        final AppRoleDto role1 = AppRoleDto.builder()
                 .id(role1Id.toString())
                 .name("Admin Role")
                 .ordinal(1)
                 .app(authzApp)
                 .build();
-        AppRoleDto role2 = AppRoleDto.builder()
+        final AppRoleDto role2 = AppRoleDto.builder()
                 .id(role2Id.toString())
                 .name("LAA Role")
                 .ordinal(1)
