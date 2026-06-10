@@ -2722,6 +2722,10 @@ class UserControllerTest {
         List<OfficeModel> selectOfficesDisplay = (List<OfficeModel>) model.getAttribute("userOffices");
         assertThat(selectOfficesDisplay).isNotEmpty();
         assertThat(selectOfficesDisplay.getFirst().getId()).isEqualTo(of1.getId());
+        Map<String, List<OfficeModel>> officesByCity = (Map<String, List<OfficeModel>>) model.getAttribute("officesByCity");
+        assertThat(officesByCity).isNotNull();
+        assertThat(officesByCity).containsKey("city");
+        assertThat(officesByCity.get("city")).containsExactly(of1);
     }
 
     @Test
