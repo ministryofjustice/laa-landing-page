@@ -43,6 +43,8 @@ import org.springframework.ui.Model;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import uk.gov.justice.laa.portal.landingpage.auth.AuthenticatedUser;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -627,7 +629,7 @@ class AuditControllerTest {
         when(userService.determineStatusBadgeForAuditUser(any(AuditUserDetailDto.class)))
                 .thenReturn(UserProfileSilasStatus.COMPLETE);
 
-        String viewName = auditController.displayUserAuditDetail(userId, 1, 5, false, false, model);
+        String viewName = auditController.displayUserAuditDetail(userId, 1, 5, false, model);
 
         assertThat(viewName).isEqualTo("user-audit/details");
 
@@ -693,7 +695,7 @@ class AuditControllerTest {
         when(userService.determineStatusBadgeForAuditUser(any(AuditUserDetailDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
-        String viewName = auditController.displayUserAuditDetail(userId, 1, 5, false, false, model);
+        String viewName = auditController.displayUserAuditDetail(userId, 1, 5, false, model);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/details");
@@ -769,7 +771,7 @@ class AuditControllerTest {
         when(userService.determineStatusBadgeForAuditUser(any(AuditUserDetailDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
-        String viewName = auditController.displayUserAuditDetail(userId, 1, 10, false, false, model);
+        String viewName = auditController.displayUserAuditDetail(userId, 1, 10, false, model);
 
         // Then
         AuditUserDetailDto resultUserDetails = (AuditUserDetailDto) model.getAttribute("user");
@@ -829,7 +831,7 @@ class AuditControllerTest {
         when(userService.determineStatusBadgeForAuditUser(any(AuditUserDetailDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
-        String viewName = auditController.displayUserAuditDetail(userId, profilePage, profileSize, false, false, model);
+        String viewName = auditController.displayUserAuditDetail(userId, profilePage, profileSize, false, model);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/details");
@@ -1476,116 +1478,51 @@ class AuditControllerTest {
     }
 
     @Test
-    void displayUserAuditDetail_whenResendVerificationTrue_addsSuccessMessageToModel() {
-        // Given
+    void resendActivationEmail_whenSuccess() {
         UUID userId = UUID.randomUUID();
 
-        AuditUserDetailDto mockUserDetail = AuditUserDetailDto.builder()
-                .userId(userId.toString())
-                .email("john.doe@example.com")
-                .firstName("John")
-                .lastName("Doe")
-                .fullName("John Doe")
-                .isMultiFirmUser(false)
-                .profiles(Collections.emptyList())
-                .entraOid(UUID.randomUUID().toString())
-                .build();
-
         TechServicesApiResponse<SendUserVerificationEmailResponse> successResponse =
-                TechServicesApiResponse.success(
-                        SendUserVerificationEmailResponse.builder()
-                                .message("Verification email sent successfully")
-                                .build()
-                );
+                mock(TechServicesApiResponse.class, RETURNS_DEEP_STUBS);
 
-        TechServicesUser techServicesUser = TechServicesUser.builder()
-                .id(UUID.randomUUID().toString())
-                .givenName("Test")
-                .surname("User")
-                .lastSignIn(null)
-                .build();
+        when(successResponse.isSuccess()).thenReturn(true);
 
-        GetUserResponse getUserResponse = GetUserResponse.builder()
-                .success(true)
-                .user(techServicesUser)
-                .build();
-
-        when(userService.getAuditUserDetail(userId, 1, 3)).thenReturn(mockUserDetail);
         when(userService.sendVerificationEmail(userId.toString())).thenReturn(successResponse);
-        when(userService.determineStatusBadgeForAuditUser(any())).thenReturn(UserProfileSilasStatus.COMPLETE);
         when(accessControlService.canSendVerificationEmail(userId.toString())).thenReturn(true);
 
-        when(techServicesClient.getUser(any()))
-                .thenReturn(TechServicesApiResponse.success(getUserResponse));
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
 
-        when(accessControlService.canDisableUser(any())).thenReturn(false);
-        when(accessControlService.canResendActivationForAuditUser(any())).thenReturn(true);
+        // when
+        String view = auditController.resendActivationEmail(userId, redirectAttributes);
 
-        // When
-        String viewName = auditController.displayUserAuditDetail(userId, 1, 3, false, true, model);
-
-        // Then
-        assertThat(viewName).isEqualTo("user-audit/details");
-        assertThat(model.getAttribute("successMessage"))
-                .isEqualTo("Verification email sent successfully");
-
-        verify(userService, times(1)).sendVerificationEmail(userId.toString());
+        // then
+        assertThat(view).isEqualTo("redirect:/admin/users/audit/" + userId);
+        assertThat(redirectAttributes.getFlashAttributes())
+                .extractingByKey("successMessage")
+                .isEqualTo("Activation code has been generated and sent successfully via email.");
     }
 
     @Test
-    void displayUserAuditDetail_whenResendVerificationFails_addsErrorMessageToModel() {
-        // Given
+    void resendActivationEmail_whenError() {
         UUID userId = UUID.randomUUID();
-
-        AuditUserDetailDto mockUserDetail = AuditUserDetailDto.builder()
-                .userId(userId.toString())
-                .email("john.doe@example.com")
-                .firstName("John")
-                .lastName("Doe")
-                .fullName("John Doe")
-                .isMultiFirmUser(false)
-                .profiles(Collections.emptyList())
-                .entraOid(UUID.randomUUID().toString())
-                .build();
 
         TechServicesApiResponse<SendUserVerificationEmailResponse> errorResponse =
                 mock(TechServicesApiResponse.class, RETURNS_DEEP_STUBS);
 
         when(errorResponse.isSuccess()).thenReturn(false);
-        when(errorResponse.getError().getMessage()).thenReturn("Failed to send email");
 
-        TechServicesUser techServicesUser = TechServicesUser.builder()
-                .id(UUID.randomUUID().toString())
-                .givenName("Test")
-                .surname("User")
-                .lastSignIn(null)
-                .build();
-
-        GetUserResponse getUserResponse = GetUserResponse.builder()
-                .success(true)
-                .user(techServicesUser)
-                .build();
-
-        // Mocks
-        when(userService.getAuditUserDetail(userId, 1, 3)).thenReturn(mockUserDetail);
         when(userService.sendVerificationEmail(userId.toString())).thenReturn(errorResponse);
-        when(userService.determineStatusBadgeForAuditUser(any())).thenReturn(UserProfileSilasStatus.COMPLETE);
         when(accessControlService.canSendVerificationEmail(userId.toString())).thenReturn(true);
 
-        when(techServicesClient.getUser(any()))
-                .thenReturn(TechServicesApiResponse.success(getUserResponse));
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
 
-        when(accessControlService.canDisableUser(any())).thenReturn(false);
-        when(accessControlService.canResendActivationForAuditUser(any())).thenReturn(true);
+        // when
+        String view = auditController.resendActivationEmail(userId, redirectAttributes);
 
-        // When
-        String viewName = auditController.displayUserAuditDetail(userId, 1, 3, false, true, model);
-
-        // Then
-        assertThat(viewName).isEqualTo("user-audit/details");
-        assertThat(model.getAttribute("errorMessage"))
-                .isEqualTo("Failed to send email");
-
-        verify(userService).sendVerificationEmail(userId.toString());
+        // then
+        assertThat(view).isEqualTo("redirect:/admin/users/audit/" + userId);
+        assertThat(redirectAttributes.getFlashAttributes()).containsKey("errorMessage");
+        assertThat(redirectAttributes.getFlashAttributes().get("errorMessage"))
+                .isEqualTo("Failed to generate and send activation code via email.");
     }
+
 }

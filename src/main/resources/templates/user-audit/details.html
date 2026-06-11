@@ -137,7 +137,8 @@
                                         <dd class="govuk-summary-list__value" th:text="${user.email}"></dd>
                                         <dd class="govuk-summary-list__actions" style="width: 30%">
                                             <a th:if="${showResendVerificationLink}"  class="govuk-link"
-                                               th:href="@{/admin/users/audit/{id}(id=${profileId},resendVerification=true)}">Resend Activation Code</a>
+                                               th:href="@{/admin/users/audit/{id}/resend-verification(id=${profileId})}">Resend
+                                                Activation Code</a>
                                         </dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
