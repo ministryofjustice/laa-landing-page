@@ -319,14 +319,7 @@ public class UserController {
      */
     @GetMapping("/users/manage/{id}")
     @PreAuthorize("@accessControlService.canAccessUser(#id)")
-    public String manageUser(@PathVariable String id,
-            @RequestParam(value = "resendVerification", required = false) boolean resendVerification,
-            Model model, HttpSession session, Authentication authentication) {
-
-        // Handle verification email resend if requested
-        if (Boolean.TRUE.equals(resendVerification)) {
-            handleResendVerification(id, model);
-        }
+    public String manageUser(@PathVariable String id, Model model, HttpSession session, Authentication authentication) {
 
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
@@ -451,6 +444,20 @@ public class UserController {
         }
 
         return "manage-user";
+    }
+
+    /**
+     * Handle resending activation email
+     */
+    @GetMapping("/users/manage/{id}/resend-verification")
+    @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions("
+            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).RESEND_VERIFICATION_EMAIL)")
+    public String resendActivationEmail(@PathVariable("id") UUID userId, RedirectAttributes redirectAttributes) {
+
+        handleResendVerification(String.valueOf(userId), redirectAttributes);
+
+        return "redirect:/admin/users/manage/" + userId;
+
     }
 
     @PostMapping("/users/manage/{id}/delete")
@@ -2958,7 +2965,7 @@ public class UserController {
         return result;
     }
 
-    private void handleResendVerification(String id, Model model) {
+    private void handleResendVerification(String id, RedirectAttributes redirectAttributes) {
         if (!accessControlService.canSendVerificationEmail(id)) {
             throw new AccessDeniedException("User does not have permission to send verification email.");
         }
@@ -2967,9 +2974,9 @@ public class UserController {
             TechServicesApiResponse<SendUserVerificationEmailResponse> response = userService
                     .sendVerificationEmail(id);
             if (response.isSuccess()) {
-                model.addAttribute("successMessage", response.getData().getMessage());
+                redirectAttributes.addFlashAttribute("successMessage", response.getData().getMessage());
             } else {
-                model.addAttribute("errorMessage", response.getError().getMessage());
+                redirectAttributes.addFlashAttribute("errorMessage", response.getError().getMessage());
             }
         } catch (RuntimeException runtimeException) {
             log.error("Error sending activation code for user profile: {}", id, runtimeException);
