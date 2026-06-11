@@ -1,0 +1,19 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1781186425211
+      author: joshua.halladey
+      comment: "Assign RESEND_VERIFICATION_EMAIL permission to Global Admin and External User Manager roles"
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Manager'), 'RESEND_VERIFICATION_EMAIL')"
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'RESEND_VERIFICATION_EMAIL')"
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'RESEND_VERIFICATION_EMAIL' AND app_role_id = (SELECT id FROM app_role WHERE name = 'External User Manager')"
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'RESEND_VERIFICATION_EMAIL' AND app_role_id = (SELECT id FROM app_role WHERE name = 'Global Admin')"

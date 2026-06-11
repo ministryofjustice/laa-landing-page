@@ -764,7 +764,7 @@ public class AccessControlServiceTest {
                 .entraUser(accessedUser)
                 .build();
 
-        Permission userPermission = Permission.EDIT_EXTERNAL_USER;
+        Permission userPermission = Permission.RESEND_VERIFICATION_EMAIL;
         AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
         EntraUser authenticatedUser = EntraUser.builder().id(userId).email("internal@email.com")
                 .userProfiles(HashSet.newHashSet(1)).build();
@@ -799,7 +799,7 @@ public class AccessControlServiceTest {
         EntraUserDto accessedUser =
                 EntraUserDto.builder().id(accessedUserId.toString()).enabled(true).invitationStatus(InvitationStatus.INVITE_SENT).build();
 
-        Permission userPermission = Permission.EDIT_EXTERNAL_USER;
+        Permission userPermission = Permission.RESEND_VERIFICATION_EMAIL;
         AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
         EntraUser authenticatedUser = EntraUser.builder().id(userId).email("internal@email.com")
                 .userProfiles(HashSet.newHashSet(1)).build();

@@ -184,7 +184,8 @@
                                         </dd>
                                         <dd class="govuk-summary-list__actions">
                                             <a th:if="${showResendVerificationLink}" class="govuk-link"
-                                                th:href="@{/admin/users/manage/{id}(id=${user.id},resendVerification=true)}">Resend Activation Code</a>
+                                                th:href="@{/admin/users/manage/{id}/resend-verification(id=${user.id})}">Resend
+                                                Activation Code</a>
                                         </dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
