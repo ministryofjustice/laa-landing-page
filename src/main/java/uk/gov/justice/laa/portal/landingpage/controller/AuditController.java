@@ -247,7 +247,7 @@ public class AuditController {
      */
     @GetMapping("/users/audit/{id}/resend-verification")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions("
-            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_AUDIT_TABLE)")
+            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_DETAILS)")
     public String resendActivationEmail(@PathVariable("id") UUID userId, RedirectAttributes redirectAttributes) {
 
         handleResendVerification(String.valueOf(userId), redirectAttributes);
