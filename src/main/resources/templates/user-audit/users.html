@@ -590,6 +590,7 @@
 
                     if (query.length < 3) {
                         firmSearchIdInput.value = '';
+                        updateExportButton();
                         hideResults();
                         return;
                     }
@@ -732,6 +733,7 @@
                 function selectFirm(firm) {
                     firmSearchInput.value = firm.name;
                     firmSearchIdInput.value = firm.id;
+                    updateExportButton();
                     hideResults();
                     updateStatus(`${firm.name} selected`);
                 }
@@ -772,6 +774,35 @@
                 function updateStatus(message) {
                     currentStatusElement = currentStatusElement === statusA ? statusB : statusA;
                     currentStatusElement.textContent = message;
+                }
+
+                function updateExportButton() {
+                    const exportLink = document.querySelector('.js-export-csv');
+                    if (!exportLink) return;
+
+                    const firmId = firmSearchIdInput.value;
+                    const firmName = firmSearchInput.value.trim();
+                    const currentUrl = new URL(window.location.href);
+                    const selectedUserType = currentUrl.searchParams.get('selectedUserType') || '';
+                    const firmSelected = firmId !== '' || selectedUserType === 'INTERNAL';
+
+                    exportLink.setAttribute('data-firm-selected', firmSelected ? 'true' : 'false');
+
+                    if (firmSelected) {
+                        const params = {
+                            search: currentUrl.searchParams.get('search'),
+                            selectedFirmId: firmId || currentUrl.searchParams.get('selectedFirmId'),
+                            silasRole: currentUrl.searchParams.get('silasRole'),
+                            selectedAppId: currentUrl.searchParams.get('selectedAppId'),
+                            selectedUserType: currentUrl.searchParams.get('selectedUserType'),
+                            selectedFirmName: firmId ? firmName : currentUrl.searchParams.get('selectedFirmName'),
+                            neverActivated: currentUrl.searchParams.get('neverActivated'),
+                            inactiveSinceDate: currentUrl.searchParams.get('inactiveSinceDate')
+                        };
+                        exportLink.href = buildCleanUrl('/admin/users/audit/download', params);
+                    } else {
+                        exportLink.href = '#';
+                    }
                 }
 
                 // SiLAS Role filter auto-submit
