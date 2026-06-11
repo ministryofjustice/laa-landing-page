@@ -1,7 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -161,12 +163,17 @@ public abstract class BaseIntegrationTest extends BaseRepositoryTest {
         EntraUser freshUser = entraUserRepository.findByIdWithAssociations(user.getId())
                 .orElseThrow(() -> new RuntimeException("User not found: " + user.getId()));
 
-        Set<Permission> userPermissions = freshUser.getUserProfiles().stream()
-                .findFirst()
-                .orElseThrow()
-                .getAppRoles().stream()
-                .flatMap(appRole -> appRole.getPermissions().stream())
-                .collect(Collectors.toSet());
+        Optional<UserProfile> profile = freshUser.getUserProfiles().stream()
+                .findFirst();
+
+        Set<Permission> userPermissions = new HashSet<>();
+
+        if (profile.isPresent()) {
+            userPermissions = profile.get()
+                    .getAppRoles().stream()
+                    .flatMap(appRole -> appRole.getPermissions().stream())
+                    .collect(Collectors.toSet());
+        }
 
         Set<SimpleGrantedAuthority> authorities = userPermissions.stream()
                 .map(permission -> new SimpleGrantedAuthority(permission.name()))
