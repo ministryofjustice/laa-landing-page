@@ -2974,9 +2974,10 @@ public class UserController {
             TechServicesApiResponse<SendUserVerificationEmailResponse> response = userService
                     .sendVerificationEmail(id);
             if (response.isSuccess()) {
-                redirectAttributes.addFlashAttribute("successMessage", response.getData().getMessage());
+                redirectAttributes.addFlashAttribute("successMessage", "Activation code has been generated and sent successfully "
+                        + "via email.");
             } else {
-                redirectAttributes.addFlashAttribute("errorMessage", response.getError().getMessage());
+                redirectAttributes.addFlashAttribute("errorMessage", "Failed to generate and send activation code via email.");
             }
         } catch (RuntimeException runtimeException) {
             log.error("Error sending activation code for user profile: {}", id, runtimeException);
