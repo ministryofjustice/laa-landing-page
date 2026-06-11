@@ -3,6 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -814,9 +815,23 @@ public class MultiFirmUserController {
                             String city = office.getAddress() != null ? office.getAddress().getCity() : null;
                             return (city == null || city.isEmpty()) ? "Other cities" : city;
                         },
-                        java.util.LinkedHashMap::new,
                         Collectors.toList()
                 ));
+
+        // Sort the map: alphabetically, with "Other cities" at the end
+                officesByCity = officesByCity.entrySet().stream()
+                        .sorted((e1, e2) -> {
+                            if (e1.getKey().equals("Other cities")) return 1;
+                            if (e2.getKey().equals("Other cities")) return -1;
+                            return e1.getKey().compareToIgnoreCase(e2.getKey());
+                        })
+                        .collect(Collectors.toMap(
+                                Map.Entry::getKey,
+                                Map.Entry::getValue,
+                                (v1, v2) -> v1,
+                                LinkedHashMap::new
+                        ));
+
         FirmDto firmDto = targetFirmId != null ? firmService.getFirm(UUID.fromString(targetFirmId)) : currentUserProfileDto.getFirm();
         model.addAttribute("officesByCity", officesByCity);
         model.addAttribute("firm", firmDto);
