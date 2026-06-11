@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -233,7 +234,6 @@ public class MultiFirmUserController {
 
     @GetMapping("/user/add/profile")
     public String addUserProfile(Model model, HttpSession session, Authentication authentication) {
-
         String targetFirmId = (String) session.getAttribute("delegateTargetFirmId");
         if (targetFirmId == null) {
             // If current user's firm has children, select a target firm first
@@ -689,7 +689,6 @@ public class MultiFirmUserController {
         if (allSelectedRolesByPage == null) {
             allSelectedRolesByPage = new HashMap<>();
         }
-
         // Add the roles for the currently selected app to a map for lookup.
         allSelectedRolesByPage.put(selectedAppIndex, rolesForm.getRoles());
         if (selectedAppIndex >= selectedApps.size() - 1) {
@@ -803,35 +802,36 @@ public class MultiFirmUserController {
         UserProfileDto currentUserProfileDto = mapper.map(currentUserProfile, UserProfileDto.class);
         List<OfficeDto> userOfficeDtos = userOfficeIds.contains("ALL") ? List.of()
                 : officeService.getOfficesByIds(userOfficeIds);
-        String targetFirmId = (String) session.getAttribute("delegateTargetFirmId");
 
         session.setAttribute("userProfile", currentUserProfileDto);
         model.addAttribute("userOffices", userOfficeDtos);
 
-        // Group offices by city, with null/empty cities mapped to "Other cities"
+        // Sort offices by city name (alphabetically, A-Z) before grouping, with "Other cities" always at the end
         Map<String, List<OfficeDto>> officesByCity = userOfficeDtos.stream()
+                .sorted(Comparator.comparing(officeDto -> {
+                    String city = officeDto.getAddress() == null ? "Other cities"
+                            : officeDto.getAddress().getCity();
+                    return (city == null || city.isBlank()) ? "Other cities" : city;
+                }, (city1, city2) -> {
+                    if ("Other cities".equals(city1)) {
+                        return 1;
+                    }
+                    if ("Other cities".equals(city2)) {
+                        return -1;
+                    }
+                    return city1.compareToIgnoreCase(city2);
+                }))
                 .collect(Collectors.groupingBy(
-                        office -> {
-                            String city = office.getAddress() != null ? office.getAddress().getCity() : null;
-                            return (city == null || city.isEmpty()) ? "Other cities" : city;
+                        officeDto -> {
+                            String city = officeDto.getAddress() == null ? "Other cities"
+                                    : officeDto.getAddress().getCity();
+                            return (city == null || city.isBlank()) ? "Other cities" : city;
                         },
+                        LinkedHashMap::new,
                         Collectors.toList()
                 ));
 
-        // Sort the map: alphabetically, with "Other cities" at the end
-                officesByCity = officesByCity.entrySet().stream()
-                        .sorted((e1, e2) -> {
-                            if (e1.getKey().equals("Other cities")) return 1;
-                            if (e2.getKey().equals("Other cities")) return -1;
-                            return e1.getKey().compareToIgnoreCase(e2.getKey());
-                        })
-                        .collect(Collectors.toMap(
-                                Map.Entry::getKey,
-                                Map.Entry::getValue,
-                                (v1, v2) -> v1,
-                                LinkedHashMap::new
-                        ));
-
+        String targetFirmId = (String) session.getAttribute("delegateTargetFirmId");
         FirmDto firmDto = targetFirmId != null ? firmService.getFirm(UUID.fromString(targetFirmId)) : currentUserProfileDto.getFirm();
         model.addAttribute("officesByCity", officesByCity);
         model.addAttribute("firm", firmDto);
