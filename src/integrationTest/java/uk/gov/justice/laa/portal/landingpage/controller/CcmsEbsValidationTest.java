@@ -5,9 +5,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.mock.web.MockHttpSession;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.servlet.ModelAndView;
 import uk.gov.justice.laa.portal.landingpage.dto.CcmsUserDetailsResponse;
@@ -15,7 +13,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.service.CcmsUserDetailsService;
 
 import java.util.List;
 import java.util.Map;
@@ -23,7 +20,6 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -62,7 +58,7 @@ public class CcmsEbsValidationTest extends RoleBasedAccessIntegrationTest {
 
     @Test
     @Transactional
-    public void testEditRoleCheckAnswersGetHasErrorWhenInternalUserIsNotMigrated() throws Exception {
+    public void testEditRoleCheckAnswersGetHasNoErrorsWhenInternalUserIsNotMigrated() throws Exception {
         EntraUser loggedInUser = globalAdmins.getFirst();
         EntraUser editedUser = internalUsersNoRoles.getFirst();
 
@@ -74,7 +70,7 @@ public class CcmsEbsValidationTest extends RoleBasedAccessIntegrationTest {
         assertThat(result.getResponse().getStatus()).isEqualTo(200);
         assertThat(result.getModelAndView()).isNotNull();
         ModelAndView modelAndView = result.getModelAndView();
-        assertThat(modelAndView.getModel().get("errorMessage")).isNotNull();
+        assertThat(modelAndView.getModel().get("errorMessage")).isNull();
     }
 
     @Test
@@ -111,7 +107,9 @@ public class CcmsEbsValidationTest extends RoleBasedAccessIntegrationTest {
         // Assert request was not success
         assertThat(result.getResponse()).isNotNull();
         assertThat(result.getResponse().getStatus()).isEqualTo(302);
-        assertThat(result.getResponse().getRedirectedUrl()).contains("/error");
+        assertThat(result.getResponse().getRedirectedUrl()).contains("/roles-check-answer");
+        assertThat(result.getResponse().getRedirectedUrl()).contains("errorMessage");
+
 
         // Assert user does not have role.
         assertThat(userHasAppRole(editedUser, legacySyncRole)).isFalse();
@@ -143,7 +141,7 @@ public class CcmsEbsValidationTest extends RoleBasedAccessIntegrationTest {
 
     @Test
     @Transactional
-    public void testGrantAccessCheckAnswersGetHasErrorWhenInternalUserIsNotMigrated() throws Exception {
+    public void testGrantAccessCheckAnswersGetHasNoErrorsWhenInternalUserIsNotMigrated() throws Exception {
         EntraUser loggedInUser = globalAdmins.getFirst();
         EntraUser editedUser = internalUsersNoRoles.getFirst();
 
@@ -155,7 +153,7 @@ public class CcmsEbsValidationTest extends RoleBasedAccessIntegrationTest {
         assertThat(result.getResponse().getStatus()).isEqualTo(200);
         assertThat(result.getModelAndView()).isNotNull();
         ModelAndView modelAndView = result.getModelAndView();
-        assertThat(modelAndView.getModel().get("errorMessage")).isNotNull();
+        assertThat(modelAndView.getModel().get("errorMessage")).isNull();
     }
 
     @Test
@@ -192,7 +190,9 @@ public class CcmsEbsValidationTest extends RoleBasedAccessIntegrationTest {
         // Assert request was not success
         assertThat(result.getResponse()).isNotNull();
         assertThat(result.getResponse().getStatus()).isEqualTo(302);
-        assertThat(result.getResponse().getRedirectedUrl()).contains("/confirmation");
+        assertThat(result.getResponse().getRedirectedUrl()).contains("/check-answers");
+        assertThat(result.getResponse().getRedirectedUrl()).contains("errorMessage");
+
 
         // Assert user does not have role.
         assertThat(userHasAppRole(editedUser, legacySyncRole)).isFalse();

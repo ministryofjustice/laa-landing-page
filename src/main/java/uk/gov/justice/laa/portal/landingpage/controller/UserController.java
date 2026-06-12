@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -62,6 +63,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
+import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
@@ -317,14 +319,7 @@ public class UserController {
      */
     @GetMapping("/users/manage/{id}")
     @PreAuthorize("@accessControlService.canAccessUser(#id)")
-    public String manageUser(@PathVariable String id,
-            @RequestParam(value = "resendVerification", required = false) boolean resendVerification,
-            Model model, HttpSession session, Authentication authentication) {
-
-        // Handle verification email resend if requested
-        if (Boolean.TRUE.equals(resendVerification)) {
-            handleResendVerification(id, model);
-        }
+    public String manageUser(@PathVariable String id, Model model, HttpSession session, Authentication authentication) {
 
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
@@ -453,6 +448,20 @@ public class UserController {
         }
 
         return "manage-user";
+    }
+
+    /**
+     * Handle resending activation email
+     */
+    @GetMapping("/users/manage/{id}/resend-verification")
+    @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions("
+            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).RESEND_VERIFICATION_EMAIL)")
+    public String resendActivationEmail(@PathVariable("id") UUID userId, RedirectAttributes redirectAttributes) {
+
+        handleResendVerification(String.valueOf(userId), redirectAttributes);
+
+        return "redirect:/admin/users/manage/" + userId;
+
     }
 
     @PostMapping("/users/manage/{id}/delete")
@@ -1571,9 +1580,16 @@ public class UserController {
                 .flatMap(List::stream)
                 .map(UUID::fromString)
                 .toList();
+
+        Map<String, Long> totalAssignableRolesForApps = roleAssignmentService.filterRoles(editorUserProfile.getAppRoles(), roleIds).stream()
+                .collect(Collectors.groupingBy(
+                        role -> role.getApp().getId(),
+                        Collectors.counting()
+                ));
+
         Map<String, AppRoleDto> roles = userService.getRolesByIdIn(roleIds);
         String backUrl = "";
-        List<UserRole> selectedAppRole = new ArrayList<>();
+        List<UserRole> selectedAppRoles = new ArrayList<>();
         if (editUserAllSelectedRoles.isEmpty()) {
             backUrl = "/admin/users/edit/" + id + "/apps";
         } else {
@@ -1587,11 +1603,15 @@ public class UserController {
                     for (String selectedRole : selectedRoles) {
                         AppRoleDto role = roles.get(selectedRole);
                         UserRole userRole = new UserRole();
-                        userRole.setRoleName(role.getDescription());
+                        userRole.setRoleName(role.getName());
                         userRole.setAppName(role.getApp().getName());
                         userRole.setUrl(url);
                         userRole.setLegacySync(role.isLegacySync());
-                        selectedAppRole.add(userRole);
+                        userRole.setAuthzRole(role.isAuthzRole());
+                        userRole.setAppIndex(key);
+                        Long totalAppRoles = totalAssignableRolesForApps.get(role.getApp().getId());
+                        userRole.setTotalAppRoles(totalAppRoles != null ? totalAppRoles : 0);
+                        selectedAppRoles.add(userRole);
                     }
                 } else {
                     UserRole userRole = new UserRole();
@@ -1608,21 +1628,19 @@ public class UserController {
                     }
                     userRole.setRoleName("No Role selected");
                     userRole.setUrl(url);
-                    selectedAppRole.add(userRole);
+                    selectedAppRoles.add(userRole);
                 }
             }
-        }
-        // If any apps are marked as legacy sync, make sure user exists in ccms.
-        if (user.getUserType() == UserType.INTERNAL && selectedAppRole.stream().anyMatch(UserRole::isLegacySync)
-                && !user.getEntraUser().isCcmsEbsUser()) {
-            final String ccmsErrorMsg = "This user has not been migrated, so is unable to access CCMS. Remove any CCMS or PUI role before saving.";
-            errorMessage = errorMessage == null ? ccmsErrorMsg : errorMessage + "\n" + ccmsErrorMsg;
         }
         if (errorMessage != null) {
             model.addAttribute("errorMessage", errorMessage);
         }
+        Map<String, List<UserRole>> selectedAppRolesGrouped = selectedAppRoles.stream()
+                .collect(Collectors.groupingBy(UserRole::getAppName));
         model.addAttribute("user", user);
-        model.addAttribute("selectedAppRole", selectedAppRole);
+        model.addAttribute("selectedAuthzApps", selectedAppRoles.stream().filter(UserRole::isAuthzRole).map(UserRole::getAppName).collect(Collectors.toSet()));
+        model.addAttribute("selectedNonAuthzApps", selectedAppRoles.stream().filter(userRole -> !userRole.isAuthzRole()).map(UserRole::getAppName).collect(Collectors.toSet()));
+        model.addAttribute("selectedAppRolesGrouped", selectedAppRolesGrouped);
         model.addAttribute("backUrl", backUrl);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user services - " + user.getFullName());
         return "edit-user-roles-check-answer";
@@ -1656,9 +1674,8 @@ public class UserController {
         Collection<AppRoleDto> roles = userService.getRolesByIdIn(roleUuids).values();
         if (user.getUserType() == UserType.INTERNAL && roles.stream().anyMatch(AppRoleDto::isLegacySync)
             && !user.getEntraUser().isCcmsEbsUser()) {
-            log.error("Role update blocked for user profile ID {}."
-                    + "A POST request was attempted to add CCMS/PUI roles to a non-migrated user. This may have been done to bypass UI validation.", user.getId());
-            throw new RuntimeException();
+            final String ccmsErrorMsg = "This user has not been migrated, so is unable to access CCMS. Remove any CCMS or PUI role before saving.";
+            return String.format("redirect:/admin/users/edit/%s/roles-check-answer?errorMessage=%s", uuid, ccmsErrorMsg);
         }
         if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
             Map<String, String> updateResult = userService.updateUserRoles(id, allSelectedRoles,
@@ -2103,6 +2120,12 @@ public class UserController {
         model.addAttribute("apps", editableApps);
         model.addAttribute("groupedApps", appService.buildGroupedApps(editableApps));
 
+        // Clear role selections
+        session.removeAttribute("grantAccessUserRolesModel");
+        session.removeAttribute("grantAccessAllSelectedRoles");
+        session.removeAttribute("allSelectedRoles");
+        session.removeAttribute("nonEditableRoles");
+
         // Store the model in session to handle validation errors later
         session.setAttribute("grantAccessUserAppsModel", model);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Select services - " + user.getFullName());
@@ -2379,10 +2402,6 @@ public class UserController {
         allSelectedRolesByPage.put(selectedAppIndex, rolesForm.getRoles());
         if (selectedAppIndex >= selectedApps.size() - 1) {
             UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
-            // Clear the grantAccessUserRolesModel and page roles from session to avoid
-            // stale data
-            session.removeAttribute("grantAccessUserRolesModel");
-            session.removeAttribute("grantAccessAllSelectedRoles");
             // Flatten the map to a single list of all selected roles across all pages.
             Set<String> allSelectedRoles = allSelectedRolesByPage.values().stream().filter(Objects::nonNull)
                     .flatMap(List::stream)
@@ -2578,6 +2597,7 @@ public class UserController {
     @GetMapping("/users/grant-access/{id}/check-answers")
     @PreAuthorize("@accessControlService.canGrantUserAccess(#id)")
     public String grantAccessCheckAnswers(@PathVariable String id,
+                                          @RequestParam(value = "errorMessage", required = false) String errorMessage,
                                           Model model,
                                           HttpSession session,
                                           Authentication authentication) {
@@ -2606,11 +2626,6 @@ public class UserController {
             userOffices = officeService.getOfficesByIds(selectedOffices);
 
         }
-        String errorMessage = null;
-        if (user.getUserType() == UserType.INTERNAL && userAppRoles.stream().anyMatch(AppRoleDto::isLegacySync)
-                && !user.getEntraUser().isCcmsEbsUser()) {
-            errorMessage = "This user has not been migrated, so is unable to access CCMS. Remove any CCMS or PUI role before saving.";
-        }
         UserProfile editorUserProfile = loginService.getCurrentProfile(authentication);
         List<AppRoleDto> editableUserAppRoles = userAppRoles.stream()
                 .filter(role -> roleAssignmentService.canUserAssignRolesForApp(editorUserProfile, role.getApp()))
@@ -2630,10 +2645,46 @@ public class UserController {
                         (e1, e2) -> e1,
                         LinkedHashMap::new));
 
+        Map<AppType, Set<String>> appsGroupByType = userAppRoles.stream()
+                .sorted()
+                .collect(Collectors.groupingBy(
+                        appRole -> appRole.getApp().getAppType(),
+                        LinkedHashMap::new,
+                        Collectors.mapping(
+                                appRole -> appRole.getApp().getName(),
+                                Collectors.toSet()
+                        )
+                ));
+
+        Map<String, List<OfficeDto>> officesByCity = userOffices.stream()
+                .sorted(Comparator.comparing(officeDto -> {
+                    String city = officeDto.getAddress() == null ? "Other cities"
+                            : officeDto.getAddress().getCity();
+                    return (city == null || city.isBlank()) ? "Other cities" : city;
+                }, (city1, city2) -> {
+                    if ("Other cities".equals(city1)) {
+                        return 1;
+                    }
+                    if ("Other cities".equals(city2)) {
+                        return -1;
+                    }
+                    return city1.compareToIgnoreCase(city2);
+                }))
+                .collect(Collectors.groupingBy(
+                        officeDto -> {
+                            String city = officeDto.getAddress() == null ? "Other cities"
+                                    : officeDto.getAddress().getCity();
+                            return (city == null || city.isBlank()) ? "Other cities" : city;
+                        },
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                ));
+
         model.addAttribute("user", user);
         model.addAttribute("userAppRoles", editableUserAppRoles);
         model.addAttribute("groupedAppRoles", sortedGroupedAppRoles);
-        model.addAttribute("userOffices", userOffices);
+        model.addAttribute("appsGroupByType", appsGroupByType);
+        model.addAttribute("officesByCity", officesByCity);
         model.addAttribute("externalUser", user.getUserType() == UserType.EXTERNAL);
         model.addAttribute("hasAllOffices", selectedOffices.contains(ALL));
         model.addAttribute("hasNoOffices", selectedOffices.contains(NO_OFFICES));
@@ -2707,9 +2758,8 @@ public class UserController {
             List<AppRoleDto> roles = appRoleService.getByIds(allSelectedRoles);
             if (userProfileDto.getUserType() == UserType.INTERNAL && roles.stream().anyMatch(AppRoleDto::isLegacySync)
                     && !userProfileDto.getEntraUser().isCcmsEbsUser()) {
-                log.error("Role update blocked for user profile ID {}."
-                        + "A POST request was attempted to add CCMS/PUI roles to a non-migrated user. This may have been done to bypass UI validation.", userProfileDto.getId());
-                throw new RuntimeException();
+                String ccmsErrorMsg = "This user has not been migrated, so is unable to access CCMS. Remove any CCMS or PUI role before saving.";
+                return String.format("redirect:/admin/users/grant-access/%s/check-answers?errorMessage=%s", id, ccmsErrorMsg);
             }
 
             UserProfile editorProfile = loginService.getCurrentProfile(authentication);
@@ -2767,6 +2817,8 @@ public class UserController {
         session.removeAttribute("grantAccessUserRolesModel");
         session.removeAttribute("grantAccessAllSelectedRoles");
         session.removeAttribute("selectedOffices");
+        session.removeAttribute("allSelectedRoles");
+        session.removeAttribute("nonEditableRoles");
 
         return "redirect:/admin/users/grant-access/" + id + "/confirmation";
     }
@@ -2821,8 +2873,9 @@ public class UserController {
         session.removeAttribute("selectedOffices");
         session.removeAttribute("allSelectedRoles");
         session.removeAttribute("selectedApps");
-        session.removeAttribute("grantAccessSelectedApps");
         session.removeAttribute("nonEditableRoles");
+        session.removeAttribute("selectedOffices");
+        session.removeAttribute("allSelectedRoles");
 
         // Clear any success messages
         session.removeAttribute("successMessage");
@@ -2916,7 +2969,7 @@ public class UserController {
         return result;
     }
 
-    private void handleResendVerification(String id, Model model) {
+    private void handleResendVerification(String id, RedirectAttributes redirectAttributes) {
         if (!accessControlService.canSendVerificationEmail(id)) {
             throw new AccessDeniedException("User does not have permission to send verification email.");
         }
@@ -2925,9 +2978,10 @@ public class UserController {
             TechServicesApiResponse<SendUserVerificationEmailResponse> response = userService
                     .sendVerificationEmail(id);
             if (response.isSuccess()) {
-                model.addAttribute("successMessage", response.getData().getMessage());
+                redirectAttributes.addFlashAttribute("successMessage", "Activation code has been generated and sent successfully "
+                        + "via email.");
             } else {
-                model.addAttribute("errorMessage", response.getError().getMessage());
+                redirectAttributes.addFlashAttribute("errorMessage", "Failed to generate and send activation code via email.");
             }
         } catch (RuntimeException runtimeException) {
             log.error("Error sending activation code for user profile: {}", id, runtimeException);
