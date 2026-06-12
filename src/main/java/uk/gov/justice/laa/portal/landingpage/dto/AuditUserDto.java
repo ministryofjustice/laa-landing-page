@@ -118,4 +118,6 @@ public class AuditUserDto implements Serializable {
      * Whether the user's account is enabled.
      */
     private boolean enabled;
+
+    private String silasAccountStatus;
 }
