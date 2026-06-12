@@ -33,6 +33,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -599,7 +601,7 @@ class UserControllerTest {
         when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // Act
-        String view = userController.manageUser(userId, false, model, session, authentication);
+        String view = userController.manageUser(userId, model, session, authentication);
 
         // Assert
         assertThat(view).isEqualTo("manage-user");
@@ -647,7 +649,7 @@ class UserControllerTest {
         userController.editUserDetailFeatureEnabled = true;
         when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
         // Act
-        String view = userController.manageUser(userId, false, model, session, authentication);
+        String view = userController.manageUser(userId, model, session, authentication);
 
         // Assert
         assertThat(view).isEqualTo("manage-user");
@@ -712,7 +714,7 @@ class UserControllerTest {
             when(session.getAttribute("userListFilters")).thenReturn(userListFilters);
             when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
-            String view = userController.manageUser(userId, false, model, session, authentication);
+            String view = userController.manageUser(userId, model, session, authentication);
 
             // Assert
             assertThat(view).isEqualTo("manage-user");
@@ -753,14 +755,10 @@ class UserControllerTest {
                 .build();
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
         when(accessControlService.canSendVerificationEmail(mockUser.getId().toString())).thenReturn(true);
-        when(userService.sendVerificationEmail(mockUser.getId().toString()))
-                .thenReturn(TechServicesApiResponse.success(SendUserVerificationEmailResponse.builder().success(true)
-                        .message("Activation code has been generated and sent successfully via email.")
-                        .build()));
         when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // Act
-        String view = userController.manageUser(mockUser.getId().toString(), true, model, session, authentication);
+        String view = userController.manageUser(mockUser.getId().toString(), model, session, authentication);
 
         // Assert
         assertThat(view).isEqualTo("manage-user");
@@ -986,7 +984,7 @@ class UserControllerTest {
         when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // Act
-        String view = userController.manageUser(userId, false, model, session, authentication);
+        String view = userController.manageUser(userId, model, session, authentication);
 
         // Assert
         assertThat(view).isEqualTo("manage-user");
@@ -1037,7 +1035,7 @@ class UserControllerTest {
         when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // Act
-        String view = userController.manageUser(userId, false, model, session, authentication);
+        String view = userController.manageUser(userId, model, session, authentication);
 
         // Assert
         assertThat(view).isEqualTo("manage-user");
@@ -1056,7 +1054,7 @@ class UserControllerTest {
 
         // Act & Assert
         Assertions.assertThrows(NoSuchElementException.class,
-                () -> userController.manageUser(userId, false, model, session, authentication));
+                () -> userController.manageUser(userId, model, session, authentication));
 
         verify(userService).getUserProfileById(userId);
     }
@@ -2722,6 +2720,42 @@ class UserControllerTest {
         List<OfficeModel> selectOfficesDisplay = (List<OfficeModel>) model.getAttribute("userOffices");
         assertThat(selectOfficesDisplay).isNotEmpty();
         assertThat(selectOfficesDisplay.getFirst().getId()).isEqualTo(of1.getId());
+        Map<String, List<OfficeModel>> officesByCity = (Map<String, List<OfficeModel>>) model.getAttribute("officesByCity");
+        assertThat(officesByCity).isNotNull();
+        assertThat(officesByCity).containsKey("city");
+        assertThat(officesByCity.get("city")).containsExactly(of1);
+    }
+
+    @Test
+    void updateUserOfficesCheck_Selected_shouldSortCitiesAlphabeticallyWithOtherCitiesLast() {
+        // Given
+        OfficeModel.Address londonAddress = OfficeModel.Address.builder().city("London").build();
+        OfficeModel londonOffice = new OfficeModel();
+        londonOffice.setId("office-london");
+        londonOffice.setAddress(londonAddress);
+        OfficeModel.Address birminghamAddress = OfficeModel.Address.builder().city("Birmingham").build();
+        OfficeModel birminghamOffice = new OfficeModel();
+        birminghamOffice.setId("office-birmingham");
+        birminghamOffice.setAddress(birminghamAddress);
+        OfficeModel.Address noCity = OfficeModel.Address.builder().build();
+        OfficeModel noCityOffice = new OfficeModel();
+        noCityOffice.setId("office-no-city");
+        noCityOffice.setAddress(noCity);
+        final String userId = "user123";
+        MockHttpSession testSession = new MockHttpSession();
+        OfficesForm form = new OfficesForm();
+        form.setOffices(List.of("office-london", "office-birmingham", "office-no-city"));
+        testSession.setAttribute("officesForm", form);
+        Model modelFromSession = new ExtendedModelMap();
+        modelFromSession.addAttribute("user", UserProfile.builder().build());
+        modelFromSession.addAttribute("officeData", List.of(londonOffice, birminghamOffice, noCityOffice));
+        testSession.setAttribute("editUserOfficesModel", modelFromSession);
+        // When
+        userController.updateUserOfficesCheck(userId, model, testSession);
+        // Then
+        Map<String, List<OfficeModel>> officesByCity = (Map<String, List<OfficeModel>>) model.getAttribute("officesByCity");
+        assertThat(officesByCity).isNotNull();
+        assertThat(officesByCity.keySet()).containsExactly("Birmingham", "London", "Other cities");
     }
 
     @Test
@@ -3346,7 +3380,7 @@ class UserControllerTest {
         when(userService.getUserProfileById("id1")).thenReturn(Optional.of(userProfile));
         when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
-        String view = userController.manageUser("id1", false, model, session, authentication);
+        String view = userController.manageUser("id1", model, session, authentication);
 
         assertThat(view).isEqualTo("manage-user");
         assertThat(model.getAttribute("user")).isEqualTo(userProfile);
@@ -3358,7 +3392,7 @@ class UserControllerTest {
 
         // Expect exception since controller calls .get() on empty Optional
         Assertions.assertThrows(NoSuchElementException.class,
-                () -> userController.manageUser("id2", false, model, session, authentication));
+                () -> userController.manageUser("id2", model, session, authentication));
     }
 
     @Test
@@ -3389,7 +3423,7 @@ class UserControllerTest {
         when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
-        String view = userController.manageUser("internal-user-id", false, model, session, authentication);
+        String view = userController.manageUser("internal-user-id", model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -3430,7 +3464,7 @@ class UserControllerTest {
         when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
-        String view = userController.manageUser("external-user-id", false, model, session, authentication);
+        String view = userController.manageUser("external-user-id", model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -3477,7 +3511,7 @@ class UserControllerTest {
         when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
-        String view = userController.manageUser("external-user-id", false, model, session, authentication);
+        String view = userController.manageUser("external-user-id", model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -3518,7 +3552,7 @@ class UserControllerTest {
         when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
-        String view = userController.manageUser("external-user-id", false, model, session, authentication);
+        String view = userController.manageUser("external-user-id", model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -3566,7 +3600,7 @@ class UserControllerTest {
         when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
-        String view = userController.manageUser("external-user-id", false, model, session, authentication);
+        String view = userController.manageUser("external-user-id", model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -3616,7 +3650,7 @@ class UserControllerTest {
         when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
-        String view = userController.manageUser("external-user-id", false, model, session, authentication);
+        String view = userController.manageUser("external-user-id", model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -3666,7 +3700,7 @@ class UserControllerTest {
         when(accessControlService.canViewAllFirmsOfMultiFirmUser()).thenReturn(true);
 
         // When
-        String view = userController.manageUser(profileId.toString(), false, model, session, authentication);
+        String view = userController.manageUser(profileId.toString(), model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -3720,7 +3754,7 @@ class UserControllerTest {
         when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
-        String view = userController.manageUser(viewedProfileId.toString(), false, model, session, authentication);
+        String view = userController.manageUser(viewedProfileId.toString(), model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -4216,7 +4250,7 @@ class UserControllerTest {
         when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
-        String view = userController.manageUser(userId, false, model, session, authentication);
+        String view = userController.manageUser(userId, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -4262,7 +4296,7 @@ class UserControllerTest {
         when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class))).thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
-        String view = userController.manageUser(userId, false, model, session, authentication);
+        String view = userController.manageUser(userId, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -8242,5 +8276,54 @@ class UserControllerTest {
                     .isEqualTo("All app assignments must be removed before assigning a different firm to the account");
             assertThat(result).isEqualTo("redirect:/admin/users/manage/" + userId);
         }
+
+        @Test
+        void resendActivationEmail_whenSuccess() {
+            UUID userId = UUID.randomUUID();
+
+            TechServicesApiResponse<SendUserVerificationEmailResponse> successResponse =
+                    mock(TechServicesApiResponse.class, RETURNS_DEEP_STUBS);
+
+            when(successResponse.isSuccess()).thenReturn(true);
+
+            when(userService.sendVerificationEmail(userId.toString())).thenReturn(successResponse);
+            when(accessControlService.canSendVerificationEmail(userId.toString())).thenReturn(true);
+
+            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+            // when
+            String view = userController.resendActivationEmail(userId, redirectAttributes);
+
+            // then
+            assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
+            assertThat(redirectAttributes.getFlashAttributes())
+                    .extractingByKey("successMessage")
+                    .isEqualTo("Activation code has been generated and sent successfully via email.");
+        }
+
+        @Test
+        void resendActivationEmail_whenError() {
+            UUID userId = UUID.randomUUID();
+
+            TechServicesApiResponse<SendUserVerificationEmailResponse> errorResponse =
+                    mock(TechServicesApiResponse.class, RETURNS_DEEP_STUBS);
+
+            when(errorResponse.isSuccess()).thenReturn(false);
+
+            when(userService.sendVerificationEmail(userId.toString())).thenReturn(errorResponse);
+            when(accessControlService.canSendVerificationEmail(userId.toString())).thenReturn(true);
+
+            RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+            // when
+            String view = userController.resendActivationEmail(userId, redirectAttributes);
+
+            // then
+            assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
+            assertThat(redirectAttributes.getFlashAttributes()).containsKey("errorMessage");
+            assertThat(redirectAttributes.getFlashAttributes().get("errorMessage"))
+                    .isEqualTo("Failed to generate and send activation code via email.");
+        }
+
     }
 }
