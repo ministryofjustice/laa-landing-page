@@ -2720,6 +2720,42 @@ class UserControllerTest {
         List<OfficeModel> selectOfficesDisplay = (List<OfficeModel>) model.getAttribute("userOffices");
         assertThat(selectOfficesDisplay).isNotEmpty();
         assertThat(selectOfficesDisplay.getFirst().getId()).isEqualTo(of1.getId());
+        Map<String, List<OfficeModel>> officesByCity = (Map<String, List<OfficeModel>>) model.getAttribute("officesByCity");
+        assertThat(officesByCity).isNotNull();
+        assertThat(officesByCity).containsKey("city");
+        assertThat(officesByCity.get("city")).containsExactly(of1);
+    }
+
+    @Test
+    void updateUserOfficesCheck_Selected_shouldSortCitiesAlphabeticallyWithOtherCitiesLast() {
+        // Given
+        OfficeModel.Address londonAddress = OfficeModel.Address.builder().city("London").build();
+        OfficeModel londonOffice = new OfficeModel();
+        londonOffice.setId("office-london");
+        londonOffice.setAddress(londonAddress);
+        OfficeModel.Address birminghamAddress = OfficeModel.Address.builder().city("Birmingham").build();
+        OfficeModel birminghamOffice = new OfficeModel();
+        birminghamOffice.setId("office-birmingham");
+        birminghamOffice.setAddress(birminghamAddress);
+        OfficeModel.Address noCity = OfficeModel.Address.builder().build();
+        OfficeModel noCityOffice = new OfficeModel();
+        noCityOffice.setId("office-no-city");
+        noCityOffice.setAddress(noCity);
+        final String userId = "user123";
+        MockHttpSession testSession = new MockHttpSession();
+        OfficesForm form = new OfficesForm();
+        form.setOffices(List.of("office-london", "office-birmingham", "office-no-city"));
+        testSession.setAttribute("officesForm", form);
+        Model modelFromSession = new ExtendedModelMap();
+        modelFromSession.addAttribute("user", UserProfile.builder().build());
+        modelFromSession.addAttribute("officeData", List.of(londonOffice, birminghamOffice, noCityOffice));
+        testSession.setAttribute("editUserOfficesModel", modelFromSession);
+        // When
+        userController.updateUserOfficesCheck(userId, model, testSession);
+        // Then
+        Map<String, List<OfficeModel>> officesByCity = (Map<String, List<OfficeModel>>) model.getAttribute("officesByCity");
+        assertThat(officesByCity).isNotNull();
+        assertThat(officesByCity.keySet()).containsExactly("Birmingham", "London", "Other cities");
     }
 
     @Test
