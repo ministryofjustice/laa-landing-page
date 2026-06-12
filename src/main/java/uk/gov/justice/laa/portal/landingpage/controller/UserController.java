@@ -1857,13 +1857,23 @@ public class UserController {
             }
         }
         Model modelFromSession = (Model) session.getAttribute("editUserOfficesModel");
+        Comparator<String> cityOrder = Comparator
+                .comparing((String city) -> city.equals("Other cities"))
+                .thenComparing(Comparator.naturalOrder());
         Map<String, List<OfficeModel>> officesByCity = selectOfficesDisplay.stream()
                 .collect(Collectors.groupingBy(
                         office -> office.getAddress() != null && office.getAddress().getCity() != null
                                 ? office.getAddress().getCity()
-                                : "Unknown",
-                        LinkedHashMap::new,
+                                : "Other cities",
                         Collectors.toList()
+                ))
+                .entrySet().stream()
+                .sorted(Map.Entry.comparingByKey(cityOrder))
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (a, b) -> a,
+                        LinkedHashMap::new
                 ));
         model.addAttribute("userOffices", selectOfficesDisplay);
         model.addAttribute("officesByCity", officesByCity);
