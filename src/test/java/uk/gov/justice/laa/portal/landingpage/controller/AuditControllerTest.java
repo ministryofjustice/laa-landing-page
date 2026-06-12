@@ -1482,9 +1482,11 @@ class AuditControllerTest {
         UUID userId = UUID.randomUUID();
 
         TechServicesApiResponse<SendUserVerificationEmailResponse> successResponse =
-                mock(TechServicesApiResponse.class, RETURNS_DEEP_STUBS);
-
-        when(successResponse.isSuccess()).thenReturn(true);
+                TechServicesApiResponse.success(
+                        SendUserVerificationEmailResponse.builder()
+                                .message("Verification email sent successfully")
+                                .build()
+                );
 
         when(userService.sendVerificationEmail(userId.toString())).thenReturn(successResponse);
         when(accessControlService.canSendVerificationEmail(userId.toString())).thenReturn(true);
@@ -1498,7 +1500,7 @@ class AuditControllerTest {
         assertThat(view).isEqualTo("redirect:/admin/users/audit/" + userId);
         assertThat(redirectAttributes.getFlashAttributes())
                 .extractingByKey("successMessage")
-                .isEqualTo("Activation code has been generated and sent successfully via email.");
+                .isEqualTo("Verification email sent successfully");
     }
 
     @Test
@@ -1509,6 +1511,7 @@ class AuditControllerTest {
                 mock(TechServicesApiResponse.class, RETURNS_DEEP_STUBS);
 
         when(errorResponse.isSuccess()).thenReturn(false);
+        when(errorResponse.getError().getMessage()).thenReturn("Failed to generate and send activation code via email.");
 
         when(userService.sendVerificationEmail(userId.toString())).thenReturn(errorResponse);
         when(accessControlService.canSendVerificationEmail(userId.toString())).thenReturn(true);

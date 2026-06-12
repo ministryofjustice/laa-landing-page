@@ -338,11 +338,15 @@ public class UserController {
 
         UserProfileSilasStatus silasStatus = userService.calculateSilasStatusForUserProfile(user);
 
+        // Check if user has any roles assigned
+        final boolean userHasRoles = !userAppRoles.isEmpty();
+
         model.addAttribute("user", user);
         model.addAttribute("silasStatus", silasStatus.name());
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("userOffices", userOffices);
         model.addAttribute("isAccessGranted", isAccessGranted);
+        model.addAttribute("userHasRoles", userHasRoles);
         boolean externalUser = UserType.EXTERNAL == user.getUserType();
         model.addAttribute("externalUser", externalUser);
 
@@ -2993,10 +2997,9 @@ public class UserController {
             TechServicesApiResponse<SendUserVerificationEmailResponse> response = userService
                     .sendVerificationEmail(id);
             if (response.isSuccess()) {
-                redirectAttributes.addFlashAttribute("successMessage", "Activation code has been generated and sent successfully "
-                        + "via email.");
+                redirectAttributes.addFlashAttribute("successMessage", response.getData().getMessage());
             } else {
-                redirectAttributes.addFlashAttribute("errorMessage", "Failed to generate and send activation code via email.");
+                redirectAttributes.addFlashAttribute("errorMessage", response.getError().getMessage());
             }
         } catch (RuntimeException runtimeException) {
             log.error("Error sending activation code for user profile: {}", id, runtimeException);

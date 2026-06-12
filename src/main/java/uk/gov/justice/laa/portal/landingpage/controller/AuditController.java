@@ -593,10 +593,9 @@ public class AuditController {
             TechServicesApiResponse<SendUserVerificationEmailResponse> response = userService
                     .sendVerificationEmail(id);
             if (response.isSuccess()) {
-                redirectAttributes.addFlashAttribute("successMessage", "Activation code has been generated and sent successfully "
-                        + "via email.");
+                redirectAttributes.addFlashAttribute("successMessage", response.getData().getMessage());
             } else {
-                redirectAttributes.addFlashAttribute("errorMessage", "Failed to generate and send activation code via email.");
+                redirectAttributes.addFlashAttribute("errorMessage", response.getError().getMessage());
             }
         } catch (RuntimeException runtimeException) {
             log.error("Error sending activation code for user profile: {}", id, runtimeException);
