@@ -588,9 +588,10 @@
                     clearTimeout(searchTimeout);
                     const query = this.value.trim();
 
+                    firmSearchIdInput.value = '';
+                    updateExportButton();
+
                     if (query.length < 3) {
-                        firmSearchIdInput.value = '';
-                        updateExportButton();
                         hideResults();
                         return;
                     }
@@ -789,13 +790,14 @@
                     exportLink.setAttribute('data-firm-selected', firmSelected ? 'true' : 'false');
 
                     if (firmSelected) {
+                        const isInternal = selectedUserType === 'INTERNAL';
                         const params = {
                             search: currentUrl.searchParams.get('search'),
-                            selectedFirmId: firmId || currentUrl.searchParams.get('selectedFirmId'),
+                            selectedFirmId: isInternal ? null : (firmId || currentUrl.searchParams.get('selectedFirmId')),
                             silasRole: currentUrl.searchParams.get('silasRole'),
                             selectedAppId: currentUrl.searchParams.get('selectedAppId'),
                             selectedUserType: currentUrl.searchParams.get('selectedUserType'),
-                            selectedFirmName: firmId ? firmName : currentUrl.searchParams.get('selectedFirmName'),
+                            selectedFirmName: isInternal ? null : (firmId ? firmName : currentUrl.searchParams.get('selectedFirmName')),
                             neverActivated: currentUrl.searchParams.get('neverActivated'),
                             inactiveSinceDate: currentUrl.searchParams.get('inactiveSinceDate')
                         };
@@ -804,6 +806,8 @@
                         exportLink.href = '#';
                     }
                 }
+
+                updateExportButton();
 
                 // SiLAS Role filter auto-submit
                 const silasRoleFilter = document.getElementById('silasRoleFilter');
