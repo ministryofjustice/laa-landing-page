@@ -2730,14 +2730,14 @@ class UserControllerTest {
     void updateUserOfficesCheck_Selected_shouldSortCitiesAlphabeticallyWithOtherCitiesLast() {
         // Given
         OfficeModel.Address londonAddress = OfficeModel.Address.builder().city("London").build();
-        OfficeModel.Address birminghamAddress = OfficeModel.Address.builder().city("Birmingham").build();
-        OfficeModel.Address noCity = OfficeModel.Address.builder().build();
         OfficeModel londonOffice = new OfficeModel();
         londonOffice.setId("office-london");
         londonOffice.setAddress(londonAddress);
+        OfficeModel.Address birminghamAddress = OfficeModel.Address.builder().city("Birmingham").build();
         OfficeModel birminghamOffice = new OfficeModel();
         birminghamOffice.setId("office-birmingham");
         birminghamOffice.setAddress(birminghamAddress);
+        OfficeModel.Address noCity = OfficeModel.Address.builder().build();
         OfficeModel noCityOffice = new OfficeModel();
         noCityOffice.setId("office-no-city");
         noCityOffice.setAddress(noCity);
