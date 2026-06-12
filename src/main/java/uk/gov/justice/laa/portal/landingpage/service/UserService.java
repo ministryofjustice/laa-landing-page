@@ -1887,12 +1887,25 @@ public class UserService {
         String getAppRolesAcess = determineAppRolesAccess(profiles, firmId);
         String getAppAccess = determineAppAccess(profiles, firmId);
 
+        String silasAccountStatus = determineSilasAccountStatus(user, profiles);
+
         // Get firm code
         String firmCode = determineFirmCode(profiles, csvExport);
 
         return AuditUserDto.builder().name(user.getFirstName() + " " + user.getLastName())
                 .email(user.getEmail()).firmAssociation(firmAssociation).firmCode(firmCode).appAccess(getAppAccess)
-                .isMultiFirmUser(user.isMultiFirmUser()).isProviderAdmin(userRole).appRolesAccess(getAppRolesAcess).build();
+                .isMultiFirmUser(user.isMultiFirmUser()).isProviderAdmin(userRole).appRolesAccess(getAppRolesAcess).silasAccountStatus(silasAccountStatus).build();
+    }
+
+    // Same logic used in user-audit/details.html template.
+    private String determineSilasAccountStatus(EntraUser user, List<UserProfile> profiles) {
+        boolean userActivated = profiles.stream().anyMatch(profile -> profile.getUserType() == UserType.INTERNAL)
+                || user.getInvitationStatus() == InvitationStatus.VERIFICATION_SUCCESS;
+        if (userActivated) {
+            return user.isEnabled() ? "Enabled" : "Disabled";
+        } else {
+            return "Awaiting Verification";
+        }
     }
 
     /**

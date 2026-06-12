@@ -53,7 +53,7 @@ class AuditExportServiceTest {
 
         String csv = new String(export.bytes(), StandardCharsets.UTF_8);
         assertEquals("Name,Email,\"Firm Name\",\"Firm Code\",Multi-firm,"
-                + "\"Provider Admin\",\"App Access\",\"Roles Assigned\"\n", csv);
+                + "\"Provider Admin\",\"App Access\",\"Roles Assigned\",\"SILAS Account Status\"\n", csv);
     }
 
     @Test
@@ -66,6 +66,7 @@ class AuditExportServiceTest {
                 .firmCode("FC1")
                 .isMultiFirmUser(true)
                 .isProviderAdmin(true)
+                .silasAccountStatus("Enabled")
                 .appAccess("App 1, App 2")
                 .appRolesAccess("App1 [Role 1, Role 2], App2 [Role 3]")
                 .build();
@@ -76,8 +77,8 @@ class AuditExportServiceTest {
 
         String expected =
                 """
-                        Name,Email,"Firm Name","Firm Code",Multi-firm,"Provider Admin","App Access","Roles Assigned"
-                        "Doe, John","a""b@example.com","Firm Name",FC1,Yes,Yes,"App 1, App 2","App1 [Role 1, Role 2], App2 [Role 3]"
+                        Name,Email,"Firm Name","Firm Code",Multi-firm,"Provider Admin","App Access","Roles Assigned","SILAS Account Status"
+                        "Doe, John","a""b@example.com","Firm Name",FC1,Yes,Yes,"App 1, App 2","App1 [Role 1, Role 2], App2 [Role 3]",Enabled
                         """;
 
         assertEquals(expected, csv);
