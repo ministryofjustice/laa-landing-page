@@ -80,6 +80,30 @@
                         </div>
                     </div>
 
+                    <div class="govuk-summary-card" th:if="${isInternalUser}">
+                        <div class="govuk-summary-card__title-wrapper">
+                            <h2 class="govuk-summary-card__title">
+                                User Access
+                            </h2>
+                        </div>
+                        <div class="govuk-summary-card__content">
+                            <dl class="govuk-summary-list">
+                                <div class="govuk-summary-list__row">
+                                    <dt class="govuk-summary-list__key">Firm</dt>
+                                    <dd class="govuk-summary-list__value">
+                                        <span th:text="${firm.name}"></span>
+                                    </dd>
+                                    <dd class="govuk-summary-list__actions">
+                                        <a class="govuk-link"
+                                           th:href="@{'/admin/multi-firm/user/add/profile/select/internalUserFirm'}">
+                                            Change
+                                        </a>
+                                    </dd>
+                                </div>
+                            </dl>
+                        </div>
+                    </div>
+
                     <div class="govuk-summary-card">
                         <div class="govuk-summary-card__title-wrapper">
                             <h2 class="govuk-summary-card__title">
