@@ -589,9 +589,41 @@ public class ManageUsersTest extends BaseFrontEndTest {
     }
 
     @Test
-    @DisplayName("Global Admin creates an external user and assigns offices")
-    void globalAdminCreatesExternalUserAndAssignsOffices() {
-        // Create user
+    @DisplayName("Global Admin can use Manage Access for user without roles")
+    void globalAdminCanUseManageAccessForUserWithoutRoles() {
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+        manageUsersPage.clickCreateUser();
+        final String email = manageUsersPage.fillInUserDetails(false);
+        manageUsersPage.selectMultiFirmAccess(false);
+        manageUsersPage.searchAndSelectFirmByCode("90001");
+        manageUsersPage.clickContinueFirmSelectPage();
+        manageUsersPage.clickConfirmNewUserButton();
+        manageUsersPage.clickGoBackToManageUsers();
+
+        assertTrue(manageUsersPage.searchAndVerifyUser(email));
+        manageUsersPage.clickFirstUserLink();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        assertTrue(
+                page.locator(".govuk-button:has-text('Manage Access')").isVisible(),
+                "Manage Access button should be visible for user without roles"
+        );
+
+        manageUsersPage.clickServicesTab();
+        assertTrue(
+                page.locator("#services p:has-text('No services are currently assigned to this user')").isVisible(),
+                "Should show that no services are assigned"
+        );
+
+        assertFalse(
+                page.locator("#services .govuk-link:has-text('Change')").isVisible(),
+                "Change link should NOT be visible for user without roles"
+        );
+    }
+
+    @Test
+    @DisplayName("Provider Admin with default roles shows Change link not Manage Access button")
+    void providerAdminWithDefaultRolesShowsChangeLink() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
         manageUsersPage.clickCreateUser();
         final String email = manageUsersPage.fillInUserDetails(true);
@@ -603,19 +635,51 @@ public class ManageUsersTest extends BaseFrontEndTest {
 
         assertTrue(manageUsersPage.searchAndVerifyUser(email));
         manageUsersPage.clickFirstUserLink();
-        manageUsersPage.clickManageAccess();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-        manageUsersPage.clickContinueLink();
-        manageUsersPage.clickContinueLink();
-        manageUsersPage.checkSelectedOffices(List.of("Automation Office 1, City1, 12345 (THREE)"));
-        manageUsersPage.clickContinueLink();
-        manageUsersPage.clickConfirmButton();
+        //Verify Manage Access button is not visible
+        manageUsersPage.clickServicesTab();
+        assertTrue(
+                page.locator("#services .govuk-link:has-text('Change')").isVisible(),
+                "Change link should be visible in Services tab for Provider Admin with default roles"
+        );
 
-        // Verify office assigned
+        assertTrue(
+                page.locator("#services dd:has-text('Firm User Manager')").isVisible(),
+                "Provider Admin should have Firm User Manager role assigned by default"
+        );
+    }
+
+    @Test
+    @DisplayName("Non-Provider Admin without roles shows Manage Access button not Change link")
+    void nonProviderAdminWithoutRolesShowsManageAccessButton() {
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+        manageUsersPage.clickCreateUser();
+        final String email = manageUsersPage.fillInUserDetails(false);
+        manageUsersPage.selectMultiFirmAccess(false);
+        manageUsersPage.searchAndSelectFirmByCode("90001");
+        manageUsersPage.clickContinueFirmSelectPage();
+        manageUsersPage.clickConfirmNewUserButton();
         manageUsersPage.clickGoBackToManageUsers();
-        manageUsersPage.searchForUser(email);
+
+        assertTrue(manageUsersPage.searchAndVerifyUser(email));
         manageUsersPage.clickFirstUserLink();
-        manageUsersPage.clickOfficesTab();
-        assertTrue(page.locator(".govuk-summary-card:has-text('Automation Office 1, City1, 12345')").isVisible());
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        assertTrue(
+                page.locator(".govuk-button:has-text('Manage Access')").isVisible(),
+                "Manage Access button should be visible for user without roles"
+        );
+
+        manageUsersPage.clickServicesTab();
+        assertFalse(
+                page.locator("#services .govuk-link:has-text('Change')").isVisible(),
+                "Change link should not be visible in Services tab for user without roles"
+        );
+
+        assertTrue(
+                page.locator("#services p:has-text('No services are currently assigned to this user')").isVisible(),
+                "Should show message that no services are assigned"
+        );
     }
 }
