@@ -20,7 +20,7 @@
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
         <div class="govuk-grid-row">
-            <div class="govuk-grid-column-two-thirds-from-desktop">
+            <div class="govuk-grid-column-full-from-desktop">
                 <h1 class="govuk-heading-l">
                     Check your answers and confirm
                 </h1>
@@ -47,6 +47,14 @@
                             <h2 class="govuk-summary-card__title">
                                 User details
                             </h2>
+                            <ul class="govuk-summary-card__actions">
+                                <li class="govuk-summary-card__action">
+                                    <a class="govuk-link"
+                                       th:href="@{'/admin/multi-firm/user/add/profile'}">
+                                        Change
+                                    </a>
+                                </li>
+                            </ul>
                         </div>
                         <div class="govuk-summary-card__content">
                             <dl class="govuk-summary-list">
@@ -68,28 +76,6 @@
                                         <span th:text="${user.lastName}"></span>
                                     </dd>
                                 </div>
-                                <div class="govuk-summary-list__row">
-                                    <dt class="govuk-summary-list__key">User type</dt>
-                                    <dd class="govuk-summary-list__value">
-                                        <span th:text="${isUserManager} ? 'Provider Admin' : 'Provider User'"></span>
-                                    </dd>
-                                </div>
-                                <div class="govuk-summary-list__row">
-                                    <dt class="govuk-summary-list__key">Multi-firm access</dt>
-                                    <dd class="govuk-summary-list__value">
-                                        <span th:text="${isMultiFirmUser} ? 'Yes' : 'No'"></span>
-                                    </dd>
-                                </div>
-                                <div class="govuk-summary-list__row">
-                                    <dt class="govuk-summary-list__key">Firm</dt>
-                                    <dd class="govuk-summary-list__value">
-                                        <span th:text="${firm.code != null ? firm.name + ' (Firm code: ' + firm.code + ')' : firm.name}"></span>
-                                    </dd>
-                                    <dd class="govuk-summary-list__actions" th:if="isInternalUser">
-                                        <a class="govuk-link"
-                                           th:href="@{/admin/multi-firm/user/add/profile/select/internalUserFirm}">Change</a>
-                                    </dd>
-                                </div>
                             </dl>
                         </div>
                     </div>
@@ -97,28 +83,38 @@
                     <div class="govuk-summary-card">
                         <div class="govuk-summary-card__title-wrapper">
                             <h2 class="govuk-summary-card__title">
-                                User Roles
+                                Services
                             </h2>
+                            <ul class="govuk-summary-card__actions">
+                                <li class="govuk-summary-card__action">
+                                    <a class="govuk-link"
+                                       th:href="@{'/admin/multi-firm/user/add/profile/select/apps'}">
+                                        Change
+                                    </a>
+                                </li>
+                            </ul>
                         </div>
                         <div class="govuk-summary-card__content">
-                            <dl class="govuk-summary-list" th:if="${selectedAppRole != null and !selectedAppRole.isEmpty()}">
-                                <div th:each="appRole : ${selectedAppRole}" class="govuk-summary-list__row">
+                            <dl class="govuk-summary-list"
+                                th:if="${appsByType != null and !appsByType.isEmpty()}">
+
+                                <div class="govuk-summary-list__row" th:each="entry : ${appsByType}">
+                                    <dt class="govuk-summary-list__key" th:text="${entry.key.name}">
+                                    </dt>
                                     <dd class="govuk-summary-list__value">
-                                        <span th:text="${appRole.getRoleName()}"></span>
-                                        (<span th:text="${appRole.getAppName()}"></span>)
-                                    </dd>
-                                    <dd class="govuk-summary-list__actions">
-                                        <a th:href="${appRole.getUrl()}" class="govuk-link">Change</a>
+                                        <ul class="govuk-list">
+                                            <li th:each="app : ${entry.value}"
+                                                th:text="${app.appName}">
+                                            </li>
+                                        </ul>
                                     </dd>
                                 </div>
+
                             </dl>
-                            <div class="govuk-summary-list" th:if="${(selectedAppRole == null or selectedAppRole.isEmpty())}">
+                            <div class="govuk-summary-list" th:if="${(appsByType == null or appsByType.isEmpty())}">
                                 <div class="govuk-summary-list__row">
                                     <dd class="govuk-summary-list__value">
-                                        <span>No role assigned</span>
-                                    </dd>
-                                    <dd class="govuk-summary-list__actions">
-                                        <a th:href="@{'/admin/multi-firm/user/add/profile/select/apps'}" class="govuk-link">Change</a>
+                                        <span>No service assigned</span>
                                     </dd>
                                 </div>
                             </div>
@@ -128,28 +124,75 @@
                     <div class="govuk-summary-card">
                         <div class="govuk-summary-card__title-wrapper">
                             <h2 class="govuk-summary-card__title">
-                                User offices
+                                Roles
                             </h2>
                         </div>
                         <div class="govuk-summary-card__content">
-                            <dl class="govuk-summary-list" th:if="${userOffices != null and !userOffices.isEmpty()}">
-                                <div th:each="office : ${userOffices}" class="govuk-summary-list__row">
+                            <dl class="govuk-summary-list"
+                                th:if="${rolesByApp != null and !rolesByApp.isEmpty()}">
+                                <div class="govuk-summary-list__row" th:each="entry : ${rolesByApp}">
+
+                                    <dt class="govuk-summary-list__key" th:text="${entry.key}"></dt>
+
                                     <dd class="govuk-summary-list__value">
-                                        <span th:text="${office.address?.formattedAddress ?: 'Unknown'}"></span>
-                                        (<span th:text="${office.code}"></span>)
+                                        <ul class="govuk-list">
+                                            <li th:each="role : ${entry.value}"
+                                                th:text="${role.roleName}">
+                                            </li>
+                                        </ul>
                                     </dd>
-                                    <dd class="govuk-summary-list__actions">
-                                        <a th:href="@{'/admin/multi-firm/user/add/profile/select/offices'}" class="govuk-link">Change</a>
+                                    <dd th:if="${entry.value[0].totalAppRoles > 1}" class="govuk-summary-list__actions">
+                                        <a th:href="@{${entry.value[0].url}}" class="govuk-link">
+                                            Change
+                                            <span class="govuk-visually-hidden"> role</span>
+                                        </a>
+                                    </dd>
+
+                                </div>
+                            </dl>
+                            <div class="govuk-summary-list" th:if="${rolesByApp == null or rolesByApp.isEmpty()}">
+                                <div class="govuk-summary-list__row">
+                                    <dd class="govuk-summary-list__value">
+                                        <span>No role assigned</span>
+                                    </dd>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="govuk-summary-card">
+                        <div class="govuk-summary-card__title-wrapper">
+                            <h2 class="govuk-summary-card__title">
+                                Offices
+                            </h2>
+                            <ul class="govuk-summary-card__actions">
+                                <li class="govuk-summary-card__action">
+                                    <a class="govuk-link"
+                                       th:href="@{'/admin/multi-firm/user/add/profile/select/offices'}">
+                                        Change
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="govuk-summary-card__content">
+                            <dl class="govuk-summary-list" th:if="${officesByCity != null and !officesByCity.isEmpty()}">
+                                <div class="govuk-summary-list__row" th:each="entry : ${officesByCity}">
+                                    <dt class="govuk-summary-list__key" th:text="${entry.key}">
+                                    </dt>
+                                    <dd class="govuk-summary-list__value">
+                                        <ul class="govuk-list">
+                                            <li th:each="office : ${entry.value}">
+                                                <span th:text="${office.address?.formattedAddress ?: 'Unknown'}"></span>
+                                                (<span th:text="${office.code}"></span>)
+                                            </li>
+                                        </ul>
                                     </dd>
                                 </div>
                             </dl>
-                            <div class="govuk-summary-list" th:if="${(userOffices == null or userOffices.isEmpty())}">
+                            <div class="govuk-summary-list" th:if="${(officesByCity == null or officesByCity.isEmpty())}">
                                 <div class="govuk-summary-list__row">
                                     <dd class="govuk-summary-list__value">
                                         <span>Access to All Offices</span>
-                                    </dd>
-                                    <dd class="govuk-summary-list__actions">
-                                        <a th:href="@{'/admin/multi-firm/user/add/profile/select/offices'}" class="govuk-link">Change</a>
                                     </dd>
                                 </div>
                             </div>

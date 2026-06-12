@@ -116,6 +116,7 @@ class HomeControllerTest {
 
         // Arrange: Mock service responses
         when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         when(userService.getUserAppsByUserId(any())).thenReturn(Set.of(appDto));
         when(userService.getUserAppRolesByUserId(any())).thenReturn(List.of(appRoleDto));
         when(appService.getById(any())).thenReturn(Optional.of(app));
@@ -200,6 +201,7 @@ class HomeControllerTest {
 
         // Arrange: Mock service responses
         when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         when(userService.getUserAppsByUserId(any())).thenReturn(Set.of(appDto));
         when(userService.getUserAppRolesByUserId(any())).thenReturn(List.of(appRoleDto));
         when(appService.getById(any())).thenReturn(Optional.of(app));
@@ -291,6 +293,7 @@ class HomeControllerTest {
 
         // Mock service responses
         when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         when(userService.getUserAppsByUserId(any())).thenReturn(Set.of(appDto));
         when(userService.getUserAppRolesByUserId(any())).thenReturn(List.of(appRoleDto));
         when(appService.getById(appId)).thenReturn(Optional.of(app));
