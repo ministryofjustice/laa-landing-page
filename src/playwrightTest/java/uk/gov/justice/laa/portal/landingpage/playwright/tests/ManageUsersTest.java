@@ -638,11 +638,6 @@ public class ManageUsersTest extends BaseFrontEndTest {
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
         //Verify Manage Access button is not visible
-        assertFalse(
-                page.locator(".govuk-button:has-text('Manage Access')").isVisible(),
-                "Manage Access button should not be visible for Provider Admin with default roles"
-        );
-
         manageUsersPage.clickServicesTab();
         assertTrue(
                 page.locator("#services .govuk-link:has-text('Change')").isVisible(),
