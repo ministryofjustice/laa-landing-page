@@ -145,8 +145,8 @@ public class SecurityConfig {
                 .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
                 .requestMatchers("/admin/multi-firm/user/**")
                 .hasAnyAuthority(Permission.DELEGATE_FIRM_ACCESS_PERMISSIONS)
-                .requestMatchers("/", "/login", "/logout-success", "/cookies", "/accessibility", "/css/**", "/js/**", "/assets/**"
-                ).permitAll()
+                .requestMatchers("/", "/login", "/logout-success", "/cookies", "/accessibility", "/css/**", "/js/**", "/assets/**", "/actuator/health")
+                .permitAll()
                 .requestMatchers("/actuator/**", "/playwright/login")
                 .access((auth, context) -> {
                     boolean allowed =

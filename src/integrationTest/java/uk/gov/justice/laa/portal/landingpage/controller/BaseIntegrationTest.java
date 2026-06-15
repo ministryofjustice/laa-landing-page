@@ -53,7 +53,11 @@ import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 @TestInstance(Lifecycle.PER_CLASS)
 @AutoConfigureMockMvc
 @EnableConfigurationProperties
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
+    "management.endpoints.web.exposure.include=health,metrics",
+    "management.endpoint.env.access=read_only",
+    "management.endpoint.metrics.access=read_only"
+})
 @ActiveProfiles("test")
 public abstract class BaseIntegrationTest extends BaseRepositoryTest {
 
