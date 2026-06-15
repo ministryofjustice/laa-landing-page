@@ -200,7 +200,8 @@ public class SecurityConfig {
                                 + " object-src 'none';"
                                 + " frame-src 'none';"
                                 + " frame-ancestors 'none';"))
-                .addHeaderWriter(new StaticHeadersWriter("Cross-Origin-Embedder-Policy-Report-Only", "require-corp"))
+                .addHeaderWriter(new StaticHeadersWriter("Cross-Origin-Embedder-Policy", "require-corp"))
+                .addHeaderWriter(new StaticHeadersWriter("Permissions-Policy", "geolocation=(), camera=(), microphone=(), payment=(), usb=(), interest-cohort=()"))
         );
         return http.build();
     }
