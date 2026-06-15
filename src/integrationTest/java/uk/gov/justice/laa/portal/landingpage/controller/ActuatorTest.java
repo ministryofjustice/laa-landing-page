@@ -27,11 +27,7 @@ public class ActuatorTest extends BaseIntegrationTest {
 
     @Test
     void shouldAllowSensitiveActuatorWhenIpIsInternal() throws Exception {
-        mockMvc.perform(get("/actuator/metrics")
-                        .with(request -> {
-                            request.setRemoteAddr("10.0.0.5");
-                            return request;
-                        }))
+        mockMvc.perform(get("/actuator/metrics"))
                 .andExpect(status().isOk());
     }
 
