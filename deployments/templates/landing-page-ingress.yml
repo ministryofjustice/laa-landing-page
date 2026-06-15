@@ -32,8 +32,6 @@ metadata:
       if ($uri ~ "^/actuator/health") {
         set $http1_reject 0;
       }
-      access_log /dev/stdout combined;
-      access_log /dev/stderr combined if=$http1_reject;
       if ($http1_reject = 1) {
         return 426;
       }
