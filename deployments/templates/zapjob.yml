@@ -11,6 +11,9 @@ spec:
       containers:
         - name: zap
           image: ghcr.io/zaproxy/zaproxy:stable
+          volumeMounts:
+            - name: zap-wrk
+              mountPath: /zap/wrk
           securityContext:
             runAsUser: 1000
             runAsNonRoot: true
