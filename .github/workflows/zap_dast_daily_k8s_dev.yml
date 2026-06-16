@@ -124,7 +124,7 @@ jobs:
       - name: Apply ZAP job
         run: |
           kubectl delete job zap-scan -n ${{ secrets.KUBE_NAMESPACE }} --ignore-not-found
-          kubectl apply -f deployments/zapjob.yaml
+          kubectl apply -f deployments/zapjob.yml
 
       - name: Wait for job completion
         run: |
