@@ -21,7 +21,7 @@ spec:
             - zap-baseline.py
           args:
             - "-t"
-            - "http://laa-landing-page.${NAMESPACE}.svc.cluster.local"
+            - "http://laa-landing-page.${NAMESPACE}.svc.cluster.local:8080"
             - "-I"
             - "-r"
             - "report.html"
