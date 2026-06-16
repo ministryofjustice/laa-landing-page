@@ -11,8 +11,8 @@ spec:
       containers:
         - name: zap
           image: ghcr.io/zaproxy/zaproxy:stable
-          runasuser: 1000
-          runasnonroot: true
+          runAsUser: 1000
+          runAsNonRoot: true
           command:
             - zap-baseline.py
           args:
