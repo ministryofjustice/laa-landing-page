@@ -1,0 +1,25 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: zap-scan
+  namespace: ${NAMESPACE}
+spec:
+  ttlSecondsAfterFinished: 600
+  backoffLimit: 3
+  template:
+    spec:
+      containers:
+        - name: zap
+          image: ghcr.io/zaproxy/zaproxy:stable
+          command:
+            - zap-baseline.py
+          args:
+            - "-t"
+            - "http://laa-landing-page.${NAMESPACE}.svc.cluster.local"
+            - "-I"
+            - "-r"
+            - "report.html"
+      volumes:
+        - name: zap-work
+          emptyDir: {}
+      restartPolicy: Never
