@@ -23,6 +23,6 @@ spec:
             - "-r"
             - "report.html"
       volumes:
-        - name: zap-work
+        - name: zap-wrk
           emptyDir: {}
       restartPolicy: Never
