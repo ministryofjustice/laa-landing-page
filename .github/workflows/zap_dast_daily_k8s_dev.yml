@@ -1,0 +1,78 @@
+name: Run ZAP Scan
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  zap:
+    runs-on: ubuntu-latest
+    environment: development
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CERT }}" | base64 -d > $HOME/.kube/ca.crt
+          kubectl config set-cluster k8s-cluster --server=${{ secrets.KUBE_SERVER }} --certificate-authority=$HOME/.kube/ca.crt
+          kubectl config set-credentials user --token=${{ secrets.KUBE_TOKEN }}
+          kubectl config set-context default --cluster=k8s-cluster --user=user
+          kubectl config use-context default
+
+      - name: Apply ZAP job
+        run: |
+          kubectl delete job zap-scan -n k8s-test-app --ignore-not-found
+          kubectl apply -f k8s/zapjob.yaml
+
+      - name: Wait for job completion
+        run: |
+          kubectl wait \
+            --for=condition=complete \
+            job/zap-scan \
+            -n k8s-test-app \
+            --timeout=900s
+
+      - name: Get logs (debugging)
+        run: |
+          kubectl logs job/zap-scan -n k8s-test-app | tee zap-output.txt
+
+      - name: Parse ZAP alerts
+        id: parse_alerts
+        shell: bash
+        run: |
+          FAIL_COUNT=$(grep -oE 'FAIL-NEW: [0-9]+' zap-output.txt | tail -1 | awk '{print $2}')
+          WARN_COUNT=$(grep -oE 'WARN-NEW: [0-9]+' zap-output.txt | tail -1 | awk '{print $2}')
+
+          FAIL_COUNT=${FAIL_COUNT:-0}
+          WARN_COUNT=${WARN_COUNT:-0}
+
+          echo "fail_count=${FAIL_COUNT}" >> "$GITHUB_OUTPUT"
+          echo "warn_count=${WARN_COUNT}" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "# ZAP Scan Alerts"
+            echo
+            echo "- Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "- Commit: ${{ github.sha }}"
+            echo "- FAIL-NEW: ${FAIL_COUNT}"
+            echo "- WARN-NEW: ${WARN_COUNT}"
+            echo
+            echo "## ZAP Output Excerpt"
+            echo
+            echo '```text'
+            tail -n 120 zap-output.txt
+            echo '```'
+          } > zap-issue.md
+
+      - name: Create GitHub issue for alerts
+        if: ${{ steps.parse_alerts.outputs.fail_count != '0' || steps.parse_alerts.outputs.warn_count != '0' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TITLE="ZAP alerts detected: FAIL=${{ steps.parse_alerts.outputs.fail_count }}, WARN=${{ steps.parse_alerts.outputs.warn_count }}"
+          gh issue create --title "$TITLE" --body-file zap-issue.md
