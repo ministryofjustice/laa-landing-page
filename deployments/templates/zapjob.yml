@@ -4,7 +4,7 @@ metadata:
   name: zap-scan
   namespace: ${NAMESPACE}
 spec:
-  ttlSecondsAfterFinished: 600
+  ttlSecondsAfterFinished: 3600
   backoffLimit: 3
   template:
     spec:
@@ -18,15 +18,23 @@ spec:
             runAsUser: 1000
             runAsNonRoot: true
           command:
-            - zap-baseline.py
+            - /bin/sh
+            - -c
           args:
-            - "-t"
-            - "http://laa-landing-page.${NAMESPACE}.svc.cluster.local:8080"
-            - "-I"
-            - "-a"
-            - "-j"
-            - "-r"
-            - "/zap/wrk/report.html"
+            - |
+              zap-baseline.py \
+                -t http://laa-landing-page.${NAMESPACE}.svc.cluster.local:8080 \
+                -I \
+                -a \
+                -j \
+                -r /zap/wrk/report.html
+              STATUS=$?
+              if [ "$STATUS" -ne 0 ]; then
+                echo "ZAP baseline failed with status $STATUS" >&2
+                exit "$STATUS"
+              fi
+              echo "ZAP report written to /zap/wrk/report.html"
+              sleep 30
       volumes:
         - name: zap-wrk
           emptyDir: {}
