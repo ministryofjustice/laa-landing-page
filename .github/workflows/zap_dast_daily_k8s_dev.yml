@@ -128,7 +128,7 @@ jobs:
 
       - name: Copy ZAP report from pod
         run: |
-          until pod=$(kubectl get pods -n ${{ secrets.KUBE_NAMESPACE }} -l job-name=zap-scan -o jsonpath='{.items[0].metadata.name}') && [ -n "$pod" ]; do
+          until pod=$(kubectl get pods -n ${{ secrets.KUBE_NAMESPACE }} -l job-name=zap-scan -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | head -n1) && [ -n "$pod" ]; do
             echo "Waiting for zap-scan pod..."
             sleep 2
           done
