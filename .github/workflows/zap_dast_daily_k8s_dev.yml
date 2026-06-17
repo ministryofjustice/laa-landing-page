@@ -138,6 +138,12 @@ jobs:
         run: |
           kubectl logs job/zap-scan -n ${{ secrets.KUBE_NAMESPACE }} | tee zap-output.txt
 
+      - name: Upload ZAP scan report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-scan-report
+          path: zap-output.txt
+
       - name: Parse ZAP alerts
         id: parse_alerts
         shell: bash

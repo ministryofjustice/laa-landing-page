@@ -23,6 +23,8 @@ spec:
             - "-t"
             - "http://laa-landing-page.${NAMESPACE}.svc.cluster.local:8080"
             - "-I"
+            - "-a"
+            - "-j"
             - "-r"
             - "report.html"
       volumes:
