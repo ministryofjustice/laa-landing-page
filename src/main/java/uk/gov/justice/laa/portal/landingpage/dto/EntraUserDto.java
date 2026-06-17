@@ -31,4 +31,5 @@ public class EntraUserDto implements Serializable {
     private String disabledBy;
     private boolean mailOnly;
     private InvitationStatus invitationStatus;
+    private boolean ccmsEbsUser;
 }

@@ -27,6 +27,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.IpAddressMatcher;
@@ -144,8 +145,8 @@ public class SecurityConfig {
                 .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
                 .requestMatchers("/admin/multi-firm/user/**")
                 .hasAnyAuthority(Permission.DELEGATE_FIRM_ACCESS_PERMISSIONS)
-                .requestMatchers("/", "/login", "/logout-success", "/cookies", "/accessibility", "/css/**", "/js/**", "/assets/**"
-                ).permitAll()
+                .requestMatchers("/", "/login", "/logout-success", "/cookies", "/accessibility", "/css/**", "/js/**", "/assets/**", "/actuator/health")
+                .permitAll()
                 .requestMatchers("/actuator/**", "/playwright/login")
                 .access((auth, context) -> {
                     boolean allowed =
@@ -190,10 +191,16 @@ public class SecurityConfig {
                         .requestMatcher(AnyRequestMatcher.INSTANCE)
                 )
                 .contentSecurityPolicy(contentSecurityPolicyConfig -> contentSecurityPolicyConfig
-                        .policyDirectives("default-src * self blob: data: gap:; style-src * self 'unsafe-inline' blob: data: gap:;"
-                                + " script-src * 'self' 'unsafe-eval' 'unsafe-inline' blob: data: gap:; object-src * 'self' blob: data: gap:;"
-                                + " img-src * self 'unsafe-inline' blob: data: gap:; connect-src self * 'unsafe-inline' blob: data: gap:;"
-                                + " frame-src * self blob: data: gap:;"))
+                        .policyDirectives("default-src 'self';"
+                                + " script-src 'self' 'unsafe-inline' https://code.jquery.com;"
+                                + " style-src 'self' 'unsafe-inline';"
+                                + " img-src 'self' data:;"
+                                + " connect-src 'self';"
+                                + " font-src 'self';"
+                                + " object-src 'none';"
+                                + " frame-src 'none';"
+                                + " frame-ancestors 'none';"))
+                .addHeaderWriter(new StaticHeadersWriter("Cross-Origin-Embedder-Policy-Report-Only", "require-corp"))
         );
         return http.build();
     }

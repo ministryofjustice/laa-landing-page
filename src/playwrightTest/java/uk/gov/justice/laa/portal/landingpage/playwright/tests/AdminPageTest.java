@@ -14,6 +14,8 @@ import uk.gov.justice.laa.portal.landingpage.playwright.common.BaseFrontEndTest;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.TestUser;
 import uk.gov.justice.laa.portal.landingpage.playwright.pages.AdminPage;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -110,10 +112,23 @@ public class AdminPageTest extends BaseFrontEndTest {
                 "Expected Role assignment restrictions table to contain at least 1 row"
         );
 
+        // Get details of the first row in role assign restrictions tab
+        String roleAssignmentTabFirstRowText = Optional.of(adminPage)
+                .map(AdminPage::getRoleAssignRestrictionsRows)
+                .map(Locator::first)
+                .map(Locator::allInnerTexts)
+                .map(List::getFirst)
+                .orElseThrow();
+
+        // Split up the raw text and grab the name.
+        String[] firstRowParts = roleAssignmentTabFirstRowText.split("\t");
+        Assertions.assertTrue(firstRowParts.length > 1);
+        String appRoleName = firstRowParts[0];
+
         clickFirstChangeLinkOnRoleAssignRestrictionsTab();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-        Assertions.assertTrue(page.locator("h1.govuk-fieldset__heading").textContent().contains("Test LAA App Three Access"));
+        Assertions.assertTrue(page.locator("h1.govuk-fieldset__heading").textContent().contains(appRoleName));
         Locator others = page.locator("input[type='checkbox']");
         for (int i = 0; i < 3; i++) {
             others.nth(i).check();
@@ -371,7 +386,7 @@ public class AdminPageTest extends BaseFrontEndTest {
     private void clickFirstChangeLinkOnRoleAssignRestrictionsTab() {
         page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Change")).first().click();
 
-        String expectedUrlFragment = "/admin/silas-administration/role/assignRestrictions/ffffffff-ffff-ffff-ffff-bbbbbbbbbbbb";
+        String expectedUrlFragment = "/admin/silas-administration/role/assignRestrictions/";
         Assertions.assertTrue(
                 page.url().contains(expectedUrlFragment),
                 "Expected URL to contain '" + expectedUrlFragment + "' after clicking Change link for Role assignment restrictions"

@@ -694,8 +694,7 @@ public class AccessControlService {
                 && !userService.isInternal(accessedUser.getId())
                 && accessedUser.isEnabled()
                 && !InvitationStatus.VERIFICATION_SUCCESS.equals(accessedUser.getInvitationStatus())
-                && userHasAnyGivenPermissions(authenticatedUser, Permission.CREATE_EXTERNAL_USER,
-                        Permission.EDIT_EXTERNAL_USER);
+                && userHasAnyGivenPermissions(authenticatedUser, Permission.RESEND_VERIFICATION_EMAIL);
     }
 
     public boolean canResendActivationForAuditUser(String entraUserId) {
@@ -716,9 +715,7 @@ public class AccessControlService {
                 && !isAccessedUserInternal
                 && accessedUser.isEnabled()
                 && !InvitationStatus.VERIFICATION_SUCCESS.equals(accessedUser.getInvitationStatus())
-                && userHasAnyGivenPermissions(authenticatedUser,
-                Permission.CREATE_EXTERNAL_USER,
-                Permission.EDIT_EXTERNAL_USER);
+                && userHasAnyGivenPermissions(authenticatedUser, Permission.RESEND_VERIFICATION_EMAIL);
     }
 
     public boolean canBulkDisableFirmUsers() {

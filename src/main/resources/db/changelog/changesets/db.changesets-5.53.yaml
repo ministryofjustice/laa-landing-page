@@ -1,0 +1,79 @@
+databaseChangeLog:
+  # Remove duplicate PendingAcceptance entries created by changesets-5.49 and changesets-5.51
+  - changeSet:
+      id: remove-duplicate-pending-acceptance
+      author: paul.snowdon
+      validCheckSum: ANY
+      comment: "Remove duplicate PendingAcceptance disable_user_reason entries.
+        Keep the entry from changesets-5.51 (name='Pending Acceptance') and remove
+        the entry from changesets-5.49 (name='PendingAcceptance')"
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: "1"
+            sql: "SELECT CASE WHEN COUNT(*) > 1 THEN 1 ELSE 0 END FROM disable_user_reason WHERE entra_description = 'PendingAcceptance'"
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM disable_user_reason WHERE entra_description = 'PendingAcceptance' AND name = 'PendingAcceptance'"
+
+  # Remove duplicate NotActive entries created by changesets-5.49 and changesets-5.51
+  - changeSet:
+      id: remove-duplicate-not-active
+      author: paul.snowdon
+      comment: "Remove duplicate NotActive disable_user_reason entries.
+        Keep the entry from changesets-5.51 (name='Not Active') and remove
+        the entry from changesets-5.49 (name='NotActive').
+        Reassigns any FK references in user_account_status_audit first to avoid constraint violations."
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: "1"
+            sql: "SELECT CASE WHEN COUNT(*) > 1 THEN 1 ELSE 0 END FROM disable_user_reason WHERE entra_description = 'NotActive'"
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: >-
+              UPDATE user_account_status_audit
+              SET disable_user_reason_id = (SELECT id FROM disable_user_reason WHERE entra_description = 'NotActive' AND name = 'Not Active')
+              WHERE disable_user_reason_id = (SELECT id FROM disable_user_reason WHERE entra_description = 'NotActive' AND name = 'NotActive');
+              DELETE FROM disable_user_reason WHERE entra_description = 'NotActive' AND name = 'NotActive'
+
+  # Fix FK references before removing duplicate NotActive entry (for envs where the delete failed due to FK constraint)
+  - changeSet:
+      id: fix-not-active-fk-references
+      author: paul.snowdon
+      comment:
+        "Reassign user_account_status_audit FK references from the duplicate
+        NotActive entry to the canonical Not Active entry, then delete the duplicate.
+        Required for environments where remove-duplicate-not-active failed due to FK constraint."
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: "1"
+            sql: "SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END FROM disable_user_reason WHERE entra_description = 'NotActive' AND name = 'NotActive'"
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: >-
+              UPDATE user_account_status_audit
+              SET disable_user_reason_id = (SELECT id FROM disable_user_reason WHERE entra_description = 'NotActive' AND name = 'Not Active')
+              WHERE disable_user_reason_id = (SELECT id FROM disable_user_reason WHERE entra_description = 'NotActive' AND name = 'NotActive');
+              DELETE FROM disable_user_reason WHERE entra_description = 'NotActive' AND name = 'NotActive'
+
+  # Add unique constraint on entra_description to prevent future duplicates
+  - changeSet:
+      id: add-unique-constraint-entra-description
+      author: paul.snowdon
+      comment: "Add unique constraint on entra_description column to prevent
+        duplicate entries with the same Entra description"
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: "0"
+            sql: "SELECT COUNT(*) FROM pg_constraint WHERE conname = 'disable_user_reason_entra_description_unique'"
+      changes:
+        - addUniqueConstraint:
+            tableName: disable_user_reason
+            columnNames: entra_description
+            constraintName: disable_user_reason_entra_description_unique

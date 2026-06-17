@@ -58,7 +58,7 @@ public class ManageUsersPage {
 
     private final Locator deleteUserLink;
     private final Locator confirmAndDeleteUserButton;
-    private final Locator deleteUserReason;
+    private final Locator deleteUserReasonRadioFirst;
     private final Locator deleteUserMessageHeading;
 
     private final Locator firmSearchInput;
@@ -113,7 +113,7 @@ public class ManageUsersPage {
 
         this.deleteUserLink = page.locator("a.govuk-link[href*='/admin/users/manage/'][href$='delete']");
         this.confirmAndDeleteUserButton = page.locator("button:has-text(\"Confirm and delete user\")");
-        this.deleteUserReason = page.locator("textarea[name='reason']");
+        this.deleteUserReasonRadioFirst = page.locator("input[name='reasonId']").first();
         this.deleteUserMessageHeading = page.locator("h1.govuk-panel__title");
 
         this.firmSearchInput = page.locator("input#firmSearch");
@@ -163,7 +163,8 @@ public class ManageUsersPage {
 
     public void confirmAndDeleteUser() {
         deleteUserLink.click();
-        deleteUserReason.fill("reason for deleting user");
+        deleteUserReasonRadioFirst.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
+        deleteUserReasonRadioFirst.click();
         confirmAndDeleteUserButton.click();
 
         assertEquals(

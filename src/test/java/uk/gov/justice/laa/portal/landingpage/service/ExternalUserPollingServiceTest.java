@@ -1,44 +1,50 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
-import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraLastSyncMetadata;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.repository.DisableUserReasonRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.EntraLastSyncMetadataRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
-import uk.gov.justice.laa.portal.landingpage.techservices.GetUsersResponse;
-import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
-import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
-import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesErrorResponse;
-
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.matches;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import org.mockito.ArgumentCaptor;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
+import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraLastSyncMetadata;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.repository.DisableUserReasonRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraLastSyncMetadataRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+import uk.gov.justice.laa.portal.landingpage.techservices.GetUsersResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesErrorResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
 
 @ExtendWith(MockitoExtension.class)
 class ExternalUserPollingServiceTest {
@@ -54,6 +60,9 @@ class ExternalUserPollingServiceTest {
 
     @Mock
     private DisableUserReasonRepository disableUserReasonRepository;
+
+    @Mock
+    private uk.gov.justice.laa.portal.landingpage.repository.DeleteUserReasonRepository deleteUserReasonRepository;
 
     @Mock
     private UserAccountStatusAuditRepository userAccountStatusAuditRepository;
@@ -99,7 +108,7 @@ class ExternalUserPollingServiceTest {
                 .updatedAt(LocalDateTime.now().minusHours(2))
                 .build();
         when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.of(existingMetadata));
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(Collections.emptyList())
@@ -122,7 +131,7 @@ class ExternalUserPollingServiceTest {
                 .updatedAt(LocalDateTime.now().minusMinutes(30))
                 .build();
         when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.of(existingMetadata));
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(Collections.emptyList())
@@ -145,7 +154,7 @@ class ExternalUserPollingServiceTest {
                 .updatedAt(LocalDateTime.now().minusHours(3))
                 .build();
         when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.of(existingMetadata));
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(Collections.emptyList())
@@ -162,7 +171,7 @@ class ExternalUserPollingServiceTest {
     @Test
     void shouldProcessUsersSuccessfully_whenApiReturnsUsers() {
         when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
-        
+
         TechServicesUser user1 = TechServicesUser.builder()
                 .id("user1")
                 .displayName("John Doe")
@@ -173,7 +182,7 @@ class ExternalUserPollingServiceTest {
                 .displayName("Jane Smith")
                 .mail("jane@example.com")
                 .build();
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(List.of(user1, user2))
@@ -190,7 +199,7 @@ class ExternalUserPollingServiceTest {
     @Test
     void shouldThrowException_whenApiCallFails() {
         when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
-        
+
         TechServicesErrorResponse errorResponse = TechServicesErrorResponse.builder()
                 .success(false)
                 .message("API Error")
@@ -212,7 +221,7 @@ class ExternalUserPollingServiceTest {
                 .updatedAt(LocalDateTime.now().minusHours(1))
                 .build();
         when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.of(existingMetadata));
-        
+
         TechServicesErrorResponse errorResponse = TechServicesErrorResponse.builder()
                 .success(false)
                 .message("Service Unavailable")
@@ -227,7 +236,7 @@ class ExternalUserPollingServiceTest {
     @Test
     void shouldHandleNullUserList_gracefully() {
         when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(null)
@@ -244,7 +253,7 @@ class ExternalUserPollingServiceTest {
     @Test
     void shouldUseOneHourDefault_whenNoExistingMetadata() {
         when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(Collections.emptyList())
@@ -287,14 +296,14 @@ class ExternalUserPollingServiceTest {
         when(entraUserRepository.findByEntraOid("user456")).thenReturn(Optional.of(userToDisable));
 
         // Mock disable reason repository
-        DisableUserReason inactivityReason = DisableUserReason.builder()
+        DisableUserReason notActiveReason = DisableUserReason.builder()
                 .id(java.util.UUID.randomUUID())
-                .name("Inactivity")
-                .description("Disabled due to inactivity")
-                .entraDescription("Inactivity")
+                .name("Not Active")
+                .description("User account is not active in Entra")
+                .entraDescription("NotActive")
                 .userSelectable(false)
                 .build();
-        when(disableUserReasonRepository.findAll()).thenReturn(List.of(inactivityReason));
+        when(disableUserReasonRepository.findAll()).thenReturn(List.of(notActiveReason));
 
         TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
@@ -314,11 +323,11 @@ class ExternalUserPollingServiceTest {
                 .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
                         .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
-                                .disabledReason("NoGroupsDisable")
+                                .disabledReason("NotActive")
                                 .build())
                         .build())
                 .build();
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(List.of(apiUser, disabledUser))
@@ -348,7 +357,7 @@ class ExternalUserPollingServiceTest {
                 .isMailOnly(false)
                 .lastSignIn("2025-01-18T10:30:00Z")
                 .build();
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(List.of(apiUser))
@@ -365,7 +374,7 @@ class ExternalUserPollingServiceTest {
     @Test
     void shouldHandleMultipleUsers_inSingleSyncOperation() {
         when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
-        
+
         // Setup multiple existing users
         EntraUser user1 = EntraUser.builder()
                 .id(java.util.UUID.randomUUID())
@@ -385,7 +394,7 @@ class ExternalUserPollingServiceTest {
                 .enabled(false)
                 .mailOnly(true)
                 .build();
-        
+
         when(entraUserRepository.findByEntraOid("user1")).thenReturn(Optional.of(user1));
         when(entraUserRepository.findByEntraOid("user2")).thenReturn(Optional.of(user2));
 
@@ -405,7 +414,7 @@ class ExternalUserPollingServiceTest {
                 .isMailOnly(false) // changed
                 .lastSignIn("2025-01-19T15:45:00Z")
                 .build();
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(List.of(apiUser1, apiUser2))
@@ -447,7 +456,7 @@ class ExternalUserPollingServiceTest {
 
         profile1.setEntraUser(existingUser);
         profile2.setEntraUser(existingUser);
-        
+
         when(entraUserRepository.findByEntraOid("deleted-user-with-profiles")).thenReturn(Optional.of(existingUser));
         when(userAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
         when(userAccountStatusAuditRepository.findByEntraUser(existingUser)).thenReturn(Collections.emptyList());
@@ -460,7 +469,7 @@ class ExternalUserPollingServiceTest {
                 .isMailOnly(false)
                 .deleted(true)
                 .build();
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(List.of(deletedUser))
@@ -554,7 +563,7 @@ class ExternalUserPollingServiceTest {
                 .isMailOnly(false)
                 .deleted(true) // deleted and not in silas db
                 .build();
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(List.of(deletedUser))
@@ -616,7 +625,7 @@ class ExternalUserPollingServiceTest {
                 .isMailOnly(false)
                 .deleted(true) // deleted
                 .build();
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(List.of(updateUser, deleteUser))
@@ -631,14 +640,14 @@ class ExternalUserPollingServiceTest {
         verify(userAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
         verify(entraUserRepository).delete(userToDelete);
         verify(entraUserRepository).flush();
-        
+
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
 
     @Test
     void shouldHandleUsersNotFoundError_successfully() {
         when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
-        
+
         TechServicesErrorResponse errorResponse = TechServicesErrorResponse.builder()
                 .success(false)
                 .message("Users not found.")
@@ -662,7 +671,7 @@ class ExternalUserPollingServiceTest {
                 .updatedAt(LocalDateTime.now().minusMinutes(35))
                 .build();
         when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.of(existingMetadata));
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(Collections.emptyList())
@@ -679,13 +688,13 @@ class ExternalUserPollingServiceTest {
     @Test
     void shouldHandleApiResponseWithNullData() {
         when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
-        
+
         TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(null);
         when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(apiResponse);
 
-        assertThrows(RuntimeException.class, () -> 
+        assertThrows(RuntimeException.class, () ->
             externalUserPollingService.updateSyncMetadata());
-        
+
         verify(entraLastSyncMetadataRepository, never()).save(any(EntraLastSyncMetadata.class));
     }
 
@@ -712,7 +721,7 @@ class ExternalUserPollingServiceTest {
                 .isMailOnly(false)
                 .customSecurityAttributes(null)
                 .build();
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(List.of(apiUser))
@@ -756,7 +765,7 @@ class ExternalUserPollingServiceTest {
                 .isMailOnly(false)
                 .deleted(true)
                 .build();
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(List.of(apiUser))
@@ -825,7 +834,7 @@ class ExternalUserPollingServiceTest {
                 .updatedAt(LocalDateTime.now().minusHours(2))
                 .build();
         when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.of(existingMetadata));
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(Collections.emptyList())
@@ -851,7 +860,7 @@ class ExternalUserPollingServiceTest {
                 .isMailOnly(false)
                 .deleted(true)
                 .build();
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(List.of(apiUser))
@@ -889,7 +898,7 @@ class ExternalUserPollingServiceTest {
                 .isMailOnly(false)
                 .lastSignIn("2025-01-18T10:30:00Z")
                 .build();
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(List.of(apiUser))
@@ -927,7 +936,7 @@ class ExternalUserPollingServiceTest {
                 .isMailOnly(false)
                 .lastSignIn(null)
                 .build();
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(List.of(apiUser))
@@ -954,7 +963,7 @@ class ExternalUserPollingServiceTest {
                 .accountEnabled(true)
                 .isMailOnly(false)
                 .build();
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(List.of(apiUser))
@@ -983,11 +992,11 @@ class ExternalUserPollingServiceTest {
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(existingUser));
         when(entraUserRepository.save(existingUser)).thenThrow(new RuntimeException("Database error"));
 
-        DisableUserReason inactivityReason = DisableUserReason.builder()
+        DisableUserReason notActiveReason = DisableUserReason.builder()
                 .id(java.util.UUID.randomUUID())
-                .name("Inactivity")
-                .description("Disabled due to inactivity")
-                .entraDescription("Inactivity")
+                .name("Not Active")
+                .description("User account is not active in Entra")
+                .entraDescription("NotActive")
                 .userSelectable(false)
                 .build();
 
@@ -1000,7 +1009,7 @@ class ExternalUserPollingServiceTest {
                 .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
                         .build())
                 .build();
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(List.of(apiUser))
@@ -1037,11 +1046,11 @@ class ExternalUserPollingServiceTest {
                 .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
                         .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
-                                .disabledReason("NoGroupsDisable")
+                                .disabledReason("NotActive")
                                 .build())
                         .build())
                 .build();
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(List.of(apiUser))
@@ -1059,7 +1068,7 @@ class ExternalUserPollingServiceTest {
     @Test
     void shouldHandleEmptyUsersList() {
         when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(Collections.emptyList())
@@ -1077,7 +1086,7 @@ class ExternalUserPollingServiceTest {
     @Test
     void shouldHandleNullUsersList() {
         when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(null)
@@ -1101,7 +1110,7 @@ class ExternalUserPollingServiceTest {
                 .updatedAt(LocalDateTime.now().minusMinutes(10))
                 .build();
         when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.of(existingMetadata));
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(Collections.emptyList())
@@ -1128,13 +1137,13 @@ class ExternalUserPollingServiceTest {
                 .updatedAt(LocalDateTime.now().minusMinutes(10))
                 .build();
         when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.of(existingMetadata));
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(Collections.emptyList())
                 .build();
         TechServicesApiResponse<GetUsersResponse> apiResponse = TechServicesApiResponse.success(response);
-        
+
         // Capture the actual date strings being passed
         ArgumentCaptor<String> fromDateCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<String> toDateCaptor = ArgumentCaptor.forClass(String.class);
@@ -1151,7 +1160,7 @@ class ExternalUserPollingServiceTest {
         String formattedDatePattern = "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.00Z";
         assertThat(fromDate).matches(formattedDatePattern);
         assertThat(toDate).matches(formattedDatePattern);
-        
+
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
     }
 
@@ -1217,7 +1226,7 @@ class ExternalUserPollingServiceTest {
                 .accountEnabled(true) // Enabled in Entra
                 .isMailOnly(false)
                 .build();
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(List.of(apiUser))
@@ -1247,14 +1256,14 @@ class ExternalUserPollingServiceTest {
                 .build();
         when(entraUserRepository.findByEntraOid("user123")).thenReturn(Optional.of(enabledUser));
 
-        DisableUserReason inactivityReason = DisableUserReason.builder()
+        DisableUserReason notActiveReason = DisableUserReason.builder()
                 .id(java.util.UUID.randomUUID())
-                .name("Inactivity")
-                .description("Disabled due to inactivity")
-                .entraDescription("Inactivity")
+                .name("Not Active")
+                .description("User account is not active in Entra")
+                .entraDescription("NotActive")
                 .userSelectable(false)
                 .build();
-        when(disableUserReasonRepository.findAll()).thenReturn(List.of(inactivityReason));
+        when(disableUserReasonRepository.findAll()).thenReturn(List.of(notActiveReason));
 
         TechServicesUser apiUser = TechServicesUser.builder()
                 .id("user123")
@@ -1265,11 +1274,11 @@ class ExternalUserPollingServiceTest {
                 .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
                         .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
-                                .disabledReason("NoGroupsDisable")
+                                .disabledReason("NotActive")
                                 .build())
                         .build())
                 .build();
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(List.of(apiUser))
@@ -1308,11 +1317,11 @@ class ExternalUserPollingServiceTest {
                 .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
                         .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                 .odataType("#microsoft.graph.customSecurityAttributeValue")
-                                .disabledReason("NoGroupsDisable")
+                                .disabledReason("NotActive")
                                 .build())
                         .build())
                 .build();
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(List.of(apiUser))
@@ -1356,7 +1365,7 @@ class ExternalUserPollingServiceTest {
                                 .build())
                         .build())
                 .build();
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(List.of(apiUser))
@@ -1402,7 +1411,7 @@ class ExternalUserPollingServiceTest {
                                 .build())
                         .build())
                 .build();
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(List.of(apiUser))
@@ -1448,7 +1457,7 @@ class ExternalUserPollingServiceTest {
                                 .build())
                         .build())
                 .build();
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(List.of(apiUser))
@@ -1494,7 +1503,7 @@ class ExternalUserPollingServiceTest {
                                 .build())
                         .build())
                 .build();
-        
+
         GetUsersResponse response = GetUsersResponse.builder()
                 .message("Success")
                 .users(List.of(apiUser))
@@ -1509,5 +1518,155 @@ class ExternalUserPollingServiceTest {
         EntraUser savedUser = userCaptor.getValue();
         assertThat(savedUser.getInvitationStatus()).isEqualTo(InvitationStatus.AWAITING_VERIFICATION);
         verify(entraLastSyncMetadataRepository).save(any(EntraLastSyncMetadata.class));
+    }
+
+    // -----------------------------------------------------------------------
+    // determineSystemDeleteReason tests (tested via the full delete flow)
+    // -----------------------------------------------------------------------
+
+    private TechServicesApiResponse<GetUsersResponse> deletedUserApiResponse(String entraOid) {
+        TechServicesUser deletedUser = TechServicesUser.builder()
+                .id(entraOid)
+                .givenName("Test").surname("User")
+                .accountEnabled(true).isMailOnly(false).deleted(true)
+                .build();
+        return TechServicesApiResponse.success(
+                GetUsersResponse.builder().message("Success").users(List.of(deletedUser)).build());
+    }
+
+    @Test
+    void determineSystemDeleteReason_pendingAcceptanceDisableReason_setsExpiredInvitation() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        EntraUser entraUser = EntraUser.builder()
+                .id(UUID.randomUUID()).entraOid("oid-expired-invite")
+                .firstName("Jane").lastName("Doe").email("jane@example.com")
+                .enabled(true).mailOnly(false)
+                .build();
+
+        DisableUserReason pendingAcceptanceReason = DisableUserReason.builder()
+                .name("PendingAcceptance").description("Pending").entraDescription("PendingAcceptance")
+                .build();
+        UserAccountStatusAudit auditRecord = UserAccountStatusAudit.builder()
+                .statusChange(UserAccountStatus.DISABLED)
+                .statusChangedBy("sync")
+                .statusChangedDate(java.time.LocalDateTime.now())
+                .disableUserReason(pendingAcceptanceReason)
+                .build();
+
+        DeleteUserReason expiredInvitationReason = DeleteUserReason.builder()
+                .code("ExpiredInvitation").label("Expired Invitation").systemGenerated(true).build();
+
+        when(entraUserRepository.findByEntraOid("oid-expired-invite")).thenReturn(Optional.of(entraUser));
+        when(userAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(List.of(auditRecord));
+        when(deleteUserReasonRepository.findByCode("ExpiredInvitation")).thenReturn(Optional.of(expiredInvitationReason));
+        when(userAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(deletedUserApiResponse("oid-expired-invite"));
+
+        externalUserPollingService.updateSyncMetadata();
+
+        ArgumentCaptor<UserAccountStatusAudit> auditCaptor = ArgumentCaptor.forClass(UserAccountStatusAudit.class);
+        verify(userAccountStatusAuditRepository).save(auditCaptor.capture());
+        assertThat(auditCaptor.getValue().getDeleteUserReason()).isEqualTo(expiredInvitationReason);
+        assertThat(auditCaptor.getValue().getDeleteUserReason().isSystemGenerated()).isTrue();
+    }
+
+    @Test
+    void determineSystemDeleteReason_notActiveDisableReason_setsNotActiveAfterMaxLifetime() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        EntraUser entraUser = EntraUser.builder()
+                .id(UUID.randomUUID()).entraOid("oid-not-active")
+                .firstName("Bob").lastName("Smith").email("bob@example.com")
+                .enabled(true).mailOnly(false)
+                .build();
+
+        DisableUserReason notActiveReason = DisableUserReason.builder()
+                .name("NotActive").description("Not active").entraDescription("NotActive")
+                .build();
+        UserAccountStatusAudit auditRecord = UserAccountStatusAudit.builder()
+                .statusChange(UserAccountStatus.DISABLED)
+                .statusChangedBy("sync")
+                .statusChangedDate(java.time.LocalDateTime.now())
+                .disableUserReason(notActiveReason)
+                .build();
+
+        DeleteUserReason notActiveDeleteReason = DeleteUserReason.builder()
+                .code("NotActiveAfterMaxLifetime").label("Not Active After Max Lifetime").systemGenerated(true).build();
+
+        when(entraUserRepository.findByEntraOid("oid-not-active")).thenReturn(Optional.of(entraUser));
+        when(userAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(List.of(auditRecord));
+        when(deleteUserReasonRepository.findByCode("NotActiveAfterMaxLifetime")).thenReturn(Optional.of(notActiveDeleteReason));
+        when(userAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(deletedUserApiResponse("oid-not-active"));
+
+        externalUserPollingService.updateSyncMetadata();
+
+        ArgumentCaptor<UserAccountStatusAudit> auditCaptor = ArgumentCaptor.forClass(UserAccountStatusAudit.class);
+        verify(userAccountStatusAuditRepository).save(auditCaptor.capture());
+        assertThat(auditCaptor.getValue().getDeleteUserReason()).isEqualTo(notActiveDeleteReason);
+        assertThat(auditCaptor.getValue().getDeleteUserReason().isSystemGenerated()).isTrue();
+    }
+
+    @Test
+    void determineSystemDeleteReason_noRolesAssigned_setsNoGroupsDelete() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        UserProfile profileWithNoRoles = UserProfile.builder()
+                .id(UUID.randomUUID()).activeProfile(true)
+                .appRoles(new HashSet<>())
+                .build();
+        EntraUser entraUser = EntraUser.builder()
+                .id(UUID.randomUUID()).entraOid("oid-no-roles")
+                .firstName("Alice").lastName("Jones").email("alice@example.com")
+                .enabled(true).mailOnly(false)
+                .userProfiles(new HashSet<>(Set.of(profileWithNoRoles)))
+                .build();
+        profileWithNoRoles.setEntraUser(entraUser);
+
+        DeleteUserReason noGroupsReason = DeleteUserReason.builder()
+                .code("NoGroupsDelete").label("No Groups Delete").systemGenerated(true).build();
+
+        when(entraUserRepository.findByEntraOid("oid-no-roles")).thenReturn(Optional.of(entraUser));
+        when(userAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
+        when(deleteUserReasonRepository.findByCode("NoGroupsDelete")).thenReturn(Optional.of(noGroupsReason));
+        when(userAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(deletedUserApiResponse("oid-no-roles"));
+
+        externalUserPollingService.updateSyncMetadata();
+
+        ArgumentCaptor<UserAccountStatusAudit> auditCaptor = ArgumentCaptor.forClass(UserAccountStatusAudit.class);
+        verify(userAccountStatusAuditRepository).save(auditCaptor.capture());
+        assertThat(auditCaptor.getValue().getDeleteUserReason()).isEqualTo(noGroupsReason);
+        assertThat(auditCaptor.getValue().getDeleteUserReason().isSystemGenerated()).isTrue();
+    }
+
+    @Test
+    void determineSystemDeleteReason_hasRolesAndNoMatchingDisableReason_setsNullReason() {
+        when(entraLastSyncMetadataRepository.findById(eq(ENTRA_USER_SYNC_ID))).thenReturn(Optional.empty());
+
+        AppRole role = AppRole.builder().name("SomeRole").build();
+        UserProfile profileWithRoles = UserProfile.builder()
+                .id(UUID.randomUUID()).activeProfile(true)
+                .appRoles(new HashSet<>(Set.of(role)))
+                .build();
+        EntraUser entraUser = EntraUser.builder()
+                .id(UUID.randomUUID()).entraOid("oid-has-roles")
+                .firstName("Charlie").lastName("Brown").email("charlie@example.com")
+                .enabled(true).mailOnly(false)
+                .userProfiles(new HashSet<>(Set.of(profileWithRoles)))
+                .build();
+        profileWithRoles.setEntraUser(entraUser);
+
+        when(entraUserRepository.findByEntraOid("oid-has-roles")).thenReturn(Optional.of(entraUser));
+        when(userAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
+        when(userAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
+        when(techServicesClient.getUsers(anyString(), anyString())).thenReturn(deletedUserApiResponse("oid-has-roles"));
+
+        externalUserPollingService.updateSyncMetadata();
+
+        ArgumentCaptor<UserAccountStatusAudit> auditCaptor = ArgumentCaptor.forClass(UserAccountStatusAudit.class);
+        verify(userAccountStatusAuditRepository).save(auditCaptor.capture());
+        assertThat(auditCaptor.getValue().getDeleteUserReason()).isNull();
     }
 }

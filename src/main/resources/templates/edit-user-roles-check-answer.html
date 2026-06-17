@@ -35,25 +35,76 @@
         <div class="govuk-summary-card">
             <div class="govuk-summary-card__title-wrapper">
                 <h2 class="govuk-summary-card__title">
-                    User permissions
+                    Services
                 </h2>
+                <a th:href="@{/admin/users/edit/{id}/apps(id=${user.id})}" class="govuk-link">
+                    Change
+                </a>
             </div>
             <div class="govuk-summary-card__content">
-                <dl class="govuk-summary-list" th:if="${selectedAppRole != null and !selectedAppRole.isEmpty()}">
-                    <div th:each="appRole : ${selectedAppRole}" class="govuk-summary-list__row">
+                <dl class="govuk-summary-list">
+                    <div class="govuk-summary-list__row" th:if="${selectedAuthzApps != null and !selectedAuthzApps.isEmpty()}">
+                        <dd class="govuk-summary-list__key">
+                            <span>Admin Services</span>
+                        </dd>
                         <dd class="govuk-summary-list__value">
-                            <span th:text="${appRole.getRoleName()}"></span>
-                            (<span th:text="${appRole.getAppName()}"></span>)
+                            <div th:each="app : ${selectedAuthzApps}">
+                                <span th:text="${app}"></span>
+                            </div>
+                        </dd>
+                    </div>
+                    <div class="govuk-summary-list__row" th:if="${selectedNonAuthzApps != null and !selectedNonAuthzApps.isEmpty()}">
+                        <dd class="govuk-summary-list__key">
+                            <span>Legal Aid Services</span>
+                        </dd>
+                        <dd class="govuk-summary-list__value">
+                            <div th:each="app : ${selectedNonAuthzApps}">
+                                <span th:text="${app}"></span>
+                            </div>
+                        </dd>
+                    </div>
+                </dl>
+                <div class="govuk-summary-list" th:if="${(selectedAppRolesGrouped == null or selectedAppRolesGrouped.isEmpty())}">
+                    <div class="govuk-summary-list__row">
+                        <dd class="govuk-summary-list__value">
+                            <span>No role assigned</span>
                         </dd>
                         <dd class="govuk-summary-list__actions">
                             <a th:href="@{/admin/users/edit/{id}/apps(id=${user.id})}" class="govuk-link">
                                 Change
-                                <span class="govuk-visually-hidden"> app roles</span>
+                                <span class="govuk-visually-hidden"> role</span>
+                            </a>
+                        </dd>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="govuk-summary-card">
+            <div class="govuk-summary-card__title-wrapper">
+                <h2 class="govuk-summary-card__title">
+                    Roles
+                </h2>
+            </div>
+            <div class="govuk-summary-card__content">
+                <dl class="govuk-summary-list" th:if="${selectedAppRolesGrouped != null and !selectedAppRolesGrouped.isEmpty()}">
+                    <div th:each="app : ${selectedAppRolesGrouped.keySet()}" class="govuk-summary-list__row">
+                        <dd class="govuk-summary-list__key">
+                            <span th:text="${app}"></span>
+                        </dd>
+                        <dd class="govuk-summary-list__value">
+                            <div th:each="appRole : ${selectedAppRolesGrouped.get(app)}">
+                                <span th:text="${appRole.getRoleName()}"></span>
+                            </div>
+                        </dd>
+                        <dd th:if="${selectedAppRolesGrouped.get(app).getFirst().getTotalAppRoles() > 1}" class="govuk-summary-list__actions">
+                            <a th:href="@{${selectedAppRolesGrouped.get(app).getFirst().getUrl()}}" class="govuk-link">
+                                Change
+                                <span class="govuk-visually-hidden"> role</span>
                             </a>
                         </dd>
                     </div>
                 </dl>
-                <div class="govuk-summary-list" th:if="${(selectedAppRole == null or selectedAppRole.isEmpty())}">
+                <div class="govuk-summary-list" th:if="${(selectedAppRolesGrouped == null or selectedAppRolesGrouped.isEmpty())}">
                     <div class="govuk-summary-list__row">
                         <dd class="govuk-summary-list__value">
                             <span>No role assigned</span>
@@ -72,7 +123,7 @@
         <p class="govuk-body">When you confirm, the user will get access to the chosen services.
         </p>
         <div class="govuk-button-group">
-            <button type="submit" class="govuk-button">Confirm</button>
+            <button type="submit" th:disabled="${errorMessage != null}" class="govuk-button">Confirm</button>
             <a th:href="@{/admin/users/edit/{id}/cancel/confirmation(id=${user.id})}" class="govuk-link">Cancel</a>
         </div>
     </form>

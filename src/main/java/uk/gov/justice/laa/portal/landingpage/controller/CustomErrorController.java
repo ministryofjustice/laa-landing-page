@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,13 +22,20 @@ public class CustomErrorController implements ErrorController {
     /**
      * Handle all error requests and route to appropriate error page
      */
-    @RequestMapping("/error")
+    // Spring Boot ErrorController must accept all HTTP methods — errors can be dispatched from any original request
+    // method (GET, POST, PUT, DELETE, etc.). This handler only renders error views and performs no state changes,
+    // so there is no CSRF risk.
+    @RequestMapping(value = "/error", method = {
+        RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT,
+        RequestMethod.DELETE, RequestMethod.PATCH, RequestMethod.HEAD,
+        RequestMethod.OPTIONS, RequestMethod.TRACE
+    })
     public String handleError(HttpServletRequest request, Model model) {
         Object status = request.getAttribute(RequestDispatcher.ERROR_STATUS_CODE);
         Object exception = request.getAttribute(RequestDispatcher.ERROR_EXCEPTION);
         String requestUri = (String) request.getAttribute(RequestDispatcher.ERROR_REQUEST_URI);
-        
-        log.debug("Error occurred - Status: {}, URI: {}, Exception: {}", status, requestUri, 
+
+        log.debug("Error occurred - Status: {}, URI: {}, Exception: {}", status, requestUri,
                 exception != null ? exception.getClass().getSimpleName() : "None");
 
         if (status != null) {

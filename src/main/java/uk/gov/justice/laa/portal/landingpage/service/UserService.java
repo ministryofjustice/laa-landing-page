@@ -1,7 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import java.io.IOException;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -19,6 +18,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.function.Function;
@@ -33,17 +33,18 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.microsoft.graph.models.DirectoryRole;
 import com.microsoft.graph.models.User;
 import com.microsoft.graph.models.UserCollectionResponse;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 import uk.gov.justice.laa.portal.landingpage.dto.AccountStatusHistoryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -64,6 +65,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
+import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
@@ -86,12 +88,13 @@ import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.DeleteUserReasonRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.projection.UserAuditProjection;
+import uk.gov.justice.laa.portal.landingpage.repository.projection.AuditUserSearchProjection;
 import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
@@ -119,6 +122,7 @@ public class UserService {
     private final EventService eventService;
     private final NotificationService notificationService;
     private final AccessControlService accessControlService;
+    private final DeleteUserReasonRepository deleteUserReasonRepository;
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
@@ -130,7 +134,8 @@ public class UserService {
            RoleChangeNotificationService roleChangeNotificationService, FirmService firmService,
            FirmRepository firmRepository, EventService eventService,
            NotificationService notificationService,
-           @Lazy AccessControlService accessControlService) {
+           @Lazy AccessControlService accessControlService,
+           DeleteUserReasonRepository deleteUserReasonRepository) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -146,6 +151,7 @@ public class UserService {
         this.eventService = eventService;
         this.notificationService = notificationService;
         this.accessControlService = accessControlService;
+        this.deleteUserReasonRepository = deleteUserReasonRepository;
     }
 
     public boolean hasUserFirmAlreadyAssigned(String email, UUID firmId) {
@@ -285,15 +291,26 @@ public class UserService {
             return result;
         }
 
-        Set<String> oldPuiRoles = filterByPuiRoles(userProfile.getAppRoles());
-        Set<String> newPuiRoles = filterByPuiRoles(newRoles);
+        Map<String, Set<String>> oldPuiRoles = filterByPuiRoles(userProfile.getAppRoles());
+        Map<String, Set<String>> newPuiRoles = filterByPuiRoles(newRoles);
+
+        Set<String> allPuiAppOids = new HashSet<>(oldPuiRoles.keySet());
+        allPuiAppOids.addAll(newPuiRoles.keySet());
 
         // Update roles
         userProfile.setAppRoles(newRoles);
+        boolean notificationSuccess = userProfile.isLastCcmsSyncSuccessful();
+        boolean ccmsSyncResult = true;
 
-        // Try to send role change notification with retry logic before saving
-        boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile,
-                newPuiRoles, oldPuiRoles);
+        for (String ccmsAppEntraOid : allPuiAppOids) {
+            // Try to send role change notification with retry logic before saving
+            boolean currentSyncResult = roleChangeNotificationService.sendMessage(userProfile,
+                    ccmsAppEntraOid, newPuiRoles.getOrDefault(ccmsAppEntraOid, Collections.emptySet()),
+                    oldPuiRoles.getOrDefault(ccmsAppEntraOid, Collections.emptySet()));
+            ccmsSyncResult = ccmsSyncResult && currentSyncResult;
+            notificationSuccess = ccmsSyncResult;
+        }
+
         userProfile.setLastCcmsSyncSuccessful(notificationSuccess);
 
         refreshAndUpdatedUserProfileStatus(userProfile.getEntraUser().isEnabled(), userProfile.getEntraUser().getInvitationStatus(), userProfile);
@@ -373,13 +390,18 @@ public class UserService {
         return "";
     }
 
-    private Set<String> filterByPuiRoles(Set<AppRole> roles) {
+    private Map<String, Set<String>> filterByPuiRoles(Set<AppRole> roles) {
         if (roles == null || roles.isEmpty()) {
-            return new HashSet<>();
+            return new HashMap<>();
         }
 
-        return roles.stream().filter(AppRole::isLegacySync).filter(Objects::nonNull)
-                .map(AppRole::getCcmsCode).collect(Collectors.toSet());
+        return roles.stream().filter(AppRole::isLegacySync)
+                .filter(ar -> ar.getApp().getEntraOid() != null)
+                .collect(Collectors.groupingBy(role -> role.getApp().getEntraOid(),
+                        Collectors.collectingAndThen(
+                                Collectors.mapping(AppRole::getCcmsCode, Collectors.toSet()),
+                                HashSet::new
+                        )));
     }
 
     public TechServicesApiResponse<SendUserVerificationEmailResponse> sendVerificationEmail(
@@ -427,16 +449,30 @@ public class UserService {
                 .map(user -> mapper.map(user, UserProfileDto.class));
     }
 
+    public List<DeleteUserReason> getDeleteUserReasons(boolean isInternalUser) {
+        List<DeleteUserReason> deleteUserReasons;
+        if (isInternalUser) {
+            deleteUserReasons = deleteUserReasonRepository.findAllByEditableByInternalUser(true);
+        } else {
+            deleteUserReasons = deleteUserReasonRepository.findAllByEditableByExternalUser(true);
+        }
+        return deleteUserReasons.stream()
+                .sorted(Comparator.comparing(DeleteUserReason::getLabel,
+                        Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))
+                .collect(Collectors.toList());
+    }
+
     /**
      * Delete an EXTERNAL user and all related local records.
      *
-     * @param userProfileId the ID of the user profile (UUID as String)
-     * @param reason        the reason for deletion, used for logging/audit
-     * @param actorId       the entra oid of the actor performing the deletion (for
-     *                      logging)
+     * @param userProfileId  the ID of the user profile (UUID as String)
+     * @param deleteReasonId the UUID of the structured delete reason
+     * @param actorId        the entra oid of the actor performing the deletion (for
+     *                       logging)
+     * @return DeletedUser containing deletion metadata
      */
     @Transactional
-    public DeletedUser deleteExternalUser(String userProfileId, String reason, String actorId) {
+    public DeletedUser deleteExternalUser(String userProfileId, UUID deleteReasonId, String actorId) {
         Optional<UserProfile> optionalUserProfile = userProfileRepository.findById(UUID.fromString(userProfileId));
         if (optionalUserProfile.isEmpty()) {
             throw new RuntimeException("User profile not found: " + userProfileId);
@@ -455,9 +491,15 @@ public class UserService {
 
         EntraUserDto entraUserDto = mapper.map(entraUser, EntraUserDto.class);
 
+        DeleteUserReason deleteUserReason = (deleteReasonId != null)
+                ? deleteUserReasonRepository.findById(deleteReasonId)
+                        .orElseThrow(() -> new IllegalArgumentException("Unknown delete reason id: " + deleteReasonId))
+                : null;
+
         logger.info(
-                "Deleting external user. actorEntraId={}, userProfileId={}, entraUserId={}, reason=\"{}\"",
-                actorId, userProfileId, entraUser.getId(), reason);
+                "Deleting external user. actorEntraId={}, userProfileId={}, entraUserId={}, reason={}",
+                actorId, userProfileId, entraUser.getId(),
+                deleteUserReason != null ? deleteUserReason.getCode() : "none");
 
 
         // first send update to tech services
@@ -489,18 +531,21 @@ public class UserService {
         List<UserProfile> profiles = userProfileRepository.findAllByEntraUser(entraUser);
         DeletedUser.DeletedUserBuilder builder = new DeletedUser().toBuilder()
                 .deletedUserEntraOid(userProfile.getEntraUser().getEntraOid())
-                .deletedUserId(userProfile.getId()).encounteredTsErrors(encounteredTsError);
+                .deletedUserId(userProfile.getId()).encounteredTsErrors(encounteredTsError)
+                .deleteReasonLabel(deleteUserReason != null ? deleteUserReason.getLabel() : null);
         if (profiles != null && !profiles.isEmpty()) {
             for (UserProfile up : profiles) {
-                Set<String> puiRoles = new HashSet<>();
+                Map<String, Set<String>> puiRoles;
                 if (up.getAppRoles() != null) {
                     builder.removedRolesCount(
                             up.getAppRoles().isEmpty() ? 0 : up.getAppRoles().size());
                     puiRoles = filterByPuiRoles(up.getAppRoles());
                     up.getAppRoles().clear();
                     if (!puiRoles.isEmpty()) {
-                        roleChangeNotificationService.sendMessage(up, Collections.emptySet(),
-                                puiRoles);
+                        for (Map.Entry<String, Set<String>> roles : puiRoles.entrySet()) {
+                            roleChangeNotificationService.sendMessage(userProfile, roles.getKey(),
+                                    Collections.emptySet(), roles.getValue());
+                        }
                     }
                 }
                 if (up.getOffices() != null) {
@@ -537,6 +582,7 @@ public class UserService {
             .statusChange(UserAccountStatus.DELETED)
             .statusChangedBy(deletedByName)
             .statusChangedDate(LocalDateTime.now())
+            .deleteUserReason(deleteUserReason)
             .build();
         userAccountStatusAuditRepository.save(deletedAudit);
         userAccountStatusAuditRepository.flush();
@@ -580,13 +626,15 @@ public class UserService {
                 actorId, userProfileId, entraUser.getId(), firmName);
 
         // Handle PUI role changes notification (like in deleteExternalUser)
-        Set<String> puiRoles = new HashSet<>();
+        Map<String, Set<String>> puiRoles;
         if (userProfile.getAppRoles() != null && !userProfile.getAppRoles().isEmpty()) {
             puiRoles = filterByPuiRoles(userProfile.getAppRoles());
             userProfile.getAppRoles().clear();
             if (!puiRoles.isEmpty()) {
-                roleChangeNotificationService.sendMessage(userProfile, Collections.emptySet(),
-                        puiRoles);
+                for (Map.Entry<String, Set<String>> roles : puiRoles.entrySet()) {
+                    roleChangeNotificationService.sendMessage(userProfile, roles.getKey(),
+                            Collections.emptySet(), roles.getValue());
+                }
             }
         }
 
@@ -640,15 +688,15 @@ public class UserService {
      * Tech Services to
      * remove Entra group memberships and deletes from local database
      *
-     * @param entraUserId the ID of the EntraUser to delete (UUID as String)
-     * @param reason      the reason for deletion, used for logging/audit
-     * @param actorId     the UUID of the actor performing the deletion (for
-     *                    logging)
+     * @param entraUserId    the ID of the EntraUser to delete (UUID as String)
+     * @param deleteReasonId the UUID of the structured delete reason
+     * @param actorId        the UUID of the actor performing the deletion (for
+     *                       logging)
      * @return DeletedUser containing deletion metadata
      * @throws RuntimeException if user not found, has profiles, or is internal user
      */
     @Transactional
-    public DeletedUser deleteEntraUserWithoutProfile(String entraUserId, String reason,
+    public DeletedUser deleteEntraUserWithoutProfile(String entraUserId, UUID deleteReasonId,
             UUID actorId) {
         EntraUser entraUser = entraUserRepository.findById(UUID.fromString(entraUserId))
                 .orElseThrow(() -> new RuntimeException("Entra user not found: " + entraUserId));
@@ -669,9 +717,15 @@ public class UserService {
             throw new RuntimeException("Cannot delete internal users");
         }
 
+        DeleteUserReason deleteUserReason = (deleteReasonId != null)
+                ? deleteUserReasonRepository.findById(deleteReasonId)
+                        .orElseThrow(() -> new IllegalArgumentException("Delete user reason not found: " + deleteReasonId))
+                : null;
+
         logger.info(
-                "Deleting Entra user without profile. actorId={}, entraUserId={}, reason=\"{}\"",
-                actorId, entraUserId, entraUser.getEmail(), reason);
+                "Deleting Entra user without profile. actorId={}, entraUserId={}, reason={}",
+                actorId, entraUserId,
+                deleteUserReason != null ? deleteUserReason.getCode() : "none");
 
         // Notify Tech Services to remove Entra group memberships
         try {
@@ -717,12 +771,15 @@ public class UserService {
             .statusChange(UserAccountStatus.DELETED)
             .statusChangedBy(deletedByName)
             .statusChangedDate(LocalDateTime.now())
+            .deleteUserReason(deleteUserReason)
             .build();
         userAccountStatusAuditRepository.save(deletedAudit);
         userAccountStatusAuditRepository.flush();
 
         return DeletedUser.builder().deletedUserEntraOid(userEntraOid).removedRolesCount(0)
-                .detachedOfficesCount(0).build();
+                .detachedOfficesCount(0)
+                .deleteReasonLabel(deleteUserReason != null ? deleteUserReason.getLabel() : null)
+                .build();
     }
 
     public Optional<UserType> getUserTypeByUserId(String userId) {
@@ -1025,11 +1082,19 @@ public class UserService {
         }
 
         userProfile = userProfileRepository.save(userProfile); //save to generate legacy user id for ccms sync
-        Set<String> newPuiRoles = appRoles != null ? filterByPuiRoles(appRoles) : Collections.emptySet();
+        Map<String, Set<String>> newPuiRoles = appRoles != null ? filterByPuiRoles(appRoles) : Collections.emptyMap();
 
         // Try to send role change notification with retry logic before saving
-        boolean notificationSuccess = roleChangeNotificationService.sendMessage(userProfile,
-                newPuiRoles, Collections.emptySet());
+        boolean notificationSuccess = userProfile.isLastCcmsSyncSuccessful();
+        boolean ccmsSyncResult = true;
+
+        for (Map.Entry<String, Set<String>> roles : newPuiRoles.entrySet()) {
+            boolean currentSyncResult = roleChangeNotificationService.sendMessage(userProfile, roles.getKey(),
+                    roles.getValue(), Collections.emptySet());
+            ccmsSyncResult = ccmsSyncResult && currentSyncResult;
+            notificationSuccess = ccmsSyncResult;
+        }
+
         userProfile.setLastCcmsSyncSuccessful(notificationSuccess);
 
         // Save user profile with ccms sync status
@@ -1690,16 +1755,14 @@ public class UserService {
      * @param direction  Sort direction (asc/desc)
      * @return Paginated audit users
      */
+    @Transactional(readOnly = true)
     public PaginatedAuditUsers getAuditUsers(
             String searchTerm, UUID firmId, String silasRole, UUID appId, UserTypeForm userTypeForm,
-            int page, int pageSize, String sort, String direction, boolean csvExport,
-            LocalDate inactiveSinceDate, Boolean neverActivated) {
+            int page, int pageSize, String sort, String direction, boolean csvExport, Boolean neverActivated) {
         Boolean multiFirm = userTypeForm == null ? null : userTypeForm.getMultiFirm();
         UserType userType = userTypeForm == null ? null : userTypeForm.getUserType();
         String userTypeStr = userType == null ? null : userType.name();
         String neverActivatedFlag = Boolean.TRUE.equals(neverActivated) ? "true" : null;
-        String inactiveSinceDateFlag = inactiveSinceDate != null ? "active" : null;
-        LocalDateTime inactiveSinceDateDt = inactiveSinceDate != null ? inactiveSinceDate.atStartOfDay() : null;
 
         // Check if sorting by profile count, firm, or account status (special cases -
         // require different queries)
@@ -1708,101 +1771,59 @@ public class UserService {
                 && (sort.equalsIgnoreCase("firm") || sort.equalsIgnoreCase("firmassociation"));
         boolean sortBySilasStatus = sort != null && sort.equalsIgnoreCase("silasstatus");
         boolean sortByUserType = sort != null && sort.equalsIgnoreCase("usertype");
+        boolean sortByMultiFirmFlag = sort != null && sort.equalsIgnoreCase("isMultiFirmUser");
 
         Page<EntraUser> userPage;
 
-        if (sortByProfileCount || sortByFirm || sortBySilasStatus || sortByUserType) {
-            // Use special queries for profile count, firm, or account status sorting
-            boolean ascending = direction == null || direction.equalsIgnoreCase("asc");
-            String sortField;
-            if (sortByProfileCount) {
-                sortField = "profileCount";
-            } else if (sortByFirm) {
-                sortField = "firmName";
-            } else if (sortBySilasStatus) {
-                sortField = "silasStatusRank";
-            } else {
-                sortField = "userTypeRank";
-            }
-
-            Sort sortObj = ascending ? Sort.by(sortField).ascending() : Sort.by(sortField).descending();
-            PageRequest pageRequest = PageRequest.of(page - 1, pageSize, sortObj);
-            // UserType must be treated as a string because we are using native queries
-
-            Page<? extends UserAuditProjection> resultPage;
-            if (sortByProfileCount) {
-                resultPage = entraUserRepository.findAllUsersForAuditWithProfileCount(
-                        searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm,
-                        inactiveSinceDateFlag, inactiveSinceDateDt, neverActivatedFlag, pageRequest);
-            } else if (sortByFirm) {
-                resultPage = entraUserRepository.findAllUsersForAuditWithFirm(
-                        searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm,
-                        inactiveSinceDateFlag, inactiveSinceDateDt, neverActivatedFlag, pageRequest);
-            } else if (sortBySilasStatus) {
-                resultPage = entraUserRepository.findAllUsersForAuditWithSilasStatus(
-                        searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm,
-                        inactiveSinceDateFlag, inactiveSinceDateDt, neverActivatedFlag, pageRequest);
-            } else {
-                resultPage = entraUserRepository.findAllUsersForAuditWithUserType(
-                        searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm,
-                        inactiveSinceDateFlag, inactiveSinceDateDt, neverActivatedFlag, pageRequest);
-            }
-
-            // Extract user IDs in order
-            Set<UUID> userIds = resultPage.getContent().stream()
-                    .map(UserAuditProjection::getUserId)
-                    .collect(Collectors.toCollection(LinkedHashSet::new));
-
-            // Fetch full user details
-            List<EntraUser> users = Collections.emptyList();
-            if (!userIds.isEmpty()) {
-                List<EntraUser> fetchedUsers = entraUserRepository
-                        .findUsersWithProfilesAndRoles(userIds);
-
-                // Sort users to match the order from the query result
-                Map<UUID, EntraUser> orderMap = fetchedUsers.stream()
-                        .collect(Collectors.toMap(EntraUser::getId, Function.identity()));
-                users = userIds.stream()
-                        .map(orderMap::get)
-                        .filter(Objects::nonNull)
-                        .toList();
-            }
-
-            // Create page with sorted users
-            userPage = new PageImpl<>(users, pageRequest, resultPage.getTotalElements());
+        // Use special queries for profile count, firm, or account status sorting
+        String sortField;
+        if (sort == null || sort.isBlank()) {
+            sortField = "NAME";
+        } else if (sortByProfileCount) {
+            sortField = "PROFILE_COUNT";
+        } else if (sortByFirm) {
+            sortField = "FIRM_NAME";
+        } else if (sortBySilasStatus) {
+            sortField = "STATUS_RANK";
+        } else if (sortByUserType) {
+            sortField = "USER_TYPE_RANK";
+        } else if (sortByMultiFirmFlag) {
+            sortField = "MULTI_FIRM";
         } else {
-            // Map sort field to entity field
-            String mappedSort = mapAuditSortField(sort != null ? sort : "name");
-            Sort sortObj = getAuditSort(mappedSort, direction);
-            PageRequest pageRequest = PageRequest.of(page - 1, pageSize, sortObj);
-
-            userPage = entraUserRepository.findAllUsersForAudit(
-                    searchTerm, firmId, silasRole, appId, userType, multiFirm,
-                    inactiveSinceDateFlag, inactiveSinceDateDt, neverActivatedFlag, pageRequest);
-
-            // Second query: Batch fetch relationships for the paginated users
-            if (!userPage.getContent().isEmpty()) {
-                Set<UUID> userIds = userPage.getContent().stream().map(EntraUser::getId)
-                        .collect(Collectors.toCollection(LinkedHashSet::new));
-                List<EntraUser> usersWithRelations = entraUserRepository.findUsersWithProfilesAndRoles(userIds);
-
-                // Replace content with fully loaded entities, preserving order
-                Map<UUID, EntraUser> orderMap = usersWithRelations.stream()
-                        .collect(Collectors.toMap(EntraUser::getId, Function.identity()));
-                List<EntraUser> orderedUsers = userIds.stream()
-                        .map(orderMap::get)
-                        .filter(Objects::nonNull)
-                        .toList();
-                userPage = new PageImpl<>(orderedUsers, userPage.getPageable(),
-                        userPage.getTotalElements());
-            }
+            sortField = sort.toUpperCase();
         }
+
+        Page<AuditUserSearchProjection> resultPage = getPagedUsersWithPredictions(sortField, searchTerm, firmId, silasRole, appId, userTypeStr, multiFirm,
+                null, neverActivatedFlag, page - 1, pageSize, direction);
+
+        // Extract user IDs in order
+        Set<UUID> userIds = resultPage.getContent().stream()
+                .map(AuditUserSearchProjection::getUserId)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        // Fetch full user details
+        List<EntraUser> users = Collections.emptyList();
+        if (!userIds.isEmpty()) {
+            List<EntraUser> fetchedUsers = entraUserRepository
+                    .findUsersWithProfilesAndRoles(userIds);
+
+            // Sort users to match the order from the query result
+            Map<UUID, EntraUser> orderMap = fetchedUsers.stream()
+                    .collect(Collectors.toMap(EntraUser::getId, Function.identity()));
+            users = userIds.stream()
+                    .map(orderMap::get)
+                    .filter(Objects::nonNull)
+                    .toList();
+        }
+
+        // Create page with sorted users
+        userPage = new PageImpl<>(users, resultPage.getPageable(), resultPage.getTotalElements());
 
         // Map to DTOs
         List<AuditUserDto> auditUsers;
         if (csvExport) {
             auditUsers =
-                userPage.getContent().stream().map(user -> mapToAuditUserDtoForCsv(user, csvExport, firmId)).toList();
+                    userPage.getContent().stream().map(user -> mapToAuditUserDtoForCsv(user, csvExport, firmId)).toList();
         } else {
             auditUsers =
                     userPage.getContent().stream().map(user -> mapToAuditUserDto(user, csvExport)).toList();
@@ -1845,7 +1866,7 @@ public class UserService {
                 .email(user.getEmail()).userId(userId).entraUserId(user.getId().toString())
                 .userType(userType).firmAssociation(firmAssociation).firmCode(firmCode).accountStatus(accountStatus)
                 .isMultiFirmUser(user.isMultiFirmUser()).profileCount(profileCount)
-                .createdDate(user.getCreatedDate()).createdBy(user.getCreatedBy())
+                .createdDate(user.getCreatedDate()).createdBy(user.getCreatedBy()).invitationStatus(user.getInvitationStatus()).enabled(user.isEnabled())
                 // TODO: Fetch lastLoginDate from Microsoft Graph or Silas API
                 .entraStatus(user.getUserStatus() != null ? user.getUserStatus().name() : "UNKNOWN")
                 // TODO: Fetch activationStatus from TechServices API
@@ -1863,14 +1884,28 @@ public class UserService {
         // Get selected firm user roles
         boolean userRole = determineIsProviderAdminForSelectedFirm(profiles, firmId);
 
+        String getAppRolesAcess = determineAppRolesAccess(profiles, firmId);
         String getAppAccess = determineAppAccess(profiles, firmId);
+
+        String silasAccountStatus = determineSilasAccountStatus(user, profiles);
 
         // Get firm code
         String firmCode = determineFirmCode(profiles, csvExport);
 
         return AuditUserDto.builder().name(user.getFirstName() + " " + user.getLastName())
                 .email(user.getEmail()).firmAssociation(firmAssociation).firmCode(firmCode).appAccess(getAppAccess)
-                .isMultiFirmUser(user.isMultiFirmUser()).isProviderAdmin(userRole).build();
+                .isMultiFirmUser(user.isMultiFirmUser()).isProviderAdmin(userRole).appRolesAccess(getAppRolesAcess).silasAccountStatus(silasAccountStatus).build();
+    }
+
+    // Same logic used in user-audit/details.html template.
+    private String determineSilasAccountStatus(EntraUser user, List<UserProfile> profiles) {
+        boolean userActivated = profiles.stream().anyMatch(profile -> profile.getUserType() == UserType.INTERNAL)
+                || user.getInvitationStatus() == InvitationStatus.VERIFICATION_SUCCESS;
+        if (userActivated) {
+            return user.isEnabled() ? "Enabled" : "Disabled";
+        } else {
+            return "Awaiting Verification";
+        }
     }
 
     /**
@@ -1995,11 +2030,7 @@ public class UserService {
         }
 
         // At this point, invitationStatus == VERIFICATION_SUCCESS
-        if (!isEnabled) {
-            return UserProfileSilasStatus.DISABLED;
-        }
-
-        if (isPending || noRolesAssigned) {
+        if (noRolesAssigned) {
             return UserProfileSilasStatus.NO_ROLES_ASSIGNED;
         }
 
@@ -2021,7 +2052,7 @@ public class UserService {
     public boolean determineIsProviderAdminForSelectedFirm(List<UserProfile> profiles, UUID firmId) {
         return profiles.stream()
                 .filter(p -> UserType.EXTERNAL.equals(p.getUserType()))
-                .filter(p -> firmId.equals(p.getFirm().getId()))
+                .filter(p -> firmId != null && p.getFirm() != null && firmId.equals(p.getFirm().getId()))
                 .anyMatch(profile ->
                         profile.getAppRoles().stream()
                                 .anyMatch(role -> role.getName().equals("Firm User Manager"))
@@ -2034,7 +2065,7 @@ public class UserService {
     public String determineAppAccess(List<UserProfile> profiles, UUID firmId) {
         return profiles.stream()
                 .filter(p -> UserType.INTERNAL.equals(p.getUserType())
-                        || firmId.equals(p.getFirm().getId()))
+                        || (firmId != null && p.getFirm() != null && firmId.equals(p.getFirm().getId())))
                 .flatMap(profile -> profile.getAppRoles().stream())
                 .map(AppRole::getApp)
                 .filter(Objects::nonNull)
@@ -2044,6 +2075,31 @@ public class UserService {
                 .sorted()
                 .collect(Collectors.joining(", "));
     }
+
+    /**
+     * Determine what app access a user has for the filtered firm along with the roles assigned for that app
+     */
+    public String determineAppRolesAccess(List<UserProfile> profiles, UUID firmId) {
+        return profiles.stream()
+                .filter(p -> UserType.INTERNAL.equals(p.getUserType())
+                        || (firmId != null && p.getFirm() != null && firmId.equals(p.getFirm().getId())))
+                .flatMap(profile -> profile.getAppRoles().stream())
+                .filter(ar -> ar.getApp() != null)
+                .collect(Collectors.groupingBy(
+                        ar -> ar.getApp().getName(),
+                        TreeMap::new,
+                        Collectors.mapping(
+                                AppRole::getName,
+                                Collectors.toCollection(TreeSet::new)
+                        )
+                ))
+                .entrySet()
+                .stream()
+                .map(entry -> entry.getKey() + " ["
+                        + String.join(", ", entry.getValue()) + "]")
+                .collect(Collectors.joining("; "));
+    }
+
 
     /**
      * Map audit table sort field to entity field
@@ -2435,6 +2491,7 @@ public class UserService {
                 case "email", "useremail" -> "userEmail";
                 case "deletedby", "statuschangedby" -> "statusChangedBy";
                 case "deleteddate", "statuschangeddate" -> "statusChangedDate";
+                case "deletereason", "deleteusereasonlabel" -> "deleteUserReason.label";
                 default -> "statusChangedDate";
             };
         }
@@ -2463,6 +2520,9 @@ public class UserService {
                     .userEmail(audit.getUserEmail())
                     .deletedDate(audit.getStatusChangedDate())
                     .deletedBy(audit.getStatusChangedBy())
+                    .deleteReason(audit.getDeleteUserReason() != null
+                            ? audit.getDeleteUserReason().getLabel()
+                            : null)
                     .build())
                 .collect(Collectors.toList());
 
@@ -2511,5 +2571,50 @@ public class UserService {
         UserProfileSilasStatus silasStatus = determineStatusBadge(invitationStatusStr, noRoleAssigned, false, isEnabled, isInternalUser);
         userProfile.setSilasStatus(silasStatus);
     }
-}
 
+    @Transactional(readOnly = true)
+    public Page<AuditUserSearchProjection> getPagedUsersWithPredictions(
+            String sortType,
+            String searchTerm,
+            UUID firmId,
+            String silasRole,
+            UUID appId,
+            String userType,
+            Boolean multiFirm,
+            Boolean inactiveSinceDateFlag,
+            String neverActivated,
+            int page,
+            int size,
+            String sortDirection
+    ) {
+        // 1. Build Pageable object (Our custom query interprets the sort direction internally using 'predictionValue')
+        Sort.Direction direction = "DESC".equalsIgnoreCase(sortDirection) ? Sort.Direction.DESC : Sort.Direction.ASC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, "predictionValue"));
+
+        Boolean neverActivatedFlag = "true".equals(neverActivated) ? Boolean.TRUE : null;
+        // 2. Fetch the raw object array tuples from our unified repository setup
+        Page<Object[]> rawPage = entraUserRepository.findAuditUsersWithDynamicProjection(
+                sortType, searchTerm, firmId, silasRole, appId, userType,
+                multiFirm, inactiveSinceDateFlag, neverActivatedFlag, pageable
+        );
+
+        // 3. Map the raw database tuples safely to our Response DTO
+        List<AuditUserSearchProjection> mappedContent = rawPage.getContent().stream().map(tuple -> {
+            UUID userId = tuple[0] instanceof UUID ? (UUID) tuple[0] : UUID.fromString(tuple[0].toString());
+
+            // "STATUS_RANK" layout yields 3 columns: [userId, silasStatus, silasStatusRank]
+            if ("STATUS_RANK".equalsIgnoreCase(sortType) && tuple.length > 2) {
+                String silasStatus = tuple[1] != null ? tuple[1].toString() : null;
+                Object rankValue = tuple[2];
+                return new AuditUserSearchProjection(userId, silasStatus, rankValue);
+            }
+
+            // Standard 2-column layout layouts: [userId, predictionValue]
+            Object predictionValue = tuple[1];
+            return new AuditUserSearchProjection(userId, predictionValue);
+        }).toList();
+
+        return new PageImpl<>(mappedContent, pageable, rawPage.getTotalElements());
+    }
+
+}

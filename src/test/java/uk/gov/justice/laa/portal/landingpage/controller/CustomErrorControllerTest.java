@@ -1,6 +1,12 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,6 +17,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.ui.Model;
 import org.springframework.validation.support.BindingAwareModelMap;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 
 import jakarta.servlet.RequestDispatcher;
 
@@ -32,9 +40,9 @@ class CustomErrorControllerTest {
     @Test
     void handleError_404_returnsNotFoundPage() {
         request.setAttribute(RequestDispatcher.ERROR_STATUS_CODE, HttpStatus.NOT_FOUND.value());
-        
+
         String viewName = customErrorController.handleError(request, model);
-        
+
         assertEquals("errors/error-404", viewName);
         assertEquals("404", model.getAttribute("errorType"));
         assertEquals("Page not found", model.getAttribute("errorTitle"));
@@ -44,9 +52,9 @@ class CustomErrorControllerTest {
     @Test
     void handleError_403_returnsForbiddenPage() {
         request.setAttribute(RequestDispatcher.ERROR_STATUS_CODE, HttpStatus.FORBIDDEN.value());
-        
+
         String viewName = customErrorController.handleError(request, model);
-        
+
         assertEquals("errors/error-403", viewName);
         assertEquals("403", model.getAttribute("errorType"));
         assertEquals("Access forbidden", model.getAttribute("errorTitle"));
@@ -56,9 +64,9 @@ class CustomErrorControllerTest {
     @Test
     void handleError_500_returnsInternalServerErrorPage() {
         request.setAttribute(RequestDispatcher.ERROR_STATUS_CODE, HttpStatus.INTERNAL_SERVER_ERROR.value());
-        
+
         String viewName = customErrorController.handleError(request, model);
-        
+
         assertEquals("errors/error-500", viewName);
         assertEquals("500", model.getAttribute("errorType"));
         assertEquals("Sorry, there is a problem with the service", model.getAttribute("errorTitle"));
@@ -68,9 +76,9 @@ class CustomErrorControllerTest {
     @Test
     void handleError_otherStatusCode_returnsGenericErrorPage() {
         request.setAttribute(RequestDispatcher.ERROR_STATUS_CODE, HttpStatus.BAD_REQUEST.value());
-        
+
         String viewName = customErrorController.handleError(request, model);
-        
+
         assertEquals("errors/error-generic", viewName);
         assertEquals("400", model.getAttribute("errorType"));
         assertEquals("Sorry, there is a problem with the service", model.getAttribute("errorTitle"));
@@ -80,9 +88,9 @@ class CustomErrorControllerTest {
     @Test
     void handleError_noStatusCode_returnsGenericErrorPage() {
         // No status code attribute set
-        
+
         String viewName = customErrorController.handleError(request, model);
-        
+
         assertEquals("errors/error-generic", viewName);
         assertEquals("Unknown", model.getAttribute("errorType"));
         assertEquals("Sorry, there is a problem with the service", model.getAttribute("errorTitle"));
@@ -92,9 +100,9 @@ class CustomErrorControllerTest {
     @Test
     void handleError_401_returnsGenericErrorPage() {
         request.setAttribute(RequestDispatcher.ERROR_STATUS_CODE, HttpStatus.UNAUTHORIZED.value());
-        
+
         String viewName = customErrorController.handleError(request, model);
-        
+
         assertEquals("errors/error-generic", viewName);
         assertEquals("401", model.getAttribute("errorType"));
         assertEquals("Sorry, there is a problem with the service", model.getAttribute("errorTitle"));
@@ -104,9 +112,9 @@ class CustomErrorControllerTest {
     @Test
     void handleError_405_returnsGenericErrorPage() {
         request.setAttribute(RequestDispatcher.ERROR_STATUS_CODE, HttpStatus.METHOD_NOT_ALLOWED.value());
-        
+
         String viewName = customErrorController.handleError(request, model);
-        
+
         assertEquals("errors/error-generic", viewName);
         assertEquals("405", model.getAttribute("errorType"));
         assertEquals("Sorry, there is a problem with the service", model.getAttribute("errorTitle"));
@@ -116,9 +124,9 @@ class CustomErrorControllerTest {
     @Test
     void handleError_502_returnsGenericErrorPage() {
         request.setAttribute(RequestDispatcher.ERROR_STATUS_CODE, HttpStatus.BAD_GATEWAY.value());
-        
+
         String viewName = customErrorController.handleError(request, model);
-        
+
         assertEquals("errors/error-generic", viewName);
         assertEquals("502", model.getAttribute("errorType"));
         assertEquals("Sorry, there is a problem with the service", model.getAttribute("errorTitle"));
@@ -128,9 +136,9 @@ class CustomErrorControllerTest {
     @Test
     void handleError_503_returnsGenericErrorPage() {
         request.setAttribute(RequestDispatcher.ERROR_STATUS_CODE, HttpStatus.SERVICE_UNAVAILABLE.value());
-        
+
         String viewName = customErrorController.handleError(request, model);
-        
+
         assertEquals("errors/error-generic", viewName);
         assertEquals("503", model.getAttribute("errorType"));
         assertEquals("Sorry, there is a problem with the service", model.getAttribute("errorTitle"));
@@ -140,12 +148,27 @@ class CustomErrorControllerTest {
     @Test
     void handleError_504_returnsGenericErrorPage() {
         request.setAttribute(RequestDispatcher.ERROR_STATUS_CODE, HttpStatus.GATEWAY_TIMEOUT.value());
-        
+
         String viewName = customErrorController.handleError(request, model);
-        
+
         assertEquals("errors/error-generic", viewName);
         assertEquals("504", model.getAttribute("errorType"));
         assertEquals("Sorry, there is a problem with the service", model.getAttribute("errorTitle"));
         assertEquals("An unexpected error occurred.", model.getAttribute("errorMessage"));
+    }
+
+    @Test
+    void handleError_requestMappingExplicitlyDeclaresAllHttpMethods() throws NoSuchMethodException {
+        Method method = CustomErrorController.class.getMethod(
+                "handleError", jakarta.servlet.http.HttpServletRequest.class, Model.class);
+        RequestMapping mapping = method.getAnnotation(RequestMapping.class);
+
+        Set<RequestMethod> declared = EnumSet.copyOf(Arrays.asList(mapping.method()));
+        Set<RequestMethod> expected = EnumSet.allOf(RequestMethod.class);
+
+        assertEquals(expected, declared,
+                "@RequestMapping on /error must explicitly declare all HTTP methods to satisfy security scanning");
+        assertTrue(Arrays.asList(mapping.value()).contains("/error"),
+                "@RequestMapping must map to /error");
     }
 }

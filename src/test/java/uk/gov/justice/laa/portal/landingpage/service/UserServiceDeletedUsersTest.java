@@ -186,6 +186,32 @@ class UserServiceDeletedUsersTest {
     }
 
     @Test
+    void getDeletedUsers_shouldSortByDeleteReason() {
+        // Arrange
+        List<UserAccountStatusAudit> auditList = Arrays.asList(deletedAudit1, deletedAudit2);
+        Page<UserAccountStatusAudit> auditPage = new PageImpl<>(auditList, PageRequest.of(0, 10), 2);
+
+        when(userAccountStatusAuditRepository.findDeletedUsers(
+                isNull(),
+                any(Pageable.class)))
+                .thenReturn(auditPage);
+
+        // Act
+        PaginatedDeletedUsers result = userService.getDeletedUsers(null, 1, 10, "deleteReason", "asc");
+
+        // Assert
+        assertNotNull(result);
+
+        // Verify the repository was called with the JPA path for the related label field
+        verify(userAccountStatusAuditRepository).findDeletedUsers(
+                isNull(),
+                argThat(pageable ->
+                    pageable.getSort().getOrderFor("deleteUserReason.label") != null
+                )
+        );
+    }
+
+    @Test
     void getDeletedUsers_shouldHandleSecondPage() {
         // Arrange
         List<UserAccountStatusAudit> auditList = Arrays.asList(deletedAudit1);
@@ -211,4 +237,3 @@ class UserServiceDeletedUsersTest {
         );
     }
 }
-

@@ -24,46 +24,42 @@
                     <h2 class="govuk-summary-card__title">
                         Offices
                     </h2>
+                    <ul class="govuk-summary-card__actions">
+                        <li class="govuk-summary-card__action">
+                            <a th:href="@{/admin/users/edit/{id}/offices(id=${user.id})}" class="govuk-link">
+                                Change
+                                <span class="govuk-visually-hidden"> offices</span>
+                            </a>
+                        </li>
+                    </ul>
                 </div>
                 <div class="govuk-summary-card__content">
                     <dl class="govuk-summary-list" th:if="${userOffices != null and !userOffices.isEmpty()}">
-                        <div th:each="office : ${userOffices}" class="govuk-summary-list__row">
+                        <div th:each="entry : ${officesByCity}" class="govuk-summary-list__row">
+                            <dt class="govuk-summary-list__key" th:text="${entry.key}"></dt>
                             <dd class="govuk-summary-list__value">
-                                <span th:text="${office.address?.formattedAddress ?: 'Unknown'}"></span>
-                                (<span th:text="${office.code}"></span>)
-                            </dd>
-                            <dd class="govuk-summary-list__actions">
-                                <a th:href="@{/admin/users/edit/{id}/offices(id=${user.id})}" class="govuk-link">
-                                    Change
-                                    <span class="govuk-visually-hidden"> office</span>
-                                </a>
+                                <div th:each="office : ${entry.value}">
+                                    <span th:text="${office.address?.formattedAddress ?: 'Unknown'}"></span>
+                                    (<span th:text="${office.code}"></span>)
+                                </div>
                             </dd>
                         </div>
                     </dl>
                     <div class="govuk-summary-list" th:if="${(userOffices == null or userOffices.isEmpty())}">
-                        <div class="govuk-summary-list__row" th:if="${hasAllOffices}" >
+                        <div class="govuk-summary-list__row" th:if="${hasAllOffices}">
                             <dd class="govuk-summary-list__value">
                                 <span>Access to All Offices</span>
                             </dd>
-                            <dd class="govuk-summary-list__actions">
-                                <a th:href="@{/admin/users/edit/{id}/offices(id=${user.id})}" class="govuk-link">
-                                    Change
-                                    <span class="govuk-visually-hidden"> access to all offices</span>
-                                </a>
-                            </dd>
                         </div>
-                        <div class="govuk-summary-list__row" th:if="${hasNoOffices}" >
+                        <div class="govuk-summary-list__row" th:if="${hasNoOffices}">
                             <dd class="govuk-summary-list__value">
                                 <span>No Office Access</span>
-                            </dd>
-                            <dd class="govuk-summary-list__actions">
-                                <a th:href="@{/admin/users/edit/{id}/offices(id=${user.id})}" class="govuk-link">Change</a>
                             </dd>
                         </div>
                     </div>
                 </div>
             </div>
-            <h2 class="govuk-heading-m">Confirm Offices</h2>
+            <h2 class="govuk-heading-m">Confirm access and permissions</h2>
             <p class="govuk-body">When you confirm, the user will get access to the chosen offices.
             </p>
             <div class="govuk-button-group">

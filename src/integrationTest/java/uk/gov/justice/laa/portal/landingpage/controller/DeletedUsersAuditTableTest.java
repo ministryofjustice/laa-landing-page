@@ -12,7 +12,6 @@ import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRe
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -259,6 +258,25 @@ public class DeletedUsersAuditTableTest extends RoleBasedAccessIntegrationTest {
 
         Map<String, Object> model = result.getModelAndView().getModel();
         assertThat(model.get("sort")).isEqualTo("deletedBy");
+    }
+
+    @Test
+    public void testDeletedUsersTableSortByDeleteReason() throws Exception {
+        EntraUser globalAdmin = globalAdmins.getFirst();
+
+        createDeletedUserAudit(externalUsersNoRoles.get(0), "user1@test.com",
+                globalAdmin.getEntraOid(), LocalDateTime.now());
+
+        MvcResult result = mockMvc.perform(get("/admin/users/audit/deleted")
+                        .param("sort", "deleteReason")
+                        .param("direction", "asc")
+                        .with(userOauth2Login(globalAdmin)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        Map<String, Object> model = result.getModelAndView().getModel();
+        assertThat(model.get("sort")).isEqualTo("deleteReason");
+        assertThat(model.get("direction")).isEqualTo("asc");
     }
 
     @Test

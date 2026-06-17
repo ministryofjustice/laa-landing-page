@@ -16,6 +16,7 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -30,6 +31,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import uk.gov.justice.laa.portal.landingpage.auth.AuthenticatedUser;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
@@ -42,15 +44,13 @@ import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
-import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
+import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import static uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus.VERIFICATION_SUCCESS;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
-import uk.gov.justice.laa.portal.landingpage.repository.DisableUserReasonRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AuditExportService;
 import uk.gov.justice.laa.portal.landingpage.service.AuditExportService.AuditCsvExport;
@@ -58,10 +58,13 @@ import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.TechServicesClient;
+import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUserResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
+import uk.gov.justice.laa.portal.landingpage.viewmodel.DeleteUserReasonViewModel;
 
 @Slf4j
 @Controller
@@ -74,11 +77,10 @@ public class AuditController {
     private final EventService eventService;
     private final AccessControlService accessControlService;
     private final AuditExportService auditExportService;
-    private final FirmRepository firmRepository;
     private final FirmService firmService;
     private final AuthenticatedUser authenticatedUser;
     private final TechServicesClient techServicesClient;
-    private final DisableUserReasonRepository disableUserReasonRepository;
+    private final UserAccountStatusService userAccountStatusService;
 
     @Value("${feature.flag.disable.user}")
     private boolean disableUserFeatureEnabled;
@@ -127,9 +129,10 @@ public class AuditController {
                 criteria.getSearch(), filteredFirmId,
                 criteria.getSilasRole(), criteria.getSelectedAppId(), filteredUserType,
                 criteria.getPage(), criteria.getSize(), criteria.getSort(), criteria.getDirection(), false,
-                criteria.getInactiveSinceDate(), criteria.getNeverActivated());
-        // Build firm search form
-        FirmSearchForm firmSearchForm = new FirmSearchForm(criteria.getFirmSearch(), criteria.getSelectedFirmId());
+                criteria.getNeverActivated());
+        // Build firm search form using the effective (access-control-applied) firm ID so that the
+        // export button correctly reflects the auto-applied firm for external single-firm users.
+        FirmSearchForm firmSearchForm = new FirmSearchForm(criteria.getFirmSearch(), filteredFirmId);
         // Add attributes to model
         buildDisplayAuditTableModel(criteria, model, paginatedUsers, firmSearchForm);
         model.addAttribute("canSeeExternalUsers", canSeeExternalUsers);
@@ -233,8 +236,24 @@ public class AuditController {
         model.addAttribute("canEnableUser", canEnableUser);
         model.addAttribute("cannotEnableUser", cannotEnableUser);
         model.addAttribute("userIsEnabled", userDetail.isEnabled());
+        model.addAttribute("userActivated",
+                Objects.equals(userDetail.getUserType(), "Internal") || Objects.equals(userDetail.getActivationStatus(), VERIFICATION_SUCCESS.name()));
 
         return "user-audit/details";
+    }
+
+    /**
+     * Handle resending activation email
+     */
+    @GetMapping("/users/audit/{id}/resend-verification")
+    @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions("
+            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).RESEND_VERIFICATION_EMAIL)")
+    public String resendActivationEmail(@PathVariable("id") UUID userId, RedirectAttributes redirectAttributes) {
+
+        handleResendVerification(String.valueOf(userId), redirectAttributes);
+
+        return "redirect:/admin/users/audit/" + userId;
+
     }
 
     private String getEntraVerificationStatus(TechServicesApiResponse<GetUserResponse> entraUserResponse) {
@@ -307,9 +326,8 @@ public class AuditController {
                 .map(TechServicesUser::getCustomSecurityAttributes)
                 .map(TechServicesUser.CustomSecurityAttributes::getGuestUserStatus)
                 .map(TechServicesUser.GuestUserStatus::getDisabledReason)
-                .flatMap(disableUserReasonRepository::findDisableUserReasonByEntraDescription)
-                .map(DisableUserReason::getName)
-                .orElse("Inactivity");
+                .map(userAccountStatusService::getDisableUserReasonNameByEntraDescription)
+                .orElse("Unknown");
     }
 
     /**
@@ -324,7 +342,7 @@ public class AuditController {
         model.addAttribute("user", userDetail);
         model.addAttribute(ModelAttributes.PAGE_TITLE,
                 "Remove access - " + userDetail.getFullName());
-
+        populateDeleteReasonsModel(model);
         return "user-audit/delete-user-without-profile-reason";
     }
 
@@ -334,39 +352,73 @@ public class AuditController {
     @PostMapping("/users/audit/entra/{id}/delete")
     @PreAuthorize("@accessControlService.canDeleteUserWithoutProfile(#id)")
     public String deleteUserWithoutProfile(@PathVariable String id,
-            @RequestParam("reason") String reason, Authentication authentication,
+            @RequestParam(value = "reasonId", required = false) String reasonId, Authentication authentication,
             HttpSession session, Model model) {
 
-        log.debug("AuditController.deleteUserWithoutProfile - entraUserId: '{}', reason: '{}'", id,
-                reason);
+        log.debug("AuditController.deleteUserWithoutProfile - entraUserId: '{}', reasonId: '{}'", id,
+                reasonId);
 
         AuditUserDetailDto userDetail = userService.getAuditUserDetailByEntraId(UUID.fromString(id));
 
-        if (reason == null || reason.trim().length() < 10) {
+        UUID deleteReasonId = null;
+        if (reasonId == null || reasonId.isBlank()) {
             model.addAttribute("user", userDetail);
-            model.addAttribute("fieldErrorMessage",
-                    "Please enter a reason (minimum 10 characters).");
+            model.addAttribute("fieldErrorMessage", "Please select a reason.");
             model.addAttribute(ModelAttributes.PAGE_TITLE,
                     "Remove access - " + userDetail.getFullName());
+            populateDeleteReasonsModel(model);
+            return "user-audit/delete-user-without-profile-reason";
+        }
+        try {
+            deleteReasonId = UUID.fromString(reasonId);
+        } catch (IllegalArgumentException e) {
+            model.addAttribute("user", userDetail);
+            model.addAttribute("fieldErrorMessage", "Please select a valid reason.");
+            model.addAttribute(ModelAttributes.PAGE_TITLE,
+                    "Remove access - " + userDetail.getFullName());
+            populateDeleteReasonsModel(model);
+            return "user-audit/delete-user-without-profile-reason";
+        }
+
+        final UUID resolvedReasonId = deleteReasonId;
+        Optional<DeleteUserReason> matchedReason = userService.getDeleteUserReasons(true).stream()
+                .filter(r -> r.getId().equals(resolvedReasonId))
+                .findFirst();
+        if (matchedReason.isEmpty()) {
+            model.addAttribute("user", userDetail);
+            model.addAttribute("fieldErrorMessage", "Please select a valid reason.");
+            model.addAttribute(ModelAttributes.PAGE_TITLE,
+                    "Remove access - " + userDetail.getFullName());
+            populateDeleteReasonsModel(model);
             return "user-audit/delete-user-without-profile-reason";
         }
 
         EntraUser current = loginService.getCurrentEntraUser(authentication);
+        UUID currentEntraOidUuid = UUID.fromString(current.getEntraOid());
+        String deleteReasonLabel = matchedReason.get().getLabel();
         try {
-            DeletedUser deletedUser = userService.deleteEntraUserWithoutProfile(id, reason.trim(), UUID.fromString(current.getEntraOid()));
-            DeleteUserSuccessAuditEvent deleteUserAuditEvent = new DeleteUserSuccessAuditEvent(reason.trim(),
-                    UUID.fromString(current.getEntraOid()), deletedUser);
+            DeletedUser deletedUser = userService.deleteEntraUserWithoutProfile(id, deleteReasonId, current.getId());
+            DeleteUserSuccessAuditEvent deleteUserAuditEvent = new DeleteUserSuccessAuditEvent(
+                    deletedUser.getDeleteReasonLabel(), currentEntraOidUuid, deletedUser);
             eventService.logEvent(deleteUserAuditEvent);
+        } catch (IllegalArgumentException ex) {
+            model.addAttribute("user", userDetail);
+            model.addAttribute("fieldErrorMessage", "Please select a valid reason.");
+            model.addAttribute(ModelAttributes.PAGE_TITLE,
+                    "Remove access - " + userDetail.getFullName());
+            populateDeleteReasonsModel(model);
+            return "user-audit/delete-user-without-profile-reason";
         } catch (RuntimeException ex) {
             log.error("Failed to delete user without profile {}: {}", id, ex.getMessage(), ex);
-            DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(id, reason.trim(),
-                    UUID.fromString(current.getEntraOid()),
+            DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(id, deleteReasonLabel,
+                    currentEntraOidUuid,
                     ex.getMessage());
             eventService.logEvent(deleteUserAttemptAuditEvent);
             model.addAttribute("user", userDetail);
             model.addAttribute("globalErrorMessage", "User delete failed, please try again later");
             model.addAttribute(ModelAttributes.PAGE_TITLE,
                     "Remove access - " + userDetail.getFullName());
+            populateDeleteReasonsModel(model);
             return "user-audit/delete-user-without-profile-reason";
         }
 
@@ -376,50 +428,95 @@ public class AuditController {
         return "user-audit/delete-user-success";
     }
 
-    @GetMapping(value = "/users/audit/download", produces = "text/csv")
-    @PreAuthorize("@accessControlService.authenticatedUserHasPermission('EXPORT_AUDIT_DATA')")
-    public ResponseEntity<byte[]> downloadAuditCsv(@ModelAttribute AuditTableSearchCriteria criteria) {
+    private void populateDeleteReasonsModel(Model model) {
+        List<DeleteUserReasonViewModel> deleteReasons = userService.getDeleteUserReasons(true)
+                .stream()
+                .map(r -> {
+                    DeleteUserReasonViewModel vm = new DeleteUserReasonViewModel();
+                    vm.setId(r.getId());
+                    vm.setCode(r.getCode());
+                    vm.setLabel(r.getLabel());
+                    return vm;
+                })
+                .toList();
+        model.addAttribute("deleteReasons", deleteReasons);
+    }
 
-        if (criteria.getSearch() == null || (criteria.getSelectedFirmId() == null && criteria.getSelectedUserType() != UserTypeForm.INTERNAL)) {
-            log.warn("Invalid search criteria provided for CSV export - search: '{}', selectedFirmId: {}, selectedUserType: {}",
-                    criteria.getSearch(), criteria.getSelectedFirmId(), criteria.getSelectedUserType());
+    @GetMapping(value = "/users/audit/download", produces = "text/csv")
+    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EXPORT_AUDIT_DATA)")
+    public ResponseEntity<byte[]> downloadAuditCsv(@ModelAttribute AuditTableSearchCriteria criteria,
+            Authentication authentication) {
+
+        // Apply the same access-control firm/type restrictions as displayAuditTable so that
+        // external single-firm users (whose firm is auto-applied server-side) can export CSV.
+        boolean canSeeExternalUsers = accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
+        boolean canSeeInternalUsers = accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER);
+        boolean canSeeAllUsers = canSeeExternalUsers && canSeeInternalUsers;
+
+        UUID effectiveFirmId = criteria.getSelectedFirmId();
+        UserTypeForm effectiveUserType = criteria.getSelectedUserType();
+
+        if (!canSeeAllUsers) {
+            if (canSeeInternalUsers) {
+                effectiveUserType = UserTypeForm.INTERNAL;
+            } else {
+                if (effectiveUserType == null || effectiveUserType == UserTypeForm.ALL || effectiveUserType == UserTypeForm.INTERNAL) {
+                    effectiveUserType = UserTypeForm.ALL_EXTERNAL;
+                }
+                EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
+                Optional<FirmDto> optionalFirm = firmService.getUserFirm(entraUser);
+                if (optionalFirm.isPresent()) {
+                    effectiveFirmId = optionalFirm.get().getId();
+                }
+            }
+        }
+
+        if (effectiveFirmId == null && effectiveUserType != UserTypeForm.INTERNAL) {
+            log.warn("Invalid criteria provided for CSV export - firm ID must always be provided when external user type is selected. effectiveUserType: {}",
+                    effectiveUserType);
+            throw new RuntimeException("Invalid Search criteria provided");
+        }
+
+        if (effectiveFirmId != null && effectiveUserType == UserTypeForm.INTERNAL) {
+            log.warn("Invalid criteria provided for CSV export - firm ID should not be provided when internal user type is selected. effectiveFirmId: {}",
+                    effectiveFirmId);
             throw new RuntimeException("Invalid Search criteria provided");
         }
 
         final int pageSize = 500;
         int page = 1;
 
-        String userId = authenticatedUser.getCurrentUser()
-                .map(CurrentUserDto::getUserId)
-                .map(Object::toString)
-                .orElse("unknown");
-
         List<String> filterSummary = Stream.of(
                         criteria.getSilasRole(),
-                        criteria.getSelectedUserType() == null ? "" : String.valueOf(criteria.getSelectedUserType()),
+                        effectiveUserType == null ? "" : String.valueOf(effectiveUserType),
                         criteria.getSelectedAppId() == null ? "" : String.valueOf(criteria.getSelectedAppId())
                 )
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
-        String firmCode = criteria.getSelectedFirmId() == null ? ""
-                : firmRepository.findById(criteria.getSelectedFirmId()).map(Firm::getCode).orElse("");
+        String firmCode = "";
+        String firmName = criteria.getSelectedFirmName();
+        if (effectiveFirmId != null) {
+            firmCode = firmService.getFirmCodeById(effectiveFirmId);
+            if (firmName == null || firmName.isBlank()) {
+                firmName = firmService.getFirmNameById(effectiveFirmId);
+            }
+        }
         List<AuditUserDto> firmData = new ArrayList<>(pageSize);
 
         PaginatedAuditUsers result;
         do {
             result = userService.getAuditUsers(
                     criteria.getSearch(),
-                    criteria.getSelectedFirmId(),
+                    effectiveFirmId,
                     criteria.getSilasRole(),
                     criteria.getSelectedAppId(),
-                    criteria.getSelectedUserType(),
+                    effectiveUserType,
                     page,
                     pageSize,
                     criteria.getSort(),
                     criteria.getDirection(),
                     true,
-                    criteria.getInactiveSinceDate(),
                     criteria.getNeverActivated()
             );
 
@@ -432,7 +529,11 @@ public class AuditController {
             log.info("No audit users found for search criteria: {}", Arrays.toString(filterSummary.toArray()));
         }
 
-        AuditCsvExport export = auditExportService.downloadAuditCsv(firmData, firmCode, criteria.getSelectedFirmName());
+        AuditCsvExport export = auditExportService.downloadAuditCsv(firmData, firmCode, firmName);
+        String userId = authenticatedUser.getCurrentUser()
+                .map(CurrentUserDto::getUserId)
+                .map(Object::toString)
+                .orElse("unknown");
         log.info("CSV Audit Export complete - actor= {}, timestamp= {}, Firm Code= {}, Filter Summary (Silas Role, "
                 + "UserType, App Id)= {}, "
                 + "row count= {}", userId, LocalDateTime.now(), firmCode, filterSummary, result.getUsers().size());
@@ -481,5 +582,24 @@ public class AuditController {
         model.addAttribute("currentPage", page);
 
         return "user-audit/deleted-users";
+    }
+
+    private void handleResendVerification(String id, RedirectAttributes redirectAttributes) {
+        if (!accessControlService.canSendVerificationEmail(id)) {
+            throw new AccessDeniedException("User does not have permission to send verification email.");
+        }
+
+        try {
+            TechServicesApiResponse<SendUserVerificationEmailResponse> response = userService
+                    .sendVerificationEmail(id);
+            if (response.isSuccess()) {
+                redirectAttributes.addFlashAttribute("successMessage", response.getData().getMessage());
+            } else {
+                redirectAttributes.addFlashAttribute("errorMessage", response.getError().getMessage());
+            }
+        } catch (RuntimeException runtimeException) {
+            log.error("Error sending activation code for user profile: {}", id, runtimeException);
+            throw runtimeException;
+        }
     }
 }

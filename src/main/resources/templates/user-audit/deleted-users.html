@@ -110,6 +110,21 @@
                                         </span>
                                     </a>
                                 </th>
+                                <th scope="col" class="govuk-table__header">
+                                    <a th:href="@{/admin/users/audit/deleted(
+                                            search=${search},
+                                            page=1,
+                                            size=${size},
+                                            sort='deleteReason',
+                                            direction=${sort == 'deleteReason' and direction == 'asc' ? 'desc' : 'asc'})}"
+                                       class="govuk-link govuk-link--no-visited-state">
+                                        Delete reason
+                                        <span th:if="${sort == 'deleteReason'}">
+                                            <span th:if="${direction == 'asc'}">▲</span>
+                                            <span th:if="${direction == 'desc'}">▼</span>
+                                        </span>
+                                    </a>
+                                </th>
                             </tr>
                         </thead>
                         <tbody class="govuk-table__body">
@@ -121,6 +136,7 @@
                                     th:text="${#temporals.format(deletedUser.deletedDate, 'dd/MM/yyyy')}">
                                     01/01/2024
                                 </td>
+                                <td class="govuk-table__cell" th:text="${deletedUser.deleteReason ?: '—'}"></td>
                             </tr>
                         </tbody>
                     </table>
@@ -249,4 +265,3 @@
     </main>
 </body>
 </html>
-
