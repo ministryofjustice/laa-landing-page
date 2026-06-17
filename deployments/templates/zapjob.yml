@@ -27,14 +27,14 @@ spec:
                 -I \
                 -a \
                 -j \
-                -r report.html
+                -r /zap/wrk/report.html
               STATUS=$?
               if [ "$STATUS" -ne 0 ]; then
                 echo "ZAP baseline failed with status $STATUS" >&2
                 exit "$STATUS"
               fi
               echo "ZAP report written to /zap/wrk/report.html"
-              sleep 30
+              sleep 300
       volumes:
         - name: zap-wrk
           emptyDir: {}

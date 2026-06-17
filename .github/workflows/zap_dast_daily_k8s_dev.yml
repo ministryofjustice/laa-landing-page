@@ -126,6 +126,20 @@ jobs:
           kubectl delete job zap-scan -n ${{ secrets.KUBE_NAMESPACE }} --ignore-not-found
           kubectl apply -f deployments/zapjob.yml
 
+      - name: Copy ZAP report from pod
+        run: |
+          until pod=$(kubectl get pods -n ${{ secrets.KUBE_NAMESPACE }} -l job-name=zap-scan -o jsonpath='{.items[0].metadata.name}') && [ -n "$pod" ]; do
+            echo "Waiting for zap-scan pod..."
+            sleep 2
+          done
+          echo "Found pod: $pod"
+          until [ "$(kubectl get pod -n ${{ secrets.KUBE_NAMESPACE }} "$pod" -o jsonpath='{.status.phase}')" = "Running" ]; do
+            echo "Waiting for pod to be Running..."
+            sleep 2
+          done
+          echo "Pod is Running, copying report..."
+          kubectl cp "${{ secrets.KUBE_NAMESPACE }}/$pod:/zap/wrk/report.html" ./report.html
+
       - name: Wait for job completion
         run: |
           kubectl wait \
@@ -137,11 +151,6 @@ jobs:
       - name: Get logs (debugging)
         run: |
           kubectl logs job/zap-scan -n ${{ secrets.KUBE_NAMESPACE }} | tee zap-output.txt
-
-      - name: Copy ZAP report from pod
-        run: |
-          pod=$(kubectl get pods -n ${{ secrets.KUBE_NAMESPACE }} -l job-name=zap-scan -o jsonpath='{.items[0].metadata.name}')
-          kubectl cp "${{ secrets.KUBE_NAMESPACE }}/$pod:/zap/wrk/report.html" ./report.html
 
       - name: Upload ZAP scan report artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
