@@ -26,7 +26,7 @@ spec:
             - "-a"
             - "-j"
             - "-r"
-            - "report.html"
+            - "/zap/wrk/report.html"
       volumes:
         - name: zap-wrk
           emptyDir: {}

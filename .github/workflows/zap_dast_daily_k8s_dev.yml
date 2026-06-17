@@ -138,11 +138,18 @@ jobs:
         run: |
           kubectl logs job/zap-scan -n ${{ secrets.KUBE_NAMESPACE }} | tee zap-output.txt
 
+      - name: Copy ZAP report from pod
+        run: |
+          pod=$(kubectl get pods -n ${{ secrets.KUBE_NAMESPACE }} -l job-name=zap-scan -o jsonpath='{.items[0].metadata.name}')
+          kubectl cp "${{ secrets.KUBE_NAMESPACE }}/$pod:/zap/wrk/report.html" ./report.html
+
       - name: Upload ZAP scan report artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: zap-scan-report
-          path: zap-output.txt
+          path: |
+            report.html
+            zap-output.txt
 
       - name: Parse ZAP alerts
         id: parse_alerts
