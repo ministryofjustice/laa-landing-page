@@ -27,7 +27,7 @@ spec:
                 -I \
                 -a \
                 -j \
-                -r /zap/wrk/report.html
+                -r report.html
               STATUS=$?
               if [ "$STATUS" -ne 0 ]; then
                 echo "ZAP baseline failed with status $STATUS" >&2
