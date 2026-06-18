@@ -195,6 +195,67 @@ jobs:
               echo "ZAP_SHOULD_NOTIFY=false" >> "$GITHUB_ENV"
           fi
 
+      - name: Post to Slack
+        if: env.ZAP_SHOULD_NOTIFY == 'true'
+        uses: slackapi/slack-github-action@45a88b9581bfab2566dc881e2cd66d334e621e2c # v3.0.3
+        with:
+          webhook: ${{ secrets.ZAP_SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "ZAP Daily Scan Report: DEV Environment"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Scan Summary:*"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":rotating_light: *HIGH:* ${{ env.ZAP_HIGH }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":sign-warning: *MEDIUM:* ${{ env.ZAP_MEDIUM }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":orange_heart: *LOW:* ${{ env.ZAP_LOW }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":yellow_heart: *INFORMATIONAL:* ${{ env.ZAP_INFO }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "Please review the detailed scan results and take necessary actions. \n\n View Details on GitHub: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                }
+              ]
+            }
+
     #   - name: Create GitHub issue for alerts
     #     if: ${{ steps.parse_alerts.outputs.fail_count != '0' || steps.parse_alerts.outputs.warn_count != '0' }}
     #     env:
