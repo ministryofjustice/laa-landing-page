@@ -32,7 +32,6 @@ spec:
           volumeMounts:
             - name: zap-wrk
               mountPath: /zap/wrk
-            
             - name: config
               mountPath: /etc/config
           securityContext:
