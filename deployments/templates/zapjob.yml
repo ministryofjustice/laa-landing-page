@@ -29,6 +29,10 @@ spec:
       containers:
         - name: zap
           image: ghcr.io/zaproxy/zaproxy:stable
+          resources:
+            limits:
+              cpu: 500m
+              memory: 1Gi
           volumeMounts:
             - name: zap-wrk
               mountPath: /zap/wrk
@@ -53,7 +57,5 @@ spec:
           configMap:
             name: zap-config
       restartPolicy: Never
-      limits:
-        cpu: 500m
-        memory: 1Gi
+
 
