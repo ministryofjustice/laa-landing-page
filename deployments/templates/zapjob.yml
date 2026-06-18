@@ -40,7 +40,7 @@ spec:
           command:
             - /bin/sh
             - -c
-            - zap-baseline.py -a -j -t http://laa-landing-page.${NAMESPACE}.svc.cluster.local:8080 -c /etc/config/rules.tsv -I -w /zap/wrk/report.md && echo "===== BEGIN ZAP REPORT.MD =====" && cat /zap/wrk/report.md && echo "===== END ZAP REPORT.MD ====="
+            - zap-baseline.py -a -j -t http://laa-landing-page.${NAMESPACE}.svc.cluster.local:8080 -c /etc/config/rules.tsv -I -w report.md && echo "===== BEGIN ZAP REPORT.MD =====" && cat /zap/wrk/report.md && echo "===== END ZAP REPORT.MD ====="
       volumes:
         - name: zap-wrk
           emptyDir: {}
