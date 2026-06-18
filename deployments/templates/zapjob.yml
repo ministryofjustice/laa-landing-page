@@ -20,21 +20,7 @@ spec:
           command:
             - /bin/sh
             - -c
-          args:
-            - |
-              zap-baseline.py \
-                -t http://laa-landing-page.${NAMESPACE}.svc.cluster.local:8080 \
-                -I \
-                -a \
-                -j \
-                -r /zap/wrk/report.html
-              STATUS=$?
-              if [ "$STATUS" -ne 0 ]; then
-                echo "ZAP baseline failed with status $STATUS" >&2
-                exit "$STATUS"
-              fi
-              echo "ZAP report written to /zap/wrk/report.html"
-              sleep 300
+            - zap-baseline.py -t http://laa-landing-page.${NAMESPACE}.svc.cluster.local -I -w report.md && echo "===== BEGIN ZAP REPORT.MD =====" && cat /zap/wrk/report.md && echo "===== END ZAP REPORT.MD ====="
       volumes:
         - name: zap-wrk
           emptyDir: {}
