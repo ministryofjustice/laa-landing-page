@@ -1,8 +1,8 @@
 name: ZAP DEV DAST Daily Baseline Scan
-
 on:
   schedule:
     - cron: '0 8 * * 1-5' # At 08:00 on Monday through Friday
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -12,27 +12,162 @@ jobs:
   zap_scan:
     name: Run ZAP DEV DAST Daily Baseline Scan Against Live App
     runs-on: ubuntu-latest
+    environment: development
 
     steps:
-      - name: Run ZAP Daily Baseline Scan
-        id: baseline_run
-        uses: zaproxy/action-baseline@de8ad967d3548d44ef623df22cf95c3b0baf8b25 # v0.15.0
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBE_CERT }}" > ca.crt
+          kubectl config set-cluster ${KUBE_CLUSTER} --certificate-authority=./ca.crt --server=https://${KUBE_CLUSTER}
+          kubectl config set-credentials deploy-user --token=${{ secrets.KUBE_TOKEN }}
+          kubectl config set-context ${KUBE_CLUSTER} --cluster=${KUBE_CLUSTER} --user=deploy-user --namespace=${KUBE_NAMESPACE}
+          kubectl config use-context ${KUBE_CLUSTER}
+        env:
+          KUBE_NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
+          KUBE_CLUSTER: ${{ secrets.KUBE_CLUSTER }}
+
+      - name: Generate Deployment the Files
+        run: |
+          # Get all env vars, filter out server_protocol and uri, and format with leading dollar signs
+          ALLOWED_VARS=$(printenv | cut -d= -f1 | grep -v -E '^(server_protocol|uri|http1_reject)$' | sed 's/^/$/' | tr '\n' ' ')
+
+          # Pass the dynamic list into envsubst
+          envsubst "$ALLOWED_VARS" < deployments/templates/zapjob.yml  > deployments/zapjob.yml
+        env:
+          SENTRY_SAMPLE_RATE: ${{ vars.SENTRY_SAMPLE_RATE }}
+          BASE_URL_HOMEPAGE: ${{ secrets.BASE_URL_HOMEPAGE }}
+          JWT_URL: ${{ secrets.JWT_URL }}
+          SPRING_PROFILE: ${{ vars.SPRING_PROFILE }}
+          LOG_LEVEL: ${{ vars.LOG_LEVEL || 'INFO' }}
+          IMAGE_TAG: ${{ github.sha }}
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+          NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
+          INGRESS_CLASS_NAME: ${{ vars.INGRESS_CLASS_NAME }}
+          ENV_NAME: ${{ vars.ENV_NAME }}
+          POPULATE_TEST_DATA: ${{ vars.POPULATE_DUMMY_DATA }}
+          TEST_DATA_ADMIN_PRINCIPALS: ${{ secrets.TEST_DATA_ADMIN_PRINCIPALS }}
+          TEST_DATA_NON_ADMIN_PRINCIPALS: ${{ secrets.TEST_DATA_NON_ADMIN_PRINCIPALS }}
+          TEST_DATA_INTERNAL_PRINCIPALS: ${{ secrets.TEST_DATA_INTERNAL_PRINCIPALS }}
+          TECH_SERVICES_AZURE_SCOPE: ${{ vars.TECH_SERVICES_AZURE_SCOPE }}
+          TECH_SERVICES_LAA_BUSINESS_UNIT : ${{ vars.TECH_SERVICES_LAA_BUSINESS_UNIT }}
+          TECH_SERVICES_AZURE_CLIENT_ID: ${{ secrets.TECH_SERVICES_AZURE_CLIENT_ID }}
+          TECH_SERVICES_AZURE_CLIENT_SECRET: ${{ secrets.TECH_SERVICES_AZURE_CLIENT_SECRET }}
+          TECH_SERVICES_TENANT_ID: ${{ secrets.TECH_SERVICES_TENANT_ID }}
+          TECH_SERVICES_BASE_URL: ${{ secrets.TECH_SERVICES_BASE_URL }}
+          TECH_SERVICES_VERIFICATION_METHOD: ${{ vars.TECH_SERVICES_VERIFICATION_METHOD }}
+          APP_DEFAULT_USER_ACC_SEC_GROUP: ${{ secrets.APP_DEFAULT_USER_ACC_SEC_GROUP }}
+          POLLING_ENABLED : ${{ vars.POLLING_ENABLED }}
+          POLLING_SCHEDULE : ${{ vars.POLLING_SCHEDULE }}
+          POLLING_GROUP_ID : ${{ secrets.POLLING_GROUP_ID }}
+          EXTERNAL_USER_POLLING_SCHEDULE: ${{ vars.EXTERNAL_USER_POLLING_SCHEDULE }}
+          EXTERNAL_USER_POLLING_ENABLED: ${{ vars.EXTERNAL_USER_POLLING_ENABLED }}
+          EXTERNAL_USER_REPORTING_ENABLED: ${{ vars.EXTERNAL_USER_REPORTING_ENABLED }}
+          EXTERNAL_USER_REPORTING_SCHEDULE: ${{ vars.EXTERNAL_USER_REPORTING_SCHEDULE }}
+          ROLE_ASSIGNMENT_MATRIX_REPORTING_ENABLED: ${{ vars.ROLE_ASSIGNMENT_MATRIX_REPORTING_ENABLED }}
+          ROLE_ASSIGNMENT_MATRIX_REPORTING_SCHEDULE: ${{ vars.ROLE_ASSIGNMENT_MATRIX_REPORTING_SCHEDULE }}
+          MULTIFIRM_USER_REPORTING_ENABLED: ${{ vars.MULTIFIRM_USER_REPORTING_ENABLED }}
+          MULTIFIRM_USER_REPORTING_INTERVAL: ${{ vars.MULTIFIRM_USER_REPORTING_INTERVAL }}
+          USER_UPTAKE_REPORTING_ENABLED : ${{ vars.USER_UPTAKE_REPORTING_ENABLED }}
+          USER_UPTAKE_REPORTING_SCHEDULE : ${{ vars.USER_UPTAKE_REPORTING_SCHEDULE }}
+          REPORT_SERVICE_CLIENT_ID: ${{ secrets.REPORT_SERVICE_CLIENT_ID }}
+          REPORT_SERVICE_CLIENT_SECRET: ${{ secrets.REPORT_SERVICE_CLIENT_SECRET }}
+          REPORT_SERVICE_TENANT_ID: ${{ secrets.REPORT_SERVICE_TENANT_ID }}
+          REPORT_SHAREPOINT_URL: ${{ secrets.REPORT_SHAREPOINT_URL }}
+          REPORT_SHAREPOINT_BASE_FOLDER: ${{ secrets.REPORT_SHAREPOINT_BASE_FOLDER }}
+          FIRM_CACHE_CLEAR_SCHEDULE : ${{ vars.FIRM_CACHE_CLEAR_SCHEDULE }}
+          APPS_CACHE_CLEAR_SCHEDULE : ${{ vars.APPS_CACHE_CLEAR_SCHEDULE }}
+          REFRESH_USER_SILAS_STATUS_SCHEDULE : ${{ vars.REFRESH_USER_SILAS_STATUS_SCHEDULE }}
+          TECH_SERVICES_CLEAR_CACHE_INTERVAL : ${{ vars.TECH_SERVICES_CLEAR_CACHE_INTERVAL }}
+          TECH_SERVICES_REQ_READ_TIMEOUT : ${{ vars.TECH_SERVICES_REQ_READ_TIMEOUT }}
+          TECH_SERVICES_REQ_CONNECT_TIMEOUT : ${{ vars.TECH_SERVICES_REQ_CONNECT_TIMEOUT }}
+          PDA_SYNC_SCHEDULER_ENABLED: ${{ vars.PDA_SYNC_SCHEDULER_ENABLED }}
+          PDA_SYNC_SCHEDULER_CRON: ${{ vars.PDA_SYNC_SCHEDULER_CRON }}
+          PDA_SYNC_SCHEDULER_RUN_ON_STARTUP: ${{ vars.PDA_SYNC_SCHEDULER_RUN_ON_STARTUP }}
+          APP_DATA_PROVIDER_BASE_URL: ${{ secrets.APP_DATA_PROVIDER_BASE_URL }}
+          APP_DATA_PROVIDER_API_KEY: ${{ secrets.APP_DATA_PROVIDER_API_KEY }}
+          SENTRY_ENVIRONMENT: ${{ vars.ENV_NAME }}
+          SENTRY_ENABLED: ${{ vars.SENTRY_ENABLED }}
+          CCMS_APP_ENTRA_OBJECT_ID: ${{ secrets.CCMS_APP_ENTRA_OBJECT_ID || 'NONE' }}
+          CCMS_USER_MANAGEMENT_API_BASE_URL : ${{ secrets.CCMS_USER_MANAGEMENT_API_BASE_URL }}
+          CCMS_USER_MANAGEMENT_API_KEY : ${{ secrets.CCMS_USER_MANAGEMENT_API_KEY }}
+          CCMS_USER_API_SQS_ARN : ${{ secrets.CCMS_USER_API_SQS_ARN }}
+          CCMS_UDA_API_BASE_URL: ${{ secrets.CCMS_UDA_API_BASE_URL }}
+          CCMS_UDA_API_KEY: ${{ secrets.CCMS_UDA_API_KEY }}
+          CIVIL_APPLY_APP_ENTRA_OBJECT_ID: ${{ secrets.CIVIL_APPLY_APP_ENTRA_OBJECT_ID || 'NONE' }}
+          CCMS_EBS_APP_ENTRA_OBJECT_ID: ${{ secrets.CCMS_EBS_APP_ENTRA_OBJECT_ID || 'NONE' }}
+          CCMS_EBS_APP_TWO_ENTRA_OBJECT_ID: ${{ secrets.CCMS_EBS_APP_TWO_ENTRA_OBJECT_ID || 'NONE' }}
+          CCMS_APP_TWO_ENTRA_OBJECT_ID: ${{ secrets.CCMS_APP_TWO_ENTRA_OBJECT_ID || 'NONE' }}
+          CCMS_APP_TWO_USER_MANAGEMENT_API_BASE_URL: ${{ secrets.CCMS_APP_TWO_USER_MANAGEMENT_API_BASE_URL || 'NONE' }}
+          CCMS_APP_TWO_USER_MANAGEMENT_API_KEY: ${{ secrets.CCMS_APP_TWO_USER_MANAGEMENT_API_KEY || 'NONE' }}
+          CCMS_APP_TWO_USER_API_SQS_ARN: ${{ secrets.CCMS_APP_TWO_USER_API_SQS_ARN || 'NONE' }}
+          CCMS_APP_TWO_UDA_API_BASE_URL: ${{ secrets.CCMS_APP_TWO_UDA_API_BASE_URL || 'NONE' }}
+          CCMS_APP_TWO_UDA_API_KEY: ${{ secrets.CCMS_APP_TWO_UDA_API_KEY || 'NONE' }}
+          ENABLE_DISTRIBUTED_DB_LOCKING : ${{ vars.ENABLE_DISTRIBUTED_DB_LOCKING }}
+          DISTRIBUTED_DB_LOCKING_PERIOD : ${{ vars.DISTRIBUTED_DB_LOCKING_PERIOD }}
+          FEATURE_FLAG_ENABLE_USER_AUDIT_TABLE: ${{ vars.FEATURE_FLAG_ENABLE_USER_AUDIT_TABLE || 'true' }}
+          FEATURE_FLAG_FIRM_DIRECTORY_ENABLED: ${{ vars.FEATURE_FLAG_FIRM_DIRECTORY_ENABLED || 'true' }}
+          FEATURE_FLAG_DISABLE_USER: ${{ vars.FEATURE_FLAG_DISABLE_USER || 'true' }}
+          FEATURE_FLAG_BULK_DISABLE_USER: ${{ vars.FEATURE_FLAG_BULK_DISABLE_USER || 'true' }}
+          FEATURE_FLAG_SYNC_APPS_FROM_ENTRA: ${{ vars.FEATURE_FLAG_SYNC_APPS_FROM_ENTRA || 'false' }}
+          FEATURE_FLAG_SYNC_APP_UPDATES_FROM_ENTRA: ${{ vars.FEATURE_FLAG_SYNC_APP_UPDATES_FROM_ENTRA || 'false' }}
+          FEATURE_FLAG_EDIT_USER_DETAILS: ${{ vars.FEATURE_FLAG_EDIT_USER_DETAILS || 'true' }}
+          SPRING_SESSION_JDBC_ENABLED: ${{ vars.SPRING_SESSION_JDBC_ENABLED || 'false' }}
+          NOTIFICATION_DELEGATE_FIRM_ACCESS_TEMPLATE_ID : ${{ vars.NOTIFICATION_DELEGATE_FIRM_ACCESS_TEMPLATE_ID || 'NONE' }}
+          NOTIFICATION_REVOKE_FIRM_ACCESS_TEMPLATE_ID : ${{ vars.NOTIFICATION_REVOKE_FIRM_ACCESS_TEMPLATE_ID || 'NONE' }}
+          NOTIFICATION_USER_ACCESS_CHANGE_TEMPLATE_ID : ${{ vars.NOTIFICATION_USER_ACCESS_CHANGE_TEMPLATE_ID || 'NONE' }}
+          NOTIFICATION_ADD_NEW_USER_TEMPLATE_ID : ${{ vars.NOTIFICATION_ADD_NEW_USER_TEMPLATE_ID || 'NONE' }}
+
+      - name: Apply ZAP job
+        run: |
+          kubectl delete job zap-scan -n ${{ secrets.KUBE_NAMESPACE }} --ignore-not-found
+          kubectl apply -f deployments/zapjob.yml
+
+      - name: Wait for job completion
+        run: |
+          kubectl wait \
+            --for=condition=complete \
+            job/zap-scan \
+            -n ${{ secrets.KUBE_NAMESPACE }} \
+            --timeout=900s
+
+      - name: Get logs (debugging)
+        run: |
+          kubectl logs job/zap-scan -n ${{ secrets.KUBE_NAMESPACE }} | tee zap-output.txt
+
+      - name: Extract report.md from logs
+        shell: bash
+        run: |
+          awk '/^===== BEGIN ZAP REPORT\.MD =====$/ {capture=1; next} /^===== END ZAP REPORT\.MD =====$/ {capture=0; exit} capture {print}' zap-output.txt > report.md
+          test -s report.md
+
+      - name: Print report.md to stdout
+        run: |
+          echo "===== BEGIN ZAP report.md ====="
+          cat report.md
+          echo "===== END ZAP report.md ====="
+
+      - name: Upload ZAP scan report artifact
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
-          target: 'https://dev.your-legal-aid-services.service.justice.gov.uk/'
-          cmd_options: '-a -j'
-          fail_action: false
-          issue_title: ZAP Scan Baseline Report - dev
-          
+          name: zap-scan-report
+          path: |
+            report.md
+            zap-output.txt
+
       - name: Parse summary
         run: |
           #!/bin/bash -xe
           
           # Read directly from the markdown file.
           # -m 1 ensures we only grab the first match (which is the summary table at the top of the report)
-          high_value=$(grep -a -m 1 "| High |" report_md.md | awk -F'|' '{print $3}' | xargs)
-          medium_value=$(grep -a -m 1 "| Medium |" report_md.md | awk -F'|' '{print $3}' | xargs)
-          low_value=$(grep -a -m 1 "| Low |" report_md.md | awk -F'|' '{print $3}' | xargs)
-          info_value=$(grep -a -m 1 "| Informational |" report_md.md | awk -F'|' '{print $3}' | xargs)
+          high_value=$(grep -a -m 1 "| High |" report.md | awk -F'|' '{print $3}' | xargs)
+          medium_value=$(grep -a -m 1 "| Medium |" report.md | awk -F'|' '{print $3}' | xargs)
+          low_value=$(grep -a -m 1 "| Low |" report.md | awk -F'|' '{print $3}' | xargs)
+          info_value=$(grep -a -m 1 "| Informational |" report.md | awk -F'|' '{print $3}' | xargs)
           
           # Fallback to 0 if grep returns empty (e.g., if the ZAP report is totally empty/failed)
           high_value=${high_value:-0}
@@ -120,3 +255,11 @@ jobs:
                 }
               ]
             }
+
+    #   - name: Create GitHub issue for alerts
+    #     if: ${{ steps.parse_alerts.outputs.fail_count != '0' || steps.parse_alerts.outputs.warn_count != '0' }}
+    #     env:
+    #       GH_TOKEN: ${{ github.token }}
+    #     run: |
+    #       TITLE="ZAP alerts detected: FAIL=${{ steps.parse_alerts.outputs.fail_count }}, WARN=${{ steps.parse_alerts.outputs.warn_count }}"
+    #       gh issue create --title "$TITLE" --body-file zap-issue.md
