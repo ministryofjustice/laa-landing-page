@@ -39,6 +39,9 @@ spec:
             runAsNonRoot: true
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
           command:
             - /bin/sh
             - -c
@@ -50,4 +53,7 @@ spec:
           configMap:
             name: zap-config
       restartPolicy: Never
+      limits:
+        cpu: 500m
+        memory: 1Gi
 
