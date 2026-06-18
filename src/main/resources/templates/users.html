@@ -424,16 +424,22 @@
                         }
                     }
 
+
                     .full-width-container {
-                        position: relative;
-                        width: 100vw;
-                        max-width: 1440px;
-                        left: 50%;
-                        transform: translateX(-50%);
-                        padding-left: 40px;
-                        padding-right: 40px;
+                        padding: 0 40px;
                         box-sizing: border-box;
                     }
+
+                    @media (min-width: 768px) {
+                        .full-width-container {
+                            position: relative;
+                            width: 100vw;
+                            max-width: 1440px;
+                            left: 50%;
+                            transform: translateX(-50%);
+                        }
+                    }
+
 
 
                     .table-container {
