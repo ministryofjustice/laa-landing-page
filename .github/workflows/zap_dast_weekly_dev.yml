@@ -19,20 +19,21 @@ jobs:
         with:
           target: 'https://dev.your-legal-aid-services.service.justice.gov.uk/'
           cmd_options: '-a -j -m 120'
+          rules_file_name: '.zap/rules.tsv'
           fail_action: false
           issue_title: ZAP Full Scan Report - dev
 
       - name: Parse summary
         run: |
           #!/bin/bash -xe
-          
+
           # Read directly from the markdown file.
           # -m 1 ensures we only grab the first match (which is the summary table at the top of the report)
           high_value=$(grep -a -m 1 "| High |" report_md.md | awk -F'|' '{print $3}' | xargs)
           medium_value=$(grep -a -m 1 "| Medium |" report_md.md | awk -F'|' '{print $3}' | xargs)
           low_value=$(grep -a -m 1 "| Low |" report_md.md | awk -F'|' '{print $3}' | xargs)
           info_value=$(grep -a -m 1 "| Informational |" report_md.md | awk -F'|' '{print $3}' | xargs)
-          
+
           # Fallback to 0 if grep returns empty (e.g., if the ZAP report is totally empty/failed)
           high_value=${high_value:-0}
           medium_value=${medium_value:-0}
