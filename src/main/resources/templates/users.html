@@ -423,6 +423,29 @@
                             padding-top: 0 !important;
                         }
                     }
+
+                    .full-width-container {
+                        position: relative;
+                        width: 100vw;
+                        max-width: 1440px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        padding-left: 40px;
+                        padding-right: 40px;
+                        box-sizing: border-box;
+                    }
+
+
+                    .table-container {
+                        width: 100%;
+                        overflow-x: auto;
+                    }
+
+                    .govuk-table {
+                        width: 100%;
+                        table-layout: auto;
+                    }
+
                 </style>
 
                 <script th:src="@{/js/utils/url-utils.js}"></script>
@@ -744,6 +767,7 @@
 
 
         <form class="govuk-form-group">
+            <div class="full-width-container">
             <div class="table-container" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
                 <table class="govuk-table" data-id-prefix="users-"
                     style="table-layout: fixed; min-width: 768px; width: 100%;">
@@ -877,6 +901,7 @@
                         </tr>
                     </tbody>
                 </table>
+            </div>
             </div>
         </form>
         <nav class="govuk-pagination" aria-label="Pagination">
