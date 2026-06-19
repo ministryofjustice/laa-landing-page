@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   zap_scan:
-    name: Run ZAP DEV DAST Daily Baseline Scan Against Live App
+    name: ZAP TEST DAST Daily Baseline Scan Against Live App
     runs-on: ubuntu-latest
     environment: test
 

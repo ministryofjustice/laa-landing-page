@@ -31,7 +31,7 @@ jobs:
 
       - name: Generate Deployment the Files
         run: |
-          cat deployments/templates/zapjob.yml | envsubst > deployments/zapjob.yml
+          cat deployments/templates/zapweeklyjob.yml | envsubst > deployments/zapweeklyjob.yml
         env:
           SENTRY_SAMPLE_RATE: ${{ vars.SENTRY_SAMPLE_RATE }}
           BASE_URL_HOMEPAGE: ${{ secrets.BASE_URL_HOMEPAGE }}
@@ -119,8 +119,8 @@ jobs:
 
       - name: Apply ZAP job
         run: |
-          kubectl delete job zap-scan -n ${{ secrets.KUBE_NAMESPACE }} --ignore-not-found
-          kubectl apply -f deployments/zapjob.yml
+          kubectl delete job zap-scan-weekly -n ${{ secrets.KUBE_NAMESPACE }} --ignore-not-found
+          kubectl apply -f deployments/zapweeklyjob.yml
 
       - name: Wait for job completion
         run: |
