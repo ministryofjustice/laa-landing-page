@@ -2,9 +2,6 @@ name: ZAP DEV DAST Daily Baseline Scan
 on:
   schedule:
     - cron: '0 8 * * 1-5' # At 08:00 on Monday through Friday
-  push:
-    branches:
-      - STB-4345-ZAP-K8S
   workflow_dispatch:
 
 permissions:
