@@ -30,7 +30,7 @@ spec:
       securityContext:
         runAsUser: 1000
         runAsNonRoot: true
-      autoMountServiceAccountToken: false
+      automountServiceAccountToken: false
       containers:
         - name: zap
           image: ghcr.io/zaproxy/zaproxy:stable
