@@ -161,7 +161,7 @@ jobs:
       - name: Parse summary
         run: |
           #!/bin/bash -xe
-          
+
           # Read directly from the markdown file.
           # -m 1 ensures we only grab the first match (which is the summary table at the top of the report)
           high_value=$(grep -a -m 1 "| High |" report.md | awk -F'|' '{print $3}' | xargs)
