@@ -2824,14 +2824,6 @@ public class UserController {
 
             notifyExternalUserRoleChange(userProfileDto, "You have been granted access to services and offices", "Access granted");
 
-        } catch (org.springframework.dao.DataIntegrityViolationException e) {
-            if (e.getMessage() != null && e.getMessage().contains("user_profile_app_role_pkey")
-                    || (e.getCause() != null && e.getCause().getMessage() != null
-                        && e.getCause().getMessage().contains("user_profile_app_role_pkey"))) {
-                log.warn("Duplicate role assignment ignored for user {} - request already processed", id);
-            } else {
-                log.error("Error completing grant access for user: " + id, e);
-            }
         } catch (Exception e) {
             log.error("Error completing grant access for user: " + id, e);
             // Could add error handling here if needed
