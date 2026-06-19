@@ -283,7 +283,7 @@ class GlobalExceptionHandlerTest {
         // Arrange
         org.springframework.web.servlet.resource.NoResourceFoundException exception =
             new org.springframework.web.servlet.resource.NoResourceFoundException(
-                org.springframework.http.HttpMethod.GET, "/favicon.ico");
+                org.springframework.http.HttpMethod.GET, "/favicon.ico", "/favicon.ico");
 
         // Act
         ResponseEntity<Void> response = exceptionHandler.handleNoResourceFoundException(exception);

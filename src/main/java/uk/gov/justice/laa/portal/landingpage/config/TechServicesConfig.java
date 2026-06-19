@@ -3,6 +3,13 @@ package uk.gov.justice.laa.portal.landingpage.config;
 import com.azure.identity.ClientSecretCredential;
 import com.azure.identity.ClientSecretCredentialBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.hc.client5.http.config.ConnectionConfig;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.core5.util.Timeout;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -23,8 +30,6 @@ import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.service.DoNothingTechServicesClient;
 import uk.gov.justice.laa.portal.landingpage.service.LiveTechServicesClient;
 import uk.gov.justice.laa.portal.landingpage.service.TechServicesClient;
-
-import java.time.Duration;
 
 @Configuration
 public class TechServicesConfig {
@@ -62,10 +67,29 @@ public class TechServicesConfig {
 
     @Bean
     public ClientHttpRequestFactory getClientHttpRequestFactory() {
-        HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory();
-        factory.setReadTimeout(Duration.ofSeconds(technicalServicesReqReadTimeout));
-        factory.setConnectTimeout(Duration.ofSeconds(technicalServicesReqConnectTimeout));
-        return factory;
+
+        // 1. Physical Socket Layer: Set the connect timeout here instead!
+        ConnectionConfig connectionConfig = ConnectionConfig.custom()
+                .setConnectTimeout(Timeout.ofSeconds(technicalServicesReqConnectTimeout))
+                .build();
+
+        // 2. Wrap the socket settings cleanly into a connection manager pool
+        PoolingHttpClientConnectionManager connectionManager = PoolingHttpClientConnectionManagerBuilder.create()
+                .setDefaultConnectionConfig(connectionConfig)
+                .build();
+
+        // 3. Request Layer: Handles the read timeout per execution call
+        RequestConfig requestConfig = RequestConfig.custom()
+                .setResponseTimeout(Timeout.ofSeconds(technicalServicesReqReadTimeout)) // replaces setReadTimeout
+                .build();
+
+        // 4. Assemble the final client cleanly using both layers
+        CloseableHttpClient httpClient = HttpClients.custom()
+                .setConnectionManager(connectionManager)
+                .setDefaultRequestConfig(requestConfig)
+                .build();
+
+        return new HttpComponentsClientHttpRequestFactory(httpClient);
     }
 
     @Bean

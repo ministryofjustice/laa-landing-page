@@ -1,18 +1,23 @@
 package uk.gov.justice.laa.portal.landingpage.repository;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import org.junit.jupiter.api.BeforeAll;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.boot.session.autoconfigure.SessionTimeout;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 
+import org.testcontainers.junit.jupiter.Testcontainers;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
@@ -28,6 +33,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
+@Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 public class BaseRepositoryTest {
 
@@ -42,9 +48,19 @@ public class BaseRepositoryTest {
             .withUsername("postgres")
             .withPassword("password");
 
-    @BeforeAll
-    static void beforeAll() {
-        postgresContainer.start();
+    @Configuration
+    static class TestSessionFallbackConfig {
+        @Bean
+        public SessionTimeout sessionTimeout() {
+            return () -> Duration.ofMinutes(30);
+        }
+
+        @Bean
+        public Object tokenDetailsManager() {
+            // Returns a generic mock object so the framework's @PostConstruct
+            // initialization checks are bypassed completely
+            return Mockito.mock(Object.class);
+        }
     }
 
     protected EntraUser buildEntraUser(String entraId, String email, String firstName, String lastName) {

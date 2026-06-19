@@ -153,7 +153,7 @@ class CcmsUserDetailsServiceTest {
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
                 eq(CcmsUserDetailsResponse.class)
-        )).thenReturn(new ResponseEntity<>(null, HttpStatus.NOT_FOUND));
+        )).thenReturn(new ResponseEntity<>(HttpStatus.NOT_FOUND));
 
         CcmsUserDetailsResponse result =
                 spyService.getUserDetailsByLegacyUserId(APP_OID, LEGACY_USER_ID);
@@ -172,7 +172,7 @@ class CcmsUserDetailsServiceTest {
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
                 eq(CcmsUserDetailsResponse.class)
-        )).thenReturn(new ResponseEntity<>(null, HttpStatus.BAD_GATEWAY));
+        )).thenReturn(new ResponseEntity<>(HttpStatus.BAD_GATEWAY));
 
         CcmsUserDetailsResponse result =
                 spyService.getUserDetailsByLegacyUserId(APP_OID, LEGACY_USER_ID);

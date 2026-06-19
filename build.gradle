@@ -1,11 +1,14 @@
 plugins {
-    id 'uk.gov.laa.ccms.springboot.laa-ccms-spring-boot-gradle-plugin' version '0.0.32'
-    id "io.sentry.jvm.gradle" version "5.11.0"
+    id 'uk.gov.laa.java.laa-java-gradle-plugin' version '2.1.5'
+    id 'uk.gov.laa.springboot.laa-spring-boot-gradle-plugin' version '2.1.5'
+    id "io.sentry.jvm.gradle" version "6.11.0"
 }
 
 ext {
-    set('springWebMvcVersion', "6.1.13")
-    set('springDocVersion', "2.4.0")
+    springDocVersion = "3.0.0"
+    playwrightVersion = "1.52.0"
+    testcontainersVersion = "1.20.4"
+    apiGuardianVersion = "1.1.2"
 }
 
 java {
@@ -14,12 +17,23 @@ java {
 }
 
 checkstyle {
-    toolVersion = '10.21.2'
+    toolVersion = '10.21.4'
     configFile = file("${rootDir}/config/checkstyle/checkstyle.xml")
 }
 
 repositories {
     mavenCentral()
+    // Declare the LAA package registry again here so the starter blocks can be downloaded
+    maven {
+        url = uri("https://maven.pkg.github.com/ministryofjustice/laa-spring-boot-common")
+        credentials {
+            username = System.getenv("GITHUB_ACTOR")?.trim()
+                    ?: providers.gradleProperty("gitPackageUser").orNull
+
+            password = System.getenv("GITHUB_TOKEN")?.trim()
+                    ?: providers.gradleProperty("gitPackageKey").orNull
+        }
+    }
 }
 
 sentry {
@@ -30,7 +44,7 @@ sentry {
   authToken = System.getenv("SENTRY_AUTH_TOKEN")
 
   autoInstallation {
-    sentryVersion = "8.16.0"
+    sentryVersion = "8.43.2"
     enabled = true
   }
 }
@@ -58,98 +72,97 @@ configurations {
 }
 
 dependencies {
-    implementation 'io.sentry:sentry-opentelemetry-agentless-spring:8.16.0'
+
+    // LAA & Gov UK Extensions
+    implementation 'uk.gov.laa.springboot:laa-spring-boot-starter-govuk-dialect'
+    implementation 'uk.gov.service.notify:notifications-java-client:5.2.1-RELEASE'
+
+    // Core Spring Boot 4 Starters
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.projectlombok:lombok'
-    implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
-    implementation 'org.springframework.session:spring-session-jdbc'
-
-    implementation 'org.apache.httpcomponents.client5:httpclient5'
-
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.0'
-    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
-    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-csv'
-
-    annotationProcessor 'org.projectlombok:lombok'
-
+    implementation 'org.springframework.boot:spring-boot-starter-session-jdbc'
     implementation 'org.springframework.boot:spring-boot-starter-graphql'
-    implementation 'uk.gov.laa.ccms.springboot:laa-ccms-spring-boot-starter-govuk-dialect'
-
-    // Microsoft Graph SDK dependencies
-    implementation 'com.microsoft.graph:microsoft-graph:6.30.0'
-    implementation 'com.microsoft.graph:microsoft-graph-core:3.6.1'
-
-    // MSAL for authentication
-    implementation 'com.microsoft.azure:msal4j:1.19.1'
-
-    // Validation
     implementation 'org.springframework.boot:spring-boot-starter-validation'
-
-    // Spring Retry for declarative retry logic
-    implementation 'org.springframework.retry:spring-retry'
-    implementation 'org.springframework:spring-aspects'
-
-    // OpenAPI / Swagger Documentation
-    implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springDocVersion}"
-
-    // Microsoft Graph SDK with Azure Identity
-    implementation 'com.azure:azure-identity:1.16.0'
-    implementation 'com.microsoft.graph:microsoft-graph:6.30.0'
-    implementation 'com.microsoft.graph:microsoft-graph-core:3.6.1'
-
-    // Azure Identity SDK for OAuth2 and token management
-    implementation 'com.azure:azure-identity:1.16.0'
-
-    implementation 'com.azure.spring:spring-cloud-azure-starter-active-directory:5.22.0'
-//    implementation 'com.h2database:h2'
-    implementation 'org.postgresql:postgresql'
-    implementation "org.liquibase:liquibase-core"
-    // UK Gov Notify dependency for email notifications
-    implementation group: 'uk.gov.service.notify', name: 'notifications-java-client', version: '5.2.1-RELEASE'
-    
-    // AWS SQS SDK for message queue integration
-    implementation 'software.amazon.awssdk:sqs:2.28.11'
-    
-    // AWS STS SDK for IRSA web identity token authentication
-    implementation 'software.amazon.awssdk:sts:2.28.11'
-    
-    // Needed for the @Validated annotation, used when injecting properties.
-    implementation 'org.hibernate.validator:hibernate-validator:8.0.2.Final'
-
-
-    // Metrics
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'io.sentry:sentry-spring-boot-4:8.43.2'
+    implementation 'org.slf4j:jcl-over-slf4j:2.0.13'
+
+    // Thymeleaf Security Integration for Spring Security 6+
+    implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
+
+    // Jackson 3 Dataformat Engine (Upgraded for Spring Boot 4 compatibility)
+    implementation 'tools.jackson.dataformat:jackson-dataformat-csv:3.0.3'
+
+    // Micro-Architectural / Cloud SDKs
+    implementation('com.azure.spring:spring-cloud-azure-starter-active-directory:7.1.0') {
+        exclude group: 'org.springframework.boot', module: 'spring-boot-jackson2'
+        exclude group: 'com.fasterxml.jackson.core'
+    }
+    implementation 'com.azure:azure-identity'
+    implementation 'com.microsoft.graph:microsoft-graph:6.30.0'
+    implementation 'software.amazon.awssdk:sqs:2.28.11'
+    implementation 'software.amazon.awssdk:sts:2.28.11'
+
+    // Resiliency, Execution and Observability
+    implementation 'org.springframework.retry:spring-retry:2.0.6'
+    implementation 'org.springframework:spring-aspects'
     implementation 'io.micrometer:micrometer-registry-prometheus'
 
-    // Tablesaw for data processing
-    implementation 'tech.tablesaw:tablesaw-core:0.43.1'
-    implementation 'tech.tablesaw:tablesaw-json:0.43.1'
+    // Database & Driver Layer
+    implementation 'org.postgresql:postgresql'
+    implementation('org.liquibase:liquibase-core') {
+        exclude group: 'javax.xml.bind', module: 'jaxb-api'
+    }
 
-    // Model mapper (used for mapping between Entities, DTOs and ViewModels
+    // Utilities & Core Framework Enhancements
+    implementation 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springDocVersion}"
+    implementation 'org.hibernate.validator:hibernate-validator'
+    implementation 'org.apache.httpcomponents.client5:httpclient5'
     implementation 'org.modelmapper:modelmapper:3.2.3'
 
+    // Tablesaw Data Processing Engine
+    implementation 'tech.tablesaw:tablesaw-core:0.44.4'
+
+    // JSON engine (with legacy Jackson transitives stripped out)
+    implementation('tech.tablesaw:tablesaw-json:0.44.4') {
+        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
+        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-core'
+    }
+
+    // Unit & Slice Integration Testing Libraries
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
     testImplementation 'org.springframework.graphql:spring-graphql-test'
     testImplementation 'org.springframework.security:spring-security-test'
-    testImplementation('org.testcontainers:postgresql')
-    testImplementation('org.testcontainers:junit-jupiter')
-    testImplementation('org.springframework.boot:spring-boot-testcontainers')
-    testImplementation "org.testcontainers:testcontainers:2.0.2"
-    testImplementation('com.microsoft.playwright:playwright:1.52.0')
-    testImplementation 'tech.tablesaw:tablesaw-core:0.43.1'
-    testImplementation 'tech.tablesaw:tablesaw-json:0.43.1'
-    playwrightTestImplementation "org.apiguardian:apiguardian-api:1.1.2"
+
+    // Database Testcontainers Layer
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation "org.testcontainers:postgresql:${testcontainersVersion}"
+    testImplementation "org.testcontainers:junit-jupiter:${testcontainersVersion}"
+    testImplementation "org.testcontainers:testcontainers:${testcontainersVersion}"
+
+    // End-to-End Browser Testing Configuration
+    testImplementation "com.microsoft.playwright:playwright:${playwrightVersion}"
+    playwrightTestImplementation "org.apiguardian:apiguardian-api:${apiGuardianVersion}"
+
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
 }
 
 test {
     useJUnitPlatform()
-    jvmArgs "-javaagent:${configurations.testRuntimeClasspath.find { it.name.contains('mockito-core') }}", '-Xshare:off'
-    finalizedBy jacocoTestReport // report is always generated after tests run
+
+    doFirst {
+        jvmArgs "-javaagent:${configurations.testRuntimeClasspath.find { it.name.contains('mockito-core') }}", '-Xshare:off'
+    }
+
+    finalizedBy jacocoTestReport
 }
 
 tasks.withType(ProcessResources).configureEach {

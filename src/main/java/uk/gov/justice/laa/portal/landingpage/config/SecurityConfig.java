@@ -1,8 +1,10 @@
 package uk.gov.justice.laa.portal.landingpage.config;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.boot.session.autoconfigure.SessionTimeout;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -28,7 +30,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtGra
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.header.writers.StaticHeadersWriter;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
 import org.springframework.security.web.util.matcher.IpAddressMatcher;
 import org.springframework.session.config.SessionRepositoryCustomizer;
@@ -170,7 +172,7 @@ public class SecurityConfig {
                 .defaultSuccessUrl("/home", true)
                 .permitAll()
         ).logout(logout -> logout
-                .logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
+                .logoutRequestMatcher(PathPatternRequestMatcher.withDefaults().matcher("/logout"))
                 .addLogoutHandler(logoutHandler)
                 .logoutSuccessUrl("/logout-success")
                 .clearAuthentication(true)
@@ -247,5 +249,10 @@ public class SecurityConfig {
             sessionRepository.setCreateSessionAttributeQuery(CREATE_SESSION_ATTRIBUTE_QUERY);
         }
 
+    }
+
+    @Bean
+    public SessionTimeout sessionTimeout() {
+        return () -> Duration.ofMinutes(30);
     }
 }

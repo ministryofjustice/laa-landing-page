@@ -83,7 +83,7 @@ class RestUtilTest {
     void getGraphApi_whenApiReturnsSuccessfulButNullBody_returnsEmptyString() {
 
         // Arrange
-        ResponseEntity<String> mockResponseEntity = new ResponseEntity<>(null, HttpStatus.OK);
+        ResponseEntity<String> mockResponseEntity = new ResponseEntity<>(HttpStatus.OK);
 
         try (MockedConstruction<RestTemplate> mockedConstruction = Mockito.mockConstruction(RestTemplate.class,
                 (mock, context) -> when(mock.exchange(eq(DUMMY_URL), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))

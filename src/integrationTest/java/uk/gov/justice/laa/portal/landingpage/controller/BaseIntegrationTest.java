@@ -13,8 +13,8 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
@@ -54,6 +54,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 @AutoConfigureMockMvc
 @EnableConfigurationProperties
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
+    "spring.autoconfigure.exclude=uk.gov.laa.springboot.auth.SecurityFilterChainAutoConfiguration,io.opentelemetry.instrumentation.spring.autoconfigure.OpenTelemetryAutoConfiguration",
     "management.endpoints.web.exposure.include=health,metrics",
     "management.endpoint.env.access=read_only",
     "management.endpoint.metrics.access=read_only"
