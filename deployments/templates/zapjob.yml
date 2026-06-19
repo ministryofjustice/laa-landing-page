@@ -26,9 +26,14 @@ spec:
   backoffLimit: 3
   template:
     spec:
+      serviceAccountName: default
+      securityContext:
+        runAsUser: 1000
+        runAsNonRoot: true
       containers:
         - name: zap
           image: ghcr.io/zaproxy/zaproxy:stable
+          imagePullPolicy: Always
           resources:
             limits:
               cpu: 500m
@@ -41,13 +46,12 @@ spec:
             - name: config
               mountPath: /etc/config
           securityContext:
-            runAsUser: 1000
-            runAsNonRoot: true
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities:
-              drop:
-                - ALL
+              drop: ["All"]
+            seccompProfile:
+              type: RuntimeDefault
           command:
             - /bin/sh
             - -c
