@@ -54,6 +54,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
+import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
@@ -1436,7 +1437,10 @@ public class MultiFirmUserControllerTest {
                 profileDto.getFirm().isSkipFirmSelection(), profileDto.getFirm().isCanChange());
         assertThat(model.getAttribute("firm")).isEqualTo(expectedFirm);
         assertThat(model.getAttribute("userOffices")).isInstanceOf(List.class);
-        assertThat(model.getAttribute("selectedAppRole")).isInstanceOf(List.class);
+        assertThat(model.getAttribute("uniqueApps")).isInstanceOf(List.class);
+        assertThat(model.getAttribute("rolesByApp")).isInstanceOf(Map.class);
+        assertThat(model.getAttribute("appsByType")).isInstanceOf(Map.class);
+        assertThat(model.getAttribute("officesByCity")).isInstanceOf(Map.class);
         assertThat(model.getAttribute("externalUser")).isEqualTo(true);
         assertThat(model.getAttribute("user")).isEqualTo(session.getAttribute("entraUser"));
     }
@@ -1470,14 +1474,24 @@ public class MultiFirmUserControllerTest {
         appRolesMap.put(0, List.of("role1", "role2"));
         session.setAttribute("addUserProfileAllSelectedRoles", appRolesMap);
 
-        AppRoleDto role1 = AppRoleDto.builder().id("role1").name("Role One").ordinal(2).build();
-        AppRoleDto role2 = AppRoleDto.builder().id("role2").name("Role Two").ordinal(1).build();
+        // Create AppDto with proper type
+        AppDto appDto = AppDto.builder().id("app1").name("Test App").appType(AppType.AUTHZ).build();
+
+        AppRoleDto role1 = AppRoleDto.builder()
+                .id("role1")
+                .name("Role One")
+                .ordinal(2)
+                .app(appDto)
+                .build();
+        AppRoleDto role2 = AppRoleDto.builder()
+                .id("role2")
+                .name("Role Two")
+                .ordinal(1)
+                .app(appDto)
+                .build();
 
         Firm firm = Firm.builder().build();
         UserProfile profile = UserProfile.builder().firm(firm).build();
-
-        FirmDto firmDto = FirmDto.builder().build();
-        UserProfileDto profileDto = UserProfileDto.builder().firm(firmDto).build();
 
         when(loginService.getCurrentProfile(authentication)).thenReturn(profile);
         when(officeService.getOfficesByIds(List.of("office1"))).thenReturn(List.of(new OfficeDto()));
@@ -1487,10 +1501,24 @@ public class MultiFirmUserControllerTest {
 
         assertThat(view).isEqualTo("multi-firm-user/add-profile-check-answers");
 
-        List<UserRole> selectedRoles = (List<UserRole>) model.getAttribute("selectedAppRole");
-        assertThat(selectedRoles).hasSize(2);
-        assertThat(selectedRoles.get(0).getRoleName()).isEqualTo("Role Two"); // sorted by ordinal
-        assertThat(selectedRoles.get(1).getRoleName()).isEqualTo("Role One");
+        // Check uniqueApps
+        List<UserRole> uniqueApps = (List<UserRole>) model.getAttribute("uniqueApps");
+        assertThat(uniqueApps).hasSize(1);
+
+        // Check rolesByApp contains grouped roles with correct URLs
+        Map<String, List<UserRole>> rolesByApp = (Map<String, List<UserRole>>) model.getAttribute("rolesByApp");
+        assertThat(rolesByApp).isNotNull();
+        assertThat(rolesByApp).hasSize(1);
+        assertThat(rolesByApp.get("Test App")).hasSize(2);
+
+        // Verify each role has the correct appIndex and URL
+        for (List<UserRole> roles : rolesByApp.values()) {
+            for (UserRole role : roles) {
+                assertThat(role.getAppIndex()).isEqualTo(0);
+                assertThat(role.getUrl()).contains("selectedAppIndex=0");
+            }
+        }
+
         assertThat(model.getAttribute("isMultiFirmUser")).isEqualTo(true);
         assertThat(model.getAttribute("isInternalUser")).isEqualTo(false);
     }
@@ -1504,17 +1532,27 @@ public class MultiFirmUserControllerTest {
         appRolesMap.put(0, List.of("role1", "role2"));
         session.setAttribute("addUserProfileAllSelectedRoles", appRolesMap);
 
-        AppRoleDto role1 = AppRoleDto.builder().id("role1").name("Role One").ordinal(2).build();
-        AppRoleDto role2 = AppRoleDto.builder().id("role2").name("Role Two").ordinal(1).build();
+        // Create AppDto with proper type
+        AppDto appDto = AppDto.builder().id("app1").name("Test App").appType(AppType.AUTHZ).build();
+
+        AppRoleDto role1 = AppRoleDto.builder()
+                .id("role1")
+                .name("Role One")
+                .ordinal(2)
+                .app(appDto)
+                .build();
+        AppRoleDto role2 = AppRoleDto.builder()
+                .id("role2")
+                .name("Role Two")
+                .ordinal(1)
+                .app(appDto)
+                .build();
 
         Firm firm = Firm.builder().build();
         UserProfile profile = UserProfile.builder()
                 .firm(firm)
                 .userType(UserType.INTERNAL)
                 .build();
-
-        FirmDto firmDto = FirmDto.builder().build();
-        UserProfileDto profileDto = UserProfileDto.builder().firm(firmDto).build();
 
         when(loginService.getCurrentProfile(authentication)).thenReturn(profile);
         when(officeService.getOfficesByIds(List.of("office1"))).thenReturn(List.of(new OfficeDto()));
@@ -1524,12 +1562,124 @@ public class MultiFirmUserControllerTest {
 
         assertThat(view).isEqualTo("multi-firm-user/add-profile-check-answers");
 
-        List<UserRole> selectedRoles = (List<UserRole>) model.getAttribute("selectedAppRole");
-        assertThat(selectedRoles).hasSize(2);
-        assertThat(selectedRoles.get(0).getRoleName()).isEqualTo("Role Two"); // sorted by ordinal
-        assertThat(selectedRoles.get(1).getRoleName()).isEqualTo("Role One");
+        // Check uniqueApps
+        List<UserRole> uniqueApps = (List<UserRole>) model.getAttribute("uniqueApps");
+        assertThat(uniqueApps).hasSize(1);
+
+        // Check rolesByApp contains grouped roles with correct URLs
+        Map<String, List<UserRole>> rolesByApp = (Map<String, List<UserRole>>) model.getAttribute("rolesByApp");
+        assertThat(rolesByApp).isNotNull();
+        assertThat(rolesByApp).hasSize(1);
+        assertThat(rolesByApp.get("Test App")).hasSize(2);
+
+        // Verify each role has the correct appIndex and URL
+        for (List<UserRole> roles : rolesByApp.values()) {
+            for (UserRole role : roles) {
+                assertThat(role.getAppIndex()).isEqualTo(0);
+                assertThat(role.getUrl()).contains("selectedAppIndex=0");
+            }
+        }
+
         assertThat(model.getAttribute("isMultiFirmUser")).isEqualTo(true);
         assertThat(model.getAttribute("isInternalUser")).isEqualTo(true);
+    }
+
+    @Test
+    void shouldGroupAppsByTypeAndOfficesByCity() {
+
+        UUID app1Id = UUID.randomUUID();
+        UUID app2Id = UUID.randomUUID();
+
+        session.setAttribute("entraUser", EntraUserDto.builder().fullName("Test User").build());
+        session.setAttribute("addProfileSelectedApps", List.of(app1Id.toString(), app2Id.toString()));
+
+        Map<Integer, List<String>> appRolesMap = new HashMap<>();
+        UUID role1Id = UUID.randomUUID();
+        appRolesMap.put(0, List.of(role1Id.toString()));
+        UUID role2Id = UUID.randomUUID();
+        appRolesMap.put(1, List.of(role2Id.toString()));
+        session.setAttribute("addUserProfileAllSelectedRoles", appRolesMap);
+
+        // Create apps with different types
+        final AppDto authzApp = AppDto.builder().id(app1Id.toString()).name("Admin App").appType(AppType.AUTHZ).build();
+        final AppDto laaApp = AppDto.builder().id(app2Id.toString()).name("LAA App").appType(AppType.LAA).build();
+
+        final AppRoleDto role1 = AppRoleDto.builder()
+                .id(role1Id.toString())
+                .name("Admin Role")
+                .ordinal(1)
+                .app(authzApp)
+                .build();
+        final AppRoleDto role2 = AppRoleDto.builder()
+                .id(role2Id.toString())
+                .name("LAA Role")
+                .ordinal(1)
+                .app(laaApp)
+                .build();
+
+        // Create offices with different cities
+        OfficeDto office1 = OfficeDto.builder()
+                .id(UUID.randomUUID())
+                .code("OFF1")
+                .address(OfficeDto.AddressDto.builder().city("London").addressLine1("1 London St").build())
+                .build();
+        OfficeDto office2 = OfficeDto.builder()
+                .id(UUID.randomUUID())
+                .code("OFF2")
+                .address(OfficeDto.AddressDto.builder().city("London").addressLine1("2 London St").build())
+                .build();
+        OfficeDto office3 = OfficeDto.builder()
+                .id(UUID.randomUUID())
+                .code("OFF3")
+                .address(OfficeDto.AddressDto.builder().city("Manchester").addressLine1("1 Manchester St").build())
+                .build();
+        OfficeDto office4 = OfficeDto.builder()
+                .id(UUID.randomUUID())
+                .code("OFF4")
+                .address(null)
+                .build();
+
+        session.setAttribute("userOffices", List.of(office1.getId(), office2.getId(), office3.getId(), office4.getId()));
+
+        Firm firm = Firm.builder().build();
+        UserProfile profile = UserProfile.builder().firm(firm).appRoles(Set.of()).build();
+
+        when(loginService.getCurrentProfile(authentication)).thenReturn(profile);
+        when(officeService.getOfficesByIds(any())).thenReturn(List.of(office1, office2, office3, office4));
+        when(appRoleService.getByIds(List.of(role1Id.toString(), role2Id.toString()))).thenReturn(List.of(role1, role2));
+        when(userService.getAppRolesByAppIdAndUserType(eq(app1Id.toString()), eq(UserType.EXTERNAL), any())).thenReturn(List.of(role1));
+        when(userService.getAppRolesByAppIdAndUserType(eq(app2Id.toString()), eq(UserType.EXTERNAL), any())).thenReturn(List.of(role2));
+        when(roleAssignmentService.filterRoles(any(), any())).thenReturn(List.of(role1)).thenReturn(List.of(role2));
+
+        String view = controller.checkAnswerAndAddProfile(model, authentication, session);
+
+        assertThat(view).isEqualTo("multi-firm-user/add-profile-check-answers");
+
+        // Check appsByType
+        Map<AppType, List<UserRole>> appsByType = (Map<AppType, List<UserRole>>) model.getAttribute("appsByType");
+        assertThat(appsByType).isNotNull();
+        assertThat(appsByType).hasSize(2);
+        assertThat(appsByType.get(AppType.AUTHZ)).hasSize(1);
+        assertThat(appsByType.get(AppType.LAA)).hasSize(1);
+        assertThat(appsByType.get(AppType.AUTHZ).get(0).getAppName()).isEqualTo("Admin App");
+        assertThat(appsByType.get(AppType.LAA).get(0).getAppName()).isEqualTo("LAA App");
+
+        // Check officesByCity
+        Map<String, List<OfficeDto>> officesByCity = (Map<String, List<OfficeDto>>) model.getAttribute("officesByCity");
+        assertThat(officesByCity).isNotNull();
+        assertThat(officesByCity).hasSize(3); // London, Manchester, Other cities
+        assertThat(officesByCity.get("London")).hasSize(2);
+        assertThat(officesByCity.get("Manchester")).hasSize(1);
+        assertThat(officesByCity.get("Other cities")).hasSize(1);
+
+        // Check totalAppRoles is set
+        Map<String, List<UserRole>> rolesByApp = (Map<String, List<UserRole>>) model.getAttribute("rolesByApp");
+        assertThat(rolesByApp).isNotNull();
+        for (List<UserRole> roles : rolesByApp.values()) {
+            for (UserRole role : roles) {
+                assertThat(role.getTotalAppRoles()).isEqualTo(1);
+            }
+        }
     }
 
     @Test

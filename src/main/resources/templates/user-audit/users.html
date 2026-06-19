@@ -321,6 +321,25 @@
                 display: block;
             }
 
+
+            .full-width-container {
+                padding-left: 40px;
+                padding-right: 40px;
+                box-sizing: border-box;
+                overflow: auto;
+            }
+
+            /* Only breakout on tablet/desktop */
+            @media (min-width: 768px) {
+                .full-width-container {
+                    position: relative;
+                    width: 100vw;
+                    max-width: 1440px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                }
+            }
+
             .autocomplete__input {
                 -webkit-appearance: none;
                 -moz-appearance: none;
@@ -459,68 +478,59 @@
 
             /* Table optimizations with fixed layout */
             .govuk-table {
-                table-layout: fixed;
+                table-layout: auto;
                 width: 100%;
             }
 
             .table-container {
-                overflow-x: visible !important;
+                width: 100%;
+                overflow-x: auto;
             }
 
             .govuk-table__header,
             .govuk-table__cell {
-                padding: 10px 8px;
-                word-wrap: break-word;
-                overflow-wrap: break-word;
-                hyphens: auto;
+                padding: 12px 10px;
                 vertical-align: top;
-            }
-
-            /* Fixed column widths - adjusted to fit without scroll */
-            .govuk-table__header:nth-child(1),
-            .govuk-table__cell:nth-child(1) {
-                width: 19%;
-            }
-
-            .govuk-table__header:nth-child(2),
-            .govuk-table__cell:nth-child(2) {
-                width: 20%;
-            }
-
-            .govuk-table__header:nth-child(3),
-            .govuk-table__cell:nth-child(3) {
-                width: 14%;
-            }
-
-            .govuk-table__header:nth-child(4),
-            .govuk-table__cell:nth-child(4) {
-                width: 16%;
-            }
-
-            .govuk-table__header:nth-child(5),
-            .govuk-table__cell:nth-child(5) {
-                width: 11%;
-            }
-
-            .govuk-table__header:nth-child(6),
-            .govuk-table__cell:nth-child(6) {
-                width: 12%;
-                text-align: center;
-            }
-
-            .govuk-table__header:nth-child(7),
-            .govuk-table__cell:nth-child(7) {
-                width: 12%;
-                text-align: center;
-            }
-
-            /* Prevent table headers from breaking - with proper spacing */
-            .govuk-table__header {
                 white-space: nowrap;
-                line-height: 1.25;
             }
 
-            .govuk-table__header .sort-button {
+            .govuk-table__cell {
+                white-space: normal;
+                word-break: break-word;
+
+
+                /* Prevent table headers from breaking - with proper spacing */
+
+                .govuk-table__header {
+                    white-space: nowrap;
+                }
+            }
+
+            .govuk-table__cell:nth-child(0),
+            .govuk-table__header:nth-child(0) {
+                width: 5%;
+            }
+
+            .govuk-table__cell:nth-child(4),
+            .govuk-table__header:nth-child(4) {
+                width: 15%;
+            }
+
+            .govuk-table__cell:nth-child(5),
+            .govuk-table__header:nth-child(5) {
+                width: 5%;
+                white-space: nowrap;
+            }
+            .govuk-table__cell:nth-child(6),
+            .govuk-table__header:nth-child(6),
+            .govuk-table__cell:nth-child(7),
+            .govuk-table__header:nth-child(7) {
+                width: 2%;
+                white-space: nowrap;
+                text-align: center;
+            }
+
+                .govuk-table__header .sort-button {
                 white-space: nowrap;
                 display: inline-flex;
                 align-items: center;
@@ -540,7 +550,6 @@
             /* Force email column to break long addresses */
             .govuk-table__cell:nth-child(2) {
                 word-break: break-all;
-                overflow-wrap: anywhere;
             }
 
             @media (max-width: 1200px) {
@@ -982,7 +991,7 @@
         <!-- Audit Table -->
         <div class="govuk-grid-row govuk-!-margin-top-6" id="audit-table">
             <div class="govuk-grid-column-full">
-                <div class="table-container">
+                <div class="full-width-container">
                     <table class="govuk-table">
                         <thead class="govuk-table__head">
                             <tr class="govuk-table__row">
@@ -1046,7 +1055,7 @@
                                             width="22" height="22" alt="">
                                     </button>
                                 </th>
-                                <th scope="col" class="govuk-table__header govuk-!-width-one-quarter"
+                                <th scope="col" class="govuk-table__header"
                                     style="padding-right: 35px"
                                     th:aria-sort="${sort == 'silasStatus' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="silasStatus"
@@ -1062,7 +1071,7 @@
                                             width="22" height="22" alt="">
                                     </button>
                                 </th>
-                                <th scope="col" class="govuk-table__header govuk-!-width-one-quarter"
+                                <th scope="col" class="govuk-table__header"
                                     th:aria-sort="${sort == 'isMultiFirmUser' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
                                     <button type="button" class="sort-button" data-sort="isMultiFirmUser"
                                         th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'isMultiFirmUser' and direction == 'asc' ? 'desc' : 'asc'}, data-firm-search=${firmSearch.firmSearch}, data-selected-firm-id=${firmSearch.selectedFirmId}, data-silas-role=${selectedSilasRole}, data-selected-app-id=${selectedAppId}, data-selected-user-type=${selectedUserType}, data-never-activated=${neverActivated}">
@@ -1106,7 +1115,7 @@
                                     <span th:if="${user.userId == null && user.entraUserId == null}" th:text="${user.name}"></span>
                                 </td>
                                 <td class="govuk-table__cell" th:text="${user.email}"></td>
-                                <td class="govuk-table__cell"
+                                <td class="govuk-table__cell" style="white-space: nowrap;"
                                     th:text="${user.userType}"></td>
                                 <td class="govuk-table__cell"
                                     th:text="${user.firmAssociation != null and user.firmAssociation != 'None' and user.firmAssociation != 'Unknown' ? user.firmAssociation : ''}">
@@ -1126,12 +1135,13 @@
                                     </th:block>
                                     <th:block
                                             th:if="${user.userType != 'Internal' and (user.invitationStatus == null or user.invitationStatus.name() != 'VERIFICATION_SUCCESS')}">
-                                        <strong class="govuk-tag govuk-tag--grey govuk-!-margin-top-1">
+                                        <strong class="govuk-tag govuk-tag--grey govuk-!-margin-top-1" style="white-space: nowrap; padding-right: 20px;">
                                             Awaiting Verification
                                         </strong>
                                     </th:block>
                                 </td>
-                                <td class="govuk-table__cell" th:text="${user.isMultiFirmUser ? 'Yes' : 'No'}"></td>
+                                <td class="govuk-table__cell"
+                                    th:text="${user.isMultiFirmUser ? 'Yes' : 'No'}"></td>
                                 <td class="govuk-table__cell" th:text="${user.profileCount}"></td>
                             </tr>
                         </tbody>

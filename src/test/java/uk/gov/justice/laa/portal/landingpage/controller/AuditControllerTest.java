@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -25,6 +26,9 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import org.mockito.Mock;
+
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -39,6 +43,8 @@ import org.springframework.ui.Model;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import uk.gov.justice.laa.portal.landingpage.auth.AuthenticatedUser;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -63,6 +69,7 @@ import uk.gov.justice.laa.portal.landingpage.service.TechServicesClient;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUserResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
@@ -1469,4 +1476,56 @@ class AuditControllerTest {
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Invalid Search criteria provided");
     }
+
+    @Test
+    void resendActivationEmail_whenSuccess() {
+        UUID userId = UUID.randomUUID();
+
+        TechServicesApiResponse<SendUserVerificationEmailResponse> successResponse =
+                TechServicesApiResponse.success(
+                        SendUserVerificationEmailResponse.builder()
+                                .message("Verification email sent successfully")
+                                .build()
+                );
+
+        when(userService.sendVerificationEmail(userId.toString())).thenReturn(successResponse);
+        when(accessControlService.canSendVerificationEmail(userId.toString())).thenReturn(true);
+
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+        // when
+        String view = auditController.resendActivationEmail(userId, redirectAttributes);
+
+        // then
+        assertThat(view).isEqualTo("redirect:/admin/users/audit/" + userId);
+        assertThat(redirectAttributes.getFlashAttributes())
+                .extractingByKey("successMessage")
+                .isEqualTo("Verification email sent successfully");
+    }
+
+    @Test
+    void resendActivationEmail_whenError() {
+        UUID userId = UUID.randomUUID();
+
+        TechServicesApiResponse<SendUserVerificationEmailResponse> errorResponse =
+                mock(TechServicesApiResponse.class, RETURNS_DEEP_STUBS);
+
+        when(errorResponse.isSuccess()).thenReturn(false);
+        when(errorResponse.getError().getMessage()).thenReturn("Failed to generate and send activation code via email.");
+
+        when(userService.sendVerificationEmail(userId.toString())).thenReturn(errorResponse);
+        when(accessControlService.canSendVerificationEmail(userId.toString())).thenReturn(true);
+
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+
+        // when
+        String view = auditController.resendActivationEmail(userId, redirectAttributes);
+
+        // then
+        assertThat(view).isEqualTo("redirect:/admin/users/audit/" + userId);
+        assertThat(redirectAttributes.getFlashAttributes()).containsKey("errorMessage");
+        assertThat(redirectAttributes.getFlashAttributes().get("errorMessage"))
+                .isEqualTo("Failed to generate and send activation code via email.");
+    }
+
 }

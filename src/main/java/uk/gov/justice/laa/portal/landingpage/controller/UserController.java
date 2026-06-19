@@ -319,14 +319,7 @@ public class UserController {
      */
     @GetMapping("/users/manage/{id}")
     @PreAuthorize("@accessControlService.canAccessUser(#id)")
-    public String manageUser(@PathVariable String id,
-            @RequestParam(value = "resendVerification", required = false) boolean resendVerification,
-            Model model, HttpSession session, Authentication authentication) {
-
-        // Handle verification email resend if requested
-        if (Boolean.TRUE.equals(resendVerification)) {
-            handleResendVerification(id, model);
-        }
+    public String manageUser(@PathVariable String id, Model model, HttpSession session, Authentication authentication) {
 
         UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
 
@@ -345,11 +338,15 @@ public class UserController {
 
         UserProfileSilasStatus silasStatus = userService.calculateSilasStatusForUserProfile(user);
 
+        // Check if user has any roles assigned
+        final boolean userHasRoles = !userAppRoles.isEmpty();
+
         model.addAttribute("user", user);
         model.addAttribute("silasStatus", silasStatus.name());
         model.addAttribute("userAppRoles", userAppRoles);
         model.addAttribute("userOffices", userOffices);
         model.addAttribute("isAccessGranted", isAccessGranted);
+        model.addAttribute("userHasRoles", userHasRoles);
         boolean externalUser = UserType.EXTERNAL == user.getUserType();
         model.addAttribute("externalUser", externalUser);
 
@@ -451,6 +448,20 @@ public class UserController {
         }
 
         return "manage-user";
+    }
+
+    /**
+     * Handle resending activation email
+     */
+    @GetMapping("/users/manage/{id}/resend-verification")
+    @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions("
+            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).RESEND_VERIFICATION_EMAIL)")
+    public String resendActivationEmail(@PathVariable("id") UUID userId, RedirectAttributes redirectAttributes) {
+
+        handleResendVerification(String.valueOf(userId), redirectAttributes);
+
+        return "redirect:/admin/users/manage/" + userId;
+
     }
 
     @PostMapping("/users/manage/{id}/delete")
@@ -1857,7 +1868,26 @@ public class UserController {
             }
         }
         Model modelFromSession = (Model) session.getAttribute("editUserOfficesModel");
+        Comparator<String> cityOrder = Comparator
+                .comparing((String city) -> city.equals("Other cities"))
+                .thenComparing(Comparator.naturalOrder());
+        Map<String, List<OfficeModel>> officesByCity = selectOfficesDisplay.stream()
+                .collect(Collectors.groupingBy(
+                        office -> office.getAddress() != null && office.getAddress().getCity() != null
+                                ? office.getAddress().getCity()
+                                : "Other cities",
+                        Collectors.toList()
+                ))
+                .entrySet().stream()
+                .sorted(Map.Entry.comparingByKey(cityOrder))
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (a, b) -> a,
+                        LinkedHashMap::new
+                ));
         model.addAttribute("userOffices", selectOfficesDisplay);
+        model.addAttribute("officesByCity", officesByCity);
         model.addAttribute("user", modelFromSession.getAttribute("user"));
         model.addAttribute("hasAllOffices", selectedOffices.getFirst().equals(ALL));
         model.addAttribute("hasNoOffices", selectedOffices.getFirst().equals(NO_OFFICES));
@@ -2958,7 +2988,7 @@ public class UserController {
         return result;
     }
 
-    private void handleResendVerification(String id, Model model) {
+    private void handleResendVerification(String id, RedirectAttributes redirectAttributes) {
         if (!accessControlService.canSendVerificationEmail(id)) {
             throw new AccessDeniedException("User does not have permission to send verification email.");
         }
@@ -2967,9 +2997,9 @@ public class UserController {
             TechServicesApiResponse<SendUserVerificationEmailResponse> response = userService
                     .sendVerificationEmail(id);
             if (response.isSuccess()) {
-                model.addAttribute("successMessage", response.getData().getMessage());
+                redirectAttributes.addFlashAttribute("successMessage", response.getData().getMessage());
             } else {
-                model.addAttribute("errorMessage", response.getError().getMessage());
+                redirectAttributes.addFlashAttribute("errorMessage", response.getError().getMessage());
             }
         } catch (RuntimeException runtimeException) {
             log.error("Error sending activation code for user profile: {}", id, runtimeException);

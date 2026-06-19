@@ -96,7 +96,7 @@
                         <h2 class="govuk-summary-card__title">Services</h2>
                     </div>
                     <div class="govuk-summary-card__content">
-                        <dl th:if="${!#lists.isEmpty(appAssignments)}" class="govuk-summary-list">
+                        <dl th:if="${!#maps.isEmpty(appAssignments)}" class="govuk-summary-list">
                             <div th:each="appAssignment : ${appAssignments}" class="govuk-summary-list__row">
                                 <dt class="govuk-summary-list__key" th:text="${appAssignment.key}">Service name</dt>
                                 <dd class="govuk-summary-list__value">
@@ -106,7 +106,7 @@
                                 </dd>
                             </div>
                         </dl>
-                        <p th:if="${#lists.isEmpty(appAssignments)}" class="govuk-body">No services assigned</p>
+                        <p th:if="${#maps.isEmpty(appAssignments)}" class="govuk-body">No services assigned</p>
                     </div>
                 </div>
 
