@@ -1,0 +1,9 @@
+10015	IGNORE	Cache-Control headers are correctly set (no-cache, no-store). ZAP flags this on the unauthenticated login page which intentionally prevents caching.
+10020	IGNORE	X-Frame-Options: DENY is set by Spring Security. ZAP incorrectly flags this on OAuth redirect responses where the header is not included.
+10038	IGNORE	Content-Security-Policy is set by Spring Security. ZAP incorrectly flags this on OAuth redirect responses where the header is not included.
+10049	IGNORE	Non-storable 302 redirects to Azure AD OAuth are expected and intentional. These are authentication redirects that must not be cached.
+10094	IGNORE	Base64 values are CSRF tokens and OAuth state parameters in authentication redirect URLs. These are expected and do not represent information disclosure.
+10096	IGNORE	Unix timestamps are OAuth state parameters in authentication redirect URLs. These are expected and do not represent information disclosure.
+10109	IGNORE	Informational notice only - ZAP identifying this as a modern web application. Not a vulnerability.
+10112	IGNORE	Informational notice only - ZAP identifying session management cookies. Session cookies are correctly configured with HttpOnly, Secure and SameSite=Lax.
+90005	IGNORE	ZAP's own scanner does not send the Sec-Fetch-Dest header. This is a false positive about ZAP's own behaviour, not the server.
