@@ -31,11 +31,7 @@ jobs:
 
       - name: Generate Deployment the Files
         run: |
-          # Get all env vars, filter out server_protocol and uri, and format with leading dollar signs
-          ALLOWED_VARS=$(printenv | cut -d= -f1 | grep -v -E '^(server_protocol|uri|http1_reject)$' | sed 's/^/$/' | tr '\n' ' ')
-
-          # Pass the dynamic list into envsubst
-          envsubst "$ALLOWED_VARS" < deployments/templates/zapjob.yml  > deployments/zapjob.yml
+          cat deployments/templates/zapjob.yml | envsubst > deployments/zapjob.yml
         env:
           SENTRY_SAMPLE_RATE: ${{ vars.SENTRY_SAMPLE_RATE }}
           BASE_URL_HOMEPAGE: ${{ secrets.BASE_URL_HOMEPAGE }}
