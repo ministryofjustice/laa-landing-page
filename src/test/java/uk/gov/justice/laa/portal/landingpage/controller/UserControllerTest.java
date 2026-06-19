@@ -33,7 +33,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.lenient;
@@ -6552,6 +6551,44 @@ class UserControllerTest {
 
         // then
         assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
+    }
+
+    @Test
+    void grantAccessProcessCheckAnswers_shouldRedirectToConfirmation_whenDuplicateRoleViolationOccurs() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440012";
+        UserProfileDto userProfileDto = new UserProfileDto();
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setFullName("Test User");
+        userProfileDto.setEntraUser(entraUser);
+
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("admin user");
+
+        MockHttpSession testSession = new MockHttpSession();
+        Set<String> selectedRoles = Set.of("Role 1");
+        List<String> selectedOffices = List.of("Office 1");
+        testSession.setAttribute("allSelectedRoles", selectedRoles);
+        testSession.setAttribute("selectedOffices", selectedOffices);
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().build());
+        when(roleAssignmentService.canAssignRole(any(), anyCollection())).thenReturn(true);
+        when(userService.updateUserRoles(any(), anyCollection(), anyList(), any()))
+                .thenThrow(new org.springframework.dao.DataIntegrityViolationException(
+                        "could not execute statement; SQL [n/a]; constraint [user_profile_app_role_pkey]"));
+
+        // When
+        String view = userController.grantAccessProcessCheckAnswers(userId, authentication, redirectAttributes, testSession);
+
+        // Then - duplicate key violation is treated as idempotent; user is still redirected to confirmation
+        assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/confirmation");
+
+        // Verify session was cleaned up
+        assertThat(testSession.getAttribute("allSelectedRoles")).isNull();
+        assertThat(testSession.getAttribute("selectedOffices")).isNull();
     }
 
     @Test
