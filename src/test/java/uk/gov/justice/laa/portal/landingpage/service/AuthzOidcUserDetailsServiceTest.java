@@ -11,7 +11,6 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.oidc.OidcIdToken;
-import org.springframework.security.oauth2.core.oidc.OidcUserInfo;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 
 import java.time.Instant;
@@ -40,7 +39,6 @@ class AuthzOidcUserDetailsServiceTest {
         List<String> roles = List.of("ROLE_USER", "ROLE_ADMIN");
 
         // Construct standard token properties matching what OidcUserService expects
-        OidcUserInfo userInfo = new OidcUserInfo(Map.of("preferred_username", username, "oid", username));
         OidcIdToken oidcIdToken = new OidcIdToken(
                 "test-token",
                 Instant.now(),
@@ -67,14 +65,11 @@ class AuthzOidcUserDetailsServiceTest {
 
         OidcUserRequest oidcUserRequest = new OidcUserRequest(clientRegistration, accessToken, oidcIdToken);
 
-        // Instantiate normally (No Spy needed!)
-        AuthzOidcUserDetailsService serviceUnderTest = new AuthzOidcUserDetailsService(userService);
-
         // Stub your internal database call
         when(userService.getUserAuthorities(username)).thenReturn(roles);
 
         // Act
-        OidcUser result = serviceUnderTest.loadUser(oidcUserRequest);
+        OidcUser result = authzOidcUserDetailsService.loadUser(oidcUserRequest);
 
         // Assert
         assertNotNull(result);
