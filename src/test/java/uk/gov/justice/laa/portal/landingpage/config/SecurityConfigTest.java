@@ -1,7 +1,10 @@
 package uk.gov.justice.laa.portal.landingpage.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -10,10 +13,13 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+
+import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 import uk.gov.justice.laa.portal.landingpage.config.jwt.DevJwtDecoderConfig;
@@ -66,7 +72,24 @@ class SecurityConfigTest {
         }
     }
 
+    @BeforeEach
+    void configureFilters() throws Exception {
+        // Force the custom filters to pass the execution token onward down the chain
+        Mockito.doAnswer(invocation -> {
+            jakarta.servlet.FilterChain chain = invocation.getArgument(2);
+            chain.doFilter(invocation.getArgument(0), invocation.getArgument(1));
+            return null;
+        }).when(userDisabledFilter).doFilter(any(), any(), any());
+
+        Mockito.doAnswer(invocation -> {
+            jakarta.servlet.FilterChain chain = invocation.getArgument(2);
+            chain.doFilter(invocation.getArgument(0), invocation.getArgument(1));
+            return null;
+        }).when(firmDisabledFilter).doFilter(any(), any(), any());
+    }
+
     @Test
+    @WithMockUser(username = "test-user", roles = "USER")
     void securityHeaders() throws Exception {
         MvcResult mvcResult = mockMvc.perform(get("/")).andReturn();
         String sts = mvcResult.getResponse().getHeader("Strict-Transport-Security");
