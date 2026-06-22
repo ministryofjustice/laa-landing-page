@@ -15,6 +15,7 @@ metadata:
     nginx.ingress.kubernetes.io/enable-modsecurity: "true"
     nginx.ingress.kubernetes.io/ssl-ciphers: "TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-CHACHA20-POLY1305"
     nginx.ingress.kubernetes.io/ssl-protocols: "TLSv1.2 TLSv1.3"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/configuration-snippet: |
       more_set_headers "Strict-Transport-Security: max-age=31536000; includeSubDomains; preload";
     nginx.ingress.kubernetes.io/modsecurity-snippet: |
@@ -23,6 +24,20 @@ metadata:
       SecDefaultAction "phase:2,pass,log,tag:github_team=laa-portal-stabilisation-tech"
       SecDebugLogLevel 1
       SecRule REQUEST_URI "@beginsWith /api/v1/claims/enrich" "id:10001,phase:2,pass,nolog,ctl:ruleRemoveById=942100,ctl:ruleRemoveById=942151"
+    nginx.ingress.kubernetes.io/server-snippet: |
+      set $http1_reject 0;
+      if ($server_protocol = "HTTP/1.1") {
+        set $http1_reject 1;
+      }
+      if ($uri ~ "^/api/v1/claims/enrich") {
+        set $http1_reject 0;
+      }
+      if ($uri ~ "^/actuator/health") {
+        set $http1_reject 0;
+      }
+      if ($http1_reject = 1) {
+        return 426;
+      }
 spec:
   ingressClassName: ${INGRESS_CLASS_NAME}
   tls:
