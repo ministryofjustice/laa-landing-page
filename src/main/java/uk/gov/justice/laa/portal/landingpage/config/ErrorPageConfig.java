@@ -63,7 +63,7 @@ public class ErrorPageConfig {
      */
     @Bean
     public WebServerFactoryCustomizer<TomcatServletWebServerFactory> tomcatCustomizer() {
-        return factory -> factory.addConnectorCustomizers( connector ->
+        return factory -> factory.addConnectorCustomizers(connector ->
                 connector.setXpoweredBy(false));
     }
 }
