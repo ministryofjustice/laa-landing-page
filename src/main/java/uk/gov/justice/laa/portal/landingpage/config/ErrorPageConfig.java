@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.config;
 
+import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
 import org.springframework.boot.web.server.ErrorPage;
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.boot.web.servlet.server.ConfigurableServletWebServerFactory;
@@ -53,5 +54,16 @@ public class ErrorPageConfig {
                 new ErrorPage(HttpStatus.GATEWAY_TIMEOUT, "/error")
             );
         };
+    }
+
+    /**
+     *
+     * Disable Tomcat's X-Powered-By header
+     *
+     */
+    @Bean
+    public WebServerFactoryCustomizer<TomcatServletWebServerFactory> tomcatCustomizer() {
+        return factory -> factory.addConnectorCustomizers( connector ->
+                connector.setXpoweredBy(false));
     }
 }
