@@ -127,13 +127,13 @@ jobs:
         run: |
           kubectl wait \
             --for=condition=complete \
-            job/zap-scan \
+            job/zap-scan-weekly \
             -n ${{ secrets.KUBE_NAMESPACE }} \
             --timeout=900s
 
       - name: Get logs (debugging)
         run: |
-          kubectl logs job/zap-scan -n ${{ secrets.KUBE_NAMESPACE }} | tee zap-output.txt
+          kubectl logs job/zap-scan-weekly -n ${{ secrets.KUBE_NAMESPACE }} | tee zap-output.txt
 
       - name: Extract report.md from logs
         shell: bash
