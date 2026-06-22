@@ -13,6 +13,7 @@ jobs:
   zap_scan:
     name: Run Full ZAP DEV DAST Scan Against Live App
     runs-on: ubuntu-latest
+    environment: development
 
     steps:
       - name: Checkout
