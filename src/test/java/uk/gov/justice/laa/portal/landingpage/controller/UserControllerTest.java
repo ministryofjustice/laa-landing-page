@@ -43,6 +43,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.access.AccessDeniedException;
@@ -2054,7 +2055,7 @@ class UserControllerTest {
         session.setAttribute("editUserAllSelectedRoles", new HashMap<>());
         when(roleAssignmentService.canAssignRole(any(), any())).thenReturn(true);
         when(userService.updateUserRoles(any(), any(), any(), any()))
-                .thenThrow(new org.springframework.dao.DataIntegrityViolationException(
+                .thenThrow(new DataIntegrityViolationException(
                         "could not execute statement; constraint [user_profile_app_role_pkey]"));
 
         // When
