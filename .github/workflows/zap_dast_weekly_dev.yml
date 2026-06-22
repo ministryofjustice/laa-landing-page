@@ -13,6 +13,7 @@ jobs:
   zap_scan:
     name: Run Full ZAP DEV DAST Scan Against Live App
     runs-on: ubuntu-latest
+    environment: development
 
     steps:
       - name: Checkout
@@ -126,13 +127,13 @@ jobs:
         run: |
           kubectl wait \
             --for=condition=complete \
-            job/zap-scan \
+            job/zap-scan-weekly \
             -n ${{ secrets.KUBE_NAMESPACE }} \
             --timeout=900s
 
       - name: Get logs (debugging)
         run: |
-          kubectl logs job/zap-scan -n ${{ secrets.KUBE_NAMESPACE }} | tee zap-output.txt
+          kubectl logs job/zap-scan-weekly -n ${{ secrets.KUBE_NAMESPACE }} | tee zap-output.txt
 
       - name: Extract report.md from logs
         shell: bash
@@ -160,10 +161,10 @@ jobs:
 
           # Read directly from the markdown file.
           # -m 1 ensures we only grab the first match (which is the summary table at the top of the report)
-          high_value=$(grep -a -m 1 "| High |" report_md.md | awk -F'|' '{print $3}' | xargs)
-          medium_value=$(grep -a -m 1 "| Medium |" report_md.md | awk -F'|' '{print $3}' | xargs)
-          low_value=$(grep -a -m 1 "| Low |" report_md.md | awk -F'|' '{print $3}' | xargs)
-          info_value=$(grep -a -m 1 "| Informational |" report_md.md | awk -F'|' '{print $3}' | xargs)
+          high_value=$(grep -a -m 1 "| High |" report.md | awk -F'|' '{print $3}' | xargs)
+          medium_value=$(grep -a -m 1 "| Medium |" report.md | awk -F'|' '{print $3}' | xargs)
+          low_value=$(grep -a -m 1 "| Low |" report.md | awk -F'|' '{print $3}' | xargs)
+          info_value=$(grep -a -m 1 "| Informational |" report.md | awk -F'|' '{print $3}' | xargs)
 
           # Fallback to 0 if grep returns empty (e.g., if the ZAP report is totally empty/failed)
           high_value=${high_value:-0}
