@@ -1693,8 +1693,8 @@ public class UserController {
                         "role");
                 eventService.logEvent(updateUserAuditEvent);
                 notifyExternalUserRoleChange(user, updateResult.get("diff"), "Service roles");
-            } catch (DataIntegrityViolationException e) {
-                log.warn("Duplicate role assignment detected for user {} - continuing to confirmation", id);
+            } catch (Exception e) {
+                log.warn("Duplicate or concurrent role assignment detected for user {} - continuing to confirmation", id);
             }
         }
         // Clear the session
@@ -2829,6 +2829,8 @@ public class UserController {
 
             notifyExternalUserRoleChange(userProfileDto, "You have been granted access to services and offices", "Access granted");
 
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Duplicate role assignment detected for user {} during grant access - continuing to confirmation", id);
         } catch (Exception e) {
             log.error("Error completing grant access for user: " + id, e);
             // Could add error handling here if needed
