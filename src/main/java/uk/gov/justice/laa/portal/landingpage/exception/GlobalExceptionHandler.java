@@ -4,6 +4,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.validation.FieldError;
@@ -32,18 +33,14 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ClaimEnrichmentResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        String errorMessage = ex.getBindingResult()
-                .getFieldErrors()
-                .stream()
-                .map(FieldError::getDefaultMessage)
-                .collect(Collectors.joining("; "));
-
-        return createErrorResponse(HttpStatus.BAD_REQUEST, "Validation error: " + errorMessage);
+        log.warn("Validation exception occurred", ex);
+        return createErrorResponse(HttpStatus.BAD_REQUEST, "Invalid request");
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ClaimEnrichmentResponse> handleConstraintViolation(ConstraintViolationException ex) {
-        return createErrorResponse(HttpStatus.BAD_REQUEST, "Validation error: " + ex.getMessage());
+        log.warn("Constraint violation occurred", ex);
+        return createErrorResponse(HttpStatus.BAD_REQUEST, "Invalid request");
     }
 
     @ExceptionHandler(CreateUserDetailsIncompleteException.class)
@@ -65,10 +62,10 @@ public class GlobalExceptionHandler {
         String contentType = request.getHeader("Content-Type");
 
         if (isApiRequest(acceptHeader, contentType, request.getRequestURI())) {
-            log.warn("Access denied in API request: {}", ex.getMessage());
+            log.warn("Access denied in API request", ex);
             return createErrorResponse(
                     HttpStatus.UNAUTHORIZED,
-                    "An unauthorized error occurred: " + ex.getMessage());
+                    "Access denied");
         }
 
         // Let web requests be handled by Spring Security's error handling
@@ -77,12 +74,14 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({ UserNotFoundException.class})
     public ResponseEntity<ClaimEnrichmentResponse> handleUserNotFoundExceptionException(Exception ex) {
-        return createErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage());
+        log.warn("User not found", ex);
+        return createErrorResponse(HttpStatus.NOT_FOUND, "Resource not found");
     }
 
     @ExceptionHandler({ BadRequestException.class})
     public ResponseEntity<ClaimEnrichmentResponse> handleBadRequestExceptionException(Exception ex) {
-        return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+        log.warn("Bad request", ex);
+        return createErrorResponse(HttpStatus.BAD_REQUEST, "Invalid request");
     }
 
     /**
@@ -93,6 +92,25 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Void> handleNoResourceFoundException(NoResourceFoundException ex) {
         // Browsers automatically request favicon.ico, return clean 404
         return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    }
+
+
+    /**
+     * Handle malformed JSON requests.
+     * Returns a generic 400 response without exposing parsing details.
+     */
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ClaimEnrichmentResponse> handleMalformedJson(HttpMessageNotReadableException ex,
+                                                                       HttpServletRequest request) {
+        if (isApiRequest(request.getHeader("Accept"), request.getHeader("Content-Type"), request.getRequestURI())) {
+            log.warn("Malformed JSON request", ex);
+            return createErrorResponse(
+                    HttpStatus.BAD_REQUEST,
+                    "Invalid request"
+            );
+        }
+        throw ex;
     }
 
     /**
@@ -109,7 +127,7 @@ public class GlobalExceptionHandler {
             log.error("Unexpected error in API request", ex);
             return createErrorResponse(
                     HttpStatus.INTERNAL_SERVER_ERROR,
-                    "An unexpected error occurred: " + ex.getMessage());
+                    "An error occurred");
         }
 
         // Let web requests be handled by the error controller
