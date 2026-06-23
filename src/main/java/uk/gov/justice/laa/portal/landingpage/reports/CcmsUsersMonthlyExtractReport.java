@@ -15,10 +15,10 @@ import java.time.Duration;
 
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "external.user.reporting.pui.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "ccms.user.monthly.reporting.enabled", havingValue = "true")
 @Slf4j
 public class CcmsUsersMonthlyExtractReport {
-    private static final String REPORTING_LOCK_KEY = "EXTERNAL_USER_PUI_REPORT_LOCK";
+    private static final String REPORTING_LOCK_KEY = "CCMS_USERS_MONTHLY_REPORT_LOCK";
 
     private final CcmsUsersMonthlyExtractService ccmsUsersMonthlyExtractService;
     private final DistributedLockService lockService;

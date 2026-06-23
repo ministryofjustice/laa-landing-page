@@ -302,7 +302,7 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID>, Ent
     List<EntraUser> findEntraUserByCcmsEbsUserIsTrue();
 
     @Query("""
-        SELECT DISTINCT u.firstName, u.lastName, u.email
+        SELECT DISTINCT u.firstName, u.lastName, u.email, up.createdDate
         FROM EntraUser u
         JOIN u.userProfiles up
         JOIN up.appRoles ar

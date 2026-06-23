@@ -18,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
 import jakarta.validation.ConstraintViolationException;
+import org.springframework.test.annotation.DirtiesContext;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -511,8 +512,10 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
         nonMatchingProfile.getAppRoles().add(invalidRole);
         userProfileRepository.saveAndFlush(nonMatchingProfile);
 
-        LocalDateTime start = LocalDateTime.of(2026, 5, 20, 0, 0);
-        LocalDateTime end = LocalDateTime.of(2026, 6, 20, 0, 0);
+        LocalDateTime matchingUserCreatedDate = matchingProfile.getCreatedDate();
+
+        LocalDateTime start = matchingUserCreatedDate.minusMonths(3);
+        LocalDateTime end = matchingUserCreatedDate.plusDays(1);
 
         List<Object[]> results = repository.findCcmsUsersWithAppInPeriod(
                 UserType.EXTERNAL,
@@ -528,6 +531,7 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
         assertThat(row[0]).isEqualTo("John");
         assertThat(row[1]).isEqualTo("Doe");
         assertThat(row[2]).isEqualTo("john@test.com");
+        assertThat(row[3]).isEqualTo(matchingUserCreatedDate);
     }
 
 }

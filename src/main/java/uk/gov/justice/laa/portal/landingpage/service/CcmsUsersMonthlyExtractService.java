@@ -32,11 +32,13 @@ public class CcmsUsersMonthlyExtractService {
     private final String folderPath = "CCMS_users_monthly_extract";
     private final DateTimeFormatter fileTimestamp = DateTimeFormatter.ofPattern("MM-yyyy");
 
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
     public void downloadCcmsUsersMonthlyExtract() {
         LocalDate referenceDate = LocalDate.now();
 
-        LocalDate endBoundary = referenceDate.withDayOfMonth(20);
-        LocalDate startBoundary = endBoundary.minusMonths(1);
+        LocalDate endBoundary = referenceDate.withDayOfMonth(21);
+        LocalDate startBoundary = endBoundary.minusMonths(3);
 
         LocalDateTime start = startBoundary.atStartOfDay();
         LocalDateTime end = endBoundary.atStartOfDay();
@@ -67,6 +69,7 @@ public class CcmsUsersMonthlyExtractService {
                     .addColumn("First Name")
                     .addColumn("Last Name")
                     .addColumn("Email")
+                    .addColumn("Created Date")
                     .setUseHeader(true)
                     .build();
 
@@ -86,7 +89,8 @@ public class CcmsUsersMonthlyExtractService {
                     List<Object> csvRow = List.of(
                             row[0] == null ? "" : row[0],
                             row[1] == null ? "" : row[1],
-                            row[2] == null ? "" : row[2]
+                            row[2] == null ? "" : row[2],
+                            row[3] == null ? "" : ((LocalDateTime) row[3]).format(formatter)
                     );
                     sequenceWriter.write(csvRow);
                 }
