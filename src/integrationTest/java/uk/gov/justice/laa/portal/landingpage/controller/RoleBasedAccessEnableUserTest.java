@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.ResultMatcher;
+import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 
@@ -79,6 +80,7 @@ public class RoleBasedAccessEnableUserTest extends RoleBasedAccessIntegrationTes
         UserProfile disabledByProfile = firmUserManagers.getLast().getUserProfiles().stream()
                 .filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
         accessedUser.setDisabledBy(disabledByProfile.getId());
+        accessedUser.setDisableType(DisableType.FIRM);
         entraUserRepository.saveAndFlush(accessedUser);
         EntraUser loggedInUser = firmUserManagers.getFirst();
         sendEnableUserPost(loggedInUser, accessedUser, status().isOk());
