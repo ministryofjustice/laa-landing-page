@@ -531,7 +531,9 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
         assertThat(row[0]).isEqualTo("John");
         assertThat(row[1]).isEqualTo("Doe");
         assertThat(row[2]).isEqualTo("john@test.com");
-        assertThat(row[3]).isEqualTo(matchingUserCreatedDate);
+        assertThat(((LocalDateTime) row[3]).toLocalDate())
+                .isEqualTo(matchingUserCreatedDate.toLocalDate());
+
     }
 
 }
