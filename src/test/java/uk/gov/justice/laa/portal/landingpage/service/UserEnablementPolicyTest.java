@@ -21,18 +21,28 @@ class UserEnablementPolicyTest {
     private static final String EUM = AuthzRole.EXTERNAL_USER_MANAGER.getRoleName();
     private static final String EUA = AuthzRole.EXTERNAL_USER_ADMIN.getRoleName();
     private static final String FUM = AuthzRole.FIRM_USER_MANAGER.getRoleName();
+    private static final String IUM = AuthzRole.INTERNAL_USER_MANAGER.getRoleName();
 
     @Nested
     class CanEnable {
 
         @Test
-        void nullDisableType_anyRole_returnsTrue() {
-            assertThat(policy.canEnable(null, List.of(FUM))).isTrue();
+        void nullDisableType_internalDelegationRoles_returnTrue() {
+            assertThat(policy.canEnable(null, List.of(IUM))).isTrue();
             assertThat(policy.canEnable(null, List.of(EUM))).isTrue();
             assertThat(policy.canEnable(null, List.of(EUA))).isTrue();
             assertThat(policy.canEnable(null, List.of(SR))).isTrue();
             assertThat(policy.canEnable(null, List.of(GA))).isTrue();
-            assertThat(policy.canEnable(null, List.of())).isTrue();
+        }
+
+        @Test
+        void nullDisableType_providerAdminCannotEnable() {
+            assertThat(policy.canEnable(null, List.of(FUM))).isFalse();
+        }
+
+        @Test
+        void nullDisableType_noRoleCannotEnable() {
+            assertThat(policy.canEnable(null, List.of())).isFalse();
         }
 
         // --- NONE disable type (Manual User Sync — all roles permitted) ---
@@ -199,13 +209,13 @@ class UserEnablementPolicyTest {
 
         @Test
         void none_fumWithEumRole_canEnable() {
-            // FUM alone cannot re-enable a NONE-disabled user, but EUM (higher delegation) can
+            // NONE-disabled users can be re-enabled by all roles.
             assertThat(policy.canEnable(DisableType.NONE, List.of(FUM, EUM))).isTrue();
         }
 
         @Test
         void none_fumWithSrRole_canEnable() {
-            // FUM alone cannot re-enable a NONE-disabled user, but SR (higher delegation) can
+            // NONE-disabled users can be re-enabled by all roles.
             assertThat(policy.canEnable(DisableType.NONE, List.of(FUM, SR))).isTrue();
         }
 
