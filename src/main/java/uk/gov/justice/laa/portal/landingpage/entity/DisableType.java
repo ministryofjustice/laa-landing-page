@@ -15,7 +15,8 @@ package uk.gov.justice.laa.portal.landingpage.entity;
  * </ol>
  *
  * <p>A {@code NULL} value in the database means the disable was not attributed to a known
- * actor (legacy data before this field existed). In that case all role levels may re-enable the user.
+ * actor (legacy data before this field existed). In that case only internal/LAA delegation
+ * roles may re-enable the user.
  */
 public enum DisableType {
 
@@ -27,7 +28,7 @@ public enum DisableType {
 
     /**
      * Disabled by a manual user sync process, or an unattributed disable before full tracking was introduced.
-     * All roles are permitted to re-enable (identical behaviour to a {@code null} disable type).
+     * All roles are permitted to re-enable.
      */
     NONE("None"),
 

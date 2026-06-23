@@ -4,6 +4,7 @@ import org.apache.catalina.Valve;
 import org.apache.catalina.valves.ErrorReportValve;
 import org.springframework.boot.web.context.WebServerInitializedEvent;
 import org.springframework.boot.web.embedded.tomcat.TomcatWebServer;
+import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
 import org.springframework.boot.web.server.ErrorPage;
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.boot.web.servlet.server.ConfigurableServletWebServerFactory;
@@ -82,5 +83,16 @@ public class ErrorPageConfig {
                 }
             }
         };
+    }
+
+    /**
+     *
+     * Disable Tomcat's X-Powered-By header
+     *
+     */
+    @Bean
+    public WebServerFactoryCustomizer<TomcatServletWebServerFactory> tomcatCustomizer() {
+        return factory -> factory.addConnectorCustomizers(connector ->
+                connector.setXpoweredBy(false));
     }
 }
