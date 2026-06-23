@@ -209,13 +209,13 @@ class UserEnablementPolicyTest {
 
         @Test
         void none_fumWithEumRole_canEnable() {
-            // NONE-disabled users can be re-enabled by all roles.
+            // FUM alone cannot re-enable a NONE-disabled user, but EUM (higher delegation) can
             assertThat(policy.canEnable(DisableType.NONE, List.of(FUM, EUM))).isTrue();
         }
 
         @Test
         void none_fumWithSrRole_canEnable() {
-            // NONE-disabled users can be re-enabled by all roles.
+            // FUM alone cannot re-enable a NONE-disabled user, but SR (higher delegation) can
             assertThat(policy.canEnable(DisableType.NONE, List.of(FUM, SR))).isTrue();
         }
 
