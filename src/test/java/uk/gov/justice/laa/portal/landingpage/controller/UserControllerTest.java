@@ -43,6 +43,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.access.AccessDeniedException;
@@ -2033,6 +2034,35 @@ class UserControllerTest {
         // Then - should redirect back when role coverage exception thrown
         assertThat(redirect).isEqualTo(String.format("redirect:/admin/users/edit/%s/roles-check-answer?errorMessage=%s",
                 userId, "Attempt to remove own External User Manager, from user profile " + userId));
+    }
+
+    @Test
+    public void editUserRolesCheckAnswerSubmit_shouldRedirectToConfirmation_whenDuplicateRoleViolationOccurs() {
+        // Given
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("tester");
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        when(loginService.getCurrentProfile(authentication))
+                .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        UUID userId = UUID.randomUUID();
+        UserProfileDto userProfile = UserProfileDto.builder()
+                .id(userId)
+                .userType(UserType.EXTERNAL)
+                .build();
+        when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.ofNullable(userProfile));
+        HttpSession session = new MockHttpSession();
+        session.setAttribute("editUserAllSelectedRoles", new HashMap<>());
+        when(roleAssignmentService.canAssignRole(any(), any())).thenReturn(true);
+        when(userService.updateUserRoles(any(), any(), any(), any()))
+                .thenThrow(new DataIntegrityViolationException(
+                        "could not execute statement; constraint [user_profile_app_role_pkey]"));
+
+        // When
+        String redirect = userController.editUserRolesCheckAnswerSubmit(userId.toString(), session, authentication);
+
+        // Then - duplicate key violation is handled gracefully; user still reaches confirmation
+        assertThat(redirect).isEqualTo("redirect:/admin/users/edit/" + userId + "/confirmation");
     }
 
     // ===== NEW EDIT USER FUNCTIONALITY TESTS =====
