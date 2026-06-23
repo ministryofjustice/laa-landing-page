@@ -49,8 +49,10 @@ class CcmsUsersMonthlyExtractServiceTest {
                 any(LocalDateTime.class),
                 any(LocalDateTime.class)
         )).thenReturn(List.of(
-                new Object[]{"John", "Doe", "john.doe@test.com"},
-                new Object[]{"Jane", "Smith", "jane.smith@test.com"}
+                new Object[]{"John", "Doe", "john.doe@test.com",
+                        LocalDateTime.of(2026, 3, 21, 0, 0)},
+                new Object[]{"Jane", "Smith", "jane.smith@test.com",
+                        LocalDateTime.of(2026, 4, 1, 0, 0)}
         ));
 
         Path tempDir = Path.of(System.getProperty("java.io.tmpdir"));
@@ -68,13 +70,12 @@ class CcmsUsersMonthlyExtractServiceTest {
         assertThat(lines).isNotEmpty();
 
         assertThat(lines.get(0)).isEqualTo(
-                "\"First Name\",\"Last Name\",Email"
+                "\"First Name\",\"Last Name\",Email,\"Created Date\""
         );
 
-        // Data rows check
         assertThat(lines).contains(
-                "John,Doe,john.doe@test.com",
-                "Jane,Smith,jane.smith@test.com"
+                "John,Doe,john.doe@test.com,21/03/2026",
+                "Jane,Smith,jane.smith@test.com,01/04/2026"
         );
 
         verify(entraUserRepository, times(1))
