@@ -129,7 +129,7 @@ jobs:
             --for=condition=complete \
             job/zap-scan-weekly \
             -n ${{ secrets.KUBE_NAMESPACE }} \
-            --timeout=900s
+            --timeout=8400s
 
       - name: Get logs (debugging)
         run: |
