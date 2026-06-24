@@ -47,7 +47,7 @@ scanners:
   grype:
     enabled: true
   npm-audit:
-    enabled: false
+    enabled: true
   opengrep:
     enabled: true
     options:
