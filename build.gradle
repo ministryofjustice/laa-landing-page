@@ -133,6 +133,8 @@ dependencies {
         exclude group: 'com.fasterxml.jackson.core', module: 'jackson-core'
     }
 
+    runtimeOnly 'org.springframework.boot:spring-boot-properties-migrator'
+
     // Unit & Slice Integration Testing Libraries
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
@@ -159,6 +161,15 @@ test {
 
     doFirst {
         jvmArgs "-javaagent:${configurations.testRuntimeClasspath.find { it.name.contains('mockito-core') }}", '-Xshare:off'
+    }
+
+    // 💡 ADD THIS CONFIGURATION BLOCK:
+    testLogging {
+        // Forces Gradle to print out standard logs during execution
+        showStandardStreams = true
+
+        // Formats formatting so you know exactly which test emitted the property warning
+        events "failed", "skipped", "standard_out", "standard_error"
     }
 
     finalizedBy jacocoTestReport
