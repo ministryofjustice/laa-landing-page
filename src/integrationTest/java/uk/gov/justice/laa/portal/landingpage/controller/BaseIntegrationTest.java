@@ -101,6 +101,7 @@ public abstract class BaseIntegrationTest extends BaseRepositoryTest {
     @PersistenceContext
     private EntityManager entityManager;
 
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
     private TransactionTemplate transactionTemplate;
 

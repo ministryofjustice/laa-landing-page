@@ -18,9 +18,6 @@ public class AppRepositoryTest extends BaseRepositoryTest {
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
     private AppRoleRepository appRoleRepository;
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    @Autowired
-    private RoleAssignmentRepository roleAssignmentRepository;
 
     @BeforeEach
     public void beforeEach() {

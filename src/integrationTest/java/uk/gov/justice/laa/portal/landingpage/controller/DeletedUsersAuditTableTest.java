@@ -2,12 +2,10 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.web.servlet.MvcResult;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
-import uk.gov.justice.laa.portal.landingpage.repository.UserAccountStatusAuditRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;

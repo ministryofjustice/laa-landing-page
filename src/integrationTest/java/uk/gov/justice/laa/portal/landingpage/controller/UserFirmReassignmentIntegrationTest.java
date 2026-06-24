@@ -30,7 +30,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
-import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
 class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
 
@@ -41,10 +40,6 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
     protected AppRoleRepository appRoleRepository;
-
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    @Autowired
-    protected UserService userService;
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
