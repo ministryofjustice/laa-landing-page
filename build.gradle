@@ -113,9 +113,8 @@ dependencies {
 
     // Database & Driver Layer
     implementation 'org.postgresql:postgresql'
-    implementation('org.liquibase:liquibase-core') {
-        exclude group: 'javax.xml.bind', module: 'jaxb-api'
-    }
+    implementation 'org.springframework.boot:spring-boot-starter-liquibase'
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
     // Utilities & Core Framework Enhancements
     implementation 'org.projectlombok:lombok'

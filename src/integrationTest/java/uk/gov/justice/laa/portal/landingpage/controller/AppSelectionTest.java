@@ -13,13 +13,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
+
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.servlet.http.HttpSession;
+import org.springframework.web.context.WebApplicationContext;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -55,13 +60,19 @@ public class AppSelectionTest extends BaseIntegrationTest {
     private AppRole testAppRole;
     private int distinctIndex = 0;
 
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    private WebApplicationContext webApplicationContext;
+
     @BeforeEach
     public void beforeEach() {
-        userProfileRepository.deleteAll();
-        entraUserRepository.deleteAll();
+        userProfileRepository.deleteAllInBatch();
+        entraUserRepository.deleteAllInBatch();
+        deleteNonAuthzAppRoleAssignments();
         deleteNonAuthzAppRoles(appRoleRepository);
         deleteNonAuthzApps(appRepository);
         buildTestAppRole();
+        this.mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).apply(springSecurity()).build();
     }
 
     @Test
@@ -122,8 +133,10 @@ public class AppSelectionTest extends BaseIntegrationTest {
 
     private EntraUser buildTestUser() {
         EntraUser entraUser = buildEntraUser(generateEntraId(), "test" + distinctIndex++ + "@test.com", "Test", "User");
+        entraUserRepository.saveAndFlush(entraUser);
         UserProfile userProfile = buildLaaUserProfile(entraUser, UserType.INTERNAL, true);
         userProfile.getAppRoles().add(testAppRole);
+        userProfileRepository.saveAndFlush(userProfile);
         // Use a mutable set to allow Hibernate to manage the relationship properly
         entraUser.getUserProfiles().add(userProfile);
         return entraUser;

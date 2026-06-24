@@ -20,6 +20,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
 import jakarta.transaction.Transactional;
+import org.springframework.test.context.ActiveProfiles;
 import uk.gov.justice.laa.portal.landingpage.entity.CountFirms;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -31,6 +32,7 @@ import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
 
 @DataJpaTest
+@ActiveProfiles("test")
 public class UserProfileRepositoryTest extends BaseRepositoryTest {
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")

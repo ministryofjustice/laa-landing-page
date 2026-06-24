@@ -63,6 +63,7 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
         entraUserRepository.deleteAll();
 
         // Keep consistent with other repository tests that avoid deleting authz seed data
+        deleteNonAuthzAppRoleAssignments();
         deleteNonAuthzAppRoles(appRoleRepository);
         deleteNonAuthzApps(appRepository);
 

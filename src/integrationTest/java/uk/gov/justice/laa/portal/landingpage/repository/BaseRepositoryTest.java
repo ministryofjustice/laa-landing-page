@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,10 +15,9 @@ import org.springframework.boot.session.autoconfigure.SessionTimeout;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
 
-import org.testcontainers.junit.jupiter.Testcontainers;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
@@ -27,26 +27,34 @@ import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.RoleAssignment;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
-@Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@ActiveProfiles("test")
 public class BaseRepositoryTest {
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
     protected AppRoleRepository appRoleRepository;
 
-    @Container
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    protected RoleAssignmentRepository roleAssignmentRepository;
+
     @ServiceConnection
-    public static final PostgreSQLContainer<?> postgresContainer = new PostgreSQLContainer<>("postgres:16-alpine")
+    public static final PostgreSQLContainer<?> postgresServer = new PostgreSQLContainer<>("postgres:16-alpine")
             .withDatabaseName("test_db")
             .withUsername("postgres")
             .withPassword("password");
+
+    static {
+        postgresServer.start();
+    }
 
     @Configuration
     static class TestSessionFallbackConfig {
@@ -98,7 +106,8 @@ public class BaseRepositoryTest {
     }
 
     protected App buildLaaApp(String name, String entraAppId, String securityGroupOid) {
-        return buildLaaApp(name, entraAppId, securityGroupOid, "Test App Description", "http://localhost:8080/");
+        return buildLaaApp(name, entraAppId, securityGroupOid, "Test App Description " + ThreadLocalRandom.current().nextInt(),
+                "http://localhost:8080/");
     }
 
     protected App buildLaaApp(String name, String entraAppId, String securityGroupOid, String description, String url) {
@@ -177,6 +186,13 @@ public class BaseRepositoryTest {
 
     protected String generateEntraId() {
         return UUID.randomUUID().toString();
+    }
+
+    protected void deleteNonAuthzAppRoleAssignments() {
+        List<RoleAssignment> nonAuthzAppRoleAssignmentss = roleAssignmentRepository.findAll().stream()
+                .filter(role -> !role.getAssignableRole().isAuthzRole())
+                .toList();
+        roleAssignmentRepository.deleteAll(nonAuthzAppRoleAssignmentss);
     }
 
     protected void deleteNonAuthzAppRoles(AppRoleRepository appRoleRepository) {

@@ -7,7 +7,10 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.web.context.WebApplicationContext;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcOperations;
@@ -27,12 +30,14 @@ import uk.gov.justice.laa.portal.landingpage.service.AuthzOidcUserDetailsService
 import uk.gov.justice.laa.portal.landingpage.service.CustomLogoutHandler;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 
-@WebMvcTest(controllers = TestController.class)
+@SpringBootTest(classes = TestController.class)
 @Import({SecurityConfig.class, DevJwtDecoderConfig.class, SecurityConfigTest.OauthClientTestConfig.class})
 @ActiveProfiles("test")
 class SecurityConfigTest {
 
     @Autowired
+    private WebApplicationContext context;
+
     private MockMvc mockMvc;
 
     @MockitoBean
@@ -86,6 +91,10 @@ class SecurityConfigTest {
             chain.doFilter(invocation.getArgument(0), invocation.getArgument(1));
             return null;
         }).when(firmDisabledFilter).doFilter(any(), any(), any());
+
+        this.mockMvc = MockMvcBuilders.webAppContextSetup(context)
+                .apply(springSecurity())
+                .build();
     }
 
     @Test

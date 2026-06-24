@@ -25,6 +25,7 @@ public class AppRepositoryTest extends BaseRepositoryTest {
     @BeforeEach
     public void beforeEach() {
         // Delete child tables first to avoid foreign key constraint violations
+        deleteNonAuthzAppRoleAssignments();
         deleteNonAuthzAppRoles(appRoleRepository);
         deleteNonAuthzApps(repository);
     }

@@ -49,6 +49,7 @@ class EntraUserRepositoryAuditIntegrationTest extends BaseRepositoryTest {
         // Clean up
         userProfileRepository.deleteAll();
         entraUserRepository.deleteAll();
+        deleteNonAuthzAppRoleAssignments();
         deleteNonAuthzAppRoles(appRoleRepository);
         deleteNonAuthzApps(appRepository);
         firmRepository.deleteAll();

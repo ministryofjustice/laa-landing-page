@@ -31,6 +31,7 @@ public class AppRoleRepositoryTest extends BaseRepositoryTest {
 
     @BeforeEach
     public void beforeEach() {
+        deleteNonAuthzAppRoleAssignments();
         deleteNonAuthzAppRoles(repository);
         deleteNonAuthzApps(appRepository);
     }

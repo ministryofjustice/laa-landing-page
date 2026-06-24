@@ -57,6 +57,7 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
         // Clean up
         userProfileRepository.deleteAll();
         entraUserRepository.deleteAll();
+        deleteNonAuthzAppRoleAssignments();
         deleteNonAuthzAppRoles(appRoleRepository);
         deleteNonAuthzApps(appRepository);
         firmRepository.deleteAll();

@@ -13,7 +13,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class CacheControllerTest extends BaseIntegrationTest {
@@ -62,7 +62,7 @@ class CacheControllerTest extends BaseIntegrationTest {
         // Act & Assert
         mockMvc.perform(get("/admin/firms/clear-cache"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrlPattern("**/oauth2/authorization/azure"));
+                .andExpect(redirectedUrl("/oauth2/authorization/azure"));
 
         // Verify
         verify(cacheManager, never()).getCache(anyString());

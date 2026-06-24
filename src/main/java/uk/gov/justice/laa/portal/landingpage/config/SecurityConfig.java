@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
+import jakarta.servlet.DispatcherType;
 import org.springframework.boot.session.autoconfigure.SessionTimeout;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -138,8 +139,8 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
         ).addFilterAfter(userDisabledFilter, OAuth2LoginAuthenticationFilter.class)
-                .addFilterAfter(firmDisabledFilter, UserDisabledFilter.class)
                 .authorizeHttpRequests((authorize) -> authorize
+                .dispatcherTypeMatchers(DispatcherType.FORWARD).permitAll()
                 .requestMatchers("/api/pda/**").hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
                 .requestMatchers("/admin/users/**", "/pda/**")
                 .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
@@ -147,9 +148,9 @@ public class SecurityConfig {
                 .hasAnyAuthority(Permission.ADMIN_PERMISSIONS)
                 .requestMatchers("/admin/multi-firm/user/**")
                 .hasAnyAuthority(Permission.DELEGATE_FIRM_ACCESS_PERMISSIONS)
-                .requestMatchers("/", "/login", "/logout-success", "/cookies", "/accessibility", "/css/**", "/js/**", "/assets/**", "/actuator/health")
+                .requestMatchers("/", "/login", "/logout-success", "/cookies", "/accessibility", "/css/**", "/js/**", "/assets/**", "/actuator/health", "/playwright/login", "/error")
                 .permitAll()
-                .requestMatchers("/actuator/**", "/playwright/login")
+                .requestMatchers("/actuator/**")
                 .access((auth, context) -> {
                     boolean allowed =
                             new IpAddressMatcher("127.0.0.1").matches(context.getRequest())

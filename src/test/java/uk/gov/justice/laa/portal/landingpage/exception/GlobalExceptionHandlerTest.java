@@ -157,7 +157,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleAccessException() {
+    void handleAccessException() throws Exception {
         // Arrange
         String errorMessage = "unauthorized error";
         AccessDeniedException exception = new AccessDeniedException(errorMessage);
@@ -203,11 +203,11 @@ class GlobalExceptionHandlerTest {
             RuntimeException.class,
             () -> exceptionHandler.handleAccessException(exception, request)
         );
-        assertEquals(exception, thrown.getCause());
+        assertEquals(exception, thrown);
     }
 
     @Test
-    void handleAccessException_apiRequestByContentType() {
+    void handleAccessException_apiRequestByContentType() throws Exception {
         // Arrange
         String errorMessage = "unauthorized error";
         AccessDeniedException exception = new AccessDeniedException(errorMessage);
@@ -225,7 +225,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleAccessException_apiRequestByUri() {
+    void handleAccessException_apiRequestByUri() throws Exception {
         // Arrange
         String errorMessage = "unauthorized error";
         AccessDeniedException exception = new AccessDeniedException(errorMessage);
@@ -294,7 +294,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleAuthorizationDeniedException_apiRequest() {
+    void handleAuthorizationDeniedException_apiRequest() throws Exception {
         // Arrange
         String errorMessage = "authorization denied";
         org.springframework.security.authorization.AuthorizationDeniedException exception =
@@ -330,6 +330,6 @@ class GlobalExceptionHandlerTest {
             RuntimeException.class,
             () -> exceptionHandler.handleAccessException(exception, request)
         );
-        assertEquals(exception, thrown.getCause());
+        assertEquals(exception, thrown);
     }
 }

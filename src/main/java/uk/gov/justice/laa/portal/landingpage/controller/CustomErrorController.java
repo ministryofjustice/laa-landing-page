@@ -16,7 +16,7 @@ import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
  * Custom error controller to handle HTTP errors and provide appropriate error pages
  */
 @Slf4j
-@Controller
+@Controller("errorController")
 public class CustomErrorController implements ErrorController {
 
     /**
