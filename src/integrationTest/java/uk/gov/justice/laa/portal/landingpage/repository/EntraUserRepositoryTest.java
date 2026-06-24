@@ -18,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
 import jakarta.validation.ConstraintViolationException;
+import org.springframework.test.annotation.DirtiesContext;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -470,6 +471,69 @@ public class EntraUserRepositoryTest extends BaseRepositoryTest {
         long result = repository.countActivationPendingExternalUsers();
 
         assertThat(result).isEqualTo(1L);
+    }
+
+    @Test
+    void shouldReturnExternalUsersWithAppInPeriod() {
+        EntraUser user = buildEntraUser(generateEntraId(),
+                "john@test.com", "John", "Doe");
+        repository.saveAndFlush(user);
+
+        EntraUser otherUser = buildEntraUser(generateEntraId(),
+                "jane@test.com", "Jane", "Smith");
+        repository.saveAndFlush(otherUser);
+
+        App targetApp = buildLaaApp("CCMS PUI", "123", "456");
+        targetApp.setDescription("Desc-" + System.nanoTime());
+        appRepository.saveAndFlush(targetApp);
+
+        App otherApp = buildLaaApp("OTHER APP", "999", "888");
+        otherApp.setDescription("Desc-" + System.nanoTime());
+        appRepository.saveAndFlush(otherApp);
+
+        AppRole validRole = buildLaaAppRole(targetApp, "ROLE_USER");
+        appRoleRepository.saveAndFlush(validRole);
+
+        AppRole invalidRole = buildLaaAppRole(otherApp, "ROLE_OTHER");
+        appRoleRepository.saveAndFlush(invalidRole);
+
+        Firm firm = buildFirm("Test Firm", "TEST");
+        firmRepository.saveAndFlush(firm);
+
+        UserProfile matchingProfile = buildLaaUserProfile(user, UserType.EXTERNAL);
+        matchingProfile.setFirm(firm);
+        matchingProfile.setCreatedDate(LocalDateTime.of(2026, 6, 1, 0, 0));
+        matchingProfile.getAppRoles().add(validRole);
+        userProfileRepository.saveAndFlush(matchingProfile);
+
+        UserProfile nonMatchingProfile = buildLaaUserProfile(otherUser, UserType.EXTERNAL);
+        nonMatchingProfile.setFirm(firm);
+        nonMatchingProfile.setCreatedDate(LocalDateTime.of(2026, 6, 1, 0, 0));
+        nonMatchingProfile.getAppRoles().add(invalidRole);
+        userProfileRepository.saveAndFlush(nonMatchingProfile);
+
+        LocalDateTime matchingUserCreatedDate = matchingProfile.getCreatedDate();
+
+        LocalDateTime start = matchingUserCreatedDate.minusMonths(3);
+        LocalDateTime end = matchingUserCreatedDate.plusDays(1);
+
+        List<Object[]> results = repository.findCcmsUsersWithAppInPeriod(
+                UserType.EXTERNAL,
+                "CCMS PUI",
+                start,
+                end
+        );
+
+        assertThat(results).hasSize(1);
+
+        Object[] row = results.getFirst();
+
+        assertThat(row[0]).isEqualTo("John");
+        assertThat(row[1]).isEqualTo("Doe");
+        assertThat(row[2]).isEqualTo("john@test.com");
+        assertThat(((LocalDateTime) row[3]).toLocalDate())
+                .isEqualTo(matchingUserCreatedDate.toLocalDate());
+
     }
 
 }

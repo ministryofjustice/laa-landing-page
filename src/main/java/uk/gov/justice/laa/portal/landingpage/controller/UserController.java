@@ -1695,6 +1695,8 @@ public class UserController {
                 notifyExternalUserRoleChange(user, updateResult.get("diff"), "Service roles");
             } catch (DataIntegrityViolationException e) {
                 log.warn("Duplicate role assignment detected for user {} - continuing to confirmation", id);
+            } catch (TechServicesClientException e) {
+                log.warn("Concurrent Tech Services request detected for user {} - continuing to confirmation", id);
             }
         }
         // Clear the session
@@ -2829,6 +2831,8 @@ public class UserController {
 
             notifyExternalUserRoleChange(userProfileDto, "You have been granted access to services and offices", "Access granted");
 
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Duplicate role assignment detected for user {} during grant access - continuing to confirmation", id);
         } catch (Exception e) {
             log.error("Error completing grant access for user: " + id, e);
             // Could add error handling here if needed
