@@ -102,7 +102,7 @@
 
                                     <dd class="govuk-summary-list__actions">
                                         <a class="govuk-link govuk-link--no-visited-state govuk-!-font-weight-bold"
-                                           th:if="${!appEntry.value.isEmpty() and appEntry.value.size() > 1}"
+                                           th:if="${totalRolesByApp[appEntry.key] > 1}"
                                            th:href="@{/admin/users/grant-access/{id}/roles(id=${user.id}, selectedAppIndex=${iterStat.index})}">
                                             Change<span class="govuk-visually-hidden"> roles for <th:block th:text="${appEntry.key}">App</th:block></span>
                                         </a>
