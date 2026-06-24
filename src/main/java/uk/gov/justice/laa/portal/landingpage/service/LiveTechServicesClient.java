@@ -1,8 +1,16 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import com.azure.core.credential.TokenRequestContext;
-import com.azure.identity.ClientSecretCredential;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -18,6 +26,11 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
+
+import com.azure.core.credential.TokenRequestContext;
+import com.azure.identity.ClientSecretCredential;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import uk.gov.justice.laa.portal.landingpage.config.CachingConfig;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -38,17 +51,6 @@ import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesErrorRespo
 import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsRequest;
 import uk.gov.justice.laa.portal.landingpage.techservices.UpdateSecurityGroupsResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.UpdateUserDetailsRequest;
-
-import java.time.Duration;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 public class LiveTechServicesClient implements TechServicesClient {
 
@@ -136,7 +138,7 @@ public class LiveTechServicesClient implements TechServicesClient {
             throw new BadRequestException(e);
         } catch (Exception ex) {
             logger.error("Error while sending security group changes to Tech Services.", ex);
-            throw new RuntimeException("Error while sending security group changes to Tech Services.", ex);
+            throw new TechServicesClientException("Error while sending security group changes to Tech Services.", ex);
         }
 
     }
