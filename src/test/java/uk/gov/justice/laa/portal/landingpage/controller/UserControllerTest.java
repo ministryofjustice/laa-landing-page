@@ -2065,6 +2065,34 @@ class UserControllerTest {
         assertThat(redirect).isEqualTo("redirect:/admin/users/edit/" + userId + "/confirmation");
     }
 
+    @Test
+    public void editUserRolesCheckAnswerSubmit_shouldRedirectToConfirmation_whenTechServicesExceptionOccurs() {
+        // Given
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("tester");
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        when(loginService.getCurrentProfile(authentication))
+                .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
+        UUID userId = UUID.randomUUID();
+        UserProfileDto userProfile = UserProfileDto.builder()
+                .id(userId)
+                .userType(UserType.EXTERNAL)
+                .build();
+        when(userService.getUserProfileById(userId.toString())).thenReturn(Optional.ofNullable(userProfile));
+        HttpSession session = new MockHttpSession();
+        session.setAttribute("editUserAllSelectedRoles", new HashMap<>());
+        when(roleAssignmentService.canAssignRole(any(), any())).thenReturn(true);
+        when(userService.updateUserRoles(any(), any(), any(), any()))
+                .thenThrow(new TechServicesClientException("Error while sending security group changes to Tech Services."));
+
+        // When
+        String redirect = userController.editUserRolesCheckAnswerSubmit(userId.toString(), session, authentication);
+
+        // Then - concurrent Tech Services failure is handled gracefully; user still reaches confirmation
+        assertThat(redirect).isEqualTo("redirect:/admin/users/edit/" + userId + "/confirmation");
+    }
+
     // ===== NEW EDIT USER FUNCTIONALITY TESTS =====
 
     @Test
@@ -6581,6 +6609,40 @@ class UserControllerTest {
 
         // then
         assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userId);
+    }
+
+    @Test
+    void grantAccessProcessCheckAnswers_shouldRedirectToConfirmation_whenDuplicateRoleViolationOccurs() {
+        // Given
+        final String userId = "550e8400-e29b-41d4-a716-446655440012";
+        UserProfileDto userProfileDto = new UserProfileDto();
+        EntraUserDto entraUser = new EntraUserDto();
+        entraUser.setFullName("Test User");
+        userProfileDto.setEntraUser(entraUser);
+
+        CurrentUserDto currentUserDto = new CurrentUserDto();
+        currentUserDto.setUserId(UUID.randomUUID());
+        currentUserDto.setName("admin user");
+
+        MockHttpSession testSession = new MockHttpSession();
+        testSession.setAttribute("allSelectedRoles", Set.of("Role 1"));
+        testSession.setAttribute("selectedOffices", List.of("Office 1"));
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfileDto));
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().build());
+        when(roleAssignmentService.canAssignRole(any(), anyCollection())).thenReturn(true);
+        when(userService.updateUserRoles(any(), anyCollection(), anyList(), any()))
+                .thenThrow(new DataIntegrityViolationException(
+                        "could not execute statement; constraint [user_profile_app_role_pkey]"));
+
+        // When
+        String view = userController.grantAccessProcessCheckAnswers(userId, authentication, redirectAttributes, testSession);
+
+        // Then - duplicate key violation from concurrent submit is handled gracefully; user still reaches confirmation
+        assertThat(view).isEqualTo("redirect:/admin/users/grant-access/" + userId + "/confirmation");
+        assertThat(testSession.getAttribute("allSelectedRoles")).isNull();
+        assertThat(testSession.getAttribute("selectedOffices")).isNull();
     }
 
     @Test
