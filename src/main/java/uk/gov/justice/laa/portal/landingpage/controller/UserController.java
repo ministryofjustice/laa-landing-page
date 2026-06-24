@@ -1693,8 +1693,10 @@ public class UserController {
                         "role");
                 eventService.logEvent(updateUserAuditEvent);
                 notifyExternalUserRoleChange(user, updateResult.get("diff"), "Service roles");
-            } catch (Exception e) {
-                log.warn("Duplicate or concurrent role assignment detected for user {} - continuing to confirmation", id);
+            } catch (DataIntegrityViolationException e) {
+                log.warn("Duplicate role assignment detected for user {} - continuing to confirmation", id);
+            } catch (TechServicesClientException e) {
+                log.warn("Concurrent Tech Services request detected for user {} - continuing to confirmation", id);
             }
         }
         // Clear the session
