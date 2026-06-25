@@ -7,16 +7,13 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.validation.BindingResult;
-import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.servlet.view.RedirectView;
 
@@ -40,7 +37,7 @@ class GlobalExceptionHandlerTest {
     @Test
     void handleUserNotFoundException() {
         // Arrange
-        String errorMessage = "Test error message";
+        String errorMessage = "Resource not found";
         UserNotFoundException exception = new UserNotFoundException(errorMessage);
 
         // Act
@@ -56,7 +53,7 @@ class GlobalExceptionHandlerTest {
     @Test
     void handleBadRequestException() {
         // Arrange
-        String errorMessage = "Test error message";
+        String errorMessage = "Invalid request";
         BadRequestException exception = new BadRequestException(errorMessage);
 
         // Act
@@ -89,37 +86,36 @@ class GlobalExceptionHandlerTest {
     void handleMethodArgumentNotValidException() {
         // Arrange
         MethodArgumentNotValidException exception = mock(MethodArgumentNotValidException.class);
-        BindingResult bindingResult = mock(BindingResult.class);
-        FieldError fieldError = new FieldError("object", "field", "Field validation failed");
-
-        when(exception.getBindingResult()).thenReturn(bindingResult);
-        when(bindingResult.getFieldErrors()).thenReturn(List.of(fieldError));
 
         // Act
-        ResponseEntity<ClaimEnrichmentResponse> response = exceptionHandler.handleValidationExceptions(exception);
+        ResponseEntity<ClaimEnrichmentResponse> response =
+                exceptionHandler.handleValidationExceptions(exception);
 
         // Assert
         assertNotNull(response);
         assertEquals(400, response.getStatusCode().value());
         assertFalse(response.getBody().isSuccess());
-        assertTrue(response.getBody().getMessage().contains("Validation error"));
-        assertTrue(response.getBody().getMessage().contains("Field validation failed"));
+
+        assertEquals("Invalid request", response.getBody().getMessage());
     }
 
     @Test
     void handleConstraintViolation() {
         // Arrange
         Set<ConstraintViolation<?>> violations = new HashSet<>();
-        ConstraintViolationException exception = new ConstraintViolationException("Constraint violation", violations);
+        ConstraintViolationException exception =
+                new ConstraintViolationException("Constraint violation", violations);
 
         // Act
-        ResponseEntity<ClaimEnrichmentResponse> response = exceptionHandler.handleConstraintViolation(exception);
+        ResponseEntity<ClaimEnrichmentResponse> response =
+                exceptionHandler.handleConstraintViolation(exception);
 
         // Assert
         assertNotNull(response);
         assertEquals(400, response.getStatusCode().value());
         assertFalse(response.getBody().isSuccess());
-        assertTrue(response.getBody().getMessage().contains("Validation error"));
+
+        assertEquals("Invalid request", response.getBody().getMessage());
     }
 
     @Test
@@ -141,7 +137,7 @@ class GlobalExceptionHandlerTest {
     @Test
     void handleGenericException() {
         // Arrange
-        String errorMessage = "Unexpected error";
+        String errorMessage = "An error occurred";
         Exception exception = new Exception(errorMessage);
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Accept", "application/json"); // Make it an API request
@@ -153,13 +149,13 @@ class GlobalExceptionHandlerTest {
         assertNotNull(response);
         assertEquals(500, response.getStatusCode().value());
         assertFalse(response.getBody().isSuccess());
-        assertTrue(response.getBody().getMessage().contains(errorMessage));
+        assertEquals(errorMessage, response.getBody().getMessage());
     }
 
     @Test
     void handleAccessException() throws Exception {
         // Arrange
-        String errorMessage = "unauthorized error";
+        String errorMessage = "Access denied";
         AccessDeniedException exception = new AccessDeniedException(errorMessage);
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Accept", "application/json"); // Make it an API request
@@ -171,7 +167,7 @@ class GlobalExceptionHandlerTest {
         assertNotNull(response);
         assertEquals(401, response.getStatusCode().value());
         assertFalse(response.getBody().isSuccess());
-        assertTrue(response.getBody().getMessage().contains(errorMessage));
+        assertEquals(errorMessage, response.getBody().getMessage());
     }
 
     @Test
@@ -209,7 +205,7 @@ class GlobalExceptionHandlerTest {
     @Test
     void handleAccessException_apiRequestByContentType() throws Exception {
         // Arrange
-        String errorMessage = "unauthorized error";
+        String errorMessage = "Access denied";
         AccessDeniedException exception = new AccessDeniedException(errorMessage);
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Content-Type", "application/json"); // API request via Content-Type
@@ -221,13 +217,13 @@ class GlobalExceptionHandlerTest {
         assertNotNull(response);
         assertEquals(401, response.getStatusCode().value());
         assertFalse(response.getBody().isSuccess());
-        assertTrue(response.getBody().getMessage().contains(errorMessage));
+        assertEquals(errorMessage, response.getBody().getMessage());
     }
 
     @Test
     void handleAccessException_apiRequestByUri() throws Exception {
         // Arrange
-        String errorMessage = "unauthorized error";
+        String errorMessage = "Access denied";
         AccessDeniedException exception = new AccessDeniedException(errorMessage);
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setRequestURI("/api/pda/report"); // API request via URI
@@ -239,13 +235,13 @@ class GlobalExceptionHandlerTest {
         assertNotNull(response);
         assertEquals(401, response.getStatusCode().value());
         assertFalse(response.getBody().isSuccess());
-        assertTrue(response.getBody().getMessage().contains(errorMessage));
+        assertEquals(errorMessage, response.getBody().getMessage());
     }
 
     @Test
     void handleGenericException_apiRequestByContentType() {
         // Arrange
-        String errorMessage = "Unexpected error";
+        String errorMessage = "An error occurred";
         Exception exception = new Exception(errorMessage);
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Content-Type", "application/json"); // API request via Content-Type
@@ -257,13 +253,13 @@ class GlobalExceptionHandlerTest {
         assertNotNull(response);
         assertEquals(500, response.getStatusCode().value());
         assertFalse(response.getBody().isSuccess());
-        assertTrue(response.getBody().getMessage().contains(errorMessage));
+        assertEquals(errorMessage, response.getBody().getMessage());
     }
 
     @Test
     void handleGenericException_apiRequestByUri() {
         // Arrange
-        String errorMessage = "Unexpected error";
+        String errorMessage = "An error occurred";
         Exception exception = new Exception(errorMessage);
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setRequestURI("/api/claim/enrich"); // API request via URI
@@ -275,7 +271,7 @@ class GlobalExceptionHandlerTest {
         assertNotNull(response);
         assertEquals(500, response.getStatusCode().value());
         assertFalse(response.getBody().isSuccess());
-        assertTrue(response.getBody().getMessage().contains(errorMessage));
+        assertEquals(errorMessage, response.getBody().getMessage());
     }
 
     @Test
@@ -296,7 +292,7 @@ class GlobalExceptionHandlerTest {
     @Test
     void handleAuthorizationDeniedException_apiRequest() throws Exception {
         // Arrange
-        String errorMessage = "authorization denied";
+        String errorMessage = "Access denied";
         org.springframework.security.authorization.AuthorizationDeniedException exception =
             new org.springframework.security.authorization.AuthorizationDeniedException(
                 errorMessage,
@@ -311,7 +307,7 @@ class GlobalExceptionHandlerTest {
         assertNotNull(response);
         assertEquals(401, response.getStatusCode().value());
         assertFalse(response.getBody().isSuccess());
-        assertTrue(response.getBody().getMessage().contains(errorMessage));
+        assertEquals(errorMessage, response.getBody().getMessage());
     }
 
     @Test
@@ -331,5 +327,26 @@ class GlobalExceptionHandlerTest {
             () -> exceptionHandler.handleAccessException(exception, request)
         );
         assertEquals(exception, thrown);
+    }
+
+    @Test
+    void handleMalformedJson_apiRequest() {
+        // Arrange
+        HttpMessageNotReadableException exception =
+                mock(HttpMessageNotReadableException.class);
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/api/test");
+        request.addHeader("Content-Type", "application/json");
+
+        // Act
+        ResponseEntity<ClaimEnrichmentResponse> response =
+                exceptionHandler.handleMalformedJson(exception, request);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(400, response.getStatusCode().value());
+        assertFalse(response.getBody().isSuccess());
+        assertEquals("Invalid request", response.getBody().getMessage());
     }
 }

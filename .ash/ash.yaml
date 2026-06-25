@@ -26,6 +26,9 @@ global_settings:
     - rule_id: "CKV_K8S_35" # Prefer using secrets as files over secrets as environment variables
       path: "**/*"
       reason: "Secrets are used as environment variables in this project, and to switch would be significant effort for the minimal gains."
+    - rule_id: "CKV_K8S_40" 
+      path: "deployments/templates/zap*.yml"
+      reason: "UID 1000 is used to run zap container is specified by the image and therefore cannot be changed."
 
 scanners:
   bandit:

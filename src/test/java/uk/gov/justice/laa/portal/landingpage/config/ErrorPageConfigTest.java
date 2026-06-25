@@ -8,12 +8,16 @@ import static org.mockito.Mockito.verify;
 
 import java.util.Arrays;
 
+import org.apache.catalina.connector.Connector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.tomcat.TomcatConnectorCustomizer;
+import org.springframework.boot.tomcat.servlet.TomcatServletWebServerFactory;
 import org.springframework.boot.web.error.ErrorPage;
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.boot.web.server.servlet.ConfigurableServletWebServerFactory;
@@ -24,6 +28,11 @@ class ErrorPageConfigTest {
 
     private ErrorPageConfig errorPageConfig;
     private ConfigurableServletWebServerFactory mockFactory;
+
+
+    @Mock
+    private TomcatServletWebServerFactory tomcatFactory;
+
 
     @Captor
     private ArgumentCaptor<ErrorPage[]> errorPagesCaptor;
@@ -159,5 +168,22 @@ class ErrorPageConfigTest {
     private boolean containsStatusCode(ErrorPage[] errorPages, HttpStatus status) {
         return Arrays.stream(errorPages)
             .anyMatch(page -> page.getStatus() == status);
+    }
+
+    @Test
+    void tomcatCustomizer_setsXpoweredByFalse() {
+        Connector connector = mock(Connector.class);
+        ArgumentCaptor<TomcatConnectorCustomizer> customizerCaptor =
+                ArgumentCaptor.forClass(TomcatConnectorCustomizer.class);
+        WebServerFactoryCustomizer<TomcatServletWebServerFactory> customizer =
+                errorPageConfig.tomcatCustomizer();
+        customizer.customize(tomcatFactory);
+
+        verify(tomcatFactory).addConnectorCustomizers(customizerCaptor.capture());
+        TomcatConnectorCustomizer connectorCustomizer = customizerCaptor.getValue();
+        connectorCustomizer.customize(connector);
+
+        // Assert
+        verify(connector).setXpoweredBy(false);
     }
 }
