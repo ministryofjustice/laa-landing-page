@@ -35,6 +35,12 @@ spec:
         - name: zap
           image: ghcr.io/zaproxy/zaproxy:stable
           imagePullPolicy: Always
+          workingDir: /zap/wrk
+          env:
+            - name: HOME
+              value: /home/zap
+            - name: TMPDIR
+              value: /tmp
           resources:
             limits:
               cpu: 500m
@@ -44,6 +50,8 @@ spec:
               mountPath: /zap/wrk
             - name: home
               mountPath: /home/zap
+            - name: tmp
+              mountPath: /tmp
             - name: config
               mountPath: /etc/config
           securityContext:
@@ -61,6 +69,8 @@ spec:
         - name: zap-wrk
           emptyDir: {}
         - name: home
+          emptyDir: {}
+        - name: tmp
           emptyDir: {}
         - name: config
           configMap:
