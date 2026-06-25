@@ -1,0 +1,24 @@
+{
+  "keys": [
+    {
+      "kty": "RSA",
+      "use": "sig",
+      "kid": "mock-test-key-id",
+      "alg": "RS256",
+      "n": "u1W_A3z3z8z8...",
+      "e": "AQAB"
+    }
+  ],
+  "tokens": {
+    "default": {
+      "iss": "https://login.microsoftonline.com/mock-tenant/v2.0",
+      "sub": "00000000-0000-0000-0000-000000000000",
+      "aud": "mock-client-id",
+      "exp": 4102444800,
+      "iat": 1718755200,
+      "roles": ["LAA_PORTAL_USER"],
+      "name": "Test User",
+      "preferred_username": "test.user@justice.gov.uk"
+    }
+  }
+}

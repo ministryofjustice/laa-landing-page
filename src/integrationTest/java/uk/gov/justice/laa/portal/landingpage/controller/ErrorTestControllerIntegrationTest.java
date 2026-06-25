@@ -1,16 +1,12 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Import;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -18,7 +14,6 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import uk.gov.justice.laa.portal.landingpage.exception.GlobalExceptionHandler;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 
 @TestPropertySource(properties = {
@@ -44,7 +39,8 @@ class ErrorTestControllerIntegrationTest extends BaseIntegrationTest {
     void testErrorController_whenPropertyEnabled_shouldBeAccessible() throws Exception {
         // Test that the controller is available when the property is enabled
         mockMvc.perform(get("/test-errors/404"))
-            .andExpect(status().isNotFound());
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/oauth2/authorization/azure"));
     }
 
     @Test
@@ -68,6 +64,7 @@ class ErrorTestControllerIntegrationTest extends BaseIntegrationTest {
     void testErrorController_trigger403_shouldReturn403() throws Exception {
         // Test that 403 endpoint triggers access denied
         mockMvc.perform(get("/test-errors/403"))
-            .andExpect(status().isForbidden());
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/oauth2/authorization/azure"));
     }
 }

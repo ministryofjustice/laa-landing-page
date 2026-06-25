@@ -14,12 +14,13 @@ import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
 import jakarta.transaction.Transactional;
+import org.springframework.test.context.ActiveProfiles;
 import uk.gov.justice.laa.portal.landingpage.entity.CountFirms;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -31,6 +32,7 @@ import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
 
 @DataJpaTest
+@ActiveProfiles("test")
 public class UserProfileRepositoryTest extends BaseRepositoryTest {
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
@@ -389,9 +391,9 @@ public class UserProfileRepositoryTest extends BaseRepositoryTest {
         assertThat(page.getTotalElements()).isEqualTo(1);
         assertThat(page.getContent()).extracting(UserSearchResultsDto::id)
                 .containsExactly(childProfile2.getId());
-        assertThat(page.getContent().get(0).hasAppRoles()).isTrue();
-        assertThat(page.getContent().get(0).enabled()).isTrue();
-        assertThat(page.getContent().get(0).invitationStatus()).isEqualTo(InvitationStatus.VERIFICATION_SUCCESS);
+        assertThat(page.getContent().getFirst().hasAppRoles()).isTrue();
+        assertThat(page.getContent().getFirst().enabled()).isTrue();
+        assertThat(page.getContent().getFirst().invitationStatus()).isEqualTo(InvitationStatus.VERIFICATION_SUCCESS);
 
     }
 

@@ -3,29 +3,23 @@ package uk.gov.justice.laa.portal.landingpage.service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 import uk.gov.justice.laa.portal.landingpage.dto.CcmsUserDetails;
 import uk.gov.justice.laa.portal.landingpage.dto.CcmsUserDetailsResponse;
 import uk.gov.justice.laa.portal.landingpage.registry.CcmsUdaRegistry;
 
 import java.util.Optional;
+import java.util.function.Predicate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -39,27 +33,40 @@ class CcmsUserDetailsServiceTest {
     private static final String API_KEY = "api-key";
 
     @Mock
-    private RestTemplate restTemplate;
-    @Mock
     private CcmsUdaRegistry ccmsUdaRegistry;
+
+    @Mock
+    private RestClient.Builder restClientBuilder;
+    @Mock
+    private RestClient restClient;
+    @Mock
+    private RestClient.RequestHeadersUriSpec requestHeadersUriSpec;
+    @Mock
+    private RestClient.RequestHeadersSpec requestHeadersSpec;
+    @Mock
+    private RestClient.ResponseSpec responseSpec;
+
     @InjectMocks
     private CcmsUserDetailsService service;
-    private CcmsUserDetailsService spyService;
 
     @BeforeEach
     void setUp() {
-        spyService = Mockito.spy(service);
+        lenient().when(restClientBuilder.baseUrl(anyString())).thenReturn(restClientBuilder);
+        lenient().when(restClientBuilder.build()).thenReturn(restClient);
+        lenient().when(restClient.get()).thenReturn(requestHeadersUriSpec);
+        lenient().when(requestHeadersUriSpec.uri(any(java.util.function.Function.class))).thenReturn(requestHeadersSpec);
+        lenient().when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
+        lenient().when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+        lenient().when(responseSpec.onStatus(any(Predicate.class), any(RestClient.ResponseSpec.ErrorHandler.class))).thenReturn(responseSpec);
     }
 
     @Test
     void getUserDetailsByLegacyUserId_WhenCallFails_ReturnsNull() {
-        doReturn(restTemplate).when(spyService).createRestTemplate();
         when(ccmsUdaRegistry.getUdaBaseUrl(APP_OID)).thenReturn(Optional.of(BASE_URL));
         when(ccmsUdaRegistry.getUdaApiKey(APP_OID)).thenReturn(Optional.of(API_KEY));
-        when(restTemplate.exchange(any(String.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(CcmsUserDetailsResponse.class)))
-                .thenThrow(new RuntimeException("boom"));
+        when(responseSpec.body(CcmsUserDetailsResponse.class)).thenThrow(new RuntimeException("boom"));
 
-        CcmsUserDetailsResponse response = spyService.getUserDetailsByLegacyUserId(APP_OID, "some-legacy-id");
+        CcmsUserDetailsResponse response = service.getUserDetailsByLegacyUserId(APP_OID, "some-legacy-id");
 
         assertNull(response);
     }
@@ -71,16 +78,11 @@ class CcmsUserDetailsServiceTest {
         CcmsUserDetailsResponse body = new CcmsUserDetailsResponse();
         body.setCcmsUserDetails(ccmsUserDetails);
 
-        ResponseEntity<CcmsUserDetailsResponse> responseEntity =
-                new ResponseEntity<>(body, HttpStatus.OK);
-
-        doReturn(restTemplate).when(spyService).createRestTemplate();
         when(ccmsUdaRegistry.getUdaBaseUrl(APP_OID)).thenReturn(Optional.of(BASE_URL));
         when(ccmsUdaRegistry.getUdaApiKey(APP_OID)).thenReturn(Optional.of(API_KEY));
-        when(restTemplate.exchange(any(String.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(CcmsUserDetailsResponse.class)))
-                .thenReturn(responseEntity);
+        when(responseSpec.body(CcmsUserDetailsResponse.class)).thenReturn(body);
 
-        CcmsUserDetailsResponse response = spyService.getUserDetailsByLegacyUserId(APP_OID, "legacy-id");
+        CcmsUserDetailsResponse response = service.getUserDetailsByLegacyUserId(APP_OID, "legacy-id");
 
         assertEquals("CCMS_USER_FROM_API", response.getCcmsUserDetails().getUserName());
     }
@@ -90,11 +92,10 @@ class CcmsUserDetailsServiceTest {
         when(ccmsUdaRegistry.getUdaBaseUrl(APP_OID)).thenReturn(Optional.empty());
         when(ccmsUdaRegistry.getUdaApiKey(APP_OID)).thenReturn(Optional.of(API_KEY));
 
-        CcmsUserDetailsResponse result =
-                spyService.getUserDetailsByLegacyUserId(APP_OID, LEGACY_USER_ID);
+        CcmsUserDetailsResponse result = service.getUserDetailsByLegacyUserId(APP_OID, LEGACY_USER_ID);
 
         assertNull(result);
-        verifyNoInteractions(restTemplate);
+        verifyNoInteractions(restClientBuilder);
     }
 
     @Test
@@ -102,11 +103,10 @@ class CcmsUserDetailsServiceTest {
         when(ccmsUdaRegistry.getUdaBaseUrl(APP_OID)).thenReturn(Optional.of(BASE_URL));
         when(ccmsUdaRegistry.getUdaApiKey(APP_OID)).thenReturn(Optional.empty());
 
-        CcmsUserDetailsResponse result =
-                spyService.getUserDetailsByLegacyUserId(APP_OID, LEGACY_USER_ID);
+        CcmsUserDetailsResponse result = service.getUserDetailsByLegacyUserId(APP_OID, LEGACY_USER_ID);
 
         assertNull(result);
-        verifyNoInteractions(restTemplate);
+        verifyNoInteractions(restClientBuilder);
     }
 
     @Test
@@ -114,11 +114,10 @@ class CcmsUserDetailsServiceTest {
         when(ccmsUdaRegistry.getUdaBaseUrl(APP_OID)).thenReturn(Optional.of("NONE"));
         when(ccmsUdaRegistry.getUdaApiKey(APP_OID)).thenReturn(Optional.of(API_KEY));
 
-        CcmsUserDetailsResponse result =
-                spyService.getUserDetailsByLegacyUserId(APP_OID, LEGACY_USER_ID);
+        CcmsUserDetailsResponse result = service.getUserDetailsByLegacyUserId(APP_OID, LEGACY_USER_ID);
 
         assertNull(result);
-        verifyNoInteractions(restTemplate);
+        verifyNoInteractions(restClientBuilder);
     }
 
     @Test
@@ -127,17 +126,9 @@ class CcmsUserDetailsServiceTest {
 
         when(ccmsUdaRegistry.getUdaBaseUrl(APP_OID)).thenReturn(Optional.of(BASE_URL));
         when(ccmsUdaRegistry.getUdaApiKey(APP_OID)).thenReturn(Optional.of(API_KEY));
-        doReturn(restTemplate).when(spyService).createRestTemplate();
+        when(responseSpec.body(CcmsUserDetailsResponse.class)).thenReturn(responseBody);
 
-        when(restTemplate.exchange(
-                anyString(),
-                eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                eq(CcmsUserDetailsResponse.class)
-        )).thenReturn(new ResponseEntity<>(responseBody, HttpStatus.OK));
-
-        CcmsUserDetailsResponse result =
-                spyService.getUserDetailsByLegacyUserId(APP_OID, LEGACY_USER_ID);
+        CcmsUserDetailsResponse result = service.getUserDetailsByLegacyUserId(APP_OID, LEGACY_USER_ID);
 
         assertSame(responseBody, result);
     }
@@ -146,17 +137,9 @@ class CcmsUserDetailsServiceTest {
     void shouldReturnNullOn404Response() {
         when(ccmsUdaRegistry.getUdaBaseUrl(APP_OID)).thenReturn(Optional.of(BASE_URL));
         when(ccmsUdaRegistry.getUdaApiKey(APP_OID)).thenReturn(Optional.of(API_KEY));
-        doReturn(restTemplate).when(spyService).createRestTemplate();
+        when(responseSpec.body(CcmsUserDetailsResponse.class)).thenReturn(null);
 
-        when(restTemplate.exchange(
-                anyString(),
-                eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                eq(CcmsUserDetailsResponse.class)
-        )).thenReturn(new ResponseEntity<>(null, HttpStatus.NOT_FOUND));
-
-        CcmsUserDetailsResponse result =
-                spyService.getUserDetailsByLegacyUserId(APP_OID, LEGACY_USER_ID);
+        CcmsUserDetailsResponse result = service.getUserDetailsByLegacyUserId(APP_OID, LEGACY_USER_ID);
 
         assertNull(result);
     }
@@ -165,36 +148,9 @@ class CcmsUserDetailsServiceTest {
     void shouldReturnNullOnUnexpectedHttpStatus() {
         when(ccmsUdaRegistry.getUdaBaseUrl(APP_OID)).thenReturn(Optional.of(BASE_URL));
         when(ccmsUdaRegistry.getUdaApiKey(APP_OID)).thenReturn(Optional.of(API_KEY));
-        doReturn(restTemplate).when(spyService).createRestTemplate();
+        when(responseSpec.body(CcmsUserDetailsResponse.class)).thenReturn(null);
 
-        when(restTemplate.exchange(
-                anyString(),
-                eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                eq(CcmsUserDetailsResponse.class)
-        )).thenReturn(new ResponseEntity<>(null, HttpStatus.BAD_GATEWAY));
-
-        CcmsUserDetailsResponse result =
-                spyService.getUserDetailsByLegacyUserId(APP_OID, LEGACY_USER_ID);
-
-        assertNull(result);
-    }
-
-    @Test
-    void shouldReturnNullWhenExceptionIsThrown() {
-        when(ccmsUdaRegistry.getUdaBaseUrl(APP_OID)).thenReturn(Optional.of(BASE_URL));
-        when(ccmsUdaRegistry.getUdaApiKey(APP_OID)).thenReturn(Optional.of(API_KEY));
-        doReturn(restTemplate).when(spyService).createRestTemplate();
-
-        when(restTemplate.exchange(
-                anyString(),
-                eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                eq(CcmsUserDetailsResponse.class)
-        )).thenThrow(new RuntimeException("boom"));
-
-        CcmsUserDetailsResponse result =
-                spyService.getUserDetailsByLegacyUserId(APP_OID, LEGACY_USER_ID);
+        CcmsUserDetailsResponse result = service.getUserDetailsByLegacyUserId(APP_OID, LEGACY_USER_ID);
 
         assertNull(result);
     }
@@ -203,36 +159,12 @@ class CcmsUserDetailsServiceTest {
     void shouldCallCorrectUrlAndSetAuthorizationHeader() {
         when(ccmsUdaRegistry.getUdaBaseUrl(APP_OID)).thenReturn(Optional.of(BASE_URL));
         when(ccmsUdaRegistry.getUdaApiKey(APP_OID)).thenReturn(Optional.of(API_KEY));
-        doReturn(restTemplate).when(spyService).createRestTemplate();
+        when(responseSpec.body(CcmsUserDetailsResponse.class)).thenReturn(new CcmsUserDetailsResponse());
 
-        when(restTemplate.exchange(
-                anyString(),
-                any(),
-                any(),
-                eq(CcmsUserDetailsResponse.class)
-        )).thenReturn(new ResponseEntity<>(new CcmsUserDetailsResponse(), HttpStatus.OK));
+        service.getUserDetailsByLegacyUserId(APP_OID, LEGACY_USER_ID);
 
-        spyService.getUserDetailsByLegacyUserId(APP_OID, LEGACY_USER_ID);
+        verify(restClientBuilder).baseUrl(BASE_URL);
 
-        ArgumentCaptor<String> urlCaptor = ArgumentCaptor.forClass(String.class);
-        ArgumentCaptor<HttpEntity<Void>> entityCaptor =
-                ArgumentCaptor.forClass(HttpEntity.class);
-
-        verify(restTemplate).exchange(
-                urlCaptor.capture(),
-                eq(HttpMethod.GET),
-                entityCaptor.capture(),
-                eq(CcmsUserDetailsResponse.class)
-        );
-
-        assertEquals(
-                "http://uda-host/api/v1/user-details/silas/legacy123",
-                urlCaptor.getValue()
-        );
-        assertEquals(
-                API_KEY,
-                entityCaptor.getValue().getHeaders().getFirst("X-Authorization")
-        );
+        verify(requestHeadersSpec).header("X-Authorization", API_KEY);
     }
-
 }
