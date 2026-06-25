@@ -28,7 +28,10 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class RestUtilTest {
@@ -138,7 +141,7 @@ class RestUtilTest {
     void testGettingObjectFromSessionReturnsPopulatedOptionalWhenTypeIsCorrect() {
         Object o = "TestValue";
         HttpSession mockHttpSession = Mockito.mock(HttpSession.class);
-        Mockito.when(mockHttpSession.getAttribute("test")).thenReturn(o);
+        when(mockHttpSession.getAttribute("test")).thenReturn(o);
         Optional<String> returnedString = RestUtils.getObjectFromHttpSession(mockHttpSession, "test", String.class);
         Assertions.assertTrue(returnedString.isPresent());
         Assertions.assertEquals(o, returnedString.get());
@@ -148,7 +151,7 @@ class RestUtilTest {
     void testGettingObjectFromSessionReturnsEmptyOptionalWhenTypeIsIncorrect() {
         Object o = "TestValue";
         HttpSession mockHttpSession = Mockito.mock(HttpSession.class);
-        Mockito.when(mockHttpSession.getAttribute("test")).thenReturn(o);
+        when(mockHttpSession.getAttribute("test")).thenReturn(o);
         Optional<Integer> returnedInt = RestUtils.getObjectFromHttpSession(mockHttpSession, "test", Integer.class);
         Assertions.assertTrue(returnedInt.isEmpty());
     }
@@ -156,7 +159,7 @@ class RestUtilTest {
     @Test
     void testGettingObjectFromSessionHandlesNulls() {
         HttpSession mockHttpSession = Mockito.mock(HttpSession.class);
-        Mockito.when(mockHttpSession.getAttribute("test")).thenReturn(null);
+        when(mockHttpSession.getAttribute("test")).thenReturn(null);
         Optional<Integer> returnedInt = RestUtils.getObjectFromHttpSession(mockHttpSession, "test", Integer.class);
         Assertions.assertTrue(returnedInt.isEmpty());
     }
@@ -165,7 +168,7 @@ class RestUtilTest {
     void testGettingListFromSessionReturnsPopulatedOptionalWhenTypeIsCorrect() {
         Object o = List.of("TestValue1", "TestValue2", "TestValue3");
         HttpSession mockHttpSession = Mockito.mock(HttpSession.class);
-        Mockito.when(mockHttpSession.getAttribute("test")).thenReturn(o);
+        when(mockHttpSession.getAttribute("test")).thenReturn(o);
         Optional<List<String>> stringList = RestUtils.getListFromHttpSession(mockHttpSession, "test", String.class);
         Assertions.assertTrue(stringList.isPresent());
         Assertions.assertEquals(3, stringList.get().size());
@@ -179,7 +182,7 @@ class RestUtilTest {
         list.add("TestValue3");
         Object o = list;
         HttpSession mockHttpSession = Mockito.mock(HttpSession.class);
-        Mockito.when(mockHttpSession.getAttribute("test")).thenReturn(o);
+        when(mockHttpSession.getAttribute("test")).thenReturn(o);
         Optional<List<String>> stringList = RestUtils.getListFromHttpSession(mockHttpSession, "test", String.class);
         Assertions.assertTrue(stringList.isPresent());
         Assertions.assertEquals(3, stringList.get().size());
@@ -189,7 +192,7 @@ class RestUtilTest {
     void testGettingListFromSessionReturnsEmptyOptionalWhenTypeIsIncorrect() {
         Object o = List.of("TestValue1", "TestValue2", "TestValue3");
         HttpSession mockHttpSession = Mockito.mock(HttpSession.class);
-        Mockito.when(mockHttpSession.getAttribute("test")).thenReturn(o);
+        when(mockHttpSession.getAttribute("test")).thenReturn(o);
         Optional<List<Integer>> integerList = RestUtils.getListFromHttpSession(mockHttpSession, "test", Integer.class);
         Assertions.assertTrue(integerList.isEmpty());
     }
@@ -197,7 +200,7 @@ class RestUtilTest {
     @Test
     void testGettingListFromSessionHandlesNulls() {
         HttpSession mockHttpSession = Mockito.mock(HttpSession.class);
-        Mockito.when(mockHttpSession.getAttribute("test")).thenReturn(null);
+        when(mockHttpSession.getAttribute("test")).thenReturn(null);
         Optional<List<String>> returnedInt = RestUtils.getListFromHttpSession(mockHttpSession, "test", String.class);
         Assertions.assertTrue(returnedInt.isEmpty());
     }
@@ -205,7 +208,7 @@ class RestUtilTest {
     @Test
     void testGettingObjectFromSessionHandlesEmpty() {
         HttpSession mockHttpSession = Mockito.mock(HttpSession.class);
-        Mockito.when(mockHttpSession.getAttribute("test")).thenReturn(new ArrayList<>());
+        when(mockHttpSession.getAttribute("test")).thenReturn(new ArrayList<>());
         Optional<List<String>> returnedList = RestUtils.getListFromHttpSession(mockHttpSession, "test", String.class);
         Assertions.assertTrue(returnedList.isPresent());
         Assertions.assertTrue(returnedList.get().isEmpty());

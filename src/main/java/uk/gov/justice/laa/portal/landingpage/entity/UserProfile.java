@@ -3,7 +3,7 @@ package uk.gov.justice.laa.portal.landingpage.entity;
 import java.util.Set;
 import java.util.UUID;
 
-import org.hibernate.annotations.Check;
+import jakarta.persistence.CheckConstraint;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -33,15 +33,18 @@ import lombok.experimental.SuperBuilder;
     @Index(name = "UserProfileCreatedByIdx", columnList = "created_by"),
     @Index(name = "UserProfileCreatedDateIdx", columnList = "created_date"),
     @Index(name = "UserProfileLastModifiedDateIdx", columnList = "last_modified_date"),
-    @Index(name = "UserProfileLastModifiedByIdx", columnList = "last_modified_by"), })
+    @Index(name = "UserProfileLastModifiedByIdx", columnList = "last_modified_by"), },
+    check = {
+        @CheckConstraint(
+                name = "firm_not_null_for_non_internal_users_only",
+                constraint = "(firm_id IS NULL AND user_type = 'INTERNAL') OR (firm_id IS NOT NULL AND user_type != 'INTERNAL')"
+            )
+    })
 @Getter
 @Setter
 @SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED, force = true)
 @ToString(doNotUseGetters = true)
-@Check(name = "firm_not_null_for_non_internal_users_only",
-    constraints = "(firm_id IS NULL AND user_type = 'INTERNAL') "
-        + "OR (firm_id IS NOT NULL AND user_type != 'INTERNAL')")
 public class UserProfile extends AuditableEntity {
 
     @Column(name = "active_profile", nullable = false)

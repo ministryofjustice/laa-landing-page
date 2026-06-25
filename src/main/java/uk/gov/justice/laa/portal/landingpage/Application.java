@@ -9,7 +9,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * Javadoc comment.
  */
 @SpringBootApplication(exclude = {
-        SessionAutoConfiguration.class,
+    SessionAutoConfiguration.class,
 })
 @EnableScheduling
 public class Application {

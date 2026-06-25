@@ -29,7 +29,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.annotations.Comment;
 
 @Entity
 @Table(name = "entra_user", indexes = {
@@ -90,9 +89,8 @@ public class EntraUser extends AuditableEntity {
     @Builder.Default
     private boolean enabled = true;
 
-    @Column(name = "disabled_by", nullable = true, length = 255)
+    @Column(name = "disabled_by", nullable = true, length = 255, comment = "The EntraUser id of the admin who disabled the user")
     @Nullable
-    @Comment(value = "The EntraUser id of the admin who disabled the user")
     private UUID disabledBy;
 
     @Column(name = "ccms_ebs_user", nullable = false)
@@ -101,10 +99,10 @@ public class EntraUser extends AuditableEntity {
     private boolean ccmsEbsUser = false;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "disable_type", nullable = true, length = 20)
+    @Column(name = "disable_type", nullable = true, length = 20,
+            comment = "The delegation level of the user who disabled this account. NULL means unknown/legacy"
+                    + " (any role may re-enable). Set at disable-time from the disabling user's highest-delegation role.")
     @Nullable
-    @Comment(value = "The delegation level of the user who disabled this account. NULL means unknown/legacy"
-            + " (any role may re-enable). Set at disable-time from the disabling user's highest-delegation role.")
     private DisableType disableType;
 
     @Enumerated(EnumType.STRING)
