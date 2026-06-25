@@ -139,6 +139,7 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
         ).addFilterAfter(userDisabledFilter, OAuth2LoginAuthenticationFilter.class)
+                .addFilterAfter(firmDisabledFilter, UserDisabledFilter.class)
                 .authorizeHttpRequests((authorize) -> authorize
                 .dispatcherTypeMatchers(DispatcherType.FORWARD).permitAll()
                 .requestMatchers("/api/pda/**").hasAnyAuthority(Permission.ADMIN_PERMISSIONS)

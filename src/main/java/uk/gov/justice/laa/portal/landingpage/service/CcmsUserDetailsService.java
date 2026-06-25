@@ -40,7 +40,7 @@ public class CcmsUserDetailsService {
                     .uri(uriBuilder -> uriBuilder.path(String.format(CCMS_UDA_GET_USER_DETAILS_ENDPOINT, legacyUserId)).build())
                     .header("X-Authorization", udaApiKey)
                     .retrieve()
-                    .onStatus(status -> status == HttpStatus.NOT_FOUND, (request, response) -> {
+                    .onStatus(status -> status.value() == HttpStatus.NOT_FOUND.value(), (request, response) -> {
                         log.info("CCMS UDA details not found for legacyUserId: {} 404", legacyUserId);
                     })
                     .onStatus(HttpStatusCode::isError, (request, response) -> {

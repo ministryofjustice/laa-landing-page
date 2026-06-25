@@ -189,10 +189,10 @@ public class BaseRepositoryTest {
     }
 
     protected void deleteNonAuthzAppRoleAssignments() {
-        List<RoleAssignment> nonAuthzAppRoleAssignmentss = roleAssignmentRepository.findAll().stream()
+        List<RoleAssignment> nonAuthzAppRoleAssignments = roleAssignmentRepository.findAll().stream()
                 .filter(role -> !role.getAssignableRole().isAuthzRole())
                 .toList();
-        roleAssignmentRepository.deleteAll(nonAuthzAppRoleAssignmentss);
+        roleAssignmentRepository.deleteAll(nonAuthzAppRoleAssignments);
     }
 
     protected void deleteNonAuthzAppRoles(AppRoleRepository appRoleRepository) {

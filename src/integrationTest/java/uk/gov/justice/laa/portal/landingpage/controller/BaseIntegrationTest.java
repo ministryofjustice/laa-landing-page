@@ -225,9 +225,10 @@ public abstract class BaseIntegrationTest extends BaseRepositoryTest {
                 .orElse(Collections.emptySet());
 
         Map<String, Object> claims = new HashMap<>();
-        claims.put("sub", Objects.requireNonNullElse(freshUser.getEntraOid(), UUID.randomUUID().toString()));
-        claims.put("oid", Objects.requireNonNullElse(freshUser.getEntraOid(), UUID.randomUUID().toString()));
-        claims.put("name", Objects.requireNonNullElse(freshUser.getFirstName() + " " + freshUser.getLastName(), "Test User"));
+        String userOid = Objects.requireNonNullElse(freshUser.getEntraOid(), UUID.randomUUID().toString());
+        claims.put("sub", userOid);
+        claims.put("oid", userOid);
+        claims.put("name", freshUser.getFirstName() + " " + freshUser.getLastName());
         claims.put("preferred_username", freshUser.getEmail());
         claims.put("email", freshUser.getEmail());
 
