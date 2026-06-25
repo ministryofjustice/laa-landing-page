@@ -35,15 +35,23 @@ spec:
         - name: zap
           image: ghcr.io/zaproxy/zaproxy:stable
           imagePullPolicy: Always
+          workingDir: /zap/wrk
+          env:
+            - name: HOME
+              value: /home/zap
+            - name: TMPDIR
+              value: /tmp
           resources:
             limits:
               cpu: 500m
-              memory: 1Gi
+              memory: 4Gi
           volumeMounts:
             - name: zap-wrk
               mountPath: /zap/wrk
             - name: home
               mountPath: /home/zap
+            - name: tmp
+              mountPath: /tmp
             - name: config
               mountPath: /etc/config
           securityContext:
@@ -56,11 +64,13 @@ spec:
           command:
             - /bin/sh
             - -c
-            - zap-baseline.py -a -j -m 120 -t http://laa-landing-page.${NAMESPACE}.svc.cluster.local:8080 -c /etc/config/rules.tsv -I -w report.md && echo "===== BEGIN ZAP REPORT.MD =====" && cat /zap/wrk/report.md && echo "===== END ZAP REPORT.MD ====="
+            - zap-full-scan.py -a -j -m 120 -t http://laa-landing-page.${NAMESPACE}.svc.cluster.local:8080 -c /etc/config/rules.tsv -I -w report.md && echo "===== BEGIN ZAP REPORT.MD =====" && cat /zap/wrk/report.md && echo "===== END ZAP REPORT.MD ====="
       volumes:
         - name: zap-wrk
           emptyDir: {}
         - name: home
+          emptyDir: {}
+        - name: tmp
           emptyDir: {}
         - name: config
           configMap:
