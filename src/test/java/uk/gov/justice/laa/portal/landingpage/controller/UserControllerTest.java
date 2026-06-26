@@ -1274,8 +1274,7 @@ class UserControllerTest {
         HttpSession session = new MockHttpSession();
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserController.class);
         String view = userController.addUserCreated(model, session);
-        assertThat(model.getAttribute("user")).isNull();
-        assertThat(view).isEqualTo("add-user-created");
+        assertThat(view).isEqualTo("redirect:/admin/users");
         List<ILoggingEvent> logEvents = LogMonitoring.getLogsByLevel(listAppender, Level.ERROR);
         assertThat(logEvents).hasSize(1);
     }
