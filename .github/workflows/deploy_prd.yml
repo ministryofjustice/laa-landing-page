@@ -41,13 +41,13 @@ jobs:
           SENTRY_ENVIRONMENT: ${{ vars.ENV_NAME }}
 
       # Assume role in Cloud Platform
-      - uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
+      - uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
           role-to-assume: ${{ secrets.ECR_ROLE_TO_ASSUME }}
           aws-region: ${{ vars.ECR_REGION }}
 
       # Login to container repository
-      - uses: aws-actions/amazon-ecr-login@f2e9fc6c2b355c1890b65e6f6f0e2ac3e6e22f78 # v2
+      - uses: aws-actions/amazon-ecr-login@fa648b43de3d4d023bcb3f89ed6940096949c419 # v2
         id: login-ecr
 
       - name: Configure kubectl
@@ -80,8 +80,12 @@ jobs:
 
       - name: Generate Deployment the Files
         run: |
+          # Get all env vars, filter out server_protocol, uri and http1_reject, and format with leading dollar signs
+          ALLOWED_VARS=$(printenv | cut -d= -f1 | grep -v -E '^(server_protocol|uri|http1_reject)$' | sed 's/^/$/' | tr '\n' ' ')
+
+          # Pass the dynamic list into envsubst
+          envsubst "$ALLOWED_VARS" < deployments/templates/landing-page-ingress.yml  > deployments/landing-page-ingress.yml
           cat deployments/templates/deployment.yml | envsubst > deployments/deployment.yml
-          cat deployments/templates/landing-page-ingress.yml | envsubst > deployments/landing-page-ingress.yml
           cat deployments/templates/service.yml | envsubst > deployments/service.yml
           cat deployments/templates/servicemonitor.yml | envsubst > deployments/servicemonitor.yml
         env:

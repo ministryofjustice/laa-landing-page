@@ -169,7 +169,7 @@
                         assigned.
                     </p>
                     <div class="govuk-button-group">
-                        <button type="submit" class="govuk-button govuk-!-font-size-19 govuk-!-font-weight-bold" data-module="govuk-button" th:disabled="${errorMessage != null}">
+                        <button type="submit" class="govuk-button govuk-!-font-size-19 govuk-!-font-weight-bold" data-module="govuk-button" th:disabled="${errorMessage != null}" onclick="this.disabled=true; this.form.submit();">
                             Confirm
                         </button>
                         <a th:href="@{/admin/users/grant-access/{id}/cancel/confirmation(id=${user.id})}" class="govuk-link govuk-link--no-visited-state">Cancel</a>

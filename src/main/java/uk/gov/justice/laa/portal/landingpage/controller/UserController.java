@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
@@ -1678,19 +1679,25 @@ public class UserController {
             return String.format("redirect:/admin/users/edit/%s/roles-check-answer?errorMessage=%s", uuid, ccmsErrorMsg);
         }
         if (roleAssignmentService.canAssignRole(editorProfile.getAppRoles(), allSelectedRoles)) {
-            Map<String, String> updateResult = userService.updateUserRoles(id, allSelectedRoles,
-                    nonEditableRoles, currentUserDto.getUserId());
-            if (updateResult.get("error") != null) {
-                String errorMessage = updateResult.get("error");
-                return "redirect:/admin/users/edit/" + uuid + "/roles-check-answer?errorMessage=" + errorMessage;
+            try {
+                Map<String, String> updateResult = userService.updateUserRoles(id, allSelectedRoles,
+                        nonEditableRoles, currentUserDto.getUserId());
+                if (updateResult.get("error") != null) {
+                    String errorMessage = updateResult.get("error");
+                    return "redirect:/admin/users/edit/" + uuid + "/roles-check-answer?errorMessage=" + errorMessage;
+                }
+                UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
+                        editorProfile.getId(),
+                        currentUserDto,
+                        user.getEntraUser(), updateResult.get("diff"),
+                        "role");
+                eventService.logEvent(updateUserAuditEvent);
+                notifyExternalUserRoleChange(user, updateResult.get("diff"), "Service roles");
+            } catch (DataIntegrityViolationException e) {
+                log.warn("Duplicate role assignment detected for user {} - continuing to confirmation", id);
+            } catch (TechServicesClientException e) {
+                log.warn("Concurrent Tech Services request detected for user {} - continuing to confirmation", id);
             }
-            UpdateUserAuditEvent updateUserAuditEvent = new UpdateUserAuditEvent(
-                    editorProfile.getId(),
-                    currentUserDto,
-                    user.getEntraUser(), updateResult.get("diff"),
-                    "role");
-            eventService.logEvent(updateUserAuditEvent);
-            notifyExternalUserRoleChange(user, updateResult.get("diff"), "Service roles");
         }
         // Clear the session
         session.removeAttribute("editUserAllSelectedRoles");
@@ -2824,6 +2831,8 @@ public class UserController {
 
             notifyExternalUserRoleChange(userProfileDto, "You have been granted access to services and offices", "Access granted");
 
+        } catch (DataIntegrityViolationException e) {
+            log.warn("Duplicate role assignment detected for user {} during grant access - continuing to confirmation", id);
         } catch (Exception e) {
             log.error("Error completing grant access for user: " + id, e);
             // Could add error handling here if needed

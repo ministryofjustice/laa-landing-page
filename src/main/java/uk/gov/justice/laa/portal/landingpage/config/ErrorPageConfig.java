@@ -1,8 +1,14 @@
 package uk.gov.justice.laa.portal.landingpage.config;
 
+import org.apache.catalina.Valve;
+import org.apache.catalina.valves.ErrorReportValve;
+import org.springframework.boot.web.context.WebServerInitializedEvent;
+import org.springframework.boot.web.embedded.tomcat.TomcatWebServer;
+import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
 import org.springframework.boot.web.server.ErrorPage;
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.boot.web.servlet.server.ConfigurableServletWebServerFactory;
+import org.springframework.context.ApplicationListener;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -53,5 +59,40 @@ public class ErrorPageConfig {
                 new ErrorPage(HttpStatus.GATEWAY_TIMEOUT, "/error")
             );
         };
+    }
+
+    /**
+     * Suppress Tomcat's built-in ErrorReportValve HTML output.
+     *
+     * Connector-level rejections (e.g. malformed request paths) are handled by
+     * Tomcat before the request reaches Spring, so the ErrorPage mappings above
+     * cannot intercept them. StandardHost adds ErrorReportValve to its pipeline
+     * during startInternal(), so we configure it after the server is fully started
+     * via WebServerInitializedEvent, which also avoids leaking server/version info.
+     */
+    @Bean
+    public ApplicationListener<WebServerInitializedEvent> suppressTomcatErrorReport() {
+        return event -> {
+            if (event.getWebServer() instanceof TomcatWebServer tomcatWebServer) {
+                for (Valve valve : tomcatWebServer.getTomcat().getHost().getPipeline().getValves()) {
+                    if (valve instanceof ErrorReportValve errorReportValve) {
+                        errorReportValve.setShowReport(false);
+                        errorReportValve.setShowServerInfo(false);
+                        break;
+                    }
+                }
+            }
+        };
+    }
+
+    /**
+     *
+     * Disable Tomcat's X-Powered-By header
+     *
+     */
+    @Bean
+    public WebServerFactoryCustomizer<TomcatServletWebServerFactory> tomcatCustomizer() {
+        return factory -> factory.addConnectorCustomizers(connector ->
+                connector.setXpoweredBy(false));
     }
 }
