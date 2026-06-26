@@ -8420,4 +8420,43 @@ class UserControllerTest {
         }
 
     }
+
+    @Nested
+    class AddUserCreated {
+
+        @Test
+        void addUserCreated_whenUserInSession_returnsConfirmationView() {
+            // Given
+            MockHttpSession testSession = new MockHttpSession();
+            EntraUserDto user = new EntraUserDto();
+            user.setFirstName("Jane");
+            user.setLastName("Smith");
+            testSession.setAttribute("user", user);
+            testSession.setAttribute("isMultiFirmUser", false);
+
+            UserProfileDto userProfile = new UserProfileDto();
+            testSession.setAttribute("userProfile", userProfile);
+
+            // When
+            String view = userController.addUserCreated(model, testSession);
+
+            // Then
+            assertThat(view).isEqualTo("add-user-created");
+            assertThat(testSession.getAttribute("user")).isNull();
+            assertThat(testSession.getAttribute("userProfile")).isNull();
+            assertThat(testSession.getAttribute("isMultiFirmUser")).isNull();
+        }
+
+        @Test
+        void addUserCreated_whenNoUserInSession_redirectsToUsers() {
+            // Given
+            MockHttpSession testSession = new MockHttpSession();
+
+            // When
+            String view = userController.addUserCreated(model, testSession);
+
+            // Then
+            assertThat(view).isEqualTo("redirect:/admin/users");
+        }
+    }
 }
