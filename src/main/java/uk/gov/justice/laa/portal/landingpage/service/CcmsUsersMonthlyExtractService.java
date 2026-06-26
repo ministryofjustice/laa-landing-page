@@ -44,7 +44,7 @@ public class CcmsUsersMonthlyExtractService {
         LocalDateTime end = endBoundary.atStartOfDay();
 
         List<Object[]> rows = entraUserRepository.findCcmsUsersWithAppInPeriod(
-                UserType.EXTERNAL, "CCMS PUI", start, end);
+                UserType.EXTERNAL, "Apply for civil legal aid using CCMS (Client and Cost Management System)", start, end);
 
         File csv = writeToCsv(rows, startBoundary, endBoundary);
 

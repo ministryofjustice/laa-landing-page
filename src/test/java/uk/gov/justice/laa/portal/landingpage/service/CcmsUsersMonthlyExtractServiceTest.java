@@ -45,7 +45,7 @@ class CcmsUsersMonthlyExtractServiceTest {
     void shouldCreateCsvAndUploadToSharePoint() throws Exception {
         when(entraUserRepository.findCcmsUsersWithAppInPeriod(
                 eq(UserType.EXTERNAL),
-                eq("CCMS PUI"),
+                eq("Apply for civil legal aid using CCMS (Client and Cost Management System)"),
                 any(LocalDateTime.class),
                 any(LocalDateTime.class)
         )).thenReturn(List.of(
@@ -81,7 +81,7 @@ class CcmsUsersMonthlyExtractServiceTest {
         verify(entraUserRepository, times(1))
                 .findCcmsUsersWithAppInPeriod(
                         eq(UserType.EXTERNAL),
-                        eq("CCMS PUI"),
+                        eq("Apply for civil legal aid using CCMS (Client and Cost Management System)"),
                         any(LocalDateTime.class),
                         any(LocalDateTime.class)
             );
