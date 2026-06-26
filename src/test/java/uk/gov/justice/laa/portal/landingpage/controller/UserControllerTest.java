@@ -1275,7 +1275,7 @@ class UserControllerTest {
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserController.class);
         String view = userController.addUserCreated(model, session);
         assertThat(view).isEqualTo("redirect:/admin/users");
-        List<ILoggingEvent> logEvents = LogMonitoring.getLogsByLevel(listAppender, Level.ERROR);
+        List<ILoggingEvent> logEvents = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
         assertThat(logEvents).hasSize(1);
     }
 
