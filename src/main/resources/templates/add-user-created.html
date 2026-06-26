@@ -17,7 +17,7 @@
         <div class="govuk-!-width-two-thirds">
             <div class="govuk-panel govuk-panel--confirmation">
                 <h1 class="govuk-panel__title">User created</h1>
-                <div class="govuk-panel__body">
+                <div class="govuk-panel__body" th:if="${user != null}">
                     <span th:text="${user.firstName}"></span> <span th:text="${user.lastName}"></span> has been added
                 </div>
             </div>
