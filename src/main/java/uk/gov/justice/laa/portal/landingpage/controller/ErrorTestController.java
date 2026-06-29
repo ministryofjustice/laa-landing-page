@@ -2,11 +2,10 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Controller for testing error pages in development/test environments only
@@ -18,14 +17,13 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 public class ErrorTestController {
 
     @GetMapping("/404")
-    @ResponseStatus(HttpStatus.NOT_FOUND)
     public void trigger404() {
-        // This will trigger a 404 error
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Test 404 error");
     }
 
     @GetMapping("/403")
     public void trigger403() {
-        throw new AccessDeniedException("Test access denied error");
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Test 403");
     }
 
     @GetMapping("/500")
