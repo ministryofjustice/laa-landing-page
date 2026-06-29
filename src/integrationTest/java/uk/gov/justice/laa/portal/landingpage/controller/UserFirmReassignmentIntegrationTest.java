@@ -16,7 +16,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +30,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
-import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
 class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
 
@@ -41,10 +40,6 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
     protected AppRoleRepository appRoleRepository;
-
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    @Autowired
-    protected UserService userService;
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
@@ -67,9 +62,10 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
     private Firm firm4;
     private EntraUser adminUser;
 
-    @BeforeAll
+    @BeforeEach
     @Override
-    public void beforeAll() {
+    public void beforeEach() throws Exception {
+        super.beforeEach();
         setupFirmsAndUsers();
     }
 
@@ -77,11 +73,11 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
         org.springframework.transaction.TransactionStatus txStatus = 
             transactionManager.getTransaction(new org.springframework.transaction.support.DefaultTransactionDefinition());
         try {
-            // Clean up
-            userProfileRepository.deleteAll();
-            entraUserRepository.deleteAll();
-            officeRepository.deleteAll();
-            firmRepository.deleteAll();
+            userProfileRepository.deleteAllInBatch();
+            entraUserRepository.deleteAllInBatch();
+            officeRepository.deleteAllInBatch();
+            firmRepository.deleteAllInBatch();
+            entityManager.clear();
 
             // Create firms with offices (firms must have at least one office)
             // Disable triggers temporarily to avoid constraint issues during setup
@@ -146,7 +142,6 @@ class UserFirmReassignmentIntegrationTest extends BaseIntegrationTest {
     }
 
     @AfterAll
-    @Override
     protected void baseAfterAll() {
         org.springframework.transaction.TransactionStatus txStatus = 
             transactionManager.getTransaction(new org.springframework.transaction.support.DefaultTransactionDefinition());

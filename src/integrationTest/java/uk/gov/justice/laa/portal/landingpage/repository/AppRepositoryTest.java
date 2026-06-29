@@ -4,7 +4,7 @@ import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 
@@ -18,13 +18,11 @@ public class AppRepositoryTest extends BaseRepositoryTest {
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
     private AppRoleRepository appRoleRepository;
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
-    @Autowired
-    private RoleAssignmentRepository roleAssignmentRepository;
 
     @BeforeEach
     public void beforeEach() {
         // Delete child tables first to avoid foreign key constraint violations
+        deleteNonAuthzAppRoleAssignments();
         deleteNonAuthzAppRoles(appRoleRepository);
         deleteNonAuthzApps(repository);
     }

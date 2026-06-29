@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.utils;
 
 import jakarta.servlet.http.HttpSession;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -8,18 +9,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
-import org.mockito.MockedConstruction;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -29,7 +27,9 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -40,9 +40,19 @@ class RestUtilTest {
     private static final String DUMMY_URL = "https://graph.microsoft.com/v1.0/test";
 
     @Mock
-    private RestTemplate mockRestTemplate;
+    private RestClient mockRestClient;
+    @Mock
+    private RestClient.RequestBodyUriSpec requestBodyUriSpec;
+    @Mock
+    private RestClient.RequestBodySpec requestBodySpec;
+    @Mock
+    private RestClient.ResponseSpec responseSpec;
+
     @Captor
-    private ArgumentCaptor<HttpEntity<?>> httpEntityCaptor;
+    private ArgumentCaptor<String> headerCaptor;
+    @Captor
+    private ArgumentCaptor<Object> bodyCaptor;
+
     private MockHttpSession mockHttpSession;
 
     @BeforeEach
@@ -50,98 +60,88 @@ class RestUtilTest {
         mockHttpSession = new MockHttpSession();
     }
 
+    @AfterEach
+    void tearDown() {
+        // Forces the mock back to its pristine, unstubbed state
+        Mockito.reset(mockRestClient, requestBodyUriSpec, responseSpec, requestBodySpec);
+    }
+
+    private void setupMockRestClientChain() {
+        lenient().when(mockRestClient.method(any(HttpMethod.class))).thenReturn(requestBodyUriSpec);
+        lenient().when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        lenient().when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        lenient().when(requestBodySpec.accept(any(MediaType.class))).thenReturn(requestBodySpec);
+        lenient().when(requestBodySpec.contentType(any(MediaType.class))).thenReturn(requestBodySpec);
+        lenient().when(requestBodySpec.body(any())).thenReturn(requestBodySpec);
+        lenient().when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+    }
+
     @Test
     void getGraphApi_whenApiCallIsSuccessfulAndBodyIsPresent_returnsResponseBody() {
-
-        // Arrange
+        setupMockRestClientChain();
         String expectedResponseBody = "{\"data\":\"success\"}";
-        ResponseEntity<String> mockResponseEntity = new ResponseEntity<>(expectedResponseBody, HttpStatus.OK);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.body(String.class)).thenReturn(expectedResponseBody);
 
-        try (MockedConstruction<RestTemplate> mockedConstruction = Mockito.mockConstruction(RestTemplate.class,
-                (mock, context) -> when(mock.exchange(eq(DUMMY_URL), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
-                        .thenReturn(mockResponseEntity))) {
+        // 💡 Intercept RestClient.create() static call to inject our mock blueprint
+        try (MockedStatic<RestClient> staticRestClient = Mockito.mockStatic(RestClient.class)) {
+            staticRestClient.when(RestClient::create).thenReturn(mockRestClient);
 
-            // Act
             String actualResponseBody = RestUtils.getGraphApi(DUMMY_ACCESS_TOKEN, DUMMY_URL);
 
-            // Assert
             assertThat(actualResponseBody).isEqualTo(expectedResponseBody);
-            RestTemplate constructedRestTemplate = mockedConstruction.constructed().get(0);
-            verify(constructedRestTemplate).exchange(
-                    eq(DUMMY_URL),
-                    eq(HttpMethod.GET),
-                    httpEntityCaptor.capture(),
-                    eq(String.class)
-            );
-            HttpHeaders capturedHeaders = httpEntityCaptor.getValue().getHeaders();
-            assertThat(capturedHeaders.getFirst("Authorization")).isEqualTo("Bearer " + DUMMY_ACCESS_TOKEN);
-            assertThat(capturedHeaders.getFirst("Accept")).isEqualTo("application/json");
+            verify(mockRestClient).method(HttpMethod.GET);
+            verify(requestBodyUriSpec).uri(DUMMY_URL);
+            verify(requestBodySpec).header(eq("Authorization"), headerCaptor.capture());
+            assertThat(headerCaptor.getValue()).isEqualTo("Bearer " + DUMMY_ACCESS_TOKEN);
         }
     }
 
     @Test
     void getGraphApi_whenApiReturnsSuccessfulButNullBody_returnsEmptyString() {
+        setupMockRestClientChain();
 
-        // Arrange
-        ResponseEntity<String> mockResponseEntity = new ResponseEntity<>(null, HttpStatus.OK);
+        try (MockedStatic<RestClient> staticRestClient = Mockito.mockStatic(RestClient.class)) {
+            staticRestClient.when(RestClient::create).thenReturn(mockRestClient);
 
-        try (MockedConstruction<RestTemplate> mockedConstruction = Mockito.mockConstruction(RestTemplate.class,
-                (mock, context) -> when(mock.exchange(eq(DUMMY_URL), eq(HttpMethod.GET), any(HttpEntity.class), eq(String.class)))
-                        .thenReturn(mockResponseEntity))) {
-            // Act
             String actualResponseBody = RestUtils.getGraphApi(DUMMY_ACCESS_TOKEN, DUMMY_URL);
 
-            // Assert
             assertThat(actualResponseBody).isEqualTo(RestUtils.EMPTY_STRING);
-
-            RestTemplate constructedRestTemplate = mockedConstruction.constructed().get(0);
-            verify(constructedRestTemplate).exchange(
-                    eq(DUMMY_URL),
-                    eq(HttpMethod.GET),
-                    any(HttpEntity.class),
-                    eq(String.class)
-            );
         }
     }
 
     @Test
     void postGraphApi_whenApiCallIsSuccessfulAndBodyIsPresent_returnsResponseBody() {
-        // Arrange
+        setupMockRestClientChain();
         String expectedResponseBody = "{\"data\":\"success\"}";
-        ResponseEntity<String> mockResponseEntity = new ResponseEntity<>(expectedResponseBody, HttpStatus.OK);
+        when(responseSpec.body(String.class)).thenReturn(expectedResponseBody);
 
-        try (MockedConstruction<RestTemplate> mockedConstruction = Mockito.mockConstruction(RestTemplate.class,
-                (mock, context) -> when(mock.exchange(eq(DUMMY_URL), eq(HttpMethod.POST), any(HttpEntity.class), eq(String.class)))
-                        .thenReturn(mockResponseEntity))) {
+        try (MockedStatic<RestClient> staticRestClient = Mockito.mockStatic(RestClient.class)) {
+            staticRestClient.when(RestClient::create).thenReturn(mockRestClient);
 
-            // Act
             MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
             body.add("data", "payload");
+
             String actualResponseBody = RestUtils.postGraphApi(DUMMY_ACCESS_TOKEN, DUMMY_URL, body);
 
-            // Assert
             assertThat(actualResponseBody).isEqualTo(expectedResponseBody);
-            RestTemplate constructedRestTemplate = mockedConstruction.constructed().get(0);
-            verify(constructedRestTemplate).exchange(
-                    eq(DUMMY_URL),
-                    eq(HttpMethod.POST),
-                    httpEntityCaptor.capture(),
-                    eq(String.class)
-            );
-            HttpHeaders capturedHeaders = httpEntityCaptor.getValue().getHeaders();
-            assertThat(capturedHeaders.getFirst("Authorization")).isEqualTo("Bearer " + DUMMY_ACCESS_TOKEN);
-            assertThat(capturedHeaders.getFirst("Accept")).isEqualTo("application/json");
-            MultiValueMap<String, String> payload = (MultiValueMap<String, String>) httpEntityCaptor.getValue().getBody();
+            verify(mockRestClient).method(HttpMethod.POST);
+            verify(requestBodySpec).body(bodyCaptor.capture());
+
+            MultiValueMap<String, String> payload = (MultiValueMap<String, String>) bodyCaptor.getValue();
             assertThat(payload).containsKey("data");
             assertThat(payload.get("data")).containsExactly("payload");
         }
     }
 
+    // ─────────────────────────────────────────────────────────────────
+    // HTTP SESSION UNIT TESTS (UNTOUCHED AND RETAINED AS IS)
+    // ─────────────────────────────────────────────────────────────────
     @Test
     void testGettingObjectFromSessionReturnsPopulatedOptionalWhenTypeIsCorrect() {
         Object o = "TestValue";
         HttpSession mockHttpSession = Mockito.mock(HttpSession.class);
-        Mockito.when(mockHttpSession.getAttribute("test")).thenReturn(o);
+        when(mockHttpSession.getAttribute("test")).thenReturn(o);
         Optional<String> returnedString = RestUtils.getObjectFromHttpSession(mockHttpSession, "test", String.class);
         Assertions.assertTrue(returnedString.isPresent());
         Assertions.assertEquals(o, returnedString.get());
@@ -151,7 +151,7 @@ class RestUtilTest {
     void testGettingObjectFromSessionReturnsEmptyOptionalWhenTypeIsIncorrect() {
         Object o = "TestValue";
         HttpSession mockHttpSession = Mockito.mock(HttpSession.class);
-        Mockito.when(mockHttpSession.getAttribute("test")).thenReturn(o);
+        when(mockHttpSession.getAttribute("test")).thenReturn(o);
         Optional<Integer> returnedInt = RestUtils.getObjectFromHttpSession(mockHttpSession, "test", Integer.class);
         Assertions.assertTrue(returnedInt.isEmpty());
     }
@@ -159,7 +159,7 @@ class RestUtilTest {
     @Test
     void testGettingObjectFromSessionHandlesNulls() {
         HttpSession mockHttpSession = Mockito.mock(HttpSession.class);
-        Mockito.when(mockHttpSession.getAttribute("test")).thenReturn(null);
+        when(mockHttpSession.getAttribute("test")).thenReturn(null);
         Optional<Integer> returnedInt = RestUtils.getObjectFromHttpSession(mockHttpSession, "test", Integer.class);
         Assertions.assertTrue(returnedInt.isEmpty());
     }
@@ -168,7 +168,7 @@ class RestUtilTest {
     void testGettingListFromSessionReturnsPopulatedOptionalWhenTypeIsCorrect() {
         Object o = List.of("TestValue1", "TestValue2", "TestValue3");
         HttpSession mockHttpSession = Mockito.mock(HttpSession.class);
-        Mockito.when(mockHttpSession.getAttribute("test")).thenReturn(o);
+        when(mockHttpSession.getAttribute("test")).thenReturn(o);
         Optional<List<String>> stringList = RestUtils.getListFromHttpSession(mockHttpSession, "test", String.class);
         Assertions.assertTrue(stringList.isPresent());
         Assertions.assertEquals(3, stringList.get().size());
@@ -176,21 +176,14 @@ class RestUtilTest {
 
     @Test
     void testGettingListFromSessionReturnsPopulatedOptionalWhenTypeIsCorrectAndListContainsNulls() {
-        // Given
-
-        // Setup list with some null values
         List<String> list = new ArrayList<>();
         list.add("TestValue1");
         list.add(null);
         list.add("TestValue3");
         Object o = list;
-        // Have httpSession return above list as object.
         HttpSession mockHttpSession = Mockito.mock(HttpSession.class);
-        Mockito.when(mockHttpSession.getAttribute("test")).thenReturn(o);
-        // When
+        when(mockHttpSession.getAttribute("test")).thenReturn(o);
         Optional<List<String>> stringList = RestUtils.getListFromHttpSession(mockHttpSession, "test", String.class);
-
-        // Then
         Assertions.assertTrue(stringList.isPresent());
         Assertions.assertEquals(3, stringList.get().size());
     }
@@ -199,7 +192,7 @@ class RestUtilTest {
     void testGettingListFromSessionReturnsEmptyOptionalWhenTypeIsIncorrect() {
         Object o = List.of("TestValue1", "TestValue2", "TestValue3");
         HttpSession mockHttpSession = Mockito.mock(HttpSession.class);
-        Mockito.when(mockHttpSession.getAttribute("test")).thenReturn(o);
+        when(mockHttpSession.getAttribute("test")).thenReturn(o);
         Optional<List<Integer>> integerList = RestUtils.getListFromHttpSession(mockHttpSession, "test", Integer.class);
         Assertions.assertTrue(integerList.isEmpty());
     }
@@ -207,7 +200,7 @@ class RestUtilTest {
     @Test
     void testGettingListFromSessionHandlesNulls() {
         HttpSession mockHttpSession = Mockito.mock(HttpSession.class);
-        Mockito.when(mockHttpSession.getAttribute("test")).thenReturn(null);
+        when(mockHttpSession.getAttribute("test")).thenReturn(null);
         Optional<List<String>> returnedInt = RestUtils.getListFromHttpSession(mockHttpSession, "test", String.class);
         Assertions.assertTrue(returnedInt.isEmpty());
     }
@@ -215,7 +208,7 @@ class RestUtilTest {
     @Test
     void testGettingObjectFromSessionHandlesEmpty() {
         HttpSession mockHttpSession = Mockito.mock(HttpSession.class);
-        Mockito.when(mockHttpSession.getAttribute("test")).thenReturn(new ArrayList<>());
+        when(mockHttpSession.getAttribute("test")).thenReturn(new ArrayList<>());
         Optional<List<String>> returnedList = RestUtils.getListFromHttpSession(mockHttpSession, "test", String.class);
         Assertions.assertTrue(returnedList.isPresent());
         Assertions.assertTrue(returnedList.get().isEmpty());
@@ -232,20 +225,13 @@ class RestUtilTest {
 
     @Test
     void testGettingSettFromSessionReturnsPopulatedOptionalWhenTypeIsCorrectAndListContainsNulls() {
-        // Given
-
-        // Setup list with some null values
         Set<String> set = new HashSet<>();
         set.add("TestValue1");
         set.add(null);
         set.add("TestValue3");
         Object o = set;
-        // Have httpSession return above list as object.
         mockHttpSession.setAttribute("test", o);
-        // When
         Optional<Set<String>> stringList = RestUtils.getSetFromHttpSession(mockHttpSession, "test", String.class);
-
-        // Then
         Assertions.assertTrue(stringList.isPresent());
         Assertions.assertEquals(3, stringList.get().size());
     }
@@ -272,5 +258,4 @@ class RestUtilTest {
         Assertions.assertTrue(returnedSet.isPresent());
         Assertions.assertTrue(returnedSet.get().isEmpty());
     }
-
 }

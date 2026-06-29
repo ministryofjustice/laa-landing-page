@@ -1,12 +1,13 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -79,8 +80,9 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
     protected List<EntraUser> securityResponseUsers = new ArrayList<>();
     protected List<EntraUser> allUsers = new ArrayList<>();
 
-    @BeforeAll
-    public void beforeAll() {
+    @BeforeEach
+    public void beforeEach() throws Exception {
+        super.beforeEach();
         clearRepositories();
         setupFirms();
         setupTestUsers();
@@ -124,6 +126,21 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
     }
 
     protected void setupTestUsers() {
+        internalUsersNoRoles.clear();
+        internalUserManagers.clear();
+        internalAndExternalUserManagers.clear();
+        internalWithExternalOnlyUserManagers.clear();
+        externalOnlyUserManagers.clear();
+        externalUsersNoRoles.clear();
+        externalUserAdmins.clear();
+        internalUserViewers.clear();
+        externalUserViewers.clear();
+        multiFirmUsers.clear();
+        globalAdmins.clear();
+        silasAdmins.clear();
+        firmUserManagers.clear();
+        securityResponseUsers.clear();
+        allUsers.clear();
         // Index to keep all email addresses unique.
         int emailIndex = 0;
         List<AppRole> allAppRoles = appRoleRepository.findAllWithPermissions();
@@ -210,6 +227,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
             UserProfile profile = buildLaaUserProfile(user, UserType.EXTERNAL, true);
             profile.setAppRoles(Set.of());
             profile.setFirm(testFirm1);
+            profile.setOffices(Set.of());
             user.setUserProfiles(Set.of(profile));
             profile.setEntraUser(user);
             externalUsersNoRoles.add(entraUserRepository.saveAndFlush(user));
@@ -221,6 +239,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
             UserProfile profile = buildLaaUserProfile(user, UserType.EXTERNAL, true);
             profile.setAppRoles(Set.of());
             profile.setFirm(testFirm2);
+            profile.setOffices(Set.of());
             user.setUserProfiles(Set.of(profile));
             profile.setEntraUser(user);
             externalUsersNoRoles.add(entraUserRepository.saveAndFlush(user));
@@ -307,7 +326,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         profile = buildLaaUserProfile(user, UserType.EXTERNAL, true);
         profile.setAppRoles(Set.of());
         profile.setFirm(testFirm1);
-        user.setUserProfiles(Set.of(profile));
+        user.setUserProfiles(new HashSet<>(Set.of(profile)));
         profile.setEntraUser(user);
         multiFirmUsers.add(entraUserRepository.saveAndFlush(user));
 
@@ -375,6 +394,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
     protected Firm createChildFirm(Firm parent, String name, String code) {
         Firm child = buildChildFirm(name, code, parent);
         child = firmRepository.saveAndFlush(child);
+        parent.setChildFirms(Set.of(child));
         return child;
     }
 
