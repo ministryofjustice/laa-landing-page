@@ -43,7 +43,7 @@ class CcmsUsersMonthlyExtractServiceTest {
         ));
         ReflectionTestUtils.setField(
                 service,
-                "APP_CCMS_PUI_NAME",
+                "ccmsAppName",
                 "Apply for civil legal aid using CCMS (Client and Cost Management System)"
         );
     }

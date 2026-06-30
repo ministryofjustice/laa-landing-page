@@ -183,8 +183,8 @@ spec:
               value: "${USER_UPTAKE_REPORTING_ENABLED}"
             - name: USER_UPTAKE_REPORTING_SCHEDULE
               value: "${USER_UPTAKE_REPORTING_SCHEDULE}"
-            - name: CCMS_APP_NAME
-              value: "${CCMS_APP_NAME}"
+            - name: APP_CCMS_PUI_NAME
+              value: "${APP_CCMS_PUI_NAME}"
             - name: CCMS_USERS_MONTHLY_REPORTING_ENABLED
               value: "${CCMS_USERS_MONTHLY_REPORTING_ENABLED}"
             - name: CCMS_USERS_MONTHLY_REPORTING_SCHEDULE
