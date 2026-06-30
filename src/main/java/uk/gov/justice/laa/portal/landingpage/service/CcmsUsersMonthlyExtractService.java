@@ -36,7 +36,7 @@ public class CcmsUsersMonthlyExtractService {
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     @Value("${ccms.app.name}")
-    private String ccmsAppName;
+    private String APP_CCMS_PUI_NAME;
 
     public void downloadCcmsUsersMonthlyExtract() {
         LocalDate referenceDate = LocalDate.now();
@@ -48,7 +48,7 @@ public class CcmsUsersMonthlyExtractService {
         LocalDateTime end = endBoundary.atStartOfDay();
 
         List<Object[]> rows = entraUserRepository.findCcmsUsersWithAppInPeriod(
-                UserType.EXTERNAL, ccmsAppName, start, end);
+                UserType.EXTERNAL, APP_CCMS_PUI_NAME, start, end);
 
         File csv = writeToCsv(rows, startBoundary, endBoundary);
 
