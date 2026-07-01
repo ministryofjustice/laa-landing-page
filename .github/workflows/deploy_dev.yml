@@ -90,10 +90,10 @@ jobs:
           ALLOWED_VARS=$(printenv | cut -d= -f1 | grep -v -E '^(server_protocol|uri|http1_reject)$' | sed 's/^/$/' | tr '\n' ' ')
 
           # Pass the dynamic list into envsubst
-          envsubst "$ALLOWED_VARS" < deployments/templates/landing-page-ingress.yml  > deployments/landing-page-ingress.yml
-          cat deployments/templates/deployment.yml | envsubst > deployments/deployment.yml
-          cat deployments/templates/service.yml | envsubst > deployments/service.yml
-          cat deployments/templates/servicemonitor.yml | envsubst > deployments/servicemonitor.yml
+          # envsubst "$ALLOWED_VARS" < deployments/templates/landing-page-ingress.yml  > deployments/landing-page-ingress.yml
+          # cat deployments/templates/deployment.yml | envsubst > deployments/deployment.yml
+          # cat deployments/templates/service.yml | envsubst > deployments/service.yml
+          # cat deployments/templates/servicemonitor.yml | envsubst > deployments/servicemonitor.yml
           cat deployments/templates/zapjob-cron.yml | envsubst > deployments/zapjob-cron.yml
         env:
           SENTRY_SAMPLE_RATE: ${{ vars.SENTRY_SAMPLE_RATE }}
