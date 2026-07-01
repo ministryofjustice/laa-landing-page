@@ -2,14 +2,18 @@ package uk.gov.justice.laa.portal.landingpage.playwright.pages;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+
+
 import com.microsoft.playwright.options.LoadState;
 import com.microsoft.playwright.options.WaitForSelectorState;
 
@@ -586,4 +590,33 @@ public class ManageUsersPage {
     public void clickUserLink(String email) {
         userRowLocator(email).locator("a").first().click();
     }
+
+
+    public Locator statusTag(String status) {
+        // Finds any GOV.UK status tag on the page that contains the supplied status text.
+        // This keeps the selector in one place instead of repeating ".govuk-tag" in tests.
+        return page.locator(".govuk-tag")
+                .filter(new Locator.FilterOptions().setHasText(status));
+    }
+
+    public void assertStatusVisible(String status) {
+        // Verifies that the expected status tag is displayed for the user.
+        // The status text is passed in so this can be reused for any current or future status.
+        assertTrue(
+                statusTag(status).isVisible(),
+                "Expected status tag to be visible: " + status
+        );
+    }
+
+    public void assertStatusNotVisible(String status) {
+        // Verifies that a specific status tag is not displayed.
+        // Useful for negative checks where a user should not have a certain status.
+        assertFalse(
+                statusTag(status).isVisible(),
+                "Expected status tag NOT to be visible: " + status
+        );
+    }
+
 }
+
+
