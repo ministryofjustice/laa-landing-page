@@ -15,7 +15,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
  *
  * <table border="1">
  *   <tr><th>disable_type</th><th>FUM</th><th>EUM / EUA</th><th>SR / GA</th></tr>
- *   <tr><td>NULL (unknown/legacy)</td><td>✅</td><td>✅</td><td>✅</td></tr>
+ *   <tr><td>NULL (unknown/legacy)</td><td>❌</td><td>✅</td><td>✅</td></tr>
  *   <tr><td>NONE (manual sync)</td><td>✅</td><td>✅</td><td>✅</td></tr>
  *   <tr><td>SYNC (automated sync)</td><td>❌</td><td>✅</td><td>✅</td></tr>
  *   <tr><td>FIRM</td><td>✅ (same-firm check required separately)</td><td>✅</td><td>✅</td></tr>
@@ -46,18 +46,19 @@ public class UserEnablementPolicy {
      * @return {@code true} if enabling is permitted at the role level
      */
     public boolean canEnable(DisableType disableType, List<String> actorRoles) {
-        // Legacy / not-logged case: all roles permitted
-        if (disableType == null) {
-            return true;
-        }
-
         boolean isGlobalAdminOrSecurityResponse = actorRoles.contains(AuthzRole.GLOBAL_ADMIN.getRoleName())
                 || actorRoles.contains(AuthzRole.SECURITY_RESPONSE.getRoleName());
 
         boolean isEuaLevel = actorRoles.contains(AuthzRole.EXTERNAL_USER_MANAGER.getRoleName())
                 || actorRoles.contains(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName());
 
+        boolean isInternalUserManager = actorRoles.contains(AuthzRole.INTERNAL_USER_MANAGER.getRoleName());
+
         boolean isFirmUserManager = actorRoles.contains(AuthzRole.FIRM_USER_MANAGER.getRoleName());
+
+        if (disableType == null) {
+            return isInternalUserManager || isEuaLevel || isGlobalAdminOrSecurityResponse;
+        }
 
         return switch (disableType) {
             case SYNC ->

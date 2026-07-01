@@ -71,7 +71,8 @@ class SecurityConfigTest {
         MvcResult mvcResult = mockMvc.perform(get("/")).andReturn();
         String sts = mvcResult.getResponse().getHeader("Strict-Transport-Security");
         String csp = mvcResult.getResponse().getHeader("Content-Security-Policy");
-        String coep = mvcResult.getResponse().getHeader("Cross-Origin-Embedder-Policy-Report-Only");
+        String coep = mvcResult.getResponse().getHeader("Cross-Origin-Embedder-Policy");
+        String permissionsPolicy = mvcResult.getResponse().getHeader("Permissions-Policy");
         assertThat(sts).isEqualTo("max-age=63072000 ; includeSubDomains ; preload");
         assertThat(csp).isEqualTo("default-src 'self';"
                 + " script-src 'self' 'unsafe-inline' https://code.jquery.com;"
@@ -83,6 +84,7 @@ class SecurityConfigTest {
                 + " frame-src 'none';"
                 + " frame-ancestors 'none';");
         assertThat(coep).isEqualTo("require-corp");
+        assertThat(permissionsPolicy).isEqualTo("geolocation=(), camera=(), microphone=(), payment=(), usb=(), interest-cohort=()");
     }
 
     /*
