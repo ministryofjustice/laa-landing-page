@@ -1,0 +1,122 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zap-config-cron
+  namespace: ${NAMESPACE}
+data:
+  rules.tsv: |
+    10015	IGNORE	Cache-Control headers are correctly set (no-cache, no-store). ZAP flags this on the unauthenticated login page which intentionally prevents caching.
+    10020	IGNORE	X-Frame-Options: DENY is set by Spring Security. ZAP incorrectly flags this on OAuth redirect responses where the header is not included.
+    10038	IGNORE	Content-Security-Policy is set by Spring Security. ZAP incorrectly flags this on OAuth redirect responses where the header is not included.
+    10049	IGNORE	Non-storable 302 redirects to Azure AD OAuth are expected and intentional. These are authentication redirects that must not be cached.
+    10094	IGNORE	Base64 values are CSRF tokens and OAuth state parameters in authentication redirect URLs. These are expected and do not represent information disclosure.
+    10096	IGNORE	Unix timestamps are OAuth state parameters in authentication redirect URLs. These are expected and do not represent information disclosure.
+    10109	IGNORE	Informational notice only - ZAP identifying this as a modern web application. Not a vulnerability.
+    10112	IGNORE	Informational notice only - ZAP identifying session management cookies. Session cookies are correctly configured with HttpOnly, Secure and SameSite=Lax.
+    90005	IGNORE	ZAP's own scanner does not send the Sec-Fetch-Dest header. This is a false positive about ZAP's own behaviour, not the server.
+  scan.sh: |
+    #!/bin/sh
+    set -e
+
+    zap_report=/zap/wrk/report.md
+
+    zap-baseline.py -a -j -t http://laa-landing-page.${NAMESPACE}.svc.cluster.local:8080 -c /etc/config/rules.tsv -I -w report.md || true
+
+    echo "===== BEGIN ZAP REPORT.MD ====="
+    cat "$zap_report"
+    echo "===== END ZAP REPORT.MD ====="
+
+    zap_high=$(grep -a -m 1 "| High |" "$zap_report" | awk -F'|' '{print $3}' | xargs); zap_high=${zap_high:-0}
+    zap_medium=$(grep -a -m 1 "| Medium |" "$zap_report" | awk -F'|' '{print $3}' | xargs); zap_medium=${zap_medium:-0}
+    zap_low=$(grep -a -m 1 "| Low |" "$zap_report" | awk -F'|' '{print $3}' | xargs); zap_low=${zap_low:-0}
+    zap_info=$(grep -a -m 1 "| Informational |" "$zap_report" | awk -F'|' '{print $3}' | xargs); zap_info=${zap_info:-0}
+
+    if [ "$zap_high" -gt 0 ] || [ "$zap_medium" -gt 0 ] || [ "$zap_low" -gt 0 ]; then
+      ZAP_HIGH="$zap_high" ZAP_MEDIUM="$zap_medium" ZAP_LOW="$zap_low" ZAP_INFO="$zap_info" python3 - <<'PYEOF'
+    import json
+    import os
+    import urllib.request
+
+    payload = {
+        "blocks": [
+            {"type": "header", "text": {"type": "plain_text", "text": "ZAP Daily Scan Report: PRD Environment"}},
+            {"type": "section", "text": {"type": "mrkdwn", "text": "*Scan Summary:*"}},
+            {"type": "section", "text": {"type": "mrkdwn", "text": f":rotating_light: *HIGH:* {os.environ['ZAP_HIGH']}"}},
+            {"type": "section", "text": {"type": "mrkdwn", "text": f":sign-warning: *MEDIUM:* {os.environ['ZAP_MEDIUM']}"}},
+            {"type": "section", "text": {"type": "mrkdwn", "text": f":orange_heart: *LOW:* {os.environ['ZAP_LOW']}"}},
+            {"type": "section", "text": {"type": "mrkdwn", "text": f":yellow_heart: *INFORMATIONAL:* {os.environ['ZAP_INFO']}"}},
+            {"type": "section", "text": {"type": "mrkdwn", "text": "Review the zap-scan CronJob pod logs in the prd namespace for full details."}},
+        ]
+    }
+    req = urllib.request.Request(
+        os.environ["SLACK_WEBHOOK_URL"],
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json"},
+    )
+    urllib.request.urlopen(req, timeout=10)
+    PYEOF
+    fi
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: zap-scan
+  namespace: ${NAMESPACE}
+spec:
+  schedule: "0 3 * * 1-5" # At 03:00 on Monday through Friday
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 3600
+      backoffLimit: 3
+      activeDeadlineSeconds: 900
+      template:
+        spec:
+          serviceAccountName: default
+          securityContext:
+            runAsUser: 1000
+            runAsNonRoot: true
+          automountServiceAccountToken: false
+          containers:
+            - name: zap
+              image: ghcr.io/zaproxy/zaproxy:stable
+              imagePullPolicy: Always
+              resources:
+                limits:
+                  cpu: 500m
+                  memory: 1Gi
+              env:
+                - name: SLACK_WEBHOOK_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: slack-alert-webhook-secret
+                      key: webhook_url
+              volumeMounts:
+                - name: zap-wrk
+                  mountPath: /zap/wrk
+                - name: home
+                  mountPath: /home/zap
+                - name: config
+                  mountPath: /etc/config
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+                seccompProfile:
+                  type: RuntimeDefault
+              command:
+                - /bin/sh
+                - /etc/config/scan.sh
+          volumes:
+            - name: zap-wrk
+              emptyDir: {}
+            - name: home
+              emptyDir: {}
+            - name: config
+              configMap:
+                name: zap-config-cron
+          restartPolicy: Never
