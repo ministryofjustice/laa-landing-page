@@ -7,6 +7,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
@@ -33,19 +34,26 @@ class CcmsUsersMonthlyExtractServiceTest {
 
     private CcmsUsersMonthlyExtractService service;
 
+
     @BeforeEach
     void setUp() {
         service = Mockito.spy(new CcmsUsersMonthlyExtractService(
                 entraUserRepository,
                 reportUploadService
         ));
+        ReflectionTestUtils.setField(
+                service,
+                "ccmsAppName",
+                "Apply for civil legal aid using CCMS (Client and Cost Management System)"
+        );
     }
+
 
     @Test
     void shouldCreateCsvAndUploadToSharePoint() throws Exception {
         when(entraUserRepository.findCcmsUsersWithAppInPeriod(
                 eq(UserType.EXTERNAL),
-                eq("CCMS PUI"),
+                eq("Apply for civil legal aid using CCMS (Client and Cost Management System)"),
                 any(LocalDateTime.class),
                 any(LocalDateTime.class)
         )).thenReturn(List.of(
@@ -81,7 +89,7 @@ class CcmsUsersMonthlyExtractServiceTest {
         verify(entraUserRepository, times(1))
                 .findCcmsUsersWithAppInPeriod(
                         eq(UserType.EXTERNAL),
-                        eq("CCMS PUI"),
+                        eq("Apply for civil legal aid using CCMS (Client and Cost Management System)"),
                         any(LocalDateTime.class),
                         any(LocalDateTime.class)
             );
