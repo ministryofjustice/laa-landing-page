@@ -37,6 +37,6 @@ public class ActuatorTest extends BaseIntegrationTest {
                         .with(anonymous())
                         .remoteAddress("203.0.113.195"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(header().string("Location", "http://localhost/oauth2/authorization/azure"));
+                .andExpect(header().string("Location", "/oauth2/authorization/azure"));
     }
 }
