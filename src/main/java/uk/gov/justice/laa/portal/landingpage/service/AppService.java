@@ -13,6 +13,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -342,9 +343,9 @@ public class AppService {
         } else if (remote != null && !local.isEnabled()) {
             return AppDto.ChangeType.REVIEW;
         } else if (remote != null
-                && (!StringUtils.equals(remote.getName(), local.getName())
+                && (!Strings.CS.equals(remote.getName(), local.getName())
                 || (!(remote.getUrl() == null && "#".equals(local.getUrl()))
-                    && (!StringUtils.equals(remote.getUrl(), local.getUrl())))
+                    && (!Strings.CS.equals(remote.getUrl(), local.getUrl())))
                 || !areSecurityGroupsEqual(remote.getSecurityGroups(), local))) {
             return AppDto.ChangeType.UPDATED;
         }

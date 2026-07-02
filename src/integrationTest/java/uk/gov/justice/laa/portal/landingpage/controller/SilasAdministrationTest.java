@@ -27,7 +27,8 @@ public class SilasAdministrationTest extends RoleBasedAccessIntegrationTest {
     private int distinctIndex = 0;
 
     @BeforeEach
-    public void beforeEach() {
+    public void beforeEach() throws Exception {
+        super.beforeEach();
         buildTestAppRole();
     }
 
@@ -84,7 +85,6 @@ public class SilasAdministrationTest extends RoleBasedAccessIntegrationTest {
     @Test
     public void testConfirmAppDetailsGetPageDisplaysCheckAnswers() throws Exception {
         EntraUser loggedInUser = silasAdmins.getFirst();
-        loggedInUser = entraUserRepository.saveAndFlush(loggedInUser);
 
         // First submit form
         MvcResult submitResult = this.mockMvc.perform(MockMvcRequestBuilders.post(String.format("/admin/silas-administration/app/%s", testApp.getId()))

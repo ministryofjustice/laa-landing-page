@@ -1,6 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import org.springframework.boot.web.servlet.error.ErrorController;
+import org.springframework.boot.webmvc.error.ErrorController;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -16,7 +16,7 @@ import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
  * Custom error controller to handle HTTP errors and provide appropriate error pages
  */
 @Slf4j
-@Controller
+@Controller("errorController")
 public class CustomErrorController implements ErrorController {
 
     /**

@@ -7,6 +7,7 @@ import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 
 @Configuration
 public class OpenApiConfig {
@@ -14,6 +15,7 @@ public class OpenApiConfig {
     private static final String SECURITY_SCHEME_NAME = "bearerAuth";
 
     @Bean
+    @Primary
     public OpenAPI customOpenApi() {
         return new OpenAPI()
                 .addSecurityItem(new SecurityRequirement().addList(SECURITY_SCHEME_NAME))

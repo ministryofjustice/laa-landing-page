@@ -7,17 +7,13 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.validation.BindingResult;
-import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.servlet.view.RedirectView;
 
@@ -157,7 +153,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleAccessException() {
+    void handleAccessException() throws Exception {
         // Arrange
         String errorMessage = "Access denied";
         AccessDeniedException exception = new AccessDeniedException(errorMessage);
@@ -203,11 +199,11 @@ class GlobalExceptionHandlerTest {
             RuntimeException.class,
             () -> exceptionHandler.handleAccessException(exception, request)
         );
-        assertEquals(exception, thrown.getCause());
+        assertEquals(exception, thrown);
     }
 
     @Test
-    void handleAccessException_apiRequestByContentType() {
+    void handleAccessException_apiRequestByContentType() throws Exception {
         // Arrange
         String errorMessage = "Access denied";
         AccessDeniedException exception = new AccessDeniedException(errorMessage);
@@ -225,7 +221,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleAccessException_apiRequestByUri() {
+    void handleAccessException_apiRequestByUri() throws Exception {
         // Arrange
         String errorMessage = "Access denied";
         AccessDeniedException exception = new AccessDeniedException(errorMessage);
@@ -283,7 +279,7 @@ class GlobalExceptionHandlerTest {
         // Arrange
         org.springframework.web.servlet.resource.NoResourceFoundException exception =
             new org.springframework.web.servlet.resource.NoResourceFoundException(
-                org.springframework.http.HttpMethod.GET, "/favicon.ico");
+                org.springframework.http.HttpMethod.GET, "/favicon.ico", "/favicon.ico");
 
         // Act
         ResponseEntity<Void> response = exceptionHandler.handleNoResourceFoundException(exception);
@@ -294,7 +290,7 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void handleAuthorizationDeniedException_apiRequest() {
+    void handleAuthorizationDeniedException_apiRequest() throws Exception {
         // Arrange
         String errorMessage = "Access denied";
         org.springframework.security.authorization.AuthorizationDeniedException exception =
@@ -330,7 +326,7 @@ class GlobalExceptionHandlerTest {
             RuntimeException.class,
             () -> exceptionHandler.handleAccessException(exception, request)
         );
-        assertEquals(exception, thrown.getCause());
+        assertEquals(exception, thrown);
     }
 
     @Test

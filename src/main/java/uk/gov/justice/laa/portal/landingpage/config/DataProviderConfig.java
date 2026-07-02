@@ -1,7 +1,12 @@
 package uk.gov.justice.laa.portal.landingpage.config;
 
-import java.time.Duration;
-
+import org.apache.hc.client5.http.config.ConnectionConfig;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.core5.util.Timeout;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -45,10 +50,29 @@ public class DataProviderConfig {
     }
 
     private ClientHttpRequestFactory getDataProviderClientHttpRequestFactory() {
-        HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory();
-        factory.setReadTimeout(Duration.ofSeconds(dataProviderReqReadTimeout));
-        factory.setConnectTimeout(Duration.ofSeconds(dataProviderReqConnectTimeout));
-        return factory;
+
+        // 1. Connection Config (Socket layer connect timeout)
+        ConnectionConfig connectionConfig = ConnectionConfig.custom()
+                .setConnectTimeout(Timeout.ofSeconds(dataProviderReqConnectTimeout))
+                .build();
+
+        // 2. Connection Manager Pool
+        PoolingHttpClientConnectionManager connectionManager = PoolingHttpClientConnectionManagerBuilder.create()
+                .setDefaultConnectionConfig(connectionConfig)
+                .build();
+
+        // 3. Request Config (Application layer read/response timeout)
+        RequestConfig requestConfig = RequestConfig.custom()
+                .setResponseTimeout(Timeout.ofSeconds(dataProviderReqReadTimeout))
+                .build();
+
+        // 4. Assemble the client
+        CloseableHttpClient httpClient = HttpClients.custom()
+                .setConnectionManager(connectionManager)
+                .setDefaultRequestConfig(requestConfig)
+                .build();
+
+        return new HttpComponentsClientHttpRequestFactory(httpClient);
     }
 
     public boolean isUseLocalFile() {
