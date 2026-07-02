@@ -70,7 +70,7 @@ spec:
   failedJobsHistoryLimit: 3
   jobTemplate:
     spec:
-      ttlSecondsAfterFinished: 3600
+      ttlSecondsAfterFinished: 1440
       backoffLimit: 3
       activeDeadlineSeconds: 900
       template:
