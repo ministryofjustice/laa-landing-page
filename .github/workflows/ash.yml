@@ -30,7 +30,7 @@ jobs:
       config: .ash/ash.yaml
       fail-on-findings: true
       collect-junit-xml-report: false
-      collect-sarif-report: false
+      collect-sarif-report: true
       install-grype: true
       install-syft: true
       install-opengrep: true
@@ -51,19 +51,53 @@ jobs:
 
       - name: Verify ASH findings
         run: |
-          set -e
+          set +e
           echo "Checking for HIGH or CRITICAL findings in ASH output..."
+          echo "Contents of .ash/ash_output:"
+          find .ash/ash_output -type f 2>/dev/null | head -20
           
-          # Check if any SARIF files exist with HIGH/CRITICAL findings
-          if find .ash/ash_output -name "*.sarif" -type f | grep -q .; then
-            # Look for HIGH or CRITICAL severity in SARIF files
-            if grep -r "\"level\": \"error\"\|\"level\": \"warning\"" .ash/ash_output/**/*.sarif 2>/dev/null || grep -r "\"severity\": \"HIGH\"\|\"severity\": \"CRITICAL\"" .ash/ash_output/**/*.sarif 2>/dev/null; then
-              echo "❌ HIGH or CRITICAL security findings detected by ASH!"
+          # Check for SARIF files
+          SARIF_FILES=$(find .ash/ash_output -name "*.sarif" -type f 2>/dev/null)
+          if [ -n "$SARIF_FILES" ]; then
+            echo -e "\n=== Checking SARIF reports ==="
+            echo "$SARIF_FILES"
+            
+            # Look for error level (which represents HIGH/CRITICAL)
+            if grep -l "\"level\".*:.*\"error\"" $SARIF_FILES 2>/dev/null; then
+              echo "❌ CRITICAL findings detected in SARIF!"
+              cat $SARIF_FILES | head -100
+              exit 1
+            fi
+            
+            # Also check for explicit severity markers
+            if grep -i "\"severity\".*\"error\"\|\"severity\".*\"critical\"\|\"severity\".*\"high\"" $SARIF_FILES 2>/dev/null; then
+              echo "❌ HIGH or CRITICAL findings detected!"
+              exit 1
+            fi
+          fi
+          
+          # Check for JSON report files
+          JSON_FILES=$(find .ash/ash_output -name "*.json" -type f 2>/dev/null | grep -v sarif)
+          if [ -n "$JSON_FILES" ]; then
+            echo -e "\n=== Checking JSON reports ==="
+            if grep -r -i "\"severity\".*\"CRITICAL\"\|\"severity\".*\"HIGH\"\|\"level\".*\"error\"" $JSON_FILES 2>/dev/null; then
+              echo "❌ HIGH or CRITICAL findings detected in JSON!"
+              exit 1
+            fi
+          fi
+          
+          # Check for text/markdown reports
+          TEXT_FILES=$(find .ash/ash_output \( -name "*.md" -o -name "*.txt" \) -type f 2>/dev/null)
+          if [ -n "$TEXT_FILES" ]; then
+            echo -e "\n=== Checking text reports ==="
+            if grep -i "| CRITICAL\|| HIGH" $TEXT_FILES 2>/dev/null; then
+              echo "❌ HIGH or CRITICAL findings detected in text reports!"
               exit 1
             fi
           fi
           
           echo "✅ ASH scan passed with no blocking findings"
+          exit 0
 
   syft-image-scan:
     name: Syft Image Scan
