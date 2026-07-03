@@ -617,6 +617,25 @@ public class ManageUsersPage {
         );
     }
 
+    public void refreshUntilStatusVisible(String email, String expectedStatus) {
+        // Refreshes the manage users page and re-runs the user search until the expected status is visible.
+        // This is useful where the status update happens asynchronously and the page needs reloading.
+        int maxAttempts = 5;
+
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            page.reload();
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+            searchAndVerifyUser(email);
+
+            if (statusTag(expectedStatus).isVisible()) {
+                return;
+            }
+        }
+
+        assertStatusVisible(expectedStatus);
+    }
+
 }
 
 

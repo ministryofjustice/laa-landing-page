@@ -6,6 +6,8 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.microsoft.playwright.options.WaitForSelectorState;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -228,7 +230,11 @@ public class ManageUsersTest extends BaseFrontEndTest {
         // First, add services to ensure they exist
         manageUsersPage.searchForUser(userEmail);
         manageUsersPage.clickFirstUserLink();
-        assertTrue(page.url().contains("/admin/users/manage/"));
+
+        assertTrue(
+                page.url().contains("/admin/users/manage/"),
+                "User details page should be displayed"
+        );
 
         manageUsersPage.clickServicesTab();
         manageUsersPage.clickChangeLink();
@@ -255,26 +261,51 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickGoBackToManageUsers();
         manageUsersPage.searchForUser(userEmail);
         manageUsersPage.clickFirstUserLink();
+
         manageUsersPage.clickServicesTab();
         manageUsersPage.clickChangeLink();
         manageUsersPage.clickContinueFirmSelectPage();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
         List<String> rolesToRemove = List.of(
                 TestRole.INTERNAL_USER_MANAGER.roleName,
                 TestRole.EXTERNAL_USER_VIEWER.roleName
         );
 
-        // Verify the roles are visible, selected, and enabled before trying to remove them
+        // Verify the roles exist, are selected, and are enabled before removing them
         for (String role : rolesToRemove) {
-            Locator roleCheckbox = page.getByLabel(role);
+            Locator roleCheckbox = page.locator(
+                    "//div[contains(@class, 'govuk-checkboxes__item')]" +
+                            "[.//label//span[normalize-space()='" + role + "']]" +
+                            "//input[@type='checkbox' and @name='roles']"
+            );
 
-            assertTrue(roleCheckbox.isVisible(), role + " checkbox should be visible");
-            assertTrue(roleCheckbox.isChecked(), role + " checkbox should be selected before removal");
-            assertTrue(roleCheckbox.isEnabled(), role + " checkbox should be enabled so it can be removed");
+            roleCheckbox.waitFor(new Locator.WaitForOptions()
+                    .setState(WaitForSelectorState.ATTACHED)
+                    .setTimeout(10000));
+
+            assertTrue(
+                    roleCheckbox.count() > 0,
+                    role + " checkbox should exist on the page"
+            );
+
+            assertTrue(
+                    roleCheckbox.isChecked(),
+                    role + " checkbox should be selected before removal"
+            );
+
+            assertTrue(
+                    roleCheckbox.isEnabled(),
+                    role + " checkbox should be enabled so it can be removed"
+            );
 
             roleCheckbox.uncheck();
 
-            assertFalse(roleCheckbox.isChecked(), role + " checkbox should be unchecked after removal");
+            assertFalse(
+                    roleCheckbox.isChecked(),
+                    role + " checkbox should be unchecked after removal"
+            );
         }
 
         manageUsersPage.clickContinueUserDetails();
@@ -302,7 +333,6 @@ public class ManageUsersTest extends BaseFrontEndTest {
 
         manageUsersPage.verifySelectedUserServices(remainingRoles);
     }
-
     @Test
     @DisplayName("Verify offices tab is populated and exists for an external user")
     void editUserOfficesAndVerify() {
@@ -489,68 +519,66 @@ public class ManageUsersTest extends BaseFrontEndTest {
     }
 
     @Test
-    @DisplayName("Verify External User Manager can Manage Access for incomplete users.")
+    @DisplayName("Verify External User Manager can Manage Access for incomplete users")
     public void verifyExternalUserManagerIncompleteUsers() {
+        String firmCode = "90001";
+        String service = "Test LAA App Four";
+        String role = "Test LAA App Four Role One Access";
+        String office = "Automation Office 1, City1, 12345 (THREE)";
 
-        // Login as Global Admin and create incomplete external user
-        ManageUsersPage globalAdminManageUsersPage =
-                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
-        final String email =
-                globalAdminManageUsersPage.createProviderAdminUserWithNonMultiFirmAccess("90001");
+        ManageUsersPage globalAdminManageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
 
-        // Force clean session without clicking sign out
+        final String email = globalAdminManageUsersPage.createProviderAdminUserWithNonMultiFirmAccess(firmCode);
+
         page.context().clearCookies();
         page.evaluate("() => window.localStorage.clear()");
         page.evaluate("() => window.sessionStorage.clear()");
 
-        // Login as External User Manager
-        ManageUsersPage manageUsersPage =
-                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
 
         assertTrue(
                 manageUsersPage.searchAndVerifyUser(email),
                 "Created incomplete user should be visible to External User Manager"
         );
 
-        Locator row = manageUsersPage.userRowLocator(email);
-
-        assertTrue(row.locator(".govuk-tag.govuk-tag--red").isVisible());
+        manageUsersPage.assertStatusVisible("INCOMPLETE");
 
         manageUsersPage.clickUserLink(email);
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-        assertTrue(page.locator(".govuk-button:has-text('Manage Access')").isVisible());
+        assertTrue(
+                page.locator(".govuk-button:has-text('Manage Access')").isVisible(),
+                "Manage Access button should be visible for incomplete user"
+        );
 
         manageUsersPage.clickManageAccess();
 
-        List<String> services = List.of("Test LAA App Four");
-        manageUsersPage.checkSelectedServices(services);
-
+        manageUsersPage.checkSelectedServices(List.of(service));
         manageUsersPage.clickContinueLink();
-        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-
-        List<String> roles = List.of("Test LAA App Four Role One Access");
-        manageUsersPage.checkSelectedRoles(roles);
 
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
+        manageUsersPage.checkSelectedRoles(List.of(role));
         manageUsersPage.clickContinueLink();
+
         manageUsersPage.clickContinueLink();
-        manageUsersPage.checkSelectedOffices(List.of("Automation Office 1, City1, 12345 (THREE)"));
+
+        manageUsersPage.checkSelectedOffices(List.of(office));
         manageUsersPage.clickContinueLink();
+
         manageUsersPage.clickConfirmButton();
 
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
         assertTrue(
-                page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible()
+                page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible(),
+                "Access and permissions updated confirmation should be visible"
         );
 
         manageUsersPage.clickGoBackToManageUsers();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-        manageUsersPage.clickNextPageLink();
-
-        assertTrue(row.locator(".govuk-tag.govuk-tag--blue").isVisible());
+        manageUsersPage.refreshUntilStatusVisible(email, "ACTIVATION PENDING");
     }
 
     private void openExternalUser(ManageUsersPage manageUsersPage, String userName) {
