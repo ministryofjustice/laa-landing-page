@@ -52,7 +52,6 @@ scanners:
     enabled: true
     options:
       config: auto
-      fail-on-severity: HIGH
   semgrep:
     enabled: false
   syft:

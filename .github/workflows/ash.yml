@@ -38,10 +38,37 @@ jobs:
       verbose: true
       output-dir: '.ash/ash_output'
 
+  check-ash-findings:
+    name: Check ASH Findings
+    runs-on: ubuntu-latest
+    needs: ash
+    if: always()
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: ash_output
+          path: .ash/ash_output
+
+      - name: Verify ASH findings
+        run: |
+          set -e
+          echo "Checking for HIGH or CRITICAL findings in ASH output..."
+          
+          # Check if any SARIF files exist with HIGH/CRITICAL findings
+          if find .ash/ash_output -name "*.sarif" -type f | grep -q .; then
+            # Look for HIGH or CRITICAL severity in SARIF files
+            if grep -r "\"level\": \"error\"\|\"level\": \"warning\"" .ash/ash_output/**/*.sarif 2>/dev/null || grep -r "\"severity\": \"HIGH\"\|\"severity\": \"CRITICAL\"" .ash/ash_output/**/*.sarif 2>/dev/null; then
+              echo "❌ HIGH or CRITICAL security findings detected by ASH!"
+              exit 1
+            fi
+          fi
+          
+          echo "✅ ASH scan passed with no blocking findings"
+
   syft-image-scan:
     name: Syft Image Scan
     runs-on: ubuntu-latest
-    needs: ash
+    needs: check-ash-findings
     permissions:
       contents: read
       security-events: write
