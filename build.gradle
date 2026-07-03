@@ -28,10 +28,10 @@ repositories {
         url = uri("https://maven.pkg.github.com/ministryofjustice/laa-spring-boot-common")
         credentials {
             username = System.getenv("GITHUB_ACTOR")?.trim()
-                    ?: providers.gradleProperty("gitPackageUser").orNull
+                    ?: providers.gradleProperty("project.ext.gitPackageUser").orNull
 
             password = System.getenv("GITHUB_TOKEN")?.trim()
-                    ?: providers.gradleProperty("gitPackageKey").orNull
+                    ?: providers.gradleProperty("project.ext.gitPackageKey").orNull
         }
     }
 }
@@ -163,12 +163,8 @@ test {
         jvmArgs "-javaagent:${configurations.testRuntimeClasspath.find { it.name.contains('mockito-core') }}", '-Xshare:off'
     }
 
-    // 💡 ADD THIS CONFIGURATION BLOCK:
     testLogging {
-        // Forces Gradle to print out standard logs during execution
         showStandardStreams = true
-
-        // Formats formatting so you know exactly which test emitted the property warning
         events "failed", "skipped", "standard_out", "standard_error"
     }
 
@@ -185,6 +181,11 @@ tasks.register('playwrightTest', Test) {
     testClassesDirs = sourceSets.playwrightTest.output.classesDirs
     classpath = sourceSets.playwrightTest.runtimeClasspath
     useJUnitPlatform()
+
+    testLogging {
+        showStandardStreams = true
+        events "failed", "skipped", "standard_out", "standard_error"
+    }
 }
 
 jacocoTestReport {
