@@ -40,7 +40,7 @@ sentry {
   includeSourceContext = true
 
   org = "ministryofjustice"
-  projectName = "laa-landing-page"
+  projectName = "laa-portal-stabilisation"
   authToken = System.getenv("SENTRY_AUTH_TOKEN")
 
   autoInstallation {
