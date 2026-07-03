@@ -276,9 +276,9 @@ public class ManageUsersTest extends BaseFrontEndTest {
         // Verify the roles exist, are selected, and are enabled before removing them
         for (String role : rolesToRemove) {
             Locator roleCheckbox = page.locator(
-                    "//div[contains(@class, 'govuk-checkboxes__item')]" +
-                            "[.//label//span[normalize-space()='" + role + "']]" +
-                            "//input[@type='checkbox' and @name='roles']"
+                    "//div[contains(@class, 'govuk-checkboxes__item')]"
+                            + "[.//label//span[normalize-space()='" + role + "']]"
+                            + "//input[@type='checkbox' and @name='roles']"
             );
 
             roleCheckbox.waitFor(new Locator.WaitForOptions()
@@ -333,6 +333,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
 
         manageUsersPage.verifySelectedUserServices(remainingRoles);
     }
+
     @Test
     @DisplayName("Verify offices tab is populated and exists for an external user")
     void editUserOfficesAndVerify() {
@@ -522,9 +523,9 @@ public class ManageUsersTest extends BaseFrontEndTest {
     @DisplayName("Verify External User Manager can Manage Access for incomplete users")
     public void verifyExternalUserManagerIncompleteUsers() {
         String firmCode = "90001";
-        String service = "Test LAA App Four";
-        String role = "Test LAA App Four Role One Access";
-        String office = "Automation Office 1, City1, 12345 (THREE)";
+        final String service = "Test LAA App Four";
+        final String role = "Test LAA App Four Role One Access";
+        final String office = "Automation Office 1, City1, 12345 (THREE)";
 
         ManageUsersPage globalAdminManageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
 
