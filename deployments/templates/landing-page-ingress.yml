@@ -30,11 +30,7 @@ metadata:
       set $http1_allow 0;
       set $http1_reject 0;
 
-      if ($remote_addr = 127.0.0.1) {
-        set $http1_allow 1;
-      }
-
-      if ($remote_addr = 127.0.0.2) {
+      if ($realip_remote_addr = 35.176.93.186) {
         set $http1_allow 1;
       }
 
