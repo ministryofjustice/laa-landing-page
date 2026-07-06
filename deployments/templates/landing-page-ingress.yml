@@ -29,27 +29,24 @@ metadata:
     nginx.ingress.kubernetes.io/server-snippet: |
       set $http1_allow 0;
       set $http1_reject 0;
-
-      if ($realip_remote_addr = 35.176.93.186) {
+      
+      if ($remote_addr ~ "${HTTP1_ALLOW_REGEX}") {
         set $http1_allow 1;
       }
 
-      #
-      # Reject HTTP/1.1 by default
-      #
       if ($server_protocol = "HTTP/1.1") {
         set $http1_reject 1;
+      }
+
+      if ($http1_allow = 1) {
+        set $http1_reject 0;
       }
 
       if ($uri ~ "^/api/v1/claims/enrich") {
         set $http1_reject 0;
       }
 
-      if ($uri = "/actuator/health") {
-        set $http1_reject 0;
-      }
-
-      if ($http1_allow = 1) {
+      if ($uri ~ "^/actuator/health") {
         set $http1_reject 0;
       }
 
