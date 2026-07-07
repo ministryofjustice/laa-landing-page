@@ -77,6 +77,20 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
           ENV_NAME: ${{ vars.ENV_NAME }}
 
+      - name: Build allowlist regex
+        run: |
+          IFS=',' read -ra IPS <<< "${{ secrets.HTTP_ALLOWLIST }}"
+
+          REGEX=""
+
+          for ip in "${IPS[@]}"; do
+            escaped=$(echo "$ip" | sed 's/\./\\./g')
+            REGEX="${REGEX}${escaped}|"
+          done
+
+          REGEX="(${REGEX%|})"
+
+          echo "HTTP1_ALLOW_REGEX=$REGEX" >> $GITHUB_ENV
 
       - name: Generate Deployment the Files
         run: |
