@@ -344,7 +344,8 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickOfficesTab();
         manageUsersPage.clickOfficeChange();
         assertTrue(page.url().contains("/admin/users/edit/"));
-        List<String> offices = List.of("Automation Office 1, City1, 12345 (THREE)", "Automation Office 2, City2, 23456 (FOUR)");
+        List<String> offices = List.of("Automation Office 1, City1, 12345 (Office account number: THREE)",
+                "Automation Office 2, City2, 23456 (Office account number: FOUR)");
         manageUsersPage.checkSelectedOffices(offices);
         manageUsersPage.clickContinueUserDetails();
         manageUsersPage.clickConfirmButton();
@@ -490,7 +491,8 @@ public class ManageUsersTest extends BaseFrontEndTest {
             manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
             manageUsersPage.clickOfficesTab();
             manageUsersPage.clickOfficeChange();
-            List<String> offices = List.of("Automation Office 1, City1, 12345 (THREE)", "Automation Office 2, City2, 23456 (FOUR)");
+            List<String> offices = List.of("Automation Office 1, City1, 12345 (Office account number: THREE)",
+                    "Automation Office 2, City2, 23456 (Office account number: FOUR)");
             manageUsersPage.checkSelectedOffices(offices);
             manageUsersPage.clickContinueLink();
             manageUsersPage.clickConfirmButton();
@@ -505,7 +507,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
             manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
             manageUsersPage.clickOfficesTab();
             manageUsersPage.clickOfficeChange();
-            List<String> updatedOffices = List.of("Automation Office 1, City1, 12345 (THREE)");
+            List<String> updatedOffices = List.of("Automation Office 1, City1, 12345 (Office account number: THREE)");
             manageUsersPage.uncheckSelectedOffices(updatedOffices);
             manageUsersPage.clickContinueLink();
             manageUsersPage.clickConfirmButton();
@@ -563,8 +565,8 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickContinueLink();
 
         manageUsersPage.clickContinueLink();
-
-        manageUsersPage.checkSelectedOffices(List.of(office));
+        manageUsersPage.checkSelectedOffices(List.of("Automation Office 1, City1, 12345 (Office account number: "
+                + "THREE)"));
         manageUsersPage.clickContinueLink();
 
         manageUsersPage.clickConfirmButton();
