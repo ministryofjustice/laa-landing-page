@@ -553,21 +553,39 @@ public class ManageUsersTest extends BaseFrontEndTest {
         assertTrue(row.locator(".govuk-tag.govuk-tag--blue").isVisible());
     }
 
-    @Test
-    @DisplayName("Verify External User Manager can Manage Access for incomplete users (Single Role App).")
-    public void verifyExternalUserManagerIncompleteUsersSkipRoleSelectionForSingleRoleApp() {
-        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
-        manageUsersPage.clickExternalUserLink("Playwright ExternalUserIncompleteTwo");
+    private void openExternalUser(ManageUsersPage manageUsersPage, String userName) {
+        manageUsersPage.clickExternalUserLink(userName);
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    private void assertAccessUpdated() {
+        assertTrue(page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible());
+    }
+
+    @Test
+    @DisplayName("Verify External User Manager can Manage Access for incomplete users (Single Role App)")
+    public void verifyExternalUserManagerIncompleteUsersSkipRoleSelectionForSingleRoleApp() {
+        String userName = "Playwright ExternalUserIncompleteTwo";
+        final List<String> services = List.of("Test LAA App One");
+
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+
+        openExternalUser(manageUsersPage, userName);
         assertTrue(page.locator(".govuk-button:has-text('Manage Access')").isVisible());
+        manageUsersPage.assertStatusVisible("INCOMPLETE");
+
         manageUsersPage.clickManageAccess();
-        List<String> services = List.of("Test LAA App One");
         manageUsersPage.checkSelectedServices(services);
         manageUsersPage.clickContinueLink();
         manageUsersPage.clickContinueLink();
         manageUsersPage.clickConfirmButton();
+
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-        assertTrue(page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible());
+        assertAccessUpdated();
+
+        loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+        openExternalUser(manageUsersPage, userName);
+        manageUsersPage.assertStatusVisible("ACTIVATION PENDING");
     }
 
     @Disabled("Test disabled - user creation logic changed. Users with only firm selection get COMPLETE status instead of PENDING. Needs investigation.")
@@ -654,6 +672,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
     @DisplayName("Non-Provider Admin without roles shows Manage Access button not Change link")
     void nonProviderAdminWithoutRolesShowsManageAccessButton() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
         manageUsersPage.clickCreateUser();
         final String email = manageUsersPage.fillInUserDetails(false);
         manageUsersPage.selectMultiFirmAccess(false);
@@ -663,23 +682,49 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickGoBackToManageUsers();
 
         assertTrue(manageUsersPage.searchAndVerifyUser(email));
+
         manageUsersPage.clickFirstUserLink();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-        assertTrue(
-                page.locator(".govuk-button:has-text('Manage Access')").isVisible(),
-                "Manage Access button should be visible for user without roles"
-        );
+        assertTrue(page.locator(".govuk-button:has-text('Manage Access')").isVisible(),
+                "Manage Access button should be visible for user without roles");
 
         manageUsersPage.clickServicesTab();
-        assertFalse(
-                page.locator("#services .govuk-link:has-text('Change')").isVisible(),
-                "Change link should not be visible in Services tab for user without roles"
-        );
 
-        assertTrue(
-                page.locator("#services p:has-text('No services are currently assigned to this user')").isVisible(),
-                "Should show message that no services are assigned"
-        );
+        assertFalse(page.locator("#services .govuk-link:has-text('Change')").isVisible(),
+                "Change link should not be visible in Services tab for user without roles");
+
+        assertTrue(page.locator("#services p:has-text('No services are currently assigned to this user')").isVisible(),
+                "No assigned services message should be displayed");
+    }
+
+    @Test
+    @DisplayName("Verify status updates once roles are removed from complete user")
+    public void verifyStatusUpdatesOnceRolesRemovedFromCompleteUser() {
+        final String userName = "Playwright FirmTwoUserViewer";
+        final String service = "Manage your users";
+
+        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+
+        manageUsersPage.clickExternalUserLink(userName);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        manageUsersPage.assertStatusVisible("COMPLETE");
+        manageUsersPage.clickServicesTab();
+        manageUsersPage.clickChangeLink();
+
+        Locator serviceCheckbox = page.getByLabel(service);
+        serviceCheckbox.uncheck();
+        assertFalse(serviceCheckbox.isChecked(), service + " checkbox should be unchecked after removal");
+
+        manageUsersPage.clickContinueUserDetails();
+        manageUsersPage.clickConfirmButton();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        assertTrue(page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible());
+
+        loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+        manageUsersPage.clickExternalUserLink(userName);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        manageUsersPage.assertStatusVisible("NO ROLES ASSIGNED");
     }
 }

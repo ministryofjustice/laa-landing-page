@@ -2,12 +2,10 @@ package uk.gov.justice.laa.portal.landingpage.utils;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,17 +29,26 @@ public class RestUtils {
     }
 
     protected static String callGraphApi(String accessToken, String url, HttpMethod method, MultiValueMap<String, String> body) {
-        RestTemplate restTemplate = new RestTemplate();
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Bearer " + accessToken);
-        headers.set("Content-Type", "application/json");
-        headers.set("Accept", "application/json");
+        try {
+            RestClient restClient = RestClient.create();
+            RestClient.RequestBodySpec requestSpec = restClient.method(method)
+                    .uri(url)
+                    .header("Authorization", "Bearer " + accessToken)
+                    .accept(MediaType.APPLICATION_JSON);
 
-        HttpEntity<?> entity = new HttpEntity<Object>(body, headers);
-        ResponseEntity<String> response = restTemplate.exchange(
-                url, method, entity, String.class);
+            if (body != null && !body.isEmpty()) {
+                requestSpec.contentType(MediaType.APPLICATION_JSON).body(body);
+            }
 
-        return Optional.ofNullable(response.getBody()).orElse(EMPTY_STRING);
+            String responseBody = requestSpec.retrieve()
+                    .body(String.class);
+
+            return Optional.ofNullable(responseBody).orElse(EMPTY_STRING);
+
+        } catch (Exception e) {
+            log.error("Graph API call failed [{} {}]: {}", method, url, e.getMessage());
+            return EMPTY_STRING;
+        }
     }
 
     /**
@@ -76,7 +83,6 @@ public class RestUtils {
         return Optional.empty();
     }
 
-
     @SuppressWarnings("unchecked")
     public static <T> Optional<Set<T>> getSetFromHttpSession(HttpSession session, String key, Class<T> elementType) {
         Object object = session.getAttribute(key);
@@ -90,5 +96,4 @@ public class RestUtils {
 
         return Optional.empty();
     }
-
 }
