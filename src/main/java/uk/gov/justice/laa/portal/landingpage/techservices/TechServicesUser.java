@@ -27,7 +27,7 @@ public class TechServicesUser implements Serializable {
     private String mail;
 
     @JsonProperty("accountEnabled")
-    private boolean accountEnabled;
+    private Boolean accountEnabled;
 
     @JsonProperty("createdDateTime")
     private LocalDateTime createdDateTime;
