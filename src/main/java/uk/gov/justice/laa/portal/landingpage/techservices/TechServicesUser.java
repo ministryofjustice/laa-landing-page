@@ -51,7 +51,7 @@ public class TechServicesUser implements Serializable {
     private CustomSecurityAttributes customSecurityAttributes;
 
     @JsonProperty("isMailOnly")
-    private boolean isMailOnly;
+    private Boolean isMailOnly;
 
     @JsonProperty("deleted")
     private boolean deleted;

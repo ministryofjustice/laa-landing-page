@@ -52,4 +52,21 @@ public class JacksonMapperIntegrationTest extends BaseIntegrationTest {
         // Ensure it still binds without exception with property missing
         objectMapper.readValue(json, GetUserResponse.class);
     }
+
+    @Test
+    public void testGetUserTechServicesResponseBindsWithoutIsMailOnlyProperty() {
+        // Remove isMailOnly attribute from test JSON
+        String json = TEST_TECH_SERVICES_USER_RESPONSE.replace("\"isMailOnly\": false,", "");
+        // Ensure it still binds without exception with property missing
+        objectMapper.readValue(json, GetUserResponse.class);
+    }
+
+    @Test
+    public void testGetUserTechServicesResponseBindsWithOnlyDeleteProperty() {
+        // Test simple user json with only delete property.
+        String json = "{\"success\": true, \"user\": {\"deleted\":true}}";
+
+        // Ensure it still binds without exception with property missing
+        objectMapper.readValue(json, GetUserResponse.class);
+    }
 }

@@ -165,9 +165,12 @@ public class ExternalUserPollingService {
                         entraUser.setEmail(user.getEmail());
                     }
 
-                    if (user.isMailOnly() != entraUser.isMailOnly()) {
-                        entraUser.setMailOnly(user.isMailOnly());
+                    if (user.getIsMailOnly() != null) {
+                        if (user.getIsMailOnly() != entraUser.isMailOnly()) {
+                            entraUser.setMailOnly(user.getIsMailOnly());
+                        }
                     }
+
 
                     // Update Silas Status for the user
                     userService.refreshAndUpdatedUserProfilesStatus(entraUser.isEnabled(), entraUser.getInvitationStatus(), entraUser.getUserProfiles());
