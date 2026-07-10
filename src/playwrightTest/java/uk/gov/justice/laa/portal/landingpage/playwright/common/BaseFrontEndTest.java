@@ -12,11 +12,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.testcontainers.containers.PostgreSQLContainer;
 import uk.gov.justice.laa.portal.landingpage.playwright.pages.ManageUsersPage;
 import uk.gov.justice.laa.portal.landingpage.playwright.pages.UserProfilePage;
@@ -45,14 +44,19 @@ public abstract class BaseFrontEndTest {
 
     private static boolean setupComplete = false;
 
-    protected static final PostgreSQLContainer<?> postgresContainer =
-            SharedPostgresContainer.getInstance();
+    @ServiceConnection
+    public static final PostgreSQLContainer<?> postgresServer =
+            new PostgreSQLContainer<>("postgres:16-alpine")
+                    .withDatabaseName("laa_portal_test")
+                    .withUsername("root")
+                    .withPassword("secret");
 
-    @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgresContainer::getJdbcUrl);
-        registry.add("spring.datasource.username", postgresContainer::getUsername);
-        registry.add("spring.datasource.password", postgresContainer::getPassword);
+    static {
+        postgresServer.start();
+
+        System.setProperty("spring.datasource.url", postgresServer.getJdbcUrl());
+        System.setProperty("spring.datasource.username", postgresServer.getUsername());
+        System.setProperty("spring.datasource.password", postgresServer.getPassword());
     }
 
     @RegisterExtension

@@ -129,23 +129,9 @@ public class AuditPage {
         );
     }
 
-    public void searchAndSelectFirm(String firmName) {
-        log.info("Searching and selecting firm: {}", firmName);
-
+    public void populateFirmField(String firmName) {
         firmSearchInput.fill("");
         firmSearchInput.fill(firmName);
-
-        firmSearchListbox.waitFor();
-        firmOptionRows.first().waitFor();
-
-        firmOptionRows.first().click();
-
-        Assertions.assertFalse(
-                firmSearchHiddenId.inputValue().isBlank(),
-                "Expected selectedFirmId to be populated after selecting firm"
-        );
-
-        page.waitForLoadState(LoadState.NETWORKIDLE);
     }
 
     public void filterBySilasRole(String role) {

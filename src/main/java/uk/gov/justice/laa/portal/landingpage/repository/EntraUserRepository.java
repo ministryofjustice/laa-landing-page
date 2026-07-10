@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -11,6 +12,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 @Repository
 public interface EntraUserRepository extends JpaRepository<EntraUser, UUID>, EntraUserRepositoryCustomAuditSearch {
@@ -298,4 +300,22 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID>, Ent
     long countActivationPendingExternalMultiFirmUsers();
 
     List<EntraUser> findEntraUserByCcmsEbsUserIsTrue();
+
+    @Query("""
+        SELECT DISTINCT u.firstName, u.lastName, u.email, up.createdDate
+        FROM EntraUser u
+        JOIN u.userProfiles up
+        JOIN up.appRoles ar
+        JOIN ar.app a
+        WHERE up.userType = :userType
+          AND a.name = :appName
+          AND up.createdDate >= :startDate
+          AND up.createdDate < :endDate
+        """)
+    List<Object[]> findCcmsUsersWithAppInPeriod(
+            @Param("userType") UserType userType,
+            @Param("appName") String appName,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
 }
