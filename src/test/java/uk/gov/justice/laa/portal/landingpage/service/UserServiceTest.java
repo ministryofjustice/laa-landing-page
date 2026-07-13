@@ -3406,6 +3406,158 @@ class UserServiceTest {
             // Multi-firm users have no profile, so no profile status to check
             assertThat(capturedUser.getUserProfiles()).isNotEmpty();
         }
+
+        @Test
+        void createUser_existingActiveUser_sendsGovNotify() {
+            // Arrange
+            EntraUserDto user = new EntraUserDto();
+            user.setEmail("existing@example.com");
+            user.setFirstName("John");
+            user.setLastName("Smith");
+
+            when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class))).thenAnswer(i -> {
+                EntraUser eu = i.getArgument(0);
+                eu.setId(UUID.randomUUID());
+                return eu;
+            });
+
+            RegisterUserResponse.User respUser = RegisterUserResponse.User.builder()
+                    .id(UUID.randomUUID().toString())
+                    .email("existing@example.com")
+                    .accountEnabled(true)
+                    .build();
+
+            TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
+                    .success(RegisterUserResponse.builder()
+                            .message("User already exists. Group memberships updated successfully.")
+                            .user(respUser).build());
+            when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
+
+            FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
+
+            // Act
+            userService.createUser(user, firmDto, false, "admin", false);
+
+            // Assert
+            verify(notificationService, times(1)).notifyExistingUser(any(), eq("John"), eq("existing@example.com"));
+            verify(techServicesClient, never()).sendEmailVerification(any(EntraUserDto.class));
+        }
+
+        @Test
+        void createUser_expiredInvitation_triggersResendActivation() {
+            // Arrange
+            EntraUserDto user = new EntraUserDto();
+            user.setEmail("expired@example.com");
+            user.setFirstName("Jane");
+
+            when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class))).thenAnswer(i -> {
+                EntraUser eu = i.getArgument(0);
+                eu.setId(UUID.randomUUID());
+                return eu;
+            });
+
+            RegisterUserResponse.User respUser = RegisterUserResponse.User.builder()
+                    .id(UUID.randomUUID().toString())
+                    .email("expired@example.com")
+                    .accountEnabled(false)
+                    .customSecurityAttributes(RegisterUserResponse.CustomSecurityAttributes.builder()
+                            .guestUserStatus(RegisterUserResponse.GuestUserStatus.builder()
+                                    .disabledReason("ExpiredInvitation").build()).build())
+                    .build();
+
+            TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
+                    .success(RegisterUserResponse.builder()
+                            .message("User already exists")
+                            .user(respUser).build());
+            when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
+            when(techServicesClient.sendEmailVerification(any(EntraUserDto.class)))
+                    .thenReturn(TechServicesApiResponse.success(SendUserVerificationEmailResponse.builder().success(true).message("sent").build()));
+
+            FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
+
+            // Act
+            userService.createUser(user, firmDto, false, "admin", false);
+
+            // Assert
+            verify(techServicesClient, times(1)).sendEmailVerification(any(EntraUserDto.class));
+            verify(notificationService, never()).notifyExistingUser(any(), anyString(), anyString());
+        }
+
+        @Test
+        void createUser_awaitingVerification_triggersResendActivation() {
+            // Arrange
+            EntraUserDto user = new EntraUserDto();
+            user.setEmail("awaiting@example.com");
+            user.setFirstName("Alex");
+
+            when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class))).thenAnswer(i -> {
+                EntraUser eu = i.getArgument(0);
+                eu.setId(UUID.randomUUID());
+                return eu;
+            });
+
+            RegisterUserResponse.User respUser = RegisterUserResponse.User.builder()
+                    .id(UUID.randomUUID().toString())
+                    .email("awaiting@example.com")
+                    .accountEnabled(false)
+                    .build();
+
+            RegisterUserResponse.Verification verification = RegisterUserResponse.Verification.builder()
+                    .status("AwaitingVerification").build();
+
+            TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
+                    .success(RegisterUserResponse.builder()
+                            .message("User already exists")
+                            .user(respUser)
+                            .verification(verification)
+                            .build());
+            when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
+            when(techServicesClient.sendEmailVerification(any(EntraUserDto.class)))
+                    .thenReturn(TechServicesApiResponse.success(SendUserVerificationEmailResponse.builder().success(true).message("sent").build()));
+
+            FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
+
+            // Act
+            userService.createUser(user, firmDto, false, "admin", false);
+
+            // Assert
+            verify(techServicesClient, times(1)).sendEmailVerification(any(EntraUserDto.class));
+            verify(notificationService, never()).notifyExistingUser(any(), anyString(), anyString());
+        }
+
+        @Test
+        void createUser_newUser_doesNotSendNotifyOrResend() {
+            // Arrange
+            EntraUserDto user = new EntraUserDto();
+            user.setEmail("new@example.com");
+            user.setFirstName("New");
+
+            when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class))).thenAnswer(i -> {
+                EntraUser eu = i.getArgument(0);
+                eu.setId(UUID.randomUUID());
+                return eu;
+            });
+
+            RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
+            createdUser.setId(UUID.randomUUID().toString());
+            createdUser.setMail("new@example.com");
+            createdUser.setAccountEnabled(true);
+
+            TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
+                    .success(RegisterUserResponse.builder()
+                            .message("User created successfully")
+                            .createdUser(createdUser).build());
+            when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
+
+            FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
+
+            // Act
+            userService.createUser(user, firmDto, false, "admin", false);
+
+            // Assert
+            verify(notificationService, never()).notifyExistingUser(any(), anyString(), anyString());
+            verify(techServicesClient, never()).sendEmailVerification(any(EntraUserDto.class));
+        }
     }
 
     @Nested

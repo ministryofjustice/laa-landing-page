@@ -940,19 +940,84 @@ public class UserService {
                     registerUserResponse.getError().getErrors());
         }
 
-        RegisterUserResponse.CreatedUser createdUser = registerUserResponse.getData().getCreatedUser();
+        RegisterUserResponse resp = registerUserResponse.getData();
+        RegisterUserResponse.User respUser = resp != null ? resp.getUser() : null;
+        RegisterUserResponse.CreatedUser createdUser = resp != null ? resp.getCreatedUser() : null;
 
-        if (createdUser != null && user.getEmail().equalsIgnoreCase(createdUser.getMail())) {
+        // Prefer new 'user' shape, fallback to legacy 'createdUser'
+        if (respUser != null && user.getEmail().equalsIgnoreCase(respUser.getEmail())) {
+            user.setEntraOid(respUser.getId());
+        } else if (createdUser != null && user.getEmail().equalsIgnoreCase(createdUser.getMail())) {
             user.setEntraOid(createdUser.getId());
         } else {
             throw new RuntimeException("User creation failed");
         }
 
         EntraUser newUser = persistNewUser(user, firm, isUserManager, createdBy, isMultiFirmUser);
-        if (registerUserResponse.getData().getMessage().contains("User already exists") && !createdUser.isAccountEnabled()) {
+
+        // Determine if this was an existing user scenario and handle accordingly
+        boolean isExistingUserResponse = (respUser != null) || (resp != null && resp.getMessage() != null && resp.getMessage().contains("User already exists"));
+
+        if (isExistingUserResponse) {
+            handleExistingUserScenario(resp, newUser, respUser, createdUser);
+        }
+
+        return newUser;
+    }
+
+    private void handleExistingUserScenario(RegisterUserResponse resp, EntraUser newUser,
+            RegisterUserResponse.User respUser, RegisterUserResponse.CreatedUser createdUser) {
+
+        String deleteReason = null;
+        String verificationStatus = null;
+        boolean accountEnabled = true;
+
+        if (respUser != null) {
+            accountEnabled = respUser.isAccountEnabled();
+            if (respUser.getCustomSecurityAttributes() != null && respUser.getCustomSecurityAttributes().getGuestUserStatus() != null) {
+                deleteReason = respUser.getCustomSecurityAttributes().getGuestUserStatus().getDisabledReason();
+            }
+            if (resp != null && resp.getVerification() != null) {
+                verificationStatus = resp.getVerification().getStatus();
+            }
+        } else if (createdUser != null) {
+            // Legacy response: only account enabled flag is available
+            accountEnabled = createdUser.isAccountEnabled();
+        }
+
+        // Scenario: Never activated OR awaiting verification -> trigger resend activation
+        if ((deleteReason != null && "ExpiredInvitation".equalsIgnoreCase(deleteReason))
+                || (verificationStatus != null && ("AwaitingVerification".equalsIgnoreCase(verificationStatus)
+                        || "awaiting_verification".equalsIgnoreCase(verificationStatus)
+                        || "pending".equalsIgnoreCase(verificationStatus)))) {
+            logger.info("Triggering resend activation for user: {}", newUser.getEntraOid());
+            triggerResendActivation(newUser);
+            return;
+        }
+
+        // Scenario: Existing active user -> ensure enabled and send gov.notify email
+        if (!accountEnabled) {
             enableUserOnRecreate(newUser);
         }
-        return newUser;
+
+        notifyExistingUser(newUser);
+    }
+
+    private void triggerResendActivation(EntraUser user) {
+        TechServicesApiResponse<SendUserVerificationEmailResponse> verificationResponse =
+                techServicesClient.sendEmailVerification(mapper.map(user, EntraUserDto.class));
+
+        if (!verificationResponse.isSuccess()) {
+            throw new TechServicesClientException(verificationResponse.getError().getMessage(),
+                    verificationResponse.getError().getCode(),
+                    verificationResponse.getError().getErrors());
+        }
+
+        logger.info("Resend activation email triggered for user: {}", user.getEntraOid());
+    }
+
+    private void notifyExistingUser(EntraUser user) {
+        notificationService.notifyExistingUser(user.getId(), user.getFirstName(), user.getEmail());
     }
 
     private void enableUserOnRecreate(EntraUser newUser) {

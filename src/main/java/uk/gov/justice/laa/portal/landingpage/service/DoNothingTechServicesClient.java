@@ -53,7 +53,7 @@ public class DoNothingTechServicesClient implements TechServicesClient {
         // return success response with random uuid
         return TechServicesApiResponse.success(RegisterUserResponse.builder().success(true).message("Success")
                 .createdUser(RegisterUserResponse.CreatedUser.builder().id(UUID.randomUUID().toString())
-                        .displayName(user.getFullName()).mail(user.getEmail()).build())
+                        .mail(user.getEmail()).accountEnabled(true).build())
                 .build());
     }
 
