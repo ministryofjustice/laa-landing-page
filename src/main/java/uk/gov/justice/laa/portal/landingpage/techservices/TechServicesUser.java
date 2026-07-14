@@ -8,8 +8,9 @@ import lombok.NoArgsConstructor;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 @Data
 @NoArgsConstructor
@@ -30,7 +31,7 @@ public class TechServicesUser implements Serializable {
     private Boolean accountEnabled;
 
     @JsonProperty("createdDateTime")
-    private LocalDateTime createdDateTime;
+    private Date createdDateTime;
 
     @JsonProperty("givenName")
     private String givenName;
@@ -46,6 +47,9 @@ public class TechServicesUser implements Serializable {
 
     @JsonProperty("lastSignIn")
     private String lastSignIn;
+
+    @JsonProperty("groups")
+    private Set<String> groups;
 
     @JsonProperty("customSecurityAttributes")
     private CustomSecurityAttributes customSecurityAttributes;

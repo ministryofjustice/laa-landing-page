@@ -667,18 +667,43 @@ public class LiveTechServicesClientTest {
         when(jwtDecoder.decode(anyString())).thenThrow(new RuntimeException("Error decoding JWT token"));
         String responseJson = """
                                 {
-                                "success": true,
-                                "message": "User created successfully. An email has been sent to the user with their activation code",
-                                "entraObject": {
-                            "id": "12345678-1234-1234-1234-123456789012",
-                                    "displayName": "John Smith",
-                                    "mail": "john@example.com",
-                                    "accountEnabled": false,
-                                    "createdDateTime": "2025-01-15T10:30:00Z"
-                        }
+                  "success": true,
+                  "user": {
+                    "id": "12345678-1234-1234-1234-123456789012",
+                    "displayName": "John Smith [LAA]",
+                    "givenName": "John",
+                    "surname": "Smith",
+                    "email": "john@example.com",
+                    "alias": [
+                      "john@example.com",
+                      "jsmith@example.com"
+                    ],
+                    "accountEnabled": true,
+                    "createdDateTime": "2025-01-15T10:30:00Z",
+                    "lastSignIn": "2025-01-18T10:30:00Z",
+                    "groups": [
+                      "985ba934-f7e1-43af-a2a1-51a1a2afc1cd",
+                      "0bccdd91-23de-4103-a0ba-1d46efbc3743"
+                    ],
+                    "customSecurityAttributes": {
+                      "GuestUserStatus": {
+                        "@odata.type": "#microsoft.graph.customSecurityAttributeValue",
+                        "DisabledReason": "NoGroupsDisable",
+                        "ActivationCode": "12345"
+                      }
+                    },
+                    "isMailOnly": true,
+                    "deleted": false
+                  },
+                  "verification": {
+                    "status": "verified",
+                    "method": "activation_code_email",
+                    "verified_at": "2025-01-15T11:00:00Z"
+                  }
                 }""";
+
         when(responseSpec.toEntity(String.class))
-                .thenReturn(ResponseEntity.ok(responseJson));
+                .thenReturn(ResponseEntity.status(HttpStatus.CREATED).body(responseJson));
 
         EntraUserDto user = EntraUserDto.builder().email("test@email.com").entraOid("entraOid")
                 .firstName("firstName").lastName("lastName").build();
@@ -687,6 +712,70 @@ public class LiveTechServicesClientTest {
 
         assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
         assertLogMessage(Level.INFO, "New User creation by Tech Services is successful for entra user: entraOid");
+        verify(restClient, times(1)).post();
+    }
+
+    @Test
+    void testReregisterDeletedUser() {
+        AccessToken token = new AccessToken("token", null);
+        when(clientSecretCredential.getToken(any(TokenRequestContext.class))).thenReturn(Mono.just(token));
+        when(restClient.post()).thenReturn(requestBodyUriSpec);
+        when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
+        when(requestBodySpec.contentType(MediaType.APPLICATION_JSON)).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(RegisterUserRequest.class))).thenReturn(requestBodySpec);
+        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        ConcurrentMapCache concurrentMapCache = new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE);
+        concurrentMapCache.put("access_token", "techServicesDetails");
+        when(cacheManager.getCache(anyString())).thenReturn(concurrentMapCache);
+        when(jwtDecoder.decode(anyString())).thenThrow(new RuntimeException("Error decoding JWT token"));
+        String responseJson = """
+                                {
+                  "success": true,
+                  "user": {
+                    "id": "12345678-1234-1234-1234-123456789012",
+                    "displayName": "John Smith [LAA]",
+                    "givenName": "John",
+                    "surname": "Smith",
+                    "email": "john@example.com",
+                    "alias": [
+                      "john@example.com",
+                      "jsmith@example.com"
+                    ],
+                    "accountEnabled": true,
+                    "createdDateTime": "2025-01-15T10:30:00Z",
+                    "lastSignIn": "2025-01-18T10:30:00Z",
+                    "groups": [
+                      "985ba934-f7e1-43af-a2a1-51a1a2afc1cd",
+                      "0bccdd91-23de-4103-a0ba-1d46efbc3743"
+                    ],
+                    "customSecurityAttributes": {
+                      "GuestUserStatus": {
+                        "@odata.type": "#microsoft.graph.customSecurityAttributeValue",
+                        "DisabledReason": "NoGroupsDisable",
+                        "ActivationCode": "12345"
+                      }
+                    },
+                    "isMailOnly": true,
+                    "deleted": false
+                  },
+                  "verification": {
+                    "status": "verified",
+                    "method": "activation_code_email",
+                    "verified_at": "2025-01-15T11:00:00Z"
+                  }
+                }""";
+
+        when(responseSpec.toEntity(String.class))
+                .thenReturn(ResponseEntity.status(HttpStatus.OK).body(responseJson));
+
+        EntraUserDto user = EntraUserDto.builder().email("test@email.com").entraOid("entraOid")
+                .firstName("firstName").lastName("lastName").build();
+
+        liveTechServicesClient.registerNewUser(user);
+
+        assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
+        assertLogMessage(Level.INFO, "Tech Services request successful, user exists in Entra  for entra user: entraOid");
         verify(restClient, times(1)).post();
     }
 
@@ -702,7 +791,7 @@ public class LiveTechServicesClientTest {
                                 {
                                 "success": true,
                                 "message": "User created successfully. An email has been sent to the user with their activation code",
-                                "entraObject": {
+                                "user": {
                             "id": "12345678-1234-1234-1234-123456789012",
                                     "displayName": "John Smith",
                                     "mail": "john@example.com",
@@ -710,8 +799,9 @@ public class LiveTechServicesClientTest {
                                     "createdDateTime": "2025-01-15T10:30:00Z"
                         }
                 }""";
+
         when(responseSpec.toEntity(String.class))
-                .thenReturn(ResponseEntity.ok(responseJson));
+                .thenReturn(ResponseEntity.status(HttpStatus.CREATED).body(responseJson));
         ConcurrentMapCache concurrentMapCache = new ConcurrentMapCache(CachingConfig.TECH_SERVICES_DETAILS_CACHE);
         concurrentMapCache.put("access_token", "techServicesDetails");
         when(jwtDecoder.decode(anyString())).thenReturn(Jwt.withTokenValue("techServicesDetails")
