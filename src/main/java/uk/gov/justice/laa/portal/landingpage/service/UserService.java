@@ -948,7 +948,7 @@ public class UserService {
 
         EntraUser newUser = persistNewUser(user, firm, isUserManager, createdBy, isMultiFirmUser);
         if (registerUserResponse.getData().isUserFetched()) {
-            if (!createdUser.getAccountEnabled()) {
+            if (createdUser.getAccountEnabled() == null || !createdUser.getAccountEnabled()) {
                 enableUserOnRecreate(newUser);
             }
             newUser = syncUserStatus(createdUser, newUser);
