@@ -828,7 +828,7 @@ public class AdminController {
             roleCreationDto = new RoleCreationDto();
         }
 
-        if (appFilter.isEmpty()) {
+        if (appFilter == null || appFilter.isEmpty()) {
             redirectAttributes.addFlashAttribute("appRolesErrorMessage", "Please select an application to create its "
                     + "roles");
             return "redirect:/admin/silas-administration?tab=roles";
@@ -847,6 +847,7 @@ public class AdminController {
         model.addAttribute("userTypes", UserType.values());
         model.addAttribute("firmTypes", FirmType.values());
         model.addAttribute("appFilter", appFilter);
+        session.setAttribute("appFilter", appFilter);
 
         return "silas-administration/create-role";
     }
@@ -925,6 +926,7 @@ public class AdminController {
 
         session.removeAttribute("createdRole");
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Role created");
+        model.addAttribute("appFilter", getObjectFromHttpSession(session, "appFilter", String.class).orElse("none"));
         return "silas-administration/create-role-confirmation";
     }
 
