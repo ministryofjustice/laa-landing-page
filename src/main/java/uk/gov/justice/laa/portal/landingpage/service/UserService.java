@@ -99,6 +99,7 @@ import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledRe
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
 
 /**
  * userService
@@ -930,6 +931,7 @@ public class UserService {
                 .map(appRole -> mapper.map(appRole, AppRoleDto.class)).collect(Collectors.toList());
     }
 
+    @Transactional
     public EntraUser createUser(EntraUserDto user, FirmDto firm, boolean isUserManager,
             String createdBy, boolean isMultiFirmUser) {
 
@@ -940,19 +942,51 @@ public class UserService {
                     registerUserResponse.getError().getErrors());
         }
 
-        RegisterUserResponse.CreatedUser createdUser = registerUserResponse.getData().getCreatedUser();
+        TechServicesUser createdUser = registerUserResponse.getData().getUser();
+        user.setEntraOid(createdUser.getId());
 
-        if (createdUser != null && user.getEmail().equalsIgnoreCase(createdUser.getMail())) {
-            user.setEntraOid(createdUser.getId());
-        } else {
-            throw new RuntimeException("User creation failed");
-        }
 
         EntraUser newUser = persistNewUser(user, firm, isUserManager, createdBy, isMultiFirmUser);
-        if (registerUserResponse.getData().getMessage().contains("User already exists") && !createdUser.isAccountEnabled()) {
-            enableUserOnRecreate(newUser);
+        if (registerUserResponse.getData().isUserFetched()) {
+            if (createdUser.getAccountEnabled() == null || !createdUser.getAccountEnabled()) {
+                enableUserOnRecreate(newUser);
+            }
+            newUser = syncUserStatus(createdUser, newUser);
         }
         return newUser;
+    }
+
+    @Transactional
+    protected EntraUser syncUserStatus(TechServicesUser tsUser, EntraUser entraUser) {
+        updateAccountActivationStatus(tsUser, entraUser);
+
+        if (tsUser.getIsMailOnly() != null) {
+            entraUser.setMailOnly(tsUser.getIsMailOnly());
+        }
+
+        refreshAndUpdatedUserProfilesStatus(entraUser.isEnabled(), entraUser.getInvitationStatus(), entraUser.getUserProfiles());
+
+        entraUser.setLastSyncedOn(LocalDateTime.now());
+
+        entraUserRepository.save(entraUser);
+
+        return entraUser;
+    }
+
+    private void updateAccountActivationStatus(TechServicesUser user, EntraUser entraUser) {
+        boolean hasInvitationStatus = user.getCustomSecurityAttributes() != null
+                && user.getCustomSecurityAttributes().getGuestUserStatus() != null
+                && user.getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress() != null;
+
+        if (hasInvitationStatus) {
+            InvitationStatus invitationStatus = user.getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress();
+            boolean shouldUpdateActivationStatus = !Objects.equals(entraUser.getInvitationStatus(), invitationStatus);
+
+            if (shouldUpdateActivationStatus) {
+                entraUser.setInvitationStatus(invitationStatus);
+                logger.info("Updated invitation status for user {} to: {}", entraUser.getEntraOid(), invitationStatus);
+            }
+        }
     }
 
     private void enableUserOnRecreate(EntraUser newUser) {
@@ -981,6 +1015,7 @@ public class UserService {
         entraUser.setMultiFirmUser(isMultiFirmUser);
         entraUser.setEntraOid(newUser.getEntraOid());
         entraUser.setUserStatus(UserStatus.ACTIVE);
+        entraUser.setUserProfiles(Collections.emptySet());
 
         if (!isMultiFirmUser && firmDto.isSkipFirmSelection()) {
             logger.error("User with entra oid: {} is not a multi-firm user, firm selection can not be skipped",
