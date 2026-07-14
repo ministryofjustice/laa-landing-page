@@ -1015,6 +1015,7 @@ public class UserService {
         entraUser.setMultiFirmUser(isMultiFirmUser);
         entraUser.setEntraOid(newUser.getEntraOid());
         entraUser.setUserStatus(UserStatus.ACTIVE);
+        entraUser.setUserProfiles(Collections.emptySet());
 
         if (!isMultiFirmUser && firmDto.isSkipFirmSelection()) {
             logger.error("User with entra oid: {} is not a multi-firm user, firm selection can not be skipped",

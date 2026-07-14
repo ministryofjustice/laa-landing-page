@@ -705,13 +705,13 @@ public class LiveTechServicesClientTest {
         when(responseSpec.toEntity(String.class))
                 .thenReturn(ResponseEntity.status(HttpStatus.CREATED).body(responseJson));
 
-        EntraUserDto user = EntraUserDto.builder().email("test@email.com").entraOid("entraOid")
+        EntraUserDto user = EntraUserDto.builder().id("id").email("test@email.com").entraOid("entraOid")
                 .firstName("firstName").lastName("lastName").build();
 
         liveTechServicesClient.registerNewUser(user);
 
         assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
-        assertLogMessage(Level.INFO, "New User creation by Tech Services is successful for entra user: entraOid");
+        assertLogMessage(Level.INFO, "New User creation by Tech Services is successful for entra user: id");
         verify(restClient, times(1)).post();
     }
 
@@ -769,13 +769,13 @@ public class LiveTechServicesClientTest {
         when(responseSpec.toEntity(String.class))
                 .thenReturn(ResponseEntity.status(HttpStatus.OK).body(responseJson));
 
-        EntraUserDto user = EntraUserDto.builder().email("test@email.com").entraOid("entraOid")
+        EntraUserDto user = EntraUserDto.builder().id("id").email("test@email.com").entraOid("entraOid")
                 .firstName("firstName").lastName("lastName").build();
 
         liveTechServicesClient.registerNewUser(user);
 
         assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
-        assertLogMessage(Level.INFO, "Tech Services request successful, user exists in Entra  for entra user: entraOid");
+        assertLogMessage(Level.INFO, "Tech Services request successful, user exists in Entra  for entra user: id");
         verify(restClient, times(1)).post();
     }
 
@@ -808,13 +808,13 @@ public class LiveTechServicesClientTest {
                 .header("alg", "none").claim("exp", Instant.now().plusSeconds(120)).build());
         when(cacheManager.getCache(anyString())).thenReturn(concurrentMapCache);
 
-        EntraUserDto user = EntraUserDto.builder().email("test@email.com").entraOid("entraOid")
+        EntraUserDto user = EntraUserDto.builder().id("id").email("test@email.com").entraOid("entraOid")
                 .firstName("firstName").lastName("lastName").build();
 
         liveTechServicesClient.registerNewUser(user);
 
         assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
-        assertLogMessage(Level.INFO, "New User creation by Tech Services is successful for entra user: entraOid");
+        assertLogMessage(Level.INFO, "New User creation by Tech Services is successful for entra user: id");
         verify(restClient, times(1)).post();
     }
 

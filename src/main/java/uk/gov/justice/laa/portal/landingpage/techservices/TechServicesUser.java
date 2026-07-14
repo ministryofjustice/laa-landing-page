@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.techservices;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,6 +17,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class TechServicesUser implements Serializable {
 
     @JsonProperty("id")
@@ -67,6 +69,7 @@ public class TechServicesUser implements Serializable {
     @NoArgsConstructor
     @AllArgsConstructor
     @Builder
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class VerificationStatus implements Serializable {
 
         @JsonProperty("status")
@@ -74,6 +77,9 @@ public class TechServicesUser implements Serializable {
 
         @JsonProperty("method")
         private String method;
+
+        @JsonProperty("verified_at")
+        private Date verifiedAt;
     }
 
 
@@ -91,6 +97,7 @@ public class TechServicesUser implements Serializable {
     @NoArgsConstructor
     @AllArgsConstructor
     @Builder
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class GuestUserStatus implements Serializable {
 
         @JsonProperty("@odata.type")
