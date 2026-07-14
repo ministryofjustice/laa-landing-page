@@ -170,7 +170,9 @@ public class UserController {
 
         // Process request parameters and handle session filters
         search = search == null ? "" : search.trim();
-        if (selectedStatuses == null) selectedStatuses = new ArrayList<>();
+        if (selectedStatuses == null) {
+            selectedStatuses = new ArrayList<>();
+        }
         Map<String, Object> processedFilters = processRequestFilters(size, page, sort, direction, usertype, search,
                 showFirmAdmins, showMultiFirmUsers, showProviderUsers, selectedStatuses, backButton, session, firmSearchForm);
         size = (Integer) processedFilters.get("size");
