@@ -52,8 +52,8 @@ public class DoNothingTechServicesClient implements TechServicesClient {
         logger.info("Register new user request received on Dummy Tech Services Client for user {} {}", user.getFirstName(), user.getLastName());
         // return success response with random uuid
         return TechServicesApiResponse.success(RegisterUserResponse.builder().success(true).message("Success")
-                .createdUser(RegisterUserResponse.CreatedUser.builder().id(UUID.randomUUID().toString())
-                        .mail(user.getEmail()).accountEnabled(true).build())
+                .user(TechServicesUser.builder().id(UUID.randomUUID().toString())
+                        .displayName(user.getFullName()).mail(user.getEmail()).build())
                 .build());
     }
 

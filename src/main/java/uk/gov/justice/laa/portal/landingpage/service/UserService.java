@@ -99,6 +99,7 @@ import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledRe
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
 
 /**
  * userService
@@ -930,6 +931,7 @@ public class UserService {
                 .map(appRole -> mapper.map(appRole, AppRoleDto.class)).collect(Collectors.toList());
     }
 
+    @Transactional
     public EntraUser createUser(EntraUserDto user, FirmDto firm, boolean isUserManager,
             String createdBy, boolean isMultiFirmUser) {
 
@@ -940,84 +942,51 @@ public class UserService {
                     registerUserResponse.getError().getErrors());
         }
 
-        RegisterUserResponse resp = registerUserResponse.getData();
-        RegisterUserResponse.User respUser = resp != null ? resp.getUser() : null;
-        RegisterUserResponse.CreatedUser createdUser = resp != null ? resp.getCreatedUser() : null;
+        TechServicesUser createdUser = registerUserResponse.getData().getUser();
+        user.setEntraOid(createdUser.getId());
 
-        // Prefer new 'user' shape, fallback to legacy 'createdUser'
-        if (respUser != null && user.getEmail().equalsIgnoreCase(respUser.getEmail())) {
-            user.setEntraOid(respUser.getId());
-        } else if (createdUser != null && user.getEmail().equalsIgnoreCase(createdUser.getMail())) {
-            user.setEntraOid(createdUser.getId());
-        } else {
-            throw new RuntimeException("User creation failed");
-        }
 
         EntraUser newUser = persistNewUser(user, firm, isUserManager, createdBy, isMultiFirmUser);
-
-        // Determine if this was an existing user scenario and handle accordingly
-        boolean isExistingUserResponse = (respUser != null) || (resp != null && resp.getMessage() != null && resp.getMessage().contains("User already exists"));
-
-        if (isExistingUserResponse) {
-            handleExistingUserScenario(resp, newUser, respUser, createdUser);
+        if (registerUserResponse.getData().isUserFetched()) {
+            if (createdUser.getAccountEnabled() == null || !createdUser.getAccountEnabled()) {
+                enableUserOnRecreate(newUser);
+            }
+            newUser = syncUserStatus(createdUser, newUser);
         }
-
         return newUser;
     }
 
-    private void handleExistingUserScenario(RegisterUserResponse resp, EntraUser newUser,
-            RegisterUserResponse.User respUser, RegisterUserResponse.CreatedUser createdUser) {
+    @Transactional
+    protected EntraUser syncUserStatus(TechServicesUser tsUser, EntraUser entraUser) {
+        updateAccountActivationStatus(tsUser, entraUser);
 
-        String deleteReason = null;
-        String verificationStatus = null;
-        boolean accountEnabled = true;
-
-        if (respUser != null) {
-            accountEnabled = respUser.isAccountEnabled();
-            if (respUser.getCustomSecurityAttributes() != null && respUser.getCustomSecurityAttributes().getGuestUserStatus() != null) {
-                deleteReason = respUser.getCustomSecurityAttributes().getGuestUserStatus().getDisabledReason();
-            }
-            if (resp != null && resp.getVerification() != null) {
-                verificationStatus = resp.getVerification().getStatus();
-            }
-        } else if (createdUser != null) {
-            // Legacy response: only account enabled flag is available
-            accountEnabled = createdUser.isAccountEnabled();
+        if (tsUser.getIsMailOnly() != null) {
+            entraUser.setMailOnly(tsUser.getIsMailOnly());
         }
 
-        // Scenario: Never activated OR awaiting verification -> trigger resend activation
-        if ((deleteReason != null && "ExpiredInvitation".equalsIgnoreCase(deleteReason))
-                || (verificationStatus != null && ("AwaitingVerification".equalsIgnoreCase(verificationStatus)
-                        || "awaiting_verification".equalsIgnoreCase(verificationStatus)
-                        || "pending".equalsIgnoreCase(verificationStatus)))) {
-            logger.info("Triggering resend activation for user: {}", newUser.getEntraOid());
-            triggerResendActivation(newUser);
-            return;
-        }
+        refreshAndUpdatedUserProfilesStatus(entraUser.isEnabled(), entraUser.getInvitationStatus(), entraUser.getUserProfiles());
 
-        // Scenario: Existing active user -> ensure enabled and send gov.notify email
-        if (!accountEnabled) {
-            enableUserOnRecreate(newUser);
-        }
+        entraUser.setLastSyncedOn(LocalDateTime.now());
 
-        notifyExistingUser(newUser);
+        entraUserRepository.save(entraUser);
+
+        return entraUser;
     }
 
-    private void triggerResendActivation(EntraUser user) {
-        TechServicesApiResponse<SendUserVerificationEmailResponse> verificationResponse =
-                techServicesClient.sendEmailVerification(mapper.map(user, EntraUserDto.class));
+    private void updateAccountActivationStatus(TechServicesUser user, EntraUser entraUser) {
+        boolean hasInvitationStatus = user.getCustomSecurityAttributes() != null
+                && user.getCustomSecurityAttributes().getGuestUserStatus() != null
+                && user.getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress() != null;
 
-        if (!verificationResponse.isSuccess()) {
-            throw new TechServicesClientException(verificationResponse.getError().getMessage(),
-                    verificationResponse.getError().getCode(),
-                    verificationResponse.getError().getErrors());
+        if (hasInvitationStatus) {
+            InvitationStatus invitationStatus = user.getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress();
+            boolean shouldUpdateActivationStatus = !Objects.equals(entraUser.getInvitationStatus(), invitationStatus);
+
+            if (shouldUpdateActivationStatus) {
+                entraUser.setInvitationStatus(invitationStatus);
+                logger.info("Updated invitation status for user {} to: {}", entraUser.getEntraOid(), invitationStatus);
+            }
         }
-
-        logger.info("Resend activation email triggered for user: {}", user.getEntraOid());
-    }
-
-    private void notifyExistingUser(EntraUser user) {
-        notificationService.notifyExistingUser(user.getId(), user.getFirstName(), user.getEmail());
     }
 
     private void enableUserOnRecreate(EntraUser newUser) {
@@ -1046,6 +1015,7 @@ public class UserService {
         entraUser.setMultiFirmUser(isMultiFirmUser);
         entraUser.setEntraOid(newUser.getEntraOid());
         entraUser.setUserStatus(UserStatus.ACTIVE);
+        entraUser.setUserProfiles(Collections.emptySet());
 
         if (!isMultiFirmUser && firmDto.isSkipFirmSelection()) {
             logger.error("User with entra oid: {} is not a multi-firm user, firm selection can not be skipped",

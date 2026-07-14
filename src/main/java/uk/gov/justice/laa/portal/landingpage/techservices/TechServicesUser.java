@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.techservices;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -8,13 +9,15 @@ import lombok.NoArgsConstructor;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class TechServicesUser implements Serializable {
 
     @JsonProperty("id")
@@ -30,7 +33,7 @@ public class TechServicesUser implements Serializable {
     private Boolean accountEnabled;
 
     @JsonProperty("createdDateTime")
-    private LocalDateTime createdDateTime;
+    private Date createdDateTime;
 
     @JsonProperty("givenName")
     private String givenName;
@@ -46,6 +49,9 @@ public class TechServicesUser implements Serializable {
 
     @JsonProperty("lastSignIn")
     private String lastSignIn;
+
+    @JsonProperty("groups")
+    private Set<String> groups;
 
     @JsonProperty("customSecurityAttributes")
     private CustomSecurityAttributes customSecurityAttributes;
@@ -63,6 +69,7 @@ public class TechServicesUser implements Serializable {
     @NoArgsConstructor
     @AllArgsConstructor
     @Builder
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class VerificationStatus implements Serializable {
 
         @JsonProperty("status")
@@ -70,6 +77,9 @@ public class TechServicesUser implements Serializable {
 
         @JsonProperty("method")
         private String method;
+
+        @JsonProperty("verified_at")
+        private Date verifiedAt;
     }
 
 
@@ -87,6 +97,7 @@ public class TechServicesUser implements Serializable {
     @NoArgsConstructor
     @AllArgsConstructor
     @Builder
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class GuestUserStatus implements Serializable {
 
         @JsonProperty("@odata.type")

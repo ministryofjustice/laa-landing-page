@@ -232,9 +232,19 @@ public class LiveTechServicesClient implements TechServicesClient {
 
             if (response.getStatusCode().is2xxSuccessful()) {
                 RegisterUserResponse responseBody = objectMapper.readValue(response.getBody(), RegisterUserResponse.class);
-                logger.info("New User creation by Tech Services is successful for entra user: {} with security groups {} added",
-                        user.getEntraOid(), securityGroups);
-                return TechServicesApiResponse.success(responseBody);
+                if (response.getStatusCode().isSameCodeAs(HttpStatus.CREATED)) {
+                    responseBody.setResponseType(RegisterUserResponse.ResponseType.CREATED);
+                    logger.info("New User creation by Tech Services is successful for entra user: {} with security groups {} added",
+                            user.getId(), securityGroups);
+                    return TechServicesApiResponse.success(responseBody);
+                } else if (response.getStatusCode().isSameCodeAs(HttpStatus.OK)) {
+                    responseBody.setResponseType(RegisterUserResponse.ResponseType.VERIFIED);
+                    logger.info("Tech Services request successful, user exists in Entra  for entra user: {}", user.getId());
+                    return TechServicesApiResponse.success(responseBody);
+                } else {
+                    logger.error("Error while sending new user creation request to Tech Services, for user entra oid: {}", user.getEntraOid());
+                    throw new RuntimeException(String.format("Error while sending new user creation request to Tech Services, for user entra oid: %s.", user.getEntraOid()));
+                }
             } else {
                 logger.error("Error while sending new user creation request to Tech Services, for user entra oid: {}", user.getEntraOid());
                 throw new RuntimeException(String.format("Error while sending verification email to Tech Services, for user entra oid: %s.", user.getEntraOid()));
