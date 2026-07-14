@@ -945,13 +945,13 @@ public class UserService {
         TechServicesUser createdUser = registerUserResponse.getData().getUser();
         user.setEntraOid(createdUser.getId());
 
+        boolean isExistingUserResponse = registerUserResponse.getData().isUserFetched()
+                || (registerUserResponse.getData().getMessage() != null && registerUserResponse.getData().getMessage().toLowerCase().contains("user already exists"));
 
         EntraUser newUser = persistNewUser(user, firm, isUserManager, createdBy, isMultiFirmUser);
-        if (registerUserResponse.getData().isUserFetched()) {
-            if (createdUser.getAccountEnabled() == null || !createdUser.getAccountEnabled()) {
-                enableUserOnRecreate(newUser);
-            }
-            newUser = syncUserStatus(createdUser, newUser);
+
+        if (isExistingUserResponse) {
+            handleExistingUserScenario(registerUserResponse.getData(), createdUser, newUser);
         }
         return newUser;
     }
@@ -987,6 +987,59 @@ public class UserService {
                 logger.info("Updated invitation status for user {} to: {}", entraUser.getEntraOid(), invitationStatus);
             }
         }
+    }
+
+    private void triggerResendActivation(EntraUser user) {
+        TechServicesApiResponse<SendUserVerificationEmailResponse> verificationResponse = techServicesClient.sendEmailVerification(mapper.map(user, EntraUserDto.class));
+        if (!verificationResponse.isSuccess()) {
+            throw new TechServicesClientException(verificationResponse.getError().getMessage(),
+                    verificationResponse.getError().getCode(),
+                    verificationResponse.getError().getErrors());
+        }
+        logger.info("Resend activation email triggered for user: {}", user.getEntraOid());
+    }
+
+    private void handleExistingUserScenario(RegisterUserResponse resp, TechServicesUser respUser, EntraUser newUser) {
+        String deleteReason = null;
+        String verificationStatus = null;
+        boolean accountEnabled = true;
+
+        if (respUser != null) {
+            accountEnabled = respUser.getAccountEnabled() != null ? respUser.getAccountEnabled() : true;
+            if (respUser.getCustomSecurityAttributes() != null && respUser.getCustomSecurityAttributes().getGuestUserStatus() != null) {
+                deleteReason = respUser.getCustomSecurityAttributes().getGuestUserStatus().getDisabledReason();
+                if (respUser.getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress() != null) {
+                    verificationStatus = respUser.getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress().name();
+                }
+            }
+            if (resp != null && resp.getVerification() != null && resp.getVerification().getStatus() != null) {
+                verificationStatus = resp.getVerification().getStatus();
+            }
+        }
+
+        // Scenario: Never activated OR awaiting verification -> trigger resend activation
+        if ((deleteReason != null && "ExpiredInvitation".equalsIgnoreCase(deleteReason))
+                || (verificationStatus != null && ("AwaitingVerification".equalsIgnoreCase(verificationStatus)
+                        || "awaiting_verification".equalsIgnoreCase(verificationStatus)
+                        || "pending".equalsIgnoreCase(verificationStatus)))) {
+            logger.info("Triggering resend activation for user: {}", newUser.getEntraOid());
+            triggerResendActivation(newUser);
+            return;
+        }
+
+        // Scenario: Existing active user -> ensure enabled and send gov.notify email
+        if (!accountEnabled) {
+            enableUserOnRecreate(newUser);
+        }
+
+        notifyExistingUser(newUser);
+
+        // Sync status fields from TS user
+        syncUserStatus(respUser, newUser);
+    }
+
+    private void notifyExistingUser(EntraUser user) {
+        notificationService.notifyExistingUser(user.getId(), user.getEmail());
     }
 
     private void enableUserOnRecreate(EntraUser newUser) {

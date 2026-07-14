@@ -109,16 +109,16 @@ public class NotificationService {
     }
 
 
-    public void notifyExistingUser(UUID userProfileId, String firstName, String email) {
+    public void notifyExistingUser(UUID userProfileId, String email) {
         log.info("Sending existing user notification for User: {}", userProfileId);
         if (null != email) {
             emailService.sendMail(
                     email,
                     notificationProperties.getExistingUserEmailTemplate(),
-                    Map.of("first_name", firstName, "portal_url", notificationProperties.getPortalUrl()),
+                    Map.of("portal_url", notificationProperties.getPortalUrl()),
                     String.format(
                             REFERENCE_TEMPLATE_EXISTING_USER,
-                            firstName
+                            userProfileId
                     )
             );
             log.info("Existing user notification sent for User ID: {}", userProfileId);

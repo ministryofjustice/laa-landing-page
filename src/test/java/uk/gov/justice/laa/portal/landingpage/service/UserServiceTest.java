@@ -3418,7 +3418,7 @@ class UserServiceTest {
                 return eu;
             });
 
-            RegisterUserResponse.User respUser = RegisterUserResponse.User.builder()
+            TechServicesUser respUser = TechServicesUser.builder()
                     .id(UUID.randomUUID().toString())
                     .email("existing@example.com")
                     .accountEnabled(true)
@@ -3436,7 +3436,7 @@ class UserServiceTest {
             userService.createUser(user, firmDto, false, "admin", false);
 
             // Assert
-            verify(notificationService, times(1)).notifyExistingUser(any(), eq("John"), eq("existing@example.com"));
+            verify(notificationService, times(1)).notifyExistingUser(any(), eq("existing@example.com"));
             verify(techServicesClient, never()).sendEmailVerification(any(EntraUserDto.class));
         }
 
@@ -3453,12 +3453,12 @@ class UserServiceTest {
                 return eu;
             });
 
-            RegisterUserResponse.User respUser = RegisterUserResponse.User.builder()
+            TechServicesUser respUser = TechServicesUser.builder()
                     .id(UUID.randomUUID().toString())
                     .email("expired@example.com")
                     .accountEnabled(false)
-                    .customSecurityAttributes(RegisterUserResponse.CustomSecurityAttributes.builder()
-                            .guestUserStatus(RegisterUserResponse.GuestUserStatus.builder()
+                    .customSecurityAttributes(TechServicesUser.CustomSecurityAttributes.builder()
+                            .guestUserStatus(TechServicesUser.GuestUserStatus.builder()
                                     .disabledReason("ExpiredInvitation").build()).build())
                     .build();
 
@@ -3477,7 +3477,7 @@ class UserServiceTest {
 
             // Assert
             verify(techServicesClient, times(1)).sendEmailVerification(any(EntraUserDto.class));
-            verify(notificationService, never()).notifyExistingUser(any(), anyString(), anyString());
+            verify(notificationService, never()).notifyExistingUser(any(), anyString());
         }
 
         @Test
@@ -3493,7 +3493,7 @@ class UserServiceTest {
                 return eu;
             });
 
-            RegisterUserResponse.User respUser = RegisterUserResponse.User.builder()
+            TechServicesUser respUser = TechServicesUser.builder()
                     .id(UUID.randomUUID().toString())
                     .email("awaiting@example.com")
                     .accountEnabled(false)
@@ -3519,7 +3519,7 @@ class UserServiceTest {
 
             // Assert
             verify(techServicesClient, times(1)).sendEmailVerification(any(EntraUserDto.class));
-            verify(notificationService, never()).notifyExistingUser(any(), anyString(), anyString());
+            verify(notificationService, never()).notifyExistingUser(any(), anyString());
         }
 
         @Test
@@ -3535,15 +3535,16 @@ class UserServiceTest {
                 return eu;
             });
 
-            RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
-            createdUser.setId(UUID.randomUUID().toString());
-            createdUser.setMail("new@example.com");
-            createdUser.setAccountEnabled(true);
+            TechServicesUser createdUser = TechServicesUser.builder()
+                    .id(UUID.randomUUID().toString())
+                    .email("new@example.com")
+                    .accountEnabled(true)
+                    .build();
 
             TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
                     .success(RegisterUserResponse.builder()
                             .message("User created successfully")
-                            .createdUser(createdUser).build());
+                            .user(createdUser).build());
             when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
 
             FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
@@ -3552,7 +3553,7 @@ class UserServiceTest {
             userService.createUser(user, firmDto, false, "admin", false);
 
             // Assert
-            verify(notificationService, never()).notifyExistingUser(any(), anyString(), anyString());
+            verify(notificationService, never()).notifyExistingUser(any(), anyString());
             verify(techServicesClient, never()).sendEmailVerification(any(EntraUserDto.class));
         }
     }
