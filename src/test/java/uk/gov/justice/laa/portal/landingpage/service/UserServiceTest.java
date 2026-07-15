@@ -3436,7 +3436,7 @@ class UserServiceTest {
             userService.createUser(user, firmDto, false, "admin", false);
 
             // Assert
-            verify(notificationService, times(1)).notifyExistingUser(any(), eq("existing@example.com"));
+            verify(notificationService, times(1)).notifyExistingUser(any(), eq("John"), eq("existing@example.com"));
             verify(techServicesClient, never()).sendEmailVerification(any(EntraUserDto.class));
         }
 
@@ -3477,7 +3477,7 @@ class UserServiceTest {
 
             // Assert
             verify(techServicesClient, times(1)).sendEmailVerification(any(EntraUserDto.class));
-            verify(notificationService, never()).notifyExistingUser(any(), anyString());
+            verify(notificationService, never()).notifyExistingUser(any(), anyString(), anyString());
         }
 
         @Test
@@ -3519,7 +3519,7 @@ class UserServiceTest {
 
             // Assert
             verify(techServicesClient, times(1)).sendEmailVerification(any(EntraUserDto.class));
-            verify(notificationService, never()).notifyExistingUser(any(), anyString());
+            verify(notificationService, never()).notifyExistingUser(any(), anyString(), anyString());
         }
 
         @Test
@@ -3553,7 +3553,7 @@ class UserServiceTest {
             userService.createUser(user, firmDto, false, "admin", false);
 
             // Assert
-            verify(notificationService, never()).notifyExistingUser(any(), anyString());
+            verify(notificationService, never()).notifyExistingUser(any(), anyString(), anyString());
             verify(techServicesClient, never()).sendEmailVerification(any(EntraUserDto.class));
         }
     }

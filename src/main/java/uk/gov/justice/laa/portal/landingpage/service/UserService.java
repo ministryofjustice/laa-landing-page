@@ -1039,7 +1039,7 @@ public class UserService {
     }
 
     private void notifyExistingUser(EntraUser user) {
-        notificationService.notifyExistingUser(user.getId(), user.getEmail());
+        notificationService.notifyExistingUser(user.getId(), user.getFirstName(), user.getEmail());
     }
 
     private void enableUserOnRecreate(EntraUser newUser) {
