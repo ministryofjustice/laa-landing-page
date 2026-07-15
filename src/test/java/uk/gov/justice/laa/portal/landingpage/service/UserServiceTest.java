@@ -3426,6 +3426,7 @@ class UserServiceTest {
 
             TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
                     .success(RegisterUserResponse.builder()
+                            .responseType(RegisterUserResponse.ResponseType.VERIFIED)
                             .message("User already exists. Group memberships updated successfully.")
                             .user(respUser).build());
             when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
@@ -3464,6 +3465,7 @@ class UserServiceTest {
 
             TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
                     .success(RegisterUserResponse.builder()
+                            .responseType(RegisterUserResponse.ResponseType.VERIFIED)
                             .message("User already exists")
                             .user(respUser).build());
             when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
@@ -3497,16 +3499,15 @@ class UserServiceTest {
                     .id(UUID.randomUUID().toString())
                     .email("awaiting@example.com")
                     .accountEnabled(false)
+                    .verification(TechServicesUser.VerificationStatus.builder()
+                            .status("AwaitingVerification").build())
                     .build();
-
-            RegisterUserResponse.Verification verification = RegisterUserResponse.Verification.builder()
-                    .status("AwaitingVerification").build();
 
             TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
                     .success(RegisterUserResponse.builder()
+                            .responseType(RegisterUserResponse.ResponseType.VERIFIED)
                             .message("User already exists")
                             .user(respUser)
-                            .verification(verification)
                             .build());
             when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
             when(techServicesClient.sendEmailVerification(any(EntraUserDto.class)))

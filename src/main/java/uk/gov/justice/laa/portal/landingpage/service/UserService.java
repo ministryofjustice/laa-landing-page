@@ -945,13 +945,12 @@ public class UserService {
         TechServicesUser createdUser = registerUserResponse.getData().getUser();
         user.setEntraOid(createdUser.getId());
 
-        boolean isExistingUserResponse = registerUserResponse.getData().isUserFetched()
-                || (registerUserResponse.getData().getMessage() != null && registerUserResponse.getData().getMessage().toLowerCase().contains("user already exists"));
+        boolean isExistingUserResponse = registerUserResponse.getData().isUserFetched();
 
         EntraUser newUser = persistNewUser(user, firm, isUserManager, createdBy, isMultiFirmUser);
 
         if (isExistingUserResponse) {
-            handleExistingUserScenario(registerUserResponse.getData(), createdUser, newUser);
+            handleExistingUserScenario(createdUser, newUser);
         }
         return newUser;
     }
@@ -999,7 +998,7 @@ public class UserService {
         logger.info("Resend activation email triggered for user: {}", user.getEntraOid());
     }
 
-    private void handleExistingUserScenario(RegisterUserResponse resp, TechServicesUser respUser, EntraUser newUser) {
+    private void handleExistingUserScenario(TechServicesUser respUser, EntraUser newUser) {
         String deleteReason = null;
         String verificationStatus = null;
         boolean accountEnabled = true;
@@ -1012,8 +1011,8 @@ public class UserService {
                     verificationStatus = respUser.getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress().name();
                 }
             }
-            if (resp != null && resp.getVerification() != null && resp.getVerification().getStatus() != null) {
-                verificationStatus = resp.getVerification().getStatus();
+            if (respUser.getVerification() != null && respUser.getVerification().getStatus() != null) {
+                verificationStatus = respUser.getVerification().getStatus();
             }
         }
 
@@ -1023,6 +1022,7 @@ public class UserService {
                         || "awaiting_verification".equalsIgnoreCase(verificationStatus)
                         || "pending".equalsIgnoreCase(verificationStatus)))) {
             logger.info("Triggering resend activation for user: {}", newUser.getEntraOid());
+            syncUserStatus(respUser, newUser);
             triggerResendActivation(newUser);
             return;
         }
@@ -1032,14 +1032,10 @@ public class UserService {
             enableUserOnRecreate(newUser);
         }
 
-        notifyExistingUser(newUser);
+        notificationService.notifyExistingUser(newUser.getId(), newUser.getFirstName(), newUser.getEmail());
 
         // Sync status fields from TS user
         syncUserStatus(respUser, newUser);
-    }
-
-    private void notifyExistingUser(EntraUser user) {
-        notificationService.notifyExistingUser(user.getId(), user.getFirstName(), user.getEmail());
     }
 
     private void enableUserOnRecreate(EntraUser newUser) {
