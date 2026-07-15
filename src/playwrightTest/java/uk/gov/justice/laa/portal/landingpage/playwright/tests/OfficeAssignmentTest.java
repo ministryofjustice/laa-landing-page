@@ -102,7 +102,10 @@ public class OfficeAssignmentTest extends BaseFrontEndTest {
         userProfilePage.clickContinueUserDetails();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-        assertTrue(page.locator(".govuk-summary-list__row:has-text(\"Automation Office 1, City1, 12345 (THREE)\") .govuk-summary-list__value").isVisible());
+        assertTrue(page.locator(".govuk-summary-list__row:has-text(\"Automation Office 1, City1, 12345 (Office "
+                + "account number: THREE)\") "
+                + ".govuk-summary-list__value").isVisible());
+
 
         userProfilePage.clickConfirmButton();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
