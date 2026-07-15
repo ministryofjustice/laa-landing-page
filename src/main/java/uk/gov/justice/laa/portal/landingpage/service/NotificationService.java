@@ -115,7 +115,7 @@ public class NotificationService {
             emailService.sendMail(
                     email,
                     notificationProperties.getExistingUserEmailTemplate(),
-                    Map.of("first_name", firstName, "portal_url", notificationProperties.getPortalUrl()),
+                    Map.of("first_name", firstName, "email", email, "portal_url", notificationProperties.getPortalUrl()),
                     String.format(
                             REFERENCE_TEMPLATE_EXISTING_USER,
                             firstName
