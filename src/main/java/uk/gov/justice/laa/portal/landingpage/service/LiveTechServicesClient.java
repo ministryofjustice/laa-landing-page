@@ -235,11 +235,11 @@ public class LiveTechServicesClient implements TechServicesClient {
                 if (response.getStatusCode().isSameCodeAs(HttpStatus.CREATED)) {
                     responseBody.setResponseType(RegisterUserResponse.ResponseType.CREATED);
                     logger.info("New User creation by Tech Services is successful for entra user: {} with security groups {} added",
-                            user.getId(), securityGroups);
+                            responseBody.getUser().getId(), securityGroups);
                     return TechServicesApiResponse.success(responseBody);
                 } else if (response.getStatusCode().isSameCodeAs(HttpStatus.OK)) {
                     responseBody.setResponseType(RegisterUserResponse.ResponseType.VERIFIED);
-                    logger.info("Tech Services request successful, user exists in Entra  for entra user: {}", user.getId());
+                    logger.info("Tech Services request successful, user exists in Entra  for entra user: {}", responseBody.getUser().getId());
                     return TechServicesApiResponse.success(responseBody);
                 } else {
                     logger.error("Error while sending new user creation request to Tech Services, for user entra oid: {}", user.getEntraOid());
