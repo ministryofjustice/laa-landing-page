@@ -268,7 +268,9 @@
                 <div class="moj-page-header-actions govuk-!-display-flex govuk-!-justify-content-space-between govuk-!-align-items-center">
                     <h2 class="govuk-heading-m govuk-!-margin-top-2" th:unless="${user.hasNoProfile or user.userType == 'Internal'}">Profile information</h2>
                     <div>
-                            <a class="govuk-link govuk-body-m govuk-!-font-weight-bold" th:href="@{/admin/users/audit/{id}/full(id=${profileId})}">View complete profile information</a>
+                            <a class="govuk-link govuk-body-m govuk-!-font-weight-bold"
+                               th:if = "${!user.hasNoProfile and user.userType != 'Internal' and !user.isMultiFirmUser}"
+                               th:href="@{/admin/users/audit/{id}/full(id=${profileId})}">View complete profile information</a>
                     </div>
                 </div>
 
