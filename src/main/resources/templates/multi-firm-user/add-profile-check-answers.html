@@ -207,7 +207,7 @@
                                         <ul class="govuk-list">
                                             <li th:each="office : ${entry.value}">
                                                 <span th:text="${office.address?.formattedAddress ?: 'Unknown'}"></span>
-                                                (<span th:text="${office.code}"></span>)
+                                                (<span class="govuk-visually-hidden">Office account number: </span><span th:text="${office.code}"></span>)
                                             </li>
                                         </ul>
                                     </dd>
