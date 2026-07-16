@@ -1,28 +1,27 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
+import org.springframework.security.oauth2.client.registration.ClientRegistration;
+import org.springframework.security.oauth2.core.AuthorizationGrantType;
+import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.oidc.OidcIdToken;
-import org.springframework.security.oauth2.core.oidc.OidcUserInfo;
-import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AuthzOidcUserDetailsServiceTest {
@@ -38,26 +37,48 @@ class AuthzOidcUserDetailsServiceTest {
         // Arrange
         String username = "username";
         List<String> roles = List.of("ROLE_USER", "ROLE_ADMIN");
-        List<SimpleGrantedAuthority> authorities = roles.stream().map(SimpleGrantedAuthority::new).toList();
-        OidcUserInfo userInfo = new OidcUserInfo(Map.of("preferred_username", username, "oid", username));
-        OidcIdToken oidcIdToken = new OidcIdToken("test", Instant.now(), Instant.now().plusSeconds(300), Map.of("sub", "test"));
-        OidcUser oidcUser = new DefaultOidcUser(authorities, oidcIdToken, userInfo);
 
-        BiFunction<OidcUserRequest, OidcUserInfo, OidcUser> userMapper = (OidcUserRequest ouRequest, OidcUserInfo ouInfo) -> oidcUser;
-        ReflectionTestUtils.setField(authzOidcUserDetailsService, "oidcUserMapper", userMapper);
+        // Construct standard token properties matching what OidcUserService expects
+        OidcIdToken oidcIdToken = new OidcIdToken(
+                "test-token",
+                Instant.now(),
+                Instant.now().plusSeconds(300),
+                Map.of("sub", "test-sub", "oid", username)
+        );
 
-        OidcUserRequest oidcUserRequest = Mockito.mock(OidcUserRequest.class, Mockito.RETURNS_DEEP_STUBS);
-        Mockito.when(userService.getUserAuthorities(username)).thenReturn(roles);
+        ClientRegistration clientRegistration = ClientRegistration.withRegistrationId("azure")
+                .clientId("test-client")
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .redirectUri("http://localhost")
+                .authorizationUri("http://localhost/authorize")
+                .tokenUri("http://localhost/token")
+                .userNameAttributeName("sub")
+                .build();
+
+        OAuth2AccessToken accessToken = new OAuth2AccessToken(
+                OAuth2AccessToken.TokenType.BEARER,
+                "token-value-abc",
+                Instant.now(),
+                Instant.now().plusSeconds(3600),
+                Collections.emptySet()
+        );
+
+        OidcUserRequest oidcUserRequest = new OidcUserRequest(clientRegistration, accessToken, oidcIdToken);
+
+        // Stub your internal database call
+        when(userService.getUserAuthorities(username)).thenReturn(roles);
+
         // Act
         OidcUser result = authzOidcUserDetailsService.loadUser(oidcUserRequest);
+
         // Assert
         assertNotNull(result);
-        Assertions.assertThat(result.getAuthorities()).isNotNull();
-        Assertions.assertThat(result.getAuthorities()).isNotEmpty();
-        Assertions.assertThat(result.getAuthorities()).hasSize(2);
-        List<String> resultAuthorities = result.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority).collect(Collectors.toList());
-        Assertions.assertThat(resultAuthorities).hasSameElementsAs(roles);
+        assertThat(result.getAuthorities()).isNotNull().hasSize(2);
 
+        List<String> resultAuthorities = result.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toList());
+
+        assertThat(resultAuthorities).containsExactlyInAnyOrderElementsOf(roles);
     }
 }

@@ -122,6 +122,7 @@ import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesErrorResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 
 @ExtendWith(MockitoExtension.class)
@@ -733,11 +734,11 @@ class UserServiceTest {
     @Test
     void createUser() {
         // assign role
-        RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
+        TechServicesUser createdUser = new TechServicesUser();
         createdUser.setId("id");
         createdUser.setMail("test.user@email.com");
         TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
-                .success(RegisterUserResponse.builder().createdUser(createdUser)
+                .success(RegisterUserResponse.builder().user(createdUser)
                         .message("User created successfully. An email has been sent to the user with their activation code")
                         .build());
         when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
@@ -764,11 +765,11 @@ class UserServiceTest {
             savedUsers.add(invocation.getArgument(0));
             return invocation.getArgument(0);
         });
-        RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
+        TechServicesUser createdUser = new TechServicesUser();
         createdUser.setId("id");
         createdUser.setMail("test.user@email.com");
         TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
-                .success(RegisterUserResponse.builder().createdUser(createdUser)
+                .success(RegisterUserResponse.builder().user(createdUser)
                         .message("User created successfully. An email has been sent to the user with their activation code")
                         .build());
         when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
@@ -2982,13 +2983,13 @@ class UserServiceTest {
             EntraUser savedUser = EntraUser.builder().build();
             when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class))).thenReturn(savedUser);
 
-            RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
+            TechServicesUser createdUser = new TechServicesUser();
             createdUser.setId("id");
             createdUser.setMail("test@example.com");
             TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
                     .success(RegisterUserResponse.builder()
                             .message("User created successfully. An email has been sent to the user with their activation code")
-                            .createdUser(createdUser).build());
+                            .user(createdUser).build());
             when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
             FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
 
@@ -3004,13 +3005,13 @@ class UserServiceTest {
         @Test
         void createUser_withFirm_ForMultiFirmUser_withUserProfile() {
             // assign role
-            RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
+            TechServicesUser createdUser = new TechServicesUser();
             createdUser.setId("id");
             createdUser.setMail("test.user@email.com");
             TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
                     .success(RegisterUserResponse.builder()
                             .message("User created successfully. An email has been sent to the user with their activation code")
-                            .createdUser(createdUser).build());
+                            .user(createdUser).build());
             when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
             when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class))).thenAnswer(returnsFirstArg());
 
@@ -3031,11 +3032,11 @@ class UserServiceTest {
         @Test
         void createUser_withNoFirm_ForNonMultiFirmUser_Fail() {
             // assign role
-            RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
+            TechServicesUser createdUser = new TechServicesUser();
             createdUser.setId("id");
             createdUser.setMail("test.user@email.com");
             TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
-                    .success(RegisterUserResponse.builder().createdUser(createdUser).build());
+                    .success(RegisterUserResponse.builder().user(createdUser).build());
             when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
 
             EntraUserDto entraUserDto = new EntraUserDto();
@@ -3061,13 +3062,13 @@ class UserServiceTest {
             ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
             when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(EntraUser.builder().build());
 
-            RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
+            TechServicesUser createdUser = new TechServicesUser();
             createdUser.setId("id");
             createdUser.setMail("test@example.com");
             TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
                     .success(RegisterUserResponse.builder()
                             .message("User created successfully. An email has been sent to the user with their activation code")
-                            .createdUser(createdUser).build());
+                            .user(createdUser).build());
             when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
 
             FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
@@ -3138,13 +3139,13 @@ class UserServiceTest {
             EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
             when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
 
-            RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
+            TechServicesUser createdUser = new TechServicesUser();
             createdUser.setId("entra-oid-123");
             createdUser.setMail("multifirm@example.com");
             TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
                     .success(RegisterUserResponse.builder()
                             .message("User created successfully. An email has been sent to the user with their activation code")
-                            .createdUser(createdUser).build());
+                            .user(createdUser).build());
             when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
 
             FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
@@ -3172,13 +3173,13 @@ class UserServiceTest {
             EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
             when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
 
-            RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
+            TechServicesUser createdUser = new TechServicesUser();
             createdUser.setId("entra-oid-456");
             createdUser.setMail("multifirm-manager@example.com");
             TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
                     .success(RegisterUserResponse.builder()
                             .message("User created successfully. An email has been sent to the user with their activation code")
-                            .createdUser(createdUser).build());
+                            .user(createdUser).build());
             when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
 
             FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
@@ -3207,13 +3208,13 @@ class UserServiceTest {
             EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
             when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
 
-            RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
+            TechServicesUser createdUser = new TechServicesUser();
             createdUser.setId("entra-oid-789");
             createdUser.setMail("singlefirm@example.com");
             TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
                     .success(RegisterUserResponse.builder()
                             .message("User created successfully. An email has been sent to the user with their activation code")
-                            .createdUser(createdUser).build());
+                            .user(createdUser).build());
             when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
 
             FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
@@ -3242,17 +3243,16 @@ class UserServiceTest {
             user.setLastName("Firm");
 
             ArgumentCaptor<EntraUser> userCaptor = ArgumentCaptor.forClass(EntraUser.class);
-            EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
+            EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).userProfiles(Collections.emptySet()).build();
             when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
 
-            RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
+            TechServicesUser createdUser = new TechServicesUser();
             createdUser.setId("entra-oid-789");
             createdUser.setMail("singlefirm@example.com");
             createdUser.setAccountEnabled(false);
             TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
                     .success(RegisterUserResponse.builder()
-                            .message("User already exists. Group memberships updated successfully.")
-                            .createdUser(createdUser).build());
+                            .user(createdUser).responseType(RegisterUserResponse.ResponseType.VERIFIED).build());
             when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
 
             TechServicesApiResponse<ChangeAccountEnabledResponse> changeAccountEnabledResponse = TechServicesApiResponse
@@ -3289,14 +3289,13 @@ class UserServiceTest {
             EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
             when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
 
-            RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
+            TechServicesUser createdUser = new TechServicesUser();
             createdUser.setId("entra-oid-789");
             createdUser.setMail("singlefirm@example.com");
             createdUser.setAccountEnabled(true);
             TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
                     .success(RegisterUserResponse.builder()
-                            .message("User already exists. Group memberships updated successfully.")
-                            .createdUser(createdUser).build());
+                            .user(createdUser).build());
             when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
 
             FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
@@ -3329,13 +3328,13 @@ class UserServiceTest {
             EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
             when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
 
-            RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
+            TechServicesUser createdUser = new TechServicesUser();
             createdUser.setId(expectedEntraOid);
             createdUser.setMail("multifirm@example.com");
             TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
                     .success(RegisterUserResponse.builder()
                             .message("User created successfully. An email has been sent to the user with their activation code")
-                            .createdUser(createdUser).build());
+                            .user(createdUser).build());
             when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
 
             FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
@@ -3358,13 +3357,12 @@ class UserServiceTest {
             EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
             when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
 
-            RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
+            TechServicesUser createdUser = new TechServicesUser();
             createdUser.setId("entra-oid-123");
             createdUser.setMail("multifirm@example.com");
             TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
                     .success(RegisterUserResponse.builder()
-                            .message("User created successfully. An email has been sent to the user with their activation code")
-                            .createdUser(createdUser).build());
+                            .user(createdUser).build());
             when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
 
             FirmDto firmDto = FirmDto.builder().name("Test Firm").build();
@@ -3387,13 +3385,12 @@ class UserServiceTest {
             EntraUser savedUser = EntraUser.builder().id(UUID.randomUUID()).build();
             when(mockEntraUserRepository.saveAndFlush(userCaptor.capture())).thenReturn(savedUser);
 
-            RegisterUserResponse.CreatedUser createdUser = new RegisterUserResponse.CreatedUser();
+            TechServicesUser createdUser = new TechServicesUser();
             createdUser.setId("entra-oid-123");
             createdUser.setMail("multifirm@example.com");
             TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
                     .success(RegisterUserResponse.builder()
-                            .message("User created successfully. An email has been sent to the user with their activation code")
-                            .createdUser(createdUser).build());
+                            .user(createdUser).build());
             when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
 
             FirmDto firmDto = FirmDto.builder().name("Test Firm").build();

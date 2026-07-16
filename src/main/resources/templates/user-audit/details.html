@@ -226,7 +226,7 @@
                             </div>
                             <div class="govuk-summary-card__content">
                                 <dl class="govuk-summary-list">
-                                    <div class="govuk-summary-list__row" th:if="${entraUser != null && !entraUser.accountEnabled}">
+                                    <div class="govuk-summary-list__row" th:if="${entraUser != null && entraUser.accountEnabled != null && !entraUser.accountEnabled}">
                                         <dt class="govuk-summary-list__key">Disable Reason</dt>
                                         <dd class="govuk-summary-list__value" th:if="${entraUser.customSecurityAttributes == null || entraUser.customSecurityAttributes.guestUserStatus == null || entraUser.customSecurityAttributes.guestUserStatus.disabledReason == null}">Unknown</dd>
                                         <dd class="govuk-summary-list__value" th:if="${entraUser.customSecurityAttributes != null && entraUser.customSecurityAttributes.guestUserStatus != null && entraUser.customSecurityAttributes.guestUserStatus.disabledReason != null}" th:text="${entraUserDisableReason}"></dd>
@@ -467,7 +467,7 @@
                                 <dl class="govuk-summary-list">
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Date</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${record.statusChangedDate}"></dd>
+                                        <dd class="govuk-summary-list__value" th:text="${record.statusChangedDate != null ? #temporals.format(record.statusChangedDate, 'dd MMM yyyy HH:mm') : ''}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Status</dt>
