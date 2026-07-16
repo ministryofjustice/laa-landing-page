@@ -136,13 +136,14 @@ public class ClaimEnrichmentService {
                         .anyMatch(UserProfile::isUnrestrictedOfficeAccess);
 
                 if (officeIds.isEmpty() && isUnrestrictedOfficeAccess) {
+                    log.info("No direct office assignments found for user. Retrieving offices from associated firms.");
                     officeIds = firms.stream()
                             .flatMap(firm -> officeRepository.findOfficeByFirm_IdIn(List.of(firm.getId())).stream())
                             .map(Office::getCode)
                             .filter(Objects::nonNull)
                             .distinct()
                             .collect(Collectors.toList());
-                    log.info("claim enrichment empty office ids: {}", officeIds);
+                    log.info("claim enrichment fallback office ids from firms: {}", officeIds);
                 }
             }
 

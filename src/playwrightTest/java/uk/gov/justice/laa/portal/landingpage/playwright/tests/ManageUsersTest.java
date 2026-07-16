@@ -538,8 +538,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
 
         manageUsersPage.clickContinueLink();
         manageUsersPage.clickContinueLink();
-        manageUsersPage.checkSelectedOffices(List.of("Automation Office 1, City1, 12345 (Office account number: "
-                + "THREE)"));
+        manageUsersPage.checkSelectedOffices(List.of("Automation Office 1, City1, 12345 (Office account number: THREE)"));
         manageUsersPage.clickContinueLink();
         manageUsersPage.clickConfirmButton();
 

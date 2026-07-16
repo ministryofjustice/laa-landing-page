@@ -139,13 +139,16 @@ public class ExternalUserPollingService {
                     boolean isEnabledInSilas = entraUser.isEnabled();
 
                     // Update user fields if not deleted
-
-                    if (user.isAccountEnabled() && !isEnabledInSilas) {
-                        // user account enabled in entra, re-enabling in silas
-                        enableUserWithReason(user, entraUser);
-                    } else if (!user.isAccountEnabled() && isEnabledInSilas) {
-                        //user account has disabled reason in entra, disabling in silas
-                        disableUserWithReason(user, entraUser);
+                    if (user.getAccountEnabled() != null) {
+                        if (user.getAccountEnabled() && !isEnabledInSilas) {
+                            // user account enabled in entra, re-enabling in silas
+                            enableUserWithReason(user, entraUser);
+                        } else if (!user.getAccountEnabled() && isEnabledInSilas) {
+                            //user account has disabled reason in entra, disabling in silas
+                            disableUserWithReason(user, entraUser);
+                        }
+                    } else {
+                        log.warn("Could not update enabled status of user with ID {} when polling external users. Tech Services returned null for enabled status", entraUser.getId());
                     }
 
                     updateAccountActivationStatus(user, entraUser);
@@ -162,9 +165,12 @@ public class ExternalUserPollingService {
                         entraUser.setEmail(user.getEmail());
                     }
 
-                    if (user.isMailOnly() != entraUser.isMailOnly()) {
-                        entraUser.setMailOnly(user.isMailOnly());
+                    if (user.getIsMailOnly() != null) {
+                        if (user.getIsMailOnly() != entraUser.isMailOnly()) {
+                            entraUser.setMailOnly(user.getIsMailOnly());
+                        }
                     }
+
 
                     // Update Silas Status for the user
                     userService.refreshAndUpdatedUserProfilesStatus(entraUser.isEnabled(), entraUser.getInvitationStatus(), entraUser.getUserProfiles());
