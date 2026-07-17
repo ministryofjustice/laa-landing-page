@@ -3,7 +3,8 @@
       title=~{::title},
       mainContent=~{::#main-content},
       pageCategory=${'users'},
-      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+      suppressPhaseBanner=${true},
+      bodyClass=${'full-width-page'})}" xmlns:th="http://www.thymeleaf.org">
 
 
 <head>
@@ -11,11 +12,7 @@
 </head>
 
 <body>
-    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-        <a class="govuk-back-link" th:href="@{/home}">
-            Back </a>
-    </nav>
-    <main class="govuk-main-wrapper" id="main-content" th:if="${#authentication.isAuthenticated()}">
+    <main class="govuk-main-wrapper" id="main-content" style="padding-top: 0;" th:if="${#authentication.isAuthenticated()}">
         <div th:if="${successMessage}" class="govuk-notification-banner govuk-notification-banner--successsuccess" role="alert"
             aria-labelledby="govuk-notification-banner-title" data-module="govuk-notification-banner">
             <div class="govuk-notification-banner__header">
@@ -49,9 +46,20 @@
                 </p>
             </div>
         </div>
-        <div class="govuk-grid-row">
-            <div class="govuk-grid-column-full">
-                <div class="moj-page-header-actions">
+        <div class="full-width-container">
+            <div class="govuk-phase-banner" id="feedback">
+                <p class="govuk-phase-banner__content">
+                    <strong class="govuk-tag govuk-phase-banner__content__tag">
+                        Beta
+                    </strong>
+                    <span class="govuk-phase-banner__text">
+                        This is a new service. Help us improve it by <a class="govuk-link"
+                            href="https://www.smartsurvey.co.uk/s/LAASiLAS/">completing our short survey.</a>
+                    </span>
+                </p>
+            </div>
+            <a class="govuk-back-link" th:href="@{/home}">Back</a>
+            <div class="moj-page-header-actions">
                     <div class="moj-page-header-actions__title">
                         <h1 class="govuk-heading-l">Manage your users</h1>
                     </div>
@@ -76,8 +84,7 @@
                     </form>
                 </div>
 
-                <div class="govuk-grid-row">
-                    <div class="govuk-grid-column-full">
+                <div class="search-width-container">
                         <!-- Search Card -->
                         <div class="search-card">
                             <div class="govuk-form-group">
@@ -237,7 +244,6 @@
                                 </div>
                             </form>
                         </div>
-                    </div>
                 </div>
 
                 <style>
@@ -423,23 +429,6 @@
                             padding-top: 0 !important;
                         }
                     }
-
-
-                    .full-width-container {
-                        padding: 0 40px;
-                        box-sizing: border-box;
-                    }
-
-                    @media (min-width: 768px) {
-                        .full-width-container {
-                            position: relative;
-                            width: 100vw;
-                            max-width: 1440px;
-                            left: 50%;
-                            transform: translateX(-50%);
-                        }
-                    }
-
 
 
                     .table-container {
@@ -768,12 +757,8 @@
                         }
                     });
                 </script>
-            </div>
-        </div>
-
 
         <form class="govuk-form-group">
-            <div class="full-width-container">
             <div class="table-container" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
                 <table class="govuk-table" data-id-prefix="users-"
                     style="table-layout: fixed; min-width: 768px; width: 100%;">
@@ -908,7 +893,6 @@
                     </tbody>
                 </table>
             </div>
-            </div>
         </form>
         <nav class="govuk-pagination" aria-label="Pagination">
             <div class="govuk-pagination__prev" th:if="${page > 1}">
@@ -1013,7 +997,6 @@
             to <b th:text="${((requestedPageSize ?: 10) * ((page ?: 1) - 1)) + (actualPageSize ?: 10)}"></b>
             of <b th:text="${totalUsers}"></b> results</p>
         <div aria-live="polite" role="status" aria-atomic="true" class="govuk-visually-hidden"></div>
-        </div>
         </div>
     </main>
 </body>
