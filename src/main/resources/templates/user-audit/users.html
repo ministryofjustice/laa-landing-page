@@ -3,20 +3,16 @@
       title=~{::title},
       mainContent=~{::#main-content},
       pageCategory=${'users'},
-      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+      suppressPhaseBanner=${true},
+      bodyClass=${'full-width-page'})}" xmlns:th="http://www.thymeleaf.org">
 
 <head>
     <title>User Access Audit Table</title>
 </head>
 
 <body>
-    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-        <a class="govuk-back-link" th:href="@{/home}">
-            Back
-        </a>
-    </nav>
 
-    <main class="govuk-main-wrapper" id="main-content" th:if="${#authentication.isAuthenticated()}">
+    <main class="govuk-main-wrapper" id="main-content" style="padding-top: 0;" th:if="${#authentication.isAuthenticated()}">
         <div id="csv-empty-toast"
              class="govuk-notification-banner govuk-notification-banner--warning"
              role="alert"
@@ -35,8 +31,19 @@
                 </p>
             </div>
         </div>
-        <div class="govuk-grid-row">
-            <div class="govuk-grid-column-full">
+        <div class="full-width-container">
+            <div class="govuk-phase-banner" id="feedback">
+                <p class="govuk-phase-banner__content">
+                    <strong class="govuk-tag govuk-phase-banner__content__tag">
+                        Beta
+                    </strong>
+                    <span class="govuk-phase-banner__text">
+                        This is a new service. Help us improve it by <a class="govuk-link"
+                            href="https://www.smartsurvey.co.uk/s/LAASiLAS/">completing our short survey.</a>
+                    </span>
+                </p>
+            </div>
+                <a class="govuk-back-link" th:href="@{/home}">Back</a>
                 <h1 class="govuk-heading-l">User Access Audit Table</h1>
 
                 <!-- CSV export error summary -->
@@ -203,9 +210,8 @@
                 </div>
 
                 <!-- Dormant Account Filters -->
-                <div class="govuk-grid-row govuk-!-margin-top-4">
-                    <div class="govuk-grid-column-full">
-                        <div class="filters-container">
+                <div class="govuk-!-margin-top-4">
+                    <div class="filters-container">
                             <!-- Filter for non-activation -->
                             <div class="govuk-!-padding-top-2">
                                 <details class="govuk-details" data-module="govuk-details" th:attr="open=${neverActivated ? 'open' : null}">
@@ -235,9 +241,6 @@
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
 
         <style>
             /* Reuse autocomplete styles from users.html */
@@ -321,24 +324,6 @@
                 display: block;
             }
 
-
-            .full-width-container {
-                padding-left: 40px;
-                padding-right: 40px;
-                box-sizing: border-box;
-                overflow: auto;
-            }
-
-            /* Only breakout on tablet/desktop */
-            @media (min-width: 768px) {
-                .full-width-container {
-                    position: relative;
-                    width: 100vw;
-                    max-width: 1440px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                }
-            }
 
             .autocomplete__input {
                 -webkit-appearance: none;
@@ -969,8 +954,7 @@
         </script>
 
         <!-- Export CSV and action buttons -->
-        <div class="govuk-grid-row govuk-!-margin-top-4">
-            <div class="govuk-grid-column-full">
+        <div class="govuk-!-margin-top-4">
                 <div class="moj-button-group">
                     <th:block th:if="${exportCsv}">
                         <a class="govuk-button js-export-csv"
@@ -985,13 +969,10 @@
                         View all deleted users
                     </a>
                 </div>
-            </div>
         </div>
 
         <!-- Audit Table -->
-        <div class="govuk-grid-row govuk-!-margin-top-6" id="audit-table">
-            <div class="govuk-grid-column-full">
-                <div class="full-width-container">
+        <div class="govuk-!-margin-top-6" id="audit-table">
                     <table class="govuk-table">
                         <thead class="govuk-table__head">
                             <tr class="govuk-table__row">
@@ -1146,8 +1127,6 @@
                             </tr>
                         </tbody>
                     </table>
-                </div>
-            </div>
         </div>
 
         <!-- Pagination -->
@@ -1233,6 +1212,7 @@
                 th:text="${((requestedPageSize ?: 10) * ((page ?: 1) - 1)) + 1}"></b>
             to <b th:text="${((requestedPageSize ?: 10) * ((page ?: 1) - 1)) + (actualPageSize ?: 10)}"></b>
             of <b th:text="${totalUsers}"></b> results</p>
+        </div>
     </main>
 </body>
 
