@@ -44,6 +44,8 @@ jobs:
     needs: ash
     if: always()
     steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: ash_output
@@ -54,16 +56,20 @@ jobs:
         run: |
           set -euo pipefail
 
-          echo "Checking ASH findings against the configured severity threshold from .ash/ash.yaml..."
-          echo "Contents of .ash/ash_output:"
-          find .ash/ash_output -type f 2>/dev/null || true
+          repo_root="${{ github.workspace }}"
+          config_path="$repo_root/.ash/ash.yaml"
+          output_dir="$repo_root/.ash/ash_output"
 
-          if [ ! -f .ash/ash.yaml ]; then
+          echo "Checking ASH findings against the configured severity threshold from $config_path..."
+          echo "Contents of $output_dir:"
+          find "$output_dir" -type f 2>/dev/null || true
+
+          if [ ! -f "$config_path" ]; then
             echo "⚠️  No .ash/ash.yaml found; skipping threshold-based verification."
             exit 0
           fi
 
-          threshold_raw=$(grep -E '^[[:space:]]*severity_threshold:[[:space:]]*(ALL|LOW|MEDIUM|HIGH|CRITICAL)[[:space:]]*$' .ash/ash.yaml | head -n 1 | sed -E 's/.*severity_threshold:[[:space:]]*//; s/[[:space:]]*$//' || true)
+          threshold_raw=$(grep -E '^[[:space:]]*severity_threshold:[[:space:]]*(ALL|LOW|MEDIUM|HIGH|CRITICAL)[[:space:]]*$' "$config_path" | head -n 1 | sed -E 's/.*severity_threshold:[[:space:]]*//; s/[[:space:]]*$//' || true)
           threshold="${threshold_raw^^}"
           if [ -z "$threshold" ]; then
             echo "⚠️  Could not determine severity threshold from .ash/ash.yaml; defaulting to CRITICAL."
@@ -85,9 +91,9 @@ jobs:
           echo "Configured threshold: $threshold"
 
           summary_reports=(
-            ".ash/ash_output/reports/ash.summary.md"
-            ".ash/ash_output/reports/ash.summary.txt"
-            ".ash/ash_output/reports/ash.html"
+            "$output_dir/reports/ash.summary.md"
+            "$output_dir/reports/ash.summary.txt"
+            "$output_dir/reports/ash.html"
           )
 
           found_summary=0
@@ -156,18 +162,19 @@ jobs:
           if [ "$found_summary" -eq 0 ]; then
             echo "ℹ️  No ASH summary report found; falling back to SARIF-based threshold evaluation."
 
-            sarif_files=$(find .ash/ash_output -name "*.sarif" -type f 2>/dev/null)
+            sarif_files=$(find "$output_dir" -name "*.sarif" -type f 2>/dev/null)
             if [ -z "$sarif_files" ]; then
               echo "ℹ️  No SARIF files found - ASH did not produce a report to evaluate."
               exit 0
             fi
 
-            python3 - "$threshold" <<'PY'
+            python3 - "$threshold" "$output_dir" <<'PY'
                 import glob
                 import json
                 import sys
 
                 threshold = sys.argv[1].upper()
+                output_dir = sys.argv[2]
                 qualifying_levels = {
                     "ALL": {"error", "warning", "note", "none"},
                     "LOW": {"error", "warning", "note"},
@@ -178,7 +185,7 @@ jobs:
                 qualifying = qualifying_levels.get(threshold, {"error"})
 
                 count = 0
-                for sarif_path in sorted(glob.glob(".ash/ash_output/**/*.sarif", recursive=True)):
+                for sarif_path in sorted(glob.glob(f"{output_dir}/**/*.sarif", recursive=True)):
                     with open(sarif_path, encoding="utf-8") as handle:
                         data = json.load(handle)
                     for run in data.get("runs", []):
