@@ -140,7 +140,7 @@
                                         <dd class="govuk-summary-list__value">
                                             <th:block th:each="office, iterStat : ${offices.value}">
                                                 <span th:text="${office.address?.formattedAddress ?: 'Unknown'}"></span>
-                                                (<span class="govuk-visually-hidden">Office account number: </span><span th:text="${office.code}"></span>)
+                                                (<span class="govuk-visually-hidden" th:text="${uiLabels.officeAccountNumber} + ': '">Office account number: </span><span th:text="${office.code}"></span>)
                                                 <br th:if="${!iterStat.last}" />
                                             </th:block>
                                         </dd>

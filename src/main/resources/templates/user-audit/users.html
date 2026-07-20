@@ -189,8 +189,8 @@
                     <!-- User Type Filter -->
                     <div class="govuk-!-padding-top-2">
                         <div class="govuk-form-group">
-                            <label class="govuk-label govuk-label--s" for="userTypeFilter">
-                                User Type
+                            <label class="govuk-label govuk-label--s" for="userTypeFilter" th:text="${uiLabels.userType}">
+                                User type
                             </label>
                             <select class="govuk-select" id="userTypeFilter" name="selectedUserType">
                                 <option value="ALL">All user types</option>
