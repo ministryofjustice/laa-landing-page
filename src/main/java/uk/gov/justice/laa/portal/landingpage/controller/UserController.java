@@ -1035,7 +1035,8 @@ public class UserController {
                 }
             }
         } else {
-            log.error("No user attribute was present in request. User not added to model.");
+            log.warn("No user attribute was present in request. Redirecting to /admin/users.");
+            return "redirect:/admin/users";
         }
 
         model.addAttribute("isMultiFirmUser", isMultiFirmUser != null ? isMultiFirmUser : false);
