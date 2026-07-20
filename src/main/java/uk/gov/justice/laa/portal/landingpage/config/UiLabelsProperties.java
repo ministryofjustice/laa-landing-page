@@ -8,37 +8,26 @@ import lombok.Data;
 /**
  * Central configuration for UI labels and terminology used across Thymeleaf templates.
  *
- * <p>This class provides a single location to define and update labels that appear in the UI,
- * ensuring consistency across all pages and eliminating duplication of hardcoded strings in
- * templates.</p>
+ * Provides a single location to define and update labels, ensuring consistency across all
+ * pages and eliminating duplicated hardcoded strings in templates.
  *
- * <h2>How to add a new label</h2>
- * <ol>
- *   <li>Add a field with a sensible default value to this class.</li>
- *   <li>Add the corresponding property to {@code ui-labels.properties} using the
- *       {@code app.ui.labels.*} prefix.</li>
- *   <li>Reference it in Thymeleaf templates via the {@code uiLabels} model attribute,
- *       e.g. {@code th:text="${uiLabels.officeAccountNumber}"}.</li>
- * </ol>
+ * HOW TO ADD A NEW LABEL
+ *   1. Add a field with a sensible default value to this class.
+ *   2. Add the corresponding property to ui-labels.properties using the app.ui.labels.* prefix.
+ *   3. Reference it in templates via the uiLabels model attribute, e.g. th:text="${uiLabels.fieldName}".
  *
- * <h2>Naming conventions</h2>
- * <ul>
- *   <li>Java fields: {@code camelCase} (e.g. {@code officeAccountNumber})</li>
- *   <li>Properties file keys: {@code kebab-case} under {@code app.ui.labels.*}
- *       (e.g. {@code app.ui.labels.office-account-number})</li>
- *   <li>Thymeleaf references: {@code ${uiLabels.fieldName}}
- *       (e.g. {@code ${uiLabels.officeAccountNumber}})</li>
- * </ul>
+ * NAMING CONVENTIONS
+ *   Java fields        : camelCase              e.g. officeAccountNumber
+ *   Properties keys    : kebab-case             e.g. app.ui.labels.office-account-number
+ *   Template references: ${uiLabels.fieldName}  e.g. ${uiLabels.officeAccountNumber}
  *
- * <h2>Fallback behaviour</h2>
- * <p>Every field must have a default value set as a field initialiser. If a property is missing
- * or not defined in the active environment, the default value is used automatically and no
- * error or warning is raised.</p>
+ * FALLBACK BEHAVIOUR
+ *   Every field must have a default value set as a field initialiser. If a property is missing
+ *   the default is used automatically.
  *
- * <h2>Environment-specific overrides</h2>
- * <p>Override any label in a profile-specific properties file (e.g.
- * {@code application-local.properties}, {@code application-test.properties}) using the same
- * {@code app.ui.labels.*} key.</p>
+ * ENVIRONMENT-SPECIFIC OVERRIDES
+ *   Override any label in a profile-specific properties file (e.g. application-local.properties)
+ *   using the same app.ui.labels.* key. No code changes required in consuming templates.
  */
 @Configuration
 @ConfigurationProperties(prefix = "app.ui.labels")
