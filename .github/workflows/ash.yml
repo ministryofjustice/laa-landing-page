@@ -50,42 +50,151 @@ jobs:
           path: .ash/ash_output
 
       - name: Verify ASH findings
+        shell: bash
         run: |
-          set +e
-          echo "Checking for HIGH or CRITICAL findings in ASH output..."
+          set -euo pipefail
+
+          echo "Checking ASH findings against the configured severity threshold from .ash/ash.yaml..."
           echo "Contents of .ash/ash_output:"
-          find .ash/ash_output -type f 2>/dev/null
-          
-          # Check for SARIF files and look for error/warning level findings
-          SARIF_FILES=$(find .ash/ash_output -name "*.sarif" -type f 2>/dev/null)
-          if [ -z "$SARIF_FILES" ]; then
-            echo "ℹ️  No SARIF files found - ASH likely has no findings"
+          find .ash/ash_output -type f 2>/dev/null || true
+
+          if [ ! -f .ash/ash.yaml ]; then
+            echo "⚠️  No .ash/ash.yaml found; skipping threshold-based verification."
             exit 0
           fi
-          
-          echo -e "\n=== Processing SARIF reports ==="
-          FOUND_CRITICAL=0
-          
-          for SARIF_FILE in $SARIF_FILES; do
-            echo "Checking: $SARIF_FILE"
-            
-            # Count results with error level (CRITICAL) - be strict with the pattern
-            ERROR_COUNT=$(grep -o '"level" *: *"error"' "$SARIF_FILE" 2>/dev/null | wc -l)
-            
-            if [ "$ERROR_COUNT" -gt 0 ]; then
-              echo "❌ Found $ERROR_COUNT CRITICAL (error level) findings in $SARIF_FILE"
-              FOUND_CRITICAL=1
-            else
-              echo "✅ No CRITICAL findings in $SARIF_FILE"
+
+          threshold_raw=$(grep -E '^[[:space:]]*severity_threshold:[[:space:]]*(ALL|LOW|MEDIUM|HIGH|CRITICAL)[[:space:]]*$' .ash/ash.yaml | head -n 1 | sed -E 's/.*severity_threshold:[[:space:]]*//; s/[[:space:]]*$//' || true)
+          threshold="${threshold_raw^^}"
+          if [ -z "$threshold" ]; then
+            echo "⚠️  Could not determine severity threshold from .ash/ash.yaml; defaulting to CRITICAL."
+            threshold="CRITICAL"
+          fi
+
+          case "$threshold" in
+            ALL) min_rank=0 ;;
+            LOW) min_rank=1 ;;
+            MEDIUM) min_rank=2 ;;
+            HIGH) min_rank=3 ;;
+            CRITICAL) min_rank=4 ;;
+            *)
+              echo "⚠️  Unsupported threshold '$threshold'; defaulting to CRITICAL."
+              min_rank=4
+              ;;
+          esac
+
+          echo "Configured threshold: $threshold"
+
+          summary_reports=(
+            ".ash/ash_output/reports/ash.summary.md"
+            ".ash/ash_output/reports/ash.summary.txt"
+            ".ash/ash_output/reports/ash.html"
+          )
+
+          found_summary=0
+          for summary in "${summary_reports[@]}"; do
+            if [ -f "$summary" ]; then
+              found_summary=1
+              echo "Using report: $summary"
+              python3 - "$summary" "$threshold" <<'PY'
+                import sys
+                from pathlib import Path
+
+                summary_path = Path(sys.argv[1])
+                threshold = sys.argv[2].upper()
+
+                lines = summary_path.read_text(encoding='utf-8', errors='ignore').splitlines()
+                rows = []
+
+                in_table = False
+                for line in lines:
+                    stripped = line.strip()
+                    if not stripped.startswith("|"):
+                        continue
+                    if "Scanner" in stripped and "Result" in stripped and "Threshold" in stripped:
+                        in_table = True
+                        continue
+                    if not in_table:
+                        continue
+                    if stripped.startswith("| ---"):
+                        continue
+                    if stripped.count("|") < 3:
+                        continue
+
+                    parts = [part.strip() for part in stripped.strip("|").split("|")]
+                    if len(parts) < 11:
+                        continue
+                    if parts[0].lower() == "scanner":
+                        continue
+
+                    rows.append(parts)
+
+                failures = []
+                for parts in rows:
+                    actionable = parts[8] if len(parts) > 8 else "0"
+                    try:
+                        actionable_count = int(actionable)
+                    except ValueError:
+                        actionable_count = 0
+                    if actionable_count > 0:
+                        failures.append((parts[0], actionable))
+
+                if failures:
+                    print(f"❌ Found {len(failures)} scanner(s) with actionable findings above the configured threshold {threshold}:")
+                    for scanner, actionable in failures:
+                        print(f"  - {scanner}: {actionable} actionable finding(s)")
+                    sys.exit(1)
+
+                if rows:
+                    print(f"✅ No scanners reported actionable findings above the configured threshold {threshold}.")
+                else:
+                    print("ℹ️  No scanner rows found in the summary report.")
+              PY
+              exit $?
             fi
           done
-          
-          if [ "$FOUND_CRITICAL" -eq 1 ]; then
-            echo -e "\n❌ Pipeline failed: CRITICAL security findings detected"
-            exit 1
-          else
-            echo -e "\n✅ ASH scan passed - no CRITICAL findings"
-            exit 0
+
+          if [ "$found_summary" -eq 0 ]; then
+            echo "ℹ️  No ASH summary report found; falling back to SARIF-based threshold evaluation."
+
+            sarif_files=$(find .ash/ash_output -name "*.sarif" -type f 2>/dev/null)
+            if [ -z "$sarif_files" ]; then
+              echo "ℹ️  No SARIF files found - ASH did not produce a report to evaluate."
+              exit 0
+            fi
+
+            python3 - "$threshold" <<'PY'
+                import glob
+                import json
+                import sys
+
+                threshold = sys.argv[1].upper()
+                qualifying_levels = {
+                    "ALL": {"error", "warning", "note", "none"},
+                    "LOW": {"error", "warning", "note"},
+                    "MEDIUM": {"error", "warning"},
+                    "HIGH": {"error"},
+                    "CRITICAL": {"error"},
+                }
+                qualifying = qualifying_levels.get(threshold, {"error"})
+
+                count = 0
+                for sarif_path in sorted(glob.glob(".ash/ash_output/**/*.sarif", recursive=True)):
+                    with open(sarif_path, encoding="utf-8") as handle:
+                        data = json.load(handle)
+                    for run in data.get("runs", []):
+                        for result in run.get("results", []):
+                            if result.get("suppressions"):
+                                continue
+                            level = str(result.get("level") or "note").lower()
+                            if level in qualifying:
+                                count += 1
+
+                if count > 0:
+                    print(f"❌ Found {count} finding(s) above the configured threshold {threshold}.")
+                    sys.exit(1)
+
+                print(f"✅ No findings above the configured threshold {threshold}.")
+            PY
           fi
 
   syft-image-scan:
