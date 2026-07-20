@@ -30,7 +30,7 @@ jobs:
       config: .ash/ash.yaml
       fail-on-findings: true
       collect-junit-xml-report: false
-      collect-sarif-report: true
+      collect-sarif-report: false
       install-grype: true
       install-syft: true
       install-opengrep: true
