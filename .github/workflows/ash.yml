@@ -154,7 +154,7 @@ jobs:
                     print(f"✅ No scanners reported actionable findings above the configured threshold {threshold}.")
                 else:
                     print("ℹ️  No scanner rows found in the summary report.")
-              PY
+            PY
               exit $?
             fi
           done
