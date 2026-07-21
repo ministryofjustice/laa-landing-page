@@ -37,7 +37,7 @@
             <p class="govuk-body">You can:</p>
             
             <ul class="govuk-list govuk-list--bullet">
-                <li><a class="govuk-link" th:href="@{'/admin/silas-administration/roles/create'}">create another role</a></li>
+                <li><a class="govuk-link" th:href="@{/admin/silas-administration/roles/create(appFilter=${appFilter})}">create another role</a></li>
             </ul>
 
             <a class="govuk-button" data-module="govuk-button" th:href="@{'/admin/silas-administration?tab=roles'}">

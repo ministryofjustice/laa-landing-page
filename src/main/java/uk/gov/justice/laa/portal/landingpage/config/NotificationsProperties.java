@@ -24,5 +24,7 @@ public class NotificationsProperties {
     private String revokeFirmAccessEmailTemplate;
     @NotEmpty
     private String userAccessChangeEmailTemplate;
+    @NotEmpty
+    private String existingUserEmailTemplate;
 
 }

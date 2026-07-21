@@ -700,9 +700,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
 
         // Continue through firm selection
         manageUsersPage.clickContinueLink();
-
-        // Select office using the new office account number locator
-        manageUsersPage.checkSelectedOffices(List.of(officeAccountNumber));
+        manageUsersPage.checkSelectedOffices(List.of("Automation Office 1, City1, 12345 (Office account number: THREE)"));
         manageUsersPage.clickContinueLink();
 
         manageUsersPage.clickConfirmButton();

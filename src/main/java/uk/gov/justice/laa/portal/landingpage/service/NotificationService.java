@@ -25,6 +25,7 @@ public class NotificationService {
     private static final String REFERENCE_TEMPLATE_ADD_MF_PROFILE = "laa-portal-notice-of-delegate-firm-access-%s";
     private static final String REFERENCE_TEMPLATE_REVOKE_FIRM_ACCESS = "laa-portal-notice-of-revoke-firm-access-%s";
     private static final String REFERENCE_TEMPLATE_ACCESS_CHANGE = "laa-portal-notice-of-access-change-%s";
+    private static final String REFERENCE_TEMPLATE_EXISTING_USER = "laa-portal-notice-of-existing-user-%s";
     private static final String USER_NAME = "name";
     private static final String INVITATION_URL = "invitationURL";
     private static final String PORTAL_URL = "portalURL";
@@ -107,6 +108,22 @@ public class NotificationService {
         log.info("User access change notification sent for User ID: {}", userProfileId);
     }
 
+
+    public void notifyExistingUser(UUID userProfileId, String firstName, String email) {
+        log.info("Sending existing user notification for User: {}", userProfileId);
+        if (null != email) {
+            emailService.sendMail(
+                    email,
+                    notificationProperties.getExistingUserEmailTemplate(),
+                    Map.of("first_name", firstName, "email", email, "portal_url", notificationProperties.getPortalUrl()),
+                    String.format(
+                            REFERENCE_TEMPLATE_EXISTING_USER,
+                            firstName
+                    )
+            );
+            log.info("Existing user notification sent for User ID: {}", userProfileId);
+        }
+    }
 
     public Map<String, String> addProperties(String username, String invitationUrl) {
 

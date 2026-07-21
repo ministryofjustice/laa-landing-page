@@ -99,6 +99,7 @@ import uk.gov.justice.laa.portal.landingpage.techservices.ChangeAccountEnabledRe
 import uk.gov.justice.laa.portal.landingpage.techservices.RegisterUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
+import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesUser;
 
 /**
  * userService
@@ -930,6 +931,7 @@ public class UserService {
                 .map(appRole -> mapper.map(appRole, AppRoleDto.class)).collect(Collectors.toList());
     }
 
+    @Transactional
     public EntraUser createUser(EntraUserDto user, FirmDto firm, boolean isUserManager,
             String createdBy, boolean isMultiFirmUser) {
 
@@ -940,19 +942,115 @@ public class UserService {
                     registerUserResponse.getError().getErrors());
         }
 
-        RegisterUserResponse.CreatedUser createdUser = registerUserResponse.getData().getCreatedUser();
+        TechServicesUser createdUser = registerUserResponse.getData().getUser();
+        user.setEntraOid(createdUser.getId());
 
-        if (createdUser != null && user.getEmail().equalsIgnoreCase(createdUser.getMail())) {
-            user.setEntraOid(createdUser.getId());
-        } else {
-            throw new RuntimeException("User creation failed");
-        }
+        boolean isExistingUserResponse = registerUserResponse.getData().isUserFetched();
 
         EntraUser newUser = persistNewUser(user, firm, isUserManager, createdBy, isMultiFirmUser);
-        if (registerUserResponse.getData().getMessage().contains("User already exists") && !createdUser.isAccountEnabled()) {
-            enableUserOnRecreate(newUser);
+
+        if (isExistingUserResponse) {
+            handleExistingUserScenario(createdUser, newUser);
         }
         return newUser;
+    }
+
+    @Transactional
+    protected EntraUser syncUserStatus(TechServicesUser tsUser, EntraUser entraUser) {
+        // Populate details from Entra
+        entraUser.setEmail(tsUser.getEmail());
+        entraUser.setFirstName(tsUser.getGivenName());
+        entraUser.setLastName(tsUser.getSurname());
+
+        updateAccountActivationStatus(tsUser, entraUser);
+
+        if (tsUser.getIsMailOnly() != null) {
+            entraUser.setMailOnly(tsUser.getIsMailOnly());
+        }
+
+        refreshAndUpdatedUserProfilesStatus(entraUser.isEnabled(), entraUser.getInvitationStatus(), entraUser.getUserProfiles());
+
+        entraUser.setLastSyncedOn(LocalDateTime.now());
+
+        entraUserRepository.save(entraUser);
+
+        return entraUser;
+    }
+
+    private void updateAccountActivationStatus(TechServicesUser user, EntraUser entraUser) {
+        boolean hasInvitationStatus = user.getCustomSecurityAttributes() != null
+                && user.getCustomSecurityAttributes().getGuestUserStatus() != null
+                && user.getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress() != null;
+
+        if (hasInvitationStatus) {
+            InvitationStatus invitationStatus = user.getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress();
+            boolean shouldUpdateActivationStatus = !Objects.equals(entraUser.getInvitationStatus(), invitationStatus);
+
+            if (shouldUpdateActivationStatus) {
+                entraUser.setInvitationStatus(invitationStatus);
+                logger.info("Updated invitation status for user {} to: {}", entraUser.getEntraOid(), invitationStatus);
+            }
+        }
+    }
+
+    private void triggerResendActivation(EntraUser user) {
+        TechServicesApiResponse<SendUserVerificationEmailResponse> verificationResponse = techServicesClient.sendEmailVerification(mapper.map(user, EntraUserDto.class));
+        if (!verificationResponse.isSuccess()) {
+            logger.error("Failed to send verification email for user {}. Error: {}", user.getEntraOid(),
+                    verificationResponse.getError().getMessage()
+            );
+
+        }
+        logger.info("Resend activation email triggered for user: {}", user.getEntraOid());
+    }
+
+    private void handleExistingUserScenario(TechServicesUser respUser, EntraUser newUser) {
+
+        if (respUser == null) {
+            logger.error("Existing user response is null in handleExistingUserScenario for user: {}",
+                    newUser.getEntraOid());
+            return;
+        }
+
+        String deleteReason = null;
+        String verificationStatus = null;
+        Boolean accountEnabled = true;
+
+        if (respUser != null) {
+            accountEnabled = respUser.getAccountEnabled() != null ? respUser.getAccountEnabled() : true;
+            if (respUser.getCustomSecurityAttributes() != null && respUser.getCustomSecurityAttributes().getGuestUserStatus() != null) {
+                deleteReason = respUser.getCustomSecurityAttributes().getGuestUserStatus().getDisabledReason();
+                if (respUser.getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress() != null) {
+                    verificationStatus = respUser.getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress().name();
+                }
+            }
+            if (respUser.getVerification() != null && respUser.getVerification().getStatus() != null) {
+                verificationStatus = respUser.getVerification().getStatus();
+            }
+        }
+
+        // Scenario: Never activated OR awaiting verification -> trigger resend activation
+        if ((deleteReason != null && "ExpiredInvitation".equalsIgnoreCase(deleteReason))
+                || (verificationStatus != null && InvitationStatus.AWAITING_VERIFICATION.toString().equalsIgnoreCase(verificationStatus))) {
+            logger.info("Triggering resend activation for user: {}", newUser.getEntraOid());
+            syncUserStatus(respUser, newUser);
+            triggerResendActivation(newUser);
+            return;
+        }
+
+        // Scenario: Existing active user -> ensure enabled and send gov.notify email
+        if (!accountEnabled) {
+            enableUserOnRecreate(newUser);
+        }
+
+        try {
+            notificationService.notifyExistingUser(newUser.getId(), newUser.getFirstName(), newUser.getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send existing user notification for user {}", newUser.getId(), e);
+        }
+
+        // Sync status fields from TS user
+        syncUserStatus(respUser, newUser);
     }
 
     private void enableUserOnRecreate(EntraUser newUser) {
@@ -981,6 +1079,7 @@ public class UserService {
         entraUser.setMultiFirmUser(isMultiFirmUser);
         entraUser.setEntraOid(newUser.getEntraOid());
         entraUser.setUserStatus(UserStatus.ACTIVE);
+        entraUser.setUserProfiles(Collections.emptySet());
 
         if (!isMultiFirmUser && firmDto.isSkipFirmSelection()) {
             logger.error("User with entra oid: {} is not a multi-firm user, firm selection can not be skipped",

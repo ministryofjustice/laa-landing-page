@@ -106,6 +106,7 @@ public class OfficeAssignmentTest extends BaseFrontEndTest {
                 + "account number: THREE)\") "
                 + ".govuk-summary-list__value").isVisible());
 
+
         userProfilePage.clickConfirmButton();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
