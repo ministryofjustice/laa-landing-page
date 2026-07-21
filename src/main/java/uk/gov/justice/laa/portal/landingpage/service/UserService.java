@@ -991,17 +991,25 @@ public class UserService {
     private void triggerResendActivation(EntraUser user) {
         TechServicesApiResponse<SendUserVerificationEmailResponse> verificationResponse = techServicesClient.sendEmailVerification(mapper.map(user, EntraUserDto.class));
         if (!verificationResponse.isSuccess()) {
-            throw new TechServicesClientException(verificationResponse.getError().getMessage(),
-                    verificationResponse.getError().getCode(),
-                    verificationResponse.getError().getErrors());
+            logger.error("Failed to send verification email for user {}. Error: {}", user.getEntraOid(),
+                    verificationResponse.getError().getMessage()
+            );
+
         }
         logger.info("Resend activation email triggered for user: {}", user.getEntraOid());
     }
 
     private void handleExistingUserScenario(TechServicesUser respUser, EntraUser newUser) {
+
+        if (respUser == null) {
+            logger.error("Existing user response is null in handleExistingUserScenario for user: {}",
+                    newUser.getEntraOid());
+            return;
+        }
+
         String deleteReason = null;
         String verificationStatus = null;
-        boolean accountEnabled = true;
+        Boolean accountEnabled = true;
 
         if (respUser != null) {
             accountEnabled = respUser.getAccountEnabled() != null ? respUser.getAccountEnabled() : true;
@@ -1018,9 +1026,7 @@ public class UserService {
 
         // Scenario: Never activated OR awaiting verification -> trigger resend activation
         if ((deleteReason != null && "ExpiredInvitation".equalsIgnoreCase(deleteReason))
-                || (verificationStatus != null && ("AwaitingVerification".equalsIgnoreCase(verificationStatus)
-                        || "awaiting_verification".equalsIgnoreCase(verificationStatus)
-                        || "pending".equalsIgnoreCase(verificationStatus)))) {
+                || (verificationStatus != null && InvitationStatus.AWAITING_VERIFICATION.toString().equalsIgnoreCase(verificationStatus))) {
             logger.info("Triggering resend activation for user: {}", newUser.getEntraOid());
             syncUserStatus(respUser, newUser);
             triggerResendActivation(newUser);
@@ -1032,7 +1038,11 @@ public class UserService {
             enableUserOnRecreate(newUser);
         }
 
-        notificationService.notifyExistingUser(newUser.getId(), newUser.getFirstName(), newUser.getEmail());
+        try {
+            notificationService.notifyExistingUser(newUser.getId(), newUser.getFirstName(), newUser.getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send existing user notification for user {}", newUser.getId(), e);
+        }
 
         // Sync status fields from TS user
         syncUserStatus(respUser, newUser);
