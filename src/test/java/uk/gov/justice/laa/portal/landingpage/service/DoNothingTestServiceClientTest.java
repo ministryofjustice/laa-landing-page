@@ -94,8 +94,8 @@ public class DoNothingTestServiceClientTest {
         assertThat(response).isNotNull();
         assertThat(response.isSuccess()).isTrue();
         assertThat(response.getData()).isNotNull();
-        assertThat(response.getData().getCreatedUser()).isNotNull();
-        assertThat(response.getData().getCreatedUser().getId()).isNotNull();
+        assertThat(response.getData().getUser()).isNotNull();
+        assertThat(response.getData().getUser().getId()).isNotNull();
         assertLogMessage("Register new user request received on Dummy Tech Services Client for user");
     }
 
