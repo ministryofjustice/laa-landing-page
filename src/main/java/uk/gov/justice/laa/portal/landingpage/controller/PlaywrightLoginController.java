@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
@@ -69,8 +70,11 @@ public class PlaywrightLoginController {
 
         EntraUserDto user = userService.getEntraUserByEmail(email).orElseThrow();
 
+        String[] userPermissions = Stream.concat(
+                Arrays.stream(Permission.ADMIN_PERMISSIONS),
+                Arrays.stream(Permission.DELEGATE_FIRM_ACCESS_PERMISSIONS)
+        ).toArray(String[]::new);
 
-        String[] userPermissions = Permission.ADMIN_PERMISSIONS;
 
         Set<SimpleGrantedAuthority> authorities = Arrays.stream(userPermissions)
                 .map(SimpleGrantedAuthority::new)
