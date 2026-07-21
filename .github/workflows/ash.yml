@@ -103,7 +103,7 @@ jobs:
               echo "Using report: $summary"
 
               if grep -Eq '^\| .*\| .*\| .*\| .*\| .*\| .*\| .*\| .*\| .*\| .*\| .*\|$' "$summary"; then
-                actionable_count=$(awk '
+                failed_rows=$(awk '
                   BEGIN { in_table=0 }
                   /\| Scanner / && /Result/ && /Threshold/ { in_table=1; next }
                   in_table && /^\| ---/ { next }
@@ -112,21 +112,24 @@ jobs:
                     if (length(cols[2]) > 0 && cols[2] ~ /^[[:space:]]*scanner[[:space:]]*$/) {
                       next
                     }
-                    if (length(cols[10]) > 0) {
-                      gsub(/^[[:space:]]+|[[:space:]]+$/, "", cols[10])
-                      if (cols[10] ~ /^[0-9]+$/ && cols[10] > 0) {
-                        print cols[10]
-                      }
+                    result=""
+                    if (length(cols[11]) > 0) {
+                      result = cols[11]
+                      gsub(/^[[:space:]]+|[[:space:]]+$/, "", result)
+                    }
+                    if (result == "FAILED") {
+                      print cols[2]
                     }
                   }
-                ' "$summary" | paste -sd+ - | bc 2>/dev/null || true)
+                ' "$summary")
 
-                if [ -n "$actionable_count" ] && [ "$actionable_count" -gt 0 ]; then
-                  echo "❌ Found actionable findings above the configured threshold $threshold in $summary"
+                if [ -n "$failed_rows" ]; then
+                  echo "❌ ASH report shows failed scanners:"
+                  echo "$failed_rows"
                   exit 1
                 fi
 
-                echo "✅ No actionable findings above the configured threshold $threshold were reported."
+                echo "✅ No scanner rows in the ASH report were marked as FAILED."
               else
                 echo "ℹ️  Summary report format was not recognized; continuing without failing."
               fi
