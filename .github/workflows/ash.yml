@@ -102,23 +102,32 @@ jobs:
               found_summary=1
               echo "Using report: $summary"
 
-              if grep -Eq '^\| .*\| .*\| .*\| .*\| .*\| .*\| .*\| .*\| .*\| .*\| .*\|$' "$summary"; then
+              if grep -Eq '^[[:space:]]*[|│┃].*$' "$summary"; then
                 failed_rows=$(awk '
-                  BEGIN { in_table=0 }
-                  /\| Scanner / && /Result/ && /Threshold/ { in_table=1; next }
-                  in_table && /^\| ---/ { next }
-                  in_table && /^\|/ {
-                    split($0, cols, "|")
-                    if (length(cols[2]) > 0 && cols[2] ~ /^[[:space:]]*scanner[[:space:]]*$/) {
-                      next
+                  function trim(s) {
+                    sub(/^[[:space:]]+/, "", s)
+                    sub(/[[:space:]]+$/, "", s)
+                    return s
+                  }
+                  BEGIN { in_table=0; result_idx=0; scanner_idx=0 }
+                  /Scanner/ && /Result/ && /Threshold/ {
+                    in_table=1
+                    n=split($0, cols, /[|│┃]+/)
+                    for (i=1; i<=n; i++) {
+                      key=trim(cols[i])
+                      if (key == "Result") result_idx=i
+                      if (key == "Scanner") scanner_idx=i
                     }
-                    result=""
-                    if (length(cols[11]) > 0) {
-                      result = cols[11]
-                      gsub(/^[[:space:]]+|[[:space:]]+$/, "", result)
+                    next
+                  }
+                  in_table && /^[[:space:]]*[-+]/ { next }
+                  in_table && /^[[:space:]]*[|│┃]/ {
+                    n=split($0, cols, /[|│┃]+/)
+                    for (i=1; i<=n; i++) {
+                      cols[i]=trim(cols[i])
                     }
-                    if (result == "FAILED") {
-                      print cols[2]
+                    if (scanner_idx > 0 && result_idx > 0 && cols[result_idx] == "FAILED") {
+                      print cols[scanner_idx]
                     }
                   }
                 ' "$summary")
