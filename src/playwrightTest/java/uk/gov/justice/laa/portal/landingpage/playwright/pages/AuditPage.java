@@ -375,6 +375,7 @@ public class AuditPage {
         assertThat(deletedUserRow).isVisible();
         assertThat(deletedUserRow.locator("td").nth(1)).hasText(email);
     }
+
     private Locator getDeletedUserRowByEmail(String email) {
         return deletedUsersTable
                 .locator("tbody tr")

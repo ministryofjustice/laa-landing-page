@@ -404,6 +404,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         // Verify deleted user appears in the audit table
         auditPage.assertDeletedUserDisplayed(email);
     }
+
     @Test
     @DisplayName("Only admin users should able to create new user")
     void testUserPrivilegesToCreateUser() {
@@ -917,13 +918,16 @@ public class ManageUsersTest extends BaseFrontEndTest {
     void delegateFirmAccessToNewMultiFirmUser() {
         final String firmCode = "90001";
 
+        final List<String> services = List.of(
+                "Test LAA App Four"
+        );
+
         final List<String> roles = List.of(
-                TestRole.EXTERNAL_USER_MANAGER.roleName
+                "Test LAA App Four Role One Access"
         );
 
         final List<String> offices = List.of(
-                "Automation Office 1, City1, 12345 "
-                        + "(Office account number: THREE)"
+                "THREE"
         );
 
         ManageUsersPage manageUsersPage =
@@ -938,11 +942,14 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickConfirmNewUserButton();
         manageUsersPage.clickGoBackToManageUsers();
 
+        // A multi-firm user without a firm should not appear in Manage Your Users
+        manageUsersPage.searchAndVerifyUserNotExists(email);
+
         // Begin the Delegate Access workflow
         manageUsersPage.verifyDelegateAccessButtonVisible();
         manageUsersPage.clickDelegateAccess();
 
-        // Enter the existing multi-firm user's email
+        // Enter the new multi-firm user's email address
         manageUsersPage.verifyDelegateAccessProfilePageVisible();
         manageUsersPage.enterDelegateAccessEmail(email);
         manageUsersPage.clickDelegateAccessContinue();
@@ -952,30 +959,43 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.searchAndSelectFirmByCode(firmCode);
         manageUsersPage.clickContinueFirmSelectPage();
 
-        // Select the role to delegate
+        // Select the service
+        manageUsersPage.checkSelectedServices(services);
+        manageUsersPage.clickContinueUserDetails();
+
+        // Select the role
         manageUsersPage.checkSelectedRoles(roles);
         manageUsersPage.clickContinueUserDetails();
 
-        // Select the offices the user can access
+        // Select the office
         manageUsersPage.checkSelectedOffices(offices);
         manageUsersPage.clickContinueUserDetails();
 
-        // Confirm the details on the Check Your Answers page
+        // Confirm the delegated access on the Check Your Answers page
         manageUsersPage.clickConfirmButton();
-
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
         assertTrue(
-                page.locator(
-                        ".govuk-panel__title:has-text('Access and permissions updated')"
-                ).isVisible(),
-                "Access and permissions updated confirmation should be displayed"
+                page.locator(".govuk-panel__title")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("Setup complete"))
+                        .isVisible(),
+                "Setup complete confirmation should be displayed"
+        );
+
+        assertTrue(
+                page.locator(".govuk-panel__body")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("access and permissions have been added"))
+                        .isVisible(),
+                "Access and permissions confirmation message should be displayed"
         );
 
         // Return to Manage Your Users
         manageUsersPage.clickGoBackToManageUsers();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-        // The user should now appear because firm access has been delegated
+        // The user should now appear because access to a firm has been delegated
         assertTrue(
                 manageUsersPage.searchAndVerifyUser(email),
                 "Multi-firm user should appear after firm access has been delegated"
@@ -985,7 +1005,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickUserLink(email);
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-        // Verify the user remains configured as multi-firm
+        // Verify the user is still configured as multi-firm
         manageUsersPage.assertMultiFirmAccess("Yes");
 
         // Verify the delegated role
@@ -996,10 +1016,10 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickOfficesTab();
 
         assertTrue(
-                page.locator(
-                        ".govuk-summary-card:has-text("
-                                + "'Automation Office 1, City1, 12345')"
-                ).isVisible(),
+                page.locator(".govuk-summary-card")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("Automation Office 1, City1, 12345"))
+                        .isVisible(),
                 "Delegated office should be displayed against the user"
         );
     }

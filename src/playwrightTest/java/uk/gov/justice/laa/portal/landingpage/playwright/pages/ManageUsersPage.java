@@ -360,13 +360,25 @@ public class ManageUsersPage {
         page.locator("#offices .govuk-link:has-text(\"Change\")").click();
     }
 
-    public void checkSelectedOffices(List<String> offices) {
+    public void checkSelectedOffices(List<String> officeAccountNumbers) {
+        for (String officeAccountNumber : officeAccountNumbers) {
+            Locator officeCheckbox = page.locator(".govuk-checkboxes__item")
+                    .filter(new Locator.FilterOptions()
+                            .setHasText("Office account number: " + officeAccountNumber))
+                    .locator("input[name='offices']")
+                    .first();
 
-        for (String office : offices) {
-            Locator checkbox = page.getByLabel(office);
-            if (!checkbox.isChecked()) {
-                checkbox.check();
+            officeCheckbox.waitFor(
+                    new Locator.WaitForOptions()
+                            .setState(WaitForSelectorState.VISIBLE)
+                            .setTimeout(10000)
+            );
+
+            if (!officeCheckbox.isChecked()) {
+                officeCheckbox.check();
             }
+
+            assertThat(officeCheckbox).isChecked();
         }
     }
 
