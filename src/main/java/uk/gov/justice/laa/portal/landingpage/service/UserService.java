@@ -1079,6 +1079,16 @@ public class UserService {
                     entraUserDto.getEntraOid()));
         }
 
+        // Validate that any requested offices belong to the specified firm
+        if (offices != null && !offices.isEmpty()) {
+            boolean allOfficesBelongToFirm = offices.stream()
+                    .allMatch(o -> o.getFirm() != null && o.getFirm().getId().equals(firm.getId()));
+            if (!allOfficesBelongToFirm) {
+                logger.error("Attempt to assign offices not belonging to firm: {} for user: {}", firm.getId(), entraUserDto.getEntraOid());
+                throw new RuntimeException("Office assignment is not permitted");
+            }
+        }
+
         Set<AppRole> appRoles = null;
         if (!(appRoleDtos == null || appRoleDtos.isEmpty())) {
             appRoles = appRoleDtos.stream().map(appRoleDto -> appRoleRepository
