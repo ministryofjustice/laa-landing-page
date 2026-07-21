@@ -791,6 +791,38 @@ class UserServiceTest {
     }
 
     @Test
+    void recreateUserWithDifferentName() {
+        // assign role
+        TechServicesUser createdUser = new TechServicesUser();
+        createdUser.setId("id");
+        createdUser.setMail("test.user@email.com");
+        createdUser.setGivenName("New Name");
+        createdUser.setSurname("New Surname");
+        TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
+                .success(RegisterUserResponse.builder().user(createdUser)
+                        .responseType(RegisterUserResponse.ResponseType.VERIFIED)
+                        .message("User created successfully. An email has been sent to the user with their activation code")
+                        .build());
+        when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
+        when(techServicesClient.enableUser(any(EntraUserDto.class))).thenReturn(TechServicesApiResponse.success(null));
+        when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class))).thenAnswer(returnsFirstArg());
+
+        EntraUserDto entraUserDto = new EntraUserDto();
+        entraUserDto.setFirstName("Test");
+        entraUserDto.setLastName("User");
+        entraUserDto.setEmail("test.user@email.com");
+        FirmDto firm = FirmDto.builder().name("Firm").build();
+        EntraUser result = userService.createUser(entraUserDto, firm, true, "admin", false);
+        assertThat(result).isNotNull();
+        assertThat(result.getFirstName()).isEqualTo("New Name");
+        assertThat(result.getLastName()).isEqualTo("New Surname");
+        assertThat(result.getUserProfiles()).isNotEmpty();
+        assertThat(result.getUserProfiles()).hasSize(1);
+        verify(mockEntraUserRepository, times(1)).saveAndFlush(any());
+        verify(techServicesClient, times(1)).registerNewUser(any(EntraUserDto.class));
+    }
+
+    @Test
     void getUserAppRolesByUserId_returnsRoleDetails_whenServicePrincipalAndRoleExist() {
         // Arrange
         UUID userProfileId = UUID.randomUUID();

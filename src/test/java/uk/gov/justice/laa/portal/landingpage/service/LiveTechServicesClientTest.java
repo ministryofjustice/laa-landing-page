@@ -711,7 +711,7 @@ public class LiveTechServicesClientTest {
         liveTechServicesClient.registerNewUser(user);
 
         assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
-        assertLogMessage(Level.INFO, "New User creation by Tech Services is successful for entra user: id");
+        assertLogMessage(Level.INFO, "New User creation by Tech Services is successful for entra user: 12345678-1234-1234-1234-123456789012");
         verify(restClient, times(1)).post();
     }
 
@@ -775,7 +775,7 @@ public class LiveTechServicesClientTest {
         liveTechServicesClient.registerNewUser(user);
 
         assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
-        assertLogMessage(Level.INFO, "Tech Services request successful, user exists in Entra  for entra user: id");
+        assertLogMessage(Level.INFO, "Tech Services request successful, user exists in Entra  for entra user: 12345678-1234-1234-1234-123456789012");
         verify(restClient, times(1)).post();
     }
 
@@ -814,7 +814,7 @@ public class LiveTechServicesClientTest {
         liveTechServicesClient.registerNewUser(user);
 
         assertLogMessage(Level.INFO, "Sending create new user request with security groups to tech services:");
-        assertLogMessage(Level.INFO, "New User creation by Tech Services is successful for entra user: id");
+        assertLogMessage(Level.INFO, "New User creation by Tech Services is successful for entra user: 12345678-1234-1234-1234-123456789012");
         verify(restClient, times(1)).post();
     }
 

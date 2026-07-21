@@ -64,7 +64,7 @@
                                     <label class="govuk-label govuk-checkboxes__label" th:for="${office.id}">
                                         <label class="govuk-label govuk-checkboxes__label">
                                             <span th:text="${office.address?.formattedAddress ?: 'Unknown'}"></span>
-                                            (<span th:text="${office.code}"></span>)
+                                            (<span class="govuk-visually-hidden">Office account number: </span><span th:text="${office.code}"></span>)
                                         </label>
                                     </label>
                                 </div>

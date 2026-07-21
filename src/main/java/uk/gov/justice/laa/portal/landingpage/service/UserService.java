@@ -957,6 +957,11 @@ public class UserService {
 
     @Transactional
     protected EntraUser syncUserStatus(TechServicesUser tsUser, EntraUser entraUser) {
+        // Populate details from Entra
+        entraUser.setEmail(tsUser.getEmail());
+        entraUser.setFirstName(tsUser.getGivenName());
+        entraUser.setLastName(tsUser.getSurname());
+
         updateAccountActivationStatus(tsUser, entraUser);
 
         if (tsUser.getIsMailOnly() != null) {
