@@ -360,11 +360,21 @@ public class ManageUsersPage {
         page.locator("#offices .govuk-link:has-text(\"Change\")").click();
     }
 
-    public void checkSelectedOffices(List<String> officeAccountNumbers) {
-        for (String officeAccountNumber : officeAccountNumbers) {
+    public void checkSelectedOffices(List<String> offices) {
+        for (String office : offices) {
+            String officeAccountNumber = office;
+
+            if (office.contains("Office account number:")) {
+                officeAccountNumber = office
+                        .substring(office.indexOf("Office account number:")
+                                + "Office account number:".length())
+                        .replace(")", "")
+                        .trim();
+            }
+
             Locator officeCheckbox = page.locator(".govuk-checkboxes__item")
                     .filter(new Locator.FilterOptions()
-                            .setHasText("Office account number: " + officeAccountNumber))
+                            .setHasText(officeAccountNumber))
                     .locator("input[name='offices']")
                     .first();
 
@@ -382,11 +392,21 @@ public class ManageUsersPage {
         }
     }
 
-    public void uncheckSelectedOffices(List<String> officeAccountNumbers) {
-        for (String officeAccountNumber : officeAccountNumbers) {
+    public void uncheckSelectedOffices(List<String> offices) {
+        for (String office : offices) {
+            String officeAccountNumber = office;
+
+            if (office.contains("Office account number:")) {
+                officeAccountNumber = office
+                        .substring(office.indexOf("Office account number:")
+                                + "Office account number:".length())
+                        .replace(")", "")
+                        .trim();
+            }
+
             Locator officeCheckbox = page.locator(".govuk-checkboxes__item")
                     .filter(new Locator.FilterOptions()
-                            .setHasText("Office account number: " + officeAccountNumber))
+                            .setHasText(officeAccountNumber))
                     .locator("input[name='offices']")
                     .first();
 
