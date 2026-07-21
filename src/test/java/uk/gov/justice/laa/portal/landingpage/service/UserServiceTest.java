@@ -804,7 +804,6 @@ class UserServiceTest {
                         .message("User created successfully. An email has been sent to the user with their activation code")
                         .build());
         when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
-        when(techServicesClient.enableUser(any(EntraUserDto.class))).thenReturn(TechServicesApiResponse.success(null));
         when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class))).thenAnswer(returnsFirstArg());
 
         EntraUserDto entraUserDto = new EntraUserDto();
