@@ -338,27 +338,80 @@ public class ManageUsersTest extends BaseFrontEndTest {
     @DisplayName("Verify offices tab is populated and exists for an external user")
     void editUserOfficesAndVerify() {
 
-        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
-        manageUsersPage.searchForUser("playwright-firmusermanager@playwrighttest.com");
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        manageUsersPage.searchForUser(
+                "playwright-firmusermanager@playwrighttest.com"
+        );
+
         manageUsersPage.clickFirstUserLink();
         manageUsersPage.clickOfficesTab();
         manageUsersPage.clickOfficeChange();
-        assertTrue(page.url().contains("/admin/users/edit/"));
-        List<String> offices = List.of("Automation Office 1, City1, 12345 (Office account number: THREE)",
-                "Automation Office 2, City2, 23456 (Office account number: FOUR)");
-        manageUsersPage.checkSelectedOffices(offices);
+
+        assertTrue(
+                page.url().contains("/admin/users/edit/"),
+                "User office edit page should be displayed"
+        );
+
+        final List<String> officeAccountNumbers = List.of(
+                "THREE",
+                "FOUR"
+        );
+
+        manageUsersPage.checkSelectedOffices(officeAccountNumbers);
         manageUsersPage.clickContinueUserDetails();
         manageUsersPage.clickConfirmButton();
+
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-        assertTrue(page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible());
+
+        assertTrue(
+                page.locator(
+                        ".govuk-panel__title:has-text('Access and permissions updated')"
+                ).isVisible(),
+                "Access and permissions updated confirmation should be displayed"
+        );
+
         manageUsersPage.clickGoBackToManageUsers();
-        manageUsersPage.searchForUser("playwright-firmusermanager@playwrighttest.com");
+
+        manageUsersPage.searchForUser(
+                "playwright-firmusermanager@playwrighttest.com"
+        );
+
         manageUsersPage.clickFirstUserLink();
         manageUsersPage.clickOfficesTab();
-        assertTrue(page.locator(".govuk-table__header:has-text('Office Address')").isVisible());
-        assertTrue(page.locator(".govuk-table__header:has-text('Account number')").isVisible());
-        assertTrue(page.locator(".govuk-summary-card:has-text('Automation Office 1, City1, 12345')").isVisible());
-        assertTrue(page.locator(".govuk-summary-card:has-text('Automation Office 2, City2, 23456')").isVisible());
+
+        assertTrue(
+                page.locator(".govuk-table__header")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("Office Address"))
+                        .isVisible(),
+                "Office Address heading should be displayed"
+        );
+
+        assertTrue(
+                page.locator(".govuk-table__header")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("Account number"))
+                        .isVisible(),
+                "Account number heading should be displayed"
+        );
+
+        assertTrue(
+                page.locator(".govuk-summary-card")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("Automation Office 1, City1, 12345"))
+                        .isVisible(),
+                "Automation Office 1 should be displayed"
+        );
+
+        assertTrue(
+                page.locator(".govuk-summary-card")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("Automation Office 2, City2, 23456"))
+                        .isVisible(),
+                "Automation Office 2 should be displayed"
+        );
     }
 
     @Test
@@ -505,38 +558,94 @@ public class ManageUsersTest extends BaseFrontEndTest {
     @Test
     @DisplayName("Verify external user admin can view and edit/remove external user offices")
     void verifyExternalUserEditOffices() {
-        List<TestUser> users = List.of(TestUser.EXTERNAL_USER_ADMIN, TestUser.EXTERNAL_USER_MANAGER);
+        final List<TestUser> users = List.of(
+                TestUser.EXTERNAL_USER_ADMIN,
+                TestUser.EXTERNAL_USER_MANAGER
+        );
+
+        final List<String> officeAccountNumbers = List.of(
+                "THREE",
+                "FOUR"
+        );
+
+        final List<String> officeAccountNumbersToRemove = List.of(
+                "THREE"
+        );
+
         for (TestUser user : users) {
-            ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(user);
+            ManageUsersPage manageUsersPage =
+                    loginAndGetManageUsersPage(user);
+
+            // Add both offices
             manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
             manageUsersPage.clickOfficesTab();
             manageUsersPage.clickOfficeChange();
-            List<String> offices = List.of("Automation Office 1, City1, 12345 (Office account number: THREE)",
-                    "Automation Office 2, City2, 23456 (Office account number: FOUR)");
-            manageUsersPage.checkSelectedOffices(offices);
+
+            manageUsersPage.checkSelectedOffices(officeAccountNumbers);
             manageUsersPage.clickContinueLink();
             manageUsersPage.clickConfirmButton();
+
             manageUsersPage.clickGoBackToManageUsers();
             page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+            // Verify both offices were added
             manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
             manageUsersPage.clickOfficesTab();
-            assertTrue(page.locator(".govuk-summary-card:has-text('Automation Office 1, City1, 12345')").isVisible());
-            assertTrue(page.locator(".govuk-summary-card:has-text('Automation Office 2, City2, 23456')").isVisible());
+
+            assertTrue(
+                    page.locator(".govuk-summary-card")
+                            .filter(new Locator.FilterOptions()
+                                    .setHasText("Automation Office 1, City1, 12345"))
+                            .isVisible(),
+                    "Automation Office 1 should be displayed"
+            );
+
+            assertTrue(
+                    page.locator(".govuk-summary-card")
+                            .filter(new Locator.FilterOptions()
+                                    .setHasText("Automation Office 2, City2, 23456"))
+                            .isVisible(),
+                    "Automation Office 2 should be displayed"
+            );
+
+            // Return and remove Office 1
             manageUsersPage.clickGoBackToManageUsers();
             page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
             manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
             manageUsersPage.clickOfficesTab();
             manageUsersPage.clickOfficeChange();
-            List<String> updatedOffices = List.of("Automation Office 1, City1, 12345 (Office account number: THREE)");
-            manageUsersPage.uncheckSelectedOffices(updatedOffices);
+
+            manageUsersPage.uncheckSelectedOffices(
+                    officeAccountNumbersToRemove
+            );
+
             manageUsersPage.clickContinueLink();
             manageUsersPage.clickConfirmButton();
+
             manageUsersPage.clickGoBackToManageUsers();
             page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+            // Verify Office 1 was removed and Office 2 remains
             manageUsersPage.clickExternalUserLink("Playwright FirmUserManager");
             manageUsersPage.clickOfficesTab();
-            assertTrue(page.locator(".govuk-summary-card:has-text('Automation Office 1, City1, 12345')").isHidden());
-            assertTrue(page.locator(".govuk-summary-card:has-text('Automation Office 2, City2, 23456')").isVisible());
+
+            assertTrue(
+                    page.locator(".govuk-summary-card")
+                            .filter(new Locator.FilterOptions()
+                                    .setHasText("Automation Office 1, City1, 12345"))
+                            .isHidden(),
+                    "Automation Office 1 should no longer be displayed"
+            );
+
+            assertTrue(
+                    page.locator(".govuk-summary-card")
+                            .filter(new Locator.FilterOptions()
+                                    .setHasText("Automation Office 2, City2, 23456"))
+                            .isVisible(),
+                    "Automation Office 2 should remain displayed"
+            );
+
             manageUsersPage.clickAndConfirmSignOut();
         }
     }
@@ -544,20 +653,23 @@ public class ManageUsersTest extends BaseFrontEndTest {
     @Test
     @DisplayName("Verify External User Manager can Manage Access for incomplete users")
     public void verifyExternalUserManagerIncompleteUsers() {
-        String firmCode = "90001";
+        final String firmCode = "90001";
         final String service = "Test LAA App Four";
         final String role = "Test LAA App Four Role One Access";
-        final String office = "Automation Office 1, City1, 12345 (THREE)";
+        final String officeAccountNumber = "THREE";
 
-        ManageUsersPage globalAdminManageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+        ManageUsersPage globalAdminManageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
 
-        final String email = globalAdminManageUsersPage.createProviderAdminUserWithNonMultiFirmAccess(firmCode);
+        final String email =
+                globalAdminManageUsersPage.createProviderAdminUserWithNonMultiFirmAccess(firmCode);
 
         page.context().clearCookies();
         page.evaluate("() => window.localStorage.clear()");
         page.evaluate("() => window.sessionStorage.clear()");
 
-        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
 
         assertTrue(
                 manageUsersPage.searchAndVerifyUser(email),
@@ -576,32 +688,40 @@ public class ManageUsersTest extends BaseFrontEndTest {
 
         manageUsersPage.clickManageAccess();
 
+        // Select service
         manageUsersPage.checkSelectedServices(List.of(service));
         manageUsersPage.clickContinueLink();
 
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
+        // Select role
         manageUsersPage.checkSelectedRoles(List.of(role));
         manageUsersPage.clickContinueLink();
 
+        // Continue through firm selection
         manageUsersPage.clickContinueLink();
-        manageUsersPage.checkSelectedOffices(List.of("Automation Office 1, City1, 12345 (Office account number: "
-                + "THREE)"));
+
+        // Select office using the new office account number locator
+        manageUsersPage.checkSelectedOffices(List.of(officeAccountNumber));
         manageUsersPage.clickContinueLink();
 
         manageUsersPage.clickConfirmButton();
-
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
         assertTrue(
-                page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible(),
+                page.locator(
+                        ".govuk-panel__title:has-text('Access and permissions updated')"
+                ).isVisible(),
                 "Access and permissions updated confirmation should be visible"
         );
 
         manageUsersPage.clickGoBackToManageUsers();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-        manageUsersPage.refreshUntilStatusVisible(email, "ACTIVATION PENDING");
+        manageUsersPage.refreshUntilStatusVisible(
+                email,
+                "ACTIVATION PENDING"
+        );
     }
 
     private void openExternalUser(ManageUsersPage manageUsersPage, String userName) {
@@ -823,9 +943,9 @@ public class ManageUsersTest extends BaseFrontEndTest {
         final String service = "Test LAA App Four";
         final String role = "Test LAA App Four Role One Access";
 
-        final List<String> offices = List.of(
-                "Automation Office 1, City1, 12345 (Office account number: THREE)",
-                "Automation Office 2, City2, 23456 (Office account number: FOUR)"
+        final List<String> officeAccountNumbers = List.of(
+                "THREE",
+                "FOUR"
         );
 
         ManageUsersPage manageUsersPage =
@@ -865,8 +985,8 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.checkSelectedRoles(List.of(role));
         manageUsersPage.clickContinueLink();
 
-        // Select offices
-        manageUsersPage.checkSelectedOffices(offices);
+        // Select offices using the new office account number locator
+        manageUsersPage.checkSelectedOffices(officeAccountNumbers);
         manageUsersPage.clickContinueLink();
 
         // Confirm the access assignment
@@ -899,16 +1019,18 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickOfficesTab();
 
         assertTrue(
-                page.locator(
-                        ".govuk-summary-card:has-text('Automation Office 1, City1, 12345')"
-                ).isVisible(),
+                page.locator(".govuk-summary-card")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("Automation Office 1, City1, 12345"))
+                        .isVisible(),
                 "Automation Office 1 should be assigned"
         );
 
         assertTrue(
-                page.locator(
-                        ".govuk-summary-card:has-text('Automation Office 2, City2, 23456')"
-                ).isVisible(),
+                page.locator(".govuk-summary-card")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("Automation Office 2, City2, 23456"))
+                        .isVisible(),
                 "Automation Office 2 should be assigned"
         );
     }

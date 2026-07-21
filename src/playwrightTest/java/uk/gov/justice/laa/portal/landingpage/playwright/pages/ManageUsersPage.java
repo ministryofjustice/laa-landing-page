@@ -382,13 +382,25 @@ public class ManageUsersPage {
         }
     }
 
-    public void uncheckSelectedOffices(List<String> offices) {
+    public void uncheckSelectedOffices(List<String> officeAccountNumbers) {
+        for (String officeAccountNumber : officeAccountNumbers) {
+            Locator officeCheckbox = page.locator(".govuk-checkboxes__item")
+                    .filter(new Locator.FilterOptions()
+                            .setHasText("Office account number: " + officeAccountNumber))
+                    .locator("input[name='offices']")
+                    .first();
 
-        for (String office : offices) {
-            Locator checkbox = page.getByLabel(office);
-            if (checkbox.isChecked()) {
-                checkbox.uncheck();
+            officeCheckbox.waitFor(
+                    new Locator.WaitForOptions()
+                            .setState(WaitForSelectorState.VISIBLE)
+                            .setTimeout(10000)
+            );
+
+            if (officeCheckbox.isChecked()) {
+                officeCheckbox.uncheck();
             }
+
+            assertThat(officeCheckbox).not().isChecked();
         }
     }
 
