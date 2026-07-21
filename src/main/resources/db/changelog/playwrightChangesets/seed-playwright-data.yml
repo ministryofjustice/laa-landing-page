@@ -36,6 +36,16 @@ databaseChangeLog:
         - sql:
             dbms: postgresql
             sql: "INSERT INTO user_profile_app_role(user_profile_id, app_role_id) VALUES ((SELECT up.id FROM user_profile up JOIN entra_user u ON up.entra_user_id = u.id WHERE u.email = 'playwright-globaladmin@playwrighttest.com'), (SELECT id FROM app_role where name = 'Global Admin'))"
+        - sql:
+                  dbms: postgresql
+                  sql: "INSERT INTO user_profile_app_role(user_profile_id, app_role_id) VALUES ((SELECT up.id FROM user_profile up JOIN entra_user u ON up.entra_user_id = u.id WHERE u.email = 'playwright-globaladmin@playwrighttest.com'), (SELECT id FROM app_role WHERE name = 'Multi-firm Delegation'))"
+        - sql:
+                        dbms: postgresql
+                        sql: "INSERT INTO user_profile_app_role(user_profile_id, app_role_id) VALUES ((SELECT up.id FROM user_profile up JOIN entra_user u ON up.entra_user_id = u.id WHERE u.email = 'playwright-globaladmin@playwrighttest.com'), (SELECT id FROM app_role WHERE name = 'Internal User Manager'))"
+                          # Assign Security Response role
+        - sql:
+                              dbms: postgresql
+                              sql: "INSERT INTO user_profile_app_role(user_profile_id, app_role_id) VALUES ((SELECT up.id FROM user_profile up JOIN entra_user u ON up.entra_user_id = u.id WHERE u.email = 'playwright-globaladmin@playwrighttest.com'), (SELECT id FROM app_role WHERE name = 'Security Response'))"
 
   # User with No Roles
   - changeSet:

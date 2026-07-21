@@ -40,6 +40,7 @@ public class ManageUsersPage {
 
     private final Locator searchInputByName;
     private final Locator searchButton;
+    private final Locator delegateAccessButton;
 
     private final Locator emailInput;
     private final Locator firstNameInput;
@@ -75,6 +76,16 @@ public class ManageUsersPage {
     private final Locator firstNameInvalidCharsError;
     private final Locator lastNameInvalidCharsError;
     private final Locator selectUserTypeError;
+    private final Locator convertToMultiFirmLink;
+    private final Locator convertToMultiFirmYesRadio;
+    private final Locator convertToMultiFirmNoRadio;
+    private final Locator multiFirmConversionSuccessAlert;
+    private final Locator multiFirmUserNotification;
+    private final Locator viewAllFirmsLink;
+    private final Locator delegateAccessHeading;
+    private final Locator delegateAccessEmailInput;
+    private final Locator delegateAccessContinueButton;
+    private final Locator delegateAccessFirmSelectionHeading;
 
 
     public ManageUsersPage(Page page, int port) {
@@ -105,6 +116,9 @@ public class ManageUsersPage {
 
         this.continueButton = page.locator("button.govuk-button:has-text('Continue')");
         this.manageAccessButton = page.locator("button.govuk-button:has-text('Manage access')");
+        this.delegateAccessButton = page.locator(
+                "button.govuk-button[onclick=\"location.href='/admin/multi-firm/user/add/profile'\"]"
+        );
         this.cancelLink = page.locator("a.govuk-link:has-text('Cancel')");
 
         this.multiFirmYesRadio = page.locator("input#multiFirmYes");
@@ -131,13 +145,71 @@ public class ManageUsersPage {
         this.firstNameInvalidCharsError = page.locator("div.govuk-error-message:has-text('First name must not contain numbers or special characters')");
         this.lastNameInvalidCharsError = page.locator("div.govuk-error-message:has-text('Last name must not contain numbers or special characters')");
         this.selectUserTypeError = page.locator("div.govuk-error-message:has-text('Select a user type')");
+        this.multiFirmConversionSuccessAlert = page.locator(
+                ".moj-alert--success"
+        ).filter(
+                new Locator.FilterOptions()
+                        .setHasText("User has been successfully converted to a multi-firm user")
+        );
+
+        this.multiFirmUserNotification = page.locator(
+                "p.govuk-body"
+        ).filter(
+                new Locator.FilterOptions()
+                        .setHasText("This user is set up as a multi-firm user.")
+        );
+
+        this.viewAllFirmsLink = page.locator(
+                ".govuk-summary-list__row"
+        ).filter(
+                new Locator.FilterOptions()
+                        .setHasText("Multi-firm access")
+        ).locator(
+                "a.govuk-link[href*='/admin/users?search=']"
+        ).filter(
+                new Locator.FilterOptions()
+                        .setHasText("View all firms for")
+        );
+        this.convertToMultiFirmLink = page.locator(
+                "a.govuk-link[href*='/convert-to-multi-firm']"
+        ).filter(
+                new Locator.FilterOptions().setHasText("Convert to multi-firm")
+        );
+
+        this.convertToMultiFirmYesRadio =
+                page.locator("input#convertToMultiFirmYes");
+
+        this.convertToMultiFirmNoRadio =
+                page.locator("input#convertToMultiFirmNo");
+
+        this.delegateAccessHeading = page.locator("h1.govuk-heading-l")
+                .filter(new Locator.FilterOptions()
+                        .setHasText("Giving access to third-party users"));
+
+        this.delegateAccessEmailInput = page.locator("input#email");
+
+        this.delegateAccessContinueButton = page.locator(
+                "form[action='/admin/multi-firm/user/add/profile'] button[type='submit']"
+        );
+
+        this.delegateAccessFirmSelectionHeading = page.locator("h1.govuk-heading-l")
+                .filter(new Locator.FilterOptions()
+                        .setHasText("Select the user's firm"));
+
+
     }
+
+
 
 
     // Header check
     public void assertHeaderVisible() {
         assertThat(header).isVisible();
         assertThat(header).hasText("Manage your users");
+    }
+
+    public Page getPage() {
+        return page;
     }
 
     // Create user
@@ -634,6 +706,111 @@ public class ManageUsersPage {
         }
 
         assertStatusVisible(expectedStatus);
+    }
+
+    public void clickConvertToMultiFirm() {
+        assertThat(convertToMultiFirmLink).isVisible();
+        assertThat(convertToMultiFirmLink).hasText("Convert to multi-firm");
+
+        convertToMultiFirmLink.click();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void assertConvertToMultiFirmPageVisible() {
+        Locator heading = page.locator("h1.govuk-fieldset__heading")
+                .filter(
+                        new Locator.FilterOptions()
+                                .setHasText("Allow multi-firm access")
+                );
+
+        assertThat(heading).isVisible();
+        assertThat(convertToMultiFirmYesRadio).isVisible();
+        assertThat(convertToMultiFirmNoRadio).isVisible();
+    }
+
+    public void assertConvertToMultiFirmDefaultsToNo() {
+        assertThat(convertToMultiFirmNoRadio).isChecked();
+        assertThat(convertToMultiFirmYesRadio).not().isChecked();
+    }
+
+    public void selectConvertToMultiFirm(boolean convertToMultiFirm) {
+        if (convertToMultiFirm) {
+            convertToMultiFirmYesRadio.check();
+        } else {
+            convertToMultiFirmNoRadio.check();
+        }
+    }
+
+    public void assertMultiFirmAccess(String expectedValue) {
+        assertRow("Multi-firm access", expectedValue);
+    }
+
+    public void assertMultiFirmConversionSuccessful() {
+        assertThat(multiFirmConversionSuccessAlert).isVisible();
+        assertMultiFirmAccess("Yes");
+        assertThat(multiFirmUserNotification).isVisible();
+        assertThat(viewAllFirmsLink).isVisible();
+    }
+
+    public void assertUserNotConvertedToMultiFirm() {
+        page.waitForURL(
+                "**/admin/users/manage/**",
+                new Page.WaitForURLOptions().setTimeout(5000)
+        );
+
+        Locator multiFirmRow = convertToMultiFirmLink.locator(
+                "xpath=ancestor::div[contains(@class, 'govuk-summary-list__row')]"
+        );
+
+        assertThat(multiFirmRow).isVisible();
+        assertThat(
+                multiFirmRow.locator(".govuk-summary-list__value")
+        ).hasText("No");
+
+        assertThat(convertToMultiFirmLink).isVisible();
+    }
+
+    public void verifyDelegateAccessProfilePageVisible() {
+        page.waitForURL(
+                "**/admin/multi-firm/user/add/profile",
+                new Page.WaitForURLOptions().setTimeout(5000)
+        );
+
+        assertThat(delegateAccessHeading).isVisible();
+        assertThat(delegateAccessEmailInput).isVisible();
+        assertThat(delegateAccessContinueButton).isVisible();
+    }
+
+    public void enterDelegateAccessEmail(String email) {
+        assertThat(delegateAccessEmailInput).isVisible();
+        delegateAccessEmailInput.fill(email);
+    }
+
+    public void clickDelegateAccessContinue() {
+        assertThat(delegateAccessContinueButton).isVisible();
+        delegateAccessContinueButton.click();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void verifyDelegateAccessButtonVisible() {
+        assertThat(delegateAccessButton).isVisible();
+    }
+
+    public void verifyDelegateAccessFirmSelectionPageVisible() {
+        page.waitForURL(
+                "**/admin/multi-firm/user/add/profile/select/internalUserFirm",
+                new Page.WaitForURLOptions().setTimeout(5000)
+        );
+
+        assertThat(delegateAccessFirmSelectionHeading).isVisible();
+        assertThat(firmSearchInput).isVisible();
+        assertThat(continueButtonFirmSelection).isVisible();
+    }
+
+    public void clickDelegateAccess() {
+        assertThat(delegateAccessButton).isVisible();
+        delegateAccessButton.click();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
     }
 
 }

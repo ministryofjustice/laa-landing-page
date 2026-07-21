@@ -11,7 +11,7 @@ import com.microsoft.playwright.options.WaitForSelectorState;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
+import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Locator;
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 import com.microsoft.playwright.options.LoadState;
@@ -362,29 +362,48 @@ public class ManageUsersTest extends BaseFrontEndTest {
     }
 
     @Test
-    @DisplayName("Delete a new provider admin user with non multi-firm access")
-    void deleteUserAndVerify() {
+    @DisplayName("Deleted provider admin user is recorded in the audit screen")
+    void deleteUserAndVerifyInAudit() {
 
-        //Create new user
-        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+        // Create new user
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
         manageUsersPage.clickCreateUser();
-        final String email = manageUsersPage.fillInUserDetails(true);
+
+        final String email =
+                manageUsersPage.fillInUserDetails(true);
+
         manageUsersPage.selectMultiFirmAccess(false);
         manageUsersPage.searchAndSelectFirmByCode("90001");
         manageUsersPage.clickContinueFirmSelectPage();
         manageUsersPage.clickConfirmNewUserButton();
         manageUsersPage.clickGoBackToManageUsers();
+
         assertTrue(manageUsersPage.searchAndVerifyUser(email));
 
         // Delete and confirm newly created user
         manageUsersPage.clickManageUser();
         manageUsersPage.confirmAndDeleteUser();
 
-        //Verify user deleted
+        // Verify user no longer exists in Manage Users
         manageUsersPage.clickGoBackToManageUsers();
         manageUsersPage.searchAndVerifyUserNotExists(email);
-    }
 
+        // Open the audit page
+        Page page = manageUsersPage.getPage();
+        AuditPage auditPage = new AuditPage(page, port);
+
+        // Open deleted users
+        auditPage.clickViewAllDeletedUsers();
+        auditPage.assertDeletedUsersPageDisplayed();
+
+        // Search for deleted user
+        auditPage.searchForDeletedUser(email);
+
+        // Verify deleted user appears in the audit table
+        auditPage.assertDeletedUserDisplayed(email);
+    }
     @Test
     @DisplayName("Only admin users should able to create new user")
     void testUserPrivilegesToCreateUser() {
@@ -757,5 +776,231 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickExternalUserLink(userName);
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         manageUsersPage.assertStatusVisible("NO ROLES ASSIGNED");
+    }
+
+    @Test
+    @DisplayName("Convert an existing user to multi-firm access")
+    void convertExistingUserToMultiFirmAccess() throws InterruptedException {
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        final String email = "externaluser-incomplete2@playwrighttest.com";
+
+        manageUsersPage.searchForUser(email);
+        manageUsersPage.clickUserLink(email);
+        manageUsersPage.assertUserNotConvertedToMultiFirm();
+        manageUsersPage.clickConvertToMultiFirm();
+        manageUsersPage.assertConvertToMultiFirmPageVisible();
+        manageUsersPage.assertConvertToMultiFirmDefaultsToNo();
+        manageUsersPage.selectConvertToMultiFirm(true);
+        manageUsersPage.clickConfirmButton();
+        manageUsersPage.assertMultiFirmConversionSuccessful();
+    }
+
+    @Test
+    @DisplayName("Do not convert an existing user to multi-firm access when No is selected")
+    void doNotConvertExistingUserToMultiFirmAccess() {
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        final String email = "externaluser-incomplete3@playwrighttest.com";
+
+        manageUsersPage.searchForUser(email);
+        manageUsersPage.clickUserLink(email);
+        manageUsersPage.assertUserNotConvertedToMultiFirm();
+        manageUsersPage.clickConvertToMultiFirm();
+        manageUsersPage.assertConvertToMultiFirmPageVisible();
+        manageUsersPage.selectConvertToMultiFirm(false);
+        manageUsersPage.clickConfirmButton();
+        manageUsersPage.assertUserNotConvertedToMultiFirm();
+    }
+
+    @Test
+    @DisplayName("Create a non-multi-firm user and assign roles and offices using Manage Access")
+    void createNonMultiFirmUserAndAssignRolesAndOffices() {
+        final String firmCode = "90001";
+        final String service = "Test LAA App Four";
+        final String role = "Test LAA App Four Role One Access";
+
+        final List<String> offices = List.of(
+                "Automation Office 1, City1, 12345 (Office account number: THREE)",
+                "Automation Office 2, City2, 23456 (Office account number: FOUR)"
+        );
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        // Create a standard provider user without default admin roles
+        manageUsersPage.clickCreateUser();
+        final String email = manageUsersPage.fillInUserDetails(false);
+
+        // Create as non-multi-firm and associate the user with a firm
+        manageUsersPage.selectMultiFirmAccess(false);
+        manageUsersPage.searchAndSelectFirmByCode(firmCode);
+        manageUsersPage.clickContinueFirmSelectPage();
+
+        manageUsersPage.clickConfirmNewUserButton();
+        manageUsersPage.clickGoBackToManageUsers();
+
+        // Verify the newly created user appears
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(email),
+                "New non-multi-firm user should appear in Manage Users"
+        );
+
+        // Open the newly created user
+        manageUsersPage.clickUserLink(email);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.assertMultiFirmAccess("No");
+        manageUsersPage.verifyManageAccessButtonVisible();
+        manageUsersPage.clickManageAccess();
+
+        // Select service
+        manageUsersPage.checkSelectedServices(List.of(service));
+        manageUsersPage.clickContinueLink();
+
+        // Select role
+        manageUsersPage.checkSelectedRoles(List.of(role));
+        manageUsersPage.clickContinueLink();
+
+        // Select offices
+        manageUsersPage.checkSelectedOffices(offices);
+        manageUsersPage.clickContinueLink();
+
+        // Confirm the access assignment
+        manageUsersPage.clickConfirmButton();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        assertTrue(
+                page.locator(
+                        ".govuk-panel__title:has-text('Access and permissions updated')"
+                ).isVisible(),
+                "Access and permissions updated confirmation should be displayed"
+        );
+
+        // Reopen the updated user
+        manageUsersPage.clickGoBackToManageUsers();
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(email),
+                "Updated user should still appear in Manage Users"
+        );
+
+        manageUsersPage.clickUserLink(email);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Verify assigned role
+        manageUsersPage.clickServicesTab();
+        manageUsersPage.verifySelectedUserServices(List.of(role));
+
+        // Verify assigned offices
+        manageUsersPage.clickOfficesTab();
+
+        assertTrue(
+                page.locator(
+                        ".govuk-summary-card:has-text('Automation Office 1, City1, 12345')"
+                ).isVisible(),
+                "Automation Office 1 should be assigned"
+        );
+
+        assertTrue(
+                page.locator(
+                        ".govuk-summary-card:has-text('Automation Office 2, City2, 23456')"
+                ).isVisible(),
+                "Automation Office 2 should be assigned"
+        );
+    }
+
+    @Test
+    @DisplayName("Delegate firm access to a newly created multi-firm user")
+    void delegateFirmAccessToNewMultiFirmUser() {
+        final String firmCode = "90001";
+
+        final List<String> roles = List.of(
+                TestRole.EXTERNAL_USER_MANAGER.roleName
+        );
+
+        final List<String> offices = List.of(
+                "Automation Office 1, City1, 12345 "
+                        + "(Office account number: THREE)"
+        );
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        // Create a multi-firm provider user without assigning a firm
+        manageUsersPage.clickCreateUser();
+
+        final String email = manageUsersPage.fillInUserDetails(false);
+
+        manageUsersPage.selectMultiFirmAccess(true);
+        manageUsersPage.clickConfirmNewUserButton();
+        manageUsersPage.clickGoBackToManageUsers();
+
+        // Begin the Delegate Access workflow
+        manageUsersPage.verifyDelegateAccessButtonVisible();
+        manageUsersPage.clickDelegateAccess();
+
+        // Enter the existing multi-firm user's email
+        manageUsersPage.verifyDelegateAccessProfilePageVisible();
+        manageUsersPage.enterDelegateAccessEmail(email);
+        manageUsersPage.clickDelegateAccessContinue();
+
+        // Select the firm that is delegating access
+        manageUsersPage.verifyDelegateAccessFirmSelectionPageVisible();
+        manageUsersPage.searchAndSelectFirmByCode(firmCode);
+        manageUsersPage.clickContinueFirmSelectPage();
+
+        // Select the role to delegate
+        manageUsersPage.checkSelectedRoles(roles);
+        manageUsersPage.clickContinueUserDetails();
+
+        // Select the offices the user can access
+        manageUsersPage.checkSelectedOffices(offices);
+        manageUsersPage.clickContinueUserDetails();
+
+        // Confirm the details on the Check Your Answers page
+        manageUsersPage.clickConfirmButton();
+
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        assertTrue(
+                page.locator(
+                        ".govuk-panel__title:has-text('Access and permissions updated')"
+                ).isVisible(),
+                "Access and permissions updated confirmation should be displayed"
+        );
+
+        // Return to Manage Your Users
+        manageUsersPage.clickGoBackToManageUsers();
+
+        // The user should now appear because firm access has been delegated
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(email),
+                "Multi-firm user should appear after firm access has been delegated"
+        );
+
+        // Open the newly delegated user
+        manageUsersPage.clickUserLink(email);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Verify the user remains configured as multi-firm
+        manageUsersPage.assertMultiFirmAccess("Yes");
+
+        // Verify the delegated role
+        manageUsersPage.clickServicesTab();
+        manageUsersPage.verifySelectedUserServices(roles);
+
+        // Verify the delegated office
+        manageUsersPage.clickOfficesTab();
+
+        assertTrue(
+                page.locator(
+                        ".govuk-summary-card:has-text("
+                                + "'Automation Office 1, City1, 12345')"
+                ).isVisible(),
+                "Delegated office should be displayed against the user"
+        );
     }
 }
