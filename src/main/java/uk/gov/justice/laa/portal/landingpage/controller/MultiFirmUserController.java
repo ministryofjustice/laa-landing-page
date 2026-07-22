@@ -961,7 +961,7 @@ public class MultiFirmUserController {
             Firm validationFirm = targetFirmId != null ? firmService.getById(UUID.fromString(targetFirmId)) : userProfile.getFirm();
             if (userProfile.getUserType() != UserType.INTERNAL) {
                 if (validationFirm == null || validationFirm.getOffices() == null
-                        || userOfficeDtos.stream().anyMatch(dto -> validationFirm.getOffices().stream().noneMatch(of -> of.getId().equals(dto.getId())))) {
+                        || userOfficeDtos.stream().anyMatch(requestedOffice -> validationFirm.getOffices().stream().noneMatch(of -> of.getId().equals(requestedOffice.getId())))) {
                     log.error(
                             "User does not have sufficient permissions to assign the selected offices: userId={}, attemptedOfficeIds={}",
                             userProfile.getId(),
