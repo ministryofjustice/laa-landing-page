@@ -2200,7 +2200,7 @@ class UserServiceTest {
 
         // entraUserRepository.findById should return an existing EntraUser
         EntraUser existing = EntraUser.builder().id(UUID.fromString(entraUserDto.getId())).build();
-        when(mockEntraUserRepository.findById(UUID.fromString(entraUserDto.getId()))).thenReturn(Optional.of(existing));
+//        when(mockEntraUserRepository.findById(UUID.fromString(entraUserDto.getId()))).thenReturn(Optional.of(existing));
 
         // Act & Assert
         assertThrows(RuntimeException.class,
@@ -5164,11 +5164,16 @@ class UserServiceTest {
             UserProfile existingProfile = UserProfile.builder().firm(existingFirm).build();
             entraUser.setUserProfiles(new HashSet<>(Set.of(existingProfile)));
 
-            Office office = Office.builder().id(UUID.randomUUID()).build();
+            UUID newFirmId = UUID.randomUUID();
+            FirmDto newFirmDto = FirmDto.builder().id(newFirmId).name("Test Firm").build();
+
+            UUID officeId = UUID.randomUUID();
+            Office office = Office.builder().id(officeId).firm(Firm.builder().id(newFirmId).build()).build();
             OfficeDto officeDto = new OfficeDto();
+            officeDto.setId(officeId);
+
             AppRole appRole = AppRole.builder().id(UUID.randomUUID()).name("role").build();
             AppRoleDto appRoleDto = AppRoleDto.builder().id(UUID.randomUUID().toString()).build();
-            FirmDto newFirmDto = FirmDto.builder().id(UUID.randomUUID()).name("Test Firm").build();
 
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
             when(officeRepository.findById(any())).thenReturn(Optional.ofNullable(office));
