@@ -1,7 +1,10 @@
 package uk.gov.justice.laa.portal.landingpage.config;
 
+import java.io.Serial;
+import java.io.Serializable;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.stereotype.Component;
 
 import lombok.Data;
 
@@ -10,10 +13,13 @@ import lombok.Data;
  * to all Thymeleaf templates via the {@code uiLabels} model attribute. See that file for
  * guidance on adding labels, naming conventions, and environment-specific overrides.
  */
-@Configuration
+@Component
 @ConfigurationProperties(prefix = "app.ui.labels")
 @Data
-public class UiLabelsProperties {
+public class UiLabelsProperties implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     /** Unique account number associated with a provider office. */
     private String officeAccountNumber = "Office account number";
