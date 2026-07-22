@@ -2174,6 +2174,40 @@ class UserServiceTest {
     }
 
     @Test
+    void addMultiFirmUserProfile_officeFromDifferentFirm_shouldThrow() {
+        // Arrange
+        UUID targetFirmId = UUID.randomUUID();
+        UUID otherFirmId = UUID.randomUUID();
+        UUID officeId = UUID.randomUUID();
+
+        EntraUserDto entraUserDto = new EntraUserDto();
+        entraUserDto.setId(UUID.randomUUID().toString());
+        entraUserDto.setEntraOid("entra-oid");
+        entraUserDto.setMultiFirmUser(true);
+
+        FirmDto firmDto = new FirmDto();
+        firmDto.setId(targetFirmId);
+
+        OfficeDto officeDto = new OfficeDto();
+        officeDto.setId(officeId);
+
+        // officeRepository.findById will return an Office that belongs to a different firm
+        Office otherOffice = Office.builder().id(officeId).firm(Firm.builder().id(otherFirmId).build()).build();
+        when(mockOfficeRepository.findById(officeId)).thenReturn(Optional.of(otherOffice));
+
+        // firmService returns the target firm
+        when(firmService.getById(targetFirmId)).thenReturn(Firm.builder().id(targetFirmId).build());
+
+        // entraUserRepository.findById should return an existing EntraUser
+        EntraUser existing = EntraUser.builder().id(UUID.fromString(entraUserDto.getId())).build();
+        when(mockEntraUserRepository.findById(UUID.fromString(entraUserDto.getId()))).thenReturn(Optional.of(existing));
+
+        // Act & Assert
+        assertThrows(RuntimeException.class,
+                () -> userService.addMultiFirmUserProfile(entraUserDto, firmDto, List.of(officeDto), null, "admin"));
+    }
+
+    @Test
     void isInternal_Ok() {
         UUID userId = UUID.randomUUID();
         Permission userPermission = Permission.VIEW_INTERNAL_USER;
