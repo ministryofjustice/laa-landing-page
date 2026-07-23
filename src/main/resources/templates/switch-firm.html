@@ -101,7 +101,7 @@
                         <th scope="col" class="govuk-table__header">
                             <button type="button" class="sort-button" data-sort="firmName"
                                 th:data-direction="${sort != null and sort == 'firmName' and direction == 'asc' ? 'desc' : 'asc'}">
-                                Firm name
+                                <span th:text="${uiLabels.firmName}">Firm name</span>
                                 <img th:if="${sort != null and sort == 'firmName' and direction == 'asc'}"
                                     th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="">
                                 <img th:if="${sort != null and sort == 'firmName' and direction == 'desc'}"
