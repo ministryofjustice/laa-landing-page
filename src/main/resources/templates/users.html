@@ -130,7 +130,10 @@
                                 <!-- Collapsible filter panel -->
                                 <div id="filter-panel" hidden>
                                     <div class="filter-panel-content">
-                                        <p class="govuk-body govuk-!-font-weight-bold govuk-!-margin-bottom-3">Filters</p>
+                                        <div class="filter-panel-header">
+                                            <p class="govuk-body govuk-!-font-weight-bold govuk-!-margin-bottom-0">Filters</p>
+                                        </div>
+                                        <div class="filter-panel-body">
                                         <div class="govuk-grid-row">
                                             <!-- User Type -->
                                             <div class="govuk-grid-column-one-half">
@@ -199,9 +202,10 @@
                                             </div>
                                         </div>
 
-                                        <button type="submit" class="govuk-button govuk-button--secondary govuk-!-margin-top-3 govuk-!-margin-bottom-1">
+                                        <button type="submit" class="govuk-button govuk-!-margin-top-3 govuk-!-margin-bottom-0">
                                             Apply filters
                                         </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -239,7 +243,6 @@
                     .search-card {
                         padding-right: 0px;
                         border-radius: 0;
-                        border-bottom: 1px solid #0b0c0c;
                     }
 
                     .search-card .govuk-fieldset__legend {
@@ -289,6 +292,22 @@
                         }
                     }
 
+
+                    .filter-panel-content {
+                        border: 1px solid #b1b4b6;
+                        margin-bottom: 0;
+                    }
+
+                    .filter-panel-header {
+                        background-color: #f3f2f1;
+                        padding: 10px 20px;
+                        border-bottom: 1px solid #b1b4b6;
+                    }
+
+                    .filter-panel-body {
+                        background-color: #ffffff;
+                        padding: 20px;
+                    }
 
                     .table-container {
                         width: 100%;
@@ -415,16 +434,10 @@
                     });
                 </script>
 
-        <form class="govuk-form-group">
+        <form class="govuk-form-group govuk-!-margin-top-4">
             <div class="table-container" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
                 <table class="govuk-table" data-id-prefix="users-"
                     style="table-layout: fixed; min-width: 768px; width: 100%;">
-                    <caption class="govuk-table__caption">
-                        User list
-                        <span class="govuk-visually-hidden">
-                            (column headers with buttons are sortable)
-                        </span>
-                    </caption>
                     <thead class="govuk-table__head">
                         <tr class="govuk-table__row">
                             <th scope="col" class="govuk-table__header"
