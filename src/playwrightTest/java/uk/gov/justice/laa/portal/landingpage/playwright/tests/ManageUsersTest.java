@@ -1053,48 +1053,87 @@ public class ManageUsersTest extends BaseFrontEndTest {
         ManageUsersPage manageUsersPage =
                 loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
 
-        // Create a multi-firm provider user without assigning a firm
-        manageUsersPage.clickCreateUser();
+        final String email =
+                manageUsersPage.createMultiFirmUserAndDelegateAccess(
+                        firmCode,
+                        services,
+                        roles,
+                        offices
+                );
 
-        final String email = manageUsersPage.fillInUserDetails(false);
+        assertTrue(
+                page.locator(".govuk-panel__title")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("Setup complete"))
+                        .isVisible(),
+                "Setup complete confirmation should be displayed"
+        );
 
-        manageUsersPage.selectMultiFirmAccess(true);
-        manageUsersPage.clickConfirmNewUserButton();
+        assertTrue(
+                page.locator(".govuk-panel__body")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("access and permissions have been added"))
+                        .isVisible(),
+                "Access and permissions confirmation message should be displayed"
+        );
+
         manageUsersPage.clickGoBackToManageUsers();
-
-        // A multi-firm user without a firm should not appear in Manage Your Users
-        manageUsersPage.searchAndVerifyUserNotExists(email);
-
-        // Begin the Delegate Access workflow
-        manageUsersPage.verifyDelegateAccessButtonVisible();
-        manageUsersPage.clickDelegateAccess();
-
-        // Enter the new multi-firm user's email address
-        manageUsersPage.verifyDelegateAccessProfilePageVisible();
-        manageUsersPage.enterDelegateAccessEmail(email);
-        manageUsersPage.clickDelegateAccessContinue();
-
-        // Select the firm that is delegating access
-        manageUsersPage.verifyDelegateAccessFirmSelectionPageVisible();
-        manageUsersPage.searchAndSelectFirmByCode(firmCode);
-        manageUsersPage.clickContinueFirmSelectPage();
-
-        // Select the service
-        manageUsersPage.checkSelectedServices(services);
-        manageUsersPage.clickContinueUserDetails();
-
-        // Select the role
-        manageUsersPage.checkSelectedRoles(roles);
-        manageUsersPage.clickContinueUserDetails();
-
-        // Select the office
-        manageUsersPage.checkSelectedOffices(offices);
-        manageUsersPage.clickContinueUserDetails();
-
-        // Confirm the delegated access on the Check Your Answers page
-        manageUsersPage.clickConfirmButton();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(email),
+                "Multi-firm user should appear after firm access has been delegated"
+        );
+
+        manageUsersPage.clickUserLink(email);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.assertMultiFirmAccess("Yes");
+
+        manageUsersPage.clickServicesTab();
+        manageUsersPage.verifySelectedUserServices(roles);
+
+        manageUsersPage.clickOfficesTab();
+
+        assertTrue(
+                page.locator(".govuk-summary-card")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("Automation Office 1, City1, 12345"))
+                        .isVisible(),
+                "Delegated office should be displayed against the user"
+        );
+    }
+
+    @Test
+    @DisplayName("Revoke delegated firm access from a multi-firm user")
+    void revokeDelegatedFirmAccessFromMultiFirmUser() {
+        final String firmCode = "90001";
+
+        final List<String> services = List.of(
+                "Test LAA App Four"
+        );
+
+        final List<String> roles = List.of(
+                "Test LAA App Four Role One Access"
+        );
+
+        final List<String> offices = List.of(
+                "THREE"
+        );
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        // Create the multi-firm user and delegate access to the firm
+        final String email =
+                manageUsersPage.createMultiFirmUserAndDelegateAccess(
+                        firmCode,
+                        services,
+                        roles,
+                        offices
+                );
+
+        // Verify the delegated access setup completed successfully
         assertTrue(
                 page.locator(".govuk-panel__title")
                         .filter(new Locator.FilterOptions()
@@ -1115,32 +1154,105 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickGoBackToManageUsers();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-        // The user should now appear because access to a firm has been delegated
+        // Verify the user is visible under the delegated firm
         assertTrue(
                 manageUsersPage.searchAndVerifyUser(email),
-                "Multi-firm user should appear after firm access has been delegated"
+                "Delegated multi-firm user should appear in Manage Users"
         );
 
-        // Open the newly delegated user
+        // Open the delegated user
         manageUsersPage.clickUserLink(email);
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-        // Verify the user is still configured as multi-firm
+        // Verify this is still a multi-firm user
         manageUsersPage.assertMultiFirmAccess("Yes");
 
-        // Verify the delegated role
-        manageUsersPage.clickServicesTab();
-        manageUsersPage.verifySelectedUserServices(roles);
+        // Verify and open the revoke-access workflow
+        manageUsersPage.verifyRevokeAccessLinkVisible();
+        manageUsersPage.clickRevokeAccess();
 
-        // Verify the delegated office
-        manageUsersPage.clickOfficesTab();
+        // Verify the confirmation screen
+        manageUsersPage.verifyRevokeAccessConfirmationPageVisible();
+
+        // Confirm that access should be revoked
+        manageUsersPage.selectRevokeAccessYes();
+        manageUsersPage.confirmRevokeAccess();
+
+        // The user should be returned to Manage Your Users with a success message
+        manageUsersPage.verifyAccessRevokedSuccessfully();
+
+        // The revoked profile should no longer appear under the current firm
+        manageUsersPage.searchAndVerifyUserNotExists(email);
+    }
+
+    @Test
+    @DisplayName("Filter Manage Users to display multi-firm users only")
+    void filterManageUsersByThirdPartyUsers() {
+        final String firmCode = "90001";
+
+        final List<String> services = List.of(
+                "Test LAA App Four"
+        );
+
+        final List<String> roles = List.of(
+                "Test LAA App Four Role One Access"
+        );
+
+        final List<String> offices = List.of(
+                "THREE"
+        );
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        // Create a standard non-multi-firm user
+        final String nonMultiFirmEmail =
+                manageUsersPage.createProviderAdminUserWithNonMultiFirmAccess(
+                        firmCode
+                );
+
+        // Create a multi-firm user and delegate access to the same firm
+        final String multiFirmEmail =
+                manageUsersPage.createMultiFirmUserAndDelegateAccess(
+                        firmCode,
+                        services,
+                        roles,
+                        offices
+                );
+
+        // Return to Manage Your Users
+        manageUsersPage.clickGoBackToManageUsers();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Apply the 3rd Party filter
+        manageUsersPage.selectThirdPartyUserFilter();
 
         assertTrue(
-                page.locator(".govuk-summary-card")
-                        .filter(new Locator.FilterOptions()
-                                .setHasText("Automation Office 1, City1, 12345"))
-                        .isVisible(),
-                "Delegated office should be displayed against the user"
+                page.url().contains("showMultiFirmUsers=true"),
+                "The 3rd Party filter should be applied"
+        );
+
+        // Verify all users displayed are third-party users
+        manageUsersPage.verifyOnlyThirdPartyUsersDisplayed();
+
+        // Verify the newly created multi-firm user is returned
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(multiFirmEmail),
+                "The multi-firm user should appear when the 3rd Party filter is selected"
+        );
+
+        assertTrue(
+                page.url().contains("showMultiFirmUsers=true"),
+                "The 3rd Party filter should remain applied after searching"
+        );
+
+        // Search again using the same filtered form.
+        // fill() replaces the previous email, so no separate clear is required.
+        manageUsersPage.searchAndVerifyUserNotExists(nonMultiFirmEmail);
+
+        assertTrue(
+                page.url().contains("showMultiFirmUsers=true"),
+                "The 3rd Party filter should remain applied when searching for a non-multi-firm user"
         );
     }
 }

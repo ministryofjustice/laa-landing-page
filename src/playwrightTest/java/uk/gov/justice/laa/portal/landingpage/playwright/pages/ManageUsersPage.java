@@ -30,63 +30,83 @@ public class ManageUsersPage {
     private final int port;
 
 
-    // Locators
+    // Page and navigation
     private final Locator header;
-    private final Locator createNewUserButton;
-    private final Locator confirmNewUserButton;
+    private final Locator notAuthorisedHeading;
     private final Locator signOutLink;
     private final Locator signOutConfirmButton;
-    private final Locator notAuthorisedHeading;
+    private final Locator goBackToManageYourUsersButton;
 
+    // Manage users search and filters
     private final Locator searchInputByName;
     private final Locator searchButton;
-    private final Locator delegateAccessButton;
+    private final Locator userFullNameLink;
+    private final Locator thirdPartyFilterCheckbox;
 
+    // Create user
+    private final Locator createNewUserButton;
     private final Locator emailInput;
     private final Locator firstNameInput;
     private final Locator lastNameInput;
-    private final Locator userFullNameLink;
-
     private final Locator providerUserRadio;
     private final Locator providerAdminRadio;
+    private final Locator confirmNewUserButton;
 
+    // Common controls
     private final Locator continueButton;
+    private final Locator confirmButton;
     private final Locator cancelLink;
 
+    // Multi-firm selection
     private final Locator multiFirmYesRadio;
     private final Locator multiFirmNoRadio;
     private final Locator continueButtonMultiFirm;
 
-    private final Locator confirmButton;
-    private final Locator goBackToManageYourUsersButton;
-    private final Locator manageAccessButton;
-
-    private final Locator deleteUserLink;
-    private final Locator confirmAndDeleteUserButton;
-    private final Locator deleteUserReasonRadioFirst;
-    private final Locator deleteUserMessageHeading;
-
+    // Firm selection
     private final Locator firmSearchInput;
     private final Locator firmSearchListbox;
     private final Locator firmOptionRows;
     private final Locator continueButtonFirmSelection;
 
+    // Manage access
+    private final Locator manageAccessButton;
+
+    // Delete user
+    private final Locator deleteUserLink;
+    private final Locator confirmAndDeleteUserButton;
+    private final Locator deleteUserReasonRadioFirst;
+    private final Locator deleteUserMessageHeading;
+
+    // Validation errors
     private final Locator emailFormatError;
     private final Locator emailDomainError;
     private final Locator firstNameInvalidCharsError;
     private final Locator lastNameInvalidCharsError;
     private final Locator selectUserTypeError;
+
+    // Convert to multi-firm
     private final Locator convertToMultiFirmLink;
     private final Locator convertToMultiFirmYesRadio;
     private final Locator convertToMultiFirmNoRadio;
     private final Locator multiFirmConversionSuccessAlert;
     private final Locator multiFirmUserNotification;
     private final Locator viewAllFirmsLink;
+
+    // Delegate access
+    private final Locator delegateAccessButton;
     private final Locator delegateAccessHeading;
     private final Locator delegateAccessEmailInput;
     private final Locator delegateAccessContinueButton;
     private final Locator delegateAccessFirmSelectionHeading;
 
+    // Revoke access
+    private final Locator revokeAccessLink;
+    private final Locator revokeAccessHeading;
+    private final Locator revokeAccessYesRadio;
+    private final Locator revokeAccessNoRadio;
+    private final Locator revokeAccessConfirmButton;
+    private final Locator revokeAccessSuccessBanner;
+    private final Locator revokeAccessSuccessMessage;
 
     public ManageUsersPage(Page page, int port) {
         this.page = page;
@@ -97,84 +117,142 @@ public class ManageUsersPage {
         page.navigate(url);
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
+        // Page and navigation
         this.header = page.locator("h1.govuk-heading-xl");
-        this.createNewUserButton = page.locator("button.govuk-button[onclick*='/admin/user/create/details']");
         this.notAuthorisedHeading = page.locator("h1.govuk-heading-l");
         this.signOutLink = page.locator("a:has-text('Sign out')");
-        this.signOutConfirmButton = page.locator("button[type='submit']:has-text('Sign out')");
+        this.signOutConfirmButton =
+                page.locator("button[type='submit']:has-text('Sign out')");
 
-        this.searchInputByName = page.locator("input[name='search']");
-        this.searchButton = page.locator("button:has-text('Search')");
+        this.goBackToManageYourUsersButton =
+                page.locator("a.govuk-button, button.govuk-button")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("Go back to manage your users"));
+
+        // Manage users search and filters
+        this.searchInputByName =
+                page.locator("input#search[type='search']");
+
+        this.searchButton =
+                page.locator("button:has-text('Search')");
+
+        this.userFullNameLink =
+                page.locator("a.govuk-link[href*='/admin/users/manage/']");
+
+        this.thirdPartyFilterCheckbox =
+                page.locator("#showMultiFirmUsers");
+
+        // Create user
+        this.createNewUserButton =
+                page.locator(
+                        "button.govuk-button[onclick*='/admin/user/create/details']"
+                );
 
         this.emailInput = page.locator("input#email");
         this.firstNameInput = page.locator("input#firstName");
         this.lastNameInput = page.locator("input#lastName");
-        this.userFullNameLink = page.locator("a.govuk-link[href*='/admin/users/manage/']");
 
-        this.providerUserRadio = page.locator("input#providerUser");
-        this.providerAdminRadio = page.locator("input#providerAdmin");
+        this.providerUserRadio =
+                page.locator("input#providerUser");
 
-        this.continueButton = page.locator("button.govuk-button:has-text('Continue')");
-        this.manageAccessButton = page.locator("button.govuk-button:has-text('Manage access')");
-        this.delegateAccessButton = page.locator(
-                "button.govuk-button[onclick=\"location.href='/admin/multi-firm/user/add/profile'\"]"
-        );
-        this.cancelLink = page.locator("a.govuk-link:has-text('Cancel')");
+        this.providerAdminRadio =
+                page.locator("input#providerAdmin");
 
-        this.multiFirmYesRadio = page.locator("input#multiFirmYes");
-        this.multiFirmNoRadio = page.locator("input#multiFirmNo");
-        this.continueButtonMultiFirm = page.locator("button.govuk-button[type='submit']");
+        this.confirmNewUserButton =
+                page.locator("button:has-text(\"Create new user\")");
 
-        this.confirmNewUserButton = page.locator("button:has-text(\"Create new user\")");
-        this.confirmButton = page.locator("button:has-text(\"Confirm\")");
-        this.goBackToManageYourUsersButton = page.locator("a.govuk-button, button.govuk-button").filter(new Locator.FilterOptions().setHasText("Go back to manage your users"));
+        // Common controls
+        this.continueButton =
+                page.locator("button.govuk-button:has-text('Continue')");
 
-        this.deleteUserLink = page.locator("a.govuk-link[href*='/admin/users/manage/'][href$='delete']");
-        this.confirmAndDeleteUserButton = page.locator("button:has-text(\"Confirm and delete user\")");
-        this.deleteUserReasonRadioFirst = page.locator("input[name='reasonId']").first();
-        this.deleteUserMessageHeading = page.locator("h1.govuk-panel__title");
+        this.confirmButton =
+                page.locator("button:has-text(\"Confirm\")");
 
-        this.firmSearchInput = page.locator("input#firmSearch");
-        this.firmSearchListbox = page.locator("ul#firmSearch__listbox");
-        this.firmOptionRows = page.locator("ul#firmSearch__listbox li.autocomplete__option");
+        this.cancelLink =
+                page.locator("a.govuk-link:has-text('Cancel')");
 
-        this.continueButtonFirmSelection = page.locator("button.govuk-button:has-text('Continue')");
+        // Multi-firm selection
+        this.multiFirmYesRadio =
+                page.locator("input#multiFirmYes");
 
-        this.emailFormatError = page.locator("div.govuk-error-message:has-text('Enter an email address in the correct format')");
-        this.emailDomainError = page.locator("div.govuk-error-message:has-text('The email address domain is not valid or cannot receive emails.')");
-        this.firstNameInvalidCharsError = page.locator("div.govuk-error-message:has-text('First name must not contain numbers or special characters')");
-        this.lastNameInvalidCharsError = page.locator("div.govuk-error-message:has-text('Last name must not contain numbers or special characters')");
-        this.selectUserTypeError = page.locator("div.govuk-error-message:has-text('Select a user type')");
-        this.multiFirmConversionSuccessAlert = page.locator(
-                ".moj-alert--success"
-        ).filter(
-                new Locator.FilterOptions()
-                        .setHasText("User has been successfully converted to a multi-firm user")
-        );
+        this.multiFirmNoRadio =
+                page.locator("input#multiFirmNo");
 
-        this.multiFirmUserNotification = page.locator(
-                "p.govuk-body"
-        ).filter(
-                new Locator.FilterOptions()
-                        .setHasText("This user is set up as a multi-firm user.")
-        );
+        this.continueButtonMultiFirm =
+                page.locator("button.govuk-button[type='submit']");
 
-        this.viewAllFirmsLink = page.locator(
-                ".govuk-summary-list__row"
-        ).filter(
-                new Locator.FilterOptions()
-                        .setHasText("Multi-firm access")
-        ).locator(
-                "a.govuk-link[href*='/admin/users?search=']"
-        ).filter(
-                new Locator.FilterOptions()
-                        .setHasText("View all firms for")
-        );
-        this.convertToMultiFirmLink = page.locator(
-                "a.govuk-link[href*='/convert-to-multi-firm']"
-        ).filter(
-                new Locator.FilterOptions().setHasText("Convert to multi-firm")
-        );
+        // Firm selection
+        this.firmSearchInput =
+                page.locator("input#firmSearch");
+
+        this.firmSearchListbox =
+                page.locator("ul#firmSearch__listbox");
+
+        this.firmOptionRows =
+                page.locator(
+                        "ul#firmSearch__listbox li.autocomplete__option"
+                );
+
+        this.continueButtonFirmSelection =
+                page.locator("button.govuk-button:has-text('Continue')");
+
+        // Manage access
+        this.manageAccessButton =
+                page.locator(
+                        "button.govuk-button:has-text('Manage access')"
+                );
+
+        // Delete user
+        this.deleteUserLink =
+                page.locator(
+                        "a.govuk-link[href*='/admin/users/manage/'][href$='delete']"
+                );
+
+        this.confirmAndDeleteUserButton =
+                page.locator(
+                        "button:has-text(\"Confirm and delete user\")"
+                );
+
+        this.deleteUserReasonRadioFirst =
+                page.locator("input[name='reasonId']").first();
+
+        this.deleteUserMessageHeading =
+                page.locator("h1.govuk-panel__title");
+
+        // Validation errors
+        this.emailFormatError =
+                page.locator(
+                        "div.govuk-error-message:has-text('Enter an email address in the correct format')"
+                );
+
+        this.emailDomainError =
+                page.locator(
+                        "div.govuk-error-message:has-text('The email address domain is not valid or cannot receive emails.')"
+                );
+
+        this.firstNameInvalidCharsError =
+                page.locator(
+                        "div.govuk-error-message:has-text('First name must not contain numbers or special characters')"
+                );
+
+        this.lastNameInvalidCharsError =
+                page.locator(
+                        "div.govuk-error-message:has-text('Last name must not contain numbers or special characters')"
+                );
+
+        this.selectUserTypeError =
+                page.locator(
+                        "div.govuk-error-message:has-text('Select a user type')"
+                );
+
+        // Convert to multi-firm
+        this.convertToMultiFirmLink =
+                page.locator(
+                        "a.govuk-link[href*='/convert-to-multi-firm']"
+                ).filter(
+                        new Locator.FilterOptions()
+                                .setHasText("Convert to multi-firm")
+                );
 
         this.convertToMultiFirmYesRadio =
                 page.locator("input#convertToMultiFirmYes");
@@ -182,22 +260,108 @@ public class ManageUsersPage {
         this.convertToMultiFirmNoRadio =
                 page.locator("input#convertToMultiFirmNo");
 
-        this.delegateAccessHeading = page.locator("h1.govuk-heading-l")
-                .filter(new Locator.FilterOptions()
-                        .setHasText("Giving access to third-party users"));
+        this.multiFirmConversionSuccessAlert =
+                page.locator(".moj-alert--success")
+                        .filter(
+                                new Locator.FilterOptions()
+                                        .setHasText(
+                                                "User has been successfully converted to a multi-firm user"
+                                        )
+                        );
 
-        this.delegateAccessEmailInput = page.locator("input#email");
+        this.multiFirmUserNotification =
+                page.locator("p.govuk-body")
+                        .filter(
+                                new Locator.FilterOptions()
+                                        .setHasText(
+                                                "This user is set up as a multi-firm user."
+                                        )
+                        );
 
-        this.delegateAccessContinueButton = page.locator(
-                "form[action='/admin/multi-firm/user/add/profile'] button[type='submit']"
-        );
+        this.viewAllFirmsLink =
+                page.locator(".govuk-summary-list__row")
+                        .filter(
+                                new Locator.FilterOptions()
+                                        .setHasText("Multi-firm access")
+                        )
+                        .locator(
+                                "a.govuk-link[href*='/admin/users?search=']"
+                        )
+                        .filter(
+                                new Locator.FilterOptions()
+                                        .setHasText("View all firms for")
+                        );
 
-        this.delegateAccessFirmSelectionHeading = page.locator("h1.govuk-heading-l")
-                .filter(new Locator.FilterOptions()
-                        .setHasText("Select the user's firm"));
+        // Delegate access
+        this.delegateAccessButton =
+                page.locator(
+                        "button.govuk-button[onclick=\"location.href='/admin/multi-firm/user/add/profile'\"]"
+                );
 
+        this.delegateAccessHeading =
+                page.locator("h1.govuk-heading-l")
+                        .filter(
+                                new Locator.FilterOptions()
+                                        .setHasText(
+                                                "Giving access to third-party users"
+                                        )
+                        );
 
+        this.delegateAccessEmailInput =
+                page.locator("input#email");
+
+        this.delegateAccessContinueButton =
+                page.locator(
+                        "form[action='/admin/multi-firm/user/add/profile'] button[type='submit']"
+                );
+
+        this.delegateAccessFirmSelectionHeading =
+                page.locator("h1.govuk-heading-l")
+                        .filter(
+                                new Locator.FilterOptions()
+                                        .setHasText(
+                                                "Select the user's firm"
+                                        )
+                        );
+
+        // Revoke access
+        this.revokeAccessLink =
+                page.locator(
+                        "a.govuk-link[href*='/admin/multi-firm/user/delete-profile/']"
+                );
+
+        this.revokeAccessHeading =
+                page.locator("h1.govuk-heading-l")
+                        .filter(
+                                new Locator.FilterOptions()
+                                        .setHasText(
+                                                "Are you sure you want to revoke access"
+                                        )
+                        );
+
+        this.revokeAccessYesRadio =
+                page.locator("#confirm-yes");
+
+        this.revokeAccessNoRadio =
+                page.locator("#confirm-no");
+
+        this.revokeAccessConfirmButton =
+                page.locator(
+                        "form[action*='/admin/multi-firm/user/delete-profile/'] button[type='submit']"
+                );
+
+        this.revokeAccessSuccessBanner =
+                page.locator(
+                        ".govuk-notification-banner[role='alert']"
+                );
+
+        this.revokeAccessSuccessMessage =
+                page.locator(
+                        ".govuk-notification-banner__heading"
+                );
     }
+
+
 
 
 
@@ -855,6 +1019,149 @@ public class ManageUsersPage {
         assertThat(delegateAccessButton).isVisible();
         delegateAccessButton.click();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public String createMultiFirmProviderUserWithoutFirm() {
+        clickCreateUser();
+
+        final String email = fillInUserDetails(false);
+
+        selectMultiFirmAccess(true);
+        clickConfirmNewUserButton();
+        clickGoBackToManageUsers();
+
+        return email;
+    }
+
+    public void delegateFirmAccess(
+            String email,
+            String firmCode,
+            List<String> services,
+            List<String> roles,
+            List<String> officeAccountNumbers
+    ) {
+        verifyDelegateAccessButtonVisible();
+        clickDelegateAccess();
+
+        verifyDelegateAccessProfilePageVisible();
+        enterDelegateAccessEmail(email);
+        clickDelegateAccessContinue();
+
+        verifyDelegateAccessFirmSelectionPageVisible();
+        searchAndSelectFirmByCode(firmCode);
+        clickContinueFirmSelectPage();
+
+        checkSelectedServices(services);
+        clickContinueUserDetails();
+
+        checkSelectedRoles(roles);
+        clickContinueUserDetails();
+
+        checkSelectedOffices(officeAccountNumbers);
+        clickContinueUserDetails();
+
+        clickConfirmButton();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public String createMultiFirmUserAndDelegateAccess(
+            String firmCode,
+            List<String> services,
+            List<String> roles,
+            List<String> officeAccountNumbers
+    ) {
+        String email = createMultiFirmProviderUserWithoutFirm();
+
+        searchAndVerifyUserNotExists(email);
+
+        delegateFirmAccess(
+                email,
+                firmCode,
+                services,
+                roles,
+                officeAccountNumbers
+        );
+
+        return email;
+    }
+
+    public void verifyRevokeAccessLinkVisible() {
+        assertThat(revokeAccessLink).isVisible();
+    }
+
+    public void clickRevokeAccess() {
+        assertThat(revokeAccessLink).isVisible();
+
+        revokeAccessLink.click();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void verifyRevokeAccessConfirmationPageVisible() {
+        assertThat(revokeAccessHeading).isVisible();
+        assertThat(revokeAccessYesRadio).isVisible();
+        assertThat(revokeAccessNoRadio).isVisible();
+        assertThat(revokeAccessConfirmButton).isVisible();
+    }
+
+    public void selectRevokeAccessYes() {
+        assertThat(revokeAccessYesRadio).isVisible();
+        revokeAccessYesRadio.check();
+        assertThat(revokeAccessYesRadio).isChecked();
+    }
+
+    public void selectRevokeAccessNo() {
+        assertThat(revokeAccessNoRadio).isVisible();
+        revokeAccessNoRadio.check();
+        assertThat(revokeAccessNoRadio).isChecked();
+    }
+
+    public void confirmRevokeAccess() {
+        assertThat(revokeAccessConfirmButton).isVisible();
+        revokeAccessConfirmButton.click();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void verifyAccessRevokedSuccessfully() {
+        assertThat(revokeAccessSuccessBanner).isVisible();
+
+        assertThat(revokeAccessSuccessMessage)
+                .containsText("no longer has access to");
+    }
+
+    public void selectThirdPartyUserFilter() {
+        assertThat(thirdPartyFilterCheckbox).isVisible();
+
+        if (!thirdPartyFilterCheckbox.isChecked()) {
+            thirdPartyFilterCheckbox.check();
+        }
+
+        page.waitForURL(
+                url -> url.contains("showMultiFirmUsers=true"),
+                new Page.WaitForURLOptions().setTimeout(10000)
+        );
+
+        assertThat(thirdPartyFilterCheckbox).isChecked();
+    }
+
+    public void verifyOnlyThirdPartyUsersDisplayed() {
+        Locator userRows = page.locator("tbody.govuk-table__body tr.govuk-table__row");
+
+        assertTrue(
+                userRows.count() > 0,
+                "At least one third-party user should be displayed"
+        );
+
+        for (int index = 0; index < userRows.count(); index++) {
+            assertThat(userRows.nth(index))
+                    .containsText("External - 3rd Party");
+        }
+    }
+
+    public void navigateToManageUsersWithThirdPartyFilter() {
+        page.navigate("/admin/users?showMultiFirmUsers=true");
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        assertThat(thirdPartyFilterCheckbox).isChecked();
     }
 
 }
