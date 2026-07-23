@@ -14,9 +14,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.servlet.view.RedirectView;
 
+import uk.gov.justice.laa.portal.landingpage.config.UiLabelsProperties;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -32,10 +32,27 @@ class GlobalControllerAdviceTest {
     private LoginService loginService;
 
     @Mock
+    private UiLabelsProperties uiLabelsProperties;
+
+    @Mock
     private Authentication authentication;
 
     @InjectMocks
     private GlobalControllerAdvice controller;
+
+    @Test
+    void getUiLabels_returnsProperties_forNonApiRequest() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/admin/users");
+        assertThat(controller.getUiLabels(request)).isEqualTo(uiLabelsProperties);
+    }
+
+    @Test
+    void getUiLabels_returnsNull_forApiRequest() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/api/v1/something");
+        assertThat(controller.getUiLabels(request)).isNull();
+    }
 
     @Test
     void getActiveFirm_notLoggedIn() {
