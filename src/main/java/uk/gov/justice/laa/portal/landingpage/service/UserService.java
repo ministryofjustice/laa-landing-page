@@ -1007,7 +1007,7 @@ public class UserService {
         boolean accountEnabled = respUser.getAccountEnabled() == null || respUser.getAccountEnabled();
 
         // AwaitingVerification users are handled by Entra/Technical Services.
-        if (InvitationStatus.AWAITING_VERIFICATION.equals(invitationStatus)) {
+        if (invitationStatus.filter(status -> status == InvitationStatus.AWAITING_VERIFICATION).isPresent()) {
             logger.info("User {} is awaiting verification. Activation email sent from Tech Services",
                     newUser.getEntraOid());
             syncUserStatus(respUser, newUser);
