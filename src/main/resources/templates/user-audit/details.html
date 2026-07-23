@@ -244,7 +244,8 @@
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Created Date/Time</dt>
                                         <dd class="govuk-summary-list__value" th:if="${entraUser == null}">Unknown</dd>
-                                        <dd class="govuk-summary-list__value" th:if="${entraUser != null}" th:text="${entraUser.createdDateTime != null ? #temporals.format(entraUser.createdDateTime, 'dd MMM yyyy HH:mm') : 'Unknown'}"></dd>
+                                        <dd class="govuk-summary-list__value" th:if="${entraUser != null}"
+                                            th:text="${entraUser.createdDateTime != null ? #dates.format(entraUser.createdDateTime, 'dd MMM yyyy HH:mm') : 'Unknown'}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Email</dt>
@@ -467,7 +468,7 @@
                                 <dl class="govuk-summary-list">
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Date</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${record.statusChangedDate}"></dd>
+                                        <dd class="govuk-summary-list__value" th:text="${record.statusChangedDate != null ? #temporals.format(record.statusChangedDate, 'dd MMM yyyy HH:mm') : ''}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
                                         <dt class="govuk-summary-list__key">Status</dt>

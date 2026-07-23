@@ -118,3 +118,51 @@
     top: calc(50% - 9px);
     transform: rotate(-45deg);
 }
+
+/* =====================================================================
+   Responsive full-width container
+   Breaks out of govuk-width-container to span the full viewport width,
+   capped at 1440px on large screens.
+   AC1: 40px padding left and right.
+   AC2: viewports <= 1440px — fills available width (no max-width cap).
+   AC3: viewports > 1440px  — capped at 1440px, horizontally centred.
+   ===================================================================== */
+.full-width-container {
+    padding: 0 40px;
+    box-sizing: border-box;
+}
+
+/* Keep header and service-nav content away from the browser edge at all sizes */
+.full-width-page .moj-header .moj-width-container,
+.full-width-page .govuk-service-navigation .govuk-width-container {
+    padding-left: 40px;
+    padding-right: 40px;
+    box-sizing: border-box;
+}
+
+/* .logout uses position:absolute; right:0 which ignores container padding —
+   explicitly offset it from the right edge on full-width pages */
+.full-width-page .logout {
+    right: 40px;
+}
+
+@media (min-width: 768px) {
+    .full-width-container {
+        position: relative;
+        width: 100vw;
+        max-width: 1440px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    .full-width-page .moj-header .moj-width-container,
+    .full-width-page .govuk-service-navigation .govuk-width-container {
+        max-width: 1440px;
+    }
+}
+
+/* Fixed-width search section (960px max-width, left-aligned).
+   Sits inside .full-width-container on pages with mixed
+   responsive and fixed-width elements. */
+.search-width-container {
+    max-width: 960px;
+}
