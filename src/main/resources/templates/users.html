@@ -84,8 +84,6 @@
                     </form>
                 </div>
 
-                <div class="govuk-grid-row">
-                    <div class="govuk-grid-column-full">
                         <!-- Unified search + filter form -->
                         <form method="get" th:action="@{/admin/users}" id="search-filter-form" aria-label="Search and filter users">
                             <input type="hidden" name="page" value="1">
@@ -128,15 +126,15 @@
                                 </div>
 
                                 <!-- Collapsible filter panel -->
-                                <div id="filter-panel" hidden>
+                                <div id="filter-panel" hidden style="margin-top: 15px;">
                                     <div class="filter-panel-content">
                                         <div class="filter-panel-header">
                                             <p class="govuk-body govuk-!-font-weight-bold govuk-!-margin-bottom-0">Filters</p>
                                         </div>
                                         <div class="filter-panel-body">
-                                        <div class="govuk-grid-row">
+                                        <div style="display: flex; gap: 0;">
                                             <!-- User Type -->
-                                            <div class="govuk-grid-column-one-half">
+                                            <div style="flex: 1; padding-right: 15px;">
                                                 <fieldset class="govuk-fieldset">
                                                     <legend class="govuk-fieldset__legend govuk-fieldset__legend--s">User Type</legend>
                                                     <div class="govuk-checkboxes govuk-checkboxes--small" data-module="govuk-checkboxes">
@@ -169,7 +167,7 @@
                                             </div>
 
                                             <!-- User Status -->
-                                            <div class="govuk-grid-column-one-half">
+                                            <div style="flex: 1;">
                                                 <fieldset class="govuk-fieldset">
                                                     <legend class="govuk-fieldset__legend govuk-fieldset__legend--s">User Status</legend>
                                                     <div class="govuk-checkboxes govuk-checkboxes--small" data-module="govuk-checkboxes">
@@ -236,13 +234,21 @@
                             </th:block>
                             <a href="#" id="clear-filters-link" class="govuk-link govuk-!-margin-left-2">Clear filters</a>
                         </div>
-                </div>
 
                 <style>
                     /* Search card styling */
                     .search-card {
                         padding-right: 0px;
                         border-radius: 0;
+                    }
+
+                    .search-card > .govuk-form-group {
+                        margin-bottom: 0;
+                    }
+
+                    .search-card .govuk-fieldset {
+                        padding-bottom: 10px;
+                        margin-bottom: 0;
                     }
 
                     .search-card .govuk-fieldset__legend {
@@ -296,12 +302,15 @@
                     .filter-panel-content {
                         border: 1px solid #b1b4b6;
                         margin-bottom: 0;
+                        background-color: #f3f2f1;
                     }
 
                     .filter-panel-header {
                         background-color: #f3f2f1;
                         padding: 10px 20px;
                         border-bottom: 1px solid #b1b4b6;
+                        font-size: 19px;
+                        line-height: 1.31579;
                     }
 
                     .filter-panel-body {
@@ -434,7 +443,7 @@
                     });
                 </script>
 
-        <form class="govuk-form-group govuk-!-margin-top-4">
+        <form class="govuk-form-group govuk-!-margin-top-6">
             <div class="table-container" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
                 <table class="govuk-table" data-id-prefix="users-"
                     style="table-layout: fixed; min-width: 768px; width: 100%;">
