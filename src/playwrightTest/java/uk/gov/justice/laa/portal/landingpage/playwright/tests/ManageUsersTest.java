@@ -7,6 +7,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.microsoft.playwright.options.AriaRole;
 import com.microsoft.playwright.options.WaitForSelectorState;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
@@ -1105,7 +1106,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
     }
 
     @Test
-    @DisplayName("Revoke delegated firm access from a multi-firm user")
+    @DisplayName("Revoked multi-firm user can log in but has no delegated service access")
     void revokeDelegatedFirmAccessFromMultiFirmUser() {
         final String firmCode = "90001";
 
@@ -1133,7 +1134,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
                         offices
                 );
 
-        // Verify the delegated access setup completed successfully
+        // Verify delegated access was set up successfully
         assertTrue(
                 page.locator(".govuk-panel__title")
                         .filter(new Locator.FilterOptions()
@@ -1154,35 +1155,46 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickGoBackToManageUsers();
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-        // Verify the user is visible under the delegated firm
+        // Verify the delegated profile exists
         assertTrue(
                 manageUsersPage.searchAndVerifyUser(email),
-                "Delegated multi-firm user should appear in Manage Users"
+                "The delegated multi-firm user should appear in Manage Users"
         );
 
-        // Open the delegated user
+        // Open the delegated profile
         manageUsersPage.clickUserLink(email);
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
-        // Verify this is still a multi-firm user
+        // Verify the account remains a multi-firm user
         manageUsersPage.assertMultiFirmAccess("Yes");
 
-        // Verify and open the revoke-access workflow
+        // Open the revoke access journey
         manageUsersPage.verifyRevokeAccessLinkVisible();
         manageUsersPage.clickRevokeAccess();
 
-        // Verify the confirmation screen
+        // Verify the revoke confirmation page
         manageUsersPage.verifyRevokeAccessConfirmationPageVisible();
 
-        // Confirm that access should be revoked
+        // Confirm access should be revoked
         manageUsersPage.selectRevokeAccessYes();
         manageUsersPage.confirmRevokeAccess();
 
-        // The user should be returned to Manage Your Users with a success message
+        // Verify revocation completed successfully
         manageUsersPage.verifyAccessRevokedSuccessfully();
 
-        // The revoked profile should no longer appear under the current firm
+        // Verify the revoked firm profile is no longer listed
         manageUsersPage.searchAndVerifyUserNotExists(email);
+
+        // Sign out as Global Admin
+        manageUsersPage.clickAndConfirmSignOut();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Log in as the revoked multi-firm user
+        loginAs(email);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Verify the account can still log in but has no active firm access
+        manageUsersPage.verifyAwaitingFirmAccessMessage();
     }
 
     @Test
@@ -1255,4 +1267,238 @@ public class ManageUsersTest extends BaseFrontEndTest {
                 "The 3rd Party filter should remain applied when searching for a non-multi-firm user"
         );
     }
+
+    @Test
+    @DisplayName("Change the assigned role for a multi-firm user")
+    void changeAssignedRoleForMultiFirmUser() {
+        final String firmCode = "90001";
+
+        final List<String> services = List.of(
+                "Test LAA App Four"
+        );
+
+        final List<String> initialRoles = List.of(
+                "Test LAA App Four Role One Access"
+        );
+
+        final List<String> updatedRoles = List.of(
+                "Test LAA App Four Role Two Access"
+        );
+
+        final List<String> offices = List.of(
+                "THREE"
+        );
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        // Create a multi-firm user with initial access
+        final String email =
+                manageUsersPage.createMultiFirmUserAndDelegateAccess(
+                        firmCode,
+                        services,
+                        initialRoles,
+                        offices
+                );
+
+        // Return to Manage Your Users
+        manageUsersPage.clickGoBackToManageUsers();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Find and open the created user
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(email),
+                "The created multi-firm user should appear in Manage Users"
+        );
+
+        manageUsersPage.clickUserLink(email);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Confirm the user is multi-firm
+        manageUsersPage.assertMultiFirmAccess("Yes");
+
+        // Open services and begin editing
+        manageUsersPage.clickServicesTab();
+        manageUsersPage.clickChangeLink();
+
+        // Services screen
+        manageUsersPage.clickContinueUserDetails();
+
+        // Roles screen
+        manageUsersPage.uncheckSelectedRoles(initialRoles);
+        manageUsersPage.checkSelectedRoles(updatedRoles);
+        manageUsersPage.clickContinueUserDetails();
+
+        // Now on Check your answers
+        manageUsersPage.clickConfirmButton();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Return to Manage Your Users
+        manageUsersPage.clickGoBackToManageUsers();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Reopen the updated user
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(email),
+                "The updated multi-firm user should still appear in Manage Users"
+        );
+
+        manageUsersPage.clickUserLink(email);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Verify the new role is present
+        manageUsersPage.clickServicesTab();
+        manageUsersPage.verifySelectedUserServices(updatedRoles);
+
+        // Verify the old role is gone
+        manageUsersPage.verifyServicesNotPresent(initialRoles);
+    }
+
+    @Test
+    @DisplayName("Change the assigned office for a multi-firm user")
+    void changeAssignedOfficeForMultiFirmUser() {
+        final String firmCode = "90001";
+
+        final List<String> services = List.of(
+                "Test LAA App Four"
+        );
+
+        final List<String> roles = List.of(
+                "Test LAA App Four Role One Access"
+        );
+
+        final List<String> initialOffices = List.of(
+                "THREE"
+        );
+
+        final List<String> updatedOffices = List.of(
+                "FOUR"
+        );
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        // Create a multi-firm user with initial office access
+        final String email =
+                manageUsersPage.createMultiFirmUserAndDelegateAccess(
+                        firmCode,
+                        services,
+                        roles,
+                        initialOffices
+                );
+
+        // Return to Manage Your Users
+        manageUsersPage.clickGoBackToManageUsers();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Find and open the created user
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(email),
+                "The created multi-firm user should appear in Manage Users"
+        );
+
+        manageUsersPage.clickUserLink(email);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Confirm the user is multi-firm
+        manageUsersPage.assertMultiFirmAccess("Yes");
+
+        // Open the Offices tab and begin editing
+        manageUsersPage.clickOfficesTab();
+        manageUsersPage.clickOfficeChange();
+
+        // Replace the existing office
+        manageUsersPage.uncheckSelectedOffices(initialOffices);
+        manageUsersPage.checkSelectedOffices(updatedOffices);
+        manageUsersPage.clickContinueUserDetails();
+
+        // Now on Check your answers
+        manageUsersPage.clickConfirmButton();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Return to Manage Your Users
+        manageUsersPage.clickGoBackToManageUsers();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Reopen the updated user
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(email),
+                "The updated multi-firm user should still appear in Manage Users"
+        );
+
+        manageUsersPage.clickUserLink(email);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Verify the updated office
+        manageUsersPage.clickOfficesTab();
+
+        manageUsersPage.verifySelectedUserOffices(updatedOffices);
+        manageUsersPage.verifyOfficesNotPresent(initialOffices);
+    }
+
+    @Test
+    @DisplayName("Multi-firm user can log in after access is delegated")
+    void multiFirmUserCanLogInAfterAccessIsDelegated() {
+        final String firmCode = "90001";
+
+        final List<String> services = List.of(
+                "Test LAA App Four"
+        );
+
+        final List<String> roles = List.of(
+                "Test LAA App Four Role One Access"
+        );
+
+        final List<String> offices = List.of(
+                "THREE"
+        );
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        // Create the multi-firm user and delegate access
+        final String email =
+                manageUsersPage.createMultiFirmUserAndDelegateAccess(
+                        firmCode,
+                        services,
+                        roles,
+                        offices
+                );
+
+        // Sign out as Global Admin
+        manageUsersPage.clickGoBackToManageUsers();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        manageUsersPage.clickAndConfirmSignOut();
+
+        // Log in using the newly created multi-firm user's email
+        loginAs(email);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Verify the user lands on the home page
+        assertTrue(
+                page.url().endsWith("/home"),
+                "The multi-firm user should land on the home page"
+        );
+
+        // Verify the allocated LAA service is visible
+        assertThat(
+                page.getByRole(
+                        AriaRole.LINK,
+                        new Page.GetByRoleOptions()
+                                .setName("Test LAA App Four")
+                )
+        ).isVisible();
+
+        // Verify Manage Your Users is not displayed
+        assertThat(
+                page.getByText(
+                        "Manage your users",
+                        new Page.GetByTextOptions().setExact(true)
+                )
+        ).not().isVisible();
+    }
+
+
 }
+

@@ -36,6 +36,7 @@ public class ManageUsersPage {
     private final Locator signOutLink;
     private final Locator signOutConfirmButton;
     private final Locator goBackToManageYourUsersButton;
+    private final Locator awaitingFirmAccessMessage;
 
     // Manage users search and filters
     private final Locator searchInputByName;
@@ -128,6 +129,9 @@ public class ManageUsersPage {
                 page.locator("a.govuk-button, button.govuk-button")
                         .filter(new Locator.FilterOptions()
                                 .setHasText("Go back to manage your users"));
+        this.awaitingFirmAccessMessage = page.locator(".govuk-inset-text")
+                .filter(new Locator.FilterOptions()
+                        .setHasText("Your firm admin is working on giving you access to the services you need"));
 
         // Manage users search and filters
         this.searchInputByName =
@@ -1162,6 +1166,113 @@ public class ManageUsersPage {
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
 
         assertThat(thirdPartyFilterCheckbox).isChecked();
+    }
+
+    public void verifySelectedUserOffices(List<String> offices) {
+        for (String office : offices) {
+            String officeAccountNumber = office;
+
+            if (office.contains("Office account number:")) {
+                officeAccountNumber = office
+                        .substring(
+                                office.indexOf("Office account number:")
+                                        + "Office account number:".length()
+                        )
+                        .replace(")", "")
+                        .trim();
+            }
+
+            Locator officeDetails = page.locator("#offices")
+                    .filter(
+                            new Locator.FilterOptions()
+                                    .setHasText(officeAccountNumber)
+                    );
+
+            assertThat(officeDetails).containsText(officeAccountNumber);
+        }
+    }
+
+    public void verifyOfficesNotPresent(List<String> offices) {
+        for (String office : offices) {
+            String officeAccountNumber = office;
+
+            if (office.contains("Office account number:")) {
+                officeAccountNumber = office
+                        .substring(
+                                office.indexOf("Office account number:")
+                                        + "Office account number:".length()
+                        )
+                        .replace(")", "")
+                        .trim();
+            }
+
+            Locator officeDetails = page.locator("#offices")
+                    .getByText(
+                            officeAccountNumber,
+                            new Locator.GetByTextOptions().setExact(false)
+                    );
+
+            assertThat(officeDetails).not().isVisible();
+        }
+    }
+
+    public String createMultiFirmFirmUserManager(
+            String firmCode,
+            List<String> officeAccountNumbers
+    ) {
+        String email = createMultiFirmProviderUserWithoutFirm();
+
+        searchAndVerifyUserNotExists(email);
+
+        verifyDelegateAccessButtonVisible();
+        clickDelegateAccess();
+
+        verifyDelegateAccessProfilePageVisible();
+        enterDelegateAccessEmail(email);
+        clickDelegateAccessContinue();
+
+        verifyDelegateAccessFirmSelectionPageVisible();
+        searchAndSelectFirmByCode(firmCode);
+        clickContinueFirmSelectPage();
+
+        // Selecting Manage your users grants the manager access.
+        checkSelectedServices(List.of(
+                "Manage your users",
+                "Test LAA App Four"
+        ));
+        clickContinueUserDetails();
+
+        // Only Test LAA App Four presents a role-selection screen.
+        checkSelectedRoles(List.of(
+                "Test LAA App Four Role One Access"
+        ));
+        clickContinueUserDetails();
+
+        // Offices screen
+        checkSelectedOffices(officeAccountNumbers);
+        clickContinueUserDetails();
+
+        // Check your answers
+        clickConfirmButton();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        return email;
+    }
+
+    public void verifyAwaitingFirmAccessMessage() {
+        assertThat(awaitingFirmAccessMessage).isVisible();
+
+        assertThat(awaitingFirmAccessMessage)
+                .containsText(
+                        "Your firm admin is working on giving you access to the services you need.");
+
+        assertThat(awaitingFirmAccessMessage)
+                .containsText(
+                        "There’s nothing else you need to do.");
+
+        assertThat(awaitingFirmAccessMessage)
+                .containsText(
+                        "If you still don’t have access after 2 working days");
     }
 
 }
