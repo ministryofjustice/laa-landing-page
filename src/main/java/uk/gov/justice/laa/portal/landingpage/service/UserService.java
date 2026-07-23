@@ -1001,8 +1001,8 @@ public class UserService {
         }
 
         InvitationStatus invitationStatus =
-                respUser.getCustomSecurityAttributes() != null  && respUser.getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress() != null ?
-                respUser.getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress() : null;
+                respUser.getCustomSecurityAttributes() != null  && respUser.getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress() != null
+                        ? respUser.getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress() : null;
         boolean accountEnabled = respUser.getAccountEnabled() == null || respUser.getAccountEnabled();
 
         // AwaitingVerification users are handled by Entra/Technical Services.
