@@ -1000,7 +1000,8 @@ public class UserService {
             return;
         }
 
-        InvitationStatus invitationStatus = respUser.getCustomSecurityAttributes() != null ?
+        InvitationStatus invitationStatus =
+                respUser.getCustomSecurityAttributes() != null  && respUser.getCustomSecurityAttributes().getGuestUserStatus() != null ?
                 respUser.getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress() : null;
         boolean accountEnabled = respUser.getAccountEnabled() == null || respUser.getAccountEnabled();
 
