@@ -262,7 +262,7 @@
                     /* Flexbox layout for search inputs */
                     .search-inputs-container {
                         display: flex;
-                        align-items: flex-end;
+                        align-items: flex-start;
                         gap: 8px;
                         flex-wrap: wrap;
                     }
@@ -302,20 +302,25 @@
                     .filter-panel-content {
                         border: 1px solid #b1b4b6;
                         margin-bottom: 0;
-                        background-color: #f3f2f1;
+                        margin-top: 0;
+                        padding: 0;
                     }
 
                     .filter-panel-header {
                         background-color: #f3f2f1;
-                        padding: 10px 20px;
+                        padding: 8px 20px;
                         border-bottom: 1px solid #b1b4b6;
                         font-size: 19px;
                         line-height: 1.31579;
                     }
 
+                    .filter-panel-header p {
+                        margin: 0;
+                    }
+
                     .filter-panel-body {
                         background-color: #ffffff;
-                        padding: 20px;
+                        padding: 20px 20px 20px 20px;
                     }
 
                     .table-container {
