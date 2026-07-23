@@ -166,3 +166,17 @@
 .search-width-container {
     max-width: 960px;
 }
+
+.govuk-button--yellow {
+    background-color: #ffdd00;
+    color: #0b0c0c;
+    box-shadow: 0 2px 0 #594d00;
+}
+
+.govuk-button--yellow:hover {
+    background-color: #e6c800;
+}
+
+.govuk-button--yellow:focus {
+    background-color: #ffdd00;
+}
