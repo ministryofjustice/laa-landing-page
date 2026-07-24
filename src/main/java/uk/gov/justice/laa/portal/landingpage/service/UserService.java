@@ -79,6 +79,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.exception.OfficeAssignmentException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.exception.UserAlreadyAssignedToFirmException;
 import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
@@ -1144,7 +1145,7 @@ public class UserService {
                     .allMatch(o -> o.getFirm() != null && o.getFirm().getId().equals(firm.getId()));
             if (!allOfficesBelongToFirm) {
                 logger.error("Attempt to assign offices not belonging to firm: {} for user: {}", firm.getId(), entraUserDto.getEntraOid());
-                throw new RuntimeException("Office assignment is not permitted");
+                throw new OfficeAssignmentException("Office assignment is not permitted for offices that do not belong to the specified firm.");
             }
         }
 

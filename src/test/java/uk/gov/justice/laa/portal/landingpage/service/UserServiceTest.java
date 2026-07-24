@@ -103,6 +103,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.exception.OfficeAssignmentException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.exception.UserAlreadyAssignedToFirmException;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
@@ -2202,7 +2203,7 @@ class UserServiceTest {
         EntraUser existing = EntraUser.builder().id(UUID.fromString(entraUserDto.getId())).build();
 
         // Act & Assert
-        assertThrows(RuntimeException.class,
+        assertThrows(OfficeAssignmentException.class,
                 () -> userService.addMultiFirmUserProfile(entraUserDto, firmDto, List.of(officeDto), null, "admin"));
     }
 
