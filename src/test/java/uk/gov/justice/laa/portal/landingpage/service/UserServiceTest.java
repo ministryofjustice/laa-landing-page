@@ -2176,9 +2176,6 @@ class UserServiceTest {
     @Test
     void addMultiFirmUserProfile_officeFromDifferentFirm_shouldThrow() {
         // Arrange
-        UUID targetFirmId = UUID.randomUUID();
-        UUID otherFirmId = UUID.randomUUID();
-        UUID officeId = UUID.randomUUID();
 
         EntraUserDto entraUserDto = new EntraUserDto();
         entraUserDto.setId(UUID.randomUUID().toString());
@@ -2186,12 +2183,15 @@ class UserServiceTest {
         entraUserDto.setMultiFirmUser(true);
 
         FirmDto firmDto = new FirmDto();
+        UUID targetFirmId = UUID.randomUUID();
         firmDto.setId(targetFirmId);
 
         OfficeDto officeDto = new OfficeDto();
+        UUID officeId = UUID.randomUUID();
         officeDto.setId(officeId);
 
         // officeRepository.findById will return an Office that belongs to a different firm
+        UUID otherFirmId = UUID.randomUUID();
         Office otherOffice = Office.builder().id(officeId).firm(Firm.builder().id(otherFirmId).build()).build();
         when(mockOfficeRepository.findById(officeId)).thenReturn(Optional.of(otherOffice));
 
@@ -2200,7 +2200,6 @@ class UserServiceTest {
 
         // entraUserRepository.findById should return an existing EntraUser
         EntraUser existing = EntraUser.builder().id(UUID.fromString(entraUserDto.getId())).build();
-//        when(mockEntraUserRepository.findById(UUID.fromString(entraUserDto.getId()))).thenReturn(Optional.of(existing));
 
         // Act & Assert
         assertThrows(RuntimeException.class,
@@ -5165,7 +5164,6 @@ class UserServiceTest {
             entraUser.setUserProfiles(new HashSet<>(Set.of(existingProfile)));
 
             UUID newFirmId = UUID.randomUUID();
-            FirmDto newFirmDto = FirmDto.builder().id(newFirmId).name("Test Firm").build();
 
             UUID officeId = UUID.randomUUID();
             Office office = Office.builder().id(officeId).firm(Firm.builder().id(newFirmId).build()).build();
@@ -5184,6 +5182,7 @@ class UserServiceTest {
             EntraUserDto user = EntraUserDto.builder().id(entraUserId.toString())
                     .firstName("FirstName").email("test@email.com").multiFirmUser(true).build();
 
+            FirmDto newFirmDto = FirmDto.builder().id(newFirmId).name("Test Firm").build();
             UserProfile result = userService.addMultiFirmUserProfile(user, newFirmDto, List.of(officeDto),
                     List.of(appRoleDto), "admin");
 

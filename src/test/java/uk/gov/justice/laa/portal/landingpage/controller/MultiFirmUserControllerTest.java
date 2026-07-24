@@ -2339,10 +2339,7 @@ public class MultiFirmUserControllerTest {
 
     @Test
     void checkAnswerAndAddProfilePost_submittedOfficeNotInTargetFirm_shouldThrow() {
-        // Arrange
-        UUID targetFirmId = UUID.randomUUID();
-        UUID otherOfficeId = UUID.randomUUID();
-
+        //Arrange
         EntraUserDto user = new EntraUserDto();
         user.setId(UUID.randomUUID().toString());
         user.setEntraOid("entra-oid");
@@ -2353,6 +2350,7 @@ public class MultiFirmUserControllerTest {
         when(loginService.getCurrentProfile(org.mockito.Mockito.any())).thenReturn(editorProfile);
 
         // session contains userOffices with an office that does not belong to target firm
+        UUID otherOfficeId = UUID.randomUUID();
         session.setAttribute("userOffices", List.of(otherOfficeId.toString()));
 
         // officeService will resolve the OfficeDto list (returned id does not match any office on firm)
@@ -2361,6 +2359,7 @@ public class MultiFirmUserControllerTest {
         when(officeService.getOfficesByIds(List.of(otherOfficeId.toString()))).thenReturn(List.of(officeDto));
 
         // target firm has no offices (or offices not containing this id)
+        UUID targetFirmId = UUID.randomUUID();
         Firm targetFirm = Firm.builder().id(targetFirmId).offices(Set.of()).build();
         when(firmService.getById(targetFirmId)).thenReturn(targetFirm);
         session.setAttribute("delegateTargetFirmId", targetFirmId.toString());
