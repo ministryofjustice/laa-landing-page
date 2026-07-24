@@ -180,12 +180,13 @@
                                     </span>
                                     <th:block th:each="status : ${selectedStatuses}">
                                         <span class="filter-tag">
-                                            <a href="#" th:attr="data-remove-status=${status.name()}" class="filter-tag__remove"
+                                            <a href="#" data-remove-array-param="selectedStatuses" th:attr="data-remove-array-value=${status.name()}" class="filter-tag__remove"
                                                th:aria-label="'Remove ' + ${status.value} + ' filter'">&#x2715;</a>
                                             <span th:text="${status.value}"></span>
                                         </span>
                                     </th:block>
-                                    <a href="#" id="clear-filters-link" class="govuk-link filter-tag-clear-link">Clear filters</a>
+                                    <a href="#" id="clear-filters-link" class="govuk-link filter-tag-clear-link"
+                                       data-filter-params="showFirmAdmins,showMultiFirmUsers,showProviderUsers,selectedStatuses,firmSearch,selectedFirmId">Clear filters</a>
                                 </div>
                             </div>
                         </th:block>

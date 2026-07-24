@@ -4,7 +4,10 @@
 <body>
 
 <!--
-    Reusable search + filter panel component.
+    Reusable search + filter panel component. It is fully generic - any page can supply its own
+    set of filter checkboxes/param names, not just the User Type / Status filters used on the
+    users page (e.g. a "Track reactivation requests" page could pass its own User Type and
+    Request Status filters with different param names).
 
     Parameters:
       formAction          - th:action URL for the search form  (e.g. @{/admin/users})
@@ -21,12 +24,26 @@
             activeFiltersContent=~{:: #my-active-filters}
         )}">
             <div id="my-filter-content">
-                ... page-specific filter checkboxes ...
+                ... page-specific filter checkboxes (any name/value attributes you like) ...
             </div>
             <div id="my-active-filters">
                 ... page-specific active filters banner (may be empty / th:if guarded) ...
             </div>
         </th:block>
+
+    Conventions used by the shared script below when building the active-filters banner
+    (activeFiltersContent) - these work with ANY param names, so a page can define its own
+    filters that are entirely different from the users page:
+
+      - Single-value filter tag (checkbox/text param):
+          <a href="#" data-remove-filter="myParamName">...</a>
+
+      - Multi-value filter tag (repeated checkbox param, e.g. selectedStatuses):
+          <a href="#" data-remove-array-param="myParamName" data-remove-array-value="THE_VALUE">...</a>
+
+      - "Clear filters" link - list every filter param used on the page (comma separated) so it
+        knows what to strip from the URL:
+          <a href="#" id="clear-filters-link" data-filter-params="myParam1,myParam2,myArrayParam">Clear filters</a>
 -->
 
 <th:block th:fragment="searchFilter(formAction, searchHint, filterContent, activeFiltersContent)">
@@ -155,12 +172,15 @@
                 link.href = url.toString();
             });
 
-            document.querySelectorAll('[data-remove-status]').forEach(function (link) {
-                const status = link.dataset.removeStatus;
+            // Generic multi-value filter tag removal - works for any repeated param name
+            // (e.g. selectedStatuses, selectedRequestStatuses), not just the users page.
+            document.querySelectorAll('[data-remove-array-param]').forEach(function (link) {
+                const paramName = link.dataset.removeArrayParam;
+                const value = link.dataset.removeArrayValue;
                 const url = new URL(window.location.href);
-                const remaining = url.searchParams.getAll('selectedStatuses').filter(s => s !== status);
-                url.searchParams.delete('selectedStatuses');
-                remaining.forEach(s => url.searchParams.append('selectedStatuses', s));
+                const remaining = url.searchParams.getAll(paramName).filter(v => v !== value);
+                url.searchParams.delete(paramName);
+                remaining.forEach(v => url.searchParams.append(paramName, v));
                 url.searchParams.set('page', '1');
                 link.href = url.toString();
             });
@@ -168,8 +188,11 @@
             const clearFiltersLink = document.getElementById('clear-filters-link');
             if (clearFiltersLink) {
                 const url = new URL(window.location.href);
-                // Standard filter params — extend in page-specific JS if needed
-                ['showFirmAdmins', 'showMultiFirmUsers', 'showProviderUsers', 'selectedStatuses', 'firmSearch', 'selectedFirmId'].forEach(p => url.searchParams.delete(p));
+                // Filter param names come from the page-specific data-filter-params attribute,
+                // so each page can declare its own set of filters to clear.
+                const filterParams = (clearFiltersLink.dataset.filterParams || '')
+                    .split(',').map(p => p.trim()).filter(Boolean);
+                filterParams.forEach(p => url.searchParams.delete(p));
                 url.searchParams.set('page', '1');
                 clearFiltersLink.href = url.toString();
             }
@@ -183,16 +206,19 @@
                     url.search = '';
                     const sp = url.searchParams;
                     const formData = new FormData(searchFilterForm);
-                    const statuses = formData.getAll('selectedStatuses').filter(s => s);
 
-                    for (const [key, value] of formData.entries()) {
-                        if (!value || value.trim() === '') continue;
-                        if (key === 'size' && value == 10) continue;
-                        if (key === 'page' && value == 1) continue;
-                        if (key === 'selectedStatuses') continue;
-                        sp.set(key, value);
+                    // Generic handling of any repeated checkbox param name (e.g. selectedStatuses
+                    // on the users page, or a differently-named multi-value filter on another page)
+                    const seenKeys = new Set();
+                    for (const key of formData.keys()) {
+                        if (seenKeys.has(key)) continue;
+                        seenKeys.add(key);
+                        const values = formData.getAll(key).filter(v => typeof v === 'string' && v.trim() !== '');
+                        if (values.length === 0) continue;
+                        if (key === 'size' && values[0] == 10) continue;
+                        if (key === 'page' && values[0] == 1) continue;
+                        values.forEach(v => sp.append(key, v));
                     }
-                    statuses.forEach(s => sp.append('selectedStatuses', s));
                     window.location.href = url.toString();
                 });
             }
