@@ -4,7 +4,7 @@
 <head th:replace="~{partials/head :: head}">
 </head>
 
-<body class="govuk-template__body">
+<body class="govuk-template__body" th:classappend="${bodyClass}">
     <script>document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');</script>
 
     <a href="#main-content" class="govuk-skip-link" data-module="govuk-skip-link">Skip to main content</a>
@@ -15,7 +15,7 @@
             class="govuk-service-navigation__container"><span class="govuk-service-navigation__service-name"><a
             class="govuk-service-navigation__link" href="/?locale=en">Your legal aid services</a></span></div></div></section>
     <div class="govuk-width-container">
-        <div class="govuk-phase-banner" id="feedback">
+        <div class="govuk-phase-banner" id="feedback" th:unless="${suppressPhaseBanner}">
             <p class="govuk-phase-banner__content">
                 <strong class="govuk-tag govuk-phase-banner__content__tag">
                     Beta

@@ -325,7 +325,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.clickFirstUserLink();
         manageUsersPage.clickOfficesTab();
         assertTrue(page.locator(".govuk-table__header:has-text('Office Address')").isVisible());
-        assertTrue(page.locator(".govuk-table__header:has-text('Account number')").isVisible());
+        assertTrue(page.locator(".govuk-table__header:has-text('Office account number')").isVisible());
         assertTrue(page.locator(".govuk-summary-card:has-text('Automation Office 1, City1, 12345')").isVisible());
         assertTrue(page.locator(".govuk-summary-card:has-text('Automation Office 2, City2, 23456')").isVisible());
     }

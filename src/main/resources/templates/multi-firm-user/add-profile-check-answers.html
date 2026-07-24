@@ -59,19 +59,19 @@
                         <div class="govuk-summary-card__content">
                             <dl class="govuk-summary-list">
                                 <div class="govuk-summary-list__row">
-                                    <dt class="govuk-summary-list__key">Email</dt>
+                                    <dt class="govuk-summary-list__key" th:text="${uiLabels.email}">Email</dt>
                                     <dd class="govuk-summary-list__value">
                                         <span th:text="${user.email}"></span>
                                     </dd>
                                 </div>
                                 <div class="govuk-summary-list__row">
-                                    <dt class="govuk-summary-list__key">First name</dt>
+                                    <dt class="govuk-summary-list__key" th:text="${uiLabels.firstName}">First name</dt>
                                     <dd class="govuk-summary-list__value">
                                         <span th:text="${user.firstName}"></span>
                                     </dd>
                                 </div>
                                 <div class="govuk-summary-list__row">
-                                    <dt class="govuk-summary-list__key">Last name</dt>
+                                    <dt class="govuk-summary-list__key" th:text="${uiLabels.lastName}">Last name</dt>
                                     <dd class="govuk-summary-list__value">
                                         <span th:text="${user.lastName}"></span>
                                     </dd>
@@ -207,7 +207,7 @@
                                         <ul class="govuk-list">
                                             <li th:each="office : ${entry.value}">
                                                 <span th:text="${office.address?.formattedAddress ?: 'Unknown'}"></span>
-                                                (<span class="govuk-visually-hidden">Office account number: </span><span th:text="${office.code}"></span>)
+                                                (<span class="govuk-visually-hidden" th:text="${uiLabels.officeAccountNumber} + ': '">Office account number: </span><span th:text="${office.code}"></span>)
                                             </li>
                                         </ul>
                                     </dd>

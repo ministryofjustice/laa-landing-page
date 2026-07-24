@@ -945,19 +945,23 @@ public class UserService {
         TechServicesUser createdUser = registerUserResponse.getData().getUser();
         user.setEntraOid(createdUser.getId());
 
+        boolean isExistingUserResponse = registerUserResponse.getData().isUserFetched();
 
         EntraUser newUser = persistNewUser(user, firm, isUserManager, createdBy, isMultiFirmUser);
-        if (registerUserResponse.getData().isUserFetched()) {
-            if (createdUser.getAccountEnabled() == null || !createdUser.getAccountEnabled()) {
-                enableUserOnRecreate(newUser);
-            }
-            newUser = syncUserStatus(createdUser, newUser);
+
+        if (isExistingUserResponse) {
+            handleExistingUserScenario(createdUser, newUser);
         }
         return newUser;
     }
 
     @Transactional
     protected EntraUser syncUserStatus(TechServicesUser tsUser, EntraUser entraUser) {
+        // Populate details from Entra
+        entraUser.setEmail(tsUser.getEmail());
+        entraUser.setFirstName(tsUser.getGivenName());
+        entraUser.setLastName(tsUser.getSurname());
+
         updateAccountActivationStatus(tsUser, entraUser);
 
         if (tsUser.getIsMailOnly() != null) {
@@ -987,6 +991,42 @@ public class UserService {
                 logger.info("Updated invitation status for user {} to: {}", entraUser.getEntraOid(), invitationStatus);
             }
         }
+    }
+
+    private void handleExistingUserScenario(TechServicesUser respUser, EntraUser newUser) {
+
+        if (respUser == null) {
+            logger.error("Existing user response is null in handleExistingUserScenario for user: {}", newUser.getEntraOid());
+            return;
+        }
+
+        Optional<InvitationStatus> invitationStatus = Optional.of(respUser)
+                .map(TechServicesUser::getCustomSecurityAttributes)
+                .map(TechServicesUser.CustomSecurityAttributes::getGuestUserStatus)
+                .map(TechServicesUser.GuestUserStatus::getInvitationProgress);
+        boolean accountEnabled = respUser.getAccountEnabled() == null || respUser.getAccountEnabled();
+
+        // AwaitingVerification users are handled by Entra/Technical Services.
+        if (invitationStatus.filter(status -> status == InvitationStatus.AWAITING_VERIFICATION).isPresent()) {
+            logger.info("User {} is awaiting verification. Activation email sent from Tech Services",
+                    newUser.getEntraOid());
+            syncUserStatus(respUser, newUser);
+            return;
+        }
+
+        // Scenario: Existing active user -> ensure enabled and send gov.notify email
+        if (!accountEnabled) {
+            enableUserOnRecreate(newUser);
+        }
+
+        try {
+            notificationService.notifyExistingUser(newUser.getId(), newUser.getFirstName(), newUser.getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send existing user notification for user {}", newUser.getId(), e);
+        }
+
+        // Sync status fields from TS user
+        syncUserStatus(respUser, newUser);
     }
 
     private void enableUserOnRecreate(EntraUser newUser) {

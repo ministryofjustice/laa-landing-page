@@ -791,6 +791,37 @@ class UserServiceTest {
     }
 
     @Test
+    void recreateUserWithDifferentName() {
+        // assign role
+        TechServicesUser createdUser = new TechServicesUser();
+        createdUser.setId("id");
+        createdUser.setMail("test.user@email.com");
+        createdUser.setGivenName("New Name");
+        createdUser.setSurname("New Surname");
+        TechServicesApiResponse<RegisterUserResponse> registerUserResponse = TechServicesApiResponse
+                .success(RegisterUserResponse.builder().user(createdUser)
+                        .responseType(RegisterUserResponse.ResponseType.VERIFIED)
+                        .message("User created successfully. An email has been sent to the user with their activation code")
+                        .build());
+        when(techServicesClient.registerNewUser(any(EntraUserDto.class))).thenReturn(registerUserResponse);
+        when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class))).thenAnswer(returnsFirstArg());
+
+        EntraUserDto entraUserDto = new EntraUserDto();
+        entraUserDto.setFirstName("Test");
+        entraUserDto.setLastName("User");
+        entraUserDto.setEmail("test.user@email.com");
+        FirmDto firm = FirmDto.builder().name("Firm").build();
+        EntraUser result = userService.createUser(entraUserDto, firm, true, "admin", false);
+        assertThat(result).isNotNull();
+        assertThat(result.getFirstName()).isEqualTo("New Name");
+        assertThat(result.getLastName()).isEqualTo("New Surname");
+        assertThat(result.getUserProfiles()).isNotEmpty();
+        assertThat(result.getUserProfiles()).hasSize(1);
+        verify(mockEntraUserRepository, times(1)).saveAndFlush(any());
+        verify(techServicesClient, times(1)).registerNewUser(any(EntraUserDto.class));
+    }
+
+    @Test
     void getUserAppRolesByUserId_returnsRoleDetails_whenServicePrincipalAndRoleExist() {
         // Arrange
         UUID userProfileId = UUID.randomUUID();
@@ -3402,6 +3433,108 @@ class UserServiceTest {
             EntraUser capturedUser = userCaptor.getValue();
             // Multi-firm users have no profile, so no profile status to check
             assertThat(capturedUser.getUserProfiles()).isNotEmpty();
+        }
+
+        @Test
+        void createUser_existingUser_notAwaitingVerification_sendsGovNotify() {
+            // Arrange
+            EntraUserDto user = new EntraUserDto();
+            user.setEmail("existing@example.com");
+            user.setFirstName("John");
+
+            when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class)))
+                    .thenAnswer(i -> {
+                        EntraUser eu = i.getArgument(0);
+                        eu.setId(UUID.randomUUID());
+                        return eu;
+                    });
+
+            TechServicesUser respUser = TechServicesUser.builder()
+                    .id(UUID.randomUUID().toString())
+                    .email("existing@example.com")
+                    .accountEnabled(true)
+                    .customSecurityAttributes(
+                            TechServicesUser.CustomSecurityAttributes.builder()
+                                    .guestUserStatus(
+                                            TechServicesUser.GuestUserStatus.builder()
+                                                    .invitationProgress(InvitationStatus.VERIFICATION_SUCCESS)
+                                                    .build())
+                                    .build())
+                    .build();
+
+            TechServicesApiResponse<RegisterUserResponse> registerUserResponse =
+                    TechServicesApiResponse.success(
+                            RegisterUserResponse.builder()
+                                    .responseType(RegisterUserResponse.ResponseType.VERIFIED)
+                                    .user(respUser)
+                                    .build());
+
+            when(techServicesClient.registerNewUser(any(EntraUserDto.class)))
+                    .thenReturn(registerUserResponse);
+
+            FirmDto firmDto = FirmDto.builder()
+                    .name("Test Firm")
+                    .build();
+
+            // Act
+            userService.createUser(user, firmDto, false, "admin", false);
+
+            // Assert
+            verify(notificationService).notifyExistingUser(
+                    any(),
+                    eq("John"),
+                    eq("existing@example.com"));
+        }
+
+        @Test
+        void createUser_existingUser_awaitingVerification_doesNotSendGovNotify() {
+            // Arrange
+            EntraUserDto user = new EntraUserDto();
+            user.setEmail("awaiting@example.com");
+            user.setFirstName("Alex");
+
+            when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class)))
+                    .thenAnswer(i -> {
+                        EntraUser eu = i.getArgument(0);
+                        eu.setId(UUID.randomUUID());
+                        return eu;
+                    });
+
+            TechServicesUser respUser = TechServicesUser.builder()
+                    .id(UUID.randomUUID().toString())
+                    .email("awaiting@example.com")
+                    .accountEnabled(true)
+                    .customSecurityAttributes(
+                            TechServicesUser.CustomSecurityAttributes.builder()
+                                    .guestUserStatus(
+                                            TechServicesUser.GuestUserStatus.builder()
+                                                    .invitationProgress(InvitationStatus.AWAITING_VERIFICATION)
+                                                    .build())
+                                    .build())
+                    .build();
+
+            TechServicesApiResponse<RegisterUserResponse> registerUserResponse =
+                    TechServicesApiResponse.success(
+                            RegisterUserResponse.builder()
+                                    .responseType(RegisterUserResponse.ResponseType.VERIFIED)
+                                    .user(respUser)
+                                    .build());
+
+            when(techServicesClient.registerNewUser(any(EntraUserDto.class)))
+                    .thenReturn(registerUserResponse);
+
+            FirmDto firmDto = FirmDto.builder()
+                    .name("Test Firm")
+                    .build();
+
+            // Act
+            userService.createUser(user, firmDto, false, "admin", false);
+
+            // Assert
+            verify(notificationService, never()).notifyExistingUser(
+                    any(),
+                    anyString(),
+                    anyString());
         }
     }
 

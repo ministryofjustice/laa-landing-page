@@ -13,6 +13,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
+
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -21,6 +24,7 @@ import org.springframework.security.core.Authentication;
 
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 
@@ -35,10 +39,17 @@ class FirmSearchControllerTest {
     private FirmService firmService;
     @Mock
     private Authentication authentication;
+    @Mock
+    private EntraUser entraUser;
+    @Mock
+    private AccessControlService accessControlService;
 
     @BeforeEach
     void setUp() {
-        firmSearchController = new FirmSearchController(loginService, firmService);
+        firmSearchController = new FirmSearchController(loginService, firmService, accessControlService);
+        authentication = mock(Authentication.class);
+        entraUser = mock(EntraUser.class);
+
     }
 
     @Test
@@ -110,10 +121,12 @@ class FirmSearchControllerTest {
                         .code("TF002")
                         .build());
 
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(accessControlService.authenticatedUserIsInternal()).thenReturn(true);
         when(firmService.searchFirms(query)).thenReturn(mockFirms);
 
         // When
-        List<Map<String, String>> result = firmSearchController.searchFirms(query, 10);
+        List<Map<String, String>> result = firmSearchController.searchFirms(authentication, query, 10);
 
         // Then
         assertThat(result).hasSize(2);
@@ -133,10 +146,12 @@ class FirmSearchControllerTest {
                         .code(String.format("TF%03d", i)).build())
                 .collect(Collectors.toList());
 
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(accessControlService.authenticatedUserIsInternal()).thenReturn(true);
         when(firmService.searchFirms(query)).thenReturn(mockFirms);
 
         // When
-        List<Map<String, String>> result = firmSearchController.searchFirms(query, 15);
+        List<Map<String, String>> result = firmSearchController.searchFirms(authentication, query, 15);
 
         // Then
         assertThat(result).hasSize(15);
@@ -152,10 +167,12 @@ class FirmSearchControllerTest {
                         .code(String.format("TF%03d", i)).build())
                 .collect(Collectors.toList());
 
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(accessControlService.authenticatedUserIsInternal()).thenReturn(true);
         when(firmService.searchFirms(query)).thenReturn(mockFirms);
 
         // When
-        List<Map<String, String>> result = firmSearchController.searchFirms(query, 5);
+        List<Map<String, String>> result = firmSearchController.searchFirms(authentication, query, 5);
 
         // Then
         assertThat(mockFirms).hasSize(20);
@@ -172,10 +189,12 @@ class FirmSearchControllerTest {
                         .code(String.format("TF%03d", i)).build())
                 .collect(Collectors.toList());
 
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(accessControlService.authenticatedUserIsInternal()).thenReturn(true);
         when(firmService.searchFirms(query)).thenReturn(mockFirms);
 
         // When
-        List<Map<String, String>> result = firmSearchController.searchFirms(query, 101);
+        List<Map<String, String>> result = firmSearchController.searchFirms(authentication, query, 101);
 
         // Then
         assertThat(mockFirms).hasSize(200);
@@ -189,7 +208,7 @@ class FirmSearchControllerTest {
         String query = "";
 
         // When
-        List<Map<String, String>> result = firmSearchController.searchFirms(query, 10);
+        List<Map<String, String>> result = firmSearchController.searchFirms(authentication, query, 10);
 
         // Then - Should return empty and never call service
         assertThat(result).isEmpty();
@@ -199,7 +218,6 @@ class FirmSearchControllerTest {
     @Test
     void testSearchFirms_WithLargeResultSet_ShouldLimitResults() {
         // Given
-        String query = "Firm";
         List<FirmDto> mockFirms = new ArrayList<>();
         for (int i = 0; i < 15; i++) {
             mockFirms.add(FirmDto.builder()
@@ -209,14 +227,90 @@ class FirmSearchControllerTest {
                     .build());
         }
 
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(accessControlService.authenticatedUserIsInternal()).thenReturn(true);
+
+        String query = "Firm";
         when(firmService.searchFirms(query)).thenReturn(mockFirms);
 
         // When
-        List<Map<String, String>> result = firmSearchController.searchFirms(query, 10);
+        List<Map<String, String>> result = firmSearchController.searchFirms(authentication, query, 10);
 
         // Then
         assertThat(result).hasSize(10); // Should be limited to 10 results
         verify(firmService).searchFirms(query);
+    }
+
+    @Test
+    void testSearchFirms_ShouldUseAccessibleFirms_ForExternalUser() {
+        // Given
+        String query = "Test Firm";
+
+        List<FirmDto> mockFirms = List.of(
+                FirmDto.builder()
+                        .id(UUID.randomUUID())
+                        .name("Accessible Firm")
+                        .code("AF001")
+                        .build());
+
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(accessControlService.authenticatedUserIsInternal()).thenReturn(false);
+        when(firmService.getUserAccessibleFirms(entraUser, query)).thenReturn(mockFirms);
+
+        // When
+        List<Map<String, String>> result = firmSearchController.searchFirms(authentication, query, 10);
+
+        // Then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).get("name")).isEqualTo("Accessible Firm");
+        assertThat(result.get(0).get("code")).isEqualTo("AF001");
+
+        verify(firmService).getUserAccessibleFirms(entraUser, query);
+        verify(firmService, never()).searchFirms(anyString());
+    }
+
+    @Test
+    void testSearchFirms_ShouldLimitResults_ForExternalUser() {
+        // Given
+        String query = "Test Firm";
+
+        List<FirmDto> mockFirms = IntStream.rangeClosed(1, 20)
+                .mapToObj(i -> FirmDto.builder()
+                        .id(UUID.randomUUID())
+                        .name("Firm " + i)
+                        .code(String.format("TF%03d", i))
+                        .build())
+                .collect(Collectors.toList());
+
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(accessControlService.authenticatedUserIsInternal()).thenReturn(false);
+        when(firmService.getUserAccessibleFirms(entraUser, query)).thenReturn(mockFirms);
+
+        // When
+        List<Map<String, String>> result =
+                firmSearchController.searchFirms(authentication, query, 5);
+
+        // Then
+        assertThat(result).hasSize(10);
+
+        verify(firmService).getUserAccessibleFirms(entraUser, query);
+        verify(firmService, never()).searchFirms(anyString());
+    }
+
+    @Test
+    void testSearchFirms_ShouldNotUseGlobalSearch_ForExternalUser() {
+        String query = "Test Firm";
+
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(accessControlService.authenticatedUserIsInternal()).thenReturn(false);
+        when(firmService.getUserAccessibleFirms(entraUser, query)).thenReturn(List.of());
+
+        // When
+        firmSearchController.searchFirms(authentication, query, 10);
+
+        // Then
+        verify(firmService).getUserAccessibleFirms(entraUser, query);
+        verify(firmService, never()).searchFirms(anyString());
     }
 
 }

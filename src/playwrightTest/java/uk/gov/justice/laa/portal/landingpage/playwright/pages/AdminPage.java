@@ -1,14 +1,14 @@
 package uk.gov.justice.laa.portal.landingpage.playwright.pages;
 
-import com.microsoft.playwright.Locator;
-import com.microsoft.playwright.Page;
-import com.microsoft.playwright.options.LoadState;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
-
+import com.microsoft.playwright.Locator;
+import com.microsoft.playwright.Page;
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+import com.microsoft.playwright.options.LoadState;
 
 public class AdminPage {
 
@@ -266,7 +266,7 @@ public class AdminPage {
 
         assertHeadersContainExactly(
                 rolesHeaders,
-                List.of("Role name", "Description", "CCMS Code", "Legacy Sync", "User Type", "Order", "")
+                List.of("Role name", "Description", "CCMS Code", "Legacy Sync", "User type", "Order", "")
         );
         return this;
     }
