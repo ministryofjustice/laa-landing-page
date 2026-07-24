@@ -5178,6 +5178,8 @@ class UserServiceTest {
             when(appRoleRepository.findById(any())).thenReturn(Optional.ofNullable(appRole));
             when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
             doNothing().when(notificationService).notifyDeleteFirmAccess(isNull(), anyString(), anyString(), anyString());
+            // firmService.getById should return the firm corresponding to newFirmDto
+            when(firmService.getById(newFirmId)).thenReturn(Firm.builder().id(newFirmId).build());
 
             EntraUserDto user = EntraUserDto.builder().id(entraUserId.toString())
                     .firstName("FirstName").email("test@email.com").multiFirmUser(true).build();
