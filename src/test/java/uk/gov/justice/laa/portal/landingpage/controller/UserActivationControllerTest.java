@@ -5,8 +5,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.core.Authentication;
 import org.springframework.ui.ExtendedModelMap;
@@ -21,7 +23,6 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.forms.DelegateReactivateUserReasonForm;
-import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserReactivationActivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
@@ -35,10 +36,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+@ExtendWith(MockitoExtension.class)
 public class UserActivationControllerTest {
 
     private UserActivationController userActivationController;
@@ -49,8 +50,6 @@ public class UserActivationControllerTest {
     private UserService userService;
     @Mock
     private UserReactivationActivationRequestService userReactivationActivationRequestService;
-    @Mock
-    private AccessControlService accessControlService;
     @Mock
     private HttpSession session;
     @Mock
@@ -67,15 +66,9 @@ public class UserActivationControllerTest {
     void setUp() {
         userActivationController = new UserActivationController(loginService, userService, userReactivationActivationRequestService);
         userActivationController.disableUserFeatureEnabled = true;
-        lenient().when(accessControlService.getEnablementFlags(any()))
-                .thenReturn(new AccessControlService.EnablementFlags(false, false, false));
         model = new ExtendedModelMap();
     }
 
-
-    // ==========================================
-    // GET /user/delegate-reactivate/{id}
-    // ==========================================
     @Nested
     @DisplayName("GET /user/delegate-reactivate/{id}")
     class DelegateReactivateUserGetTests {
@@ -136,9 +129,6 @@ public class UserActivationControllerTest {
         }
     }
 
-    // ==========================================
-    // POST /user/delegate-reactivate/{id}
-    // ==========================================
     @Nested
     @DisplayName("POST /user/delegate-reactivate/{id}")
     class DelegateReactivateUserPostTests {
@@ -171,9 +161,6 @@ public class UserActivationControllerTest {
         }
     }
 
-    // ==========================================
-    // GET /users/delegate-reactivate-user-reason/{id}
-    // ==========================================
     @Nested
     @DisplayName("GET /users/delegate-reactivate-user-reason/{id}")
     class DelegateReactivateUserReasonsGetTests {
@@ -224,9 +211,6 @@ public class UserActivationControllerTest {
         }
     }
 
-    // ==========================================
-    // POST /users/delegate-reactivate-user-reason/{id}
-    // ==========================================
     @Nested
     @DisplayName("POST /users/delegate-reactivate-user-reason/{id}")
     class DelegateReactivateUserReasonsPostTests {
@@ -272,13 +256,6 @@ public class UserActivationControllerTest {
         }
     }
 
-    // ==========================================
-    // Builder Helpers
-    // ==========================================
-
-    // ==========================================
-    // GET /users/delegate-reactivate-user-check-answers/{id}
-    // ==========================================
     @Nested
     @DisplayName("GET /users/delegate-reactivate-user-check-answers/{id}")
     class DelegateReactivateUserReasonsCheckAnswersGetTests {
@@ -328,9 +305,6 @@ public class UserActivationControllerTest {
         }
     }
 
-    // ==========================================
-    // POST /users/delegate-reactivate-user-check-answers/{id}
-    // ==========================================
     @Nested
     @DisplayName("POST /users/delegate-reactivate-user-check-answers/{id}")
     class DelegateReactivateUserReasonsCheckAnswersPostTests {
