@@ -202,9 +202,6 @@ class UserActivationRequestRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("findAllLatestRequests (Unpaged) should return only latest version per requestId sorted by createdAt desc")
         void findAllLatestRequests_returnsOnlyLatestVersionsSorted() {
-            // Arrange
-            Instant now = Instant.now();
-
             // Request 1: Latest is v2 (Older creation time)
             EntraUser entraUser1 = buildEntraUser("123", "test@email.com", "First", "Last");
             entraUser1 = entraUserRepository.saveAndFlush(entraUser1);
@@ -214,8 +211,9 @@ class UserActivationRequestRepositoryTest extends BaseRepositoryTest {
             userProfile1.setFirm(firm1);
             userProfileRepository.saveAndFlush(userProfile1);
             userProfileId1 = userProfile1.getId();
+            Instant now = Instant.now();
             createAndPersistRequest(userProfile1, requestId1, 1, now.minus(4, ChronoUnit.HOURS), ReactivationRequestStatus.IN_REVIEW);
-            UserActivationRequest req1Latest = createAndPersistRequest(userProfile1, requestId1, 2, now.minus(3, ChronoUnit.HOURS), ReactivationRequestStatus.INFORMATION_REQUIRED);
+            final UserActivationRequest req1Latest = createAndPersistRequest(userProfile1, requestId1, 2, now.minus(3, ChronoUnit.HOURS), ReactivationRequestStatus.INFORMATION_REQUIRED);
 
             // Request 2: Latest is v1 (Newer creation time)
             EntraUser entraUser2 = buildEntraUser("12345", "test2@email.com", "First", "Last");
@@ -240,14 +238,6 @@ class UserActivationRequestRepositoryTest extends BaseRepositoryTest {
         @Test
         @DisplayName("findAllLatestRequests (Paged) should return paginated latest requests with accurate count")
         void findAllLatestRequests_paged_returnsPagedResultsAndCorrectTotalCount() {
-            // Arrange
-            Instant now = Instant.now();
-
-            // Setup 3 distinct request IDs with multiple versions
-            UUID reqIdA = UUID.randomUUID();
-            UUID reqIdB = UUID.randomUUID();
-            UUID reqIdC = UUID.randomUUID();
-
             EntraUser entraUser1 = buildEntraUser("123", "test@email.com", "First", "Last");
             entraUser1 = entraUserRepository.saveAndFlush(entraUser1);
             UserProfile userProfile1 = buildLaaUserProfile(entraUser1, UserType.EXTERNAL);
@@ -256,6 +246,10 @@ class UserActivationRequestRepositoryTest extends BaseRepositoryTest {
             userProfile1.setFirm(firm1);
             userProfileRepository.saveAndFlush(userProfile1);
             userProfileId1 = userProfile1.getId();
+            Instant now = Instant.now();
+            final UUID reqIdA = UUID.randomUUID();
+            final UUID reqIdB = UUID.randomUUID();
+            final UUID reqIdC = UUID.randomUUID();
             createAndPersistRequest(userProfile1, reqIdA, 1, now, ReactivationRequestStatus.IN_REVIEW);
             createAndPersistRequest(userProfile1, reqIdA, 2, now, ReactivationRequestStatus.INFORMATION_REQUIRED);
 

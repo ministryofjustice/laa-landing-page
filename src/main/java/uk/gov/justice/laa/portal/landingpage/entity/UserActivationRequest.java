@@ -1,6 +1,11 @@
 package uk.gov.justice.laa.portal.landingpage.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -38,7 +43,7 @@ public class UserActivationRequest extends BaseEntity {
     private UUID userProfileId;
 
     @Column(name = "version", nullable = false)
-    private Integer version = 1;
+    private Integer version;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 255)
@@ -57,5 +62,5 @@ public class UserActivationRequest extends BaseEntity {
     @Column(name = "created_at", nullable = false, updatable = false)
     @CreatedDate
     @NotNull(message = "Created date must be provided")
-    private Instant createdAt = Instant.now();
+    private Instant createdAt;
 }

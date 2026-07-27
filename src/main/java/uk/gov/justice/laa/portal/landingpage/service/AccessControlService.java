@@ -281,18 +281,24 @@ public class AccessControlService {
 
         public EnablementFlags {
             int trueCount = 0;
-            if (canEnable) trueCount++;
-            if (blockedByHierarchy) trueCount++;
-            if (canDelegate) trueCount++;
+            if (canEnable) {
+                trueCount++;
+            }
+            if (blockedByHierarchy) {
+                trueCount++;
+            }
+            if (canDelegate) {
+                trueCount++;
+            }
 
             if (trueCount > 1) {
                 log.warn("Only one flag can be true at a time. Received: canEnable={}, blockedByHierarchy={}, canDelegate={}",
                         canEnable, blockedByHierarchy, canDelegate);
                 throw new IllegalArgumentException(
-                        "Only one flag can be true at a time. Received: " +
-                                "canEnable=" + canEnable +
-                                ", blockedByHierarchy=" + blockedByHierarchy +
-                                ", canDelegate=" + canDelegate
+                        "Only one flag can be true at a time. Received: "
+                                + "canEnable=" + canEnable
+                                + ", blockedByHierarchy=" + blockedByHierarchy
+                                + ", canDelegate=" + canDelegate
                 );
             }
         }
