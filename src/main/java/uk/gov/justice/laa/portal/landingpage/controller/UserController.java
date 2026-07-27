@@ -808,12 +808,12 @@ public class UserController {
             throw new ResponseStatusException(HttpStatusCode.valueOf(404));
         }
 
-        UUID profileId = getObjectFromHttpSession(session, "profileId", UUID.class).orElseThrow();
         String idFromSession = getObjectFromHttpSession(session, "delegateReactivateUserId", String.class).orElseThrow();
         if (id == null || !id.equals(idFromSession)) {
             throw new ResponseStatusException(HttpStatusCode.valueOf(403));
         }
 
+        UUID profileId = getObjectFromHttpSession(session, "profileId", UUID.class).orElseThrow();
         DelegateReactivateUserReasonForm delegateReactivateUserReasonForm =
                 getObjectFromHttpSession(session, "delegateReactivateUserReasonForm", DelegateReactivateUserReasonForm.class)
                         .orElseThrow();
@@ -1297,7 +1297,7 @@ public class UserController {
     @GetMapping("/users/edit/{id}/details")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_DETAILS)")
     public String editUserDetails(@PathVariable String id, Model model, HttpSession session) {
-        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();;
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         EditUserDetailsForm editUserDetailsForm = new EditUserDetailsForm();
         editUserDetailsForm.setFirstName(user.getEntraUser().getFirstName());
         editUserDetailsForm.setLastName(user.getEntraUser().getLastName());

@@ -143,7 +143,9 @@ class UserReactivationActivationRequestServiceTest {
             UserActivationRequest inReview = buildUserActivationRequest(ReactivationRequestStatus.IN_REVIEW, 1);
             given(requestRepository.findFirstByUserProfileIdOrderByVersionDesc(PROFILE_ID)).willReturn(Optional.of(inReview));
 
-            assertThatThrownBy(() -> service.createNewRequest(REQUEST_ID, PROFILE_ID, "Reason", user)).isInstanceOf(IllegalStateException.class).hasMessage("Request already being processed for user " + PROFILE_ID);
+            assertThatThrownBy(() -> service.createNewRequest(REQUEST_ID, PROFILE_ID, "Reason", user))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessage("Request already being processed for user " + PROFILE_ID);
 
             verify(requestRepository, never()).save(any());
         }
@@ -166,7 +168,9 @@ class UserReactivationActivationRequestServiceTest {
         void targetUserNotFound_throwsException() {
             given(userProfileRepository.existsById(PROFILE_ID)).willReturn(false);
 
-            assertThatThrownBy(() -> service.saveRequestState(REQUEST_ID, PROFILE_ID, ReactivationRequestStatus.APPROVED, "Comments", ACTOR_ID)).isInstanceOf(EntityNotFoundException.class).hasMessage("Target user not found with ID: " + PROFILE_ID);
+            assertThatThrownBy(() -> service.saveRequestState(REQUEST_ID, PROFILE_ID, ReactivationRequestStatus.APPROVED, "Comments", ACTOR_ID))
+                    .isInstanceOf(EntityNotFoundException.class)
+                    .hasMessage("Target user not found with ID: " + PROFILE_ID);
 
             verify(requestRepository, never()).save(any());
         }
@@ -176,7 +180,9 @@ class UserReactivationActivationRequestServiceTest {
         void actingUserNotFound_throwsException() {
             given(userProfileRepository.existsById(ACTOR_ID)).willReturn(false);
 
-            assertThatThrownBy(() -> service.saveRequestState(REQUEST_ID, PROFILE_ID, ReactivationRequestStatus.APPROVED, "Comments", ACTOR_ID)).isInstanceOf(EntityNotFoundException.class).hasMessage("Acting user not found with ID: " + ACTOR_ID);
+            assertThatThrownBy(() -> service.saveRequestState(REQUEST_ID, PROFILE_ID, ReactivationRequestStatus.APPROVED, "Comments", ACTOR_ID))
+                    .isInstanceOf(EntityNotFoundException.class)
+                    .hasMessage("Acting user not found with ID: " + ACTOR_ID);
 
             verify(requestRepository, never()).save(any());
         }
@@ -232,7 +238,9 @@ class UserReactivationActivationRequestServiceTest {
             given(requestRepository.findFirstByRequestIdOrderByVersionDesc(REQUEST_ID)).willReturn(Optional.of(existing));
             given(userProfileRepository.existsById(ACTOR_ID)).willReturn(true);
 
-            assertThatThrownBy(() -> service.saveRequestState(REQUEST_ID, PROFILE_ID, ReactivationRequestStatus.REJECTED, "Cannot reject", ACTOR_ID)).isInstanceOf(IllegalStateException.class).hasMessage(String.format("Request already processed for user %s. Request ID: %s", PROFILE_ID, REQUEST_ID));
+            assertThatThrownBy(() -> service.saveRequestState(REQUEST_ID, PROFILE_ID, ReactivationRequestStatus.REJECTED, "Cannot reject", ACTOR_ID))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessage(String.format("Request already processed for user %s. Request ID: %s", PROFILE_ID, REQUEST_ID));
 
             verify(requestRepository, never()).save(any());
         }
@@ -244,7 +252,9 @@ class UserReactivationActivationRequestServiceTest {
             given(requestRepository.findFirstByRequestIdOrderByVersionDesc(REQUEST_ID)).willReturn(Optional.of(existing));
             given(userProfileRepository.existsById(ACTOR_ID)).willReturn(true);
 
-            assertThatThrownBy(() -> service.saveRequestState(REQUEST_ID, PROFILE_ID, ReactivationRequestStatus.APPROVED, "Cannot approve", ACTOR_ID)).isInstanceOf(IllegalStateException.class).hasMessage(String.format("Request already processed for user %s. Request ID: %s", PROFILE_ID, REQUEST_ID));
+            assertThatThrownBy(() -> service.saveRequestState(REQUEST_ID, PROFILE_ID, ReactivationRequestStatus.APPROVED, "Cannot approve", ACTOR_ID))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessage(String.format("Request already processed for user %s. Request ID: %s", PROFILE_ID, REQUEST_ID));
 
             verify(requestRepository, never()).save(any());
         }
