@@ -65,12 +65,15 @@ import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
@@ -80,6 +83,7 @@ import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncomple
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm;
+import uk.gov.justice.laa.portal.landingpage.forms.DelegateReactivateUserReasonForm;
 import uk.gov.justice.laa.portal.landingpage.forms.DisableUserReasonForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmReassignmentForm;
@@ -105,6 +109,7 @@ import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
+import uk.gov.justice.laa.portal.landingpage.service.UserReactivationActivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
@@ -142,6 +147,7 @@ public class UserController {
     private final AppService appService;
     private final UserAccountStatusService userAccountStatusService;
     private final NotificationService notificationService;
+    private final UserReactivationActivationRequestService userReactivationActivationRequestService;
 
 
     @Value("${feature.flag.disable.user}")
@@ -404,9 +410,10 @@ public class UserController {
         model.addAttribute("canDisableUser", canDisableUser);
         AccessControlService.EnablementFlags enablementFlags = disableUserFeatureEnabled
                 ? accessControlService.getEnablementFlags(user.getEntraUser().getId())
-                : new AccessControlService.EnablementFlags(false, false);
+                : new AccessControlService.EnablementFlags(false, false, false);
         model.addAttribute("canEnableUser", enablementFlags.canEnable());
         model.addAttribute("cannotEnableUser", enablementFlags.blockedByHierarchy());
+        model.addAttribute("canDelegateEnableUser", enablementFlags.canDelegate());
         final boolean userIsEnabled = user.getEntraUser().isEnabled();
         model.addAttribute("userIsEnabled", userIsEnabled);
         boolean showResendVerificationLink = accessControlService.canSendVerificationEmail(id);
@@ -423,6 +430,12 @@ public class UserController {
 
         model.addAttribute("isMultiFirmUser", isMultiFirmUser);
         model.addAttribute("canViewAllFirmsOfMultiFirmUser", accessControlService.canViewAllFirmsOfMultiFirmUser());
+
+        boolean isProviderAdmin = user != null
+                && accessControlService.userHasAuthzRole(authentication,
+                AuthzRole.FIRM_USER_MANAGER.getRoleName());
+        model.addAttribute("silasUserType",
+                isInternalUser ? "Internal" : isMultiFirmUser ? "3rd Party" : isProviderAdmin ? "Firm Admin" : "Provider");
 
         // Check if this profile belongs to the logged-in user
         boolean isOwnProfile = editorUserProfile.getId().equals(user.getId());
@@ -667,6 +680,189 @@ public class UserController {
         model.addAttribute("referer", referer);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Disable User Success - " + user.getFullName());
         return "disable-user-completed";
+    }
+
+    @GetMapping("/users/delegate-reactivate/{id}")
+    @PreAuthorize("@accessControlService.canDelegateEnableUser(#id)")
+    public String delegateReactivateUserGet(@PathVariable String id,
+                                            HttpSession session,
+                                            Model model,
+                                            String referer,
+                                            UUID profileId,
+                                            RedirectAttributes redirectAttributes) {
+        if (!disableUserFeatureEnabled) {
+            throw new ResponseStatusException(HttpStatusCode.valueOf(404));
+        }
+        cancelUserCreation(session);
+
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        Optional<UserActivationRequest> request = userReactivationActivationRequestService.findFirstByUserProfileIdOrderByVersionDesc(profileId);
+        if (request.isPresent()
+                && !(ReactivationRequestStatus.REJECTED.equals(request.get().getStatus())
+                || ReactivationRequestStatus.APPROVED.equals(request.get().getStatus()))) {
+            redirectAttributes.addFlashAttribute("errorMessage", "A delegate request is already in progress");
+            redirectAttributes.addFlashAttribute("requestId", request.get().getId());
+            return "redirect:/admin/users/manage/" + profileId;
+
+        }
+
+        model.addAttribute("user", user);
+        model.addAttribute("profileId", profileId);
+        model.addAttribute("referer", referer);
+        session.setAttribute("delegateReactivateUserId", id);
+        session.setAttribute("profileId", profileId);
+
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User - " + user.getFullName());
+        return "delegate-reactivate-user";
+    }
+
+    @PostMapping("/users/delegate-reactivate/{id}")
+    @PreAuthorize("@accessControlService.canDelegateEnableUser(#id)")
+    public String delegateReactivateUserPost(@PathVariable String id,
+                                             Model model,
+                                             HttpSession session,
+                                             String referer,
+                                             UUID profileId) {
+        String idFromSession = getObjectFromHttpSession(session, "delegateReactivateUserId", String.class).orElseThrow();
+        if (id == null || !id.equals(idFromSession)) {
+            throw new ResponseStatusException(HttpStatusCode.valueOf(403));
+        }
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        session.setAttribute("delegateReactivateUserId", id);
+        session.setAttribute("profileId", profileId);
+
+        model.addAttribute("user", user);
+        model.addAttribute("referer", referer);
+        model.addAttribute("profileId", profileId);
+
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User - " + user.getFullName());
+        return "redirect:/admin/users/delegate-reactivate-user-reason/" + user.getId();
+    }
+
+    @GetMapping("/users/delegate-reactivate-user-reason/{id}")
+    @PreAuthorize("@accessControlService.canDelegateEnableUser(#id)")
+    public String delegateReactivateUserReasonsGet(@PathVariable String id,
+                                                   Model model,
+                                                   HttpSession session) {
+        if (!disableUserFeatureEnabled) {
+            throw new ResponseStatusException(HttpStatusCode.valueOf(404));
+        }
+
+        String idFromSession = getObjectFromHttpSession(session, "delegateReactivateUserId", String.class).orElseThrow();
+        if (id == null || !id.equals(idFromSession)) {
+            throw new ResponseStatusException(HttpStatusCode.valueOf(403));
+        }
+
+        UUID profileId = getObjectFromHttpSession(session, "profileId", UUID.class).orElseThrow();
+
+        DelegateReactivateUserReasonForm delegateReactivateUserReasonForm =
+                getObjectFromHttpSession(session, "delegateReactivateUserReasonForm", DelegateReactivateUserReasonForm.class)
+                        .orElse(new DelegateReactivateUserReasonForm());
+
+
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        model.addAttribute("user", user);
+        model.addAttribute("delegateReactivateUserReasonForm", delegateReactivateUserReasonForm);
+        model.addAttribute("profileId", profileId);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User - " + user.getFullName());
+
+        return "delegate-reactivate-user-reason";
+    }
+
+    @PostMapping("/users/delegate-reactivate-user-reason/{id}")
+    @PreAuthorize("@accessControlService.canDelegateEnableUser(#id)")
+    public String delegateReactivateUserReasonsPost(@PathVariable String id,
+                                                    @Valid DelegateReactivateUserReasonForm delegateReactivateUserReasonForm,
+                                                    BindingResult result,
+                                                    Model model,
+                                                    HttpSession session) {
+
+        UUID profileId = getObjectFromHttpSession(session, "profileId", UUID.class).orElseThrow();
+
+        if (result.hasErrors()) {
+            String errorMessage = buildErrorString(result);
+            EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+            model.addAttribute("user", user);
+            model.addAttribute("profileId", profileId);
+            model.addAttribute("delegateReactivateUserReasonForm", delegateReactivateUserReasonForm);
+            model.addAttribute("errorMessage", errorMessage);
+            model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User - " + user.getFullName());
+            return "delegate-reactivate-user-reason";
+        }
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+
+        model.addAttribute("user", user);
+        model.addAttribute("profileId", profileId);
+        model.addAttribute("delegateReactivateUserReasonForm", delegateReactivateUserReasonForm);
+        session.setAttribute("delegateReactivateUserReasonForm", delegateReactivateUserReasonForm);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User - " + user.getFullName());
+        return "redirect:/admin/users/delegate-reactivate-user-check-answers/" + user.getId();
+    }
+
+    @GetMapping("/users/delegate-reactivate-user-check-answers/{id}")
+    @PreAuthorize("@accessControlService.canDelegateEnableUser(#id)")
+    public String delegateReactivateUserReasonsCheckAnswersGet(@PathVariable String id,
+                                                               Model model,
+                                                               HttpSession session) {
+        if (!disableUserFeatureEnabled) {
+            throw new ResponseStatusException(HttpStatusCode.valueOf(404));
+        }
+
+        UUID profileId = getObjectFromHttpSession(session, "profileId", UUID.class).orElseThrow();
+        String idFromSession = getObjectFromHttpSession(session, "delegateReactivateUserId", String.class).orElseThrow();
+        if (id == null || !id.equals(idFromSession)) {
+            throw new ResponseStatusException(HttpStatusCode.valueOf(403));
+        }
+
+        DelegateReactivateUserReasonForm delegateReactivateUserReasonForm =
+                getObjectFromHttpSession(session, "delegateReactivateUserReasonForm", DelegateReactivateUserReasonForm.class)
+                        .orElseThrow();
+
+
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        model.addAttribute("user", user);
+        model.addAttribute("delegateReactivateUserReasonForm", delegateReactivateUserReasonForm);
+        model.addAttribute("profileId", profileId);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User - " + user.getFullName());
+        return "delegate-reactivate-user-check-answers";
+    }
+
+    @PostMapping("/users/delegate-reactivate-user-check-answers/{id}")
+    @PreAuthorize("@accessControlService.canDelegateEnableUser(#id)")
+    public String delegateReactivateUserReasonsCheckAnswersPost(@PathVariable String id,
+                                                                Authentication authentication,
+                                                                Model model,
+                                                                HttpSession session) {
+        if (!disableUserFeatureEnabled) {
+            throw new ResponseStatusException(HttpStatusCode.valueOf(404));
+        }
+
+        String idFromSession = getObjectFromHttpSession(session, "delegateReactivateUserId", String.class).orElseThrow();
+        if (id == null || !id.equals(idFromSession)) {
+            throw new ResponseStatusException(HttpStatusCode.valueOf(400));
+        }
+
+        DelegateReactivateUserReasonForm delegateReactivateUserReasonForm =
+                getObjectFromHttpSession(session, "delegateReactivateUserReasonForm", DelegateReactivateUserReasonForm.class)
+                        .orElseThrow();
+
+        UUID profileId = getObjectFromHttpSession(session, "profileId", UUID.class).orElseThrow();
+        UserProfileDto userProfile = userService.getActiveProfileByUserId(id).orElseThrow();
+        if (!userProfile.getId().equals(profileId)) {
+            throw new ResponseStatusException(HttpStatusCode.valueOf(400));
+        }
+
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        CurrentUserDto actor = loginService.getCurrentUser(authentication);
+
+        UserActivationRequest userActivationRequest = userReactivationActivationRequestService
+                .createNewRequest(UUID.randomUUID(), profileId, delegateReactivateUserReasonForm.getReason(), user);
+        log.info("A delegate enable user request {} has been raised by {} for {}", userActivationRequest.getRequestId(), actor.getUserId(), id);
+
+        model.addAttribute("user", user);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User - " + user.getFullName());
+        cancelUserCreation(session);
+        return "delegate-reactivate-user-confirmation";
     }
 
     @GetMapping("/users/manage/{id}/enable")
@@ -1081,6 +1277,10 @@ public class UserController {
         session.removeAttribute("firmSearchForm");
         session.removeAttribute("firmSearchTerm");
         session.removeAttribute("createUserFlowStage");
+        session.removeAttribute("delegateReactivateUserId");
+        session.removeAttribute("delegateReactivateUserReasonForm");
+        session.removeAttribute("delegateReactivateUserId");
+        session.removeAttribute("profileId");
         return "redirect:/admin/users";
     }
 
