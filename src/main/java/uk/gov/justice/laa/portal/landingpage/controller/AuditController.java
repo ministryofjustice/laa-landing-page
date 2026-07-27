@@ -222,9 +222,10 @@ public class AuditController {
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
         AccessControlService.EnablementFlags enablementFlags = disableUserFeatureEnabled
                 ? accessControlService.getEnablementFlags(userDetail.getUserId())
-                : new AccessControlService.EnablementFlags(false, false);
+                : new AccessControlService.EnablementFlags(false, false, false);
         boolean canEnableUser = enablementFlags.canEnable();
         boolean cannotEnableUser = enablementFlags.blockedByHierarchy();
+        boolean canDelegateEnableUser = enablementFlags.canDelegate();
 
         // Add attributes to model
         model.addAttribute("user", userDetail);
@@ -235,6 +236,7 @@ public class AuditController {
         model.addAttribute("canDisableUser", disableUserFeatureEnabled && canDisableUser);
         model.addAttribute("canEnableUser", canEnableUser);
         model.addAttribute("cannotEnableUser", cannotEnableUser);
+        model.addAttribute("canDelegateEnableUser", canDelegateEnableUser);
         model.addAttribute("userIsEnabled", userDetail.isEnabled());
         model.addAttribute("userActivated",
                 Objects.equals(userDetail.getUserType(), "Internal") || Objects.equals(userDetail.getActivationStatus(), VERIFICATION_SUCCESS.name()));

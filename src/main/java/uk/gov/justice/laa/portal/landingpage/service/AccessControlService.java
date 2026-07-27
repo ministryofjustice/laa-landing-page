@@ -244,6 +244,10 @@ public class AccessControlService {
         return computeEnablementState(entraUserId).canEnable();
     }
 
+    public boolean canDelegateEnableUser(String entraUserId) {
+        return computeEnablementState(entraUserId).canDelegate();
+    }
+
     /**
      * Returns {@code true} when the authenticated user has {@code ENABLE_EXTERNAL_USER} permission
      * and the target user is disabled and external, but the enable is blocked by the
@@ -269,11 +273,30 @@ public class AccessControlService {
      */
     public EnablementFlags getEnablementFlags(String entraUserId) {
         EnablementState state = computeEnablementState(entraUserId);
-        return new EnablementFlags(state.canEnable(), state.blockedByHierarchy());
+        return new EnablementFlags(state.canEnable(), state.blockedByHierarchy(), state.canDelegate);
     }
 
     /** Exposes both canEnable and blockedByHierarchy in one object to avoid computing state twice. */
-    public record EnablementFlags(boolean canEnable, boolean blockedByHierarchy) {}
+    public record EnablementFlags(boolean canEnable, boolean blockedByHierarchy, boolean canDelegate) {
+
+        public EnablementFlags {
+            int trueCount = 0;
+            if (canEnable) trueCount++;
+            if (blockedByHierarchy) trueCount++;
+            if (canDelegate) trueCount++;
+
+            if (trueCount > 1) {
+                log.warn("Only one flag can be true at a time. Received: canEnable={}, blockedByHierarchy={}, canDelegate={}",
+                        canEnable, blockedByHierarchy, canDelegate);
+                throw new IllegalArgumentException(
+                        "Only one flag can be true at a time. Received: " +
+                                "canEnable=" + canEnable +
+                                ", blockedByHierarchy=" + blockedByHierarchy +
+                                ", canDelegate=" + canDelegate
+                );
+            }
+        }
+    }
 
     /**
      * Computes the full enablement state for the given target user in a single pass.
@@ -325,10 +348,6 @@ public class AccessControlService {
                 .stream().map(AppRole::getName).toList();
         DisableType disableType = targetUser.getDisableType();
 
-        if (!userEnablementPolicy.canEnable(disableType, actorRoles)) {
-            return EnablementState.BLOCKED_BY_HIERARCHY;
-        }
-
         if (userEnablementPolicy.requiresSameFirmCheck(disableType, actorRoles)) {
             Firm actorFirm = actorUserProfile.getFirm();
             Firm targetFirm = targetUser.getUserProfiles().stream()
@@ -340,16 +359,23 @@ public class AccessControlService {
             if (!sameFirm) {
                 return EnablementState.BLOCKED_BY_HIERARCHY;
             }
+
+            return EnablementState.CAN_ENABLE;
+        }
+
+        if (!userEnablementPolicy.canEnable(disableType, actorRoles)) {
+            return EnablementState.CAN_DELEGATE_ENABLE;
         }
 
         return EnablementState.CAN_ENABLE;
     }
 
     /** Encapsulates the result of computing the enable-user access state. */
-    private record EnablementState(boolean canEnable, boolean blockedByHierarchy) {
-        static final EnablementState DENIED = new EnablementState(false, false);
-        static final EnablementState BLOCKED_BY_HIERARCHY = new EnablementState(false, true);
-        static final EnablementState CAN_ENABLE = new EnablementState(true, false);
+    private record EnablementState(boolean canEnable, boolean blockedByHierarchy, boolean canDelegate) {
+        static final EnablementState DENIED = new EnablementState(false, false, false);
+        static final EnablementState BLOCKED_BY_HIERARCHY = new EnablementState(false, true, false);
+        static final EnablementState CAN_ENABLE = new EnablementState(true, false, false);
+        static final EnablementState CAN_DELEGATE_ENABLE = new EnablementState(false, false, true);
     }
 
     /**
