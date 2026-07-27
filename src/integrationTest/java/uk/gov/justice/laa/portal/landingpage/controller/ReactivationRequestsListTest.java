@@ -1,0 +1,121 @@
+package uk.gov.justice.laa.portal.landingpage.controller;
+
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
+
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestListItem;
+import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
+
+public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest {
+
+    @Test
+    public void testProviderAdminGetsTrackHeading() throws Exception {
+        EntraUser providerAdmin = firmUserManagers.getFirst();
+
+        mockMvc.perform(get("/admin/users/reactivation-requests")
+                        .with(userOauth2Login(providerAdmin)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("reactivation-requests"))
+                .andExpect(model().attribute("pageHeading", "Track reactivation requests"))
+                .andExpect(model().attribute("manageMode", false));
+    }
+
+    @Test
+    public void testProviderAdminResultsAreRestrictedToOwnFirm() throws Exception {
+        EntraUser providerAdmin = firmUserManagers.getFirst();
+
+        var result = mockMvc.perform(get("/admin/users/reactivation-requests")
+                        .with(userOauth2Login(providerAdmin)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        @SuppressWarnings("unchecked")
+        List<ReactivationRequestListItem> requests =
+                (List<ReactivationRequestListItem>) result.getModelAndView().getModel().get("requests");
+
+        Set<UUID> providerAdminFirmIds = providerAdmin.getUserProfiles().stream()
+                .filter(profile -> profile != null && profile.isActiveProfile() && profile.getFirm() != null)
+                .map(profile -> profile.getFirm().getId())
+                .collect(Collectors.toSet());
+
+        assertThat(requests).isNotEmpty();
+        assertThat(requests).allMatch(request -> providerAdminFirmIds.contains(request.firmId()));
+    }
+
+    @Test
+    public void testExternalUserAdminGetsManageHeadingAndDefaultInReviewFilter() throws Exception {
+        EntraUser externalUserAdmin = externalUserAdmins.getFirst();
+
+        mockMvc.perform(get("/admin/users/reactivation-requests")
+                        .with(userOauth2Login(externalUserAdmin)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/users/reactivation-requests?size=10&page=1&sort=dateSubmitted&direction=desc&defaultStatusApplied=true&selectedRequestStatuses=IN_REVIEW"));
+
+        var result = mockMvc.perform(get("/admin/users/reactivation-requests")
+                        .param("defaultStatusApplied", "true")
+                        .param("selectedRequestStatuses", "IN_REVIEW")
+                        .with(userOauth2Login(externalUserAdmin)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("reactivation-requests"))
+                .andExpect(model().attribute("pageHeading", "Manage reactivation requests"))
+                .andExpect(model().attribute("manageMode", true))
+                .andReturn();
+
+        @SuppressWarnings("unchecked")
+        List<ReactivationRequestStatus> statuses =
+                (List<ReactivationRequestStatus>) result.getModelAndView().getModel().get("selectedRequestStatuses");
+
+        assertThat(statuses).containsExactly(ReactivationRequestStatus.IN_REVIEW);
+    }
+
+    @Test
+    public void testGlobalAdminAndSecurityResponseGetManageHeading() throws Exception {
+        EntraUser globalAdmin = globalAdmins.getFirst();
+        EntraUser securityResponse = securityResponseUsers.getFirst();
+
+        mockMvc.perform(get("/admin/users/reactivation-requests")
+                        .param("defaultStatusApplied", "true")
+                        .param("selectedRequestStatuses", "IN_REVIEW")
+                        .with(userOauth2Login(globalAdmin)))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("pageHeading", "Manage reactivation requests"));
+
+        mockMvc.perform(get("/admin/users/reactivation-requests")
+                        .param("defaultStatusApplied", "true")
+                        .param("selectedRequestStatuses", "IN_REVIEW")
+                        .with(userOauth2Login(securityResponse)))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("pageHeading", "Manage reactivation requests"));
+    }
+
+    @Test
+    public void testUserWithoutPermissionCannotAccessReactivationRequestsPage() throws Exception {
+        EntraUser userWithoutRoles = internalUsersNoRoles.getFirst();
+
+        mockMvc.perform(get("/admin/users/reactivation-requests")
+                        .with(userOauth2Login(userWithoutRoles)))
+                .andExpect(status().is4xxClientError());
+    }
+
+    @Test
+    public void testManageUsersPageContainsReactivationRequestsButton() throws Exception {
+        EntraUser globalAdmin = globalAdmins.getFirst();
+
+        mockMvc.perform(get("/admin/users")
+                        .with(userOauth2Login(globalAdmin)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Reactivation requests")));
+    }
+}

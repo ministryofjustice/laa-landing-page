@@ -78,6 +78,12 @@
                                     Create a new user
                                 </button>
 
+                                <button type="button" class="govuk-button govuk-button--secondary"
+                                    data-module="govuk-button" data-govuk-button-init=""
+                                    onclick="location.href='/admin/users/reactivation-requests';">
+                                    Reactivation requests
+                                </button>
+
 
                             </div>
                         </div>
@@ -352,7 +358,8 @@
                 </table>
             </div>
         </form>
-        <th:block th:replace="~{shared-components/pagination :: usersPagination(
+        <th:block th:replace="~{shared-components/pagination :: genericPagination(
+            basePath='/admin/users',
             page=${page},
             totalPages=${totalPages},
             requestedPageSize=${requestedPageSize},
@@ -363,7 +370,10 @@
             showFirmAdmins=${showFirmAdmins},
             showMultiFirmUsers=${showMultiFirmUsers},
             showProviderUsers=${showProviderUsers},
-            selectedStatuses=${selectedStatuses}
+            selectedStatuses=${selectedStatuses},
+            selectedUserTypes=${null},
+            selectedRequestStatuses=${null},
+            defaultStatusApplied=${null}
         )}"/>
         <style>
             /* Prevent visited link styling on pagination */
