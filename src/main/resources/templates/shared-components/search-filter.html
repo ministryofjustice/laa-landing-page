@@ -17,7 +17,7 @@
 
     The caller template should wrap the two inline fragment definitions inside the th:replace block:
 
-        <th:block th:replace="~{fragments/search-filter :: searchFilter(
+        <th:block th:replace="~{shared-components/search-filter :: searchFilter(
             formAction=@{/admin/users},
             searchHint='You can search by user name, email, firm name, or firm code.',
             filterContent=~{:: #my-filter-content},
