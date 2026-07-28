@@ -177,7 +177,7 @@ public class AuditPageTest extends BaseFrontEndTest {
         // data-firm-selected is rendered server-side; filling the autocomplete client-side
         // does not reload the page, so the button still considers no firm selected.
         AuditPage auditPage = loginAndGetAuditPage(TestUser.GLOBAL_ADMIN);
-        auditPage.searchAndSelectFirm("90001");
+        auditPage.populateFirmField("90001");
         auditPage.clickExportCsv();
         auditPage.assertCsvErrorBannerVisible();
     }
