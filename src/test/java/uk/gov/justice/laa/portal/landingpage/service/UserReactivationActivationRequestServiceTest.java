@@ -59,7 +59,7 @@ class UserReactivationActivationRequestServiceTest {
         void noRequestFound_returnsEmptyOptional() {
             given(requestRepository.findFirstByUserProfileIdOrderByVersionDesc(PROFILE_ID)).willReturn(Optional.empty());
 
-            Optional<UserActivationRequest> result = service.findFirstByUserProfileIdOrderByVersionDesc(PROFILE_ID);
+            Optional<UserActivationRequest> result = service.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(PROFILE_ID);
 
             assertThat(result).isEmpty();
             verify(requestRepository).findFirstByUserProfileIdOrderByVersionDesc(PROFILE_ID);
@@ -71,7 +71,7 @@ class UserReactivationActivationRequestServiceTest {
             UserActivationRequest existing = buildUserActivationRequest(ReactivationRequestStatus.IN_REVIEW, 1);
             given(requestRepository.findFirstByUserProfileIdOrderByVersionDesc(PROFILE_ID)).willReturn(Optional.of(existing));
 
-            Optional<UserActivationRequest> result = service.findFirstByUserProfileIdOrderByVersionDesc(PROFILE_ID);
+            Optional<UserActivationRequest> result = service.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(PROFILE_ID);
 
             assertThat(result).contains(existing);
         }

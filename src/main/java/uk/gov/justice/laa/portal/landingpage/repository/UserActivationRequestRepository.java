@@ -54,29 +54,28 @@ public interface UserActivationRequestRepository extends JpaRepository<UserActiv
     UserActivationRequest findTopByUserProfileIdOrderByCreatedAtDescVersionDesc(UUID profileId);
 
     @Query("""
-    SELECT new uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto(
-        u.id,
-        u.requestId,
-        u.userProfileId,
-        u.version,
-        u.status,
-        u.comments,
-        u.actorEntraOid,
-        u.actorRoleType,
-        u.createdAt,
-        CONCAT(
-            COALESCE(e.firstName, 'Unknown'),
-            ' ',
-            COALESCE(e.lastName, 'User')
-        )
-    )
-    FROM UserActivationRequest u,
-         EntraUser e
-    WHERE e.entraOid = u.actorEntraOid
-      AND u.requestId = :requestId
-    ORDER BY u.version ASC
-    """)
-    List<UserActivationRequestSummaryDto> findRequestHistoryByRequestId(
-            @Param("requestId") UUID requestId);
+            SELECT new uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto(
+                u.id,
+                u.requestId,
+                u.userProfileId,
+                u.version,
+                u.status,
+                u.comments,
+                u.actorEntraOid,
+                u.actorRoleType,
+                u.createdAt,
+                CONCAT(
+                    COALESCE(e.firstName, 'Unknown'),
+                    ' ',
+                    COALESCE(e.lastName, 'User')
+                )
+            )
+            FROM UserActivationRequest u,
+                 EntraUser e
+            WHERE e.entraOid = u.actorEntraOid
+              AND u.requestId = :requestId
+            ORDER BY u.version ASC
+            """)
+    List<UserActivationRequestSummaryDto> findRequestHistoryByRequestId(@Param("requestId") UUID requestId);
 
 }

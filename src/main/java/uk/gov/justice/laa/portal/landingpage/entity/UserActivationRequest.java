@@ -45,7 +45,7 @@ public class UserActivationRequest extends BaseEntity {
 
     @Column(name = "version", nullable = false)
     @ColumnDefault("1")
-    private Integer version;
+    private Integer version = 1;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 255)
