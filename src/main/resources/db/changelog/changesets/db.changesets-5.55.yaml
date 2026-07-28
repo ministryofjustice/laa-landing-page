@@ -38,7 +38,12 @@ databaseChangeLog:
                   type: TEXT
               - column:
                   name: actor_entra_oid
-                  type: UUID
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: actor_role_type
+                  type: VARCHAR(255)
                   constraints:
                     nullable: false
               - column:
