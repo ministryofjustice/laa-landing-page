@@ -2148,8 +2148,6 @@ public class UserController {
 
         // Clear role selections
         session.removeAttribute("grantAccessUserRolesModel");
-        session.removeAttribute("grantAccessAllSelectedRoles");
-        session.removeAttribute("allSelectedRoles");
         session.removeAttribute("nonEditableRoles");
 
         // Store the model in session to handle validation errors later
