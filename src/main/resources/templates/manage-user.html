@@ -243,7 +243,7 @@
                                             </a>
                                         </dd>
                                     </div>
-                                    <div class="govuk-summary-list__row" th:if="${canDisableUser or canEnableUser or canDelegateEnableUser or cannotEnableUser}">
+                                    <div class="govuk-summary-list__row" th:if="${canDisableUser or canEnableUser or canDelegateEnableUser or cannotEnableUser or canTrackDelegateEnableUser}">
                                         <dt class="govuk-summary-list__key">SiLAS Account Status</dt>
                                         <dd class="govuk-summary-list__value">
                                             <strong class="govuk-tag govuk-tag--green" style="white-space: nowrap; padding-right: 20px;" th:if="${!userActivated}">Awaiting verification</strong>
@@ -257,6 +257,8 @@
                                                th:href="@{/admin/users/manage/{id}/enable(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">Activate user</a>
                                             <a th:if="${canDelegateEnableUser}" class="govuk-link"
                                                th:href="@{/admin/user/delegate-reactivate/{id}(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">Reactivate user</a>
+                                            <a th:if="${canTrackDelegateEnableUser}" class="govuk-link"
+                                               th:href="@{/admin/user/delegate-reactivate/track/{id}(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">Track request</a>
                                             <span th:if="${cannotEnableUser}">You cannot activate this user</span>
                                         </dd>
                                     </div>

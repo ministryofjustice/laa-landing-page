@@ -90,7 +90,7 @@ public class UserActivationControllerTest {
             UserActivationRequest pendingRequest = buildUserActivationRequest(ReactivationRequestStatus.IN_REVIEW);
 
             given(userService.getEntraUserById(USER_ID)).willReturn(Optional.of(user));
-            given(userReactivationActivationRequestService.findFirstByUserProfileIdOrderByVersionDesc(PROFILE_ID))
+            given(userReactivationActivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(PROFILE_ID))
                     .willReturn(Optional.of(pendingRequest));
 
             redirectAttributes = new RedirectAttributesModelMap();
@@ -113,7 +113,7 @@ public class UserActivationControllerTest {
             UserActivationRequest rejectedRequest = buildUserActivationRequest(ReactivationRequestStatus.REJECTED);
 
             given(userService.getEntraUserById(USER_ID)).willReturn(Optional.of(user));
-            given(userReactivationActivationRequestService.findFirstByUserProfileIdOrderByVersionDesc(PROFILE_ID))
+            given(userReactivationActivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(PROFILE_ID))
                     .willReturn(Optional.of(rejectedRequest));
 
             String view = userActivationController.delegateReactivateUserGet(USER_ID, session, model, REFERER, PROFILE_ID, redirectAttributes);
@@ -155,14 +155,14 @@ public class UserActivationControllerTest {
 
             String view = userActivationController.delegateReactivateUserPost(USER_ID, model, session, REFERER, PROFILE_ID);
 
-            assertThat(view).isEqualTo("redirect:/admin/users/delegate-reactivate-user-reason/" + USER_ID);
+            assertThat(view).isEqualTo("redirect:/admin/user/delegate-reactivate-user-reason/" + USER_ID);
             assertThat(session.getAttribute("delegateReactivateUserId")).isEqualTo(USER_ID);
             assertThat(session.getAttribute("profileId")).isEqualTo(PROFILE_ID);
         }
     }
 
     @Nested
-    @DisplayName("GET /users/delegate-reactivate-user-reason/{id}")
+    @DisplayName("GET /user/delegate-reactivate-user-reason/{id}")
     class DelegateReactivateUserReasonsGetTests {
 
         @Test
@@ -212,7 +212,7 @@ public class UserActivationControllerTest {
     }
 
     @Nested
-    @DisplayName("POST /users/delegate-reactivate-user-reason/{id}")
+    @DisplayName("POST /user/delegate-reactivate-user-reason/{id}")
     class DelegateReactivateUserReasonsPostTests {
 
         @Test
@@ -251,13 +251,13 @@ public class UserActivationControllerTest {
 
             String view = userActivationController.delegateReactivateUserReasonsPost(USER_ID, form, bindingResult, model, session);
 
-            assertThat(view).isEqualTo("redirect:/admin/users/delegate-reactivate-user-check-answers/" + USER_ID);
+            assertThat(view).isEqualTo("redirect:/admin/user/delegate-reactivate-user-check-answers/" + USER_ID);
             assertThat(session.getAttribute("delegateReactivateUserReasonForm")).isEqualTo(form);
         }
     }
 
     @Nested
-    @DisplayName("GET /users/delegate-reactivate-user-check-answers/{id}")
+    @DisplayName("GET /user/delegate-reactivate-user-check-answers/{id}")
     class DelegateReactivateUserReasonsCheckAnswersGetTests {
 
         @Test
@@ -306,7 +306,7 @@ public class UserActivationControllerTest {
     }
 
     @Nested
-    @DisplayName("POST /users/delegate-reactivate-user-check-answers/{id}")
+    @DisplayName("POST /user/delegate-reactivate-user-check-answers/{id}")
     class DelegateReactivateUserReasonsCheckAnswersPostTests {
 
         @Test

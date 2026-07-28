@@ -14,6 +14,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.ColumnDefault;
 import org.springframework.data.annotation.CreatedDate;
 
 import java.time.Instant;
@@ -43,6 +44,7 @@ public class UserActivationRequest extends BaseEntity {
     private UUID userProfileId;
 
     @Column(name = "version", nullable = false)
+    @ColumnDefault("1")
     private Integer version;
 
     @Enumerated(EnumType.STRING)

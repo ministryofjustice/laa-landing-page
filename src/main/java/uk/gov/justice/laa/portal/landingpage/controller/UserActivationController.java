@@ -20,6 +20,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
@@ -28,6 +29,7 @@ import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserReactivationActivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -63,7 +65,7 @@ public class UserActivationController {
         clearSessionAttributes(session);
 
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
-        Optional<UserActivationRequest> request = userReactivationActivationRequestService.findFirstByUserProfileIdOrderByVersionDesc(profileId);
+        Optional<UserActivationRequest> request = userReactivationActivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId);
         if (request.isPresent()
                 && !(ReactivationRequestStatus.REJECTED.equals(request.get().getStatus())
                 || ReactivationRequestStatus.APPROVED.equals(request.get().getStatus()))) {
@@ -103,7 +105,7 @@ public class UserActivationController {
         model.addAttribute("profileId", profileId);
 
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User - " + user.getFullName());
-        return "redirect:/admin/users/delegate-reactivate-user-reason/" + user.getId();
+        return "redirect:/admin/user/delegate-reactivate-user-reason/" + user.getId();
     }
 
     @GetMapping("/user/delegate-reactivate-user-reason/{id}")
@@ -163,7 +165,7 @@ public class UserActivationController {
         model.addAttribute("delegateReactivateUserReasonForm", delegateReactivateUserReasonForm);
         session.setAttribute("delegateReactivateUserReasonForm", delegateReactivateUserReasonForm);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User - " + user.getFullName());
-        return "redirect:/admin/users/delegate-reactivate-user-check-answers/" + user.getId();
+        return "redirect:/admin/user/delegate-reactivate-user-check-answers/" + user.getId();
     }
 
     @GetMapping("/user/delegate-reactivate-user-check-answers/{id}")
@@ -230,6 +232,42 @@ public class UserActivationController {
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User - " + user.getFullName());
         clearSessionAttributes(session);
         return "delegate-reactivate-user-confirmation";
+    }
+
+    @GetMapping("/user/delegate-reactivate/track/{id}")
+    @PreAuthorize("@accessControlService.canDelegateEnableUser(#id)")
+    public String trackDelegateReactivateUserRequestsGet(@PathVariable String id,
+                                            HttpSession session,
+                                            Model model,
+                                            String referer,
+                                            UUID profileId,
+                                            RedirectAttributes redirectAttributes) {
+        if (!disableUserFeatureEnabled) {
+            throw new ResponseStatusException(HttpStatusCode.valueOf(404));
+        }
+
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        Optional<UserActivationRequest> request = userReactivationActivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId);
+        if (request.isPresent()
+                && (ReactivationRequestStatus.REJECTED.equals(request.get().getStatus())
+                || ReactivationRequestStatus.APPROVED.equals(request.get().getStatus()))) {
+            redirectAttributes.addFlashAttribute("errorMessage", "A delegate request is already in progress");
+            redirectAttributes.addFlashAttribute("requestId", request.get().getId());
+            return "redirect:/admin/users/manage/" + profileId;
+
+        }
+
+        List<UserActivationRequestSummaryDto> latestRequestHistoryForUserProfile = userReactivationActivationRequestService.getLatestRequestHistoryForUserProfile(profileId);
+
+        model.addAttribute("user", user);
+        model.addAttribute("profileId", profileId);
+        model.addAttribute("referer", referer);
+        model.addAttribute("reactivationRequests", latestRequestHistoryForUserProfile);
+        session.setAttribute("delegateReactivateUserId", id);
+        session.setAttribute("profileId", profileId);
+
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User - " + user.getFullName());
+        return "delegate-reactivate-user-tracking";
     }
 
     public void clearSessionAttributes(HttpSession session) {

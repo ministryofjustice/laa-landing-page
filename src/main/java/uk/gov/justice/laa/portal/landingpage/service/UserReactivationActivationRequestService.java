@@ -5,12 +5,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.repository.UserActivationRequestRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
 import java.time.Instant;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -21,12 +25,13 @@ public class UserReactivationActivationRequestService {
     private final UserActivationRequestRepository requestRepository;
     private final UserProfileRepository userProfileRepository;
 
-    public UserReactivationActivationRequestService(UserActivationRequestRepository requestRepository, UserProfileRepository userRepository) {
+    public UserReactivationActivationRequestService(UserActivationRequestRepository requestRepository,
+                                                    UserProfileRepository userRepository) {
         this.requestRepository = requestRepository;
         this.userProfileRepository = userRepository;
     }
 
-    public Optional<UserActivationRequest> findFirstByUserProfileIdOrderByVersionDesc(UUID profileId) {
+    public Optional<UserActivationRequest> findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(UUID profileId) {
         return requestRepository.findFirstByUserProfileIdOrderByVersionDesc(profileId);
     }
 
@@ -45,6 +50,7 @@ public class UserReactivationActivationRequestService {
         newRecord.setComments(reason);
         newRecord.setActorEntraOid(user.getEntraOid());
         newRecord.setCreatedAt(Instant.now());
+        newRecord.setActorRoleType(AuthzRoleType.PROVIDER_ADMIN);
 
         requestRepository.save(newRecord);
 
@@ -82,6 +88,22 @@ public class UserReactivationActivationRequestService {
         newRecord.setCreatedAt(Instant.now());
 
         return requestRepository.save(newRecord);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserActivationRequestSummaryDto> getLatestRequestHistoryForUserProfile(UUID userProfileId) {
+        log.debug("Fetching latest activation request history for user profile ID: {}", userProfileId);
+
+        UserActivationRequest latestRequest = requestRepository.findTopByUserProfileIdOrderByCreatedAtDescVersionDesc(userProfileId);
+
+        List<UserActivationRequestSummaryDto> history = requestRepository.findRequestHistoryByRequestId(latestRequest.getRequestId());
+
+        if (history.isEmpty()) {
+            log.info("No activation request history found for user profile ID: {}", userProfileId);
+            return Collections.emptyList();
+        }
+
+        return history;
     }
 
 }
