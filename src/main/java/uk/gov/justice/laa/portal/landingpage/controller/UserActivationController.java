@@ -234,20 +234,8 @@ public class UserActivationController {
 
     public void clearSessionAttributes(HttpSession session) {
         session.removeAttribute("user");
-        session.removeAttribute("firm");
-        session.removeAttribute("selectedUserType");
-        session.removeAttribute("isFirmAdmin");
-        session.removeAttribute("isMultiFirmUser");
-        session.removeAttribute("multiFirmForm");
-        session.removeAttribute("apps");
-        session.removeAttribute("roles");
-        session.removeAttribute("officeData");
-        session.removeAttribute("firmSearchForm");
-        session.removeAttribute("firmSearchTerm");
-        session.removeAttribute("createUserFlowStage");
         session.removeAttribute("delegateReactivateUserId");
         session.removeAttribute("delegateReactivateUserReasonForm");
-        session.removeAttribute("delegateReactivateUserId");
         session.removeAttribute("profileId");
     }
 }
