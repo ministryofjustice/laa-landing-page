@@ -6,7 +6,8 @@
       <profile name="Gradle Imported" enabled="true">
         <outputRelativeToContentRoot value="true" />
         <processorPath useClasspath="false">
-          <entry name="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.projectlombok/lombok/1.18.38/57f8f5e02e92a30fd21b80cbd426a4172b5f8e29/lombok-1.18.38.jar" />
+          <entry name="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-configuration-processor/4.0.4/913032ff41310689ddbd9038f50956cd9dc740a2/spring-boot-configuration-processor-4.0.4.jar" />
+          <entry name="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.projectlombok/lombok/1.18.44/503fd0b002dbb237fa4656cf4b8021666a8aebac/lombok-1.18.44.jar" />
         </processorPath>
         <module name="laa-landing-page.main" />
       </profile>
@@ -15,5 +16,13 @@
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_STRING" value="-parameters" />
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="laa-landing-page.internal-user-polling-service" options="-parameters" />
+      <module name="laa-landing-page.internal-user-polling-service.main" options="-parameters" />
+      <module name="laa-landing-page.internal-user-polling-service.test" options="-parameters" />
+      <module name="laa-landing-page.laa-silas" options="-parameters" />
+      <module name="laa-landing-page.laa-silas.main" options="-parameters" />
+      <module name="laa-landing-page.laa-silas.test" options="-parameters" />
+    </option>
   </component>
 </project>
