@@ -31,43 +31,12 @@
 
         <th:block th:replace="~{shared-components/search-filter :: searchFilter(
             formAction=@{/admin/users/reactivation-requests(defaultStatusApplied=${defaultStatusApplied})},
-            searchHint='You can search by user name or email.',
+            searchHint='You can search by request ID, user profile ID, actor name, actor Entra OID, or comments.',
             filterContent=~{:: #request-filter-checkboxes},
             activeFiltersContent=~{:: #request-active-filters}
         )}">
             <div id="request-filter-checkboxes">
                 <div style="display: flex; gap: 0;">
-                    <div style="flex: 1; padding-right: 15px;">
-                        <fieldset class="govuk-fieldset">
-                            <legend class="govuk-fieldset__legend govuk-fieldset__legend--s">User Type</legend>
-                            <div class="govuk-checkboxes govuk-checkboxes--small" data-module="govuk-checkboxes">
-                                <div class="govuk-checkboxes__item">
-                                    <input class="govuk-checkboxes__input" id="usertype-provider-user"
-                                           name="selectedUserTypes" type="checkbox" value="PROVIDER_USER"
-                                           th:checked="${selectedUserTypes != null and selectedUserTypes.contains(T(uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestUserType).PROVIDER_USER)}">
-                                    <label class="govuk-label govuk-checkboxes__label" for="usertype-provider-user">
-                                        Provider User
-                                    </label>
-                                </div>
-                                <div class="govuk-checkboxes__item">
-                                    <input class="govuk-checkboxes__input" id="usertype-provider-admin"
-                                           name="selectedUserTypes" type="checkbox" value="PROVIDER_ADMIN"
-                                           th:checked="${selectedUserTypes != null and selectedUserTypes.contains(T(uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestUserType).PROVIDER_ADMIN)}">
-                                    <label class="govuk-label govuk-checkboxes__label" for="usertype-provider-admin">
-                                        Provider Admin
-                                    </label>
-                                </div>
-                                <div class="govuk-checkboxes__item">
-                                    <input class="govuk-checkboxes__input" id="usertype-third-party"
-                                           name="selectedUserTypes" type="checkbox" value="THIRD_PARTY"
-                                           th:checked="${selectedUserTypes != null and selectedUserTypes.contains(T(uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestUserType).THIRD_PARTY)}">
-                                    <label class="govuk-label govuk-checkboxes__label" for="usertype-third-party">
-                                        3rd Party
-                                    </label>
-                                </div>
-                            </div>
-                        </fieldset>
-                    </div>
                     <div style="flex: 1;">
                         <fieldset class="govuk-fieldset">
                             <legend class="govuk-fieldset__legend govuk-fieldset__legend--s">Request Status</legend>
@@ -111,18 +80,9 @@
             </div>
 
             <div id="request-active-filters">
-                <div th:if="${(selectedUserTypes != null and !selectedUserTypes.isEmpty()) or (selectedRequestStatuses != null and !selectedRequestStatuses.isEmpty())}"
+                <div th:if="${selectedRequestStatuses != null and !selectedRequestStatuses.isEmpty()}"
                      class="active-filters-banner govuk-!-margin-top-2 govuk-!-margin-bottom-3" aria-label="Active filters">
                     <span class="govuk-body govuk-!-font-weight-bold govuk-!-margin-right-2 filter-tag-label">Filters</span>
-                    <th:block th:each="userType : ${selectedUserTypes}">
-                        <span class="filter-tag">
-                            <a href="#" data-remove-array-param="selectedUserTypes"
-                               th:attr="data-remove-array-value=${userType.name()}"
-                               class="filter-tag__remove"
-                               th:aria-label="'Remove ' + ${userType.filterLabel} + ' filter'">&#x2715;</a>
-                            <span th:text="${userType.filterLabel}"></span>
-                        </span>
-                    </th:block>
                     <th:block th:each="status : ${selectedRequestStatuses}">
                         <span class="filter-tag">
                             <a href="#" data-remove-array-param="selectedRequestStatuses"
@@ -133,7 +93,7 @@
                         </span>
                     </th:block>
                     <a href="#" id="clear-filters-link" class="govuk-link filter-tag-clear-link"
-                       data-filter-params="selectedUserTypes,selectedRequestStatuses">Clear filters</a>
+                       data-filter-params="selectedRequestStatuses">Clear filters</a>
                 </div>
             </div>
         </th:block>
@@ -155,11 +115,16 @@
                     <td class="govuk-table__cell" colspan="6">No reactivation requests found.</td>
                 </tr>
                 <tr class="govuk-table__row" th:each="request : ${requests}">
-                    <td class="govuk-table__cell" th:text="${request.name()}"></td>
-                    <td class="govuk-table__cell" th:text="${request.email()}"></td>
+                    <td class="govuk-table__cell">
+                        <a class="govuk-link" th:if="${request.userProfileId() != null}"
+                           th:href="@{/admin/users/manage/{id}(id=${request.userProfileId()})}"
+                           th:text="${request.actorName()}"></a>
+                        <span th:if="${request.userProfileId() == null}" th:text="${request.actorName()}"></span>
+                    </td>
+                    <td class="govuk-table__cell" th:text="${request.actorEntraOid()}"></td>
                     <td class="govuk-table__cell" th:text="${#temporals.format(request.dateSubmitted(), 'd MMMM yyyy')}"></td>
-                    <td class="govuk-table__cell" th:text="${#temporals.format(request.lastActivity(), 'd MMMM yyyy')}"></td>
-                    <td class="govuk-table__cell" th:text="${request.userType().tableLabel}"></td>
+                    <td class="govuk-table__cell" th:text="${#temporals.format(request.dateSubmitted(), 'd MMMM yyyy')}"></td>
+                    <td class="govuk-table__cell" th:text="${request.actorRoleType()}"></td>
                     <td class="govuk-table__cell">
                         <span th:if="${request.requestStatus().name() == 'IN_REVIEW'}" class="govuk-tag govuk-tag--yellow" th:text="${request.requestStatus().label}"></span>
                         <span th:if="${request.requestStatus().name() == 'INFORMATION_REQUIRED'}" class="govuk-tag govuk-tag--blue" th:text="${request.requestStatus().label}"></span>
@@ -184,7 +149,7 @@
             showMultiFirmUsers=${null},
             showProviderUsers=${null},
             selectedStatuses=${null},
-            selectedUserTypes=${selectedUserTypes},
+            selectedUserTypes=${null},
             selectedRequestStatuses=${selectedRequestStatuses},
             defaultStatusApplied=${defaultStatusApplied}
         )}"/>

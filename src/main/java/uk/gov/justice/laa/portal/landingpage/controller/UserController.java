@@ -95,7 +95,6 @@ import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
 import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
-import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestUserType;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
@@ -107,8 +106,8 @@ import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
-import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.ReactivationRequestService;
+import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
@@ -293,7 +292,6 @@ public class UserController {
             @RequestParam(name = "sort", defaultValue = "dateSubmitted") String sort,
             @RequestParam(name = "direction", defaultValue = "desc") String direction,
             @RequestParam(name = "search", required = false, defaultValue = "") String search,
-            @RequestParam(name = "selectedUserTypes", required = false) List<ReactivationRequestUserType> selectedUserTypes,
             @RequestParam(name = "selectedRequestStatuses", required = false) List<ReactivationRequestStatus> selectedRequestStatuses,
             @RequestParam(name = "defaultStatusApplied", defaultValue = "false") boolean defaultStatusApplied,
             Model model,
@@ -314,16 +312,10 @@ public class UserController {
             if (search != null && !search.trim().isEmpty()) {
                 builder.queryParam("search", search.trim());
             }
-            if (selectedUserTypes != null && !selectedUserTypes.isEmpty()) {
-                selectedUserTypes.forEach(type -> builder.queryParam("selectedUserTypes", type.name()));
-            }
 
             return "redirect:" + builder.build().encode().toUriString();
         }
 
-        List<ReactivationRequestUserType> userTypeFilters = selectedUserTypes == null
-                ? new ArrayList<>()
-                : selectedUserTypes;
         List<ReactivationRequestStatus> statusFilters = selectedRequestStatuses == null
                 ? new ArrayList<>()
                 : selectedRequestStatuses;
@@ -331,7 +323,6 @@ public class UserController {
         ReactivationRequestsPageData pageData = reactivationRequestService.getPage(
                 authentication,
                 search,
-                userTypeFilters,
                 statusFilters,
                 page,
                 size,
@@ -349,7 +340,6 @@ public class UserController {
         model.addAttribute("search", search == null ? "" : search.trim());
         model.addAttribute("sort", sort);
         model.addAttribute("direction", direction);
-        model.addAttribute("selectedUserTypes", userTypeFilters);
         model.addAttribute("selectedRequestStatuses", pageData.appliedStatuses());
         model.addAttribute("defaultStatusApplied", pageMode.isManageMode() || defaultStatusApplied);
         model.addAttribute(ModelAttributes.PAGE_TITLE, pageData.pageMode().getHeading());

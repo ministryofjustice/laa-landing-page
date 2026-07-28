@@ -6,12 +6,15 @@ import java.util.UUID;
 
 public record ReactivationRequestListItem(
         UUID id,
-        String name,
-        String email,
-        LocalDate dateSubmitted,
-        LocalDate lastActivity,
-        ReactivationRequestUserType userType,
+        UUID requestId,
+        UUID userProfileId,
+        Integer version,
         ReactivationRequestStatus requestStatus,
+        String comments,
+        String actorEntraOid,
+        String actorRoleType,
+        String actorName,
+        LocalDate dateSubmitted,
         UUID firmId
 ) implements Serializable {
 }
