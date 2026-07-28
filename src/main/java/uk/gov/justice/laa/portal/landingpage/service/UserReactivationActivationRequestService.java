@@ -43,7 +43,7 @@ public class UserReactivationActivationRequestService {
         newRecord.setUserProfileId(profileId);
         newRecord.setStatus(ReactivationRequestStatus.IN_REVIEW);
         newRecord.setComments(reason);
-        newRecord.setActorEntraOid(UUID.fromString(user.getEntraOid()));
+        newRecord.setActorEntraOid(user.getEntraOid());
         newRecord.setCreatedAt(Instant.now());
 
         requestRepository.save(newRecord);
@@ -51,14 +51,10 @@ public class UserReactivationActivationRequestService {
         return newRecord;
     }
 
-    public UserActivationRequest saveRequestState(UUID requestId, UUID userId, ReactivationRequestStatus status, String comments, UUID actionByUserId) {
+    public UserActivationRequest saveRequestState(UUID requestId, UUID userId, ReactivationRequestStatus status, String comments, String actionByUserId) {
 
         if (!userProfileRepository.existsById(userId)) {
             throw new EntityNotFoundException("Target user not found with ID: " + userId);
-        }
-
-        if (!userProfileRepository.existsById(actionByUserId)) {
-            throw new EntityNotFoundException("Acting user not found with ID: " + actionByUserId);
         }
 
         int nextVersion = 1;
