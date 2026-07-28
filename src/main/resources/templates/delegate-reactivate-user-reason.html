@@ -46,7 +46,7 @@
                 <li>What has changed that means they now require regular access</li>
             </ul>
 
-            <form method="post" th:action="@{/admin/users/delegate-reactivate-user-reason/{id}(id=${user.id}, referer=${referer}, profileId=${profileId})}"
+            <form method="post" th:action="@{/admin/user/delegate-reactivate-user-reason/{id}(id=${user.id}, referer=${referer}, profileId=${profileId})}"
                   th:object="${delegateReactivateUserReasonForm}">
 
                 <!-- Reason Field -->

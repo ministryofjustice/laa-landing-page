@@ -11,7 +11,7 @@
 
 <body>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-        <a class="govuk-back-link" th:href="@{/admin/users/delegate-reactivate-user-reason/{id}(id=${user.id})}">
+        <a class="govuk-back-link" th:href="@{/admin/user/delegate-reactivate-user-reason/{id}(id=${user.id})}">
             Back </a>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
@@ -21,7 +21,7 @@
                     Check your answers and confirm
                 </h1>
             </legend>
-            <form th:action="@{/admin/users/delegate-reactivate-user-check-answers/{id}(id=${id})}" th:method="post" class="govuk-form">
+            <form th:action="@{/admin/user/delegate-reactivate-user-check-answers/{id}(id=${id})}" th:method="post" class="govuk-form">
 
 
                 <div class="govuk-summary-card">
@@ -68,7 +68,7 @@
                                     <span th:text="${delegateReactivateUserReasonForm.reason}"></span>
                                 </dd>
                                 <dd class="govuk-summary-list__actions">
-                                    <a th:href="@{/admin/users/delegate-reactivate-user-reason/{id}(id=${user.id})}" class="govuk-link">
+                                    <a th:href="@{/admin/user/delegate-reactivate-user-reason/{id}(id=${user.id})}" class="govuk-link">
                                         Change
                                         <span class="govuk-visually-hidden"> first name</span>
                                     </a>
