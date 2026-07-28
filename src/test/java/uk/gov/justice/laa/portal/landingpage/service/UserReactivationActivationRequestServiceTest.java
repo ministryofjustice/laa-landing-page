@@ -31,7 +31,7 @@ class UserReactivationActivationRequestServiceTest {
 
     private static final UUID PROFILE_ID = UUID.randomUUID();
     private static final UUID REQUEST_ID = UUID.randomUUID();
-    private static final UUID ACTOR_ID = UUID.randomUUID();
+    private static final String ACTOR_ID = UUID.randomUUID().toString();
     @Mock
     private UserActivationRequestRepository requestRepository;
     @Mock
@@ -39,8 +39,8 @@ class UserReactivationActivationRequestServiceTest {
     @InjectMocks
     private UserReactivationActivationRequestService service;
 
-    private EntraUserDto buildEntraUserDto(UUID entraOid) {
-        return EntraUserDto.builder().id("entra-id").entraOid(entraOid.toString()).fullName("Test User").email("test.user@justice.gov.uk").build();
+    private EntraUserDto buildEntraUserDto(String entraOid) {
+        return EntraUserDto.builder().id("entra-id").entraOid(entraOid).fullName("Test User").email("test.user@justice.gov.uk").build();
     }
 
     private UserActivationRequest buildUserActivationRequest(ReactivationRequestStatus status, int version) {
@@ -176,22 +176,9 @@ class UserReactivationActivationRequestServiceTest {
         }
 
         @Test
-        @DisplayName("Should throw EntityNotFoundException when acting user profile does not exist")
-        void actingUserNotFound_throwsException() {
-            given(userProfileRepository.existsById(ACTOR_ID)).willReturn(false);
-
-            assertThatThrownBy(() -> service.saveRequestState(REQUEST_ID, PROFILE_ID, ReactivationRequestStatus.APPROVED, "Comments", ACTOR_ID))
-                    .isInstanceOf(EntityNotFoundException.class)
-                    .hasMessage("Acting user not found with ID: " + ACTOR_ID);
-
-            verify(requestRepository, never()).save(any());
-        }
-
-        @Test
         @DisplayName("Should save state with version 1 when requestId is null")
         void nullRequestId_generatesUuidAndVersionOne() {
             given(requestRepository.save(any(UserActivationRequest.class))).willAnswer(invocation -> invocation.getArgument(0));
-            given(userProfileRepository.existsById(ACTOR_ID)).willReturn(true);
 
             UserActivationRequest result = service.saveRequestState(null, PROFILE_ID, ReactivationRequestStatus.APPROVED, "Approved by admin", ACTOR_ID);
 
@@ -208,7 +195,6 @@ class UserReactivationActivationRequestServiceTest {
         void nonNullRequestIdNoHistory_savesVersionOne() {
             given(requestRepository.findFirstByRequestIdOrderByVersionDesc(REQUEST_ID)).willReturn(Optional.empty());
             given(requestRepository.save(any(UserActivationRequest.class))).willAnswer(invocation -> invocation.getArgument(0));
-            given(userProfileRepository.existsById(ACTOR_ID)).willReturn(true);
 
             UserActivationRequest result = service.saveRequestState(REQUEST_ID, PROFILE_ID, ReactivationRequestStatus.IN_REVIEW, "Reviewing", ACTOR_ID);
 
@@ -222,7 +208,6 @@ class UserReactivationActivationRequestServiceTest {
             UserActivationRequest existing = buildUserActivationRequest(ReactivationRequestStatus.IN_REVIEW, 2);
             given(requestRepository.findFirstByRequestIdOrderByVersionDesc(REQUEST_ID)).willReturn(Optional.of(existing));
             given(requestRepository.save(any(UserActivationRequest.class))).willAnswer(invocation -> invocation.getArgument(0));
-            given(userProfileRepository.existsById(ACTOR_ID)).willReturn(true);
 
             UserActivationRequest result = service.saveRequestState(REQUEST_ID, PROFILE_ID, ReactivationRequestStatus.APPROVED, "Approved", ACTOR_ID);
 
@@ -236,7 +221,6 @@ class UserReactivationActivationRequestServiceTest {
         void alreadyApproved_throwsIllegalStateException() {
             UserActivationRequest existing = buildUserActivationRequest(ReactivationRequestStatus.APPROVED, 1);
             given(requestRepository.findFirstByRequestIdOrderByVersionDesc(REQUEST_ID)).willReturn(Optional.of(existing));
-            given(userProfileRepository.existsById(ACTOR_ID)).willReturn(true);
 
             assertThatThrownBy(() -> service.saveRequestState(REQUEST_ID, PROFILE_ID, ReactivationRequestStatus.REJECTED, "Cannot reject", ACTOR_ID))
                     .isInstanceOf(IllegalStateException.class)
@@ -250,7 +234,6 @@ class UserReactivationActivationRequestServiceTest {
         void alreadyRejected_throwsIllegalStateException() {
             UserActivationRequest existing = buildUserActivationRequest(ReactivationRequestStatus.REJECTED, 1);
             given(requestRepository.findFirstByRequestIdOrderByVersionDesc(REQUEST_ID)).willReturn(Optional.of(existing));
-            given(userProfileRepository.existsById(ACTOR_ID)).willReturn(true);
 
             assertThatThrownBy(() -> service.saveRequestState(REQUEST_ID, PROFILE_ID, ReactivationRequestStatus.APPROVED, "Cannot approve", ACTOR_ID))
                     .isInstanceOf(IllegalStateException.class)
