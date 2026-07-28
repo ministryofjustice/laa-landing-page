@@ -10,6 +10,8 @@ import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.LoadState;
 
+import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+
 
 public class AuditPage {
 
@@ -32,6 +34,8 @@ public class AuditPage {
     private final Locator silasRoleFilter;
     private final Locator appAccessFilter;
     private final Locator userTypeFilter;
+    private final Locator viewAllDeletedUsersButton;
+
 
     private final Locator nameSortButton;
     private final Locator emailSortButton;
@@ -54,6 +58,30 @@ public class AuditPage {
     private final Locator csvErrorBanner;
     private final Locator viewDeletedUsersLink;
     private final Locator auditTable;
+
+    //deleted user screen
+
+    private final Locator deletedUsersPageHeading;
+    private final Locator deletedUsersSearchInput;
+    private final Locator deletedUsersSearchButton;
+    private final Locator deletedUsersTable;
+    private final Locator deletedUsersTableRows;
+    private final Locator backToUserAuditTableLink;
+
+    private final Locator emailSortLink;
+    private final Locator deletedBySortLink;
+    private final Locator deletionDateSortLink;
+    private final Locator deleteReasonSortLink;
+
+    private final Locator nameColumnHeader;
+    private final Locator emailColumnHeader;
+    private final Locator deletedByColumnHeader;
+    private final Locator deletionDateColumnHeader;
+    private final Locator deleteReasonColumnHeader;
+
+    private final Locator deletedUsersNextPageLink;
+    private final Locator deletedUsersCurrentPage;
+    private final Locator deletedUsersPageInformation;
 
     public AuditPage(Page page, int port) {
         this.page = page;
@@ -103,11 +131,73 @@ public class AuditPage {
         // Results Summary
         this.resultsSummary = page.locator(".moj-pagination__results");
 
+
+
         // CSV Export
         this.exportCsvButton = page.locator("#exportCsvButton");
         this.csvErrorBanner = page.locator("#csv-export-error-summary");
         this.viewDeletedUsersLink = page.locator("a:has-text('View all deleted users')");
         this.auditTable = page.locator("#audit-table");
+        this.viewAllDeletedUsersButton = page.locator("a[href='/admin/users/audit/deleted']");
+
+
+        //Deleted user screen
+
+        this.deletedUsersPageHeading =
+                page.locator("h1.govuk-heading-xl");
+
+        this.deletedUsersSearchInput =
+                page.locator("#search");
+
+        this.deletedUsersSearchButton =
+                page.locator("form[action='/admin/users/audit/deleted'] button[type='submit']");
+
+        this.deletedUsersTable =
+                page.locator("table[aria-label='Deleted users table']");
+
+        this.deletedUsersTableRows =
+                deletedUsersTable.locator("tbody tr");
+
+        this.backToUserAuditTableLink =
+                page.locator("a[href='/admin/users/audit']");
+
+        this.emailSortLink =
+                page.locator("a[href*='sort=userEmail']");
+
+        this.deletedBySortLink =
+                page.locator("a[href*='sort=statusChangedBy']");
+
+        this.deletionDateSortLink =
+                page.locator("a[href*='sort=statusChangedDate']");
+
+        this.deleteReasonSortLink =
+                page.locator("a[href*='sort=deleteReason']");
+
+        this.nameColumnHeader =
+                deletedUsersTable.locator("thead th").nth(0);
+
+        this.emailColumnHeader =
+                deletedUsersTable.locator("thead th").nth(1);
+
+        this.deletedByColumnHeader =
+                deletedUsersTable.locator("thead th").nth(2);
+
+        this.deletionDateColumnHeader =
+                deletedUsersTable.locator("thead th").nth(3);
+
+        this.deleteReasonColumnHeader =
+                deletedUsersTable.locator("thead th").nth(4);
+
+        this.deletedUsersNextPageLink =
+                page.locator(".govuk-pagination__next a");
+
+        this.deletedUsersCurrentPage =
+                page.locator(".govuk-pagination__item--current");
+
+        this.deletedUsersPageInformation =
+                page.locator("p.govuk-body.govuk-\\!-margin-top-4");
+
+
     }
 
     public void assertUserIsPresent(String email) {
@@ -263,10 +353,37 @@ public class AuditPage {
         return box.y;
     }
 
-    public void clickExportCsvExpectingDownload() {
-        log.info("Clicking Export CSV button (expecting download, not error banner)");
-        // Use Playwright download interception to avoid actually saving the file
-        page.waitForDownload(exportCsvButton::click);
+    public void assertDeletedUsersPageDisplayed() {
+        log.info("Verifying Deleted Users page is displayed");
+
+        assertThat(deletedUsersPageHeading).isVisible();
+        assertThat(deletedUsersPageHeading).hasText("Deleted Users");
+    }
+
+    public void searchForDeletedUser(String email) {
+        log.info("Searching deleted users using email: {}", email);
+
+        deletedUsersSearchInput.fill(email);
+        deletedUsersSearchButton.click();
+    }
+
+    public void assertDeletedUserDisplayed(String email) {
+        log.info("Verifying deleted user is displayed with email: {}", email);
+
+        Locator deletedUserRow = getDeletedUserRowByEmail(email);
+
+        assertThat(deletedUserRow).isVisible();
+        assertThat(deletedUserRow.locator("td").nth(1)).hasText(email);
+    }
+
+    private Locator getDeletedUserRowByEmail(String email) {
+        return deletedUsersTable
+                .locator("tbody tr")
+                .filter(new Locator.FilterOptions().setHasText(email));
+    }
+
+    public void clickViewAllDeletedUsers() {
+        viewAllDeletedUsersButton.click();
     }
 
 
