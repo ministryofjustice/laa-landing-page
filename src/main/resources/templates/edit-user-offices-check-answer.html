@@ -40,7 +40,7 @@
                             <dd class="govuk-summary-list__value">
                                 <div th:each="office : ${entry.value}">
                                     <span th:text="${office.address?.formattedAddress ?: 'Unknown'}"></span>
-                                    (<span class="govuk-visually-hidden">Office account number: </span><span th:text="${office.code}"></span>)
+                                    (<span class="govuk-visually-hidden" th:text="${uiLabels.officeAccountNumber} + ': '">Office account number: </span><span th:text="${office.code}"></span>)
                                 </div>
                             </dd>
                         </div>

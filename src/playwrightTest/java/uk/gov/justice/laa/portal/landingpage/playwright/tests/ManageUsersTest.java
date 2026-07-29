@@ -6,16 +6,16 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import com.microsoft.playwright.options.AriaRole;
-import com.microsoft.playwright.options.WaitForSelectorState;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import com.microsoft.playwright.Page;
+
 import com.microsoft.playwright.Locator;
+import com.microsoft.playwright.Page;
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+import com.microsoft.playwright.options.AriaRole;
 import com.microsoft.playwright.options.LoadState;
+import com.microsoft.playwright.options.WaitForSelectorState;
 
 import uk.gov.justice.laa.portal.landingpage.playwright.common.BaseFrontEndTest;
 import uk.gov.justice.laa.portal.landingpage.playwright.common.TestRole;
@@ -393,9 +393,9 @@ public class ManageUsersTest extends BaseFrontEndTest {
         assertTrue(
                 page.locator(".govuk-table__header")
                         .filter(new Locator.FilterOptions()
-                                .setHasText("Account number"))
+                                .setHasText("Office account number"))
                         .isVisible(),
-                "Account number heading should be displayed"
+                "Office account number heading should be displayed"
         );
 
         assertTrue(
@@ -1431,4 +1431,3 @@ public class ManageUsersTest extends BaseFrontEndTest {
 
 
 }
-
