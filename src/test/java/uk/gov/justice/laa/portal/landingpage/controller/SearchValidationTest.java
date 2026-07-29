@@ -10,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -23,6 +24,7 @@ import org.springframework.security.core.Authentication;
 
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 
@@ -47,10 +49,13 @@ public class SearchValidationTest {
     @Mock
     private Authentication authentication;
 
+    @Mock
+    private AccessControlService accessControlService;
+
     @BeforeEach
     void setUp() {
         // Reset mocks between tests to avoid cross-test interference
-        reset(firmService, loginService);
+        reset(firmService, loginService, accessControlService);
     }
 
     @Test
@@ -58,6 +63,7 @@ public class SearchValidationTest {
     void testMinimumSearchLengthValidationForFirmEndpoints() {
         // Test /admin/user/firms/search endpoint
         EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        when(accessControlService.authenticatedUserIsInternal()).thenReturn(false);
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         when(firmService.getUserAccessibleFirms(any(), any())).thenReturn(List.of());
 
@@ -86,30 +92,30 @@ public class SearchValidationTest {
         verify(firmService).getUserAccessibleFirms(entraUser, "ab");
 
         // Test /admin/user/create/firm/search endpoint
-        when(firmService.searchFirms(any())).thenReturn(List.of());
-
+        when(firmService.getUserAccessibleFirms(any(), any())).thenReturn(List.of());
         // Empty query - should not call service
-        List<Map<String, String>> searchResult1 = firmSearchController.searchFirms("", 10);
+        List<Map<String, String>> searchResult1 = firmSearchController.searchFirms(authentication, "", 10);
         assertThat(searchResult1).isEmpty();
 
         // Single character - should call service
-        List<Map<String, String>> searchResult2 = firmSearchController.searchFirms("x", 10);
+        List<Map<String, String>> searchResult2 = firmSearchController.searchFirms(authentication, "x", 10);
         assertThat(searchResult2).isEmpty(); // Empty result but service was called
 
         // Two characters - should call service
-        List<Map<String, String>> searchResult3 = firmSearchController.searchFirms("xy", 10);
+        List<Map<String, String>> searchResult3 = firmSearchController.searchFirms(authentication, "xy", 10);
         assertThat(searchResult3).isEmpty(); // Empty result but service was called
 
         // Verify service calls for searchFirms
-        verify(firmService, never()).searchFirms("");
-        verify(firmService).searchFirms("x");
-        verify(firmService).searchFirms("xy");
+        verify(firmService, never()).getUserAccessibleFirms(any(), eq(""));
+        verify(firmService).getUserAccessibleFirms(entraUser, "x");
+        verify(firmService).getUserAccessibleFirms(entraUser, "xy");
     }
 
     @Test
     @DisplayName("Should process queries that meet the 1 character minimum requirement")
     void testValidQueriesProcessedCorrectly() {
         // Arrange
+        when(accessControlService.authenticatedUserIsInternal()).thenReturn(false);
         EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
         FirmDto testFirm = FirmDto.builder()
                 .id(UUID.randomUUID())
@@ -119,7 +125,8 @@ public class SearchValidationTest {
 
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         when(firmService.getUserAccessibleFirms(entraUser, "a")).thenReturn(List.of(testFirm));
-        when(firmService.searchFirms("b")).thenReturn(List.of(testFirm));
+        when(firmService.getUserAccessibleFirms(entraUser, "b")).thenReturn(List.of(testFirm));
+
 
         // Test /admin/user/firms/search endpoint with single character (now valid)
         List<FirmDto> result1 = firmSearchController.getFirms(authentication, "a");
@@ -127,46 +134,99 @@ public class SearchValidationTest {
         assertThat(result1.get(0).getName()).isEqualTo("Test Firm");
 
         // Test /admin/user/create/firm/search endpoint with single character (now valid)
-        List<Map<String, String>> result2 = firmSearchController.searchFirms("b", 10);
+        List<Map<String, String>> result2 = firmSearchController.searchFirms(authentication, "b", 10);
         assertThat(result2).hasSize(1);
         assertThat(result2.get(0).get("name")).isEqualTo("Test Firm");
 
         // Verify services were called for valid queries
         verify(firmService).getUserAccessibleFirms(entraUser, "a");
-        verify(firmService).searchFirms("b");
+        verify(firmService).getUserAccessibleFirms(entraUser, "b");
+        verify(firmService, never()).searchFirms(anyString());
     }
 
     @Test
-    @DisplayName("Should handle edge cases correctly")
+    @DisplayName("Should handle edge cases correctly for external users")
     void testEdgeCases() {
         // Test exactly 1 character (should be processed)
+        when(accessControlService.authenticatedUserIsInternal()).thenReturn(false);
         EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
         lenient().when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
         when(firmService.getUserAccessibleFirms(entraUser, "1")).thenReturn(List.of());
-        when(firmService.searchFirms("2")).thenReturn(List.of());
+        when(firmService.getUserAccessibleFirms(entraUser, "2")).thenReturn(List.of());
 
         List<FirmDto> result1 = firmSearchController.getFirms(authentication, "1");
         assertThat(result1).isEmpty(); // Empty but service was called
 
-        List<Map<String, String>> result2 = firmSearchController.searchFirms("2", 10);
+        List<Map<String, String>> result2 = firmSearchController.searchFirms(authentication, "2", 10);
         assertThat(result2).isEmpty(); // Empty but service was called
 
         verify(firmService).getUserAccessibleFirms(entraUser, "1");
-        verify(firmService).searchFirms("2");
 
         // Test query with leading/trailing spaces
         // getFirms passes the original query to service, but searchFirms trims first
         when(firmService.getUserAccessibleFirms(entraUser, "  a  ")).thenReturn(List.of());
-        when(firmService.searchFirms("b")).thenReturn(List.of());
+        when(firmService.getUserAccessibleFirms(entraUser, "b")).thenReturn(List.of());
 
         List<FirmDto> result3 = firmSearchController.getFirms(authentication, "  a  ");
         assertThat(result3).isEmpty(); // Empty but service was called (with original "  a  ")
 
-        List<Map<String, String>> result4 = firmSearchController.searchFirms("  b  ", 10);
+        List<Map<String, String>> result4 = firmSearchController.searchFirms(authentication, "  b  ", 10);
         assertThat(result4).isEmpty(); // Empty but service was called (with trimmed "b")
 
         // Verify the service was called - getFirms passes untrimmed, searchFirms passes trimmed
         verify(firmService).getUserAccessibleFirms(entraUser, "  a  ");
-        verify(firmService).searchFirms("b");
+        verify(firmService).getUserAccessibleFirms(entraUser, "b");
+    }
+
+    @Test
+    @DisplayName("Should use global firm search for internal users")
+    void testSearchFirmsUsesGlobalSearchForInternalUser() {
+        // Given
+        EntraUser entraUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .build();
+
+        FirmDto firm = FirmDto.builder()
+                .id(UUID.randomUUID())
+                .name("Internal Firm")
+                .code("IF001")
+                .build();
+
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(accessControlService.authenticatedUserIsInternal()).thenReturn(true);
+        when(firmService.searchFirms("test")).thenReturn(List.of(firm));
+
+        // When
+        List<Map<String, String>> result = firmSearchController.searchFirms(authentication, "test", 10);
+
+        // Then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).get("name"))
+                .isEqualTo("Internal Firm");
+
+        verify(firmService).searchFirms("test");
+        verify(firmService, never())
+                .getUserAccessibleFirms(any(), any());
+    }
+
+    @Test
+    @DisplayName("Should trim search query for internal users")
+    void testSearchFirmsTrimsQueryForInternalUser() {
+        // Given
+        EntraUser entraUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .build();
+
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(accessControlService.authenticatedUserIsInternal()).thenReturn(true);
+        when(firmService.searchFirms("test")).thenReturn(List.of());
+
+        // When
+        firmSearchController.searchFirms(authentication, "  test  ", 10);
+
+        // Then
+        verify(firmService).searchFirms("test");
+        verify(firmService, never()).searchFirms("  test  ");
+        verify(firmService, never()).getUserAccessibleFirms(any(), any());
     }
 }

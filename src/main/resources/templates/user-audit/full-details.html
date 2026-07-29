@@ -76,7 +76,7 @@
                             <div class="govuk-summary-card__content">
                                 <dl class="govuk-summary-list">
                                     <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Firm name</dt>
+                                     <dt class="govuk-summary-list__key" th:text="${uiLabels.firmName}">Firm name</dt>
                                         <dd class="govuk-summary-list__value">
                                             <span th:text="${profile.firmName}"></span>
                                         </dd>
@@ -131,7 +131,7 @@
                                             th:text="${record.statusChangedDate != null ? #temporals.format(record.statusChangedDate, 'dd MMM yyyy HH:mm') : ''}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Status</dt>
+                                      <dt class="govuk-summary-list__key" th:text="${uiLabels.status}">Status</dt>
                                         <dd class="govuk-summary-list__value" th:text="${record.statusChange}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row" th:if="${record.disableReason != null}">

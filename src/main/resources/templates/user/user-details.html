@@ -41,8 +41,8 @@
                 </div>
                 <div class="govuk-!-margin-bottom-3">
                     <div class="govuk-form-group">
-                        <label class="govuk-label govuk-label--m govuk-!-width-one-third" for="firmName">
-                            Firm Name
+                        <label class="govuk-label govuk-label--m govuk-!-width-one-third" for="firmName" th:text="${uiLabels.firmName}">
+                            Firm name
                         </label>
                         <select class="govuk-select" id="firmId" name="firmId">
                             <div th:each="firm : ${firms}">

@@ -163,13 +163,18 @@ public class UserController {
             @RequestParam(name = "showFirmAdmins", required = false) boolean showFirmAdmins,
             @RequestParam(name = "backButton", required = false) boolean backButton,
             @RequestParam(name = "showMultiFirmUsers", required = false) boolean showMultiFirmUsers,
+            @RequestParam(name = "showProviderUsers", required = false) boolean showProviderUsers,
+            @RequestParam(name = "selectedStatuses", required = false) List<UserProfileSilasStatus> selectedStatuses,
             FirmSearchForm firmSearchForm,
             Model model, HttpSession session, Authentication authentication) {
 
         // Process request parameters and handle session filters
         search = search == null ? "" : search.trim();
+        if (selectedStatuses == null) {
+            selectedStatuses = new ArrayList<>();
+        }
         Map<String, Object> processedFilters = processRequestFilters(size, page, sort, direction, usertype, search,
-                showFirmAdmins, showMultiFirmUsers, backButton, session, firmSearchForm);
+                showFirmAdmins, showMultiFirmUsers, showProviderUsers, selectedStatuses, backButton, session, firmSearchForm);
         size = (Integer) processedFilters.get("size");
         page = (Integer) processedFilters.get("page");
         sort = (String) processedFilters.get("sort");
@@ -179,6 +184,10 @@ public class UserController {
         firmSearchForm = (FirmSearchForm) processedFilters.get("firmSearchForm");
         showFirmAdmins = Boolean.parseBoolean(String.valueOf(processedFilters.get("showFirmAdmins")));
         showMultiFirmUsers = Boolean.parseBoolean(String.valueOf(processedFilters.get("showMultiFirmUsers")));
+        showProviderUsers = Boolean.parseBoolean(String.valueOf(processedFilters.get("showProviderUsers")));
+        @SuppressWarnings("unchecked")
+        List<UserProfileSilasStatus> processedStatuses = (List<UserProfileSilasStatus>) processedFilters.get("selectedStatuses");
+        selectedStatuses = processedStatuses != null ? processedStatuses : new ArrayList<>();
 
         PaginatedUsers paginatedUsers;
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
@@ -192,16 +201,16 @@ public class UserController {
                 search, firmSearchForm, showFirmAdmins, showMultiFirmUsers);
 
         if (canSeeAllUsers) {
-            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, null, showFirmAdmins,
-                    showMultiFirmUsers);
+            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, null,
+                    showFirmAdmins, showMultiFirmUsers, showProviderUsers, selectedStatuses);
             paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)) {
             UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.INTERNAL,
-                    showFirmAdmins, showMultiFirmUsers);
+                    showFirmAdmins, showMultiFirmUsers, showProviderUsers, selectedStatuses);
             paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER) && internal) {
             UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.EXTERNAL,
-                    showFirmAdmins, showMultiFirmUsers);
+                    showFirmAdmins, showMultiFirmUsers, showProviderUsers, selectedStatuses);
             paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else {
             // External user - restrict to their firm only
@@ -216,7 +225,7 @@ public class UserController {
                         .orElse(FirmSearchForm.builder().build());
                 searchForm.setSelectedFirmId(optionalFirm.get().getId());
                 UserSearchCriteria searchCriteria = new UserSearchCriteria(search, searchForm, UserType.EXTERNAL,
-                        showFirmAdmins, showMultiFirmUsers);
+                        showFirmAdmins, showMultiFirmUsers, showProviderUsers, selectedStatuses);
                 paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
             } else {
                 // Shouldn't happen, but return nothing if external user has no firm
@@ -248,8 +257,10 @@ public class UserController {
         model.addAttribute("usertype", usertype);
         model.addAttribute("internal", internal);
         model.addAttribute("showFirmAdmins", showFirmAdmins);
-        model.addAttribute("allowDelegateUserAccess", allowDelegateUserAccess);
         model.addAttribute("showMultiFirmUsers", showMultiFirmUsers);
+        model.addAttribute("showProviderUsers", showProviderUsers);
+        model.addAttribute("selectedStatuses", selectedStatuses);
+        model.addAttribute("allowDelegateUserAccess", allowDelegateUserAccess);
         boolean allowCreateUser = accessControlService.authenticatedUserHasPermission(Permission.CREATE_EXTERNAL_USER);
         model.addAttribute("allowCreateUser", allowCreateUser);
 
@@ -1035,7 +1046,8 @@ public class UserController {
                 }
             }
         } else {
-            log.error("No user attribute was present in request. User not added to model.");
+            log.warn("No user attribute was present in request. Redirecting to /admin/users.");
+            return "redirect:/admin/users";
         }
 
         model.addAttribute("isMultiFirmUser", isMultiFirmUser != null ? isMultiFirmUser : false);
@@ -1582,11 +1594,19 @@ public class UserController {
                 .map(UUID::fromString)
                 .toList();
 
-        Map<String, Long> totalAssignableRolesForApps = roleAssignmentService.filterRoles(editorUserProfile.getAppRoles(), roleIds).stream()
-                .collect(Collectors.groupingBy(
-                        role -> role.getApp().getId(),
-                        Collectors.counting()
-                ));
+        Map<String, Long> totalAssignableRolesForApps = new HashMap<>();
+        for (AppDto app : editableApps.values()) {
+            List<AppRoleDto> availableRoles =
+                    userService.getAppRolesByAppIdAndUserType(app.getId(), userType, null);
+            List<AppRoleDto> assignableRoles =
+                    roleAssignmentService.filterRoles(
+                            editorUserProfile.getAppRoles(),
+                            availableRoles.stream()
+                                    .map(r -> UUID.fromString(r.getId()))
+                                    .toList()
+                    );
+            totalAssignableRolesForApps.put(app.getId(), (long) assignableRoles.size());
+        }
 
         Map<String, AppRoleDto> roles = userService.getRolesByIdIn(roleIds);
         String backUrl = "";
@@ -2625,8 +2645,7 @@ public class UserController {
                                           Model model,
                                           HttpSession session,
                                           Authentication authentication) {
-        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-        UserType userType = user.getUserType();
+        final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         // Get user's current app roles from session
         Optional<Set<String>> allSelectedRolesOptional = getSetFromHttpSession(session, "allSelectedRoles", String.class);
         if (allSelectedRolesOptional.isEmpty()) {
@@ -2713,8 +2732,27 @@ public class UserController {
         model.addAttribute("hasAllOffices", selectedOffices.contains(ALL));
         model.addAttribute("hasNoOffices", selectedOffices.contains(NO_OFFICES));
         model.addAttribute("errorMessage", errorMessage);
-
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Check your answers - " + user.getFullName());
+
+        Map<String, Long> totalRolesByApp = new HashMap<>();
+        for (AppRoleDto role : editableUserAppRoles) {
+            String appName = role.getApp().getName();
+            String appId = role.getApp().getId();
+            if (!totalRolesByApp.containsKey(appName)) {
+                List<AppRoleDto> availableRoles =
+                        userService.getAppRolesByAppIdAndUserType(appId, user.getUserType(), null);
+                List<AppRoleDto> assignableRoles =
+                        roleAssignmentService.filterRoles(
+                                editorUserProfile.getAppRoles(),
+                                availableRoles.stream()
+                                        .map(r -> UUID.fromString(r.getId()))
+                                        .toList()
+                        );
+                totalRolesByApp.put(appName, (long) assignableRoles.size());
+            }
+        }
+        model.addAttribute("totalRolesByApp", totalRolesByApp);
+
 
         return "grant-access-check-answers";
     }
@@ -2937,6 +2975,7 @@ public class UserController {
 
     private Map<String, Object> processRequestFilters(int size, int page, String sort, String direction,
             String usertype, String search, boolean showFirmAdmins, boolean showMultiFirmUsers,
+            boolean showProviderUsers, List<UserProfileSilasStatus> selectedStatuses,
             boolean backButton, HttpSession session, FirmSearchForm firmSearchForm) {
 
         if (backButton) {
@@ -2958,6 +2997,15 @@ public class UserController {
                 showMultiFirmUsers = sessionFilters.containsKey("showMultiFirmUsers")
                         ? (Boolean) sessionFilters.get("showMultiFirmUsers")
                         : showMultiFirmUsers;
+                showProviderUsers = sessionFilters.containsKey("showProviderUsers")
+                        ? (Boolean) sessionFilters.get("showProviderUsers")
+                        : showProviderUsers;
+                if (sessionFilters.containsKey("selectedStatuses")) {
+                    @SuppressWarnings("unchecked")
+                    List<UserProfileSilasStatus> sessionStatuses =
+                            (List<UserProfileSilasStatus>) sessionFilters.get("selectedStatuses");
+                    selectedStatuses = sessionStatuses;
+                }
                 firmSearchForm = sessionFilters.containsKey("firmSearchForm")
                         ? (FirmSearchForm) sessionFilters.get("firmSearchForm")
                         : firmSearchForm;
@@ -2978,16 +3026,18 @@ public class UserController {
             session.removeAttribute("userListFilters");
         }
 
-        Map<String, Object> result = Map.of(
-                "size", size,
-                "page", page,
-                "sort", sort != null ? sort : "",
-                "direction", direction != null ? direction : "",
-                "search", search != null ? search : "",
-                "showFirmAdmins", showFirmAdmins,
-                "showMultiFirmUsers", showMultiFirmUsers,
-                "usertype", usertype != null ? usertype : "",
-                "firmSearchForm", firmSearchForm != null ? firmSearchForm : FirmSearchForm.builder().build());
+        Map<String, Object> result = new HashMap<>();
+        result.put("size", size);
+        result.put("page", page);
+        result.put("sort", sort != null ? sort : "");
+        result.put("direction", direction != null ? direction : "");
+        result.put("search", search != null ? search : "");
+        result.put("showFirmAdmins", showFirmAdmins);
+        result.put("showMultiFirmUsers", showMultiFirmUsers);
+        result.put("showProviderUsers", showProviderUsers);
+        result.put("selectedStatuses", selectedStatuses != null ? selectedStatuses : new ArrayList<>());
+        result.put("usertype", usertype != null ? usertype : "");
+        result.put("firmSearchForm", firmSearchForm != null ? firmSearchForm : FirmSearchForm.builder().build());
 
         // Store current filter state in session for future back navigation
         session.setAttribute("userListFilters", result);
