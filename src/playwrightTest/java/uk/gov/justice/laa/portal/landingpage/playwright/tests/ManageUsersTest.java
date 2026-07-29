@@ -874,27 +874,68 @@ public class ManageUsersTest extends BaseFrontEndTest {
         final String userName = "Playwright FirmTwoUserViewer";
         final String service = "Manage your users";
 
-        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+
+        // Search for and open the complete user
+        manageUsersPage.searchForUser(userName);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(userName),
+                userName + " should appear in the search results"
+        );
 
         manageUsersPage.clickExternalUserLink(userName);
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
         manageUsersPage.assertStatusVisible("COMPLETE");
+
+        // Remove the user's Manage your users service
         manageUsersPage.clickServicesTab();
         manageUsersPage.clickChangeLink();
 
         Locator serviceCheckbox = page.getByLabel(service);
+
+        assertTrue(
+                serviceCheckbox.isChecked(),
+                service + " should be selected before removal"
+        );
+
         serviceCheckbox.uncheck();
-        assertFalse(serviceCheckbox.isChecked(), service + " checkbox should be unchecked after removal");
+
+        assertFalse(
+                serviceCheckbox.isChecked(),
+                service + " checkbox should be unchecked after removal"
+        );
 
         manageUsersPage.clickContinueUserDetails();
         manageUsersPage.clickConfirmButton();
 
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-        assertTrue(page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible());
 
-        loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+        assertThat(
+                page.locator(".govuk-panel__title")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("Access and permissions updated"))
+        ).isVisible();
+
+        // Return to Manage Users as the External User Manager
+        manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+
+        // Search again because the results page is not guaranteed
+        // to display the user without a search
+        manageUsersPage.searchForUser(userName);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(userName),
+                userName + " should still appear after all roles are removed"
+        );
+
         manageUsersPage.clickExternalUserLink(userName);
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Verify the status has changed
         manageUsersPage.assertStatusVisible("NO ROLES ASSIGNED");
     }
 
