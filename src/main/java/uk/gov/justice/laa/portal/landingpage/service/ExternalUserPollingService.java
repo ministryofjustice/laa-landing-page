@@ -318,7 +318,7 @@ public class ExternalUserPollingService {
         return null;
     }
 
-    private void disableUserWithReason(TechServicesUser user, EntraUser entraUser) {
+    public void disableUserWithReason(TechServicesUser user, EntraUser entraUser) {
         try {
             entraUser.setEnabled(false);
             entraUser.setDisableType(DisableType.SYNC);
@@ -350,7 +350,7 @@ public class ExternalUserPollingService {
         }
     }
 
-    private void enableUserWithReason(TechServicesUser user, EntraUser entraUser) {
+    public void enableUserWithReason(TechServicesUser user, EntraUser entraUser) {
         try {
             entraUser.setEnabled(true);
             entraUserRepository.save(entraUser);

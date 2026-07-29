@@ -3536,6 +3536,57 @@ class UserServiceTest {
                     anyString(),
                     anyString());
         }
+
+        @Test
+        void createUser_existingUser_inviteSent_doesNotSendGovNotify() {
+            // Arrange
+            EntraUserDto user = new EntraUserDto();
+            user.setEmail("awaiting@example.com");
+            user.setFirstName("Alex");
+
+            when(mockEntraUserRepository.saveAndFlush(any(EntraUser.class)))
+                    .thenAnswer(i -> {
+                        EntraUser eu = i.getArgument(0);
+                        eu.setId(UUID.randomUUID());
+                        return eu;
+                    });
+
+            TechServicesUser respUser = TechServicesUser.builder()
+                    .id(UUID.randomUUID().toString())
+                    .email("awaiting@example.com")
+                    .accountEnabled(true)
+                    .customSecurityAttributes(
+                            TechServicesUser.CustomSecurityAttributes.builder()
+                                    .guestUserStatus(
+                                            TechServicesUser.GuestUserStatus.builder()
+                                                    .invitationProgress(InvitationStatus.INVITE_SENT)
+                                                    .build())
+                                    .build())
+                    .build();
+
+            TechServicesApiResponse<RegisterUserResponse> registerUserResponse =
+                    TechServicesApiResponse.success(
+                            RegisterUserResponse.builder()
+                                    .responseType(RegisterUserResponse.ResponseType.VERIFIED)
+                                    .user(respUser)
+                                    .build());
+
+            when(techServicesClient.registerNewUser(any(EntraUserDto.class)))
+                    .thenReturn(registerUserResponse);
+
+            FirmDto firmDto = FirmDto.builder()
+                    .name("Test Firm")
+                    .build();
+
+            // Act
+            userService.createUser(user, firmDto, false, "admin", false);
+
+            // Assert
+            verify(notificationService, never()).notifyExistingUser(
+                    any(),
+                    anyString(),
+                    anyString());
+        }
     }
 
     @Nested

@@ -178,7 +178,7 @@ class UserControllerTest {
                 appRoleService, appService, disableUserService, notificationService, reactivationRequestService);
         userController.disableUserFeatureEnabled = true;
         lenient().when(accessControlService.getEnablementFlags(any()))
-                .thenReturn(new AccessControlService.EnablementFlags(false, false));
+                .thenReturn(new AccessControlService.EnablementFlags(false, false, false));
         model = new ExtendedModelMap();
         firmSearchForm = FirmSearchForm.builder().build();
     }
@@ -821,7 +821,7 @@ class UserControllerTest {
         List<uk.gov.justice.laa.portal.landingpage.viewmodel.DeleteUserReasonViewModel> reasons = (List<uk.gov.justice.laa.portal.landingpage.viewmodel.DeleteUserReasonViewModel>) model
                 .getAttribute("deleteReasons");
         assertThat(reasons).hasSize(1);
-        assertThat(reasons.get(0).getCode()).isEqualTo("CyberRisk");
+        assertThat(reasons.getFirst().getCode()).isEqualTo("CyberRisk");
         verify(userService).getDeleteUserReasons(true);
     }
 

@@ -42,6 +42,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent;
+import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
@@ -51,10 +52,12 @@ import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AuditExportService;
 import uk.gov.justice.laa.portal.landingpage.service.AuditExportService.AuditCsvExport;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
+import uk.gov.justice.laa.portal.landingpage.service.ExternalUserPollingService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.TechServicesClient;
@@ -81,6 +84,8 @@ public class AuditController {
     private final AuthenticatedUser authenticatedUser;
     private final TechServicesClient techServicesClient;
     private final UserAccountStatusService userAccountStatusService;
+    private final ExternalUserPollingService externalUserPollingService;
+    private final EntraUserRepository entraUserRepository;
 
     @Value("${feature.flag.disable.user}")
     private boolean disableUserFeatureEnabled;
@@ -206,11 +211,30 @@ public class AuditController {
         TechServicesApiResponse<GetUserResponse> entraUserResponse = techServicesClient.getUser(userDetail.getEntraOid());
         if (entraUserResponse.isSuccess()) {
             TechServicesUser user = entraUserResponse.getData().getUser();
-            String disableUserReason = formatDisableUserReason(user);
 
             OffsetDateTime lastLoginTime = user.getLastSignIn() != null
                     ? OffsetDateTime.parse(user.getLastSignIn())
                     : null;
+
+            Optional<Boolean> optionalAccountEnabled = Optional.of(entraUserResponse)
+                    .map(TechServicesApiResponse::getData)
+                    .map(GetUserResponse::getUser)
+                    .map(TechServicesUser::getAccountEnabled);
+
+            if (optionalAccountEnabled.isPresent()) {
+                boolean accountEnabled = optionalAccountEnabled.get();
+                if (accountEnabled != userDetail.isEnabled()) {
+                    EntraUser entraUser = entraUserRepository.findById(UUID.fromString(userDetail.getUserId())).orElseThrow();
+                    if (accountEnabled) {
+                        externalUserPollingService.enableUserWithReason(user, entraUser);
+                    } else {
+                        externalUserPollingService.disableUserWithReason(user, entraUser);
+                    }
+                }
+                userDetail.setEnabled(accountEnabled);
+            }
+
+            String disableUserReason = formatDisableUserReason(user);
 
             model.addAttribute("lastLogin", lastLoginTime);
             model.addAttribute("entraUser", entraUserResponse.getData().getUser());
@@ -222,9 +246,10 @@ public class AuditController {
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
         AccessControlService.EnablementFlags enablementFlags = disableUserFeatureEnabled
                 ? accessControlService.getEnablementFlags(userDetail.getUserId())
-                : new AccessControlService.EnablementFlags(false, false);
+                : new AccessControlService.EnablementFlags(false, false, false);
         boolean canEnableUser = enablementFlags.canEnable();
         boolean cannotEnableUser = enablementFlags.blockedByHierarchy();
+        boolean canDelegateEnableUser = enablementFlags.canDelegate();
 
         // Add attributes to model
         model.addAttribute("user", userDetail);
@@ -235,6 +260,7 @@ public class AuditController {
         model.addAttribute("canDisableUser", disableUserFeatureEnabled && canDisableUser);
         model.addAttribute("canEnableUser", canEnableUser);
         model.addAttribute("cannotEnableUser", cannotEnableUser);
+        model.addAttribute("canDelegateEnableUser", canDelegateEnableUser);
         model.addAttribute("userIsEnabled", userDetail.isEnabled());
         model.addAttribute("userActivated",
                 Objects.equals(userDetail.getUserType(), "Internal") || Objects.equals(userDetail.getActivationStatus(), VERIFICATION_SUCCESS.name()));
