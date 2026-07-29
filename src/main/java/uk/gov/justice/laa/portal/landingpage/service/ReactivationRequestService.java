@@ -1,41 +1,51 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
+import java.time.ZoneId;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.ReactivationRequestsPageData;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedReactivationRequests;
 import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestListItem;
 import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestPageMode;
 import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserActivationRequestRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
 @Service
 @RequiredArgsConstructor
 public class ReactivationRequestService {
 
     private static final int DEFAULT_PAGE_SIZE = 10;
-    private static final List<String> FIRST_NAMES = List.of(
-            "Alice", "Samantha", "Jacob", "Steve", "Jamie", "Ben", "Daniel", "Finn", "Taylor", "Morgan");
-    private static final List<String> LAST_NAMES = List.of(
-            "Turner", "Springer", "Nolan", "Stevenson", "Helles", "Walker", "Hughes", "Roberts", "Clarke", "Patel");
+    private static final String UNKNOWN_USER_NAME = "Unknown user";
 
     private final LoginService loginService;
     private final FirmService firmService;
+    private final UserActivationRequestRepository userActivationRequestRepository;
+    private final UserProfileRepository userProfileRepository;
+    private final EntraUserRepository entraUserRepository;
 
+    @Transactional(readOnly = true)
     public ReactivationRequestsPageData getPage(
             Authentication authentication,
             String search,
@@ -52,7 +62,7 @@ public class ReactivationRequestService {
             : List.copyOf(selectedStatuses);
 
         List<ReactivationRequestListItem> requests = filterAndSortRequests(
-                buildMockRequests(currentUser, pageMode),
+                buildRequests(currentUser, pageMode),
                 normalizeSearch(search),
                 effectiveStatuses,
                 sort,
@@ -81,69 +91,37 @@ public class ReactivationRequestService {
         return isProviderAdminOnly ? ReactivationRequestPageMode.TRACK : ReactivationRequestPageMode.MANAGE;
     }
 
-    private List<ReactivationRequestListItem> buildMockRequests(EntraUser currentUser, ReactivationRequestPageMode pageMode) {
-        List<FirmDto> userActiveFirms = currentUser == null
-                ? List.of()
-                : firmService.getUserActiveAllFirms(currentUser);
+    private List<ReactivationRequestListItem> buildRequests(EntraUser currentUser, ReactivationRequestPageMode pageMode) {
+        List<UserActivationRequest> latestRequests = userActivationRequestRepository.findAllLatestRequests();
 
-        List<FirmDto> allFirms = new ArrayList<>(firmService.getAllFirmsFromCache());
-        if (allFirms.isEmpty()) {
-            allFirms = new ArrayList<>(userActiveFirms);
+        if (latestRequests.isEmpty()) {
+            return List.of();
         }
 
-        if (allFirms.isEmpty()) {
-            allFirms.add(FirmDto.builder().id(UUID.randomUUID()).code("MOCK").name("Mock Firm").build());
+        Set<UUID> profileIds = latestRequests.stream()
+                .map(UserActivationRequest::getUserProfileId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<UUID, UserProfile> profilesById = userProfileRepository.findAllByIdInWithFirm(profileIds).stream()
+                .collect(Collectors.toMap(UserProfile::getId, profile -> profile));
+
+        Set<String> actorEntraOids = latestRequests.stream()
+                .map(UserActivationRequest::getActorEntraOid)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<String, EntraUser> actorsByEntraOid = new HashMap<>();
+        if (!actorEntraOids.isEmpty()) {
+            entraUserRepository.findByEntraOidIn(actorEntraOids)
+                    .forEach(actor -> actorsByEntraOid.put(actor.getEntraOid(), actor));
         }
 
-        List<FirmDto> firmsForData = new ArrayList<>();
-        Set<UUID> seenFirmIds = new HashSet<>();
-        for (FirmDto firm : userActiveFirms) {
-            if (firm != null && firm.getId() != null && seenFirmIds.add(firm.getId())) {
-                firmsForData.add(firm);
-            }
-        }
-        for (FirmDto firm : allFirms) {
-            if (firm != null && firm.getId() != null && seenFirmIds.add(firm.getId())) {
-                firmsForData.add(firm);
-            }
-        }
-        firmsForData = firmsForData.stream().limit(4).toList();
-
-        List<ReactivationRequestListItem> mockData = new ArrayList<>();
-
-        LocalDate baseDate = LocalDate.now().minusDays(20);
-        int index = 0;
-        for (FirmDto firm : firmsForData) {
-            for (ReactivationRequestStatus status : ReactivationRequestStatus.values()) {
-                String firstName = FIRST_NAMES.get(index % FIRST_NAMES.size());
-                String lastName = LAST_NAMES.get(index % LAST_NAMES.size());
-                LocalDate dateSubmitted = baseDate.plusDays(index);
-                UUID requestId = UUID.nameUUIDFromBytes((firm.getCode() + "-request-" + index).getBytes());
-                UUID userProfileId = UUID.nameUUIDFromBytes((firm.getCode() + "-profile-" + index).getBytes());
-                int version = (index % 3) + 1;
-                String actorName = firstName + " " + lastName;
-                String actorEntraOid = "mock-actor-" + index;
-                String actorRoleType = index % 2 == 0 ? "PROVIDER_ADMIN" : "LAA_ADMIN";
-                String comments = "Request evidence submitted for account reactivation";
-
-                mockData.add(new ReactivationRequestListItem(
-                        UUID.nameUUIDFromBytes((firm.getCode() + "-" + index).getBytes()),
-                        requestId,
-                        userProfileId,
-                        version,
-                        status,
-                        comments,
-                        actorEntraOid,
-                        actorRoleType,
-                        actorName,
-                        dateSubmitted,
-                        firm.getId()));
-                index++;
-            }
-        }
+        List<ReactivationRequestListItem> items = latestRequests.stream()
+                .map(request -> toListItem(request, profilesById.get(request.getUserProfileId()),
+                        actorsByEntraOid.get(request.getActorEntraOid())))
+                .toList();
 
         if (pageMode == ReactivationRequestPageMode.TRACK && currentUser != null) {
-            Set<UUID> allowedFirmIds = userActiveFirms.stream()
+            Set<UUID> allowedFirmIds = firmService.getUserActiveAllFirms(currentUser).stream()
                     .map(FirmDto::getId)
                     .collect(Collectors.toSet());
 
@@ -151,12 +129,41 @@ public class ReactivationRequestService {
                 return List.of();
             }
 
-            return mockData.stream()
+            return items.stream()
                     .filter(item -> item.firmId() != null && allowedFirmIds.contains(item.firmId()))
                     .toList();
         }
 
-        return mockData;
+        return items;
+    }
+
+    private ReactivationRequestListItem toListItem(UserActivationRequest request, UserProfile profile, EntraUser actor) {
+        UUID firmId = profile != null && profile.getFirm() != null ? profile.getFirm().getId() : null;
+        String actorName = actor != null
+                ? (nullToEmpty(actor.getFirstName()) + " " + nullToEmpty(actor.getLastName())).trim()
+                : UNKNOWN_USER_NAME;
+        String actorRoleType = request.getActorRoleType() != null ? request.getActorRoleType().name() : null;
+        ReactivationRequestStatus status = ReactivationRequestStatus.valueOf(request.getStatus().name());
+        LocalDate dateSubmitted = request.getCreatedAt() != null
+                ? LocalDate.ofInstant(request.getCreatedAt(), ZoneId.systemDefault())
+                : null;
+
+        return new ReactivationRequestListItem(
+                request.getId(),
+                request.getRequestId(),
+                request.getUserProfileId(),
+                request.getVersion(),
+                status,
+                request.getComments(),
+                request.getActorEntraOid(),
+                actorRoleType,
+                actorName.isBlank() ? UNKNOWN_USER_NAME : actorName,
+                dateSubmitted,
+                firmId);
+    }
+
+    private String nullToEmpty(String value) {
+        return value == null ? "" : value;
     }
 
     private List<ReactivationRequestListItem> filterAndSortRequests(
@@ -221,7 +228,8 @@ public class ReactivationRequestService {
             case "version" -> Comparator.comparing(ReactivationRequestListItem::version, Comparator.nullsLast(Integer::compareTo));
             case "requestStatus" -> Comparator.comparing(item -> item.requestStatus().name(), String.CASE_INSENSITIVE_ORDER);
             case "actorName" -> Comparator.comparing(ReactivationRequestListItem::actorName, String.CASE_INSENSITIVE_ORDER);
-            case "actorRoleType" -> Comparator.comparing(ReactivationRequestListItem::actorRoleType, String.CASE_INSENSITIVE_ORDER);
+            case "actorRoleType" -> Comparator.comparing(ReactivationRequestListItem::actorRoleType,
+                    Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
             default -> Comparator.comparing(ReactivationRequestListItem::dateSubmitted,
                     Comparator.nullsLast(LocalDate::compareTo));
         };

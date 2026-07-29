@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -14,11 +15,27 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestListItem;
 import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 
 public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest {
+
+    private UserActivationRequest seedActivationRequest(UUID userProfileId) {
+        UserActivationRequest request = new UserActivationRequest();
+        request.setRequestId(UUID.randomUUID());
+        request.setUserProfileId(userProfileId);
+        request.setVersion(1);
+        request.setStatus(uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus.IN_REVIEW);
+        request.setComments("Integration test reactivation request");
+        request.setActorEntraOid(UUID.randomUUID().toString());
+        request.setActorRoleType(AuthzRoleType.PROVIDER_ADMIN);
+        request.setCreatedAt(Instant.now());
+        return userActivationRequestRepository.saveAndFlush(request);
+    }
 
     @Test
     public void testProviderAdminGetsTrackHeading() throws Exception {
@@ -35,6 +52,20 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
     @Test
     public void testProviderAdminResultsAreRestrictedToOwnFirm() throws Exception {
         EntraUser providerAdmin = firmUserManagers.getFirst();
+
+        UUID providerAdminProfileId = providerAdmin.getUserProfiles().stream()
+                .filter(profile -> profile != null && profile.isActiveProfile() && profile.getFirm() != null)
+                .map(UserProfile::getId)
+                .findFirst()
+                .orElseThrow();
+        seedActivationRequest(providerAdminProfileId);
+
+        EntraUser otherFirmUser = createExternalUserAtFirm("other-firm-user@test.com", testFirm1);
+        UUID otherFirmProfileId = otherFirmUser.getUserProfiles().stream()
+                .map(UserProfile::getId)
+                .findFirst()
+                .orElseThrow();
+        seedActivationRequest(otherFirmProfileId);
 
         var result = mockMvc.perform(get("/admin/users/reactivation-requests")
                         .with(userOauth2Login(providerAdmin)))
