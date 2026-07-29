@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 
@@ -28,6 +29,7 @@ public class FirmSearchController {
 
     private final LoginService loginService;
     private final FirmService firmService;
+    private final AccessControlService accessControlService;
 
     @GetMapping("/user/firms/search")
     @ResponseBody
@@ -41,21 +43,36 @@ public class FirmSearchController {
             return new ArrayList<>();
         }
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
+
+        if (accessControlService.authenticatedUserIsInternal()) {
+            return firmService.searchFirms(query);
+        }
         return firmService.getUserAccessibleFirms(entraUser, query);
     }
 
     @GetMapping("/user/create/firm/search")
     @ResponseBody
-    public List<Map<String, String>> searchFirms(@RequestParam(value = "q", defaultValue = "") String query,
+    @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER,"
+            + "T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_INTERNAL_USER)")
+    public List<Map<String, String>> searchFirms(Authentication authentication,
+                                                 @RequestParam(value = "q",
+                                                             defaultValue = "") String query,
                                                  @RequestParam(value = "firmSearchResultCount", defaultValue = "10") Integer count) {
         // If the query is blank/whitespace-only, return an empty result and do not
         // call the service to avoid unnecessary work.
         if (query == null || query.trim().isEmpty()) {
             return new ArrayList<>();
         }
+        EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
 
+        List<FirmDto> firms;
         int validatedCount = Math.max(10, Math.min(count, 100));
-        List<FirmDto> firms = firmService.searchFirms(query.trim());
+
+        if (accessControlService.authenticatedUserIsInternal()) {
+            firms = firmService.searchFirms(query.trim());
+        } else {
+            firms = firmService.getUserAccessibleFirms(entraUser, query.trim());
+        }
 
         List<Map<String, String>> result = firms.stream()
                 .limit(validatedCount) // Limit results to prevent overwhelming the UI
