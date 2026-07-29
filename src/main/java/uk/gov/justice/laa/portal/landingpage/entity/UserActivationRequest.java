@@ -9,6 +9,7 @@ import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -45,6 +46,7 @@ public class UserActivationRequest extends BaseEntity {
 
     @Column(name = "version", nullable = false)
     @ColumnDefault("1")
+    @Builder.Default
     private Integer version = 1;
 
     @Enumerated(EnumType.STRING)

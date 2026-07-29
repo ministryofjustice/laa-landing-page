@@ -39,10 +39,6 @@ class UserReactivationActivationRequestServiceTest {
     @InjectMocks
     private UserReactivationActivationRequestService service;
 
-    private EntraUserDto buildEntraUserDto(String entraOid) {
-        return EntraUserDto.builder().id("entra-id").entraOid(entraOid).fullName("Test User").email("test.user@justice.gov.uk").build();
-    }
-
     private UserActivationRequest buildUserActivationRequest(ReactivationRequestStatus status, int version) {
         return UserActivationRequest.builder().id(UUID.randomUUID()).requestId(REQUEST_ID).userProfileId(PROFILE_ID).status(status).version(version).actorEntraOid(ACTOR_ID).build();
     }
@@ -91,10 +87,9 @@ class UserReactivationActivationRequestServiceTest {
         @Test
         @DisplayName("Should create new request when no existing request is present")
         void noExistingRequest_createsNewRequest() {
-            EntraUserDto user = buildEntraUserDto(ACTOR_ID);
             given(requestRepository.findFirstByUserProfileIdOrderByVersionDesc(PROFILE_ID)).willReturn(Optional.empty());
 
-            UserActivationRequest result = service.createNewRequest(REQUEST_ID, PROFILE_ID, "Reactivation reason", user);
+            UserActivationRequest result = service.createNewRequest(REQUEST_ID, PROFILE_ID, "Reactivation reason", ACTOR_ID);
 
             ArgumentCaptor<UserActivationRequest> captor = ArgumentCaptor.forClass(UserActivationRequest.class);
             verify(requestRepository).save(captor.capture());
@@ -113,11 +108,10 @@ class UserReactivationActivationRequestServiceTest {
         @Test
         @DisplayName("Should create new request when existing request is REJECTED")
         void existingRejectedRequest_createsNewRequest() {
-            EntraUserDto user = buildEntraUserDto(ACTOR_ID);
             UserActivationRequest rejected = buildUserActivationRequest(ReactivationRequestStatus.REJECTED, 1);
             given(requestRepository.findFirstByUserProfileIdOrderByVersionDesc(PROFILE_ID)).willReturn(Optional.of(rejected));
 
-            UserActivationRequest result = service.createNewRequest(REQUEST_ID, PROFILE_ID, "Retry reason", user);
+            UserActivationRequest result = service.createNewRequest(REQUEST_ID, PROFILE_ID, "Retry reason", ACTOR_ID);
 
             assertThat(result).isNotNull();
             verify(requestRepository).save(any(UserActivationRequest.class));
@@ -126,11 +120,10 @@ class UserReactivationActivationRequestServiceTest {
         @Test
         @DisplayName("Should create new request when existing request is APPROVED")
         void existingApprovedRequest_createsNewRequest() {
-            EntraUserDto user = buildEntraUserDto(ACTOR_ID);
             UserActivationRequest approved = buildUserActivationRequest(ReactivationRequestStatus.APPROVED, 1);
             given(requestRepository.findFirstByUserProfileIdOrderByVersionDesc(PROFILE_ID)).willReturn(Optional.of(approved));
 
-            UserActivationRequest result = service.createNewRequest(REQUEST_ID, PROFILE_ID, "New request", user);
+            UserActivationRequest result = service.createNewRequest(REQUEST_ID, PROFILE_ID, "New request", ACTOR_ID);
 
             assertThat(result).isNotNull();
             verify(requestRepository).save(any(UserActivationRequest.class));
@@ -139,11 +132,10 @@ class UserReactivationActivationRequestServiceTest {
         @Test
         @DisplayName("Should throw IllegalStateException when request is currently IN_REVIEW")
         void activeRequestInReview_throwsIllegalStateException() {
-            EntraUserDto user = buildEntraUserDto(ACTOR_ID);
             UserActivationRequest inReview = buildUserActivationRequest(ReactivationRequestStatus.IN_REVIEW, 1);
             given(requestRepository.findFirstByUserProfileIdOrderByVersionDesc(PROFILE_ID)).willReturn(Optional.of(inReview));
 
-            assertThatThrownBy(() -> service.createNewRequest(REQUEST_ID, PROFILE_ID, "Reason", user))
+            assertThatThrownBy(() -> service.createNewRequest(REQUEST_ID, PROFILE_ID, "Reason", ACTOR_ID))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessage("Request already being processed for user " + PROFILE_ID);
 

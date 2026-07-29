@@ -16,7 +16,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.CountFirms;
-import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
+import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -68,7 +68,7 @@ public class UserAccountStatusServiceTest {
     @Mock
     private EventService eventService;
     @Mock
-    private DisableTypeResolver disableTypeResolver;
+    private RoleTypeResolver roleTypeResolver;
     @Mock
     private UserEnablementPolicy userEnablementPolicy;
 
@@ -85,8 +85,8 @@ public class UserAccountStatusServiceTest {
                 techServicesClient,
                 userService,
                 userProfileRepository, eventService,
-                disableTypeResolver, userEnablementPolicy);
-        org.mockito.Mockito.lenient().when(disableTypeResolver.resolve(any())).thenReturn(DisableType.NONE);
+                roleTypeResolver, userEnablementPolicy);
+        org.mockito.Mockito.lenient().when(roleTypeResolver.resolve(any())).thenReturn(RoleType.NONE);
     }
 
     @Test
@@ -253,17 +253,17 @@ public class UserAccountStatusServiceTest {
         when(entraUserRepository.findByIdWithAssociations(eq(disabledByUser.getId()))).thenReturn(Optional.of(disabledByUser));
         when(disableUserReasonRepository.findById(eq(disableUserReason.getId()))).thenReturn(Optional.of(disableUserReason));
         when(techServicesClient.disableUser(any(), any())).thenReturn(techServicesResponse);
-        when(disableTypeResolver.resolve(eq(disabledByUser))).thenReturn(DisableType.FIRM);
+        when(roleTypeResolver.resolve(eq(disabledByUser))).thenReturn(RoleType.FIRM);
 
         userAccountStatusService.disableUser(disabledUser.getId(), disableUserReason.getId(), disabledByUser.getId());
 
         assertThat(disabledUser.isEnabled()).isFalse();
-        assertThat(disabledUser.getDisableType()).isEqualTo(DisableType.FIRM);
-        verify(disableTypeResolver, times(1)).resolve(disabledByUser);
+        assertThat(disabledUser.getRoleType()).isEqualTo(RoleType.FIRM);
+        verify(roleTypeResolver, times(1)).resolve(disabledByUser);
         verify(entraUserRepository, times(1)).saveAndFlush(any());
         ArgumentCaptor<UserAccountStatusAudit> auditCaptor = ArgumentCaptor.forClass(UserAccountStatusAudit.class);
         verify(userAccountStatusAuditRepository, times(1)).saveAndFlush(auditCaptor.capture());
-        assertThat(auditCaptor.getValue().getDisableType()).isEqualTo(DisableType.FIRM);
+        assertThat(auditCaptor.getValue().getRoleType()).isEqualTo(RoleType.FIRM);
     }
 
     @Test
@@ -1175,7 +1175,7 @@ public class UserAccountStatusServiceTest {
         EntraUser target = EntraUser.builder()
                 .id(targetId)
                 .enabled(false)
-                .disableType(DisableType.PRIVILEGED)
+                .roleType(RoleType.PRIVILEGED)
                 .userProfiles(Set.of(UserProfile.builder()
                         .id(UUID.randomUUID()).activeProfile(true).build()))
                 .build();
@@ -1610,17 +1610,17 @@ public class UserAccountStatusServiceTest {
             when(entraUserRepository.findByIdWithAssociations(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
             when(disableUserReasonRepository.findById(eq(reason.getId()))).thenReturn(Optional.of(reason));
             when(userProfileRepository.findByFirmId(eq(firmId))).thenReturn(userProfiles);
-            when(disableTypeResolver.resolve(eq(enabledUser))).thenReturn(DisableType.FIRM);
+            when(roleTypeResolver.resolve(eq(enabledUser))).thenReturn(RoleType.FIRM);
 
             userAccountStatusService.disableUserAllUserByFirmId(String.valueOf(firmId), reason.getId(), enabledUser.getId());
 
-            verify(disableTypeResolver, times(1)).resolve(enabledUser);
-            assertThat(userToDisable.getDisableType()).isEqualTo(DisableType.FIRM);
+            verify(roleTypeResolver, times(1)).resolve(enabledUser);
+            assertThat(userToDisable.getRoleType()).isEqualTo(RoleType.FIRM);
             verify(entraUserRepository, times(1)).saveAndFlush(any());
             verify(techServicesClient, times(1)).disableUser(any(), any());
             ArgumentCaptor<UserAccountStatusAudit> bulkAuditCaptor = ArgumentCaptor.forClass(UserAccountStatusAudit.class);
             verify(userAccountStatusAuditRepository, times(1)).saveAndFlush(bulkAuditCaptor.capture());
-            assertThat(bulkAuditCaptor.getValue().getDisableType()).isEqualTo(DisableType.FIRM);
+            assertThat(bulkAuditCaptor.getValue().getRoleType()).isEqualTo(RoleType.FIRM);
 
         }
 

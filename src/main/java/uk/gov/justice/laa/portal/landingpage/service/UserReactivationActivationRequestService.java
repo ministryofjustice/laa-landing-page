@@ -4,7 +4,6 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus;
@@ -35,7 +34,7 @@ public class UserReactivationActivationRequestService {
         return requestRepository.findFirstByUserProfileIdOrderByVersionDesc(profileId);
     }
 
-    public UserActivationRequest createNewRequest(UUID requestId, UUID profileId, String reason, EntraUserDto user) {
+    public UserActivationRequest createNewRequest(UUID requestId, UUID profileId, String reason, String actorEntraOid) {
         Optional<UserActivationRequest> request = requestRepository.findFirstByUserProfileIdOrderByVersionDesc(profileId);
 
         if (request.isPresent() && !(ReactivationRequestStatus.REJECTED.equals(request.get().getStatus()) || ReactivationRequestStatus.APPROVED.equals(request.get().getStatus()))) {
@@ -48,7 +47,7 @@ public class UserReactivationActivationRequestService {
         newRecord.setUserProfileId(profileId);
         newRecord.setStatus(ReactivationRequestStatus.IN_REVIEW);
         newRecord.setComments(reason);
-        newRecord.setActorEntraOid(user.getEntraOid());
+        newRecord.setActorEntraOid(actorEntraOid);
         newRecord.setCreatedAt(Instant.now());
         newRecord.setActorRoleType(AuthzRoleType.PROVIDER_ADMIN);
 

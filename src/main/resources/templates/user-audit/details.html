@@ -482,9 +482,9 @@
                                         <dt class="govuk-summary-list__key">Changed by</dt>
                                         <dd class="govuk-summary-list__value" th:text="${record.statusChangedBy}">
                                     </div>
-                                    <div class="govuk-summary-list__row" th:if="${record.disableType != null}">
+                                    <div class="govuk-summary-list__row" th:if="${record.roleType != null}">
                                         <dt class="govuk-summary-list__key">Disable type</dt>
-                                        <dd class="govuk-summary-list__value" th:text="${record.disableType}"></dd>
+                                        <dd class="govuk-summary-list__value" th:text="${record.roleType}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row"
                                          th:if="${user.accountStatusHistory == null || user.accountStatusHistory.size() == 0}">

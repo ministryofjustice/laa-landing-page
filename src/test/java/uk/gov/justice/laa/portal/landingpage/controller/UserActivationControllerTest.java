@@ -348,7 +348,7 @@ public class UserActivationControllerTest {
             given(userService.getActiveProfileByUserId(USER_ID)).willReturn(Optional.of(userProfile));
             given(userService.getEntraUserById(USER_ID)).willReturn(Optional.of(user));
             given(loginService.getCurrentUser(authentication)).willReturn(actor);
-            given(userReactivationActivationRequestService.createNewRequest(any(UUID.class), eq(PROFILE_ID), eq("Approved leave returned"), eq(user)))
+            given(userReactivationActivationRequestService.createNewRequest(any(UUID.class), eq(PROFILE_ID), eq("Approved leave returned"), eq(USER_ID)))
                     .willReturn(createdRequest);
 
             String view = userActivationController.delegateReactivateUserReasonsCheckAnswersPost(USER_ID, authentication, model, httpSession);
@@ -357,7 +357,7 @@ public class UserActivationControllerTest {
             assertThat(model.asMap()).containsEntry("user", user);
 
             verify(userReactivationActivationRequestService)
-                    .createNewRequest(any(UUID.class), eq(PROFILE_ID), eq("Approved leave returned"), eq(user));
+                    .createNewRequest(any(UUID.class), eq(PROFILE_ID), eq("Approved leave returned"), eq(USER_ID));
         }
     }
 

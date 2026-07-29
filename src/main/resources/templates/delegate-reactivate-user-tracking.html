@@ -26,18 +26,15 @@
                 <div class="govuk-error-summary__body">
                     <ul class="govuk-list govuk-error-summary__list">
                         <li>
-                            <a href="#reason-error" th:text="${errorMessage}"></a>
+                            <a href="#comments-error" th:text="${errorMessage}"></a>
                         </li>
                     </ul>
                 </div>
             </div>
 
-            <h1 class="govuk-heading-l govuk-hint" th:text="'Reactivation request'">
-                Reactivation request
-            </h1>
-
-            <h1 class="govuk-heading-l" th:text="${user.fullName}">
-                User Full Name
+            <h1 class="govuk-heading-l">
+                <span class="govuk-caption-l" th:text="'Reactivation request'">Reactivation request</span>
+                <span th:text="${user.fullName}">[[User Full Name]]</span>
             </h1>
 
             <h2 class="govuk-heading-m" th:text="'Review evidence'">
@@ -47,16 +44,15 @@
             <p class="govuk-body">If required, you can respond to the request and ask for more information.</p>
 
             <div class="govuk-inset-text" th:each="req, iterStat : ${reactivationRequests}">
-                <h2 class="govuk-heading-s" th:text="${req.actorName()}">
+                <h2 class="govuk-heading-s" th:text="|${req.actorName()} (${req.actorRoleType().getLabel()})|">
                     User Full Name (Role Name)
                 </h2>
                 <p class="govuk-body" th:text="${req.formattedCreatedAt()}">
                     Date
                 </p>
-                <p class="govuk-body govuk-!-margin-2" th:text="${req.comments()}">
-                    Reason
+                <p class="govuk-body" th:text="${req.comments()}">
+                    Comments
                 </p>
-
             </div>
 
             <form method="post" th:action="@{/admin/user/delegate-reactivate-user-reason/{id}(id=${user.id}, referer=${referer}, profileId=${profileId})}"

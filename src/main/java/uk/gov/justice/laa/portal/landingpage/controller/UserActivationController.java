@@ -22,6 +22,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.forms.DelegateReactivateUserReasonForm;
@@ -221,15 +222,15 @@ public class UserActivationController {
             throw new ResponseStatusException(HttpStatusCode.valueOf(400));
         }
 
-        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        EntraUser user = loginService.getCurrentEntraUser(authentication);
         CurrentUserDto actor = loginService.getCurrentUser(authentication);
 
         UserActivationRequest userActivationRequest = userReactivationActivationRequestService
-                .createNewRequest(UUID.randomUUID(), profileId, delegateReactivateUserReasonForm.getReason(), user);
+                .createNewRequest(UUID.randomUUID(), profileId, delegateReactivateUserReasonForm.getReason(), user.getEntraOid());
         log.info("A delegate enable user request {} has been raised by {} for {}", userActivationRequest.getRequestId(), actor.getUserId(), id);
 
         model.addAttribute("user", user);
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User - " + user.getFullName());
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User");
         clearSessionAttributes(session);
         return "delegate-reactivate-user-confirmation";
     }
@@ -241,7 +242,8 @@ public class UserActivationController {
                                             Model model,
                                             String referer,
                                             UUID profileId,
-                                            RedirectAttributes redirectAttributes) {
+                                            RedirectAttributes redirectAttributes,
+                                            DelegateReactivateUserReasonForm delegateReactivateUserReasonForm) {
         if (!disableUserFeatureEnabled) {
             throw new ResponseStatusException(HttpStatusCode.valueOf(404));
         }
@@ -249,12 +251,16 @@ public class UserActivationController {
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
         Optional<UserActivationRequest> request = userReactivationActivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId);
         if (request.isPresent()
-                && (ReactivationRequestStatus.REJECTED.equals(request.get().getStatus())
+                &&  (ReactivationRequestStatus.REJECTED.equals(request.get().getStatus())
                 || ReactivationRequestStatus.APPROVED.equals(request.get().getStatus()))) {
             redirectAttributes.addFlashAttribute("errorMessage", "A delegate request is already in progress");
-            redirectAttributes.addFlashAttribute("requestId", request.get().getId());
+            request.ifPresent(userActivationRequest -> redirectAttributes.addFlashAttribute("requestId", userActivationRequest.getId()));
             return "redirect:/admin/users/manage/" + profileId;
+        }
 
+        if (request.isEmpty()) {
+            redirectAttributes.addFlashAttribute("errorMessage", "No delegate requests present");
+            return "redirect:/admin/users/manage/" + profileId;
         }
 
         List<UserActivationRequestSummaryDto> latestRequestHistoryForUserProfile = userReactivationActivationRequestService.getLatestRequestHistoryForUserProfile(profileId);
@@ -262,6 +268,7 @@ public class UserActivationController {
         model.addAttribute("user", user);
         model.addAttribute("profileId", profileId);
         model.addAttribute("referer", referer);
+        model.addAttribute("requestId", request.get().getRequestId());
         model.addAttribute("reactivationRequests", latestRequestHistoryForUserProfile);
         session.setAttribute("delegateReactivateUserId", id);
         session.setAttribute("profileId", profileId);
