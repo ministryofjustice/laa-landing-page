@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Assertions;
+
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -33,6 +34,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.lenient;
@@ -175,7 +177,7 @@ class UserControllerTest {
                 appRoleService, appService, disableUserService, notificationService);
         userController.disableUserFeatureEnabled = true;
         lenient().when(accessControlService.getEnablementFlags(any()))
-                .thenReturn(new AccessControlService.EnablementFlags(false, false));
+                .thenReturn(new AccessControlService.EnablementFlags(false, false, false));
         model = new ExtendedModelMap();
         firmSearchForm = FirmSearchForm.builder().build();
     }
@@ -805,7 +807,7 @@ class UserControllerTest {
         List<uk.gov.justice.laa.portal.landingpage.viewmodel.DeleteUserReasonViewModel> reasons =
                 (List<uk.gov.justice.laa.portal.landingpage.viewmodel.DeleteUserReasonViewModel>) model.getAttribute("deleteReasons");
         assertThat(reasons).hasSize(1);
-        assertThat(reasons.get(0).getCode()).isEqualTo("CyberRisk");
+        assertThat(reasons.getFirst().getCode()).isEqualTo("CyberRisk");
         verify(userService).getDeleteUserReasons(true);
     }
 
@@ -8420,4 +8422,5 @@ class UserControllerTest {
         }
 
     }
+
 }

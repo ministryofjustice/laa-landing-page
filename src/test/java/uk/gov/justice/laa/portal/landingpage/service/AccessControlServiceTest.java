@@ -3082,7 +3082,6 @@ public class AccessControlServiceTest {
             when(userService.isInternal(any(String.class))).thenReturn(false);
             when(userService.isInternal(any(UUID.class))).thenReturn(true);
             when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
-            when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
             when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(true);
 
             try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
@@ -3126,7 +3125,6 @@ public class AccessControlServiceTest {
             when(userService.isInternal(any(String.class))).thenReturn(false);
             when(userService.isInternal(any(UUID.class))).thenReturn(true);
             when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
-            when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
             when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(true);
 
             try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
@@ -3225,6 +3223,29 @@ public class AccessControlServiceTest {
                 EntraUser authenticatedUser = setupMockAuthenticatedUser(FIRM_USER_MANAGER.getRoleName(), firmA,
                         Permission.ENABLE_EXTERNAL_USER);
                 EntraUserDto targetEntraUserDto = EntraUserDto.builder().id(targetUserId.toString()).enabled(false).build();
+                EntraUser target = createTargetUser(DisableType.FIRM, null);
+
+                when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
+                when(entraUserRepository.findByIdWithAssociations(targetUserId)).thenReturn(Optional.of(target));
+                when(userService.isInternal(any(String.class))).thenReturn(false);
+                when(userService.isInternal(any(UUID.class))).thenReturn(true);
+                when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
+                when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(true);
+
+                try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
+                    mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser,
+                            Permission.ENABLE_EXTERNAL_USER)).thenReturn(true);
+                    assertThat(accessControlService.isEnableBlockedByHierarchy(targetUserId.toString())).isTrue();
+                }
+            }
+
+            @Test
+            void shouldReturnTrue_whenPolicyAllowsDelegate() {
+                // FUM actor, PRIVILEGED-disabled user — policy rejects → hierarchy denial
+                Firm firmA = Firm.builder().id(UUID.randomUUID()).build();
+                EntraUser authenticatedUser = setupMockAuthenticatedUser(FIRM_USER_MANAGER.getRoleName(), firmA,
+                        Permission.ENABLE_EXTERNAL_USER);
+                EntraUserDto targetEntraUserDto = EntraUserDto.builder().id(targetUserId.toString()).enabled(false).build();
                 EntraUser target = createTargetUser(DisableType.PRIVILEGED, null);
 
                 when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
@@ -3237,7 +3258,7 @@ public class AccessControlServiceTest {
                 try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                     mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser,
                             Permission.ENABLE_EXTERNAL_USER)).thenReturn(true);
-                    assertThat(accessControlService.isEnableBlockedByHierarchy(targetUserId.toString())).isTrue();
+                    assertThat(accessControlService.canDelegateEnableUser(targetUserId.toString())).isTrue();
                 }
             }
 
@@ -3256,7 +3277,6 @@ public class AccessControlServiceTest {
                 when(userService.isInternal(any(String.class))).thenReturn(false);
                 when(userService.isInternal(any(UUID.class))).thenReturn(true);
                 when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
-                when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
                 when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(true);
 
                 try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
