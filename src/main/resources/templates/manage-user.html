@@ -186,7 +186,7 @@
                                         <dd class="govuk-summary-list__actions"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Email</dt>
+                                        <dt class="govuk-summary-list__key" th:text="${uiLabels.email}">Email</dt>
                                         <dd class="govuk-summary-list__value">
                                             <span th:text="${user.entraUser.email}"></span>
                                         </dd>
@@ -197,7 +197,7 @@
                                         </dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">
+                                        <dt class="govuk-summary-list__key" th:text="${uiLabels.firstName}">
                                             First name
                                         </dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.entraUser.firstName}">
@@ -205,14 +205,14 @@
                                         <dd class="govuk-summary-list__actions"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">
+                                        <dt class="govuk-summary-list__key" th:text="${uiLabels.lastName}">
                                             Last name
                                         </dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.entraUser.lastName}"></dd>
                                         <dd class="govuk-summary-list__actions"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row" th:if="${canViewAllProfiles}">
-                                        <dt class="govuk-summary-list__key">
+                                        <dt class="govuk-summary-list__key" th:text="${uiLabels.firmName}">
                                             Firm name
                                         </dt>
                                         <dd class="govuk-summary-list__value">
@@ -315,7 +315,7 @@
                                         <thead class="govuk-table__head">
                                             <tr class="govuk-table__row">
                                                 <th scope="col" class="govuk-table__header">Office address</th>
-                                                <th scope="col" class="govuk-table__header">Account number</th>
+                                                <th scope="col" class="govuk-table__header" th:text="${uiLabels.officeAccountNumber}">Office account number</th>
                                             </tr>
                                         </thead>
                                         <tbody class="govuk-table__body">

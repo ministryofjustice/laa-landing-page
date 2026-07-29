@@ -55,7 +55,7 @@
                 <div class="govuk-summary-card__content">
                     <dl class="govuk-summary-list">
                         <div class="govuk-summary-list__row">
-                            <dt class="govuk-summary-list__key">Firm Name</dt>
+                            <dt class="govuk-summary-list__key" th:text="${uiLabels.firmName}">Firm name</dt>
                             <dd class="govuk-summary-list__value" th:text="${firm.name}"></dd>
                         </div>
                         <div class="govuk-summary-list__row">
@@ -87,7 +87,7 @@
             <thead class="govuk-table__head">
             <tr class="govuk-table__row">
                 <th scope="col" class="govuk-table__header">Name</th>
-                <th scope="col" class="govuk-table__header">Code</th>
+                <th scope="col" class="govuk-table__header" th:text="${uiLabels.officeAccountNumber}">Office account number</th>
                 <th scope="col" class="govuk-table__header">Address</th>
                 <!-- Uncomment when office status available
                 <th scope="col" class="govuk-table__header">Status</th> -->

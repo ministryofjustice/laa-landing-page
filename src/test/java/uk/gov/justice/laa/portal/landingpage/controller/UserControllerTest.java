@@ -345,7 +345,7 @@ class UserControllerTest {
         when(userService.getPageOfUsersBySearch(any(UserSearchCriteria.class), anyInt(), anyInt(), any(),
                 any())).thenReturn(paginatedUsers);
 
-        String view = userController.displayAllUsers(10, 1, null, null, null, "", false, false, false, firmSearchForm,
+        String view = userController.displayAllUsers(10, 1, null, null, null, "", false, false, false, false, null, firmSearchForm,
                 model,
                 session,
                 authentication);
@@ -384,7 +384,7 @@ class UserControllerTest {
 
         // Act
         String viewName = userController.displayAllUsers(10, 1, null, null, null,
-                "", false, false, false, firmSearchForm, model, session, authentication);
+                "", false, false, false, false, null, firmSearchForm, model, session, authentication);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
@@ -433,7 +433,7 @@ class UserControllerTest {
         when(session.getAttribute("successMessage")).thenReturn(null);
         when(session.getAttribute("firmSearchForm")).thenReturn(null);
         // Act
-        String viewName = userController.displayAllUsers(10, 1, null, null, null, null, false, false, false,
+        String viewName = userController.displayAllUsers(10, 1, null, null, null, null, false, false, false, false, null,
                 firmSearchForm,
                 model, session,
                 authentication);
@@ -457,7 +457,7 @@ class UserControllerTest {
         when(firmService.getUserFirm(any())).thenReturn(Optional.of(firmDto));
         when(loginService.getCurrentEntraUser(any())).thenReturn(EntraUser.builder().build());
         // Act
-        String viewName = userController.displayAllUsers(10, 1, "firstName", null, null, "", false, false, false,
+        String viewName = userController.displayAllUsers(10, 1, "firstName", null, null, "", false, false, false, false, null,
                 firmSearchForm, model,
                 session,
                 authentication);
@@ -487,7 +487,7 @@ class UserControllerTest {
 
         // Act
         String viewName = userController.displayAllUsers(10, 1, "firstname", "desc", null, "",
-                false, false, false, firmSearchForm, model, session, authentication);
+                false, false, false, false, null, firmSearchForm, model, session, authentication);
 
         // Assert
         assertThat(viewName).isEqualTo("users");
@@ -524,7 +524,7 @@ class UserControllerTest {
 
         // backButton is true, no new filter parameters provided
         String view = userController.displayAllUsers(10, 1, null, null, null, "", false,
-                true, false, firmSearchForm, model, testSession, authentication);
+                true, false, false, null, firmSearchForm, model, testSession, authentication);
 
         assertThat(view).isEqualTo("users");
         // Verify filters were restored from session
@@ -1276,9 +1276,8 @@ class UserControllerTest {
         HttpSession session = new MockHttpSession();
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserController.class);
         String view = userController.addUserCreated(model, session);
-        assertThat(model.getAttribute("user")).isNull();
-        assertThat(view).isEqualTo("add-user-created");
-        List<ILoggingEvent> logEvents = LogMonitoring.getLogsByLevel(listAppender, Level.ERROR);
+        assertThat(view).isEqualTo("redirect:/admin/users");
+        List<ILoggingEvent> logEvents = LogMonitoring.getLogsByLevel(listAppender, Level.WARN);
         assertThat(logEvents).hasSize(1);
     }
 
@@ -2907,7 +2906,7 @@ class UserControllerTest {
 
         // backButton is false, new filter parameters provided
         String view = userController.displayAllUsers(20, 2, "firstName", "asc", "internal",
-                "new@test.com", false, false, false, firmSearchForm, model, testSession, authentication);
+                "new@test.com", false, false, false, false, null, firmSearchForm, model, testSession, authentication);
 
         assertThat(view).isEqualTo("users");
         // Verify new filters were used - for internal user with VIEW_INTERNAL_USER
@@ -2946,7 +2945,7 @@ class UserControllerTest {
         MockHttpSession testSession = new MockHttpSession();
         // No existing filters in session
         String view = userController.displayAllUsers(10, 1, null, null, null, "",
-                false, true, false, firmSearchForm, model, testSession, authentication);
+                false, true, false, false, null, firmSearchForm, model, testSession, authentication);
 
         assertThat(view).isEqualTo("users");
         verify(userService).getPageOfUsersBySearch(any(UserSearchCriteria.class), eq(1), eq(10), anyString(),
@@ -2977,7 +2976,7 @@ class UserControllerTest {
         when(session.getAttribute("successMessage")).thenReturn("User added successfully");
 
         String view = userController.displayAllUsers(10, 1, null, null, null, "",
-                true, true, true, firmSearchForm, model, session, authentication);
+                true, true, true, false, null, firmSearchForm, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("users");
@@ -3356,7 +3355,7 @@ class UserControllerTest {
 
         // When
         String view = userController.displayAllUsers(10, 1, null, null, "internal", "",
-                false, false, false, firmSearchForm, model, session, authentication);
+                false, false, false, false, null, firmSearchForm, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("users");
@@ -3383,7 +3382,7 @@ class UserControllerTest {
         when(session.getAttribute("firmSearchForm")).thenReturn(null);
         // When
         String view = userController.displayAllUsers(10, 1, null, null, null, "",
-                false, false, false, firmSearchForm, model, session, authentication);
+                false, false, false, false, null, firmSearchForm, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("users");
@@ -7212,7 +7211,7 @@ class UserControllerTest {
             // When
             String viewName = userController.displayAllUsers(
                     10, 1, null, null, null, null, false,
-                    false, false, firmSearchForm, model, session, authentication);
+                    false, false, false, null, firmSearchForm, model, session, authentication);
 
             // Then
             assertThat(viewName).isEqualTo("users");
@@ -7236,7 +7235,7 @@ class UserControllerTest {
             // When
             String viewName = userController.displayAllUsers(
                     10, 1, null, null, null, "", false,
-                    false, false, firmSearchForm, model, session, authentication);
+                    false, false, false, null, firmSearchForm, model, session, authentication);
 
             // Then
             assertThat(viewName).isEqualTo("users");
@@ -7258,7 +7257,7 @@ class UserControllerTest {
             FirmSearchForm searchForm = FirmSearchForm.builder().selectedFirmId(UUID.randomUUID()).build();
             assertThrows(RuntimeException.class, () -> userController.displayAllUsers(
                     10, 1, null, null, null, "", false,
-                    false, false, searchForm, model, session, authentication));
+                    false, false, false, null, searchForm, model, session, authentication));
         }
 
         @Test
@@ -7273,7 +7272,7 @@ class UserControllerTest {
             // When
             String viewName = userController.displayAllUsers(
                     10, 1, null, null, null, "", false,
-                    false, false, firmSearchForm, model, session, authentication);
+                    false, false, false, null, firmSearchForm, model, session, authentication);
 
             // Then
             assertThat(viewName).isEqualTo("users");
@@ -7293,7 +7292,7 @@ class UserControllerTest {
             // When
             String viewName = userController.displayAllUsers(
                     10, 1, null, null, null, "", false,
-                    false, false, firmSearchForm, model, session, authentication);
+                    false, false, false, null, firmSearchForm, model, session, authentication);
 
             // Then
             assertThat(viewName).isEqualTo("users");
@@ -8423,4 +8422,42 @@ class UserControllerTest {
 
     }
 
+    @Nested
+    class AddUserCreated {
+
+        @Test
+        void addUserCreated_whenUserInSession_returnsConfirmationView() {
+            // Given
+            MockHttpSession testSession = new MockHttpSession();
+            EntraUserDto user = new EntraUserDto();
+            user.setFirstName("Jane");
+            user.setLastName("Smith");
+            testSession.setAttribute("user", user);
+            testSession.setAttribute("isMultiFirmUser", false);
+
+            UserProfileDto userProfile = new UserProfileDto();
+            testSession.setAttribute("userProfile", userProfile);
+
+            // When
+            String view = userController.addUserCreated(model, testSession);
+
+            // Then
+            assertThat(view).isEqualTo("add-user-created");
+            assertThat(testSession.getAttribute("user")).isNull();
+            assertThat(testSession.getAttribute("userProfile")).isNull();
+            assertThat(testSession.getAttribute("isMultiFirmUser")).isNull();
+        }
+
+        @Test
+        void addUserCreated_whenNoUserInSession_redirectsToUsers() {
+            // Given
+            MockHttpSession testSession = new MockHttpSession();
+
+            // When
+            String view = userController.addUserCreated(model, testSession);
+
+            // Then
+            assertThat(view).isEqualTo("redirect:/admin/users");
+        }
+    }
 }

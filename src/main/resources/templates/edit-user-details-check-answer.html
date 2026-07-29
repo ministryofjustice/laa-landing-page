@@ -34,13 +34,13 @@
                     <div class="govuk-summary-card__content">
                         <dl class="govuk-summary-list">
                             <div class="govuk-summary-list__row">
-                                <dt class="govuk-summary-list__key">Email</dt>
+                                <dt class="govuk-summary-list__key" th:text="${uiLabels.email}">Email</dt>
                                 <dd class="govuk-summary-list__value">
                                     <span th:text="*{email}"></span>
                                 </dd>
                             </div>
                             <div class="govuk-summary-list__row">
-                                <dt class="govuk-summary-list__key">First name</dt>
+                                <dt class="govuk-summary-list__key" th:text="${uiLabels.firstName}">First name</dt>
                                 <dd class="govuk-summary-list__value">
                                     <span th:text="*{firstName}"></span>
                                 </dd>
@@ -52,7 +52,7 @@
                                 </dd>
                             </div>
                             <div class="govuk-summary-list__row">
-                                <dt class="govuk-summary-list__key">Last name</dt>
+                                <dt class="govuk-summary-list__key" th:text="${uiLabels.lastName}">Last name</dt>
                                 <dd class="govuk-summary-list__value">
                                     <span th:text="*{lastName}"></span>
                                 </dd>

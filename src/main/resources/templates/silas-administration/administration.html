@@ -217,7 +217,7 @@
                     <tr class="govuk-table__row">
                         <th scope="col" class="govuk-table__header" style="width: 20%;">Service name</th>
                         <th scope="col" class="govuk-table__header" style="width: 35%;">Description</th>
-                        <th scope="col" class="govuk-table__header" style="width: 15%;">Status</th>
+                        <th scope="col" class="govuk-table__header" style="width: 15%;" th:text="${uiLabels.status}">Status</th>
                         <th scope="col" class="govuk-table__header" style="width: 10%;">Order</th>
                         <th scope="col" class="govuk-table__header" style="width: 10%;" th:if="${appSyncSuccessful}">App Sync Status</th>
                         <th scope="col" class="govuk-table__header" style="width: 10%;"></th>
@@ -342,7 +342,7 @@
                         <th scope="col" class="govuk-table__header" style="width: 25%;">Description</th>
                         <th scope="col" class="govuk-table__header" style="width: 20%;">CCMS Code</th>
                         <th scope="col" class="govuk-table__header" style="width: 10%;">Legacy Sync</th>
-                        <th scope="col" class="govuk-table__header" style="width: 10%;">User Type</th>
+                        <th scope="col" class="govuk-table__header" style="width: 10%;" th:text="${uiLabels.userType}">User type</th>
                         <th scope="col" class="govuk-table__header" style="width: 10%;">Order</th>
                         <th scope="col" class="govuk-table__header" style="width: 10%;"></th>
                     </tr>
