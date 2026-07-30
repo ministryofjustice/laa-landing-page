@@ -9,7 +9,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
-import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
+import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
 
 @ExtendWith(MockitoExtension.class)
 class UserEnablementPolicyTest {
@@ -27,7 +27,7 @@ class UserEnablementPolicyTest {
     class CanEnable {
 
         @Test
-        void nullRoleType_internalDelegationRoles_returnTrue() {
+        void nullDisableType_internalDelegationRoles_returnTrue() {
             assertThat(policy.canEnable(null, List.of(IUM))).isTrue();
             assertThat(policy.canEnable(null, List.of(EUM))).isTrue();
             assertThat(policy.canEnable(null, List.of(EUA))).isTrue();
@@ -36,173 +36,173 @@ class UserEnablementPolicyTest {
         }
 
         @Test
-        void nullRoleType_providerAdminCannotEnable() {
+        void nullDisableType_providerAdminCannotEnable() {
             assertThat(policy.canEnable(null, List.of(FUM))).isFalse();
         }
 
         @Test
-        void nullRoleType_noRoleCannotEnable() {
+        void nullDisableType_noRoleCannotEnable() {
             assertThat(policy.canEnable(null, List.of())).isFalse();
         }
 
-        // --- NONE role type (Manual User Sync — all roles permitted) ---
+        // --- NONE disable type (Manual User Sync — all roles permitted) ---
 
         @Test
         void none_gaCanEnable() {
-            assertThat(policy.canEnable(RoleType.NONE, List.of(GA))).isTrue();
+            assertThat(policy.canEnable(DisableType.NONE, List.of(GA))).isTrue();
         }
 
         @Test
         void none_srCanEnable() {
-            assertThat(policy.canEnable(RoleType.NONE, List.of(SR))).isTrue();
+            assertThat(policy.canEnable(DisableType.NONE, List.of(SR))).isTrue();
         }
 
         @Test
         void none_eumCanEnable() {
-            assertThat(policy.canEnable(RoleType.NONE, List.of(EUM))).isTrue();
+            assertThat(policy.canEnable(DisableType.NONE, List.of(EUM))).isTrue();
         }
 
         @Test
         void none_euaCanEnable() {
-            assertThat(policy.canEnable(RoleType.NONE, List.of(EUA))).isTrue();
+            assertThat(policy.canEnable(DisableType.NONE, List.of(EUA))).isTrue();
         }
 
         @Test
         void none_fumCanEnable() {
-            assertThat(policy.canEnable(RoleType.NONE, List.of(FUM))).isTrue();
+            assertThat(policy.canEnable(DisableType.NONE, List.of(FUM))).isTrue();
         }
 
         @Test
         void none_noRoleCanEnable() {
-            assertThat(policy.canEnable(RoleType.NONE, List.of())).isTrue();
+            assertThat(policy.canEnable(DisableType.NONE, List.of())).isTrue();
         }
 
-        // --- SYNC actor role type (Automatic User Sync — EUM/EUA+ only) ---
+        // --- SYNC disable type (Automatic User Sync — EUM/EUA+ only) ---
 
         @Test
         void sync_gaCanEnable() {
-            assertThat(policy.canEnable(RoleType.SYNC, List.of(GA))).isTrue();
+            assertThat(policy.canEnable(DisableType.SYNC, List.of(GA))).isTrue();
         }
 
         @Test
         void sync_srCanEnable() {
-            assertThat(policy.canEnable(RoleType.SYNC, List.of(SR))).isTrue();
+            assertThat(policy.canEnable(DisableType.SYNC, List.of(SR))).isTrue();
         }
 
         @Test
         void sync_eumCanEnable() {
-            assertThat(policy.canEnable(RoleType.SYNC, List.of(EUM))).isTrue();
+            assertThat(policy.canEnable(DisableType.SYNC, List.of(EUM))).isTrue();
         }
 
         @Test
         void sync_euaCanEnable() {
-            assertThat(policy.canEnable(RoleType.SYNC, List.of(EUA))).isTrue();
+            assertThat(policy.canEnable(DisableType.SYNC, List.of(EUA))).isTrue();
         }
 
         @Test
         void sync_fumCannotEnable() {
-            assertThat(policy.canEnable(RoleType.SYNC, List.of(FUM))).isFalse();
+            assertThat(policy.canEnable(DisableType.SYNC, List.of(FUM))).isFalse();
         }
 
         @Test
         void sync_noRoleCannotEnable() {
-            assertThat(policy.canEnable(RoleType.SYNC, List.of())).isFalse();
+            assertThat(policy.canEnable(DisableType.SYNC, List.of())).isFalse();
         }
 
-        // --- FIRM role type (Firm User Manager disabled the user) ---
+        // --- FIRM disable type (Firm User Manager disabled the user) ---
 
         @Test
         void firm_fumCanEnable() {
-            assertThat(policy.canEnable(RoleType.FIRM, List.of(FUM))).isTrue();
+            assertThat(policy.canEnable(DisableType.FIRM, List.of(FUM))).isTrue();
         }
 
         @Test
         void firm_eumCanEnable() {
-            assertThat(policy.canEnable(RoleType.FIRM, List.of(EUM))).isTrue();
+            assertThat(policy.canEnable(DisableType.FIRM, List.of(EUM))).isTrue();
         }
 
         @Test
         void firm_euaCanEnable() {
-            assertThat(policy.canEnable(RoleType.FIRM, List.of(EUA))).isTrue();
+            assertThat(policy.canEnable(DisableType.FIRM, List.of(EUA))).isTrue();
         }
 
         @Test
         void firm_srCanEnable() {
-            assertThat(policy.canEnable(RoleType.FIRM, List.of(SR))).isTrue();
+            assertThat(policy.canEnable(DisableType.FIRM, List.of(SR))).isTrue();
         }
 
         @Test
         void firm_gaCanEnable() {
-            assertThat(policy.canEnable(RoleType.FIRM, List.of(GA))).isTrue();
+            assertThat(policy.canEnable(DisableType.FIRM, List.of(GA))).isTrue();
         }
 
         @Test
         void firm_noRoleCannotEnable() {
-            assertThat(policy.canEnable(RoleType.FIRM, List.of())).isFalse();
+            assertThat(policy.canEnable(DisableType.FIRM, List.of())).isFalse();
         }
 
-        // --- LAA role type (External User Manager / External User Admin disabled the user) ---
+        // --- LAA disable type (External User Manager / External User Admin disabled the user) ---
 
         @Test
         void laa_eumCanEnable() {
-            assertThat(policy.canEnable(RoleType.LAA, List.of(EUM))).isTrue();
+            assertThat(policy.canEnable(DisableType.LAA, List.of(EUM))).isTrue();
         }
 
         @Test
         void laa_euaCanEnable() {
-            assertThat(policy.canEnable(RoleType.LAA, List.of(EUA))).isTrue();
+            assertThat(policy.canEnable(DisableType.LAA, List.of(EUA))).isTrue();
         }
 
         @Test
         void laa_srCanEnable() {
-            assertThat(policy.canEnable(RoleType.LAA, List.of(SR))).isTrue();
+            assertThat(policy.canEnable(DisableType.LAA, List.of(SR))).isTrue();
         }
 
         @Test
         void laa_gaCanEnable() {
-            assertThat(policy.canEnable(RoleType.LAA, List.of(GA))).isTrue();
+            assertThat(policy.canEnable(DisableType.LAA, List.of(GA))).isTrue();
         }
 
         @Test
         void laa_fumCannotEnable() {
-            assertThat(policy.canEnable(RoleType.LAA, List.of(FUM))).isFalse();
+            assertThat(policy.canEnable(DisableType.LAA, List.of(FUM))).isFalse();
         }
 
         @Test
         void laa_noRoleCannotEnable() {
-            assertThat(policy.canEnable(RoleType.LAA, List.of())).isFalse();
+            assertThat(policy.canEnable(DisableType.LAA, List.of())).isFalse();
         }
 
-        // --- PRIVILEGED role type (Security Response / Global Admin disabled the user) ---
+        // --- PRIVILEGED disable type (Security Response / Global Admin disabled the user) ---
 
         @Test
         void privileged_gaCanEnable() {
-            assertThat(policy.canEnable(RoleType.PRIVILEGED, List.of(GA))).isTrue();
+            assertThat(policy.canEnable(DisableType.PRIVILEGED, List.of(GA))).isTrue();
         }
 
         @Test
         void privileged_srCanEnable() {
-            assertThat(policy.canEnable(RoleType.PRIVILEGED, List.of(SR))).isTrue();
+            assertThat(policy.canEnable(DisableType.PRIVILEGED, List.of(SR))).isTrue();
         }
 
         @Test
         void privileged_eumCannotEnable() {
-            assertThat(policy.canEnable(RoleType.PRIVILEGED, List.of(EUM))).isFalse();
+            assertThat(policy.canEnable(DisableType.PRIVILEGED, List.of(EUM))).isFalse();
         }
 
         @Test
         void privileged_euaCannotEnable() {
-            assertThat(policy.canEnable(RoleType.PRIVILEGED, List.of(EUA))).isFalse();
+            assertThat(policy.canEnable(DisableType.PRIVILEGED, List.of(EUA))).isFalse();
         }
 
         @Test
         void privileged_fumCannotEnable() {
-            assertThat(policy.canEnable(RoleType.PRIVILEGED, List.of(FUM))).isFalse();
+            assertThat(policy.canEnable(DisableType.PRIVILEGED, List.of(FUM))).isFalse();
         }
 
         @Test
         void privileged_noRoleCannotEnable() {
-            assertThat(policy.canEnable(RoleType.PRIVILEGED, List.of())).isFalse();
+            assertThat(policy.canEnable(DisableType.PRIVILEGED, List.of())).isFalse();
         }
 
         // --- Multi-role scenarios: highest delegation of the enabling user is used ---
@@ -210,31 +210,31 @@ class UserEnablementPolicyTest {
         @Test
         void none_fumWithEumRole_canEnable() {
             // FUM alone cannot re-enable a NONE-disabled user, but EUM (higher delegation) can
-            assertThat(policy.canEnable(RoleType.NONE, List.of(FUM, EUM))).isTrue();
+            assertThat(policy.canEnable(DisableType.NONE, List.of(FUM, EUM))).isTrue();
         }
 
         @Test
         void none_fumWithSrRole_canEnable() {
             // FUM alone cannot re-enable a NONE-disabled user, but SR (higher delegation) can
-            assertThat(policy.canEnable(RoleType.NONE, List.of(FUM, SR))).isTrue();
+            assertThat(policy.canEnable(DisableType.NONE, List.of(FUM, SR))).isTrue();
         }
 
         @Test
         void laa_fumWithEumRole_canEnable() {
             // FUM alone cannot re-enable a LAA-disabled user, but EUM (higher delegation) can
-            assertThat(policy.canEnable(RoleType.LAA, List.of(FUM, EUM))).isTrue();
+            assertThat(policy.canEnable(DisableType.LAA, List.of(FUM, EUM))).isTrue();
         }
 
         @Test
         void privileged_eumWithGaRole_canEnable() {
             // EUM alone cannot re-enable a PRIVILEGED-disabled user, but GA (higher delegation) can
-            assertThat(policy.canEnable(RoleType.PRIVILEGED, List.of(EUM, GA))).isTrue();
+            assertThat(policy.canEnable(DisableType.PRIVILEGED, List.of(EUM, GA))).isTrue();
         }
 
         @Test
         void privileged_fumWithEumRole_cannotEnable() {
             // Neither FUM nor EUM qualifies to re-enable a PRIVILEGED-disabled user
-            assertThat(policy.canEnable(RoleType.PRIVILEGED, List.of(FUM, EUM))).isFalse();
+            assertThat(policy.canEnable(DisableType.PRIVILEGED, List.of(FUM, EUM))).isFalse();
         }
     }
 
@@ -244,40 +244,40 @@ class UserEnablementPolicyTest {
         @Test
         void nonFirmType_returnsFalse() {
             assertThat(policy.requiresSameFirmCheck(null, List.of(FUM))).isFalse();
-            assertThat(policy.requiresSameFirmCheck(RoleType.NONE, List.of(FUM))).isFalse();
-            assertThat(policy.requiresSameFirmCheck(RoleType.LAA, List.of(FUM))).isFalse();
-            assertThat(policy.requiresSameFirmCheck(RoleType.PRIVILEGED, List.of(FUM))).isFalse();
+            assertThat(policy.requiresSameFirmCheck(DisableType.NONE, List.of(FUM))).isFalse();
+            assertThat(policy.requiresSameFirmCheck(DisableType.LAA, List.of(FUM))).isFalse();
+            assertThat(policy.requiresSameFirmCheck(DisableType.PRIVILEGED, List.of(FUM))).isFalse();
         }
 
         @Test
         void firm_fumOnly_requiresSameFirmCheck() {
-            assertThat(policy.requiresSameFirmCheck(RoleType.FIRM, List.of(FUM))).isTrue();
+            assertThat(policy.requiresSameFirmCheck(DisableType.FIRM, List.of(FUM))).isTrue();
         }
 
         @Test
         void firm_gaBypassesSameFirmCheck() {
-            assertThat(policy.requiresSameFirmCheck(RoleType.FIRM, List.of(GA))).isFalse();
+            assertThat(policy.requiresSameFirmCheck(DisableType.FIRM, List.of(GA))).isFalse();
         }
 
         @Test
         void firm_srBypassesSameFirmCheck() {
-            assertThat(policy.requiresSameFirmCheck(RoleType.FIRM, List.of(SR))).isFalse();
+            assertThat(policy.requiresSameFirmCheck(DisableType.FIRM, List.of(SR))).isFalse();
         }
 
         @Test
         void firm_eumBypassesSameFirmCheck() {
-            assertThat(policy.requiresSameFirmCheck(RoleType.FIRM, List.of(EUM))).isFalse();
+            assertThat(policy.requiresSameFirmCheck(DisableType.FIRM, List.of(EUM))).isFalse();
         }
 
         @Test
         void firm_euaBypassesSameFirmCheck() {
-            assertThat(policy.requiresSameFirmCheck(RoleType.FIRM, List.of(EUA))).isFalse();
+            assertThat(policy.requiresSameFirmCheck(DisableType.FIRM, List.of(EUA))).isFalse();
         }
 
         @Test
         void firm_fumWithHigherDelegation_bypassesSameFirmCheck() {
             // FUM also holds EUA — higher delegation overrides the same-firm requirement
-            assertThat(policy.requiresSameFirmCheck(RoleType.FIRM, List.of(FUM, EUA))).isFalse();
+            assertThat(policy.requiresSameFirmCheck(DisableType.FIRM, List.of(FUM, EUA))).isFalse();
         }
     }
 }

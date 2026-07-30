@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
-import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
+import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraLastSyncMetadata;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -321,7 +321,7 @@ public class ExternalUserPollingService {
     public void disableUserWithReason(TechServicesUser user, EntraUser entraUser) {
         try {
             entraUser.setEnabled(false);
-            entraUser.setRoleType(RoleType.SYNC);
+            entraUser.setDisableType(DisableType.SYNC);
             entraUserRepository.save(entraUser);
             log.info("Disabled user: {} from API sync",
                     entraUser.getEntraOid());

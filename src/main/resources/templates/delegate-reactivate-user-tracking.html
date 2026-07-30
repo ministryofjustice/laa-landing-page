@@ -12,25 +12,12 @@
 <body>
 <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
     <a class="govuk-back-link govuk-!-margin-bottom-3"
-       th:href="@{/admin/user/delegate-reactivate/{id}(id=${user.id}, referer=${referer}, profileId=${profileId})}">
+       th:href="@{/admin/users/manage/{id}(id=${profileId})}">
         Back </a>
 </nav>
 <main class="govuk-main-wrapper" id="main-content">
     <div class="govuk-grid-row">
         <div class="govuk-grid-column-three-quarters">
-
-            <div th:if="${errorMessage}" class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title" tabindex="-1" data-module="govuk-error-summary">
-                <h2 class="govuk-error-summary__title" id="error-summary-title">
-                    There is a problem
-                </h2>
-                <div class="govuk-error-summary__body">
-                    <ul class="govuk-list govuk-error-summary__list">
-                        <li>
-                            <a href="#comments-error" th:text="${errorMessage}"></a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
 
             <h1 class="govuk-heading-l">
                 <span class="govuk-caption-l" th:text="'Reactivation request'">Reactivation request</span>
@@ -44,7 +31,7 @@
             <p class="govuk-body">If required, you can respond to the request and ask for more information.</p>
 
             <div class="govuk-inset-text" th:each="req, iterStat : ${reactivationRequests}">
-                <h2 class="govuk-heading-s" th:text="|${req.actorName()} (${req.actorRoleType().getLabel()})|">
+                <h2 class="govuk-heading-s" th:text="|${req.actorName()} (${req.actorRoleType().getDisplayName()})|">
                     User Full Name (Role Name)
                 </h2>
                 <p class="govuk-body" th:text="${req.formattedCreatedAt()}">
@@ -55,19 +42,33 @@
                 </p>
             </div>
 
-            <form method="post" th:action="@{/admin/user/delegate-reactivate-user-reason/{id}(id=${user.id}, referer=${referer}, profileId=${profileId})}"
+            <form method="post" th:action="@{/admin/user/delegate-reactivate/track/{id}(id=${user.id}, profileId=${profileId}, requestId=${requestId})}"
                   th:object="${delegateReactivateUserReasonForm}">
 
-                <!-- Comments Field -->
-                <div class="govuk-form-group govuk-!-width-full" id="comments-group">
+                <div th:if="${errorMessage}" class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title" tabindex="-1" data-module="govuk-error-summary">
+                    <h2 class="govuk-error-summary__title" id="error-summary-title">
+                        There is a problem
+                    </h2>
+                    <div class="govuk-error-summary__body">
+                        <ul class="govuk-list govuk-error-summary__list">
+                            <li>
+                                <a href="#reason" th:text="${errorMessage}"></a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
 
-                    <label class="govuk-label govuk-label--m" for="comments">
+                <!-- Comments Field -->
+                <div class="govuk-form-group govuk-!-width-full" id="reason-group">
+
+                    <label class="govuk-label govuk-label--m" for="reason">
                         Please enter a reason (minimum 10 characters).
                     </label>
 
                     <textarea class="govuk-textarea govuk-!-margin-bottom-0"
-                              id="comments"
-                              name="comments"
+                              id="reason"
+                              name="reason"
+                              th:field="*{reason}"
                               rows="4"></textarea>
 
                     <p class="govuk-hint govuk-!-margin-top-0">You can enter up to 500 characters.</p>

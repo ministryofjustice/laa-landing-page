@@ -12,9 +12,11 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
@@ -242,8 +244,7 @@ public class UserActivationController {
                                             Model model,
                                             String referer,
                                             UUID profileId,
-                                            RedirectAttributes redirectAttributes,
-                                            DelegateReactivateUserReasonForm delegateReactivateUserReasonForm) {
+                                            RedirectAttributes redirectAttributes) {
         if (!disableUserFeatureEnabled) {
             throw new ResponseStatusException(HttpStatusCode.valueOf(404));
         }
@@ -263,18 +264,57 @@ public class UserActivationController {
             return "redirect:/admin/users/manage/" + profileId;
         }
 
-        List<UserActivationRequestSummaryDto> latestRequestHistoryForUserProfile = userReactivationActivationRequestService.getLatestRequestHistoryForUserProfile(profileId);
+        List<UserActivationRequestSummaryDto> latestRequestHistoryForUserProfile
+                = userReactivationActivationRequestService.getLatestRequestHistoryForUserProfile(profileId);
+        DelegateReactivateUserReasonForm delegateReactivateUserReasonForm =
+                getObjectFromHttpSession(session, "delegateReactivateUserReasonForm", DelegateReactivateUserReasonForm.class)
+                        .orElse(new DelegateReactivateUserReasonForm());
 
         model.addAttribute("user", user);
         model.addAttribute("profileId", profileId);
         model.addAttribute("referer", referer);
         model.addAttribute("requestId", request.get().getRequestId());
         model.addAttribute("reactivationRequests", latestRequestHistoryForUserProfile);
-        session.setAttribute("delegateReactivateUserId", id);
-        session.setAttribute("profileId", profileId);
+        model.addAttribute("delegateReactivateUserReasonForm", delegateReactivateUserReasonForm);
 
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User - " + user.getFullName());
         return "delegate-reactivate-user-tracking";
+    }
+
+    @PostMapping("/user/delegate-reactivate/track/{id}")
+    @PreAuthorize("@accessControlService.canDelegateEnableUser(#id)")
+    public String trackDelegateReactivateUserRequestsPost(
+            @PathVariable UUID id,
+            @RequestParam UUID profileId,
+            @RequestParam UUID requestId,
+            @Valid @ModelAttribute("delegateReactivateUserReasonForm") DelegateReactivateUserReasonForm delegateReactivateUserReasonForm,
+            BindingResult result,
+            Authentication authentication,
+            RedirectAttributes redirectAttributes) {
+
+        if (result.hasErrors()) {
+            String errorMessage = buildErrorString(result);
+            redirectAttributes.addFlashAttribute("errorMessage", errorMessage);
+            redirectAttributes.addAttribute("id", id);
+            redirectAttributes.addAttribute("profileId", profileId);
+            redirectAttributes.addAttribute("requestId", requestId);
+
+            return "redirect:/admin/user/delegate-reactivate/track/{id}";
+        }
+
+        EntraUser user = loginService.getCurrentEntraUser(authentication);
+        CurrentUserDto actor = loginService.getCurrentUser(authentication);
+
+        ReactivationRequestStatus reactivationRequestStatus = userReactivationActivationRequestService.calculateNextReactivationRequestStatus(profileId);
+        userReactivationActivationRequestService.saveRequestState(requestId, profileId, reactivationRequestStatus, delegateReactivateUserReasonForm.getReason(), user.getEntraOid());
+        log.info("A delegate enable user request {} has been updated by {} for {}", requestId, actor.getUserId(), id);
+
+        redirectAttributes.addAttribute("id", id);
+        redirectAttributes.addAttribute("profileId", profileId);
+        redirectAttributes.addAttribute("requestId", requestId);
+
+        return "redirect:/admin/user/delegate-reactivate/track/{id}";
+
     }
 
     public void clearSessionAttributes(HttpSession session) {

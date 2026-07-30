@@ -103,7 +103,7 @@ public class EntraUser extends AuditableEntity {
             comment = "The delegation level of the user who disabled this account. NULL means unknown/legacy"
                     + " (any role may re-enable). Set at disable-time from the disabling user's highest-delegation role.")
     @Nullable
-    private RoleType roleType;
+    private DisableType disableType;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "invitation_status", length = 255)

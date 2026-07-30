@@ -2435,7 +2435,7 @@ public class UserService {
                         .statusChange(convertToSentenceCase(record.getStatusChange().toString()))
                         .disableReason(record.getDisableUserReason() != null ? record.getDisableUserReason().getName() : null)
                         .statusChangedBy(record.getStatusChangedBy())
-                        .roleType(record.getRoleType() != null ? record.getRoleType().getDisplayName() : null)
+                        .disableType(record.getDisableType() != null ? record.getDisableType().getDisplayName() : null)
                         .build())
                 .toList();
     }

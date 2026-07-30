@@ -4,10 +4,13 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
-import uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserActivationRequestRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
@@ -21,13 +24,22 @@ import java.util.UUID;
 @Transactional
 @Slf4j
 public class UserReactivationActivationRequestService {
+    private final UserService userService;
     private final UserActivationRequestRepository requestRepository;
     private final UserProfileRepository userProfileRepository;
+    private final EntraUserRepository entraUserRepository;
+    private final ReactivationTypeResolver roleTypeResolver;
 
-    public UserReactivationActivationRequestService(UserActivationRequestRepository requestRepository,
-                                                    UserProfileRepository userRepository) {
+    public UserReactivationActivationRequestService(UserService userService,
+                                                    UserActivationRequestRepository requestRepository,
+                                                    UserProfileRepository userRepository,
+                                                    EntraUserRepository entraUserRepository,
+                                                    ReactivationTypeResolver roleTypeResolver) {
+        this.userService = userService;
         this.requestRepository = requestRepository;
         this.userProfileRepository = userRepository;
+        this.entraUserRepository = entraUserRepository;
+        this.roleTypeResolver = roleTypeResolver;
     }
 
     public Optional<UserActivationRequest> findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(UUID profileId) {
@@ -49,14 +61,14 @@ public class UserReactivationActivationRequestService {
         newRecord.setComments(reason);
         newRecord.setActorEntraOid(actorEntraOid);
         newRecord.setCreatedAt(Instant.now());
-        newRecord.setActorRoleType(AuthzRoleType.PROVIDER_ADMIN);
+        newRecord.setActorRoleType(ReactivationRoleType.PROVIDER_ADMIN);
 
         requestRepository.save(newRecord);
 
         return newRecord;
     }
 
-    public UserActivationRequest saveRequestState(UUID requestId, UUID userId, ReactivationRequestStatus status, String comments, String actionByUserId) {
+    public UserActivationRequest saveRequestState(UUID requestId, UUID userId, ReactivationRequestStatus status, String comments, String actorEntraOid) {
 
         if (!userProfileRepository.existsById(userId)) {
             throw new EntityNotFoundException("Target user not found with ID: " + userId);
@@ -77,13 +89,17 @@ public class UserReactivationActivationRequestService {
             }
         }
 
+        EntraUser entraUser = entraUserRepository.findByEntraOid(actorEntraOid).orElseThrow();
+        ReactivationRoleType roleType = roleTypeResolver.resolve(entraUser);
+
         UserActivationRequest newRecord = new UserActivationRequest();
         newRecord.setRequestId(activeRequestId);
         newRecord.setUserProfileId(userId);
         newRecord.setVersion(nextVersion);
         newRecord.setStatus(status);
         newRecord.setComments(comments);
-        newRecord.setActorEntraOid(actionByUserId);
+        newRecord.setActorEntraOid(actorEntraOid);
+        newRecord.setActorRoleType(roleType);
         newRecord.setCreatedAt(Instant.now());
 
         return requestRepository.save(newRecord);
@@ -105,4 +121,11 @@ public class UserReactivationActivationRequestService {
         return history;
     }
 
+    public ReactivationRequestStatus calculateNextReactivationRequestStatus(UUID profileId) {
+        List<AppRoleDto> userAppRolesByUserId = userService.getUserAppRolesByUserId(profileId.toString());
+        List<String> userRoles = userAppRolesByUserId.stream().map(AppRoleDto::getName).toList();
+        ReactivationRoleType roleType = roleTypeResolver.resolveFromRoles(userRoles);
+
+        return roleType == ReactivationRoleType.PROVIDER_ADMIN ? ReactivationRequestStatus.IN_REVIEW : ReactivationRequestStatus.INFORMATION_REQUIRED;
+    }
 }

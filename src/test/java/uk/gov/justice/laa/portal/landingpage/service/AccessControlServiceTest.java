@@ -42,7 +42,7 @@ import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.FIRM_USER_M
 import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.GLOBAL_ADMIN;
 import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.INTERNAL_USER_MANAGER;
 import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.SECURITY_RESPONSE;
-import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
+import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
@@ -3096,7 +3096,7 @@ public class AccessControlServiceTest {
             Firm firmA = Firm.builder().id(UUID.randomUUID()).build();
             EntraUser authenticatedUser = setupMockAuthenticatedUser(FIRM_USER_MANAGER.getRoleName(), firmA, Permission.ENABLE_EXTERNAL_USER);
             EntraUserDto targetEntraUserDto = EntraUserDto.builder().id(targetUserId.toString()).enabled(false).build();
-            EntraUser target = createTargetUser(RoleType.PRIVILEGED, null);
+            EntraUser target = createTargetUser(DisableType.PRIVILEGED, null);
 
             when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
             when(entraUserRepository.findByIdWithAssociations(targetUserId)).thenReturn(Optional.of(target));
@@ -3138,7 +3138,7 @@ public class AccessControlServiceTest {
             // EUA can enable LAA-disabled users
             EntraUser authenticatedUser = setupMockAuthenticatedUser(EXTERNAL_USER_ADMIN.getRoleName(), null, Permission.ENABLE_EXTERNAL_USER);
             EntraUserDto targetEntraUserDto = EntraUserDto.builder().id(targetUserId.toString()).enabled(false).build();
-            EntraUser target = createTargetUser(RoleType.LAA, null);
+            EntraUser target = createTargetUser(DisableType.LAA, null);
 
             when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
             when(entraUserRepository.findByIdWithAssociations(targetUserId)).thenReturn(Optional.of(target));
@@ -3159,7 +3159,7 @@ public class AccessControlServiceTest {
             // EUA can also enable FIRM-disabled users
             EntraUser authenticatedUser = setupMockAuthenticatedUser(EXTERNAL_USER_ADMIN.getRoleName(), null, Permission.ENABLE_EXTERNAL_USER);
             EntraUserDto targetEntraUserDto = EntraUserDto.builder().id(targetUserId.toString()).enabled(false).build();
-            EntraUser target = createTargetUser(RoleType.FIRM, null);
+            EntraUser target = createTargetUser(DisableType.FIRM, null);
 
             when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
             when(entraUserRepository.findByIdWithAssociations(targetUserId)).thenReturn(Optional.of(target));
@@ -3223,7 +3223,7 @@ public class AccessControlServiceTest {
                 EntraUser authenticatedUser = setupMockAuthenticatedUser(FIRM_USER_MANAGER.getRoleName(), firmA,
                         Permission.ENABLE_EXTERNAL_USER);
                 EntraUserDto targetEntraUserDto = EntraUserDto.builder().id(targetUserId.toString()).enabled(false).build();
-                EntraUser target = createTargetUser(RoleType.FIRM, null);
+                EntraUser target = createTargetUser(DisableType.FIRM, null);
 
                 when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
                 when(entraUserRepository.findByIdWithAssociations(targetUserId)).thenReturn(Optional.of(target));
@@ -3246,7 +3246,7 @@ public class AccessControlServiceTest {
                 EntraUser authenticatedUser = setupMockAuthenticatedUser(FIRM_USER_MANAGER.getRoleName(), firmA,
                         Permission.ENABLE_EXTERNAL_USER);
                 EntraUserDto targetEntraUserDto = EntraUserDto.builder().id(targetUserId.toString()).enabled(false).build();
-                EntraUser target = createTargetUser(RoleType.PRIVILEGED, null);
+                EntraUser target = createTargetUser(DisableType.PRIVILEGED, null);
 
                 when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
                 when(entraUserRepository.findByIdWithAssociations(targetUserId)).thenReturn(Optional.of(target));
@@ -3270,7 +3270,7 @@ public class AccessControlServiceTest {
                 EntraUser authenticatedUser = setupMockAuthenticatedUser(FIRM_USER_MANAGER.getRoleName(), firmB,
                         Permission.ENABLE_EXTERNAL_USER);
                 EntraUserDto targetEntraUserDto = EntraUserDto.builder().id(targetUserId.toString()).enabled(false).build();
-                EntraUser target = createTargetUser(RoleType.FIRM, firmA);
+                EntraUser target = createTargetUser(DisableType.FIRM, firmA);
 
                 when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
                 when(entraUserRepository.findByIdWithAssociations(targetUserId)).thenReturn(Optional.of(target));
@@ -3344,10 +3344,10 @@ public class AccessControlServiceTest {
             return createTargetUser(null, firm);
         }
 
-        private EntraUser createTargetUser(RoleType roleType, Firm firm) {
+        private EntraUser createTargetUser(DisableType disableType, Firm firm) {
             return EntraUser.builder()
                     .id(targetUserId)
-                    .roleType(roleType)
+                    .disableType(disableType)
                     .userProfiles(Set.of(
                             UserProfile.builder()
                                     .activeProfile(true)

@@ -1,7 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.entity;
 
-import lombok.Getter;
-
 /**
  * Represents the delegation level of the user who disabled an external user account.
  * Stored on {@code entra_user.disable_type} at the time of disable so that enable
@@ -9,19 +7,18 @@ import lombok.Getter;
  *
  * <p>The hierarchy (lowest to highest delegation):
  * <ol>
- *   <li>{@link #NONE}      – acted by a manual sync process (or unattributed); all roles permitted to re-enable</li>
- *   <li>{@link #SYNC}      – acted by an automated sync process; only EUM/EUA or higher can re-enable</li>
- *   <li>{@link #FIRM}      – acted by a Firm User Manager; any FUM (same firm), EUM/EUA or higher can re-enable</li>
- *   <li>{@link #LAA}       – acted by an External User Manager or External User Admin; only EUM/EUA or higher</li>
- *   <li>{@link #PRIVILEGED} – acted by Security Response or Global Admin; only GA or SR can re-enable</li>
+ *   <li>{@link #NONE}      – disabled by a manual sync process (or unattributed); all roles permitted to re-enable</li>
+ *   <li>{@link #SYNC}      – disabled by an automated sync process; only EUM/EUA or higher can re-enable</li>
+ *   <li>{@link #FIRM}      – disabled by a Firm User Manager; any FUM (same firm), EUM/EUA or higher can re-enable</li>
+ *   <li>{@link #LAA}       – disabled by an External User Manager or External User Admin; only EUM/EUA or higher</li>
+ *   <li>{@link #PRIVILEGED} – disabled by Security Response or Global Admin; only GA or SR can re-enable</li>
  * </ol>
  *
- * <p>A {@code NULL} value in the database means the acted was not attributed to a known
+ * <p>A {@code NULL} value in the database means the disable was not attributed to a known
  * actor (legacy data before this field existed). In that case only internal/LAA delegation
  * roles may re-enable the user.
  */
-@Getter
-public enum RoleType {
+public enum DisableType {
 
     /**
      * Disabled by an automated external user sync process.
@@ -55,8 +52,11 @@ public enum RoleType {
 
     private final String displayName;
 
-    RoleType(String displayName) {
+    DisableType(String displayName) {
         this.displayName = displayName;
     }
 
+    public String getDisplayName() {
+        return displayName;
+    }
 }

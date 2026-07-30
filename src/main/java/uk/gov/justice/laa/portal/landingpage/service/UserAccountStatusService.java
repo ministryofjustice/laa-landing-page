@@ -18,7 +18,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.DisableUserReasonDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.CountFirms;
-import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
+import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -47,7 +47,7 @@ public class UserAccountStatusService {
     private final UserService userService;
     private final UserProfileRepository userProfileRepository;
     private final EventService eventService;
-    private final RoleTypeResolver roleTypeResolver;
+    private final DisableTypeResolver disableTypeResolver;
     private final UserEnablementPolicy userEnablementPolicy;
 
     public List<DisableUserReasonDto> getDisableUserReasons(UserTypeReasonDisable userTypeReasonDisable) {
@@ -121,14 +121,14 @@ public class UserAccountStatusService {
                         changeAccountEnabledResponse.getError().getErrors());
             }
 
-            // Determine and store the actor role type from the actor's roles
-            RoleType roleType = roleTypeResolver.resolve(disabledByUser);
+            // Determine and store the disable type from the actor's roles
+            DisableType disableType = disableTypeResolver.resolve(disabledByUser);
 
             // Perform disable
             disabledUser.setDisabledBy(disabledById);
             disabledUser.setEnabled(false);
             userService.refreshAndUpdatedUserProfilesStatus(false, disabledUser.getInvitationStatus(), disabledUser.getUserProfiles());
-            disabledUser.setRoleType(roleType);
+            disabledUser.setDisableType(disableType);
             entraUserRepository.saveAndFlush(disabledUser);
 
             // Add audit entry
@@ -138,7 +138,7 @@ public class UserAccountStatusService {
                     .statusChange(UserAccountStatus.DISABLED)
                     .statusChangedBy(disabledByUser.getFirstName() + " " + disabledByUser.getLastName())
                     .statusChangedDate(LocalDateTime.now())
-                    .roleType(roleType)
+                    .disableType(disableType)
                     .build();
             userAccountStatusAuditRepository.saveAndFlush(userAccountStatusAudit);
         } else {
@@ -186,7 +186,7 @@ public class UserAccountStatusService {
                 .map(UserProfile::getEntraUser)
                 .filter(EntraUser::isEnabled)
                 .toList();
-        RoleType bulkRoleType = roleTypeResolver.resolve(disabledByUser);
+        DisableType bulkDisableType = disableTypeResolver.resolve(disabledByUser);
         Integer totalOfUsersDisabled = 0;
         for (EntraUser entraUser : entraUsers) {
             // Disable user in Entra via tech services.
@@ -201,7 +201,7 @@ public class UserAccountStatusService {
             entraUser.setEnabled(false);
             userService.refreshAndUpdatedUserProfilesStatus(false, entraUser.getInvitationStatus(), entraUser.getUserProfiles());
             entraUser.setDisabledBy(disabledById);
-            entraUser.setRoleType(bulkRoleType);
+            entraUser.setDisableType(bulkDisableType);
             entraUserRepository.saveAndFlush(entraUser);
             totalOfUsersDisabled++;
             log.info("User with entra oid: {} has been disabled successfully with reason: {} By actor entra oid: {}",
@@ -215,7 +215,7 @@ public class UserAccountStatusService {
                     .statusChange(UserAccountStatus.DISABLED)
                     .statusChangedBy(disabledByUser.getFirstName() + " " + disabledByUser.getLastName())
                     .statusChangedDate(LocalDateTime.now())
-                    .roleType(bulkRoleType)
+                    .disableType(bulkDisableType)
                     .build();
 
             userAccountStatusAuditRepository.saveAndFlush(userAccountStatusAudit);
@@ -255,7 +255,7 @@ public class UserAccountStatusService {
             enabledUser.setDisabledBy(null);
             enabledUser.setEnabled(true);
             userService.refreshAndUpdatedUserProfilesStatus(true, enabledUser.getInvitationStatus(), enabledUser.getUserProfiles());
-            enabledUser.setRoleType(null);
+            enabledUser.setDisableType(null);
             entraUserRepository.saveAndFlush(enabledUser);
 
             // Add audit entry
@@ -287,15 +287,15 @@ public class UserAccountStatusService {
 
         List<String> actingUserRoles = Optional.ofNullable(actorUserProfile.getAppRoles()).orElse(Set.of())
                 .stream().map(AppRole::getName).toList();
-        RoleType roleType = targetUser.getRoleType();
+        DisableType disableType = targetUser.getDisableType();
 
-        if (!userEnablementPolicy.canEnable(roleType, actingUserRoles)) {
-            log.info("Enable blocked by hierarchy: actor {} with roles {} cannot re-enable user {} with roleType {}",
-                    actor.getId(), actingUserRoles, targetUser.getId(), roleType);
+        if (!userEnablementPolicy.canEnable(disableType, actingUserRoles)) {
+            log.info("Enable blocked by hierarchy: actor {} with roles {} cannot re-enable user {} with disableType {}",
+                    actor.getId(), actingUserRoles, targetUser.getId(), disableType);
             return false;
         }
 
-        if (userEnablementPolicy.requiresSameFirmCheck(roleType, actingUserRoles)) {
+        if (userEnablementPolicy.requiresSameFirmCheck(disableType, actingUserRoles)) {
             Firm enabledByUserFirm = actorUserProfile.getFirm();
             Firm enabledUserFirm = targetUser.getUserProfiles().stream()
                     .filter(UserProfile::isActiveProfile)

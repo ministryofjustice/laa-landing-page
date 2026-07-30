@@ -66,7 +66,7 @@ public class UserActivationRequest extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "actor_role_type", nullable = false, length = 255)
     @NotNull(message = "Actor role type must be provided")
-    private AuthzRoleType actorRoleType;
+    private ReactivationRoleType actorRoleType;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @CreatedDate

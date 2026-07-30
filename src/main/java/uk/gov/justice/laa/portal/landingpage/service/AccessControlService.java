@@ -20,7 +20,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
-import uk.gov.justice.laa.portal.landingpage.entity.RoleType;
+import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
@@ -352,9 +352,9 @@ public class AccessControlService {
 
         List<String> actorRoles = Optional.ofNullable(actorUserProfile.getAppRoles()).orElse(Set.of())
                 .stream().map(AppRole::getName).toList();
-        RoleType roleType = targetUser.getRoleType();
+        DisableType disableType = targetUser.getDisableType();
 
-        if (userEnablementPolicy.requiresSameFirmCheck(roleType, actorRoles)) {
+        if (userEnablementPolicy.requiresSameFirmCheck(disableType, actorRoles)) {
             Firm actorFirm = actorUserProfile.getFirm();
             Firm targetFirm = targetUser.getUserProfiles().stream()
                     .filter(UserProfile::isActiveProfile)
@@ -369,7 +369,7 @@ public class AccessControlService {
             return EnablementState.CAN_ENABLE;
         }
 
-        if (!userEnablementPolicy.canEnable(roleType, actorRoles)) {
+        if (!userEnablementPolicy.canEnable(disableType, actorRoles)) {
             return EnablementState.CAN_DELEGATE_ENABLE;
         }
 
