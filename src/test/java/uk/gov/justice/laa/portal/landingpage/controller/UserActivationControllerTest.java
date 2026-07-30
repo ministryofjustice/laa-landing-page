@@ -41,7 +41,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -98,9 +97,9 @@ public class UserActivationControllerTest {
             EntraUserDto user = buildEntraUserDto();
             UserActivationRequest pendingRequest = buildUserActivationRequest(ReactivationRequestStatus.IN_REVIEW);
 
-            given(userService.getEntraUserById(USER_ID)).willReturn(Optional.of(user));
-            given(userReactivationActivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(PROFILE_ID))
-                    .willReturn(Optional.of(pendingRequest));
+            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(user));
+            when(userReactivationActivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(PROFILE_ID))
+                    .thenReturn(Optional.of(pendingRequest));
 
             redirectAttributes = new RedirectAttributesModelMap();
             String view = userActivationController.delegateReactivateUserGet(USER_ID, session, model, REFERER, PROFILE_ID, redirectAttributes);
@@ -121,9 +120,9 @@ public class UserActivationControllerTest {
             EntraUserDto user = buildEntraUserDto();
             UserActivationRequest rejectedRequest = buildUserActivationRequest(ReactivationRequestStatus.REJECTED);
 
-            given(userService.getEntraUserById(USER_ID)).willReturn(Optional.of(user));
-            given(userReactivationActivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(PROFILE_ID))
-                    .willReturn(Optional.of(rejectedRequest));
+            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(user));
+            when(userReactivationActivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(PROFILE_ID))
+                    .thenReturn(Optional.of(rejectedRequest));
 
             String view = userActivationController.delegateReactivateUserGet(USER_ID, session, model, REFERER, PROFILE_ID, redirectAttributes);
 
@@ -160,7 +159,7 @@ public class UserActivationControllerTest {
             session.setAttribute("delegateReactivateUserId", USER_ID);
             EntraUserDto user = buildEntraUserDto();
 
-            given(userService.getEntraUserById(USER_ID)).willReturn(Optional.of(user));
+            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(user));
 
             String view = userActivationController.delegateReactivateUserPost(USER_ID, model, session, REFERER, PROFILE_ID);
 
@@ -208,7 +207,7 @@ public class UserActivationControllerTest {
             session.setAttribute("delegateReactivateUserReasonForm", existingForm);
 
             EntraUserDto user = buildEntraUserDto();
-            given(userService.getEntraUserById(USER_ID)).willReturn(Optional.of(user));
+            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(user));
 
             String view = userActivationController.delegateReactivateUserReasonsGet(USER_ID, model, session);
 
@@ -232,10 +231,10 @@ public class UserActivationControllerTest {
             DelegateReactivateUserReasonForm form = DelegateReactivateUserReasonForm.builder().build();
 
             BindingResult bindingResult = mock(BindingResult.class);
-            given(bindingResult.hasErrors()).willReturn(true);
+            when(bindingResult.hasErrors()).thenReturn(true);
 
             EntraUserDto user = buildEntraUserDto();
-            given(userService.getEntraUserById(USER_ID)).willReturn(Optional.of(user));
+            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(user));
 
             String view = userActivationController.delegateReactivateUserReasonsPost(USER_ID, form, bindingResult, model, session);
 
@@ -254,9 +253,9 @@ public class UserActivationControllerTest {
                     .build();
 
             BindingResult bindingResult = mock(BindingResult.class);
-            given(bindingResult.hasErrors()).willReturn(false);
+            when(bindingResult.hasErrors()).thenReturn(false);
             EntraUserDto user = buildEntraUserDto();
-            given(userService.getEntraUserById(USER_ID)).willReturn(Optional.of(user));
+            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(user));
 
             String view = userActivationController.delegateReactivateUserReasonsPost(USER_ID, form, bindingResult, model, session);
 
@@ -302,7 +301,7 @@ public class UserActivationControllerTest {
             session.setAttribute("delegateReactivateUserReasonForm", form);
 
             EntraUserDto user = buildEntraUserDto();
-            given(userService.getEntraUserById(USER_ID)).willReturn(Optional.of(user));
+            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(user));
 
             String view = userActivationController.delegateReactivateUserReasonsCheckAnswersGet(USER_ID, model, session);
 
@@ -327,7 +326,7 @@ public class UserActivationControllerTest {
             session.setAttribute("delegateReactivateUserReasonForm", DelegateReactivateUserReasonForm.builder().build());
 
             UserProfileDto mismatchedProfile = UserProfileDto.builder().id(UUID.randomUUID()).build();
-            given(userService.getActiveProfileByUserId(USER_ID)).willReturn(Optional.of(mismatchedProfile));
+            when(userService.getActiveProfileByUserId(USER_ID)).thenReturn(Optional.of(mismatchedProfile));
 
             assertThatThrownBy(() -> userActivationController.delegateReactivateUserReasonsCheckAnswersPost(USER_ID, authentication, model, session))
                     .isInstanceOf(ResponseStatusException.class)
@@ -355,7 +354,6 @@ public class UserActivationControllerTest {
                     .firstName("John Doe")
                     .email("john.doe@justice.gov.uk")
                     .build();
-            EntraUserDto user = buildEntraUserDto();
             CurrentUserDto actor = new CurrentUserDto();
             actor.setUserId(UUID.randomUUID());
             UserActivationRequest createdRequest = buildUserActivationRequest(ReactivationRequestStatus.IN_REVIEW);

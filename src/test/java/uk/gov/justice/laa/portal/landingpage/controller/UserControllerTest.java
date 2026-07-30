@@ -449,7 +449,7 @@ class UserControllerTest {
     }
 
     @Test
-    void testDisplayAllUsersSearchesUsersWithSortWhenSearchTermIsGiven() {
+    void testDisplayAllUsersSearchesUsersWithSortWhenSearchTermIswhen() {
         // Arrange
         PaginatedUsers mockPaginatedUsers = new PaginatedUsers();
         mockPaginatedUsers.setUsers(new ArrayList<>());

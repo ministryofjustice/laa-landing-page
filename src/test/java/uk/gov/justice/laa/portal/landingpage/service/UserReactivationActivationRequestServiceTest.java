@@ -10,9 +10,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserActivationRequestRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
@@ -36,6 +38,10 @@ class UserReactivationActivationRequestServiceTest {
     private UserActivationRequestRepository requestRepository;
     @Mock
     private UserProfileRepository userProfileRepository;
+    @Mock
+    private EntraUserRepository entraUserRepository;
+    @Mock
+    private ReactivationTypeResolver roleTypeResolver;
     @InjectMocks
     private UserReactivationActivationRequestService service;
 
@@ -171,6 +177,8 @@ class UserReactivationActivationRequestServiceTest {
         @DisplayName("Should save state with version 1 when requestId is null")
         void nullRequestId_generatesUuidAndVersionOne() {
             given(requestRepository.save(any(UserActivationRequest.class))).willAnswer(invocation -> invocation.getArgument(0));
+            given(entraUserRepository.findByEntraOid(ACTOR_ID)).willReturn(Optional.of(EntraUser.builder().id(UUID.randomUUID()).build()));
+            given(roleTypeResolver.resolve(any())).willReturn(ReactivationRoleType.PROVIDER_ADMIN);
 
             UserActivationRequest result = service.saveRequestState(null, PROFILE_ID, ReactivationRequestStatus.APPROVED, "Approved by admin", ACTOR_ID);
 
@@ -187,6 +195,8 @@ class UserReactivationActivationRequestServiceTest {
         void nonNullRequestIdNoHistory_savesVersionOne() {
             given(requestRepository.findFirstByRequestIdOrderByVersionDesc(REQUEST_ID)).willReturn(Optional.empty());
             given(requestRepository.save(any(UserActivationRequest.class))).willAnswer(invocation -> invocation.getArgument(0));
+            given(entraUserRepository.findByEntraOid(ACTOR_ID)).willReturn(Optional.of(EntraUser.builder().id(UUID.randomUUID()).build()));
+            given(roleTypeResolver.resolve(any())).willReturn(ReactivationRoleType.PROVIDER_ADMIN);
 
             UserActivationRequest result = service.saveRequestState(REQUEST_ID, PROFILE_ID, ReactivationRequestStatus.IN_REVIEW, "Reviewing", ACTOR_ID);
 
@@ -200,6 +210,8 @@ class UserReactivationActivationRequestServiceTest {
             UserActivationRequest existing = buildUserActivationRequest(ReactivationRequestStatus.IN_REVIEW, 2);
             given(requestRepository.findFirstByRequestIdOrderByVersionDesc(REQUEST_ID)).willReturn(Optional.of(existing));
             given(requestRepository.save(any(UserActivationRequest.class))).willAnswer(invocation -> invocation.getArgument(0));
+            given(entraUserRepository.findByEntraOid(ACTOR_ID)).willReturn(Optional.of(EntraUser.builder().id(UUID.randomUUID()).build()));
+            given(roleTypeResolver.resolve(any())).willReturn(ReactivationRoleType.PROVIDER_ADMIN);
 
             UserActivationRequest result = service.saveRequestState(REQUEST_ID, PROFILE_ID, ReactivationRequestStatus.APPROVED, "Approved", ACTOR_ID);
 
