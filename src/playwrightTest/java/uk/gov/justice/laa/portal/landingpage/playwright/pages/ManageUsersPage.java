@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.playwright.pages;
 
 import java.util.List;
 
+import com.microsoft.playwright.options.AriaRole;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1133,18 +1134,26 @@ public class ManageUsersPage {
     }
 
     public void selectThirdPartyUserFilter() {
-        assertThat(thirdPartyFilterCheckbox).isVisible();
+        Locator multiFirmCheckbox = page.locator("#showMultiFirmUsers");
 
-        if (!thirdPartyFilterCheckbox.isChecked()) {
-            thirdPartyFilterCheckbox.check();
+        if (!multiFirmCheckbox.isVisible()) {
+            Locator showFiltersButton = page.getByRole(
+                    AriaRole.BUTTON,
+                    new Page.GetByRoleOptions().setName("Show filters")
+            );
+
+            assertThat(showFiltersButton).isVisible();
+            showFiltersButton.click();
+
+            assertThat(multiFirmCheckbox).isVisible();
         }
 
-        page.waitForURL(
-                url -> url.contains("showMultiFirmUsers=true"),
-                new Page.WaitForURLOptions().setTimeout(10000)
-        );
+        if (!multiFirmCheckbox.isChecked()) {
+            multiFirmCheckbox.check();
+            page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+        }
 
-        assertThat(thirdPartyFilterCheckbox).isChecked();
+        assertThat(page.locator("#showMultiFirmUsers")).isChecked();
     }
 
     public void verifyOnlyThirdPartyUsersDisplayed() {
