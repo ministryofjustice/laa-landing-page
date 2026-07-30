@@ -78,7 +78,7 @@
                                     Create a new user
                                 </button>
 
-                                <button type="button" class="govuk-button govuk-button--secondary"
+                                <button th:if="${allowViewReactivationRequests}" type="button" class="govuk-button govuk-button--secondary"
                                     data-module="govuk-button" data-govuk-button-init=""
                                     onclick="location.href='/admin/users/reactivation-requests';">
                                     Reactivation requests
