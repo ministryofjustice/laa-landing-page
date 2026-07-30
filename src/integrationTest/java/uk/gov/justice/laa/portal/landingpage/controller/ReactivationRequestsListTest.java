@@ -187,7 +187,6 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
 
         UUID requestId = UUID.randomUUID();
         Instant originalSubmittedAt = Instant.now().minus(10, ChronoUnit.DAYS);
-        Instant latestActivityAt = Instant.now();
 
         UserActivationRequest v1 = new UserActivationRequest();
         v1.setRequestId(requestId);
@@ -200,6 +199,7 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
         v1.setCreatedAt(originalSubmittedAt);
         userActivationRequestRepository.saveAndFlush(v1);
 
+        Instant latestActivityAt = Instant.now();
         UserActivationRequest v2 = new UserActivationRequest();
         v2.setRequestId(requestId);
         v2.setUserProfileId(providerAdminProfileId);
