@@ -1,6 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -148,5 +151,117 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
                         .with(userOauth2Login(globalAdmin)))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Reactivation requests")));
+    }
+
+    @Test
+    public void testEmptyResultsReturnZeroTotalPagesAndNoPaginationControls() throws Exception {
+        EntraUser globalAdmin = globalAdmins.getFirst();
+
+        var result = mockMvc.perform(get("/admin/users/reactivation-requests")
+                        .param("defaultStatusApplied", "true")
+                        .param("selectedRequestStatuses", "IN_REVIEW")
+                        .with(userOauth2Login(globalAdmin)))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("totalPages", 0))
+                .andExpect(model().attribute("page", 0))
+                .andExpect(model().attribute("totalRequests", 0L))
+                .andReturn();
+
+        @SuppressWarnings("unchecked")
+        List<ReactivationRequestListItem> requests =
+                (List<ReactivationRequestListItem>) result.getModelAndView().getModel().get("requests");
+        assertThat(requests).isEmpty();
+
+        String content = result.getResponse().getContentAsString();
+        assertThat(content).doesNotContain("govuk-pagination__link");
+    }
+
+    @Test
+    public void testDateSubmittedComesFromFirstVersionAndLastActivityFromLatestVersion() throws Exception {
+        EntraUser providerAdmin = firmUserManagers.getFirst();
+        UUID providerAdminProfileId = providerAdmin.getUserProfiles().stream()
+                .filter(profile -> profile != null && profile.isActiveProfile() && profile.getFirm() != null)
+                .map(UserProfile::getId)
+                .findFirst()
+                .orElseThrow();
+
+        UUID requestId = UUID.randomUUID();
+        Instant originalSubmittedAt = Instant.now().minus(10, ChronoUnit.DAYS);
+        Instant latestActivityAt = Instant.now();
+
+        UserActivationRequest v1 = new UserActivationRequest();
+        v1.setRequestId(requestId);
+        v1.setUserProfileId(providerAdminProfileId);
+        v1.setVersion(1);
+        v1.setStatus(uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus.IN_REVIEW);
+        v1.setComments("Original submission");
+        v1.setActorEntraOid(UUID.randomUUID().toString());
+        v1.setActorRoleType(AuthzRoleType.PROVIDER_ADMIN);
+        v1.setCreatedAt(originalSubmittedAt);
+        userActivationRequestRepository.saveAndFlush(v1);
+
+        UserActivationRequest v2 = new UserActivationRequest();
+        v2.setRequestId(requestId);
+        v2.setUserProfileId(providerAdminProfileId);
+        v2.setVersion(2);
+        v2.setStatus(uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus.INFORMATION_REQUIRED);
+        v2.setComments("Follow up on original submission");
+        v2.setActorEntraOid(UUID.randomUUID().toString());
+        v2.setActorRoleType(AuthzRoleType.PROVIDER_ADMIN);
+        v2.setCreatedAt(latestActivityAt);
+        userActivationRequestRepository.saveAndFlush(v2);
+
+        var result = mockMvc.perform(get("/admin/users/reactivation-requests")
+                        .with(userOauth2Login(providerAdmin)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        @SuppressWarnings("unchecked")
+        List<ReactivationRequestListItem> requests =
+                (List<ReactivationRequestListItem>) result.getModelAndView().getModel().get("requests");
+
+        assertThat(requests).hasSize(1);
+        ReactivationRequestListItem item = requests.getFirst();
+        assertThat(item.dateSubmitted()).isEqualTo(LocalDate.ofInstant(originalSubmittedAt, ZoneId.systemDefault()));
+        assertThat(item.lastActivity()).isEqualTo(LocalDate.ofInstant(latestActivityAt, ZoneId.systemDefault()));
+        assertThat(item.dateSubmitted()).isNotEqualTo(item.lastActivity());
+        assertThat(item.requestStatus()).isEqualTo(ReactivationRequestStatus.INFORMATION_REQUIRED);
+    }
+
+    @Test
+    public void testSelectedUserTypesFiltersResultsByActorRoleType() throws Exception {
+        EntraUser globalAdmin = globalAdmins.getFirst();
+        UUID globalAdminProfileId = globalAdmin.getUserProfiles().stream()
+                .map(UserProfile::getId)
+                .findFirst()
+                .orElseThrow();
+
+        seedActivationRequest(globalAdminProfileId);
+
+        UserActivationRequest laaActorRequest = new UserActivationRequest();
+        laaActorRequest.setRequestId(UUID.randomUUID());
+        laaActorRequest.setUserProfileId(globalAdminProfileId);
+        laaActorRequest.setVersion(1);
+        laaActorRequest.setStatus(uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus.IN_REVIEW);
+        laaActorRequest.setComments("Raised by an LAA actor");
+        laaActorRequest.setActorEntraOid(UUID.randomUUID().toString());
+        laaActorRequest.setActorRoleType(AuthzRoleType.LAA);
+        laaActorRequest.setCreatedAt(Instant.now());
+        userActivationRequestRepository.saveAndFlush(laaActorRequest);
+
+        var result = mockMvc.perform(get("/admin/users/reactivation-requests")
+                        .param("defaultStatusApplied", "true")
+                        .param("selectedRequestStatuses", "IN_REVIEW")
+                        .param("selectedUserTypes", "LAA")
+                        .with(userOauth2Login(globalAdmin)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        @SuppressWarnings("unchecked")
+        List<ReactivationRequestListItem> requests =
+                (List<ReactivationRequestListItem>) result.getModelAndView().getModel().get("requests");
+
+        assertThat(requests).hasSize(1);
+        assertThat(requests.getFirst().actorRoleType()).isEqualTo(AuthzRoleType.LAA.getLabel());
     }
 }
