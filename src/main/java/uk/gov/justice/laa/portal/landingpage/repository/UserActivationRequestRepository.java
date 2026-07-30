@@ -10,6 +10,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Repository
@@ -23,6 +24,9 @@ public interface UserActivationRequestRepository extends JpaRepository<UserActiv
 
     @Query("SELECT COALESCE(MAX(u.version), 0) FROM UserActivationRequest u WHERE u.requestId = :requestId")
     Integer findMaxVersionByRequestId(@Param("requestId") UUID requestId);
+
+    @Query("SELECT r FROM UserActivationRequest r WHERE r.version = 1 AND r.requestId IN :requestIds")
+    List<UserActivationRequest> findAllFirstVersionsByRequestIdIn(@Param("requestIds") Set<UUID> requestIds);
 
     @Query("""
                 SELECT r

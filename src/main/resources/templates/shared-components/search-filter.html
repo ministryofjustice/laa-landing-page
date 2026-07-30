@@ -11,9 +11,11 @@
 
     Parameters:
       formAction          - th:action URL for the search form  (e.g. @{/admin/users})
-      searchHint          - hint text shown below the "Search users" heading
+      searchHint          - hint text shown below the search heading
       filterContent       - fragment expression for the filter checkboxes  (~{:: #my-filter-content})
       activeFiltersContent- fragment expression for the active-filters banner (~{:: #my-active-filters})
+      searchHeading       - optional heading text (defaults to 'Search users' if not supplied)
+      formAriaLabel       - optional aria-label for the form (defaults to 'Search and filter users' if not supplied)
 
     The caller template should wrap the two inline fragment definitions inside the th:replace block:
 
@@ -46,9 +48,9 @@
           <a href="#" id="clear-filters-link" data-filter-params="myParam1,myParam2,myArrayParam">Clear filters</a>
 -->
 
-<th:block th:fragment="searchFilter(formAction, searchHint, filterContent, activeFiltersContent)">
+<th:block th:fragment="searchFilter(formAction, searchHint, filterContent, activeFiltersContent, searchHeading, formAriaLabel)">
 
-    <form method="get" th:action="${formAction}" id="search-filter-form" aria-label="Search and filter users">
+    <form method="get" th:action="${formAction}" id="search-filter-form" th:aria-label="${formAriaLabel} ?: 'Search and filter users'">
         <input type="hidden" name="page" value="1">
         <input th:if="${requestedPageSize != null and requestedPageSize != 10}" type="hidden" name="size" th:value="${requestedPageSize}">
         <input th:if="${sort != null and sort != ''}" type="hidden" name="sort" th:value="${sort}">
@@ -58,7 +60,7 @@
             <div class="govuk-form-group">
                 <fieldset class="govuk-fieldset">
                     <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
-                        <h2 class="govuk-fieldset__heading">Search users</h2>
+                        <h2 class="govuk-fieldset__heading" th:text="${searchHeading} ?: 'Search users'">Search users</h2>
                     </legend>
                     <div class="govuk-hint" th:text="${searchHint}">Search users</div>
 

@@ -16,6 +16,7 @@ public record ReactivationRequestListItem(
         String actorName,
         String actorEmail,
         LocalDate dateSubmitted,
+        LocalDate lastActivity,
         UUID firmId
 ) implements Serializable {
 }

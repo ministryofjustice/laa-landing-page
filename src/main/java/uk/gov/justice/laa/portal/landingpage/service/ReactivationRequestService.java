@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Comparator;
@@ -115,9 +116,18 @@ public class ReactivationRequestService {
                     .forEach(actor -> actorsByEntraOid.put(actor.getEntraOid(), actor));
         }
 
+        Set<UUID> requestIds = latestRequests.stream()
+                .map(UserActivationRequest::getRequestId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<UUID, Instant> submittedAtByRequestId = userActivationRequestRepository
+                .findAllFirstVersionsByRequestIdIn(requestIds).stream()
+                .collect(Collectors.toMap(UserActivationRequest::getRequestId, UserActivationRequest::getCreatedAt));
+
         List<ReactivationRequestListItem> items = latestRequests.stream()
                 .map(request -> toListItem(request, profilesById.get(request.getUserProfileId()),
-                        actorsByEntraOid.get(request.getActorEntraOid())))
+                        actorsByEntraOid.get(request.getActorEntraOid()),
+                        submittedAtByRequestId.get(request.getRequestId())))
                 .toList();
 
         if (pageMode == ReactivationRequestPageMode.TRACK && currentUser != null) {
@@ -137,7 +147,8 @@ public class ReactivationRequestService {
         return items;
     }
 
-    private ReactivationRequestListItem toListItem(UserActivationRequest request, UserProfile profile, EntraUser actor) {
+    private ReactivationRequestListItem toListItem(UserActivationRequest request, UserProfile profile, EntraUser actor,
+            Instant submittedAt) {
         UUID firmId = profile != null && profile.getFirm() != null ? profile.getFirm().getId() : null;
         String actorName = actor != null
                 ? (nullToEmpty(actor.getFirstName()) + " " + nullToEmpty(actor.getLastName())).trim()
@@ -145,7 +156,13 @@ public class ReactivationRequestService {
         String actorEmail = actor != null ? actor.getEmail() : null;
         String actorRoleType = request.getActorRoleType() != null ? request.getActorRoleType().getLabel() : null;
         ReactivationRequestStatus status = ReactivationRequestStatus.valueOf(request.getStatus().name());
-        LocalDate dateSubmitted = request.getCreatedAt() != null
+        // dateSubmitted reflects when the request was originally raised (version 1),
+        // while lastActivity reflects the most recent version's timestamp (this row).
+        Instant originalSubmission = submittedAt != null ? submittedAt : request.getCreatedAt();
+        LocalDate dateSubmitted = originalSubmission != null
+                ? LocalDate.ofInstant(originalSubmission, ZoneId.systemDefault())
+                : null;
+        LocalDate lastActivity = request.getCreatedAt() != null
                 ? LocalDate.ofInstant(request.getCreatedAt(), ZoneId.systemDefault())
                 : null;
 
@@ -161,6 +178,7 @@ public class ReactivationRequestService {
                 actorName.isBlank() ? UNKNOWN_USER_NAME : actorName,
                 actorEmail,
                 dateSubmitted,
+                lastActivity,
                 firmId);
     }
 
@@ -185,15 +203,22 @@ public class ReactivationRequestService {
         }
 
         return requests.stream()
-                .filter(item -> search.isBlank()
-                || item.requestId().toString().toLowerCase(Locale.UK).contains(search)
-                || item.userProfileId().toString().toLowerCase(Locale.UK).contains(search)
-                || item.actorName().toLowerCase(Locale.UK).contains(search)
-                || item.actorEntraOid().toLowerCase(Locale.UK).contains(search)
-                || item.comments().toLowerCase(Locale.UK).contains(search))
+                .filter(item -> search.isBlank() || matchesSearch(item, search))
                 .filter(item -> statusFilter.isEmpty() || statusFilter.contains(item.requestStatus()))
                 .sorted(comparator)
                 .toList();
+    }
+
+    private boolean matchesSearch(ReactivationRequestListItem item, String search) {
+        return containsIgnoreCase(item.requestId(), search)
+                || containsIgnoreCase(item.userProfileId(), search)
+                || containsIgnoreCase(item.actorName(), search)
+                || containsIgnoreCase(item.actorEntraOid(), search)
+                || containsIgnoreCase(item.comments(), search);
+    }
+
+    private boolean containsIgnoreCase(Object value, String search) {
+        return value != null && value.toString().toLowerCase(Locale.UK).contains(search);
     }
 
     private PaginatedReactivationRequests paginate(List<ReactivationRequestListItem> requests, int page, int requestedSize) {
@@ -201,9 +226,9 @@ public class ReactivationRequestService {
         int safePage = Math.max(1, page);
 
         int totalItems = requests.size();
-        int totalPages = Math.max(1, (int) Math.ceil((double) totalItems / pageSize));
-        int boundedPage = Math.min(safePage, totalPages);
-        int startIndex = (boundedPage - 1) * pageSize;
+        int totalPages = totalItems == 0 ? 0 : (int) Math.ceil((double) totalItems / pageSize);
+        int boundedPage = totalPages == 0 ? 0 : Math.min(safePage, totalPages);
+        int startIndex = boundedPage == 0 ? 0 : (boundedPage - 1) * pageSize;
         int endIndex = Math.min(startIndex + pageSize, totalItems);
 
         List<ReactivationRequestListItem> pageItems = startIndex >= totalItems

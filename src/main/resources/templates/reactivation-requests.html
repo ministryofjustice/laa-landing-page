@@ -33,7 +33,9 @@
             formAction=@{/admin/users/reactivation-requests(defaultStatusApplied=${defaultStatusApplied})},
             searchHint='You can search by request ID, user profile ID, actor name, actor Entra OID, or comments.',
             filterContent=~{:: #request-filter-checkboxes},
-            activeFiltersContent=~{:: #request-active-filters}
+            activeFiltersContent=~{:: #request-active-filters},
+            searchHeading='Search reactivation requests',
+            formAriaLabel='Search and filter reactivation requests'
         )}">
             <div id="request-filter-checkboxes">
                 <div style="display: flex; gap: 0;">
@@ -123,7 +125,7 @@
                     </td>
                     <td class="govuk-table__cell" th:text="${request.actorEmail()}"></td>
                     <td class="govuk-table__cell" th:text="${#temporals.format(request.dateSubmitted(), 'd MMMM yyyy')}"></td>
-                    <td class="govuk-table__cell" th:text="${#temporals.format(request.dateSubmitted(), 'd MMMM yyyy')}"></td>
+                    <td class="govuk-table__cell" th:text="${#temporals.format(request.lastActivity(), 'd MMMM yyyy')}"></td>
                     <td class="govuk-table__cell" th:text="${request.actorRoleType()}"></td>
                     <td class="govuk-table__cell">
                         <span th:if="${request.requestStatus().name() == 'IN_REVIEW'}" class="govuk-tag govuk-tag--yellow" th:text="${request.requestStatus().label}"></span>
