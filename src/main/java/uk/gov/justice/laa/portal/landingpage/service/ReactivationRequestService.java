@@ -142,7 +142,8 @@ public class ReactivationRequestService {
         String actorName = actor != null
                 ? (nullToEmpty(actor.getFirstName()) + " " + nullToEmpty(actor.getLastName())).trim()
                 : UNKNOWN_USER_NAME;
-        String actorRoleType = request.getActorRoleType() != null ? request.getActorRoleType().name() : null;
+        String actorEmail = actor != null ? actor.getEmail() : null;
+        String actorRoleType = request.getActorRoleType() != null ? request.getActorRoleType().getLabel() : null;
         ReactivationRequestStatus status = ReactivationRequestStatus.valueOf(request.getStatus().name());
         LocalDate dateSubmitted = request.getCreatedAt() != null
                 ? LocalDate.ofInstant(request.getCreatedAt(), ZoneId.systemDefault())
@@ -158,6 +159,7 @@ public class ReactivationRequestService {
                 request.getActorEntraOid(),
                 actorRoleType,
                 actorName.isBlank() ? UNKNOWN_USER_NAME : actorName,
+                actorEmail,
                 dateSubmitted,
                 firmId);
     }

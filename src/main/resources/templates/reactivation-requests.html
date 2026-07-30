@@ -121,7 +121,7 @@
                            th:text="${request.actorName()}"></a>
                         <span th:if="${request.userProfileId() == null}" th:text="${request.actorName()}"></span>
                     </td>
-                    <td class="govuk-table__cell" th:text="${request.actorEntraOid()}"></td>
+                    <td class="govuk-table__cell" th:text="${request.actorEmail()}"></td>
                     <td class="govuk-table__cell" th:text="${#temporals.format(request.dateSubmitted(), 'd MMMM yyyy')}"></td>
                     <td class="govuk-table__cell" th:text="${#temporals.format(request.dateSubmitted(), 'd MMMM yyyy')}"></td>
                     <td class="govuk-table__cell" th:text="${request.actorRoleType()}"></td>
