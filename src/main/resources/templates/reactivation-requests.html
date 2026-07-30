@@ -39,6 +39,37 @@
         )}">
             <div id="request-filter-checkboxes">
                 <div style="display: flex; gap: 0;">
+                    <div style="flex: 1; padding-right: 15px;">
+                        <fieldset class="govuk-fieldset">
+                            <legend class="govuk-fieldset__legend govuk-fieldset__legend--s">User Type</legend>
+                            <div class="govuk-checkboxes govuk-checkboxes--small" data-module="govuk-checkboxes">
+                                <div class="govuk-checkboxes__item">
+                                    <input class="govuk-checkboxes__input" id="usertype-provider-admin"
+                                           name="selectedUserTypes" type="checkbox" value="PROVIDER_ADMIN"
+                                           th:checked="${selectedUserTypes != null and selectedUserTypes.contains(T(uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType).PROVIDER_ADMIN)}">
+                                    <label class="govuk-label govuk-checkboxes__label" for="usertype-provider-admin">
+                                        Provider Admin
+                                    </label>
+                                </div>
+                                <div class="govuk-checkboxes__item">
+                                    <input class="govuk-checkboxes__input" id="usertype-laa"
+                                           name="selectedUserTypes" type="checkbox" value="LAA"
+                                           th:checked="${selectedUserTypes != null and selectedUserTypes.contains(T(uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType).LAA)}">
+                                    <label class="govuk-label govuk-checkboxes__label" for="usertype-laa">
+                                        Legal Aid Agency
+                                    </label>
+                                </div>
+                                <div class="govuk-checkboxes__item">
+                                    <input class="govuk-checkboxes__input" id="usertype-privileged"
+                                           name="selectedUserTypes" type="checkbox" value="PRIVILEGED"
+                                           th:checked="${selectedUserTypes != null and selectedUserTypes.contains(T(uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType).PRIVILEGED)}">
+                                    <label class="govuk-label govuk-checkboxes__label" for="usertype-privileged">
+                                        Privileged
+                                    </label>
+                                </div>
+                            </div>
+                        </fieldset>
+                    </div>
                     <div style="flex: 1;">
                         <fieldset class="govuk-fieldset">
                             <legend class="govuk-fieldset__legend govuk-fieldset__legend--s">Request Status</legend>
@@ -82,9 +113,18 @@
             </div>
 
             <div id="request-active-filters">
-                <div th:if="${selectedRequestStatuses != null and !selectedRequestStatuses.isEmpty()}"
+                <div th:if="${(selectedUserTypes != null and !selectedUserTypes.isEmpty()) or (selectedRequestStatuses != null and !selectedRequestStatuses.isEmpty())}"
                      class="active-filters-banner govuk-!-margin-top-2 govuk-!-margin-bottom-3" aria-label="Active filters">
                     <span class="govuk-body govuk-!-font-weight-bold govuk-!-margin-right-2 filter-tag-label">Filters</span>
+                    <th:block th:each="userType : ${selectedUserTypes}">
+                        <span class="filter-tag">
+                            <a href="#" data-remove-array-param="selectedUserTypes"
+                               th:attr="data-remove-array-value=${userType.name()}"
+                               class="filter-tag__remove"
+                               th:aria-label="'Remove ' + ${userType.label} + ' filter'">&#x2715;</a>
+                            <span th:text="${userType.label}"></span>
+                        </span>
+                    </th:block>
                     <th:block th:each="status : ${selectedRequestStatuses}">
                         <span class="filter-tag">
                             <a href="#" data-remove-array-param="selectedRequestStatuses"
@@ -95,7 +135,7 @@
                         </span>
                     </th:block>
                     <a href="#" id="clear-filters-link" class="govuk-link filter-tag-clear-link"
-                       data-filter-params="selectedRequestStatuses">Clear filters</a>
+                       data-filter-params="selectedUserTypes,selectedRequestStatuses">Clear filters</a>
                 </div>
             </div>
         </th:block>
@@ -151,7 +191,7 @@
             showMultiFirmUsers=${null},
             showProviderUsers=${null},
             selectedStatuses=${null},
-            selectedUserTypes=${null},
+            selectedUserTypes=${selectedUserTypes},
             selectedRequestStatuses=${selectedRequestStatuses},
             defaultStatusApplied=${defaultStatusApplied}
         )}"/>

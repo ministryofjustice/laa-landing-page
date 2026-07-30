@@ -68,6 +68,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
@@ -293,6 +294,7 @@ public class UserController {
             @RequestParam(name = "direction", defaultValue = "desc") String direction,
             @RequestParam(name = "search", required = false, defaultValue = "") String search,
             @RequestParam(name = "selectedRequestStatuses", required = false) List<ReactivationRequestStatus> selectedRequestStatuses,
+            @RequestParam(name = "selectedUserTypes", required = false) List<AuthzRoleType> selectedUserTypes,
             @RequestParam(name = "defaultStatusApplied", defaultValue = "false") boolean defaultStatusApplied,
             Model model,
             Authentication authentication) {
@@ -309,6 +311,11 @@ public class UserController {
                     .queryParam("defaultStatusApplied", true)
                     .queryParam("selectedRequestStatuses", ReactivationRequestStatus.IN_REVIEW.name());
 
+            if (selectedUserTypes != null && !selectedUserTypes.isEmpty()) {
+                builder.queryParam("selectedUserTypes",
+                        selectedUserTypes.stream().map(Enum::name).toArray());
+            }
+
             if (search != null && !search.trim().isEmpty()) {
                 builder.queryParam("search", search.trim());
             }
@@ -319,11 +326,15 @@ public class UserController {
         List<ReactivationRequestStatus> statusFilters = selectedRequestStatuses == null
                 ? new ArrayList<>()
                 : selectedRequestStatuses;
+        List<AuthzRoleType> userTypeFilters = selectedUserTypes == null
+                ? new ArrayList<>()
+                : selectedUserTypes;
 
         ReactivationRequestsPageData pageData = reactivationRequestService.getPage(
                 authentication,
                 search,
                 statusFilters,
+                userTypeFilters,
                 page,
                 size,
                 sort,
@@ -341,6 +352,7 @@ public class UserController {
         model.addAttribute("sort", sort);
         model.addAttribute("direction", direction);
         model.addAttribute("selectedRequestStatuses", pageData.appliedStatuses());
+        model.addAttribute("selectedUserTypes", pageData.appliedActorRoleTypes());
         model.addAttribute("defaultStatusApplied", pageMode.isManageMode() || defaultStatusApplied);
         model.addAttribute(ModelAttributes.PAGE_TITLE, pageData.pageMode().getHeading());
 

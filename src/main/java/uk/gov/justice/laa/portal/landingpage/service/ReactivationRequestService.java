@@ -22,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.ReactivationRequestsPageData;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
@@ -51,6 +52,7 @@ public class ReactivationRequestService {
             Authentication authentication,
             String search,
             List<ReactivationRequestStatus> selectedStatuses,
+            List<AuthzRoleType> selectedActorRoleTypes,
             int page,
             int size,
             String sort,
@@ -61,16 +63,20 @@ public class ReactivationRequestService {
         List<ReactivationRequestStatus> effectiveStatuses = selectedStatuses == null
             ? List.of()
             : List.copyOf(selectedStatuses);
+        List<AuthzRoleType> effectiveActorRoleTypes = selectedActorRoleTypes == null
+            ? List.of()
+            : List.copyOf(selectedActorRoleTypes);
 
         List<ReactivationRequestListItem> requests = filterAndSortRequests(
                 buildRequests(currentUser, pageMode),
                 normalizeSearch(search),
                 effectiveStatuses,
+                effectiveActorRoleTypes,
                 sort,
                 direction);
 
         PaginatedReactivationRequests paginated = paginate(requests, page, size);
-        return new ReactivationRequestsPageData(pageMode, effectiveStatuses, paginated);
+        return new ReactivationRequestsPageData(pageMode, effectiveStatuses, effectiveActorRoleTypes, paginated);
     }
 
     public ReactivationRequestPageMode getPageMode(Authentication authentication) {
@@ -190,12 +196,16 @@ public class ReactivationRequestService {
             List<ReactivationRequestListItem> requests,
             String search,
             List<ReactivationRequestStatus> selectedStatuses,
+            List<AuthzRoleType> selectedActorRoleTypes,
             String sort,
             String direction) {
 
         Set<ReactivationRequestStatus> statusFilter = selectedStatuses == null
                 ? Set.of()
                 : new HashSet<>(selectedStatuses);
+        Set<String> actorRoleTypeLabelFilter = selectedActorRoleTypes == null || selectedActorRoleTypes.isEmpty()
+                ? Set.of()
+                : selectedActorRoleTypes.stream().map(AuthzRoleType::getLabel).collect(Collectors.toSet());
 
         Comparator<ReactivationRequestListItem> comparator = resolveComparator(sort);
         if (!"asc".equalsIgnoreCase(direction)) {
@@ -205,6 +215,7 @@ public class ReactivationRequestService {
         return requests.stream()
                 .filter(item -> search.isBlank() || matchesSearch(item, search))
                 .filter(item -> statusFilter.isEmpty() || statusFilter.contains(item.requestStatus()))
+                .filter(item -> actorRoleTypeLabelFilter.isEmpty() || actorRoleTypeLabelFilter.contains(item.actorRoleType()))
                 .sorted(comparator)
                 .toList();
     }
