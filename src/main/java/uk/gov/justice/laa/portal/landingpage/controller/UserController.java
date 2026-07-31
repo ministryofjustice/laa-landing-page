@@ -44,7 +44,6 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -62,13 +61,11 @@ import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.OfficeDto;
-import uk.gov.justice.laa.portal.landingpage.dto.ReactivationRequestsPageData;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
-import uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
@@ -96,7 +93,6 @@ import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
-import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
@@ -108,7 +104,6 @@ import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
-import uk.gov.justice.laa.portal.landingpage.service.ReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
@@ -148,7 +143,6 @@ public class UserController {
     private final AppService appService;
     private final UserAccountStatusService userAccountStatusService;
     private final NotificationService notificationService;
-    private final ReactivationRequestService reactivationRequestService;
 
     @Value("${feature.flag.disable.user}")
     public boolean disableUserFeatureEnabled;
@@ -285,80 +279,6 @@ public class UserController {
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage your users");
 
         return "users";
-    }
-
-    @GetMapping("/users/reactivation-requests")
-    @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER)")
-    public String displayReactivationRequests(
-            @RequestParam(name = "size", defaultValue = "10") int size,
-            @RequestParam(name = "page", defaultValue = "1") int page,
-            @RequestParam(name = "sort", defaultValue = "dateSubmitted") String sort,
-            @RequestParam(name = "direction", defaultValue = "desc") String direction,
-            @RequestParam(name = "search", required = false, defaultValue = "") String search,
-            @RequestParam(name = "selectedRequestStatuses", required = false) List<ReactivationRequestStatus> selectedRequestStatuses,
-            @RequestParam(name = "selectedUserTypes", required = false) List<AuthzRoleType> selectedUserTypes,
-            @RequestParam(name = "defaultStatusApplied", defaultValue = "false") boolean defaultStatusApplied,
-            Model model,
-            Authentication authentication) {
-
-        var pageMode = reactivationRequestService.getPageMode(authentication);
-
-        // For manage roles, stamp the default status into the URL once so the default is explicit and user-clearable.
-        if (pageMode.isManageMode() && !defaultStatusApplied && (selectedRequestStatuses == null || selectedRequestStatuses.isEmpty())) {
-            UriComponentsBuilder builder = UriComponentsBuilder.fromPath("/admin/users/reactivation-requests")
-                    .queryParam("size", size)
-                    .queryParam("page", page)
-                    .queryParam("sort", sort)
-                    .queryParam("direction", direction)
-                    .queryParam("defaultStatusApplied", true)
-                    .queryParam("selectedRequestStatuses", ReactivationRequestStatus.IN_REVIEW.name());
-
-            if (selectedUserTypes != null && !selectedUserTypes.isEmpty()) {
-                builder.queryParam("selectedUserTypes",
-                        selectedUserTypes.stream().map(Enum::name).toArray());
-            }
-
-            if (search != null && !search.trim().isEmpty()) {
-                builder.queryParam("search", search.trim());
-            }
-
-            return "redirect:" + builder.build().encode().toUriString();
-        }
-
-        List<ReactivationRequestStatus> statusFilters = selectedRequestStatuses == null
-                ? new ArrayList<>()
-                : selectedRequestStatuses;
-        List<AuthzRoleType> userTypeFilters = selectedUserTypes == null
-                ? new ArrayList<>()
-                : selectedUserTypes;
-
-        ReactivationRequestsPageData pageData = reactivationRequestService.getPage(
-                authentication,
-                search,
-                statusFilters,
-                userTypeFilters,
-                page,
-                size,
-                sort,
-                direction);
-
-        model.addAttribute("pageHeading", pageData.pageMode().getHeading());
-        model.addAttribute("manageMode", pageData.pageMode().isManageMode());
-        model.addAttribute("requests", pageData.page().getRequests());
-        model.addAttribute("requestedPageSize", size);
-        model.addAttribute("actualPageSize", pageData.page().getRequests().size());
-        model.addAttribute("page", pageData.page().getCurrentPage());
-        model.addAttribute("totalRequests", pageData.page().getTotalRequests());
-        model.addAttribute("totalPages", pageData.page().getTotalPages());
-        model.addAttribute("search", search == null ? "" : search.trim());
-        model.addAttribute("sort", sort);
-        model.addAttribute("direction", direction);
-        model.addAttribute("selectedRequestStatuses", pageData.appliedStatuses());
-        model.addAttribute("selectedUserTypes", pageData.appliedActorRoleTypes());
-        model.addAttribute("defaultStatusApplied", pageMode.isManageMode() || defaultStatusApplied);
-        model.addAttribute(ModelAttributes.PAGE_TITLE, pageData.pageMode().getHeading());
-
-        return "reactivation-requests";
     }
 
     /**

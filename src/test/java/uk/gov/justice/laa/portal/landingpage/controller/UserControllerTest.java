@@ -120,7 +120,6 @@ import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
-import uk.gov.justice.laa.portal.landingpage.service.ReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
@@ -168,8 +167,6 @@ class UserControllerTest {
     private UserAccountStatusService disableUserService;
     @Mock
     private NotificationService notificationService;
-    @Mock
-    private ReactivationRequestService reactivationRequestService;
     private Model model;
     private FirmSearchForm firmSearchForm;
 
@@ -177,7 +174,7 @@ class UserControllerTest {
     void setUp() {
         userController = new UserController(loginService, userService, officeService, eventService, firmService,
                 new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService,
-                appRoleService, appService, disableUserService, notificationService, reactivationRequestService);
+                appRoleService, appService, disableUserService, notificationService);
         userController.disableUserFeatureEnabled = true;
         lenient().when(accessControlService.getEnablementFlags(any()))
                 .thenReturn(new AccessControlService.EnablementFlags(false, false, false));
