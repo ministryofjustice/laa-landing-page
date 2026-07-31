@@ -1010,6 +1010,9 @@ public class UserController {
 
         } else {
             log.error("No user attribute was present in request. User not created.");
+            session.removeAttribute("firm");
+            session.removeAttribute("selectedUserType");
+            return "redirect:/admin/users";
         }
 
         session.removeAttribute("firm");
