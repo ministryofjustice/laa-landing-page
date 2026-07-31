@@ -167,7 +167,7 @@ public class ReactivationRequestService {
                 ? (nullToEmpty(targetUser.getFirstName()) + " " + nullToEmpty(targetUser.getLastName())).trim()
                 : UNKNOWN_USER_NAME;
         String userEmail = targetUser != null ? targetUser.getEmail() : null;
-        String actorRoleType = request.getActorRoleType() != null ? request.getActorRoleType().getLabel() : null;
+        String actorRoleType = request.getActorRoleType() != null ? request.getActorRoleType().getDisplayName() : null;
         ReactivationRequestStatus status = ReactivationRequestStatus.valueOf(request.getStatus().name());
         // dateSubmitted reflects when the request was originally raised (version 1),
         // while lastActivity reflects the most recent version's timestamp (this row).
