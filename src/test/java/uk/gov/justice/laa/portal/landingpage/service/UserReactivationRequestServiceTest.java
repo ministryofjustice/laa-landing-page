@@ -29,7 +29,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
-class UserReactivationActivationRequestServiceTest {
+class UserReactivationRequestServiceTest {
 
     private static final UUID PROFILE_ID = UUID.randomUUID();
     private static final UUID REQUEST_ID = UUID.randomUUID();
@@ -43,7 +43,7 @@ class UserReactivationActivationRequestServiceTest {
     @Mock
     private ReactivationTypeResolver roleTypeResolver;
     @InjectMocks
-    private UserReactivationActivationRequestService service;
+    private UserReactivationRequestService service;
 
     private UserActivationRequest buildUserActivationRequest(ReactivationRequestStatus status, int version) {
         return UserActivationRequest.builder().id(UUID.randomUUID()).requestId(REQUEST_ID).userProfileId(PROFILE_ID).status(status).version(version).actorEntraOid(ACTOR_ID).build();

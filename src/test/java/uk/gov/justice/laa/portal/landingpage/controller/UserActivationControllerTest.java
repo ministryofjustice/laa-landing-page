@@ -19,7 +19,6 @@ import org.springframework.validation.ObjectError;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
-import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
@@ -29,8 +28,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.forms.DelegateReactivateUserReasonForm;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
-import uk.gov.justice.laa.portal.landingpage.service.ReactivationRequestService;
-import uk.gov.justice.laa.portal.landingpage.service.UserReactivationActivationRequestService;
+import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
 import java.util.List;
@@ -58,9 +56,7 @@ public class UserActivationControllerTest {
     @Mock
     private UserService userService;
     @Mock
-    private UserReactivationActivationRequestService userReactivationActivationRequestService;
-    @Mock
-    private ReactivationRequestService reactivationRequestService;
+    private UserReactivationRequestService userReactivationRequestService;
     @Mock
     private HttpSession session;
     @Mock
@@ -75,7 +71,7 @@ public class UserActivationControllerTest {
 
     @BeforeEach
     void setUp() {
-        userActivationController = new UserActivationController(loginService, userService, userReactivationActivationRequestService, reactivationRequestService);
+        userActivationController = new UserActivationController(loginService, userService, userReactivationRequestService);
         userActivationController.disableUserFeatureEnabled = true;
         model = new ExtendedModelMap();
     }
@@ -101,7 +97,7 @@ public class UserActivationControllerTest {
             UserActivationRequest pendingRequest = buildUserActivationRequest(ReactivationRequestStatus.IN_REVIEW);
 
             when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(user));
-            when(userReactivationActivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(PROFILE_ID))
+            when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(PROFILE_ID))
                     .thenReturn(Optional.of(pendingRequest));
 
             redirectAttributes = new RedirectAttributesModelMap();
@@ -124,7 +120,7 @@ public class UserActivationControllerTest {
             UserActivationRequest rejectedRequest = buildUserActivationRequest(ReactivationRequestStatus.REJECTED);
 
             when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(user));
-            when(userReactivationActivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(PROFILE_ID))
+            when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(PROFILE_ID))
                     .thenReturn(Optional.of(rejectedRequest));
 
             String view = userActivationController.delegateReactivateUserGet(USER_ID, session, model, REFERER, PROFILE_ID, redirectAttributes);
@@ -335,7 +331,7 @@ public class UserActivationControllerTest {
                     .isInstanceOf(ResponseStatusException.class)
                     .hasMessageContaining("400");
 
-            verify(userReactivationActivationRequestService, never()).createNewRequest(any(), any(), any(), any());
+            verify(userReactivationRequestService, never()).createNewRequest(any(), any(), any(), any());
         }
 
         @Test
@@ -364,7 +360,7 @@ public class UserActivationControllerTest {
             when(userService.getActiveProfileByUserId(USER_ID)).thenReturn(Optional.of(userProfile));
             when(loginService.getCurrentEntraUser(any())).thenReturn(entraUser);
             when(loginService.getCurrentUser(any())).thenReturn(actor);
-            when(userReactivationActivationRequestService.createNewRequest(any(UUID.class), any(), any(), any()))
+            when(userReactivationRequestService.createNewRequest(any(UUID.class), any(), any(), any()))
                     .thenReturn(createdRequest);
 
             String view = userActivationController.delegateReactivateUserReasonsCheckAnswersPost(USER_ID, authentication, model, httpSession);
@@ -372,7 +368,7 @@ public class UserActivationControllerTest {
             assertThat(view).isEqualTo("delegate-reactivate-user-confirmation");
             assertThat(model.asMap()).containsEntry("user", entraUser);
 
-            verify(userReactivationActivationRequestService)
+            verify(userReactivationRequestService)
                     .createNewRequest(any(UUID.class), eq(PROFILE_ID), eq("Approved leave returned"), eq(USER_ID));
         }
     }
@@ -421,7 +417,7 @@ public class UserActivationControllerTest {
             UserActivationRequest mockRequest = mock(UserActivationRequest.class);
 
             when(userService.getEntraUserById(userId)).thenReturn(Optional.of(mockUser));
-            when(userReactivationActivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId))
+            when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId))
                     .thenReturn(Optional.of(mockRequest));
             when(mockRequest.getStatus()).thenReturn(ReactivationRequestStatus.APPROVED);
             when(mockRequest.getId()).thenReturn(requestId);
@@ -432,34 +428,7 @@ public class UserActivationControllerTest {
             assertThat(view).isEqualTo("redirect:/admin/users/manage/" + profileId);
             assertThat(redirectAttributes.getFlashAttributes())
                     .extractingByKey("errorMessage")
-                    .isEqualTo("A delegate request is already in progress");
-        }
-
-        @Test
-        void get_WhenRequestStatusIsRejected_RedirectsToManageUsersWithFlashAttributes() {
-            String userId = "user-123";
-            UUID profileId = UUID.randomUUID();
-            UUID requestId = UUID.randomUUID();
-            MockHttpSession session = new MockHttpSession();
-            Model model = new ConcurrentModel();
-            RedirectAttributesModelMap redirectAttributes = new RedirectAttributesModelMap();
-
-            EntraUserDto mockUser = mock(EntraUserDto.class);
-            UserActivationRequest mockRequest = mock(UserActivationRequest.class);
-
-            when(userService.getEntraUserById(userId)).thenReturn(Optional.of(mockUser));
-            when(userReactivationActivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId))
-                    .thenReturn(Optional.of(mockRequest));
-            when(mockRequest.getStatus()).thenReturn(ReactivationRequestStatus.REJECTED);
-            when(mockRequest.getId()).thenReturn(requestId);
-
-            String view = userActivationController.trackDelegateReactivateUserRequestsGet(
-                    userId, session, model, "http://referer.com", profileId, redirectAttributes);
-
-            assertThat(view).isEqualTo("redirect:/admin/users/manage/" + profileId);
-            assertThat(redirectAttributes.getFlashAttributes())
-                    .extractingByKey("errorMessage")
-                    .isEqualTo("A delegate request is already in progress");
+                    .isEqualTo("There is no open delegate activation request");
         }
 
         @Test
@@ -473,7 +442,7 @@ public class UserActivationControllerTest {
             EntraUserDto mockUser = mock(EntraUserDto.class);
 
             when(userService.getEntraUserById(userId)).thenReturn(Optional.of(mockUser));
-            when(userReactivationActivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId))
+            when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId))
                     .thenReturn(Optional.empty());
 
             String view = userActivationController.trackDelegateReactivateUserRequestsGet(
@@ -482,11 +451,11 @@ public class UserActivationControllerTest {
             assertThat(view).isEqualTo("redirect:/admin/users/manage/" + profileId);
             assertThat(redirectAttributes.getFlashAttributes())
                     .extractingByKey("errorMessage")
-                    .isEqualTo("No delegate requests present");
+                    .isEqualTo("There is no open delegate activation request");
         }
 
         @Test
-        void get_WhenRequestInProgress_PopulatesModelAndReturnsTrackingView() {
+        void get_WhenRequestNotInProgress_PopulatesModelAndReturnsTrackingView() {
             String userId = "user-123";
             UUID profileId = UUID.randomUUID();
             UUID requestId = UUID.randomUUID();
@@ -496,31 +465,23 @@ public class UserActivationControllerTest {
             RedirectAttributesModelMap redirectAttributes = new RedirectAttributesModelMap();
 
             EntraUserDto mockUser = mock(EntraUserDto.class);
-            when(mockUser.getFullName()).thenReturn("Alex Smith");
 
             UserActivationRequest mockRequest = mock(UserActivationRequest.class);
-            when(mockRequest.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
-            when(mockRequest.getRequestId()).thenReturn(requestId);
+            when(mockRequest.getStatus()).thenReturn(ReactivationRequestStatus.APPROVED);
 
             List<UserActivationRequestSummaryDto> historyList = List.of(mock(UserActivationRequestSummaryDto.class));
 
             when(userService.getEntraUserById(userId)).thenReturn(Optional.of(mockUser));
-            when(userReactivationActivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId))
+            when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId))
                     .thenReturn(Optional.of(mockRequest));
-            when(userReactivationActivationRequestService.getLatestRequestHistoryForUserProfile(profileId))
-                    .thenReturn(historyList);
 
             String view = userActivationController.trackDelegateReactivateUserRequestsGet(
-                    userId, session, model, referer, profileId, redirectAttributes);
+                    userId, session, model, "http://referer.com", profileId, redirectAttributes);
 
-            assertThat(view).isEqualTo("delegate-reactivate-user-tracking");
-            assertThat(model.getAttribute("user")).isEqualTo(mockUser);
-            assertThat(model.getAttribute("profileId")).isEqualTo(profileId);
-            assertThat(model.getAttribute("referer")).isEqualTo(referer);
-            assertThat(model.getAttribute("requestId")).isEqualTo(requestId);
-            assertThat(model.getAttribute("reactivationRequests")).isEqualTo(historyList);
-            assertThat(model.getAttribute("delegateReactivateUserReasonForm")).isNotNull();
-            assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Delegate Reactivate User - Alex Smith");
+            assertThat(view).isEqualTo("redirect:/admin/users/manage/" + profileId);
+            assertThat(redirectAttributes.getFlashAttributes())
+                    .extractingByKey("errorMessage")
+                    .isEqualTo("There is no open delegate activation request");
         }
     }
 
@@ -553,7 +514,7 @@ public class UserActivationControllerTest {
                     .containsEntry("requestId", requestId.toString());
 
             verifyNoInteractions(loginService);
-            verify(userReactivationActivationRequestService, never())
+            verify(userReactivationRequestService, never())
                     .saveRequestState(any(), any(), any(), any(), any());
         }
 
@@ -581,7 +542,7 @@ public class UserActivationControllerTest {
             when(bindingResult.hasErrors()).thenReturn(false);
             when(loginService.getCurrentEntraUser(auth)).thenReturn(mockEntraUser);
             when(loginService.getCurrentUser(auth)).thenReturn(mockActor);
-            when(userReactivationActivationRequestService.calculateNextReactivationRequestStatus(profileId))
+            when(userReactivationRequestService.calculateNextReactivationRequestStatus(profileId))
                     .thenReturn(ReactivationRequestStatus.APPROVED);
 
             String view = userActivationController.trackDelegateReactivateUserRequestsPost(
@@ -593,7 +554,7 @@ public class UserActivationControllerTest {
                     .containsEntry("profileId", profileId.toString())
                     .containsEntry("requestId", requestId.toString());
 
-            verify(userReactivationActivationRequestService).saveRequestState(
+            verify(userReactivationRequestService).saveRequestState(
                     eq(requestId),
                     eq(profileId),
                     eq(ReactivationRequestStatus.APPROVED),

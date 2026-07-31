@@ -32,8 +32,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.forms.DelegateReactivateUserReasonForm;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
-import uk.gov.justice.laa.portal.landingpage.service.ReactivationRequestService;
-import uk.gov.justice.laa.portal.landingpage.service.UserReactivationActivationRequestService;
+import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
 import java.util.ArrayList;
@@ -51,8 +50,7 @@ import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFro
 public class UserActivationController {
     private final LoginService loginService;
     private final UserService userService;
-    private final UserReactivationActivationRequestService userReactivationActivationRequestService;
-    private final ReactivationRequestService reactivationRequestService;
+    private final UserReactivationRequestService userReactivationRequestService;
 
     @Value("${feature.flag.disable.user}")
     public boolean disableUserFeatureEnabled;
@@ -74,7 +72,7 @@ public class UserActivationController {
         clearSessionAttributes(session);
 
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
-        Optional<UserActivationRequest> request = userReactivationActivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId);
+        Optional<UserActivationRequest> request = userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId);
         if (request.isPresent()
                 && !(ReactivationRequestStatus.REJECTED.equals(request.get().getStatus())
                 || ReactivationRequestStatus.APPROVED.equals(request.get().getStatus()))) {
@@ -233,7 +231,7 @@ public class UserActivationController {
         EntraUser user = loginService.getCurrentEntraUser(authentication);
         CurrentUserDto actor = loginService.getCurrentUser(authentication);
 
-        UserActivationRequest userActivationRequest = userReactivationActivationRequestService
+        UserActivationRequest userActivationRequest = userReactivationRequestService
                 .createNewRequest(UUID.randomUUID(), profileId, delegateReactivateUserReasonForm.getReason(), user.getEntraOid());
         log.info("A delegate enable user request {} has been raised by {} for {}", userActivationRequest.getRequestId(), actor.getUserId(), id);
 
@@ -256,22 +254,19 @@ public class UserActivationController {
         }
 
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
-        Optional<UserActivationRequest> request = userReactivationActivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId);
-        if (request.isPresent()
-                &&  (ReactivationRequestStatus.REJECTED.equals(request.get().getStatus())
-                || ReactivationRequestStatus.APPROVED.equals(request.get().getStatus()))) {
-            redirectAttributes.addFlashAttribute("errorMessage", "A delegate request is already in progress");
+        Optional<UserActivationRequest> request = userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId);
+
+        if (request.isEmpty()) {
+            redirectAttributes.addFlashAttribute("errorMessage", "There is no open delegate activation request");
+            return "redirect:/admin/users/manage/" + profileId;
+        } else if (ReactivationRequestStatus.APPROVED.equals(request.get().getStatus())) {
+            redirectAttributes.addFlashAttribute("errorMessage", "There is no open delegate activation request");
             request.ifPresent(userActivationRequest -> redirectAttributes.addFlashAttribute("requestId", userActivationRequest.getId()));
             return "redirect:/admin/users/manage/" + profileId;
         }
 
-        if (request.isEmpty()) {
-            redirectAttributes.addFlashAttribute("errorMessage", "No delegate requests present");
-            return "redirect:/admin/users/manage/" + profileId;
-        }
-
         List<UserActivationRequestSummaryDto> latestRequestHistoryForUserProfile
-                = userReactivationActivationRequestService.getLatestRequestHistoryForUserProfile(profileId);
+                = userReactivationRequestService.getLatestRequestHistoryForUserProfile(profileId);
         DelegateReactivateUserReasonForm delegateReactivateUserReasonForm =
                 getObjectFromHttpSession(session, "delegateReactivateUserReasonForm", DelegateReactivateUserReasonForm.class)
                         .orElse(new DelegateReactivateUserReasonForm());
@@ -311,8 +306,8 @@ public class UserActivationController {
         EntraUser user = loginService.getCurrentEntraUser(authentication);
         CurrentUserDto actor = loginService.getCurrentUser(authentication);
 
-        ReactivationRequestStatus reactivationRequestStatus = userReactivationActivationRequestService.calculateNextReactivationRequestStatus(profileId);
-        userReactivationActivationRequestService.saveRequestState(requestId, profileId, reactivationRequestStatus, delegateReactivateUserReasonForm.getReason(), user.getEntraOid());
+        ReactivationRequestStatus reactivationRequestStatus = userReactivationRequestService.calculateNextReactivationRequestStatus(profileId);
+        userReactivationRequestService.saveRequestState(requestId, profileId, reactivationRequestStatus, delegateReactivateUserReasonForm.getReason(), user.getEntraOid());
         log.info("A delegate enable user request {} has been updated by {} for {}", requestId, actor.getUserId(), id);
 
         redirectAttributes.addAttribute("id", id);
@@ -344,7 +339,7 @@ public class UserActivationController {
             Model model,
             Authentication authentication) {
 
-        var pageMode = reactivationRequestService.getPageMode(authentication);
+        var pageMode = userReactivationRequestService.getPageMode(authentication);
 
         // For manage roles, stamp the default status into the URL once so the default is explicit and user-clearable.
         if (pageMode.isManageMode() && !defaultStatusApplied && (selectedRequestStatuses == null || selectedRequestStatuses.isEmpty())) {
@@ -375,7 +370,7 @@ public class UserActivationController {
                 ? new ArrayList<>()
                 : selectedUserTypes;
 
-        ReactivationRequestsPageData pageData = reactivationRequestService.getPage(
+        ReactivationRequestsPageData pageData = userReactivationRequestService.getPage(
                 authentication,
                 search,
                 statusFilters,

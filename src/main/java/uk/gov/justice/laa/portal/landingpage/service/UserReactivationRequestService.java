@@ -1,8 +1,32 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import jakarta.persistence.EntityNotFoundException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.ReactivationRequestsPageData;
+import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.model.PaginatedReactivationRequests;
+import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestListItem;
+import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestPageMode;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserActivationRequestRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -10,48 +34,134 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.springframework.security.core.Authentication;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import lombok.RequiredArgsConstructor;
-import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
-import uk.gov.justice.laa.portal.landingpage.dto.ReactivationRequestsPageData;
-import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
-import uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-import uk.gov.justice.laa.portal.landingpage.model.PaginatedReactivationRequests;
-import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestListItem;
-import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestPageMode;
-import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
-import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.UserActivationRequestRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
-
 @Service
-@RequiredArgsConstructor
-public class ReactivationRequestService {
-
+@Transactional
+@Slf4j
+public class UserReactivationRequestService {
     private static final int DEFAULT_PAGE_SIZE = 10;
     private static final String UNKNOWN_USER_NAME = "Unknown user";
 
     private final LoginService loginService;
+    private final UserService userService;
     private final FirmService firmService;
     private final UserActivationRequestRepository userActivationRequestRepository;
     private final UserProfileRepository userProfileRepository;
     private final EntraUserRepository entraUserRepository;
+    private final ReactivationTypeResolver roleTypeResolver;
+
+    public UserReactivationRequestService(LoginService loginService,
+                                          UserService userService,
+                                          FirmService firmService,
+                                          UserActivationRequestRepository userActivationRequestRepository,
+                                          UserProfileRepository userRepository,
+                                          EntraUserRepository entraUserRepository,
+                                          ReactivationTypeResolver roleTypeResolver) {
+        this.loginService = loginService;
+        this.userService = userService;
+        this.firmService = firmService;
+        this.userActivationRequestRepository = userActivationRequestRepository;
+        this.userProfileRepository = userRepository;
+        this.entraUserRepository = entraUserRepository;
+        this.roleTypeResolver = roleTypeResolver;
+    }
+
+    public Optional<UserActivationRequest> findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(UUID profileId) {
+        return userActivationRequestRepository.findFirstByUserProfileIdOrderByVersionDesc(profileId);
+    }
+
+    public UserActivationRequest createNewRequest(UUID requestId, UUID profileId, String reason, String actorEntraOid) {
+        Optional<UserActivationRequest> request = userActivationRequestRepository.findFirstByUserProfileIdOrderByVersionDesc(profileId);
+
+        if (request.isPresent() && !(ReactivationRequestStatus.REJECTED.equals(request.get().getStatus()) || ReactivationRequestStatus.APPROVED.equals(request.get().getStatus()))) {
+            log.error("Request already being processed for user {}", profileId);
+            throw new IllegalStateException("Request already being processed for user " + profileId);
+        }
+
+        UserActivationRequest newRecord = new UserActivationRequest();
+        newRecord.setRequestId(requestId);
+        newRecord.setUserProfileId(profileId);
+        newRecord.setStatus(ReactivationRequestStatus.IN_REVIEW);
+        newRecord.setComments(reason);
+        newRecord.setActorEntraOid(actorEntraOid);
+        newRecord.setCreatedAt(Instant.now());
+        newRecord.setActorRoleType(ReactivationRoleType.PROVIDER_ADMIN);
+
+        userActivationRequestRepository.save(newRecord);
+
+        return newRecord;
+    }
+
+    public UserActivationRequest saveRequestState(UUID requestId, UUID userId, ReactivationRequestStatus status, String comments, String actorEntraOid) {
+
+        if (!userProfileRepository.existsById(userId)) {
+            throw new EntityNotFoundException("Target user not found with ID: " + userId);
+        }
+
+        int nextVersion = 1;
+        UUID activeRequestId = (requestId != null) ? requestId : UUID.randomUUID();
+
+        if (requestId != null) {
+            Optional<UserActivationRequest> firstByRequestIdOrderByVersionDesc = userActivationRequestRepository.findFirstByRequestIdOrderByVersionDesc(requestId);
+            if (firstByRequestIdOrderByVersionDesc.isPresent()) {
+                UserActivationRequest existingRecord = firstByRequestIdOrderByVersionDesc.get();
+                if (ReactivationRequestStatus.APPROVED.equals(existingRecord.getStatus()) || ReactivationRequestStatus.REJECTED.equals(existingRecord.getStatus())) {
+                    log.error("Reactivation request already processed for user {}. Request ID: {}", userId, requestId);
+                    throw new IllegalStateException(String.format("Request already processed for user %s. Request ID: %s", userId, requestId));
+                }
+                nextVersion = firstByRequestIdOrderByVersionDesc.get().getVersion() + 1;
+            }
+        }
+
+        EntraUser entraUser = entraUserRepository.findByEntraOid(actorEntraOid).orElseThrow();
+        ReactivationRoleType roleType = roleTypeResolver.resolve(entraUser);
+
+        UserActivationRequest newRecord = new UserActivationRequest();
+        newRecord.setRequestId(activeRequestId);
+        newRecord.setUserProfileId(userId);
+        newRecord.setVersion(nextVersion);
+        newRecord.setStatus(status);
+        newRecord.setComments(comments);
+        newRecord.setActorEntraOid(actorEntraOid);
+        newRecord.setActorRoleType(roleType);
+        newRecord.setCreatedAt(Instant.now());
+
+        return userActivationRequestRepository.save(newRecord);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserActivationRequestSummaryDto> getLatestRequestHistoryForUserProfile(UUID userProfileId) {
+        log.debug("Fetching latest activation request history for user profile ID: {}", userProfileId);
+
+        UserActivationRequest latestRequest = userActivationRequestRepository.findTopByUserProfileIdOrderByCreatedAtDescVersionDesc(userProfileId);
+
+        List<UserActivationRequestSummaryDto> history = userActivationRequestRepository.findRequestHistoryByRequestId(latestRequest.getRequestId());
+
+        if (history.isEmpty()) {
+            log.info("No activation request history found for user profile ID: {}", userProfileId);
+            return Collections.emptyList();
+        }
+
+        return history;
+    }
+
+    public ReactivationRequestStatus calculateNextReactivationRequestStatus(UUID profileId) {
+        List<AppRoleDto> userAppRolesByUserId = userService.getUserAppRolesByUserId(profileId.toString());
+        List<String> userRoles = userAppRolesByUserId.stream().map(AppRoleDto::getName).toList();
+        ReactivationRoleType roleType = roleTypeResolver.resolveFromRoles(userRoles);
+
+        return roleType == ReactivationRoleType.PROVIDER_ADMIN ? ReactivationRequestStatus.IN_REVIEW : ReactivationRequestStatus.INFORMATION_REQUIRED;
+    }
 
     @Transactional(readOnly = true)
     public ReactivationRequestsPageData getPage(
             Authentication authentication,
             String search,
-            List<ReactivationRequestStatus> selectedStatuses,
+            List<uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus> selectedStatuses,
             List<AuthzRoleType> selectedActorRoleTypes,
             int page,
             int size,
@@ -60,12 +170,12 @@ public class ReactivationRequestService {
 
         EntraUser currentUser = loginService.getCurrentEntraUser(authentication);
         ReactivationRequestPageMode pageMode = resolvePageMode(currentUser);
-        List<ReactivationRequestStatus> effectiveStatuses = selectedStatuses == null
-            ? List.of()
-            : List.copyOf(selectedStatuses);
+        List<uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus> effectiveStatuses = selectedStatuses == null
+                ? List.of()
+                : List.copyOf(selectedStatuses);
         List<AuthzRoleType> effectiveActorRoleTypes = selectedActorRoleTypes == null
-            ? List.of()
-            : List.copyOf(selectedActorRoleTypes);
+                ? List.of()
+                : List.copyOf(selectedActorRoleTypes);
 
         List<ReactivationRequestListItem> requests = filterAndSortRequests(
                 buildRequests(currentUser, pageMode),
@@ -156,7 +266,7 @@ public class ReactivationRequestService {
     }
 
     private ReactivationRequestListItem toListItem(UserActivationRequest request, UserProfile profile, EntraUser actor,
-            Instant submittedAt) {
+                                                   Instant submittedAt) {
         UUID firmId = profile != null && profile.getFirm() != null ? profile.getFirm().getId() : null;
         String actorName = actor != null
                 ? (nullToEmpty(actor.getFirstName()) + " " + nullToEmpty(actor.getLastName())).trim()
@@ -168,7 +278,7 @@ public class ReactivationRequestService {
                 : UNKNOWN_USER_NAME;
         String userEmail = targetUser != null ? targetUser.getEmail() : null;
         String actorRoleType = request.getActorRoleType() != null ? request.getActorRoleType().getDisplayName() : null;
-        ReactivationRequestStatus status = ReactivationRequestStatus.valueOf(request.getStatus().name());
+        uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus status = uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus.valueOf(request.getStatus().name());
         // dateSubmitted reflects when the request was originally raised (version 1),
         // while lastActivity reflects the most recent version's timestamp (this row).
         Instant originalSubmission = submittedAt != null ? submittedAt : request.getCreatedAt();
@@ -204,12 +314,12 @@ public class ReactivationRequestService {
     private List<ReactivationRequestListItem> filterAndSortRequests(
             List<ReactivationRequestListItem> requests,
             String search,
-            List<ReactivationRequestStatus> selectedStatuses,
+            List<uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus> selectedStatuses,
             List<AuthzRoleType> selectedActorRoleTypes,
             String sort,
             String direction) {
 
-        Set<ReactivationRequestStatus> statusFilter = selectedStatuses == null
+        Set<uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus> statusFilter = selectedStatuses == null
                 ? Set.of()
                 : new HashSet<>(selectedStatuses);
         Set<String> actorRoleTypeLabelFilter = selectedActorRoleTypes == null || selectedActorRoleTypes.isEmpty()
