@@ -9,11 +9,13 @@ import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.ColumnDefault;
 import org.springframework.data.annotation.CreatedDate;
 
 import java.time.Instant;
@@ -43,7 +45,9 @@ public class UserActivationRequest extends BaseEntity {
     private UUID userProfileId;
 
     @Column(name = "version", nullable = false)
-    private Integer version;
+    @ColumnDefault("1")
+    @Builder.Default
+    private Integer version = 1;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 255)
@@ -62,7 +66,7 @@ public class UserActivationRequest extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "actor_role_type", nullable = false, length = 255)
     @NotNull(message = "Actor role type must be provided")
-    private AuthzRoleType actorRoleType;
+    private ReactivationRoleType actorRoleType;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @CreatedDate

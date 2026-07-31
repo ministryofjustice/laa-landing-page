@@ -122,6 +122,7 @@ import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
+import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
@@ -167,6 +168,8 @@ class UserControllerTest {
     private UserAccountStatusService disableUserService;
     @Mock
     private NotificationService notificationService;
+    @Mock
+    private UserReactivationRequestService userReactivationRequestService;
     private Model model;
     private FirmSearchForm firmSearchForm;
 
@@ -174,7 +177,7 @@ class UserControllerTest {
     void setUp() {
         userController = new UserController(loginService, userService, officeService, eventService, firmService,
                 new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService,
-                appRoleService, appService, disableUserService, notificationService);
+                appRoleService, appService, disableUserService, notificationService, userReactivationRequestService);
         userController.disableUserFeatureEnabled = true;
         lenient().when(accessControlService.getEnablementFlags(any()))
                 .thenReturn(new AccessControlService.EnablementFlags(false, false, false));
@@ -454,7 +457,7 @@ class UserControllerTest {
     }
 
     @Test
-    void testDisplayAllUsersSearchesUsersWithSortWhenSearchTermIsGiven() {
+    void testDisplayAllUsersSearchesUsersWithSortWhenSearchTermIswhen() {
         // Arrange
         PaginatedUsers mockPaginatedUsers = new PaginatedUsers();
         mockPaginatedUsers.setUsers(new ArrayList<>());
@@ -589,7 +592,7 @@ class UserControllerTest {
                 .offices(Set.of())
                 .userType(UserType.INTERNAL)
                 .build();
-        String userId = "user42";
+        String userId = UUID.randomUUID().toString();
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setId(userId);
         entraUser.setFullName("Managed User");
@@ -636,7 +639,7 @@ class UserControllerTest {
                 .offices(Set.of())
                 .userType(UserType.EXTERNAL)
                 .build();
-        String userId = "user42";
+        String userId = UUID.randomUUID().toString();
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setId(userId);
         entraUser.setFullName("External User Admin");
@@ -676,7 +679,7 @@ class UserControllerTest {
     @Test
     void manageUser_shouldAddActiveFiltersToModelWhenFiltersArePresent() {
         // Arrange
-        String userId = "user42";
+        String userId = UUID.randomUUID().toString();
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setId(userId);
         entraUser.setFullName("Managed User");
@@ -972,7 +975,7 @@ class UserControllerTest {
                 .userType(UserType.INTERNAL)
                 .build();
         // Arrange
-        String userId = "user52";
+        String userId = UUID.randomUUID().toString();
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setId(userId);
         entraUser.setFullName("Managed User");
@@ -1024,7 +1027,7 @@ class UserControllerTest {
                 .userType(UserType.INTERNAL)
                 .build();
         // Arrange
-        String userId = "user52";
+        String userId = UUID.randomUUID().toString();
         EntraUserDto entraUser = new EntraUserDto();
         entraUser.setId(userId);
         entraUser.setFullName("Managed User");
@@ -3449,8 +3452,9 @@ class UserControllerTest {
                 .userType(UserType.INTERNAL)
                 .build();
 
+        String userId = UUID.randomUUID().toString();
         EntraUserDto entraUser = new EntraUserDto();
-        entraUser.setId("id1");
+        entraUser.setId(userId);
         AppRoleDto appRoleDto = AppRoleDto.builder().app(AppDto.builder().enabled(true).build()).build();
         UserProfileDto userProfile = UserProfileDto.builder()
                 .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
@@ -3465,11 +3469,11 @@ class UserControllerTest {
                 .silasStatus(UserProfileSilasStatus.COMPLETE)
                 .build();
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
-        when(userService.getUserProfileById("id1")).thenReturn(Optional.of(userProfile));
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
         when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class)))
                 .thenReturn(UserProfileSilasStatus.COMPLETE);
 
-        String view = userController.manageUser("id1", model, session, authentication);
+        String view = userController.manageUser(userId, model, session, authentication);
 
         assertThat(view).isEqualTo("manage-user");
         assertThat(model.getAttribute("user")).isEqualTo(userProfile);
@@ -3496,8 +3500,9 @@ class UserControllerTest {
                 .userType(UserType.INTERNAL)
                 .build();
         // Given - Internal user
+        String userId = UUID.randomUUID().toString();
         EntraUserDto entraUser = new EntraUserDto();
-        entraUser.setId("internal-user-id");
+        entraUser.setId(userId);
         UserProfileDto userProfile = UserProfileDto.builder()
                 .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
                 .entraUser(entraUser)
@@ -3507,13 +3512,13 @@ class UserControllerTest {
                 .build();
 
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
-        when(userService.getUserProfileById("internal-user-id")).thenReturn(Optional.of(userProfile));
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class)))
                 .thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
-        String view = userController.manageUser("internal-user-id", model, session, authentication);
+        String view = userController.manageUser(userId, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -3532,8 +3537,9 @@ class UserControllerTest {
                 .userType(UserType.INTERNAL)
                 .build();
         // Given - External user without required permissions
+        String userId = UUID.randomUUID().toString();
         EntraUserDto entraUser = new EntraUserDto();
-        entraUser.setId("external-user-id");
+        entraUser.setId(userId);
         UserProfileDto userProfile = UserProfileDto.builder()
                 .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
                 .entraUser(entraUser)
@@ -3543,7 +3549,7 @@ class UserControllerTest {
                 .build();
 
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
-        when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(userProfile));
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         // No edit permission
         when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(false);
@@ -3555,7 +3561,7 @@ class UserControllerTest {
                 .thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
-        String view = userController.manageUser("external-user-id", model, session, authentication);
+        String view = userController.manageUser(userId, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -3577,8 +3583,9 @@ class UserControllerTest {
                 .build();
 
         // Given - External user
+        String userId = UUID.randomUUID().toString();
         EntraUserDto entraUser = new EntraUserDto();
-        entraUser.setId("external-user-id");
+        entraUser.setId(userId);
         UserProfileDto userProfile = UserProfileDto.builder()
                 .id(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
                 .entraUser(entraUser)
@@ -3593,7 +3600,7 @@ class UserControllerTest {
                 .build();
 
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
-        when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(userProfile));
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER)).thenReturn(true);
@@ -3603,7 +3610,7 @@ class UserControllerTest {
                 .thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
-        String view = userController.manageUser("external-user-id", model, session, authentication);
+        String view = userController.manageUser(userId, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -3637,15 +3644,16 @@ class UserControllerTest {
                 .userType(UserType.INTERNAL)
                 .build();
 
+        String userId = UUID.randomUUID().toString();
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
-        when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(userProfile));
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(userProfile));
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(accessControlService.canEditUser("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(userService.calculateSilasStatusForUserProfile(any(UserProfileDto.class)))
                 .thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
-        String view = userController.manageUser("external-user-id", model, session, authentication);
+        String view = userController.manageUser(userId, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -3682,8 +3690,9 @@ class UserControllerTest {
         UUID entraUserId = UUID.fromString("550e8400-e29b-41d4-a716-446655440001");
         entraUser.setId(entraUserId.toString());
 
+        String userId = UUID.randomUUID().toString();
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
-        when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(mockUser));
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
         when(userService.isInternal(entraUserId.toString())).thenReturn(false);
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(userService.getProfileCountByEntraUserId(entraUserId)).thenReturn(2L);
@@ -3694,7 +3703,7 @@ class UserControllerTest {
                 .thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
-        String view = userController.manageUser("external-user-id", model, session, authentication);
+        String view = userController.manageUser(userId, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -3705,8 +3714,9 @@ class UserControllerTest {
     @Test
     void manageUser_shouldSetCanViewAllFirmsOfMultiFirmUserToFalse_whenUserLacksPermission() {
         // Given
+        String userId = UUID.randomUUID().toString();
         EntraUserDto entraUser = new EntraUserDto();
-        entraUser.setId("external-user-id");
+        entraUser.setId(userId);
         entraUser.setFullName("Managed User");
         entraUser.setMultiFirmUser(true);
 
@@ -3734,7 +3744,7 @@ class UserControllerTest {
         entraUser.setId(entraUserId.toString());
 
         when(loginService.getCurrentProfile(authentication)).thenReturn(editorUserProfile);
-        when(userService.getUserProfileById("external-user-id")).thenReturn(Optional.of(mockUser));
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(mockUser));
         when(userService.isInternal(entraUserId.toString())).thenReturn(false);
         when(userService.isAccessGranted("550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
         when(userService.getProfileCountByEntraUserId(entraUserId)).thenReturn(2L);
@@ -3745,7 +3755,7 @@ class UserControllerTest {
                 .thenReturn(UserProfileSilasStatus.COMPLETE);
 
         // When
-        String view = userController.manageUser("external-user-id", model, session, authentication);
+        String view = userController.manageUser(userId, model, session, authentication);
 
         // Then
         assertThat(view).isEqualTo("manage-user");
@@ -4330,7 +4340,7 @@ class UserControllerTest {
                 .userType(UserType.INTERNAL)
                 .build();
         // Given
-        String userId = "user123";
+        String userId = UUID.randomUUID().toString();
         EntraUserDto user = new EntraUserDto();
         user.setId(userId);
 
@@ -4364,7 +4374,7 @@ class UserControllerTest {
     void manageUser_shouldHandleNullAppRolesAndOffices() {
         // Given - simulates a newly created multi-firm user without initial profile
         // data
-        String userId = "user123";
+        String userId = UUID.randomUUID().toString();
         EntraUserDto user = new EntraUserDto();
         user.setId(userId);
         user.setFirstName("Test");
@@ -8531,4 +8541,5 @@ class UserControllerTest {
             assertThat(view).isEqualTo("redirect:/admin/users");
         }
     }
+
 }

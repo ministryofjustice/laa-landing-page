@@ -20,6 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestListItem;
@@ -35,7 +36,7 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
         request.setStatus(uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus.IN_REVIEW);
         request.setComments("Integration test reactivation request");
         request.setActorEntraOid(UUID.randomUUID().toString());
-        request.setActorRoleType(AuthzRoleType.PROVIDER_ADMIN);
+        request.setActorRoleType(ReactivationRoleType.PROVIDER_ADMIN);
         request.setCreatedAt(Instant.now());
         return userActivationRequestRepository.saveAndFlush(request);
     }
@@ -195,7 +196,7 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
         v1.setStatus(uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus.IN_REVIEW);
         v1.setComments("Original submission");
         v1.setActorEntraOid(UUID.randomUUID().toString());
-        v1.setActorRoleType(AuthzRoleType.PROVIDER_ADMIN);
+        v1.setActorRoleType(ReactivationRoleType.PROVIDER_ADMIN);
         v1.setCreatedAt(originalSubmittedAt);
         userActivationRequestRepository.saveAndFlush(v1);
 
@@ -207,7 +208,7 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
         v2.setStatus(uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus.INFORMATION_REQUIRED);
         v2.setComments("Follow up on original submission");
         v2.setActorEntraOid(UUID.randomUUID().toString());
-        v2.setActorRoleType(AuthzRoleType.PROVIDER_ADMIN);
+        v2.setActorRoleType(ReactivationRoleType.PROVIDER_ADMIN);
         v2.setCreatedAt(latestActivityAt);
         userActivationRequestRepository.saveAndFlush(v2);
 
@@ -245,7 +246,7 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
         laaActorRequest.setStatus(uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus.IN_REVIEW);
         laaActorRequest.setComments("Raised by an LAA actor");
         laaActorRequest.setActorEntraOid(UUID.randomUUID().toString());
-        laaActorRequest.setActorRoleType(AuthzRoleType.LAA);
+        laaActorRequest.setActorRoleType(ReactivationRoleType.LAA);
         laaActorRequest.setCreatedAt(Instant.now());
         userActivationRequestRepository.saveAndFlush(laaActorRequest);
 

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 
 import java.util.List;
@@ -53,5 +54,32 @@ public interface UserActivationRequestRepository extends JpaRepository<UserActiv
                 FROM UserActivationRequest r
             """)
     Page<UserActivationRequest> findAllLatestRequests(Pageable pageable);
+
+    UserActivationRequest findTopByUserProfileIdOrderByCreatedAtDescVersionDesc(UUID profileId);
+
+    @Query("""
+            SELECT new uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto(
+                u.id,
+                u.requestId,
+                u.userProfileId,
+                u.version,
+                u.status,
+                u.comments,
+                u.actorEntraOid,
+                u.actorRoleType,
+                u.createdAt,
+                CONCAT(
+                    COALESCE(e.firstName, 'Unknown'),
+                    ' ',
+                    COALESCE(e.lastName, 'User')
+                )
+            )
+            FROM UserActivationRequest u,
+                 EntraUser e
+            WHERE e.entraOid = u.actorEntraOid
+              AND u.requestId = :requestId
+            ORDER BY u.version ASC
+            """)
+    List<UserActivationRequestSummaryDto> findRequestHistoryByRequestId(@Param("requestId") UUID requestId);
 
 }
