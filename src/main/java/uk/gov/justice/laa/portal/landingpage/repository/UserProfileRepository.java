@@ -273,6 +273,7 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
     @Query("""
             SELECT ups FROM UserProfile ups
                         LEFT JOIN FETCH ups.firm
+                        LEFT JOIN FETCH ups.entraUser
             WHERE ups.id IN :ids
             """)
     List<UserProfile> findAllByIdInWithFirm(@Param("ids") Collection<UUID> ids);

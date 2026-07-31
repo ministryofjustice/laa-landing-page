@@ -15,6 +15,8 @@ public record ReactivationRequestListItem(
         String actorRoleType,
         String actorName,
         String actorEmail,
+        String userName,
+        String userEmail,
         LocalDate dateSubmitted,
         LocalDate lastActivity,
         UUID firmId

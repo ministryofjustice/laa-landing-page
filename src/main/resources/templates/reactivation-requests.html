@@ -160,10 +160,10 @@
                     <td class="govuk-table__cell">
                         <a class="govuk-link" th:if="${request.userProfileId() != null}"
                            th:href="@{/admin/users/manage/{id}(id=${request.userProfileId()})}"
-                           th:text="${request.actorName()}"></a>
-                        <span th:if="${request.userProfileId() == null}" th:text="${request.actorName()}"></span>
+                           th:text="${request.userName()}"></a>
+                        <span th:if="${request.userProfileId() == null}" th:text="${request.userName()}"></span>
                     </td>
-                    <td class="govuk-table__cell" th:text="${request.actorEmail()}"></td>
+                    <td class="govuk-table__cell" th:text="${request.userEmail()}"></td>
                     <td class="govuk-table__cell" th:text="${#temporals.format(request.dateSubmitted(), 'd MMMM yyyy')}"></td>
                     <td class="govuk-table__cell" th:text="${#temporals.format(request.lastActivity(), 'd MMMM yyyy')}"></td>
                     <td class="govuk-table__cell" th:text="${request.actorRoleType()}"></td>

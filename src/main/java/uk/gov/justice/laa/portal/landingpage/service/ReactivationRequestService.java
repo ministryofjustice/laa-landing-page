@@ -162,6 +162,11 @@ public class ReactivationRequestService {
                 ? (nullToEmpty(actor.getFirstName()) + " " + nullToEmpty(actor.getLastName())).trim()
                 : UNKNOWN_USER_NAME;
         String actorEmail = actor != null ? actor.getEmail() : null;
+        EntraUser targetUser = profile != null ? profile.getEntraUser() : null;
+        String userName = targetUser != null
+                ? (nullToEmpty(targetUser.getFirstName()) + " " + nullToEmpty(targetUser.getLastName())).trim()
+                : UNKNOWN_USER_NAME;
+        String userEmail = targetUser != null ? targetUser.getEmail() : null;
         String actorRoleType = request.getActorRoleType() != null ? request.getActorRoleType().getLabel() : null;
         ReactivationRequestStatus status = ReactivationRequestStatus.valueOf(request.getStatus().name());
         // dateSubmitted reflects when the request was originally raised (version 1),
@@ -185,6 +190,8 @@ public class ReactivationRequestService {
                 actorRoleType,
                 actorName.isBlank() ? UNKNOWN_USER_NAME : actorName,
                 actorEmail,
+                userName.isBlank() ? UNKNOWN_USER_NAME : userName,
+                userEmail,
                 dateSubmitted,
                 lastActivity,
                 firmId);
@@ -225,6 +232,8 @@ public class ReactivationRequestService {
     private boolean matchesSearch(ReactivationRequestListItem item, String search) {
         return containsIgnoreCase(item.requestId(), search)
                 || containsIgnoreCase(item.userProfileId(), search)
+                || containsIgnoreCase(item.userName(), search)
+                || containsIgnoreCase(item.userEmail(), search)
                 || containsIgnoreCase(item.actorName(), search)
                 || containsIgnoreCase(item.actorEntraOid(), search)
                 || containsIgnoreCase(item.comments(), search);
@@ -270,6 +279,8 @@ public class ReactivationRequestService {
             case "actorName" -> Comparator.comparing(ReactivationRequestListItem::actorName, String.CASE_INSENSITIVE_ORDER);
             case "actorRoleType" -> Comparator.comparing(ReactivationRequestListItem::actorRoleType,
                     Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+            case "lastActivity" -> Comparator.comparing(ReactivationRequestListItem::lastActivity,
+                    Comparator.nullsLast(LocalDate::compareTo));
             default -> Comparator.comparing(ReactivationRequestListItem::dateSubmitted,
                     Comparator.nullsLast(LocalDate::compareTo));
         };
