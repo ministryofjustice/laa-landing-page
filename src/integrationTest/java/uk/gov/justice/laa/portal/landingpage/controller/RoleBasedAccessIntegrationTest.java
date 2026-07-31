@@ -26,6 +26,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserActivationRequestRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
 public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest {
@@ -53,6 +54,10 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
     protected OfficeRepository officeRepository;
+
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
+    protected UserActivationRequestRepository userActivationRequestRepository;
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
@@ -115,7 +120,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
             officeRepository.save(firm2Office2);
             testFirm2.setOffices(new java.util.HashSet<>(Set.of(firm2Office1, firm2Office2)));
             testFirm2 = firmRepository.save(testFirm2);
-            
+
             firmRepository.flush();
             entityManager.createNativeQuery("SET session_replication_role = DEFAULT").executeUpdate();
             transactionManager.commit(txStatus);
@@ -377,12 +382,13 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         try {
             // Temporarily disable constraint triggers during cleanup
             entityManager.createNativeQuery("SET session_replication_role = replica").executeUpdate();
-            
+
+            userActivationRequestRepository.deleteAllInBatch();
             userProfileRepository.deleteAllInBatch();
             entraUserRepository.deleteAllInBatch();
             firmRepository.deleteAllInBatch();
             officeRepository.deleteAllInBatch();
-            
+
             entityManager.createNativeQuery("SET session_replication_role = DEFAULT").executeUpdate();
             transactionManager.commit(txStatus);
         } catch (Exception e) {

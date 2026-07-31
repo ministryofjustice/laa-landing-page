@@ -41,6 +41,8 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID>, Ent
 
     Optional<EntraUser> findByEmailIgnoreCase(String email);
 
+    List<EntraUser> findByEntraOidIn(Set<String> entraOids);
+
     /**
      * Batch fetch user profiles with firms and roles for given users
      */

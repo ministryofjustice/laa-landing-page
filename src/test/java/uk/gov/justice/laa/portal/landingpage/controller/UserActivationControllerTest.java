@@ -24,6 +24,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.forms.DelegateReactivateUserReasonForm;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
+import uk.gov.justice.laa.portal.landingpage.service.ReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserReactivationActivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
@@ -51,6 +52,8 @@ public class UserActivationControllerTest {
     @Mock
     private UserReactivationActivationRequestService userReactivationActivationRequestService;
     @Mock
+    private ReactivationRequestService reactivationRequestService;
+    @Mock
     private HttpSession session;
     @Mock
     private Authentication authentication;
@@ -64,7 +67,7 @@ public class UserActivationControllerTest {
 
     @BeforeEach
     void setUp() {
-        userActivationController = new UserActivationController(loginService, userService, userReactivationActivationRequestService);
+        userActivationController = new UserActivationController(loginService, userService, userReactivationActivationRequestService, reactivationRequestService);
         userActivationController.disableUserFeatureEnabled = true;
         model = new ExtendedModelMap();
     }
