@@ -1247,7 +1247,7 @@ class UserControllerTest {
         // Add list appender to logger to verify logs
         ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserController.class);
         String redirectUrl = userController.addUserCheckAnswers(session, authentication, model);
-        assertThat(redirectUrl).isEqualTo("redirect:/admin/user/create/confirmation");
+        assertThat(redirectUrl).isEqualTo("redirect:/admin/users");
         assertThat(model.getAttribute("roles")).isNull();
         assertThat(model.getAttribute("apps")).isNull();
         assertThat(session.getAttribute("userProfile")).isNull();
