@@ -8,6 +8,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -19,7 +20,8 @@ public class EntraUserRepositoryCustomAuditSearchImpl implements EntraUserReposi
 
     public Page<Object[]> findAuditUsersWithDynamicProjection(String sortType, String searchTerm, UUID firmId, String silasRole,
                                                               UUID appId, String userType, Boolean multiFirm, Boolean inactiveSinceDateFlag,
-                                                              Boolean neverActivated, Pageable pageable) {
+                                                              Boolean neverActivated, LocalDate createdFrom, LocalDate createdTo,
+                                                              String silasStatuses, Pageable pageable) {
 
         // 1. Build the Dynamic Projection (SELECT) and GROUP BY segments
         String selectBlock;
@@ -89,8 +91,8 @@ public class EntraUserRepositoryCustomAuditSearchImpl implements EntraUserReposi
         Query countQuery = entityManager.createNativeQuery(countQueryStr.toString());
 
         // 5. Apply parameter bindings uniformly to both queries
-        bindParameters(dataQuery, searchTerm, firmId, silasRole, appId, userType, multiFirm, inactiveSinceDateFlag, neverActivated);
-        bindParameters(countQuery, searchTerm, firmId, silasRole, appId, userType, multiFirm, inactiveSinceDateFlag, neverActivated);
+        bindParameters(dataQuery, searchTerm, firmId, silasRole, appId, userType, multiFirm, inactiveSinceDateFlag, neverActivated, createdFrom, createdTo, silasStatuses);
+        bindParameters(countQuery, searchTerm, firmId, silasRole, appId, userType, multiFirm, inactiveSinceDateFlag, neverActivated, createdFrom, createdTo, silasStatuses);
 
         // 6. Execute Count Query
         long totalCount = ((Number) countQuery.getSingleResult()).longValue();
@@ -218,13 +220,26 @@ public class EntraUserRepositoryCustomAuditSearchImpl implements EntraUserReposi
                 .append("            ) ")
                 .append("        ) ")
                 .append("   ) ");
+
+        sb.append("   AND (CAST(:createdFrom AS date) IS NULL ")
+                .append("       OR DATE(u.created_date) >= CAST(:createdFrom AS date)) ")
+                .append("   AND (CAST(:createdTo AS date) IS NULL ")
+                .append("       OR DATE(u.created_date) <= CAST(:createdTo AS date)) ")
+                .append("   AND (CAST(:silasStatuses AS varchar) IS NULL ")
+                .append("       OR CAST(:silasStatuses AS varchar) = '' ")
+                .append("       OR EXISTS ( ")
+                .append("           SELECT 1 FROM user_profile up_s ")
+                .append("           WHERE up_s.entra_user_id = u.id ")
+                .append("           AND up_s.silas_status = ANY(string_to_array(CAST(:silasStatuses AS varchar), ',')) ")
+                .append("       )) ");
     }
 
     /**
      * Binds parameters to a native query safely, handling UUID conversion conversions.
      */
     private void bindParameters(Query query, String searchTerm, UUID firmId, String silasRole, UUID appId,
-                                String userType, Boolean multiFirm, Boolean inactiveSinceDateFlag, Boolean neverActivated) {
+                                String userType, Boolean multiFirm, Boolean inactiveSinceDateFlag, Boolean neverActivated,
+                                LocalDate createdFrom, LocalDate createdTo, String silasStatuses) {
         query.setParameter("searchTerm", searchTerm);
         query.setParameter("firmId", firmId != null ? firmId.toString() : null);
         query.setParameter("silasRole", silasRole);
@@ -233,5 +248,8 @@ public class EntraUserRepositoryCustomAuditSearchImpl implements EntraUserReposi
         query.setParameter("multiFirm", multiFirm);
         query.setParameter("inactiveSinceDateFlag", inactiveSinceDateFlag);
         query.setParameter("neverActivated", neverActivated);
+        query.setParameter("createdFrom", createdFrom != null ? createdFrom.toString() : null);
+        query.setParameter("createdTo", createdTo != null ? createdTo.toString() : null);
+        query.setParameter("silasStatuses", silasStatuses);
     }
 }
