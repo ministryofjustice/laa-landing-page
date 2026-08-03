@@ -874,27 +874,68 @@ public class ManageUsersTest extends BaseFrontEndTest {
         final String userName = "Playwright FirmTwoUserViewer";
         final String service = "Manage your users";
 
-        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+
+        // Search for and open the complete user
+        manageUsersPage.searchForUser(userName);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(userName),
+                userName + " should appear in the search results"
+        );
 
         manageUsersPage.clickExternalUserLink(userName);
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
         manageUsersPage.assertStatusVisible("COMPLETE");
+
+        // Remove the user's Manage your users service
         manageUsersPage.clickServicesTab();
         manageUsersPage.clickChangeLink();
 
         Locator serviceCheckbox = page.getByLabel(service);
+
+        assertTrue(
+                serviceCheckbox.isChecked(),
+                service + " should be selected before removal"
+        );
+
         serviceCheckbox.uncheck();
-        assertFalse(serviceCheckbox.isChecked(), service + " checkbox should be unchecked after removal");
+
+        assertFalse(
+                serviceCheckbox.isChecked(),
+                service + " checkbox should be unchecked after removal"
+        );
 
         manageUsersPage.clickContinueUserDetails();
         manageUsersPage.clickConfirmButton();
 
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-        assertTrue(page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible());
 
-        loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+        assertThat(
+                page.locator(".govuk-panel__title")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("Access and permissions updated"))
+        ).isVisible();
+
+        // Return to Manage Users as the External User Manager
+        manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+
+        // Search again because the results page is not guaranteed
+        // to display the user without a search
+        manageUsersPage.searchForUser(userName);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(userName),
+                userName + " should still appear after all roles are removed"
+        );
+
         manageUsersPage.clickExternalUserLink(userName);
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Verify the status has changed
         manageUsersPage.assertStatusVisible("NO ROLES ASSIGNED");
     }
 
@@ -1195,6 +1236,66 @@ public class ManageUsersTest extends BaseFrontEndTest {
 
         // Verify the account can still log in but has no active firm access
         manageUsersPage.verifyAwaitingFirmAccessMessage();
+    }
+
+    @Test
+    @DisplayName("Filter Manage Users to display multi-firm users only")
+    void filterManageUsersByThirdPartyUsers() {
+        final String firmCode = "90001";
+
+        final List<String> services = List.of(
+                "Test LAA App Four"
+        );
+
+        final List<String> roles = List.of(
+                "Test LAA App Four Role One Access"
+        );
+
+        final List<String> offices = List.of(
+                "THREE"
+        );
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        // Create a standard provider user without multi-firm access
+        final String nonMultiFirmUserEmail =
+                manageUsersPage.createProviderAdminUserWithNonMultiFirmAccess(
+                        firmCode
+                );
+
+        // Create a multi-firm user and delegate firm access
+        final String multiFirmUserEmail =
+                manageUsersPage.createMultiFirmUserAndDelegateAccess(
+                        firmCode,
+                        services,
+                        roles,
+                        offices
+                );
+
+        // Return to Manage Your Users after delegation
+        manageUsersPage.clickGoBackToManageUsers();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Apply the new 3rd Party filter
+        manageUsersPage.filterByThirdPartyUsers();
+
+        // Search for the multi-firm user
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(multiFirmUserEmail),
+                "The multi-firm user should be displayed when the 3rd Party filter is applied"
+        );
+
+        // Verify the displayed user is identified as a 3rd Party user
+        Locator multiFirmUserRow = page.locator("tr")
+                .filter(new Locator.FilterOptions()
+                        .setHasText(multiFirmUserEmail));
+
+        assertThat(multiFirmUserRow).isVisible();
+        assertThat(multiFirmUserRow).containsText("External - 3rd Party");
+
+        // Search for the standard provider user while the filter remains applied
+        manageUsersPage.searchAndVerifyUserNotExists(nonMultiFirmUserEmail);
     }
 
 
