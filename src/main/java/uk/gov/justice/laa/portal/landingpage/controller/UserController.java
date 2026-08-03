@@ -1010,6 +1010,7 @@ public class UserController {
 
         } else {
             log.error("No user attribute was present in request. User not created.");
+            return cancelUserCreation(session);
         }
 
         session.removeAttribute("firm");
