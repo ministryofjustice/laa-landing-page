@@ -1010,6 +1010,7 @@ public class UserController {
 
         } else {
             log.error("No user attribute was present in request. User not created.");
+            return cancelUserCreation(session);
         }
 
         session.removeAttribute("firm");
@@ -2168,8 +2169,6 @@ public class UserController {
 
         // Clear role selections
         session.removeAttribute("grantAccessUserRolesModel");
-        session.removeAttribute("grantAccessAllSelectedRoles");
-        session.removeAttribute("allSelectedRoles");
         session.removeAttribute("nonEditableRoles");
 
         // Store the model in session to handle validation errors later

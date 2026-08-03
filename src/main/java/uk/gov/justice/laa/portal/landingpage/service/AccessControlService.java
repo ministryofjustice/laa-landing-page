@@ -692,7 +692,6 @@ public class AccessControlService {
 
         return userService.isInternal(authenticatedUser.getId())
                 && !userService.isInternal(accessedUser.getId())
-                && accessedUser.isEnabled()
                 && !InvitationStatus.VERIFICATION_SUCCESS.equals(accessedUser.getInvitationStatus())
                 && userHasAnyGivenPermissions(authenticatedUser, Permission.RESEND_VERIFICATION_EMAIL);
     }
@@ -713,7 +712,6 @@ public class AccessControlService {
 
         return userService.isInternal(authenticatedUser.getId())
                 && !isAccessedUserInternal
-                && accessedUser.isEnabled()
                 && !InvitationStatus.VERIFICATION_SUCCESS.equals(accessedUser.getInvitationStatus())
                 && userHasAnyGivenPermissions(authenticatedUser, Permission.RESEND_VERIFICATION_EMAIL);
     }

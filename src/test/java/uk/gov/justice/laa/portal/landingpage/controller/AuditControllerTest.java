@@ -62,9 +62,11 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AuditExportService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
+import uk.gov.justice.laa.portal.landingpage.service.ExternalUserPollingService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.TechServicesClient;
@@ -111,6 +113,12 @@ class AuditControllerTest {
     @Mock
     private UserAccountStatusService userAccountStatusService;
 
+    @Mock
+    private ExternalUserPollingService externalUserPollingService;
+
+    @Mock
+    private EntraUserRepository entraUserRepository;
+
     private PaginatedAuditUsers mockPaginatedUsers;
     private List<AppRoleDto> mockSilasRoles;
     private Model model;
@@ -118,7 +126,8 @@ class AuditControllerTest {
     @BeforeEach
     void setUp() {
         auditController = new AuditController(userService, loginService, eventService, accessControlService,
-                auditExportService, firmService, authenticatedUser, techServicesClient, userAccountStatusService);
+                auditExportService, firmService, authenticatedUser, techServicesClient, userAccountStatusService, externalUserPollingService,
+                entraUserRepository);
         model = new ExtendedModelMap();
 
         // Setup mock audit users
