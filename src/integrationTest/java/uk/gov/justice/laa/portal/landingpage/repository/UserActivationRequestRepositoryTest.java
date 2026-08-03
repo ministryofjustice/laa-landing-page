@@ -12,10 +12,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
@@ -80,7 +80,7 @@ class UserActivationRequestRepositoryTest extends BaseRepositoryTest {
         request.setCreatedAt(createdAt);
         request.setStatus(status);
         request.setActorEntraOid(UUID.randomUUID().toString());
-        request.setActorRoleType(AuthzRoleType.PROVIDER_ADMIN);
+        request.setActorRoleType(ReactivationRoleType.PROVIDER_ADMIN);
         request.setComments("Test comments");
 
         // Adjust setters below according to your entity fields
