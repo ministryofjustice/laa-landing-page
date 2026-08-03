@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'manage-access'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns="http://www.w3.org/1999/html">
+
+<head>
+    <title>${pageTitle}</title>
+</head>
+
+<body>
+    <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+        <a class="govuk-back-link" th:href="@{/admin/user/delegate-reactivate-user-reason/{id}(id=${user.id})}">
+            Back </a>
+    </nav>
+    <main class="govuk-main-wrapper" id="main-content">
+        <fieldset class="govuk-fieldset">
+            <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
+                <h1 class="govuk-fieldset__heading">
+                    Check your answers and confirm
+                </h1>
+            </legend>
+            <form th:action="@{/admin/user/delegate-reactivate-user-check-answers/{id}(id=${id})}" th:method="post" class="govuk-form">
+
+
+                <div class="govuk-summary-card">
+                    <div class="govuk-summary-card__title-wrapper">
+                        <h2 class="govuk-summary-card__title">
+                            User details
+                        </h2>
+                    </div>
+                    <div class="govuk-summary-card__content">
+                        <dl class="govuk-summary-list">
+                            <div class="govuk-summary-list__row">
+                                <dt class="govuk-summary-list__key">Email</dt>
+                                <dd class="govuk-summary-list__value">
+                                    <span th:text="${user.email}"></span>
+                                </dd>
+                            </div>
+                            <div class="govuk-summary-list__row">
+                                <dt class="govuk-summary-list__key">First name</dt>
+                                <dd class="govuk-summary-list__value">
+                                    <span th:text="${user.firstName}"></span>
+                                </dd>
+                            </div>
+                            <div class="govuk-summary-list__row">
+                                <dt class="govuk-summary-list__key">Last name</dt>
+                                <dd class="govuk-summary-list__value">
+                                    <span th:text="${user.lastName}"></span>
+                                </dd>
+                            </div>
+                        </dl>
+                    </div>
+                </div>
+
+                <div class="govuk-summary-card">
+                    <div class="govuk-summary-card__title-wrapper">
+                        <h2 class="govuk-summary-card__title">
+                            Request details
+                        </h2>
+                    </div>
+                    <div class="govuk-summary-card__content">
+                        <dl class="govuk-summary-list">
+                            <div class="govuk-summary-list__row">
+                                <dt class="govuk-summary-list__key">Justification</dt>
+                                <dd class="govuk-summary-list__value">
+                                    <span th:text="${delegateReactivateUserReasonForm.reason}"></span>
+                                </dd>
+                                <dd class="govuk-summary-list__actions">
+                                    <a th:href="@{/admin/user/delegate-reactivate-user-reason/{id}(id=${user.id})}" class="govuk-link">
+                                        Change
+                                        <span class="govuk-visually-hidden"> first name</span>
+                                    </a>
+                                </dd>
+                            </div>
+                        </dl>
+                    </div>
+                </div>
+
+                <div class="govuk-button-group">
+                    <button type="submit" class="govuk-button" data-module="govuk-button" data-prevent-double-click="true">Submit request</button>
+                    <a class="govuk-button govuk-button--secondary" th:href="@{/admin/users/manage/{id}(id=${profileId})}">Cancel</a>
+                </div>
+            </form>
+        </fieldset>
+    </main>
+</body>
+
+</html>
