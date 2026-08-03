@@ -209,7 +209,7 @@ class AuditControllerTest {
 
         UserTypeForm userTypeForm = StringUtils.isEmpty(userTypeusedInService) ? null : UserTypeForm.valueOf(userTypeusedInService);
         verify(userService, times(1)).getAuditUsers("", null, null, null,
-                userTypeForm, 1, 10, "name", "asc", false, null, null, null, null);
+                userTypeForm, 1, 10, "name", "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
         verify(userService, times(1)).getAllSilasRoles();
     }
 
@@ -230,7 +230,7 @@ class AuditControllerTest {
         assertThat(viewName).isEqualTo("user-audit/users");
         assertThat(model.getAttribute("search")).isEqualTo("john");
 
-        verify(userService, times(1)).getAuditUsers("john", null, null, null, null,  1, 10, "name", "asc", false, null, null, null, null);
+        verify(userService, times(1)).getAuditUsers("john", null, null, null, null,  1, 10, "name", "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -250,7 +250,7 @@ class AuditControllerTest {
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
 
-        verify(userService, times(1)).getAuditUsers("", firmId, null, null, null,  1, 10, "name", "asc", false, null, null, null, null);
+        verify(userService, times(1)).getAuditUsers("", firmId, null, null, null,  1, 10, "name", "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -269,7 +269,7 @@ class AuditControllerTest {
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
 
-        verify(userService, times(1)).getAuditUsers("", null, null, null, null,  1, 10, "name", "asc", false, null, null, null, null);
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null,  1, 10, "name", "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -289,7 +289,7 @@ class AuditControllerTest {
         assertThat(viewName).isEqualTo("user-audit/users");
         assertThat(model.getAttribute("selectedSilasRole")).isEqualTo("Global Admin");
 
-        verify(userService, times(1)).getAuditUsers("", null, "Global Admin", null, null, 1, 10, "name", "asc", false, null, null, null, null);
+        verify(userService, times(1)).getAuditUsers("", null, "Global Admin", null, null, 1, 10, "name", "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -309,7 +309,7 @@ class AuditControllerTest {
         assertThat(viewName).isEqualTo("user-audit/users");
         assertThat(model.getAttribute("requestedPageSize")).isEqualTo(25);
 
-        verify(userService, times(1)).getAuditUsers("", null, null, null, null, 1, 25, "name", "asc", false, null, null, null, null);
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null, 1, 25, "name", "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -329,7 +329,7 @@ class AuditControllerTest {
         assertThat(viewName).isEqualTo("user-audit/users");
         assertThat(model.getAttribute("page")).isEqualTo(2);
 
-        verify(userService, times(1)).getAuditUsers("", null, null, null, null, 2, 10, "name", "asc", false, null, null, null, null);
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null, 2, 10, "name", "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -352,7 +352,7 @@ class AuditControllerTest {
         assertThat(model.getAttribute("sort")).isEqualTo("email");
         assertThat(model.getAttribute("direction")).isEqualTo("desc");
 
-        verify(userService, times(1)).getAuditUsers("", null, "", null, null, 1, 10, "email", "desc", false, null, null, null, null);
+        verify(userService, times(1)).getAuditUsers("", null, "", null, null, 1, 10, "email", "desc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -386,7 +386,7 @@ class AuditControllerTest {
         assertThat(model.getAttribute("direction")).isEqualTo("desc");
 
         verify(userService, times(1)).getAuditUsers("test", firmId, "Global Admin", null, null,  2, 25, "email",
-                "desc", false, null, null, null, null);
+                "desc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -450,7 +450,7 @@ class AuditControllerTest {
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
 
-        verify(userService, times(1)).getAuditUsers("", null, null, appId, null, 1, 10, "name", "asc", false, null, null, null, null);
+        verify(userService, times(1)).getAuditUsers("", null, null, appId, null, 1, 10, "name", "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -476,7 +476,7 @@ class AuditControllerTest {
         assertThat(logEvents.size()).isEqualTo(1);
         ILoggingEvent logEvent = logEvents.getFirst();
         assertThat(logEvent.getFormattedMessage()).isEqualTo("Invalid app ID format: " + selectedAppId);
-        verify(userService, times(1)).getAuditUsers("", null, null, null, null, 1, 10, "name", "asc", false, null, null, null, null);
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null, 1, 10, "name", "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -502,7 +502,7 @@ class AuditControllerTest {
         assertThat(logEvents.size()).isEqualTo(1);
         ILoggingEvent logEvent = logEvents.getFirst();
         assertThat(logEvent.getFormattedMessage()).isEqualTo("Invalid user type provided: " + userType);
-        verify(userService, times(1)).getAuditUsers("", null, null, null, null,  1, 10, "name", "asc", false, null, null, null, null);
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null,  1, 10, "name", "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -522,7 +522,7 @@ class AuditControllerTest {
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
 
-        verify(userService, times(1)).getAuditUsers("", null, null, null, null,  1, 10, "name", "asc", false, null, null, null, null);
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null,  1, 10, "name", "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -531,7 +531,7 @@ class AuditControllerTest {
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
         when(userService.getAuditUsers(anyString(), any(), any(), any(), eq(UserTypeForm.INTERNAL), anyInt(),
                 anyInt(),
-                anyString(), anyString(), eq(false), any())).thenReturn(mockPaginatedUsers);
+                anyString(), anyString(), eq(false), any(), any(), any(), any())).thenReturn(mockPaginatedUsers);
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
         criteria.setSelectedUserType(UserTypeForm.INTERNAL.name());
@@ -544,7 +544,7 @@ class AuditControllerTest {
         assertThat(model.getAttribute("selectedUserType")).isEqualTo("INTERNAL");
 
         verify(userService, times(1)).getAuditUsers("", null, null, null, UserTypeForm.INTERNAL, 1, 10, "name",
-                "asc", false, null, null, null, null);
+                "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
 
@@ -565,7 +565,7 @@ class AuditControllerTest {
         assertThat(model.getAttribute("selectedUserType")).isEqualTo("MULTI_FIRM");
 
         verify(userService, times(1)).getAuditUsers("", null, null, null, UserTypeForm.MULTI_FIRM, 1, 10, "name",
-                "asc", false, null, null, null, null);
+                "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -585,7 +585,7 @@ class AuditControllerTest {
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
 
-        verify(userService, times(1)).getAuditUsers("", null, null, null, null, 1, 10, "name", "asc", false, null, null, null, null);
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null, 1, 10, "name", "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -1192,8 +1192,8 @@ class AuditControllerTest {
         assertThat(headers.getContentDisposition().getType()).isEqualTo("attachment");
         assertThat(headers.getContentDisposition().getFilename()).isEqualTo("audit.csv");
 
-        verify(userService, times(1)).getAuditUsers("TestSearch", selectedFirmId, null, null, null, 1, 500, "name", "asc", true, null);
-        verify(userService, times(1)).getAuditUsers("TestSearch", selectedFirmId, null, null, null, 2, 500, "name", "asc", true, null);
+        verify(userService, times(1)).getAuditUsers("TestSearch", selectedFirmId, null, null, null, 1, 500, "name", "asc", true, null, null, null, criteria.getSelectedSilasStatuses());
+        verify(userService, times(1)).getAuditUsers("TestSearch", selectedFirmId, null, null, null, 2, 500, "name", "asc", true, null, null, null, criteria.getSelectedSilasStatuses());
         verify(auditExportService, times(1)).downloadAuditCsv(any(), any(), any());
     }
 
@@ -1249,8 +1249,8 @@ class AuditControllerTest {
         assertThat(headers.getContentDisposition().getType()).isEqualTo("attachment");
         assertThat(headers.getContentDisposition().getFilename()).isEqualTo("audit.csv");
 
-        verify(userService, times(1)).getAuditUsers("TestSearch", selectedFirmId, null, null, null, 1, 500, "name", "asc", true, true);
-        verify(userService, times(1)).getAuditUsers("TestSearch", selectedFirmId, null, null, null, 2, 500, "name", "asc", true, true);
+        verify(userService, times(1)).getAuditUsers("TestSearch", selectedFirmId, null, null, null, 1, 500, "name", "asc", true, true, null, null, criteria.getSelectedSilasStatuses());
+        verify(userService, times(1)).getAuditUsers("TestSearch", selectedFirmId, null, null, null, 2, 500, "name", "asc", true, true, null, null, criteria.getSelectedSilasStatuses());
         verify(auditExportService, times(1)).downloadAuditCsv(any(), any(), any());
     }
 
@@ -1305,9 +1305,9 @@ class AuditControllerTest {
         assertThat(headers.getContentDisposition().getFilename()).isEqualTo("audit.csv");
 
         verify(userService, times(1)).getAuditUsers("TestSearch", null,
-                null, null, UserTypeForm.INTERNAL, 1, 500, "name", "asc", true, null);
+                null, null, UserTypeForm.INTERNAL, 1, 500, "name", "asc", true, null, null, null, criteria.getSelectedSilasStatuses());
         verify(userService, times(1)).getAuditUsers("TestSearch", null,
-                null, null, UserTypeForm.INTERNAL, 2, 500, "name", "asc", true, null);
+                null, null, UserTypeForm.INTERNAL, 2, 500, "name", "asc", true, null, null, null, criteria.getSelectedSilasStatuses());
         verify(auditExportService, times(1)).downloadAuditCsv(any(), any(), any());
     }
 
@@ -1423,20 +1423,22 @@ class AuditControllerTest {
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
-        verify(userService, times(1)).getAuditUsers("", null, null, null, null, 1, 10, "name", "asc", false, null, fromDate, toDate, null);
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null, 1, 10, "name", "asc", false, null, fromDate, toDate, criteria.getSelectedSilasStatuses());
     }
 
     @Test
     void displayAuditTable_withSilasStatuses_filtersResults() {
         // Given
-        List<UserProfileSilasStatus> selectedStatuses = new ArrayList<>();
-        selectedStatuses.add(UserProfileSilasStatus.COMPLETE);
-        selectedStatuses.add(UserProfileSilasStatus.DISABLED);
-        
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
         when(userService.getAuditUsers(anyString(), any(), any(), any(), any(), anyInt(), anyInt(),
-                anyString(), anyString(), eq(false), any(), any(), any(), any(List.class))).thenReturn(mockPaginatedUsers);
+                anyString(), anyString(), eq(false), any(), any(), any(),
+                org.mockito.ArgumentMatchers.<UserProfileSilasStatus>anyList())).thenReturn(mockPaginatedUsers);
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
+        
+        List<String> selectedStatuses = List.of("COMPLETE", "DISABLED");
+        List<UserProfileSilasStatus> expectedStatuses = List.of(
+                UserProfileSilasStatus.COMPLETE,
+                UserProfileSilasStatus.DISABLED);
         
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
         criteria.setSelectedSilasStatuses(selectedStatuses);
@@ -1446,7 +1448,7 @@ class AuditControllerTest {
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
-        verify(userService, times(1)).getAuditUsers("", null, null, null, null, 1, 10, "name", "asc", false, null, null, null, selectedStatuses);
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null, 1, 10, "name", "asc", false, null, null, null, expectedStatuses);
     }
 
     @Test
@@ -1538,7 +1540,7 @@ class AuditControllerTest {
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
         assertThat(response.getBody()).isEqualTo(csvBytes);
         verify(userService, times(1)).getAuditUsers("", autoFirmId, null, null,
-                UserTypeForm.ALL_EXTERNAL, 1, 500, "name", "asc", true, null);
+                UserTypeForm.ALL_EXTERNAL, 1, 500, "name", "asc", true, null, null, null, criteria.getSelectedSilasStatuses());
         verify(auditExportService, times(1)).downloadAuditCsv(any(), any(), any());
     }
 
