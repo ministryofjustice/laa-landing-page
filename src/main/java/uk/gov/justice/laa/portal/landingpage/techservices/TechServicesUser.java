@@ -50,6 +50,9 @@ public class TechServicesUser implements Serializable {
     @JsonProperty("lastSignIn")
     private String lastSignIn;
 
+    @JsonProperty("lastSuccessfulSignIn")
+    private String lastSuccessfulSignIn;
+
     @JsonProperty("groups")
     private Set<String> groups;
 
