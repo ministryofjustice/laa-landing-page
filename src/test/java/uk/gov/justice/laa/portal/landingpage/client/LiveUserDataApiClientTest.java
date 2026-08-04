@@ -97,7 +97,7 @@ class LiveUserDataApiClientTest {
     }
 
     @Test
-    void me_throwsException_whenNotOAuth2AuthenticationToken() {
+    void me_throwsException_whenNotOauth2AuthenticationToken() {
         var nonOauthAuth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
             "user", "password");
 

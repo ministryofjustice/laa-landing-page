@@ -97,11 +97,11 @@ class OboTokenServiceTest {
 
     @Test
     void acquireOboToken_exchangesToken_whenCachedTokenExpired() {
-        Jwt expiredJwt = buildJwt(Instant.now().minusSeconds(60));
-        OboTokenResponse tokenResponse = buildOboResponse(OBO_TOKEN);
         when(cacheManager.getCache(CachingConfig.USER_DATA_API_OBO_TOKENS_CACHE)).thenReturn(cache);
         when(cache.get(USER_OID, String.class)).thenReturn("expired-token");
+        Jwt expiredJwt = buildJwt(Instant.now().minusSeconds(60));
         when(jwtDecoder.decode("expired-token")).thenReturn(expiredJwt);
+        OboTokenResponse tokenResponse = buildOboResponse(OBO_TOKEN);
         stubRestClientPost(tokenResponse);
 
         String result = oboTokenService.acquireOboToken(USER_ACCESS_TOKEN, USER_OID);
@@ -112,10 +112,10 @@ class OboTokenServiceTest {
 
     @Test
     void acquireOboToken_exchangesToken_whenJwtDecoderThrows() {
-        OboTokenResponse tokenResponse = buildOboResponse(OBO_TOKEN);
         when(cacheManager.getCache(CachingConfig.USER_DATA_API_OBO_TOKENS_CACHE)).thenReturn(cache);
         when(cache.get(USER_OID, String.class)).thenReturn("bad-token");
         when(jwtDecoder.decode("bad-token")).thenThrow(new RuntimeException("decode failed"));
+        OboTokenResponse tokenResponse = buildOboResponse(OBO_TOKEN);
         stubRestClientPost(tokenResponse);
 
         String result = oboTokenService.acquireOboToken(USER_ACCESS_TOKEN, USER_OID);
@@ -163,7 +163,7 @@ class OboTokenServiceTest {
         when(oboRestClient.post()).thenReturn(requestBodyUriSpec);
         when(requestBodyUriSpec.uri(TOKEN_ENDPOINT)).thenReturn(requestBodySpec);
         when(requestBodySpec.header(anyString(), anyString())).thenReturn(requestBodySpec);
-        when(requestBodySpec.body(any())).thenReturn(requestBodySpec);
+        when(requestBodySpec.body(any(MultiValueMap.class))).thenReturn(requestBodySpec);
         when(requestBodySpec.retrieve()).thenReturn(responseSpec);
         when(responseSpec.body(eq(OboTokenResponse.class))).thenReturn(response);
     }
@@ -172,7 +172,7 @@ class OboTokenServiceTest {
         return Jwt.withTokenValue("token")
             .header("alg", "none")
             .claim("sub", "user")
-            .issuedAt(Instant.now().minusSeconds(60))
+            .issuedAt(Instant.now().minusSeconds(120))
             .expiresAt(expiresAt)
             .build();
     }
