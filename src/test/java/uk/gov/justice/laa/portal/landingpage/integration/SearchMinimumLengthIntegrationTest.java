@@ -19,6 +19,7 @@ import org.springframework.security.core.Authentication;
 import uk.gov.justice.laa.portal.landingpage.controller.FirmSearchController;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 
@@ -34,21 +35,22 @@ public class SearchMinimumLengthIntegrationTest {
     @Mock private FirmService firmService;
     @Mock private LoginService loginService;
     @Mock private Authentication authentication;
+    @Mock private AccessControlService accessControlService;
 
     @BeforeEach
     void setUp() {
         firmSearchController = new FirmSearchController(
-            loginService, firmService
+            loginService, firmService, accessControlService
         );
     }
 
     @Test
     public void testEmptyQueriesReturnEmpty() {
         // Empty queries should return empty lists (due to validation)
-        List<Map<String, String>> result1 = firmSearchController.searchFirms("", 10);
+        List<Map<String, String>> result1 = firmSearchController.searchFirms(authentication, "", 10);
         assertThat(result1).isEmpty();
 
-        List<Map<String, String>> result2 = firmSearchController.searchFirms("   ", 10);
+        List<Map<String, String>> result2 = firmSearchController.searchFirms(authentication, "   ", 10);
         assertThat(result2).isEmpty();
         
         // Verify that service methods were not called for empty queries
@@ -56,23 +58,37 @@ public class SearchMinimumLengthIntegrationTest {
     }
 
     @Test 
-    public void testSingleCharacterQueriesWork() {
+    public void testSingleCharacterQueriesWorkInternal() {
         // Setup mocks
         when(firmService.searchFirms("A")).thenReturn(List.of());
+        when(accessControlService.authenticatedUserIsInternal()).thenReturn(true);
         
         EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
-        when(firmService.getUserAccessibleFirms(entraUser, "B")).thenReturn(List.of());
         
         // Single character queries should now work (not return empty due to minimum length restriction)
-        List<Map<String, String>> result1 = firmSearchController.searchFirms("A", 10);
-        assertThat(result1).isNotNull();
-        
-        List<FirmDto> result2 = firmSearchController.getFirms(authentication, "B");
-        assertThat(result2).isNotNull();
+        List<Map<String, String>> result = firmSearchController.searchFirms(authentication, "A", 10);
+        assertThat(result).isNotNull();
         
         // Verify that service methods were called for single character queries
         verify(firmService).searchFirms("A");
+
+    }
+
+    @Test
+    public void testSingleCharacterQueriesWorkExternal() {
+        // Setup mocks
+
+        when(accessControlService.authenticatedUserIsInternal()).thenReturn(false);
+        EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).build();
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
+        when(firmService.getUserAccessibleFirms(entraUser, "B")).thenReturn(List.of());
+
+        // Single character queries should now work (not return empty due to minimum length restriction)
+        List<FirmDto> result = firmSearchController.getFirms(authentication, "B");
+        assertThat(result).isNotNull();
+
+        // Verify that service methods were called for single character queries
         verify(firmService).getUserAccessibleFirms(entraUser, "B");
     }
 }

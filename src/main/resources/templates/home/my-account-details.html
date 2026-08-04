@@ -55,19 +55,19 @@
                     <div class="govuk-summary-card__content">
                         <dl class="govuk-summary-list" th:if="${user != null}">
                             <div class="govuk-summary-list__row">
-                                <dt class="govuk-summary-list__key">Email</dt>
+                                <dt class="govuk-summary-list__key" th:text="${uiLabels.email}">Email</dt>
                                 <dd class="govuk-summary-list__value" th:text="${user.email}">user@example.com</dd>
                             </div>
                             <div class="govuk-summary-list__row">
-                                <dt class="govuk-summary-list__key">First name</dt>
+                                <dt class="govuk-summary-list__key" th:text="${uiLabels.firstName}">First name</dt>
                                 <dd class="govuk-summary-list__value" th:text="${user.firstName}">John</dd>
                             </div>
                             <div class="govuk-summary-list__row">
-                                <dt class="govuk-summary-list__key">Last name</dt>
+                                <dt class="govuk-summary-list__key" th:text="${uiLabels.lastName}">Last name</dt>
                                 <dd class="govuk-summary-list__value" th:text="${user.lastName}">Smith</dd>
                             </div>
                             <div class="govuk-summary-list__row" th:if="${!isInternalUser}">
-                                <dt class="govuk-summary-list__key">User type</dt>
+                                <dt class="govuk-summary-list__key" th:text="${uiLabels.userType}">User type</dt>
                                 <dd class="govuk-summary-list__value"
                                     th:text="${isUserManager ? 'Provider Admin' : 'Provider User'}">Provider User</dd>
                             </div>
@@ -120,7 +120,7 @@
                             <thead class="govuk-table__head">
                                 <tr class="govuk-table__row">
                                     <th scope="col" class="govuk-table__header">Office address</th>
-                                    <th scope="col" class="govuk-table__header">LSC account number</th>
+                                    <th scope="col" class="govuk-table__header" th:text="${uiLabels.officeAccountNumber}">Office account number</th>
                                 </tr>
                             </thead>
                             <tbody class="govuk-table__body">
