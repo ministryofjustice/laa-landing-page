@@ -49,38 +49,6 @@ public class LiveUserDataApiClient implements UserDataApiClient {
     }
 
     @Override
-    public Map<String, String> hello(Authentication authentication, String correlationId) {
-        String cid = resolveCorrelationId(correlationId);
-        String oboToken = acquireOboToken(authentication, cid);
-
-        logger.debug("Calling data API /hello: correlationId={}", cid);
-
-        return userDataApiRestClient
-            .get()
-            .uri("/api/v1/hello")
-            .header("Authorization", "Bearer " + oboToken)
-            .header(CORRELATION_ID_HEADER, cid)
-            .retrieve()
-            .onStatus(status -> status.value() == 401 || status.value() == 403,
-                (request, response) -> {
-                    logger.error("Data API auth error: correlationId={}, status={}, uri={}",
-                        cid, response.getStatusCode(), request.getURI());
-                    throw new UserDataApiClientException(
-                        "Data API rejected token — check OBO scope and audience configuration",
-                        response.getStatusCode().value());
-                })
-            .onStatus(status -> status.is5xxServerError(),
-                (request, response) -> {
-                    logger.error("Data API server error: correlationId={}, status={}, uri={}",
-                        cid, response.getStatusCode(), request.getURI());
-                    throw new UserDataApiClientException(
-                        "Data API returned server error",
-                        response.getStatusCode().value());
-                })
-            .body(STRING_MAP);
-    }
-
-    @Override
     public Map<String, String> me(Authentication authentication, String correlationId) {
         String cid = resolveCorrelationId(correlationId);
         String oboToken = acquireOboToken(authentication, cid);

@@ -64,17 +64,6 @@ class LiveUserDataApiClientTest {
     private LiveUserDataApiClient client;
 
     @Test
-    void hello_returnsBody_whenOboTokenAcquiredSuccessfully() {
-        stubAuthAndOboToken();
-        Map<String, String> expected = Map.of("message", "Hello from LAA Data User API");
-        stubGetRequest("/api/v1/hello", expected);
-
-        Map<String, String> result = client.hello(authentication, CORRELATION_ID);
-
-        assertThat(result).isEqualTo(expected);
-    }
-
-    @Test
     void me_returnsOidAndSub_whenOboTokenAcquiredSuccessfully() {
         stubAuthAndOboToken();
         Map<String, String> expected = Map.of("oid", USER_OID, "sub", "test-sub");
@@ -86,33 +75,33 @@ class LiveUserDataApiClientTest {
     }
 
     @Test
-    void hello_generatesCorrelationId_whenNullProvided() {
+    void me_generatesCorrelationId_whenNullProvided() {
         stubAuthAndOboToken();
-        Map<String, String> expected = Map.of("message", "Hello from LAA Data User API");
-        stubGetRequest("/api/v1/hello", expected);
+        Map<String, String> expected = Map.of("oid", USER_OID, "sub", "test-sub");
+        stubGetRequest("/api/v1/me", expected);
 
-        Map<String, String> result = client.hello(authentication, null);
+        Map<String, String> result = client.me(authentication, null);
 
         assertThat(result).isEqualTo(expected);
     }
 
     @Test
-    void hello_throwsException_whenNoAuthorizedClient() {
+    void me_throwsException_whenNoAuthorizedClient() {
         when(authentication.getAuthorizedClientRegistrationId()).thenReturn("azure");
         when(authentication.getName()).thenReturn("user-name");
         when(authorizedClientService.loadAuthorizedClient("azure", "user-name")).thenReturn(null);
 
-        assertThatThrownBy(() -> client.hello(authentication, CORRELATION_ID))
+        assertThatThrownBy(() -> client.me(authentication, CORRELATION_ID))
             .isInstanceOf(UserDataApiClientException.class)
             .hasMessageContaining("No access token available");
     }
 
     @Test
-    void hello_throwsException_whenNotOAuth2AuthenticationToken() {
+    void me_throwsException_whenNotOAuth2AuthenticationToken() {
         var nonOauthAuth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
             "user", "password");
 
-        assertThatThrownBy(() -> client.hello(nonOauthAuth, CORRELATION_ID))
+        assertThatThrownBy(() -> client.me(nonOauthAuth, CORRELATION_ID))
             .isInstanceOf(UserDataApiClientException.class)
             .hasMessageContaining("OAuth2AuthenticationToken");
     }

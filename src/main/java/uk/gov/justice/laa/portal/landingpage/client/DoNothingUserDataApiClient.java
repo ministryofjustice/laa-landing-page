@@ -22,12 +22,6 @@ public class DoNothingUserDataApiClient implements UserDataApiClient {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     @Override
-    public Map<String, String> hello(Authentication authentication, String correlationId) {
-        logger.debug("DoNothing: skipping data API /hello call (USER_DATA_API_CALLS_ENABLED=false)");
-        return Map.of("message", "DoNothing — data API calls disabled");
-    }
-
-    @Override
     public Map<String, String> me(Authentication authentication, String correlationId) {
         logger.debug("DoNothing: skipping data API /me call (USER_DATA_API_CALLS_ENABLED=false)");
         return Map.of("oid", "", "sub", "");

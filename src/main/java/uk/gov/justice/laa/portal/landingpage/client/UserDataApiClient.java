@@ -17,16 +17,6 @@ import java.util.Map;
 public interface UserDataApiClient {
 
     /**
-     * Calls {@code GET /api/v1/hello} on laa-data-user-api.
-     *
-     * @param authentication  the current user's Spring Security authentication
-     * @param correlationId   value to pass as {@code X-Correlation-ID}; generate one if null
-     * @return response body map
-     * @throws UserDataApiClientException on 4xx or 5xx response
-     */
-    Map<String, String> hello(Authentication authentication, String correlationId);
-
-    /**
      * Calls {@code GET /api/v1/me} on laa-data-user-api, which echoes the caller's
      * OID as derived from the validated JWT — confirming OBO token round-trip.
      *

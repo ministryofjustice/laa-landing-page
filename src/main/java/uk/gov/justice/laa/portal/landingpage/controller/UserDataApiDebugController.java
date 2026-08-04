@@ -17,7 +17,7 @@ import java.util.UUID;
 /**
  * Temporary debug endpoint to verify the OBO flow between laa-landing-page and laa-data-user-api.
  * Enable with: app.test.user-data-api.enabled=true
- * Remove (or keep behind the flag) once OBO is wired into a real user journey.
+ * Remove once OBO is wired into a real user journey.
  */
 @RestController
 @ConditionalOnProperty(name = "app.test.user-data-api.enabled", havingValue = "true")
@@ -29,16 +29,6 @@ public class UserDataApiDebugController {
 
     public UserDataApiDebugController(UserDataApiClient userDataApiClient) {
         this.userDataApiClient = userDataApiClient;
-    }
-
-    @GetMapping("/hello")
-    public ResponseEntity<Map<String, String>> hello(
-            Authentication authentication,
-            @RequestHeader(value = "X-Correlation-ID", required = false) String correlationId) {
-        String cid = correlationId != null ? correlationId : UUID.randomUUID().toString();
-        logger.info("DEBUG: calling data API /hello, correlationId={}", cid);
-        Map<String, String> response = userDataApiClient.hello(authentication, cid);
-        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/me")
