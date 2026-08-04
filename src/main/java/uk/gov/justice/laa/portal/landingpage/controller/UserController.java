@@ -696,7 +696,7 @@ public class UserController {
         model.addAttribute("user", user);
         model.addAttribute("referer", referer);
         model.addAttribute("cancelPath", getCancelPathFromReferer(referer, id, profileId));
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Enable User - " + user.getFullName());
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User - " + user.getFullName());
         return "enable-user-confirmation";
     }
 
@@ -714,7 +714,7 @@ public class UserController {
 
         model.addAttribute("user", user);
         model.addAttribute("referer", referer);
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Enable User Success - " + user.getFullName());
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User Success - " + user.getFullName());
         return "enable-user-completed";
     }
 

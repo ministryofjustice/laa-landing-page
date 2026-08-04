@@ -13,16 +13,19 @@
     <a class="govuk-back-link" th:href="@{/templates/home}">Back</a>
 
     <h1 class="govuk-heading-l">
-        Enable User Access
+        Reactivate <span th:text="${user.fullName}"></span>
     </h1>
     <p class="govuk-body">
-        You are about to enable <span th:text="${user.fullName}"></span>'s access to LAA services via SiLAS.
+        You can reactivate this user directly. When you reactivate <span th:text="${user.fullName}"></span>, they will regain access to their SiLAS account.
+    </p>
+    <p class="govuk-body">
+        You do not need to submit a reactivation request.
     </p>
     <!-- nosemgrep -->
     <form th:action="@{/admin/users/manage/{id}/enable(id=${user.id}, referer=${referer})}" method="post" style="display: inline;">
         <div class="moj-button-group">
             <button type="submit" class="govuk-button" data-module="govuk-button">
-                Confirm and enable
+                Reactivate user
             </button>
             <a class="govuk-link" th:href="${cancelPath}">Cancel</a>
         </div>
