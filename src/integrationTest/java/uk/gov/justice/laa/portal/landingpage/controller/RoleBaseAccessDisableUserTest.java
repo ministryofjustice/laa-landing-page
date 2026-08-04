@@ -256,14 +256,14 @@ public class RoleBaseAccessDisableUserTest extends RoleBasedAccessIntegrationTes
     }
 
     public void requestDisableUserReasonPage(EntraUser loggedInUser, EntraUser accessedUser, ResultMatcher expectedResult) throws Exception {
-        this.mockMvc.perform(get(String.format("/admin/users/manage/%s/disable", accessedUser.getId()))
+        this.mockMvc.perform(get(String.format("/admin/users/manage/%s/deactivate", accessedUser.getId()))
                         .with(userOauth2Login(loggedInUser)))
                 .andExpect(expectedResult);
     }
 
     public MvcResult sendDisableUserPost(EntraUser loggedInUser, EntraUser accessedUser, ResultMatcher expectedResult) throws Exception {
         DisableUserReason reason = disableUserReasonRepository.findAll().getFirst();
-        return this.mockMvc.perform(post(String.format("/admin/users/manage/%s/disable", accessedUser.getId()))
+        return this.mockMvc.perform(post(String.format("/admin/users/manage/%s/deactivate", accessedUser.getId()))
                         .param("reasonId", reason.getId().toString())
                         .with(csrf())
                         .with(userOauth2Login(loggedInUser)))

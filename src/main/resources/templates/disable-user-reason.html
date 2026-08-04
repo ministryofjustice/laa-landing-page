@@ -6,7 +6,7 @@
       breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
 
 <head>
-    <title>Disable User</title>
+    <title>Deactivate User</title>
 </head>
 
 <body>
@@ -16,7 +16,8 @@
         Back </a>
 </nav>
 <main class="govuk-main-wrapper" id="main-content">
-    <form method="post" th:action="@{/admin/users/manage/{id}/disable(id=${user.id}, referer=${referer})}" th:object="${disableUserReasonsForm}">
+    <form method="post" th:action="@{/admin/users/manage/{id}/deactivate(id=${user.id}, referer=${referer})}"
+          th:object="${disableUserReasonsForm}">
         <div th:if="${errorMessage}">
             <div class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title"
                  aria-describedby="error-summary-description" data-module="govuk-error-summary">
@@ -35,11 +36,11 @@
             <fieldset class="govuk-fieldset" aria-describedby="reasons-hint">
                 <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
                     <h1 class="govuk-fieldset__heading">
-                        Choose a reason for disabling access
+                        Choose a reason for deactivating access
                     </h1>
                 </legend>
                 <div id="reasons-hint" class="govuk-hint">
-                    You are about to disable the selected user's access to SiLAS. Please select a reason below.
+                    You are about to deactivate the selected user's access to SiLAS. Please select a reason below.
                 </div>
                 <div class="govuk-form-group govuk-!-padding-top-3"
                      th:classappend="${#fields.hasErrors('reasonId')} ? 'govuk-form-group--error'">
