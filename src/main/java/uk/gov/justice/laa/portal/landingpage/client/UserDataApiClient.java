@@ -1,7 +1,5 @@
 package uk.gov.justice.laa.portal.landingpage.client;
 
-import org.springframework.security.core.Authentication;
-
 import java.util.Map;
 
 /**
@@ -17,13 +15,14 @@ import java.util.Map;
 public interface UserDataApiClient {
 
     /**
-     * Calls {@code GET /api/v1/me} on laa-data-user-api, which echoes the caller's
-     * OID as derived from the validated JWT — confirming OBO token round-trip.
+     * Calls {@code GET /api/v1/me} on laa-data-user-api using an OBO token
+     * derived from the supplied {@code userAccessToken}.
      *
-     * @param authentication  the current user's Spring Security authentication
-     * @param correlationId   value to pass as {@code X-Correlation-ID}; generate one if null
+     * @param userAccessToken  the signed-in user's OAuth2 access token (used in OBO exchange)
+     * @param userOid          the user's Entra OID — used as the OBO token cache key
+     * @param correlationId    value to pass as {@code X-Correlation-ID}; generate one if null
      * @return map containing {@code oid} and {@code sub} fields
      * @throws UserDataApiClientException on 4xx or 5xx response
      */
-    Map<String, String> me(Authentication authentication, String correlationId);
+    Map<String, String> me(String userAccessToken, String userOid, String correlationId);
 }

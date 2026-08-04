@@ -3,7 +3,6 @@ package uk.gov.justice.laa.portal.landingpage.client;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -22,7 +21,7 @@ public class DoNothingUserDataApiClient implements UserDataApiClient {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     @Override
-    public Map<String, String> me(Authentication authentication, String correlationId) {
+    public Map<String, String> me(String userAccessToken, String userOid, String correlationId) {
         logger.debug("DoNothing: skipping data API /me call (USER_DATA_API_CALLS_ENABLED=false)");
         return Map.of("oid", "", "sub", "");
     }

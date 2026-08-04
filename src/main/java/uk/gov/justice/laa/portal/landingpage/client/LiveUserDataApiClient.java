@@ -4,10 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import uk.gov.justice.laa.portal.landingpage.service.OboTokenService;
@@ -38,20 +34,17 @@ public class LiveUserDataApiClient implements UserDataApiClient {
 
     private final OboTokenService oboTokenService;
     private final RestClient userDataApiRestClient;
-    private final OAuth2AuthorizedClientService authorizedClientService;
 
     public LiveUserDataApiClient(OboTokenService oboTokenService,
-                                 RestClient userDataApiRestClient,
-                                 OAuth2AuthorizedClientService authorizedClientService) {
+                                 RestClient userDataApiRestClient) {
         this.oboTokenService = oboTokenService;
         this.userDataApiRestClient = userDataApiRestClient;
-        this.authorizedClientService = authorizedClientService;
     }
 
     @Override
-    public Map<String, String> me(Authentication authentication, String correlationId) {
+    public Map<String, String> me(String userAccessToken, String userOid, String correlationId) {
         String cid = resolveCorrelationId(correlationId);
-        String oboToken = acquireOboToken(authentication, cid);
+        String oboToken = oboTokenService.acquireOboToken(userAccessToken, userOid);
 
         logger.debug("Calling data API /me: correlationId={}", cid);
 
@@ -78,30 +71,6 @@ public class LiveUserDataApiClient implements UserDataApiClient {
                         response.getStatusCode().value());
                 })
             .body(STRING_MAP);
-    }
-
-    private String acquireOboToken(Authentication authentication, String correlationId) {
-        if (!(authentication instanceof OAuth2AuthenticationToken oauthToken)) {
-            logger.error("Cannot acquire OBO token: unexpected authentication type: correlationId={}",
-                correlationId);
-            throw new UserDataApiClientException(
-                "OBO requires OAuth2AuthenticationToken but got " + authentication.getClass().getSimpleName(), 0);
-        }
-
-        OAuth2AuthorizedClient client = authorizedClientService.loadAuthorizedClient(
-            oauthToken.getAuthorizedClientRegistrationId(),
-            oauthToken.getName()
-        );
-
-        if (client == null || client.getAccessToken() == null) {
-            logger.error("No authorized client or access token found: correlationId={}", correlationId);
-            throw new UserDataApiClientException("No access token available for OBO exchange", 0);
-        }
-
-        String userAccessToken = client.getAccessToken().getTokenValue();
-        String userOid = oauthToken.getPrincipal().getAttribute("oid");
-
-        return oboTokenService.acquireOboToken(userAccessToken, userOid);
     }
 
     private String resolveCorrelationId(String correlationId) {

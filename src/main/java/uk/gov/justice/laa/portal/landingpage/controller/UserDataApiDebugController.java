@@ -4,12 +4,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClient;
+import uk.gov.justice.laa.portal.landingpage.client.UserDataApiClientException;
 
 import java.util.Map;
 import java.util.UUID;
@@ -26,18 +29,33 @@ public class UserDataApiDebugController {
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
     private final UserDataApiClient userDataApiClient;
+    private final OAuth2AuthorizedClientService authorizedClientService;
 
-    public UserDataApiDebugController(UserDataApiClient userDataApiClient) {
+    public UserDataApiDebugController(UserDataApiClient userDataApiClient,
+                                      OAuth2AuthorizedClientService authorizedClientService) {
         this.userDataApiClient = userDataApiClient;
+        this.authorizedClientService = authorizedClientService;
     }
 
     @GetMapping("/me")
     public ResponseEntity<Map<String, String>> me(
-            Authentication authentication,
+            OAuth2AuthenticationToken oauthToken,
             @RequestHeader(value = "X-Correlation-ID", required = false) String correlationId) {
         String cid = correlationId != null ? correlationId : UUID.randomUUID().toString();
+
+        OAuth2AuthorizedClient client = authorizedClientService.loadAuthorizedClient(
+            oauthToken.getAuthorizedClientRegistrationId(), oauthToken.getName());
+
+        if (client == null || client.getAccessToken() == null) {
+            logger.error("No authorized client or access token found: correlationId={}", cid);
+            throw new UserDataApiClientException("No access token available for OBO exchange", 0);
+        }
+
+        String userAccessToken = client.getAccessToken().getTokenValue();
+        String userOid = oauthToken.getPrincipal().getAttribute("oid");
+
         logger.info("DEBUG: calling data API /me, correlationId={}", cid);
-        Map<String, String> response = userDataApiClient.me(authentication, cid);
+        Map<String, String> response = userDataApiClient.me(userAccessToken, userOid, cid);
         return ResponseEntity.ok(response);
     }
 }

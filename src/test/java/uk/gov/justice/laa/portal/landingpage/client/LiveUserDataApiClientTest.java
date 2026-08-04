@@ -6,18 +6,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
-import org.springframework.security.oauth2.core.OAuth2AccessToken;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.client.RestClient;
 import uk.gov.justice.laa.portal.landingpage.service.OboTokenService;
 
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
@@ -37,21 +31,6 @@ class LiveUserDataApiClientTest {
     private RestClient userDataApiRestClient;
 
     @Mock
-    private OAuth2AuthorizedClientService authorizedClientService;
-
-    @Mock
-    private OAuth2AuthenticationToken authentication;
-
-    @Mock
-    private OAuth2User principal;
-
-    @Mock
-    private OAuth2AuthorizedClient authorizedClient;
-
-    @Mock
-    private OAuth2AccessToken accessToken;
-
-    @Mock
     private RestClient.RequestHeadersUriSpec requestHeadersUriSpec;
 
     @Mock
@@ -65,56 +44,24 @@ class LiveUserDataApiClientTest {
 
     @Test
     void me_returnsOidAndSub_whenOboTokenAcquiredSuccessfully() {
-        stubAuthAndOboToken();
+        when(oboTokenService.acquireOboToken(USER_ACCESS_TOKEN, USER_OID)).thenReturn(OBO_TOKEN);
         Map<String, String> expected = Map.of("oid", USER_OID, "sub", "test-sub");
         stubGetRequest("/api/v1/me", expected);
 
-        Map<String, String> result = client.me(authentication, CORRELATION_ID);
+        Map<String, String> result = client.me(USER_ACCESS_TOKEN, USER_OID, CORRELATION_ID);
 
         assertThat(result).isEqualTo(expected);
     }
 
     @Test
     void me_generatesCorrelationId_whenNullProvided() {
-        stubAuthAndOboToken();
+        when(oboTokenService.acquireOboToken(USER_ACCESS_TOKEN, USER_OID)).thenReturn(OBO_TOKEN);
         Map<String, String> expected = Map.of("oid", USER_OID, "sub", "test-sub");
         stubGetRequest("/api/v1/me", expected);
 
-        Map<String, String> result = client.me(authentication, null);
+        Map<String, String> result = client.me(USER_ACCESS_TOKEN, USER_OID, null);
 
         assertThat(result).isEqualTo(expected);
-    }
-
-    @Test
-    void me_throwsException_whenNoAuthorizedClient() {
-        when(authentication.getAuthorizedClientRegistrationId()).thenReturn("azure");
-        when(authentication.getName()).thenReturn("user-name");
-        when(authorizedClientService.loadAuthorizedClient("azure", "user-name")).thenReturn(null);
-
-        assertThatThrownBy(() -> client.me(authentication, CORRELATION_ID))
-            .isInstanceOf(UserDataApiClientException.class)
-            .hasMessageContaining("No access token available");
-    }
-
-    @Test
-    void me_throwsException_whenNotOauth2AuthenticationToken() {
-        var nonOauthAuth = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
-            "user", "password");
-
-        assertThatThrownBy(() -> client.me(nonOauthAuth, CORRELATION_ID))
-            .isInstanceOf(UserDataApiClientException.class)
-            .hasMessageContaining("OAuth2AuthenticationToken");
-    }
-
-    private void stubAuthAndOboToken() {
-        when(authentication.getAuthorizedClientRegistrationId()).thenReturn("azure");
-        when(authentication.getName()).thenReturn("user-name");
-        when(authorizedClientService.loadAuthorizedClient("azure", "user-name")).thenReturn(authorizedClient);
-        when(authorizedClient.getAccessToken()).thenReturn(accessToken);
-        when(accessToken.getTokenValue()).thenReturn(USER_ACCESS_TOKEN);
-        when(authentication.getPrincipal()).thenReturn(principal);
-        when(principal.getAttribute("oid")).thenReturn(USER_OID);
-        when(oboTokenService.acquireOboToken(USER_ACCESS_TOKEN, USER_OID)).thenReturn(OBO_TOKEN);
     }
 
     @SuppressWarnings("unchecked")
