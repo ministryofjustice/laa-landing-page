@@ -26,7 +26,8 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
-import uk.gov.justice.laa.portal.landingpage.forms.DelegateReactivateUserReasonForm;
+import uk.gov.justice.laa.portal.landingpage.forms.DelegateReactivateUserCommentForm;
+import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
@@ -58,6 +59,8 @@ public class UserActivationControllerTest {
     @Mock
     private UserReactivationRequestService userReactivationRequestService;
     @Mock
+    private AccessControlService accessControlService;
+    @Mock
     private HttpSession session;
     @Mock
     private Authentication authentication;
@@ -71,7 +74,7 @@ public class UserActivationControllerTest {
 
     @BeforeEach
     void setUp() {
-        userActivationController = new UserActivationController(loginService, userService, userReactivationRequestService);
+        userActivationController = new UserActivationController(loginService, userService, userReactivationRequestService, accessControlService);
         userActivationController.disableUserFeatureEnabled = true;
         model = new ExtendedModelMap();
     }
@@ -152,8 +155,8 @@ public class UserActivationControllerTest {
         }
 
         @Test
-        @DisplayName("Should set attributes and redirect to reasons step on success")
-        void validSession_redirectsToReasons() {
+        @DisplayName("Should set attributes and redirect to comments step on success")
+        void validSession_redirectsToComments() {
             session = new MockHttpSession();
             session.setAttribute("delegateReactivateUserId", USER_ID);
             EntraUserDto user = buildEntraUserDto();
@@ -162,22 +165,22 @@ public class UserActivationControllerTest {
 
             String view = userActivationController.delegateReactivateUserPost(USER_ID, model, session, REFERER, PROFILE_ID);
 
-            assertThat(view).isEqualTo("redirect:/admin/user/delegate-reactivate-user-reason/" + USER_ID);
+            assertThat(view).isEqualTo("redirect:/admin/user/delegate-reactivate-user-comment/" + USER_ID);
             assertThat(session.getAttribute("delegateReactivateUserId")).isEqualTo(USER_ID);
             assertThat(session.getAttribute("profileId")).isEqualTo(PROFILE_ID);
         }
     }
 
     @Nested
-    @DisplayName("GET /user/delegate-reactivate-user-reason/{id}")
-    class DelegateReactivateUserReasonsGetTests {
+    @DisplayName("GET /user/delegate-reactivate-user-comment/{id}")
+    class DelegateReactivateUserCommentsGetTests {
 
         @Test
         @DisplayName("Should throw 404 when feature flag is disabled")
         void featureDisabled_throws404() {
             userActivationController.disableUserFeatureEnabled = false;
 
-            assertThatThrownBy(() -> userActivationController.delegateReactivateUserReasonsGet(USER_ID, model, session))
+            assertThatThrownBy(() -> userActivationController.delegateReactivateUserCommentsGet(USER_ID, model, session))
                     .isInstanceOf(ResponseStatusException.class)
                     .hasMessageContaining("404");
         }
@@ -188,46 +191,46 @@ public class UserActivationControllerTest {
             session = new MockHttpSession();
             session.setAttribute("delegateReactivateUserId", "invalid-id");
 
-            assertThatThrownBy(() -> userActivationController.delegateReactivateUserReasonsGet(USER_ID, model, session))
+            assertThatThrownBy(() -> userActivationController.delegateReactivateUserCommentsGet(USER_ID, model, session))
                     .isInstanceOf(ResponseStatusException.class)
                     .hasMessageContaining("403");
         }
 
         @Test
         @DisplayName("Should load form from session if present or create new instance")
-        void validSession_rendersReasonsView() {
+        void validSession_rendersCommentsView() {
             session = new MockHttpSession();
             session.setAttribute("delegateReactivateUserId", USER_ID);
             session.setAttribute("profileId", PROFILE_ID);
 
-            DelegateReactivateUserReasonForm existingForm = DelegateReactivateUserReasonForm.builder()
-                    .reason("Existing reason")
+            DelegateReactivateUserCommentForm existingForm = DelegateReactivateUserCommentForm.builder()
+                    .comment("Existing comment")
                     .build();
-            session.setAttribute("delegateReactivateUserReasonForm", existingForm);
+            session.setAttribute("delegateReactivateUserCommentForm", existingForm);
 
             EntraUserDto user = buildEntraUserDto();
             when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(user));
 
-            String view = userActivationController.delegateReactivateUserReasonsGet(USER_ID, model, session);
+            String view = userActivationController.delegateReactivateUserCommentsGet(USER_ID, model, session);
 
-            assertThat(view).isEqualTo("delegate-reactivate-user-reason");
+            assertThat(view).isEqualTo("delegate-reactivate-user-comment");
             assertThat(model.asMap())
                     .containsEntry("user", user)
                     .containsEntry("profileId", PROFILE_ID)
-                    .containsEntry("delegateReactivateUserReasonForm", existingForm);
+                    .containsEntry("delegateReactivateUserCommentForm", existingForm);
         }
     }
 
     @Nested
-    @DisplayName("POST /user/delegate-reactivate-user-reason/{id}")
-    class DelegateReactivateUserReasonsPostTests {
+    @DisplayName("POST /user/delegate-reactivate-user-comment/{id}")
+    class DelegateReactivateUserCommentsPostTests {
 
         @Test
         @DisplayName("Should re-render form with error message when validation fails")
-        void validationErrors_returnsReasonViewWithError() {
+        void validationErrors_returnsCommentViewWithError() {
             session = new MockHttpSession();
             session.setAttribute("profileId", PROFILE_ID);
-            DelegateReactivateUserReasonForm form = DelegateReactivateUserReasonForm.builder().build();
+            DelegateReactivateUserCommentForm form = DelegateReactivateUserCommentForm.builder().build();
 
             BindingResult bindingResult = mock(BindingResult.class);
             when(bindingResult.hasErrors()).thenReturn(true);
@@ -235,11 +238,11 @@ public class UserActivationControllerTest {
             EntraUserDto user = buildEntraUserDto();
             when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(user));
 
-            String view = userActivationController.delegateReactivateUserReasonsPost(USER_ID, form, bindingResult, model, session);
+            String view = userActivationController.delegateReactivateUserCommentsPost(USER_ID, form, bindingResult, model, session);
 
-            assertThat(view).isEqualTo("delegate-reactivate-user-reason");
+            assertThat(view).isEqualTo("delegate-reactivate-user-comment");
             assertThat(model.asMap()).containsKey("errorMessage");
-            assertThat(session.getAttribute("delegateReactivateUserReasonForm")).isNull();
+            assertThat(session.getAttribute("delegateReactivateUserCommentForm")).isNull();
         }
 
         @Test
@@ -247,8 +250,8 @@ public class UserActivationControllerTest {
         void validationSuccess_savesSessionAndRedirects() {
             session = new MockHttpSession();
             session.setAttribute("profileId", PROFILE_ID);
-            DelegateReactivateUserReasonForm form = DelegateReactivateUserReasonForm.builder()
-                    .reason("Valid user reactivation request reason")
+            DelegateReactivateUserCommentForm form = DelegateReactivateUserCommentForm.builder()
+                    .comment("Valid user reactivation request comment")
                     .build();
 
             BindingResult bindingResult = mock(BindingResult.class);
@@ -256,16 +259,16 @@ public class UserActivationControllerTest {
             EntraUserDto user = buildEntraUserDto();
             when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(user));
 
-            String view = userActivationController.delegateReactivateUserReasonsPost(USER_ID, form, bindingResult, model, session);
+            String view = userActivationController.delegateReactivateUserCommentsPost(USER_ID, form, bindingResult, model, session);
 
             assertThat(view).isEqualTo("redirect:/admin/user/delegate-reactivate-user-check-answers/" + USER_ID);
-            assertThat(session.getAttribute("delegateReactivateUserReasonForm")).isEqualTo(form);
+            assertThat(session.getAttribute("delegateReactivateUserCommentForm")).isEqualTo(form);
         }
     }
 
     @Nested
     @DisplayName("GET /user/delegate-reactivate-user-check-answers/{id}")
-    class DelegateReactivateUserReasonsCheckAnswersGetTests {
+    class DelegateReactivateUserCommentsCheckAnswersGetTests {
 
         @Test
         @DisplayName("Should throw 403 if session ID does not match path variable")
@@ -274,7 +277,7 @@ public class UserActivationControllerTest {
             session.setAttribute("profileId", PROFILE_ID);
             session.setAttribute("delegateReactivateUserId", "mismatched-id");
 
-            assertThatThrownBy(() -> userActivationController.delegateReactivateUserReasonsCheckAnswersGet(USER_ID, model, session))
+            assertThatThrownBy(() -> userActivationController.delegateReactivateUserCommentsCheckAnswersGet(USER_ID, model, session))
                     .isInstanceOf(ResponseStatusException.class)
                     .hasMessageContaining("403");
         }
@@ -285,7 +288,7 @@ public class UserActivationControllerTest {
             session.setAttribute("profileId", PROFILE_ID);
             session.setAttribute("delegateReactivateUserId", USER_ID);
 
-            assertThatThrownBy(() -> userActivationController.delegateReactivateUserReasonsCheckAnswersGet(USER_ID, model, session))
+            assertThatThrownBy(() -> userActivationController.delegateReactivateUserCommentsCheckAnswersGet(USER_ID, model, session))
                     .isInstanceOf(NoSuchElementException.class);
         }
 
@@ -296,25 +299,25 @@ public class UserActivationControllerTest {
             session.setAttribute("profileId", PROFILE_ID);
             session.setAttribute("delegateReactivateUserId", USER_ID);
 
-            DelegateReactivateUserReasonForm form = DelegateReactivateUserReasonForm.builder().reason("Reactivation justification").build();
-            session.setAttribute("delegateReactivateUserReasonForm", form);
+            DelegateReactivateUserCommentForm form = DelegateReactivateUserCommentForm.builder().comment("Reactivation justification").build();
+            session.setAttribute("delegateReactivateUserCommentForm", form);
 
             EntraUserDto user = buildEntraUserDto();
             when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(user));
 
-            String view = userActivationController.delegateReactivateUserReasonsCheckAnswersGet(USER_ID, model, session);
+            String view = userActivationController.delegateReactivateUserCommentsCheckAnswersGet(USER_ID, model, session);
 
             assertThat(view).isEqualTo("delegate-reactivate-user-check-answers");
             assertThat(model.asMap())
                     .containsEntry("user", user)
                     .containsEntry("profileId", PROFILE_ID)
-                    .containsEntry("delegateReactivateUserReasonForm", form);
+                    .containsEntry("delegateReactivateUserCommentForm", form);
         }
     }
 
     @Nested
     @DisplayName("POST /user/delegate-reactivate-user-check-answers/{id}")
-    class DelegateReactivateUserReasonsCheckAnswersPostTests {
+    class DelegateReactivateUserCommentsCheckAnswersPostTests {
 
         @Test
         @DisplayName("Should throw 400 if user profile ID does not match session profile ID")
@@ -322,12 +325,12 @@ public class UserActivationControllerTest {
             session = new MockHttpSession();
             session.setAttribute("delegateReactivateUserId", USER_ID);
             session.setAttribute("profileId", PROFILE_ID);
-            session.setAttribute("delegateReactivateUserReasonForm", DelegateReactivateUserReasonForm.builder().build());
+            session.setAttribute("delegateReactivateUserCommentForm", DelegateReactivateUserCommentForm.builder().build());
 
             UserProfileDto mismatchedProfile = UserProfileDto.builder().id(UUID.randomUUID()).build();
             when(userService.getActiveProfileByUserId(USER_ID)).thenReturn(Optional.of(mismatchedProfile));
 
-            assertThatThrownBy(() -> userActivationController.delegateReactivateUserReasonsCheckAnswersPost(USER_ID, authentication, model, session))
+            assertThatThrownBy(() -> userActivationController.delegateReactivateUserCommentsCheckAnswersPost(USER_ID, authentication, model, session))
                     .isInstanceOf(ResponseStatusException.class)
                     .hasMessageContaining("400");
 
@@ -341,10 +344,10 @@ public class UserActivationControllerTest {
             httpSession.setAttribute("delegateReactivateUserId", USER_ID);
             httpSession.setAttribute("profileId", PROFILE_ID);
 
-            DelegateReactivateUserReasonForm form = DelegateReactivateUserReasonForm.builder()
-                    .reason("Approved leave returned")
+            DelegateReactivateUserCommentForm form = DelegateReactivateUserCommentForm.builder()
+                    .comment("Approved leave returned")
                     .build();
-            httpSession.setAttribute("delegateReactivateUserReasonForm", form);
+            httpSession.setAttribute("delegateReactivateUserCommentForm", form);
 
             UserProfileDto userProfile = UserProfileDto.builder().id(PROFILE_ID).build();
             EntraUser entraUser = EntraUser.builder()
@@ -363,7 +366,7 @@ public class UserActivationControllerTest {
             when(userReactivationRequestService.createNewRequest(any(UUID.class), any(), any(), any()))
                     .thenReturn(createdRequest);
 
-            String view = userActivationController.delegateReactivateUserReasonsCheckAnswersPost(USER_ID, authentication, model, httpSession);
+            String view = userActivationController.delegateReactivateUserCommentsCheckAnswersPost(USER_ID, authentication, model, httpSession);
 
             assertThat(view).isEqualTo("delegate-reactivate-user-confirmation");
             assertThat(model.asMap()).containsEntry("user", entraUser);
@@ -494,14 +497,14 @@ public class UserActivationControllerTest {
             UUID profileId = UUID.randomUUID();
             UUID requestId = UUID.randomUUID();
 
-            DelegateReactivateUserReasonForm form = new DelegateReactivateUserReasonForm();
+            DelegateReactivateUserCommentForm form = new DelegateReactivateUserCommentForm();
             BindingResult bindingResult = mock(BindingResult.class);
             Authentication auth = mock(Authentication.class);
             RedirectAttributesModelMap redirectAttributes = new RedirectAttributesModelMap();
 
             when(bindingResult.hasErrors()).thenReturn(true);
             // Assuming buildErrorString uses getAllErrors() or similar from BindingResult
-            when(bindingResult.getAllErrors()).thenReturn(List.of(new ObjectError("reason", "Reason cannot be empty")));
+            when(bindingResult.getAllErrors()).thenReturn(List.of(new ObjectError("comment", "Comment cannot be empty")));
 
             String view = userActivationController.trackDelegateReactivateUserRequestsPost(
                     id, profileId, requestId, form, bindingResult, auth, redirectAttributes);
@@ -526,8 +529,8 @@ public class UserActivationControllerTest {
             String entraOid = UUID.randomUUID().toString();
             String actorUserId = UUID.randomUUID().toString();
 
-            DelegateReactivateUserReasonForm form = new DelegateReactivateUserReasonForm();
-            form.setReason("Reactivation approved for medical leave return.");
+            DelegateReactivateUserCommentForm form = new DelegateReactivateUserCommentForm();
+            form.setComment("Reactivation approved for medical leave return.");
 
             BindingResult bindingResult = mock(BindingResult.class);
             Authentication auth = mock(Authentication.class);
@@ -542,7 +545,7 @@ public class UserActivationControllerTest {
             when(bindingResult.hasErrors()).thenReturn(false);
             when(loginService.getCurrentEntraUser(auth)).thenReturn(mockEntraUser);
             when(loginService.getCurrentUser(auth)).thenReturn(mockActor);
-            when(userReactivationRequestService.calculateNextReactivationRequestStatus(profileId))
+            when(userReactivationRequestService.calculateNextReactivationRequestStatus(any()))
                     .thenReturn(ReactivationRequestStatus.APPROVED);
 
             String view = userActivationController.trackDelegateReactivateUserRequestsPost(

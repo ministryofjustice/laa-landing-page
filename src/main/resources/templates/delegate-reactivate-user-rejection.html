@@ -34,30 +34,16 @@
             </div>
 
             <h1 class="govuk-heading-l">
-                <span class="govuk-caption-l" th:text="'Reactivation request'">Reactivation request</span>
-                <span th:text="${user.fullName}">[[User Full Name]]</span>
+                <span th:text="'Record rejection reason'">[[Record rejection reason]]</span>
             </h1>
 
-            <h2 class="govuk-heading-m" th:text="'Review evidence'">
-                Review evidence
-            </h2>
+            <p class="govuk-body">Provide detail about why you are rejecting the reactivation request.</p>
 
-            <p class="govuk-body">If required, you can respond to the request and ask for more information.</p>
-
-            <div class="govuk-inset-text" th:each="req, iterStat : ${reactivationRequests}">
-                <h2 class="govuk-heading-s" th:text="${req.actorRoleType().getLabelForUi(req.actorName())}">
-                    User Full Name (Role Name)
-                </h2>
-                <p class="govuk-body" th:text="${req.formattedCreatedAt()}">
-                    Date
-                </p>
-                <p class="govuk-body" th:text="${req.comments()}">
-                    Comments
-                </p>
-            </div>
+            <p class="govuk-body">Rejected requests cannot be reopened. If the user's circumstances change in future,
+            they can ask their provider admin to submit a new reactivation request.</p>
 
             <form method="post"
-                  th:action="@{/admin/user/delegate-reactivate/track/{id}(id=${user.id}, profileId=${profileId}, requestId=${requestId})}"
+                  th:action="@{/admin/user/delegate-reactivate/reject/{id}(id=${user.id}, profileId=${profileId}, requestId=${requestId})}"
                   th:object="${delegateReactivateUserCommentForm}">
 
                 <!-- Comments Field -->
@@ -79,8 +65,8 @@
                 </div>
 
                 <div class="govuk-button-group">
-                    <button type="submit" class="govuk-button" data-module="govuk-button">
-                        Continue
+                    <button type="submit" class="govuk-button govuk-button--warning" data-module="govuk-button">
+                        Reject request
                     </button>
                     <a class="govuk-button govuk-button--secondary"
                        th:href="@{/admin/users/manage/{id}(id=${profileId})}">Cancel</a>
@@ -89,31 +75,6 @@
         </div>
     </div>
 
-    <div class="govuk-grid-row" th:if="${canActionDelegateEnableUser}">
-        <form method="post"
-              th:action="@{/admin/user/delegate-reactivate/approve/{id}(id=${user.id}, profileId=${profileId}, requestId=${requestId})}">
-            <div class="govuk-grid-column-three-quarters">
-
-                <div class="govuk-!-margin-bottom-9 govuk-!-margin-top-9"
-                     style="border: 1px solid #b1b4b6;"></div>
-
-                <h1 class="govuk-heading-l">
-                    <span th:text="'Record a decision'">Record a decision</span>
-                </h1>
-
-                <p class="govuk-body">This action closes the request, and nobody can make any further comments.</p>
-
-                <div class="govuk-button-group">
-                    <button type="submit" class="govuk-button" data-module="govuk-button">
-                        Approve
-                    </button>
-                    <a class="govuk-button govuk-button--warning"
-                       th:href="@{/admin/user/delegate-reactivate/reject/{id}(id=${user.id}, profileId=${profileId}, requestId=${requestId})}">
-                        Reject</a>
-                </div>
-            </div>
-        </form>
-    </div>
 </main>
 </body>
 

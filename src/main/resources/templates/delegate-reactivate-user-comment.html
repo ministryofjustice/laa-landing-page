@@ -26,14 +26,14 @@
                 <div class="govuk-error-summary__body">
                     <ul class="govuk-list govuk-error-summary__list">
                         <li>
-                            <a href="#reason-error" th:text="${errorMessage}"></a>
+                            <a href="#comment-error" th:text="${errorMessage}"></a>
                         </li>
                     </ul>
                 </div>
             </div>
 
-            <h1 class="govuk-heading-l" th:text="'Provide a reason'">
-                Provide a reason
+            <h1 class="govuk-heading-l" th:text="'Provide a comment'">
+                Provide a comment
             </h1>
 
             <p class="govuk-body">This user has been deactivated by the Legal Aid Agency. You need to request
@@ -46,26 +46,26 @@
                 <li>What has changed that means they now require regular access</li>
             </ul>
 
-            <form method="post" th:action="@{/admin/user/delegate-reactivate-user-reason/{id}(id=${user.id}, referer=${referer}, profileId=${profileId})}"
-                  th:object="${delegateReactivateUserReasonForm}">
+            <form method="post" th:action="@{/admin/user/delegate-reactivate-user-comment/{id}(id=${user.id}, referer=${referer}, profileId=${profileId})}"
+                  th:object="${delegateReactivateUserCommentForm}">
 
-                <!-- Reason Field -->
-                <div class="govuk-form-group govuk-!-width-full" th:classappend="${#fields.hasErrors('reason')} ? 'govuk-form-group--error' : ''" id="reason-group">
-                    <div th:if="${#fields.hasErrors('reason')}" class="govuk-error-message" id="reason-error">
+                <!-- Comment Field -->
+                <div class="govuk-form-group govuk-!-width-full" th:classappend="${#fields.hasErrors('comment')} ? 'govuk-form-group--error' : ''" id="comment-group">
+                    <div th:if="${#fields.hasErrors('comment')}" class="govuk-error-message" id="comment-error">
                         <span class="govuk-visually-hidden">Error:</span>
-                        <span th:errors="*{reason}"></span>
+                        <span th:errors="*{comment}"></span>
                     </div>
 
-                    <label class="govuk-label govuk-label--m" for="reassignment-reason">
-                        Please enter a reason (minimum 10 characters).
+                    <label class="govuk-label govuk-label--m" for="reassignment-comment">
+                        Please enter a comment (minimum 10 characters).
                     </label>
 
                     <textarea class="govuk-textarea govuk-!-margin-bottom-0"
-                              th:classappend="${#fields.hasErrors('reason')} ? 'govuk-textarea--error' : ''"
-                              id="reassignment-reason"
-                              name="reason"
+                              th:classappend="${#fields.hasErrors('comment')} ? 'govuk-textarea--error' : ''"
+                              id="reassignment-comment"
+                              name="comment"
                               rows="4"
-                              th:field="*{reason}"></textarea>
+                              th:field="*{comment}"></textarea>
 
                     <p class="govuk-hint govuk-!-margin-top-0">You can enter up to 500 characters.</p>
                 </div>

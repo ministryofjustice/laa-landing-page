@@ -320,4 +320,6 @@ public interface EntraUserRepository extends JpaRepository<EntraUser, UUID>, Ent
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
     );
+
+    Optional<EntraUser> getEntraUserById(UUID id);
 }

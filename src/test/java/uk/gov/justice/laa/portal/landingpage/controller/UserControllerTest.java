@@ -207,8 +207,7 @@ class UserControllerTest {
         assertThat(view).isEqualTo("enable-user-completed");
         assertThat(model.getAttribute("user")).isEqualTo(enabledUser);
         assertThat(model.getAttribute("referer")).isEqualTo(referer);
-        assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE))
-                .isEqualTo("Enable User Success - " + enabledUser.getFullName());
+        assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Reactivate User Success - " + enabledUser.getFullName());
     }
 
     @Test

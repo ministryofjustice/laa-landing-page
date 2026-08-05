@@ -408,15 +408,22 @@ public class UserController {
         final boolean canDisableUser = disableUserFeatureEnabled
                 && accessControlService.canDisableUser(user.getEntraUser().getId());
         model.addAttribute("canDisableUser", canDisableUser);
+        Optional<UserActivationRequest> userActivationRequest = userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(UUID.fromString(id));
+        boolean isActiveDelegateRequestPresent = userActivationRequest.isPresent()
+                && !(userActivationRequest.get().getStatus() == ReactivationRequestStatus.APPROVED
+                || userActivationRequest.get().getStatus() == ReactivationRequestStatus.REJECTED);
+        boolean canManageDelegateEnableUser = isActiveDelegateRequestPresent && accessControlService.canManageDelegateEnableUser(user.getEntraUser().getId());
+        model.addAttribute("canManageDelegateEnableUser", isActiveDelegateRequestPresent && canManageDelegateEnableUser);
+        boolean canTrackDelegateRequest = isActiveDelegateRequestPresent && !canManageDelegateEnableUser && accessControlService.canTrackDelegateEnableUser(user.getEntraUser().getId());
+        model.addAttribute("canTrackDelegateEnableUser", canTrackDelegateRequest);
         AccessControlService.EnablementFlags enablementFlags = disableUserFeatureEnabled
                 ? accessControlService.getEnablementFlags(user.getEntraUser().getId())
                 : new AccessControlService.EnablementFlags(false, false, false);
-        model.addAttribute("canEnableUser", enablementFlags.canEnable());
+        model.addAttribute("canEnableUser", !canTrackDelegateRequest && !canManageDelegateEnableUser && enablementFlags.canEnable());
         model.addAttribute("cannotEnableUser", enablementFlags.blockedByHierarchy());
-        Optional<UserActivationRequest> userActivationRequest = userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(UUID.fromString(id));
-        boolean canTrackDelegateRequest = userActivationRequest.isPresent() && userActivationRequest.get().getStatus() != ReactivationRequestStatus.APPROVED;
-        model.addAttribute("canTrackDelegateEnableUser", canTrackDelegateRequest);
-        model.addAttribute("canDelegateEnableUser", !canTrackDelegateRequest && enablementFlags.canDelegate());
+
+        boolean canDelegateEnableUser = !isActiveDelegateRequestPresent && enablementFlags.canDelegate();
+        model.addAttribute("canDelegateEnableUser", canDelegateEnableUser);
         final boolean userIsEnabled = user.getEntraUser().isEnabled();
         model.addAttribute("userIsEnabled", userIsEnabled);
         boolean showResendVerificationLink = accessControlService.canSendVerificationEmail(id);
@@ -696,7 +703,7 @@ public class UserController {
         model.addAttribute("user", user);
         model.addAttribute("referer", referer);
         model.addAttribute("cancelPath", getCancelPathFromReferer(referer, id, profileId));
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Enable User - " + user.getFullName());
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User - " + user.getFullName());
         return "enable-user-confirmation";
     }
 
@@ -714,7 +721,7 @@ public class UserController {
 
         model.addAttribute("user", user);
         model.addAttribute("referer", referer);
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Enable User Success - " + user.getFullName());
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User Success - " + user.getFullName());
         return "enable-user-completed";
     }
 
