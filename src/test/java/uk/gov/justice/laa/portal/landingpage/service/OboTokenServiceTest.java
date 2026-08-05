@@ -152,7 +152,7 @@ class OboTokenServiceTest {
         oboTokenService.acquireOboToken(USER_ACCESS_TOKEN, USER_OID);
 
         MultiValueMap<String, String> body = bodyCaptor.getValue();
-        assertThat(body.getFirst("grant_type")).isEqualTo("urn:ietf:params:oauth2:grant-type:jwt-bearer");
+        assertThat(body.getFirst("grant_type")).isEqualTo("urn:ietf:params:oauth:grant-type:jwt-bearer");
         assertThat(body.getFirst("requested_token_use")).isEqualTo("on_behalf_of");
         assertThat(body.getFirst("assertion")).isEqualTo(USER_ACCESS_TOKEN);
         assertThat(body.getFirst("client_id")).isEqualTo("test-client-id");
