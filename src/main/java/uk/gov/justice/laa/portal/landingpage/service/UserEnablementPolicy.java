@@ -49,8 +49,7 @@ public class UserEnablementPolicy {
         boolean isGlobalAdminOrSecurityResponse = actorRoles.contains(AuthzRole.GLOBAL_ADMIN.getRoleName())
                 || actorRoles.contains(AuthzRole.SECURITY_RESPONSE.getRoleName());
 
-        boolean isEuaLevel = actorRoles.contains(AuthzRole.EXTERNAL_USER_MANAGER.getRoleName())
-                || actorRoles.contains(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName());
+        boolean isEuaLevel = actorRoles.contains(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName());
 
         boolean isInternalUserManager = actorRoles.contains(AuthzRole.INTERNAL_USER_MANAGER.getRoleName());
 

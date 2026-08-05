@@ -14,12 +14,12 @@ import java.io.Serializable;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class DelegateReactivateUserReasonForm implements Serializable {
+public class DelegateReactivateUserCommentForm implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
-    @NotNull(message = "A reason must be provided")
-    @Size(min = 10, max = 500, message = "Reason must be between 10 and 500 characters")
-    String reason;
+    @NotNull(message = "A comment must be provided")
+    @Size(min = 10, max = 500, message = "Comment must be between 10 and 500 characters")
+    String comment;
 }
