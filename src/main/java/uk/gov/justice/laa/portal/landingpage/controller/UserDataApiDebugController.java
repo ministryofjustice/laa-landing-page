@@ -1,11 +1,12 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -29,22 +30,23 @@ public class UserDataApiDebugController {
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
     private final UserDataApiClient userDataApiClient;
-    private final OAuth2AuthorizedClientService authorizedClientService;
+    private final OAuth2AuthorizedClientRepository authorizedClientRepository;
 
     public UserDataApiDebugController(UserDataApiClient userDataApiClient,
-                                      OAuth2AuthorizedClientService authorizedClientService) {
+                                      OAuth2AuthorizedClientRepository authorizedClientRepository) {
         this.userDataApiClient = userDataApiClient;
-        this.authorizedClientService = authorizedClientService;
+        this.authorizedClientRepository = authorizedClientRepository;
     }
 
     @GetMapping("/me")
     public ResponseEntity<Map<String, String>> me(
             OAuth2AuthenticationToken oauthToken,
+            HttpServletRequest request,
             @RequestHeader(value = "X-Correlation-ID", required = false) String correlationId) {
         String cid = correlationId != null ? correlationId : UUID.randomUUID().toString();
 
-        OAuth2AuthorizedClient client = authorizedClientService.loadAuthorizedClient(
-            oauthToken.getAuthorizedClientRegistrationId(), oauthToken.getName());
+        OAuth2AuthorizedClient client = authorizedClientRepository.loadAuthorizedClient(
+            oauthToken.getAuthorizedClientRegistrationId(), oauthToken, request);
 
         if (client == null || client.getAccessToken() == null) {
             logger.error("No authorized client or access token found: correlationId={}", cid);
