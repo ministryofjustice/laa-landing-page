@@ -32,13 +32,6 @@ public class ProdJwtDecoderConfig {
     @Value("${spring.security.oauth2.resourceserver.jwt.audience}")
     private String audience;
 
-    @Bean("tokenExpiryJwtDecoder")
-    public JwtDecoder tokenExpiryJwtDecoder() {
-        NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
-        decoder.setJwtValidator(new JwtTimestampValidator());
-        return decoder;
-    }
-
     @Bean
     @Primary
     public JwtDecoder jwtDecoder() {
