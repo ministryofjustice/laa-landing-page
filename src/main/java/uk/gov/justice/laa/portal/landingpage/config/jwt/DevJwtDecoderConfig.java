@@ -21,15 +21,6 @@ public class DevJwtDecoderConfig {
      * For development and testing environments, provide a JwtDecoder that accepts any token
      * This should NOT be used in production
      */
-    @Bean("tokenExpiryJwtDecoder")
-    public JwtDecoder tokenExpiryJwtDecoder() {
-        return token -> Jwt.withTokenValue(token)
-            .header("alg", "none")
-            .issuedAt(Instant.now().minusSeconds(60))
-            .expiresAt(Instant.now().plusSeconds(3600))
-            .build();
-    }
-
     @Bean("testJwtDecoder")
     @Primary
     public JwtDecoder jwtDecoder() {
