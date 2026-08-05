@@ -144,12 +144,60 @@
             <table class="govuk-table" style="table-layout: fixed; min-width: 900px; width: 100%;">
                 <thead class="govuk-table__head">
                 <tr class="govuk-table__row">
-                    <th scope="col" class="govuk-table__header" style="width: 18%;">Name</th>
-                    <th scope="col" class="govuk-table__header" style="width: 22%;">Email</th>
-                    <th scope="col" class="govuk-table__header" style="width: 14%;">Date submitted</th>
-                    <th scope="col" class="govuk-table__header" style="width: 14%;">Last activity</th>
-                    <th scope="col" class="govuk-table__header" style="width: 12%;">User type</th>
-                    <th scope="col" class="govuk-table__header" style="width: 20%;">Request status</th>
+                    <th scope="col" class="govuk-table__header" style="width: 18%;"
+                        th:aria-sort="${sort == 'userName' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
+                        <a class="govuk-link" th:href="@{/admin/users/reactivation-requests(size=${requestedPageSize}, search=${search}, sort='userName', direction=${sort == 'userName' and direction == 'asc' ? 'desc' : 'asc'}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=true)}">
+                            Name
+                            <img th:if="${sort == 'userName' and direction == 'asc'}" th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
+                            <img th:if="${sort == 'userName' and direction == 'desc'}" th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
+                            <img th:if="${sort != 'userName'}" th:src="@{/assets/images/sort-none.svg}" width="22" height="22" alt="">
+                        </a>
+                    </th>
+                    <th scope="col" class="govuk-table__header" style="width: 22%;"
+                        th:aria-sort="${sort == 'userEmail' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
+                        <a class="govuk-link" th:href="@{/admin/users/reactivation-requests(size=${requestedPageSize}, search=${search}, sort='userEmail', direction=${sort == 'userEmail' and direction == 'asc' ? 'desc' : 'asc'}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=true)}">
+                            Email
+                            <img th:if="${sort == 'userEmail' and direction == 'asc'}" th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
+                            <img th:if="${sort == 'userEmail' and direction == 'desc'}" th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
+                            <img th:if="${sort != 'userEmail'}" th:src="@{/assets/images/sort-none.svg}" width="22" height="22" alt="">
+                        </a>
+                    </th>
+                    <th scope="col" class="govuk-table__header" style="width: 14%;"
+                        th:aria-sort="${sort == 'dateSubmitted' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
+                        <a class="govuk-link" th:href="@{/admin/users/reactivation-requests(size=${requestedPageSize}, search=${search}, sort='dateSubmitted', direction=${sort == 'dateSubmitted' and direction == 'asc' ? 'desc' : 'asc'}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=true)}">
+                            Date submitted
+                            <img th:if="${sort == 'dateSubmitted' and direction == 'asc'}" th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
+                            <img th:if="${sort == 'dateSubmitted' and direction == 'desc'}" th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
+                            <img th:if="${sort != 'dateSubmitted'}" th:src="@{/assets/images/sort-none.svg}" width="22" height="22" alt="">
+                        </a>
+                    </th>
+                    <th scope="col" class="govuk-table__header" style="width: 14%;"
+                        th:aria-sort="${sort == 'lastActivity' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
+                        <a class="govuk-link" th:href="@{/admin/users/reactivation-requests(size=${requestedPageSize}, search=${search}, sort='lastActivity', direction=${sort == 'lastActivity' and direction == 'asc' ? 'desc' : 'asc'}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=true)}">
+                            Last activity
+                            <img th:if="${sort == 'lastActivity' and direction == 'asc'}" th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
+                            <img th:if="${sort == 'lastActivity' and direction == 'desc'}" th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
+                            <img th:if="${sort != 'lastActivity'}" th:src="@{/assets/images/sort-none.svg}" width="22" height="22" alt="">
+                        </a>
+                    </th>
+                    <th scope="col" class="govuk-table__header" style="width: 12%;"
+                        th:aria-sort="${sort == 'actorRoleType' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
+                        <a class="govuk-link" th:href="@{/admin/users/reactivation-requests(size=${requestedPageSize}, search=${search}, sort='actorRoleType', direction=${sort == 'actorRoleType' and direction == 'asc' ? 'desc' : 'asc'}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=true)}">
+                            User type
+                            <img th:if="${sort == 'actorRoleType' and direction == 'asc'}" th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
+                            <img th:if="${sort == 'actorRoleType' and direction == 'desc'}" th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
+                            <img th:if="${sort != 'actorRoleType'}" th:src="@{/assets/images/sort-none.svg}" width="22" height="22" alt="">
+                        </a>
+                    </th>
+                    <th scope="col" class="govuk-table__header" style="width: 20%;"
+                        th:aria-sort="${sort == 'requestStatus' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
+                        <a class="govuk-link" th:href="@{/admin/users/reactivation-requests(size=${requestedPageSize}, search=${search}, sort='requestStatus', direction=${sort == 'requestStatus' and direction == 'asc' ? 'desc' : 'asc'}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=true)}">
+                            Request status
+                            <img th:if="${sort == 'requestStatus' and direction == 'asc'}" th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
+                            <img th:if="${sort == 'requestStatus' and direction == 'desc'}" th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
+                            <img th:if="${sort != 'requestStatus'}" th:src="@{/assets/images/sort-none.svg}" width="22" height="22" alt="">
+                        </a>
+                    </th>
                 </tr>
                 </thead>
                 <tbody class="govuk-table__body">

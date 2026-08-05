@@ -416,6 +416,8 @@ public class UserController {
         model.addAttribute("canManageDelegateEnableUser", isActiveDelegateRequestPresent && canManageDelegateEnableUser);
         boolean canTrackDelegateRequest = isActiveDelegateRequestPresent && !canManageDelegateEnableUser && accessControlService.canTrackDelegateEnableUser(user.getEntraUser().getId());
         model.addAttribute("canTrackDelegateEnableUser", canTrackDelegateRequest);
+        model.addAttribute("reactivationRequestStatus", isActiveDelegateRequestPresent
+                ? userActivationRequest.get().getStatus() : null);
         AccessControlService.EnablementFlags enablementFlags = disableUserFeatureEnabled
                 ? accessControlService.getEnablementFlags(user.getEntraUser().getId())
                 : new AccessControlService.EnablementFlags(false, false, false);
@@ -697,12 +699,16 @@ public class UserController {
     public String enableUserGet(@PathVariable String id,
                                  Model model,
                                  String referer,
-                                 String profileId) {
+                                 String profileId,
+                                 Authentication authentication) {
 
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        EntraUser currentEntraUser = loginService.getCurrentEntraUser(authentication);
+        boolean actingOnBehalf = userService.isInternal(currentEntraUser.getId());
         model.addAttribute("user", user);
         model.addAttribute("referer", referer);
         model.addAttribute("cancelPath", getCancelPathFromReferer(referer, id, profileId));
+        model.addAttribute("actingOnBehalf", actingOnBehalf);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User - " + user.getFullName());
         return "enable-user-confirmation";
     }

@@ -1,9 +1,10 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import jakarta.servlet.http.HttpSession;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,14 +21,20 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
+import static uk.gov.justice.laa.portal.landingpage.controller.UserController.buildErrorString;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
-import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.ReactivationRequestsPageData;
+import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.forms.DelegateReactivateUserCommentForm;
@@ -35,13 +42,6 @@ import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-
-import static uk.gov.justice.laa.portal.landingpage.controller.UserController.buildErrorString;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
 
 @Slf4j
@@ -67,6 +67,7 @@ public class UserActivationController {
                                             Model model,
                                             String referer,
                                             UUID profileId,
+                                            Authentication authentication,
                                             RedirectAttributes redirectAttributes) {
         if (!disableUserFeatureEnabled) {
             throw new ResponseStatusException(HttpStatusCode.valueOf(404));
@@ -84,9 +85,13 @@ public class UserActivationController {
 
         }
 
+        EntraUser currentEntraUser = loginService.getCurrentEntraUser(authentication);
+        boolean actingOnBehalf = userService.isInternal(currentEntraUser.getId());
+
         model.addAttribute("user", user);
         model.addAttribute("profileId", profileId);
         model.addAttribute("referer", referer);
+        model.addAttribute("actingOnBehalf", actingOnBehalf);
         session.setAttribute("delegateReactivateUserId", id);
         session.setAttribute("profileId", profileId);
 

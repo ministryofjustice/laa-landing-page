@@ -243,7 +243,7 @@
                                             </a>
                                         </dd>
                                     </div>
-                                    <div class="govuk-summary-list__row" th:if="${canDisableUser or canEnableUser or canDelegateEnableUser or cannotEnableUser or canTrackDelegateEnableUser or canManageDelegateEnableUser}">
+                                    <div class="govuk-summary-list__row" th:if="${canDisableUser or canEnableUser or canDelegateEnableUser or cannotEnableUser}">
                                         <dt class="govuk-summary-list__key">SiLAS Account Status</dt>
                                         <dd class="govuk-summary-list__value">
                                             <strong class="govuk-tag govuk-tag--green" style="white-space: nowrap; padding-right: 20px;" th:if="${!userActivated}">Awaiting verification</strong>
@@ -257,11 +257,20 @@
                                                th:href="@{/admin/users/manage/{id}/enable(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">Activate user</a>
                                             <a th:if="${canDelegateEnableUser}" class="govuk-link"
                                                th:href="@{/admin/user/delegate-reactivate/{id}(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">Reactivate user</a>
+                                            <span th:if="${cannotEnableUser}">You cannot activate this user</span>
+                                        </dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row" th:if="${canTrackDelegateEnableUser or canManageDelegateEnableUser}">
+                                        <dt class="govuk-summary-list__key">Reactivation Request Status</dt>
+                                        <dd class="govuk-summary-list__value">
+                                            <strong class="govuk-tag govuk-tag--yellow" th:if="${reactivationRequestStatus != null and reactivationRequestStatus.name() == 'IN_REVIEW'}">In review</strong>
+                                            <strong class="govuk-tag govuk-tag--blue" th:if="${reactivationRequestStatus != null and reactivationRequestStatus.name() == 'INFORMATION_REQUIRED'}">Information required</strong>
+                                        </dd>
+                                        <dd class="govuk-summary-list__actions">
                                             <a th:if="${canTrackDelegateEnableUser}" class="govuk-link"
                                                th:href="@{/admin/user/delegate-reactivate/track/{id}(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">Track request</a>
                                             <a th:if="${canManageDelegateEnableUser}" class="govuk-link"
                                                th:href="@{/admin/user/delegate-reactivate/track/{id}(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">Manage request</a>
-                                            <span th:if="${cannotEnableUser}">You cannot activate this user</span>
                                         </dd>
                                     </div>
                                 </dl>
