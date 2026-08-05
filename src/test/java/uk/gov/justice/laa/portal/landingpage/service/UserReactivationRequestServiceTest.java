@@ -10,15 +10,18 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserActivationRequestRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -93,9 +96,13 @@ class UserReactivationRequestServiceTest {
         @Test
         @DisplayName("Should create new request when no existing request is present")
         void noExistingRequest_createsNewRequest() {
+            AppRole role = AppRole.builder().id(UUID.randomUUID()).name("Provider Admin").build();
+            UserProfile profile = UserProfile.builder().activeProfile(true).appRoles(Set.of(role)).build();
+            EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).userProfiles(Set.of(profile)).build();
+            given(entraUserRepository.findByEntraOid(any())).willReturn(Optional.of(entraUser));
             given(requestRepository.findFirstByUserProfileIdOrderByVersionDesc(PROFILE_ID)).willReturn(Optional.empty());
 
-            UserActivationRequest result = service.createNewRequest(REQUEST_ID, PROFILE_ID, "Reactivation reason", ACTOR_ID);
+            UserActivationRequest result = service.createNewRequest(REQUEST_ID, PROFILE_ID, "Reactivation comment", ACTOR_ID);
 
             ArgumentCaptor<UserActivationRequest> captor = ArgumentCaptor.forClass(UserActivationRequest.class);
             verify(requestRepository).save(captor.capture());
@@ -104,7 +111,7 @@ class UserReactivationRequestServiceTest {
             assertThat(saved.getRequestId()).isEqualTo(REQUEST_ID);
             assertThat(saved.getUserProfileId()).isEqualTo(PROFILE_ID);
             assertThat(saved.getStatus()).isEqualTo(ReactivationRequestStatus.IN_REVIEW);
-            assertThat(saved.getComments()).isEqualTo("Reactivation reason");
+            assertThat(saved.getComments()).isEqualTo("Reactivation comment");
             assertThat(saved.getActorEntraOid()).isEqualTo(ACTOR_ID);
             assertThat(saved.getCreatedAt()).isNotNull();
 
@@ -114,10 +121,14 @@ class UserReactivationRequestServiceTest {
         @Test
         @DisplayName("Should create new request when existing request is REJECTED")
         void existingRejectedRequest_createsNewRequest() {
+            AppRole role = AppRole.builder().id(UUID.randomUUID()).name("Provider Admin").build();
+            UserProfile profile = UserProfile.builder().activeProfile(true).appRoles(Set.of(role)).build();
+            EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).userProfiles(Set.of(profile)).build();
+            given(entraUserRepository.findByEntraOid(any())).willReturn(Optional.of(entraUser));
             UserActivationRequest rejected = buildUserActivationRequest(ReactivationRequestStatus.REJECTED, 1);
             given(requestRepository.findFirstByUserProfileIdOrderByVersionDesc(PROFILE_ID)).willReturn(Optional.of(rejected));
 
-            UserActivationRequest result = service.createNewRequest(REQUEST_ID, PROFILE_ID, "Retry reason", ACTOR_ID);
+            UserActivationRequest result = service.createNewRequest(REQUEST_ID, PROFILE_ID, "Retry comment", ACTOR_ID);
 
             assertThat(result).isNotNull();
             verify(requestRepository).save(any(UserActivationRequest.class));
@@ -126,8 +137,13 @@ class UserReactivationRequestServiceTest {
         @Test
         @DisplayName("Should create new request when existing request is APPROVED")
         void existingApprovedRequest_createsNewRequest() {
+            AppRole role = AppRole.builder().id(UUID.randomUUID()).name("Provider Admin").build();
+            UserProfile profile = UserProfile.builder().activeProfile(true).appRoles(Set.of(role)).build();
+            EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).userProfiles(Set.of(profile)).build();
+            given(entraUserRepository.findByEntraOid(any())).willReturn(Optional.of(entraUser));
             UserActivationRequest approved = buildUserActivationRequest(ReactivationRequestStatus.APPROVED, 1);
             given(requestRepository.findFirstByUserProfileIdOrderByVersionDesc(PROFILE_ID)).willReturn(Optional.of(approved));
+
 
             UserActivationRequest result = service.createNewRequest(REQUEST_ID, PROFILE_ID, "New request", ACTOR_ID);
 
@@ -141,7 +157,7 @@ class UserReactivationRequestServiceTest {
             UserActivationRequest inReview = buildUserActivationRequest(ReactivationRequestStatus.IN_REVIEW, 1);
             given(requestRepository.findFirstByUserProfileIdOrderByVersionDesc(PROFILE_ID)).willReturn(Optional.of(inReview));
 
-            assertThatThrownBy(() -> service.createNewRequest(REQUEST_ID, PROFILE_ID, "Reason", ACTOR_ID))
+            assertThatThrownBy(() -> service.createNewRequest(REQUEST_ID, PROFILE_ID, "Comment", ACTOR_ID))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessage("Request already being processed for user " + PROFILE_ID);
 

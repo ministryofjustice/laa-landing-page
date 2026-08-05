@@ -5,10 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.ReactivationRequestsPageData;
 import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -47,7 +47,6 @@ public class UserReactivationRequestService {
     private static final String UNKNOWN_USER_NAME = "Unknown user";
 
     private final LoginService loginService;
-    private final UserService userService;
     private final FirmService firmService;
     private final UserActivationRequestRepository userActivationRequestRepository;
     private final UserProfileRepository userProfileRepository;
@@ -55,14 +54,12 @@ public class UserReactivationRequestService {
     private final ReactivationTypeResolver roleTypeResolver;
 
     public UserReactivationRequestService(LoginService loginService,
-                                          UserService userService,
                                           FirmService firmService,
                                           UserActivationRequestRepository userActivationRequestRepository,
                                           UserProfileRepository userRepository,
                                           EntraUserRepository entraUserRepository,
                                           ReactivationTypeResolver roleTypeResolver) {
         this.loginService = loginService;
-        this.userService = userService;
         this.firmService = firmService;
         this.userActivationRequestRepository = userActivationRequestRepository;
         this.userProfileRepository = userRepository;
@@ -74,7 +71,7 @@ public class UserReactivationRequestService {
         return userActivationRequestRepository.findFirstByUserProfileIdOrderByVersionDesc(profileId);
     }
 
-    public UserActivationRequest createNewRequest(UUID requestId, UUID profileId, String reason, String actorEntraOid) {
+    public UserActivationRequest createNewRequest(UUID requestId, UUID profileId, String comment, String actorEntraOid) {
         Optional<UserActivationRequest> request = userActivationRequestRepository.findFirstByUserProfileIdOrderByVersionDesc(profileId);
 
         if (request.isPresent() && !(ReactivationRequestStatus.REJECTED.equals(request.get().getStatus()) || ReactivationRequestStatus.APPROVED.equals(request.get().getStatus()))) {
@@ -82,14 +79,19 @@ public class UserReactivationRequestService {
             throw new IllegalStateException("Request already being processed for user " + profileId);
         }
 
+        EntraUser entraUser = entraUserRepository.findByEntraOid(actorEntraOid).orElseThrow();
+        UserProfile actorActiveUserProfile = entraUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
+        List<String> appRoles = actorActiveUserProfile.getAppRoles().stream().map(AppRole::getName).toList();
+        ReactivationRoleType actorRoleType = roleTypeResolver.resolveFromRoles(appRoles);
+
         UserActivationRequest newRecord = new UserActivationRequest();
         newRecord.setRequestId(requestId);
         newRecord.setUserProfileId(profileId);
         newRecord.setStatus(ReactivationRequestStatus.IN_REVIEW);
-        newRecord.setComments(reason);
+        newRecord.setComments(comment);
         newRecord.setActorEntraOid(actorEntraOid);
         newRecord.setCreatedAt(Instant.now());
-        newRecord.setActorRoleType(ReactivationRoleType.PROVIDER_ADMIN);
+        newRecord.setActorRoleType(actorRoleType);
 
         userActivationRequestRepository.save(newRecord);
 
@@ -149,10 +151,9 @@ public class UserReactivationRequestService {
         return history;
     }
 
-    public ReactivationRequestStatus calculateNextReactivationRequestStatus(UUID profileId) {
-        List<AppRoleDto> userAppRolesByUserId = userService.getUserAppRolesByUserId(profileId.toString());
-        List<String> userRoles = userAppRolesByUserId.stream().map(AppRoleDto::getName).toList();
-        ReactivationRoleType roleType = roleTypeResolver.resolveFromRoles(userRoles);
+    public ReactivationRequestStatus calculateNextReactivationRequestStatus(Authentication authentication) {
+        EntraUser actor = loginService.getCurrentEntraUser(authentication);
+        ReactivationRoleType roleType = roleTypeResolver.resolve(actor);
 
         return roleType == ReactivationRoleType.PROVIDER_ADMIN ? ReactivationRequestStatus.IN_REVIEW : ReactivationRequestStatus.INFORMATION_REQUIRED;
     }

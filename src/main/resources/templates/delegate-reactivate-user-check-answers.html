@@ -11,7 +11,7 @@
 
 <body>
     <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-        <a class="govuk-back-link" th:href="@{/admin/user/delegate-reactivate-user-reason/{id}(id=${user.id})}">
+        <a class="govuk-back-link" th:href="@{/admin/user/delegate-reactivate-user-comment/{id}(id=${user.id})}">
             Back </a>
     </nav>
     <main class="govuk-main-wrapper" id="main-content">
@@ -65,10 +65,10 @@
                             <div class="govuk-summary-list__row">
                                 <dt class="govuk-summary-list__key">Justification</dt>
                                 <dd class="govuk-summary-list__value">
-                                    <span th:text="${delegateReactivateUserReasonForm.reason}"></span>
+                                    <span th:text="${delegateReactivateUserCommentForm.comment}"></span>
                                 </dd>
                                 <dd class="govuk-summary-list__actions">
-                                    <a th:href="@{/admin/user/delegate-reactivate-user-reason/{id}(id=${user.id})}" class="govuk-link">
+                                    <a th:href="@{/admin/user/delegate-reactivate-user-comment/{id}(id=${user.id})}" class="govuk-link">
                                         Change
                                         <span class="govuk-visually-hidden"> first name</span>
                                     </a>

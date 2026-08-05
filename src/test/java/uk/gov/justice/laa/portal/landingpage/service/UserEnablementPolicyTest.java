@@ -29,7 +29,7 @@ class UserEnablementPolicyTest {
         @Test
         void nullDisableType_internalDelegationRoles_returnTrue() {
             assertThat(policy.canEnable(null, List.of(IUM))).isTrue();
-            assertThat(policy.canEnable(null, List.of(EUM))).isTrue();
+            assertThat(policy.canEnable(null, List.of(EUM))).isFalse();
             assertThat(policy.canEnable(null, List.of(EUA))).isTrue();
             assertThat(policy.canEnable(null, List.of(SR))).isTrue();
             assertThat(policy.canEnable(null, List.of(GA))).isTrue();
@@ -90,8 +90,8 @@ class UserEnablementPolicyTest {
         }
 
         @Test
-        void sync_eumCanEnable() {
-            assertThat(policy.canEnable(DisableType.SYNC, List.of(EUM))).isTrue();
+        void sync_eumCannotEnable() {
+            assertThat(policy.canEnable(DisableType.SYNC, List.of(EUM))).isFalse();
         }
 
         @Test
@@ -117,8 +117,8 @@ class UserEnablementPolicyTest {
         }
 
         @Test
-        void firm_eumCanEnable() {
-            assertThat(policy.canEnable(DisableType.FIRM, List.of(EUM))).isTrue();
+        void firm_eumCannotEnable() {
+            assertThat(policy.canEnable(DisableType.FIRM, List.of(EUM))).isFalse();
         }
 
         @Test
@@ -144,8 +144,8 @@ class UserEnablementPolicyTest {
         // --- LAA disable type (External User Manager / External User Admin disabled the user) ---
 
         @Test
-        void laa_eumCanEnable() {
-            assertThat(policy.canEnable(DisableType.LAA, List.of(EUM))).isTrue();
+        void laa_eumCannotEnable() {
+            assertThat(policy.canEnable(DisableType.LAA, List.of(EUM))).isFalse();
         }
 
         @Test
@@ -220,9 +220,9 @@ class UserEnablementPolicyTest {
         }
 
         @Test
-        void laa_fumWithEumRole_canEnable() {
+        void laa_fumWithEumRole_cannotEnable() {
             // FUM alone cannot re-enable a LAA-disabled user, but EUM (higher delegation) can
-            assertThat(policy.canEnable(DisableType.LAA, List.of(FUM, EUM))).isTrue();
+            assertThat(policy.canEnable(DisableType.LAA, List.of(FUM, EUM))).isFalse();
         }
 
         @Test

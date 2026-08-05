@@ -49,9 +49,12 @@ public class ReactivationTypeResolver {
             return ReactivationRoleType.LAA;
         }
 
-        if (roleNames.contains(AuthzRole.EXTERNAL_USER_MANAGER.getRoleName())
-                || roleNames.contains(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())) {
-            return ReactivationRoleType.LAA;
+        if (roleNames.contains(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())) {
+            return ReactivationRoleType.LAA_USER_REGISTRATION;
+        }
+
+        if (roleNames.contains(AuthzRole.EXTERNAL_USER_MANAGER.getRoleName())) {
+            return ReactivationRoleType.LAA_OST;
         }
 
         if (roleNames.contains(AuthzRole.FIRM_USER_MANAGER.getRoleName())) {

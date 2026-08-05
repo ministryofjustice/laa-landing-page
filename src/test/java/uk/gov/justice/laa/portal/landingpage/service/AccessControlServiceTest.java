@@ -3106,7 +3106,10 @@ public class AccessControlServiceTest {
             when(userEnablementPolicy.canEnable(any(), any())).thenReturn(false);
 
             try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
-                mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER)).thenReturn(true);
+                mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser,
+                        Permission.ENABLE_EXTERNAL_USER)).thenReturn(true);
+                mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser,
+                        Permission.CAN_REQUEST_DELEGATE_ENABLE_USER)).thenReturn(true);
                 assertThat(accessControlService.canEnableUser(targetUserId.toString())).isFalse();
             }
         }
@@ -3258,6 +3261,8 @@ public class AccessControlServiceTest {
                 try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                     mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser,
                             Permission.ENABLE_EXTERNAL_USER)).thenReturn(true);
+                    mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser,
+                            Permission.CAN_REQUEST_DELEGATE_ENABLE_USER)).thenReturn(true);
                     assertThat(accessControlService.canDelegateEnableUser(targetUserId.toString())).isTrue();
                 }
             }

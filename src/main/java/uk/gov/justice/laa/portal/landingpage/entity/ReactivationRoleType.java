@@ -5,16 +5,22 @@ import lombok.Getter;
 @Getter
 public enum ReactivationRoleType {
 
-    NONE("None"),
-
-    PROVIDER_ADMIN("Provider Admin"),
-
-    LAA("Legal Aid Agency");
+    NONE("None"), LAA_OST("Legal Aid Agency (Online Support)"), // External User Manager
+    PROVIDER_ADMIN("Provider Admin"), // Firm user manager
+    LAA_USER_REGISTRATION("Legal Aid Agency (User Registration)"),  // External User Admin
+    LAA("Legal Aid Agency"); // Global Admin and Security Response
 
     private final String displayName;
 
     ReactivationRoleType(String displayName) {
         this.displayName = displayName;
+    }
+
+    public String getLabelForUi(String userName) {
+        if (this == ReactivationRoleType.PROVIDER_ADMIN) {
+            return userName + " (" + displayName + ")";
+        }
+        return displayName;
     }
 
 }
