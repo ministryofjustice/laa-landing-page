@@ -118,8 +118,7 @@ public class UserActivationController {
     }
 
     @GetMapping("/user/delegate-reactivate-user-comment/{id}")
-    @PreAuthorize("@accessControlService.canDelegateEnableUser(#id)"
-            + "|| @accessControlService.canManageDelegateEnableUser(#id)")
+    @PreAuthorize("@accessControlService.canDelegateEnableUser(#id)")
     public String delegateReactivateUserCommentsGet(@PathVariable String id,
                                                    Model model,
                                                    HttpSession session) {
