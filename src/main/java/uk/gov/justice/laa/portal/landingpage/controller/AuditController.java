@@ -134,7 +134,8 @@ public class AuditController {
                 criteria.getSearch(), filteredFirmId,
                 criteria.getSilasRole(), criteria.getSelectedAppId(), filteredUserType,
                 criteria.getPage(), criteria.getSize(), criteria.getSort(), criteria.getDirection(), false,
-                criteria.getNeverActivated());
+                criteria.getNeverActivated(),
+                criteria.getCreatedFrom(), criteria.getCreatedTo(), criteria.getSelectedSilasStatuses());
         // Build firm search form using the effective (access-control-applied) firm ID so that the
         // export button correctly reflects the auto-applied firm for external single-firm users.
         FirmSearchForm firmSearchForm = new FirmSearchForm(criteria.getFirmSearch(), filteredFirmId);
@@ -168,6 +169,10 @@ public class AuditController {
         model.addAttribute("selectedFirmName", criteria.getSelectedFirmName());
         model.addAttribute("inactiveSinceDate", criteria.getInactiveSinceDate());
         model.addAttribute("neverActivated", criteria.getNeverActivated() != null ? criteria.getNeverActivated() : false);
+        model.addAttribute("createdFrom", criteria.getCreatedFrom());
+        model.addAttribute("createdTo", criteria.getCreatedTo());
+        model.addAttribute("selectedSilasStatuses",
+                criteria.getSelectedSilasStatuses() != null ? criteria.getSelectedSilasStatuses() : List.of());
         model.addAttribute("sort", criteria.getSort());
         model.addAttribute("direction", criteria.getDirection());
         model.addAttribute("exportCsv",
@@ -541,7 +546,10 @@ public class AuditController {
                     criteria.getSort(),
                     criteria.getDirection(),
                     true,
-                    criteria.getNeverActivated()
+                    criteria.getNeverActivated(),
+                    criteria.getCreatedFrom(),
+                    criteria.getCreatedTo(),
+                    criteria.getSelectedSilasStatuses()
             );
 
             firmData.addAll(result.getUsers());
