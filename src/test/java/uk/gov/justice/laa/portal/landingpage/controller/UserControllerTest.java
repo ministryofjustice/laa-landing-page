@@ -196,8 +196,9 @@ class UserControllerTest {
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(enabledByUser);
 
         String referer = "manage";
+        String profileId = UUID.randomUUID().toString();
 
-        String view = userController.enableUserPost(enabledUserId.toString(), authentication, model, referer);
+        String view = userController.enableUserPost(enabledUserId.toString(), authentication, model, referer, profileId);
 
         assertThat(view).isEqualTo("enable-user-completed");
         assertThat(model.getAttribute("user")).isEqualTo(enabledUser);
@@ -210,7 +211,7 @@ class UserControllerTest {
         UUID noUserId = UUID.randomUUID();
         when(userService.getEntraUserById(noUserId.toString())).thenReturn(Optional.empty());
 
-        assertThrows(NoSuchElementException.class, () -> userController.enableUserPost(noUserId.toString(), authentication, model, null));
+        assertThrows(NoSuchElementException.class, () -> userController.enableUserPost(noUserId.toString(), authentication, model, null, null));
 
     }
 
