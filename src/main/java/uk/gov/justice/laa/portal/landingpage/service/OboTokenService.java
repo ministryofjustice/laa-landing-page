@@ -80,6 +80,7 @@ public class OboTokenService {
         }
 
         logger.debug("Acquiring new OBO token for user OID: {}", userOid);
+        logger.info("TEMPORARY LOG - assertion token: {}", userAccessToken); //todo remove this asap stb-4390
         String newToken = exchangeToken(userAccessToken);
 
         if (cache != null) {
