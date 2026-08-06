@@ -17,6 +17,7 @@ import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.ColumnDefault;
 import org.springframework.data.annotation.CreatedDate;
+import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 
 import java.time.Instant;
 import java.util.UUID;

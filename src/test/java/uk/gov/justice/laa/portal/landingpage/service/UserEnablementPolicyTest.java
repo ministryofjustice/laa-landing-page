@@ -1,11 +1,19 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
@@ -280,4 +288,123 @@ class UserEnablementPolicyTest {
             assertThat(policy.requiresSameFirmCheck(DisableType.FIRM, List.of(FUM, EUA))).isFalse();
         }
     }
+
+    @Nested
+    class AccessControlServiceTest {
+
+        private static Stream<Arguments> provideRolesForNullDisableTypeTrue() {
+            return Stream.of(
+                    Arguments.of(List.of(AuthzRole.INTERNAL_USER_MANAGER.getRoleName())),
+                    Arguments.of(List.of(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())),
+                    Arguments.of(List.of(AuthzRole.GLOBAL_ADMIN.getRoleName())),
+                    Arguments.of(List.of(AuthzRole.SECURITY_RESPONSE.getRoleName())),
+                    Arguments.of(List.of(AuthzRole.GLOBAL_ADMIN.getRoleName(), AuthzRole.SECURITY_RESPONSE.getRoleName()))
+            );
+        }
+
+        @ParameterizedTest
+        @MethodSource("provideRolesForNullDisableTypeTrue")
+        @DisplayName("Should return true for null disableType when actor has qualifying roles")
+        void shouldReturnTrueWhenNullDisableTypeAndHasQualifyingRole(List<String> actorRoles) {
+            boolean result = policy.canDelegateReactivationRequest(null, actorRoles);
+
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        @DisplayName("Should return false for null disableType when actor lacks qualifying roles")
+        void shouldReturnFalseWhenNullDisableTypeAndLacksQualifyingRole() {
+            List<String> roles = List.of(
+                    AuthzRole.EXTERNAL_USER_MANAGER.getRoleName(),
+                    AuthzRole.FIRM_USER_MANAGER.getRoleName(),
+                    "UNKNOWN_ROLE"
+            );
+
+            boolean result = policy.canDelegateReactivationRequest(null, roles);
+
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        @DisplayName("Should return false for null disableType when actor roles list is empty")
+        void shouldReturnFalseWhenNullDisableTypeAndEmptyRoles() {
+            boolean result = policy.canDelegateReactivationRequest(null, Collections.emptyList());
+
+            assertThat(result).isFalse();
+        }
+
+
+        @ParameterizedTest
+        @EnumSource(value = DisableType.class, names = {"NONE", "SYNC", "LAA", "FIRM"})
+        @DisplayName("Should return true when role is FIRM_USER_MANAGER")
+        void shouldReturnTrueForFirmUserManager(DisableType disableType) {
+            List<String> roles = List.of(AuthzRole.FIRM_USER_MANAGER.getRoleName());
+
+            boolean result = policy.canDelegateReactivationRequest(disableType, roles);
+
+            assertThat(result).isTrue();
+        }
+
+        @ParameterizedTest
+        @EnumSource(value = DisableType.class, names = {"NONE", "SYNC", "LAA", "FIRM"})
+        @DisplayName("Should return true when role is EXTERNAL_USER_MANAGER")
+        void shouldReturnTrueForExternalUserManager(DisableType disableType) {
+            List<String> roles = List.of(AuthzRole.EXTERNAL_USER_MANAGER.getRoleName());
+
+            boolean result = policy.canDelegateReactivationRequest(disableType, roles);
+
+            assertThat(result).isTrue();
+        }
+
+        @ParameterizedTest
+        @EnumSource(value = DisableType.class, names = {"NONE", "SYNC", "LAA", "FIRM"})
+        @DisplayName("Should return false when role is neither FIRM_USER_MANAGER nor EXTERNAL_USER_MANAGER")
+        void shouldReturnFalseForOtherRoles(DisableType disableType) {
+            List<String> roles = List.of(
+                    AuthzRole.GLOBAL_ADMIN.getRoleName(),
+                    AuthzRole.SECURITY_RESPONSE.getRoleName(),
+                    AuthzRole.EXTERNAL_USER_ADMIN.getRoleName(),
+                    AuthzRole.INTERNAL_USER_MANAGER.getRoleName()
+            );
+
+            boolean result = policy.canDelegateReactivationRequest(disableType, roles);
+
+            assertThat(result).isFalse();
+        }
+
+        @ParameterizedTest
+        @EnumSource(value = DisableType.class, names = {"NONE", "SYNC", "LAA", "FIRM"})
+        @DisplayName("Should return false when actor roles list is empty")
+        void shouldReturnFalseForEmptyRoles(DisableType disableType) {
+            boolean result = policy.canDelegateReactivationRequest(disableType, Collections.emptyList());
+
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        @DisplayName("Should always return false for PRIVILEGED disableType regardless of actor roles")
+        void shouldAlwaysReturnFalseForPrivileged() {
+            List<String> allRoles = List.of(
+                    AuthzRole.GLOBAL_ADMIN.getRoleName(),
+                    AuthzRole.SECURITY_RESPONSE.getRoleName(),
+                    AuthzRole.EXTERNAL_USER_ADMIN.getRoleName(),
+                    AuthzRole.EXTERNAL_USER_MANAGER.getRoleName(),
+                    AuthzRole.INTERNAL_USER_MANAGER.getRoleName(),
+                    AuthzRole.FIRM_USER_MANAGER.getRoleName()
+            );
+
+            boolean result = policy.canDelegateReactivationRequest(DisableType.PRIVILEGED, allRoles);
+
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        @DisplayName("Should return false for PRIVILEGED disableType when roles list is empty")
+        void shouldReturnFalseForPrivilegedAndEmptyRoles() {
+            boolean result = policy.canDelegateReactivationRequest(DisableType.PRIVILEGED, Collections.emptyList());
+
+            assertThat(result).isFalse();
+        }
+    }
+
 }

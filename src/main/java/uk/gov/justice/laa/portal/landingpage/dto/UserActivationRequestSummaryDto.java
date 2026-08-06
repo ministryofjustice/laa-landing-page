@@ -1,7 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.dto;
 
-import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
+import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 
 import java.time.Instant;
 import java.time.ZoneOffset;

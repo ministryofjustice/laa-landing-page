@@ -33,7 +33,7 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
         request.setRequestId(UUID.randomUUID());
         request.setUserProfileId(userProfileId);
         request.setVersion(1);
-        request.setStatus(uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus.IN_REVIEW);
+        request.setStatus(ReactivationRequestStatus.IN_REVIEW);
         request.setComments("Integration test reactivation request");
         request.setActorEntraOid(UUID.randomUUID().toString());
         request.setActorRoleType(ReactivationRoleType.PROVIDER_ADMIN);
@@ -193,7 +193,7 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
         v1.setRequestId(requestId);
         v1.setUserProfileId(providerAdminProfileId);
         v1.setVersion(1);
-        v1.setStatus(uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus.IN_REVIEW);
+        v1.setStatus(ReactivationRequestStatus.IN_REVIEW);
         v1.setComments("Original submission");
         v1.setActorEntraOid(UUID.randomUUID().toString());
         v1.setActorRoleType(ReactivationRoleType.PROVIDER_ADMIN);
@@ -205,7 +205,7 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
         v2.setRequestId(requestId);
         v2.setUserProfileId(providerAdminProfileId);
         v2.setVersion(2);
-        v2.setStatus(uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus.INFORMATION_REQUIRED);
+        v2.setStatus(ReactivationRequestStatus.INFORMATION_REQUIRED);
         v2.setComments("Follow up on original submission");
         v2.setActorEntraOid(UUID.randomUUID().toString());
         v2.setActorRoleType(ReactivationRoleType.PROVIDER_ADMIN);
@@ -243,7 +243,7 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
         laaActorRequest.setRequestId(UUID.randomUUID());
         laaActorRequest.setUserProfileId(globalAdminProfileId);
         laaActorRequest.setVersion(1);
-        laaActorRequest.setStatus(uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus.IN_REVIEW);
+        laaActorRequest.setStatus(ReactivationRequestStatus.IN_REVIEW);
         laaActorRequest.setComments("Raised by an LAA actor");
         laaActorRequest.setActorEntraOid(UUID.randomUUID().toString());
         laaActorRequest.setActorRoleType(ReactivationRoleType.LAA);

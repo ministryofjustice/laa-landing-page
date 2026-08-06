@@ -10,15 +10,14 @@ import uk.gov.justice.laa.portal.landingpage.dto.ReactivationRequestsPageData;
 import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
-import uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedReactivationRequests;
 import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestListItem;
 import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestPageMode;
+import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserActivationRequestRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
@@ -68,11 +67,11 @@ public class UserReactivationRequestService {
     }
 
     public Optional<UserActivationRequest> findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(UUID profileId) {
-        return userActivationRequestRepository.findFirstByUserProfileIdOrderByVersionDesc(profileId);
+        return userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId);
     }
 
     public UserActivationRequest createNewRequest(UUID requestId, UUID profileId, String comment, String actorEntraOid) {
-        Optional<UserActivationRequest> request = userActivationRequestRepository.findFirstByUserProfileIdOrderByVersionDesc(profileId);
+        Optional<UserActivationRequest> request = userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId);
 
         if (request.isPresent() && !(ReactivationRequestStatus.REJECTED.equals(request.get().getStatus()) || ReactivationRequestStatus.APPROVED.equals(request.get().getStatus()))) {
             log.error("Request already being processed for user {}", profileId);
@@ -139,9 +138,14 @@ public class UserReactivationRequestService {
     public List<UserActivationRequestSummaryDto> getLatestRequestHistoryForUserProfile(UUID userProfileId) {
         log.debug("Fetching latest activation request history for user profile ID: {}", userProfileId);
 
-        UserActivationRequest latestRequest = userActivationRequestRepository.findTopByUserProfileIdOrderByCreatedAtDescVersionDesc(userProfileId);
+        Optional<UserActivationRequest> latestRequest = userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(userProfileId);
 
-        List<UserActivationRequestSummaryDto> history = userActivationRequestRepository.findRequestHistoryByRequestId(latestRequest.getRequestId());
+        if (latestRequest.isEmpty()) {
+            log.info("No activation request found for user profile ID: {}", userProfileId);
+            return Collections.emptyList();
+        }
+
+        List<UserActivationRequestSummaryDto> history = userActivationRequestRepository.findRequestHistoryByRequestId(latestRequest.get().getRequestId());
 
         if (history.isEmpty()) {
             log.info("No activation request history found for user profile ID: {}", userProfileId);
@@ -162,8 +166,8 @@ public class UserReactivationRequestService {
     public ReactivationRequestsPageData getPage(
             Authentication authentication,
             String search,
-            List<uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus> selectedStatuses,
-            List<AuthzRoleType> selectedActorRoleTypes,
+            List<ReactivationRequestStatus> selectedStatuses,
+            List<ReactivationRoleType> selectedActorRoleTypes,
             int page,
             int size,
             String sort,
@@ -171,10 +175,10 @@ public class UserReactivationRequestService {
 
         EntraUser currentUser = loginService.getCurrentEntraUser(authentication);
         ReactivationRequestPageMode pageMode = resolvePageMode(currentUser);
-        List<uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus> effectiveStatuses = selectedStatuses == null
+        List<ReactivationRequestStatus> effectiveStatuses = selectedStatuses == null
                 ? List.of()
                 : List.copyOf(selectedStatuses);
-        List<AuthzRoleType> effectiveActorRoleTypes = selectedActorRoleTypes == null
+        List<ReactivationRoleType> effectiveActorRoleTypes = selectedActorRoleTypes == null
                 ? List.of()
                 : List.copyOf(selectedActorRoleTypes);
 
@@ -279,7 +283,7 @@ public class UserReactivationRequestService {
                 : UNKNOWN_USER_NAME;
         String userEmail = targetUser != null ? targetUser.getEmail() : null;
         String actorRoleType = request.getActorRoleType() != null ? request.getActorRoleType().getDisplayName() : null;
-        uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus status = uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus.valueOf(request.getStatus().name());
+        ReactivationRequestStatus status = ReactivationRequestStatus.valueOf(request.getStatus().name());
         // dateSubmitted reflects when the request was originally raised (version 1),
         // while lastActivity reflects the most recent version's timestamp (this row).
         Instant originalSubmission = submittedAt != null ? submittedAt : request.getCreatedAt();
@@ -315,17 +319,17 @@ public class UserReactivationRequestService {
     private List<ReactivationRequestListItem> filterAndSortRequests(
             List<ReactivationRequestListItem> requests,
             String search,
-            List<uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus> selectedStatuses,
-            List<AuthzRoleType> selectedActorRoleTypes,
+            List<ReactivationRequestStatus> selectedStatuses,
+            List<ReactivationRoleType> selectedActorRoleTypes,
             String sort,
             String direction) {
 
-        Set<uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus> statusFilter = selectedStatuses == null
+        Set<ReactivationRequestStatus> statusFilter = selectedStatuses == null
                 ? Set.of()
                 : new HashSet<>(selectedStatuses);
         Set<String> actorRoleTypeLabelFilter = selectedActorRoleTypes == null || selectedActorRoleTypes.isEmpty()
                 ? Set.of()
-                : selectedActorRoleTypes.stream().map(AuthzRoleType::getLabel).collect(Collectors.toSet());
+                : selectedActorRoleTypes.stream().map(ReactivationRoleType::getDisplayName).collect(Collectors.toSet());
 
         Comparator<ReactivationRequestListItem> comparator = resolveComparator(sort);
         if (!"asc".equalsIgnoreCase(direction)) {

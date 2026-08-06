@@ -82,6 +82,28 @@ public class UserEnablementPolicy {
         };
     }
 
+    public boolean canDelegateReactivationRequest(DisableType disableType, List<String> actorRoles) {
+        boolean isGlobalAdminOrSecurityResponse = actorRoles.contains(AuthzRole.GLOBAL_ADMIN.getRoleName())
+                || actorRoles.contains(AuthzRole.SECURITY_RESPONSE.getRoleName());
+
+        boolean isEuaLevel = actorRoles.contains(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName());
+
+        boolean isEumLevel = actorRoles.contains(AuthzRole.EXTERNAL_USER_MANAGER.getRoleName());
+
+        boolean isInternalUserManager = actorRoles.contains(AuthzRole.INTERNAL_USER_MANAGER.getRoleName());
+
+        boolean isFirmUserManager = actorRoles.contains(AuthzRole.FIRM_USER_MANAGER.getRoleName());
+
+        if (disableType == null) {
+            return isInternalUserManager || isEuaLevel || isGlobalAdminOrSecurityResponse;
+        }
+
+        return switch (disableType) {
+            case NONE, SYNC, LAA, FIRM -> isFirmUserManager || isEumLevel;
+            case PRIVILEGED -> false;
+        };
+    }
+
     /**
      * Returns {@code true} when enabling is conditionally permitted but a same-firm check must
      * also pass before the enable is allowed.
