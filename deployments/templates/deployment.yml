@@ -209,6 +209,14 @@ spec:
               value: "${APP_DATA_PROVIDER_BASE_URL}"
             - name: APP_DATA_PROVIDER_API_KEY
               value: "${APP_DATA_PROVIDER_API_KEY}"
+            - name: USER_DATA_API_BASE_URL
+              value: "${USER_DATA_API_BASE_URL}"
+            - name: USER_DATA_API_SCOPE
+              value: "${USER_DATA_API_SCOPE}"
+            - name: USER_DATA_API_CALLS_ENABLED
+              value: "${USER_DATA_API_CALLS_ENABLED}"
+            - name: USER_DATA_API_DEBUG_ENABLED
+              value: "${USER_DATA_API_DEBUG_ENABLED}"
             - name: SENTRY_ENVIRONMENT
               value: "${SENTRY_ENVIRONMENT}"
             - name: SENTRY_ENABLED
