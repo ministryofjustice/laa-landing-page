@@ -1,10 +1,27 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import jakarta.persistence.EntityNotFoundException;
-import lombok.extern.slf4j.Slf4j;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import jakarta.persistence.EntityNotFoundException;
+import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.ReactivationRequestsPageData;
 import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
@@ -21,22 +38,6 @@ import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserActivationRequestRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
-
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -396,6 +397,10 @@ public class UserReactivationRequestService {
                     Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
             case "lastActivity" -> Comparator.comparing(ReactivationRequestListItem::lastActivity,
                     Comparator.nullsLast(LocalDate::compareTo));
+            case "userName" -> Comparator.comparing(ReactivationRequestListItem::userName,
+                    Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+            case "userEmail" -> Comparator.comparing(ReactivationRequestListItem::userEmail,
+                    Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
             default -> Comparator.comparing(ReactivationRequestListItem::dateSubmitted,
                     Comparator.nullsLast(LocalDate::compareTo));
         };

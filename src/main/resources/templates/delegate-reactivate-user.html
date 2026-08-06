@@ -25,8 +25,35 @@
                     <h1 class="govuk-heading-xl govuk-!-margin-top-0">Request for <span th:text="${user.fullName}">Full Name</span>
                         to be reactivated</h1>
 
+                    <div class="govuk-warning-text" th:if="${isInternalActor}">
+                        <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
+                        <strong class="govuk-warning-text__text">
+                            <span class="govuk-visually-hidden">Warning</span>
+                            This form submits a reactivation request on behalf of a provider admin.
+                        </strong>
+                    </div>
+
                     <p class="govuk-body">This user has been deactivated by the Legal Aid Agency. You need to request
                         for their account to be reactivated.</p>
+
+                    <div th:if="${isInternalActor}">
+                        <p class="govuk-body">You should only do this when:</p>
+                        <ul class="govuk-list govuk-list--bullet">
+                            <li>the provider admin has lost access and cannot request this themselves</li>
+                            <li>there is only one provider admin at the firm</li>
+                        </ul>
+
+                        <details class="govuk-details" data-module="govuk-details">
+                            <summary class="govuk-details__summary">
+                                <span class="govuk-details__summary-text">
+                                    The person requesting reactivation doesn't meet these criteria
+                                </span>
+                            </summary>
+                            <div class="govuk-details__text">
+                                <p class="govuk-body">If the person requesting reactivation does not meet these criteria, ask another provider admin at the firm to submit the request, or ask the deactivated user's provider admin to submit a reactivation request themselves.</p>
+                            </div>
+                        </details>
+                    </div>
 
                     <p class="govuk-body">Before you start, ask the deactivated user to provide a justification for:</p>
 

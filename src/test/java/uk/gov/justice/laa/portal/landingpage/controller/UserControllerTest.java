@@ -8540,5 +8540,4 @@ class UserControllerTest {
             assertThat(view).isEqualTo("redirect:/admin/users");
         }
     }
-
 }

@@ -1,12 +1,25 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import jakarta.servlet.http.HttpSession;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.Mock;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.mock.web.MockHttpSession;
@@ -20,6 +33,8 @@ import org.springframework.validation.ObjectError;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
+
+import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.ReactivationRequestsPageData;
@@ -39,22 +54,8 @@ import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestServ
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 
 import java.util.Collections;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Optional;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 public class UserActivationControllerTest {
@@ -110,8 +111,7 @@ public class UserActivationControllerTest {
         void featureDisabled_throws404() {
             userActivationController.disableUserFeatureEnabled = false;
 
-            assertThatThrownBy(() -> userActivationController
-                    .delegateReactivateUserGet(USER_ID, session, model, REFERER, PROFILE_ID, redirectAttributes))
+            assertThatThrownBy(() -> userActivationController.delegateReactivateUserGet(USER_ID, session, model, REFERER, PROFILE_ID, authentication, redirectAttributes))
                     .isInstanceOf(ResponseStatusException.class)
                     .hasMessageContaining("404");
         }
@@ -126,7 +126,7 @@ public class UserActivationControllerTest {
             when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(PROFILE_ID)).thenReturn(Optional.of(pendingRequest));
 
             redirectAttributes = new RedirectAttributesModelMap();
-            String view = userActivationController.delegateReactivateUserGet(USER_ID, session, model, REFERER, PROFILE_ID, redirectAttributes);
+            String view = userActivationController.delegateReactivateUserGet(USER_ID, session, model, REFERER, PROFILE_ID, authentication, redirectAttributes);
 
             assertThat(view).isEqualTo("redirect:/admin/users/manage/" + PROFILE_ID);
             assertThat(redirectAttributes.getFlashAttributes()).extractingByKey("errorMessage").isEqualTo("A delegate request is already in progress");
@@ -141,9 +141,13 @@ public class UserActivationControllerTest {
             UserActivationRequest rejectedRequest = buildUserActivationRequest(ReactivationRequestStatus.REJECTED);
 
             when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(user));
-            when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(PROFILE_ID)).thenReturn(Optional.of(rejectedRequest));
+            when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(PROFILE_ID))
+                    .thenReturn(Optional.of(rejectedRequest));
+            EntraUser currentEntraUser = mock(EntraUser.class);
+            when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentEntraUser);
+            when(userService.isInternal(currentEntraUser.getId())).thenReturn(false);
 
-            String view = userActivationController.delegateReactivateUserGet(USER_ID, session, model, REFERER, PROFILE_ID, redirectAttributes);
+            String view = userActivationController.delegateReactivateUserGet(USER_ID, session, model, REFERER, PROFILE_ID, authentication, redirectAttributes);
 
             assertThat(view).isEqualTo("delegate-reactivate-user");
             assertThat(model.asMap()).containsEntry("user", user).containsEntry("profileId", PROFILE_ID).containsEntry("referer", REFERER);
