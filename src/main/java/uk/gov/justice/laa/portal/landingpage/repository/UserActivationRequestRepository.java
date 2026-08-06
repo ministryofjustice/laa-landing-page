@@ -19,7 +19,7 @@ public interface UserActivationRequestRepository extends JpaRepository<UserActiv
 
     Optional<UserActivationRequest> findFirstByRequestIdOrderByVersionDesc(UUID requestId);
 
-    Optional<UserActivationRequest> findFirstByUserProfileIdOrderByVersionDesc(UUID userProfileId);
+    Optional<UserActivationRequest> findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(UUID userProfileId);
 
     List<UserActivationRequest> findAllByRequestIdOrderByVersionAsc(UUID requestId);
 
@@ -54,8 +54,6 @@ public interface UserActivationRequestRepository extends JpaRepository<UserActiv
                 FROM UserActivationRequest r
             """)
     Page<UserActivationRequest> findAllLatestRequests(Pageable pageable);
-
-    UserActivationRequest findTopByUserProfileIdOrderByCreatedAtDescVersionDesc(UUID profileId);
 
     @Query("""
             SELECT new uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto(

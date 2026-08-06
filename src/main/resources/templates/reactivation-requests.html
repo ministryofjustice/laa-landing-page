@@ -121,8 +121,8 @@
                             <a href="#" data-remove-array-param="selectedUserTypes"
                                th:attr="data-remove-array-value=${userType.name()}"
                                class="filter-tag__remove"
-                               th:aria-label="'Remove ' + ${userType.label} + ' filter'">&#x2715;</a>
-                            <span th:text="${userType.label}"></span>
+                               th:aria-label="'Remove ' + ${userType.getDisplayName()} + ' filter'">&#x2715;</a>
+                            <span th:text="${userType.getDisplayName()}"></span>
                         </span>
                     </th:block>
                     <th:block th:each="status : ${selectedRequestStatuses}">
