@@ -111,6 +111,9 @@ public class OboTokenService {
         params.add("scope", dataApiScope);
         params.add("requested_token_use", REQUESTED_TOKEN_USE);
 
+        logger.info("TEMPORARY LOG - dataApiScope: {}", dataApiScope); //todo remove this asap stb-4390
+        logger.info("TEMPORARY LOG - tokenEndpoint: {}", tokenEndpoint); //todo remove this asap stb-4390
+
         OboTokenResponse response = oboRestClient
             .post()
             .uri(tokenEndpoint)
