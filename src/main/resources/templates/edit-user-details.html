@@ -49,7 +49,7 @@
                 </div>
                 <div class="govuk-form-group"
                     th:classappend="${#fields.hasErrors('firstName')} ? 'govuk-form-group--error'">
-                    <label class="govuk-label govuk-label--m" for="firstName">
+                    <label class="govuk-label govuk-label--m" for="firstName" th:text="${uiLabels.firstName}">
                         First name
                     </label>
                     <div th:if="${#fields.hasErrors('firstName')}" class="govuk-error-message">
@@ -61,7 +61,7 @@
                 </div>
                 <div class="govuk-form-group"
                     th:classappend="${#fields.hasErrors('lastName')} ? 'govuk-form-group--error'">
-                    <label class="govuk-label govuk-label--m" for="lastName">
+                    <label class="govuk-label govuk-label--m" for="lastName" th:text="${uiLabels.lastName}">
                         Last name
                     </label>
                     <div th:if="${#fields.hasErrors('lastName')}" class="govuk-error-message">

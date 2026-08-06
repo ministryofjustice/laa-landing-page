@@ -994,48 +994,25 @@ public class UserService {
         }
     }
 
-    private void triggerResendActivation(EntraUser user) {
-        TechServicesApiResponse<SendUserVerificationEmailResponse> verificationResponse = techServicesClient.sendEmailVerification(mapper.map(user, EntraUserDto.class));
-        if (!verificationResponse.isSuccess()) {
-            logger.error("Failed to send verification email for user {}. Error: {}", user.getEntraOid(),
-                    verificationResponse.getError().getMessage()
-            );
-
-        }
-        logger.info("Resend activation email triggered for user: {}", user.getEntraOid());
-    }
-
     private void handleExistingUserScenario(TechServicesUser respUser, EntraUser newUser) {
 
         if (respUser == null) {
-            logger.error("Existing user response is null in handleExistingUserScenario for user: {}",
-                    newUser.getEntraOid());
+            logger.error("Existing user response is null in handleExistingUserScenario for user: {}", newUser.getEntraOid());
             return;
         }
 
-        String deleteReason = null;
-        String verificationStatus = null;
-        Boolean accountEnabled = true;
+        Optional<InvitationStatus> invitationStatus = Optional.of(respUser)
+                .map(TechServicesUser::getCustomSecurityAttributes)
+                .map(TechServicesUser.CustomSecurityAttributes::getGuestUserStatus)
+                .map(TechServicesUser.GuestUserStatus::getInvitationProgress);
+        boolean accountEnabled = respUser.getAccountEnabled() == null || respUser.getAccountEnabled();
 
-        if (respUser != null) {
-            accountEnabled = respUser.getAccountEnabled() != null ? respUser.getAccountEnabled() : true;
-            if (respUser.getCustomSecurityAttributes() != null && respUser.getCustomSecurityAttributes().getGuestUserStatus() != null) {
-                deleteReason = respUser.getCustomSecurityAttributes().getGuestUserStatus().getDisabledReason();
-                if (respUser.getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress() != null) {
-                    verificationStatus = respUser.getCustomSecurityAttributes().getGuestUserStatus().getInvitationProgress().name();
-                }
-            }
-            if (respUser.getVerification() != null && respUser.getVerification().getStatus() != null) {
-                verificationStatus = respUser.getVerification().getStatus();
-            }
-        }
-
-        // Scenario: Never activated OR awaiting verification -> trigger resend activation
-        if ((deleteReason != null && "ExpiredInvitation".equalsIgnoreCase(deleteReason))
-                || (verificationStatus != null && InvitationStatus.AWAITING_VERIFICATION.toString().equalsIgnoreCase(verificationStatus))) {
-            logger.info("Triggering resend activation for user: {}", newUser.getEntraOid());
+        // AwaitingVerification and InviteSent users are handled by Entra/Technical Services.
+        if (invitationStatus.filter(status -> status == InvitationStatus.AWAITING_VERIFICATION || status
+                == InvitationStatus.INVITE_SENT).isPresent()) {
+            logger.info("User {} is awaiting verification. Activation email sent from Tech Services",
+                    newUser.getEntraOid());
             syncUserStatus(respUser, newUser);
-            triggerResendActivation(newUser);
             return;
         }
 
