@@ -16,7 +16,7 @@
         Reactivate <span th:text="${user.fullName}"></span>
     </h1>
 
-    <div class="govuk-warning-text" th:if="${actingOnBehalf}">
+    <div class="govuk-warning-text" th:if="${isInternalActor}">
         <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
         <strong class="govuk-warning-text__text">
             <span class="govuk-visually-hidden">Warning</span>
@@ -31,7 +31,7 @@
         You do not need to submit a reactivation request.
     </p>
 
-    <div th:if="${actingOnBehalf}">
+    <div th:if="${isInternalActor}">
         <p class="govuk-body">You should only do this when:</p>
         <ul class="govuk-list govuk-list--bullet">
             <li>the provider admin has lost access and cannot request this themselves</li>

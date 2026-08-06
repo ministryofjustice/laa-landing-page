@@ -704,11 +704,11 @@ public class UserController {
 
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
         EntraUser currentEntraUser = loginService.getCurrentEntraUser(authentication);
-        boolean actingOnBehalf = userService.isInternal(currentEntraUser.getId());
+        boolean isInternalActor = userService.isInternal(currentEntraUser.getId());
         model.addAttribute("user", user);
         model.addAttribute("referer", referer);
         model.addAttribute("cancelPath", getCancelPathFromReferer(referer, id, profileId));
-        model.addAttribute("actingOnBehalf", actingOnBehalf);
+        model.addAttribute("isInternalActor", isInternalActor);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User - " + user.getFullName());
         return "enable-user-confirmation";
     }

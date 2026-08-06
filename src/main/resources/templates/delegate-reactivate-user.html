@@ -25,7 +25,7 @@
                     <h1 class="govuk-heading-xl govuk-!-margin-top-0">Request for <span th:text="${user.fullName}">Full Name</span>
                         to be reactivated</h1>
 
-                    <div class="govuk-warning-text" th:if="${actingOnBehalf}">
+                    <div class="govuk-warning-text" th:if="${isInternalActor}">
                         <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
                         <strong class="govuk-warning-text__text">
                             <span class="govuk-visually-hidden">Warning</span>
@@ -36,7 +36,7 @@
                     <p class="govuk-body">This user has been deactivated by the Legal Aid Agency. You need to request
                         for their account to be reactivated.</p>
 
-                    <div th:if="${actingOnBehalf}">
+                    <div th:if="${isInternalActor}">
                         <p class="govuk-body">You should only do this when:</p>
                         <ul class="govuk-list govuk-list--bullet">
                             <li>the provider admin has lost access and cannot request this themselves</li>

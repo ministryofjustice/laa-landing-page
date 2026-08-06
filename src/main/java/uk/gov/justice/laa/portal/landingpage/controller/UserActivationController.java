@@ -86,12 +86,12 @@ public class UserActivationController {
         }
 
         EntraUser currentEntraUser = loginService.getCurrentEntraUser(authentication);
-        boolean actingOnBehalf = userService.isInternal(currentEntraUser.getId());
+        boolean isInternalActor = userService.isInternal(currentEntraUser.getId());
 
         model.addAttribute("user", user);
         model.addAttribute("profileId", profileId);
         model.addAttribute("referer", referer);
-        model.addAttribute("actingOnBehalf", actingOnBehalf);
+        model.addAttribute("isInternalActor", isInternalActor);
         session.setAttribute("delegateReactivateUserId", id);
         session.setAttribute("profileId", profileId);
 
