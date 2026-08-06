@@ -406,6 +406,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         allUsers.addAll(multiFirmUsers);
         allUsers.addAll(securityResponseUsers);
         allUsers.addAll(silasAdmins);
+        allUsers.addAll(disabledExternalUsersNoRoles);
     }
 
     protected void clearRepositories() {
