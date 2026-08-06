@@ -13,6 +13,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -1806,7 +1808,7 @@ public class MultiFirmUserControllerTest {
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("admin");
 
-        OfficeDto officeDto = OfficeDto.builder().code("office1").build();
+        OfficeDto officeDto = OfficeDto.builder().id(office.getId()).code("office1").build();
 
         when(appRoleService.getByIds(List.of("role1", "role2"))).thenReturn(List.of(role1, role2));
         when(loginService.getCurrentProfile(authentication)).thenReturn(profile);
@@ -2333,6 +2335,42 @@ public class MultiFirmUserControllerTest {
 
         assertThat(view).isEqualTo("multi-firm-user/select-user-app-roles");
         verify(userService).getAppRolesByAppIdAndUserType(appId, UserType.EXTERNAL, null);
+    }
+
+    @Test
+    void checkAnswerAndAddProfilePost_submittedOfficeNotInTargetFirm_shouldThrow() {
+        //Arrange
+        EntraUserDto user = new EntraUserDto();
+        user.setId(UUID.randomUUID().toString());
+        user.setEntraOid("entra-oid");
+        session.setAttribute("entraUser", user);
+
+        // editor profile (external)
+        UserProfile editorProfile = UserProfile.builder().userType(UserType.EXTERNAL).firm(Firm.builder().id(UUID.randomUUID()).build()).build();
+        when(loginService.getCurrentProfile(org.mockito.Mockito.any())).thenReturn(editorProfile);
+
+        // session contains userOffices with an office that does not belong to target firm
+        UUID otherOfficeId = UUID.randomUUID();
+        session.setAttribute("userOffices", List.of(otherOfficeId.toString()));
+
+        // officeService will resolve the OfficeDto list (returned id does not match any office on firm)
+        OfficeDto officeDto = new OfficeDto();
+        officeDto.setId(otherOfficeId);
+        when(officeService.getOfficesByIds(List.of(otherOfficeId.toString()))).thenReturn(List.of(officeDto));
+
+        // target firm has no offices (or offices not containing this id)
+        UUID targetFirmId = UUID.randomUUID();
+        Firm targetFirm = Firm.builder().id(targetFirmId).offices(Set.of()).build();
+        when(firmService.getById(targetFirmId)).thenReturn(targetFirm);
+        session.setAttribute("delegateTargetFirmId", targetFirmId.toString());
+
+        // allow role assignment validation to pass so office validation is reached
+        when(roleAssignmentService.canAssignRole(org.mockito.Mockito.any(), org.mockito.Mockito.anyList())).thenReturn(true);
+
+        // Act & Assert
+        Assertions.assertThatThrownBy(() -> controller.checkAnswerAndAddProfilePost(org.mockito.Mockito.mock(org.springframework.security.core.Authentication.class), null, session, model))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Office assignment is not permitted");
     }
 
 }

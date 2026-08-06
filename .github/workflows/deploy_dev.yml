@@ -152,6 +152,7 @@ jobs:
           USER_DATA_API_BASE_URL: ${{ secrets.USER_DATA_API_BASE_URL }}
           USER_DATA_API_SCOPE: ${{ vars.USER_DATA_API_SCOPE }}
           USER_DATA_API_CALLS_ENABLED: ${{ vars.USER_DATA_API_CALLS_ENABLED || 'false' }}
+          USER_DATA_API_DEBUG_ENABLED: ${{ vars.USER_DATA_API_DEBUG_ENABLED || 'false' }}
           SENTRY_ENVIRONMENT: ${{ vars.ENV_NAME }}
           SENTRY_ENABLED: ${{ vars.SENTRY_ENABLED }}
           CCMS_APP_ENTRA_OBJECT_ID: ${{ secrets.CCMS_APP_ENTRA_OBJECT_ID || 'NONE' }}

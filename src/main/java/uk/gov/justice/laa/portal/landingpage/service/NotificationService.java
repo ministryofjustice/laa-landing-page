@@ -121,7 +121,7 @@ public class NotificationService {
                             firstName
                     )
             );
-            log.info("Existing user notification sent for User ID: {}", userProfileId);
+            log.info("Existing user notification email sent for User ID: {}", userProfileId);
         }
     }
 

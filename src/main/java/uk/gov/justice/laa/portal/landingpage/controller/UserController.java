@@ -592,7 +592,7 @@ public class UserController {
         model.addAttribute("deleteReasons", deleteReasons);
     }
 
-    @GetMapping("/users/manage/{id}/disable")
+    @GetMapping("/users/manage/{id}/deactivate")
     @PreAuthorize("@accessControlService.canDisableUser(#id)")
     public String disableUserReasonsGet(@PathVariable String id,
                                      DisableUserReasonForm disableUserReasonForm,
@@ -634,7 +634,7 @@ public class UserController {
     }
 
 
-    @PostMapping("/users/manage/{id}/disable")
+    @PostMapping("/users/manage/{id}/deactivate")
     @PreAuthorize("@accessControlService.canDisableUser(#id)")
     public String disableUserReasonsPost(@PathVariable String id,
                                      @Valid DisableUserReasonForm disableUserReasonForm,
@@ -669,7 +669,7 @@ public class UserController {
         return "disable-user-completed";
     }
 
-    @GetMapping("/users/manage/{id}/enable")
+    @GetMapping("/users/manage/{id}/activate")
     @PreAuthorize("@accessControlService.canEnableUser(#id)")
     public String enableUserGet(@PathVariable String id,
                                  Model model,
@@ -686,7 +686,7 @@ public class UserController {
         return "enable-user-confirmation";
     }
 
-    @PostMapping("/users/manage/{id}/enable")
+    @PostMapping("/users/manage/{id}/activate")
     @PreAuthorize("@accessControlService.canEnableUser(#id)")
     public String enableUserPost(@PathVariable String id,
                                          Authentication authentication,

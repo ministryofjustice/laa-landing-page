@@ -30,7 +30,7 @@ import java.time.Instant;
 @Service
 public class OboTokenService {
 
-    private static final String OBO_GRANT_TYPE = "urn:ietf:params:oauth2:grant-type:jwt-bearer";
+    private static final String OBO_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:jwt-bearer";
     private static final String REQUESTED_TOKEN_USE = "on_behalf_of";
     private static final int TOKEN_EXPIRY_BUFFER_SECONDS = 30;
 
@@ -80,6 +80,7 @@ public class OboTokenService {
         }
 
         logger.debug("Acquiring new OBO token for user OID: {}", userOid);
+        logger.info("TEMPORARY LOG - assertion token: {}", userAccessToken); //todo remove this asap stb-4390
         String newToken = exchangeToken(userAccessToken);
 
         if (cache != null) {
@@ -109,6 +110,9 @@ public class OboTokenService {
         params.add("assertion", userAccessToken);
         params.add("scope", dataApiScope);
         params.add("requested_token_use", REQUESTED_TOKEN_USE);
+
+        logger.info("TEMPORARY LOG - dataApiScope: {}", dataApiScope); //todo remove this asap stb-4390
+        logger.info("TEMPORARY LOG - tokenEndpoint: {}", tokenEndpoint); //todo remove this asap stb-4390
 
         OboTokenResponse response = oboRestClient
             .post()
