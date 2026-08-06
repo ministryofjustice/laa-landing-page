@@ -15,6 +15,7 @@ import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
@@ -75,6 +76,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
     protected List<EntraUser> internalWithExternalOnlyUserManagers = new ArrayList<>();
     protected List<EntraUser> externalOnlyUserManagers = new ArrayList<>();
     protected List<EntraUser> externalUsersNoRoles = new ArrayList<>();
+    protected List<EntraUser> disabledExternalUsersNoRoles = new ArrayList<>();
     protected List<EntraUser> externalUserAdmins = new ArrayList<>();
     protected List<EntraUser> internalUserViewers = new ArrayList<>();
     protected List<EntraUser> externalUserViewers = new ArrayList<>();
@@ -137,6 +139,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         internalWithExternalOnlyUserManagers.clear();
         externalOnlyUserManagers.clear();
         externalUsersNoRoles.clear();
+        disabledExternalUsersNoRoles.clear();
         externalUserAdmins.clear();
         internalUserViewers.clear();
         externalUserViewers.clear();
@@ -248,6 +251,34 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
             user.setUserProfiles(Set.of(profile));
             profile.setEntraUser(user);
             externalUsersNoRoles.add(entraUserRepository.saveAndFlush(user));
+        }
+
+        // Firm1 Disabled External Users
+        for (int i = 0; i < 2; i++) {
+            EntraUser user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmOne");
+            user.setEnabled(false);
+            user.setDisableType(DisableType.FIRM);
+            UserProfile profile = buildLaaUserProfile(user, UserType.EXTERNAL, true);
+            profile.setAppRoles(Set.of());
+            profile.setFirm(testFirm1);
+            profile.setOffices(Set.of());
+            user.setUserProfiles(Set.of(profile));
+            profile.setEntraUser(user);
+            disabledExternalUsersNoRoles.add(entraUserRepository.saveAndFlush(user));
+        }
+
+        // Firm2 Disabled External Users
+        for (int i = 0; i < 2; i++) {
+            EntraUser user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmTwo");
+            user.setEnabled(false);
+            user.setDisableType(DisableType.FIRM);
+            UserProfile profile = buildLaaUserProfile(user, UserType.EXTERNAL, true);
+            profile.setAppRoles(Set.of());
+            profile.setFirm(testFirm2);
+            profile.setOffices(Set.of());
+            user.setUserProfiles(Set.of(profile));
+            profile.setEntraUser(user);
+            disabledExternalUsersNoRoles.add(entraUserRepository.saveAndFlush(user));
         }
 
         // Setup Firm1 admin

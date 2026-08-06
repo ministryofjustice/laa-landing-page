@@ -27,10 +27,10 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto
 import uk.gov.justice.laa.portal.landingpage.dto.ReactivationRequestsPageData;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType;
-import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.forms.DelegateReactivateUserCommentForm;
+import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
@@ -90,7 +90,7 @@ public class UserActivationController {
         session.setAttribute("delegateReactivateUserId", id);
         session.setAttribute("profileId", profileId);
 
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User - " + user.getFullName());
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User");
         return "delegate-reactivate-user";
     }
 
@@ -437,13 +437,6 @@ public class UserActivationController {
         return "delegate-reactivate-user-approve-confirmation";
     }
 
-    public void clearSessionAttributes(HttpSession session) {
-        session.removeAttribute("user");
-        session.removeAttribute("delegateReactivateUserId");
-        session.removeAttribute("delegateReactivateUserCommentForm");
-        session.removeAttribute("profileId");
-    }
-
     @GetMapping("/users/reactivation-requests")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER)")
     public String displayReactivationRequests(
@@ -452,8 +445,8 @@ public class UserActivationController {
             @RequestParam(name = "sort", defaultValue = "dateSubmitted") String sort,
             @RequestParam(name = "direction", defaultValue = "desc") String direction,
             @RequestParam(name = "search", required = false, defaultValue = "") String search,
-            @RequestParam(name = "selectedRequestStatuses", required = false) List<uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus> selectedRequestStatuses,
-            @RequestParam(name = "selectedUserTypes", required = false) List<AuthzRoleType> selectedUserTypes,
+            @RequestParam(name = "selectedRequestStatuses", required = false) List<ReactivationRequestStatus> selectedRequestStatuses,
+            @RequestParam(name = "selectedUserTypes", required = false) List<ReactivationRoleType> selectedUserTypes,
             @RequestParam(name = "defaultStatusApplied", defaultValue = "false") boolean defaultStatusApplied,
             Model model,
             Authentication authentication) {
@@ -468,7 +461,7 @@ public class UserActivationController {
                     .queryParam("sort", sort)
                     .queryParam("direction", direction)
                     .queryParam("defaultStatusApplied", true)
-                    .queryParam("selectedRequestStatuses", uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus.IN_REVIEW.name());
+                    .queryParam("selectedRequestStatuses", ReactivationRequestStatus.IN_REVIEW.name());
 
             if (selectedUserTypes != null && !selectedUserTypes.isEmpty()) {
                 builder.queryParam("selectedUserTypes",
@@ -482,10 +475,10 @@ public class UserActivationController {
             return "redirect:" + builder.build().encode().toUriString();
         }
 
-        List<uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus> statusFilters = selectedRequestStatuses == null
+        List<ReactivationRequestStatus> statusFilters = selectedRequestStatuses == null
                 ? new ArrayList<>()
                 : selectedRequestStatuses;
-        List<AuthzRoleType> userTypeFilters = selectedUserTypes == null
+        List<ReactivationRoleType> userTypeFilters = selectedUserTypes == null
                 ? new ArrayList<>()
                 : selectedUserTypes;
 
@@ -501,12 +494,12 @@ public class UserActivationController {
 
         model.addAttribute("pageHeading", pageData.pageMode().getHeading());
         model.addAttribute("manageMode", pageData.pageMode().isManageMode());
-        model.addAttribute("requests", pageData.page().getRequests());
+        model.addAttribute("requests", pageData.paginatedRequests().getRequests());
         model.addAttribute("requestedPageSize", size);
-        model.addAttribute("actualPageSize", pageData.page().getRequests().size());
-        model.addAttribute("page", pageData.page().getCurrentPage());
-        model.addAttribute("totalRequests", pageData.page().getTotalRequests());
-        model.addAttribute("totalPages", pageData.page().getTotalPages());
+        model.addAttribute("actualPageSize", pageData.paginatedRequests().getRequests().size());
+        model.addAttribute("page", pageData.paginatedRequests().getCurrentPage());
+        model.addAttribute("totalRequests", pageData.paginatedRequests().getTotalRequests());
+        model.addAttribute("totalPages", pageData.paginatedRequests().getTotalPages());
         model.addAttribute("search", search == null ? "" : search.trim());
         model.addAttribute("sort", sort);
         model.addAttribute("direction", direction);
@@ -516,5 +509,12 @@ public class UserActivationController {
         model.addAttribute(ModelAttributes.PAGE_TITLE, pageData.pageMode().getHeading());
 
         return "reactivation-requests";
+    }
+
+    public void clearSessionAttributes(HttpSession session) {
+        session.removeAttribute("user");
+        session.removeAttribute("delegateReactivateUserId");
+        session.removeAttribute("delegateReactivateUserCommentForm");
+        session.removeAttribute("profileId");
     }
 }

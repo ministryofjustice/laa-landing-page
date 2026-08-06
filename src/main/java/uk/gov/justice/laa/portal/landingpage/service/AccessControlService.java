@@ -26,12 +26,12 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
-import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
+import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import uk.gov.justice.laa.portal.landingpage.repository.UserActivationRequestRepository;
@@ -300,7 +300,7 @@ public class AccessControlService {
         }
 
         UserActivationRequest latestActivationRequest = userActivationRequestRepository
-                .findFirstByUserProfileIdOrderByVersionDesc(accessedUserProfile.getId())
+                .findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedUserProfile.getId())
                 .orElse(null);
 
         if (latestActivationRequest == null) {
@@ -410,7 +410,7 @@ public class AccessControlService {
         }
 
         UserActivationRequest latestActivationRequest = userActivationRequestRepository
-                .findFirstByUserProfileIdOrderByVersionDesc(accessedUserProfile.getId())
+                .findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedUserProfile.getId())
                 .orElse(null);
 
         if (latestActivationRequest == null) {
@@ -555,14 +555,25 @@ public class AccessControlService {
             }
 
             return EnablementState.CAN_ENABLE;
+        } else if (actorRoles.contains(AuthzRole.FIRM_USER_MANAGER.getRoleName())) {
+            return userEnablementPolicy.canDelegateReactivationRequest(disableType, actorRoles)
+                    ? EnablementState.CAN_DELEGATE_ENABLE
+                    : EnablementState.BLOCKED_BY_HIERARCHY;
         }
 
-        if (!userEnablementPolicy.canEnable(disableType, actorRoles)
-                && userHasPermission(authenticatedUser, Permission.CAN_REQUEST_DELEGATE_ENABLE_USER)) {
-            return EnablementState.CAN_DELEGATE_ENABLE;
+        if (userEnablementPolicy.canEnable(disableType, actorRoles)) {
+            return userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER)
+                    ? EnablementState.CAN_ENABLE
+                    : EnablementState.BLOCKED_BY_HIERARCHY;
         }
 
-        return EnablementState.CAN_ENABLE;
+        if (userEnablementPolicy.canDelegateReactivationRequest(disableType, actorRoles)) {
+            return userHasPermission(authenticatedUser, Permission.CAN_REQUEST_DELEGATE_ENABLE_USER)
+                    ? EnablementState.CAN_DELEGATE_ENABLE
+                    : EnablementState.BLOCKED_BY_HIERARCHY;
+        }
+
+        return EnablementState.DENIED;
     }
 
     /** Encapsulates the result of computing the enable-user access state. */

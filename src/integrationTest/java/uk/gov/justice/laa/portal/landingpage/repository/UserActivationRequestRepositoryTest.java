@@ -14,11 +14,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
-import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -132,7 +132,7 @@ class UserActivationRequestRepositoryTest extends BaseRepositoryTest {
                     userProfile, requestId2, 3, Instant.now(), ReactivationRequestStatus.INFORMATION_REQUIRED);
 
             // Act
-            Optional<UserActivationRequest> result = repository.findFirstByUserProfileIdOrderByVersionDesc(userProfileId1);
+            Optional<UserActivationRequest> result = repository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(userProfileId1);
 
             // Assert
             assertThat(result).isPresent();
