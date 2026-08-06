@@ -30,7 +30,7 @@ import java.time.Instant;
 @Service
 public class OboTokenService {
 
-    private static final String OBO_GRANT_TYPE = "urn:ietf:params:oauth2:grant-type:jwt-bearer";
+    private static final String OBO_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:jwt-bearer";
     private static final String REQUESTED_TOKEN_USE = "on_behalf_of";
     private static final int TOKEN_EXPIRY_BUFFER_SECONDS = 30;
 
