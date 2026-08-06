@@ -1105,13 +1105,13 @@
                                     <th:block
                                             th:if="${!user.enabled and (user.userType == 'Internal' or (user.invitationStatus != null and user.invitationStatus.name() == 'VERIFICATION_SUCCESS'))}">
                                         <strong class="govuk-tag govuk-tag--red">
-                                            Disabled
+                                            Deactivated
                                         </strong>
                                     </th:block>
                                     <th:block
                                             th:if="${user.enabled and (user.userType == 'Internal' or (user.invitationStatus != null and user.invitationStatus.name() == 'VERIFICATION_SUCCESS'))}">
                                         <strong class="govuk-tag govuk-tag--green govuk-!-margin-top-1">
-                                            Enabled
+                                            Active
                                         </strong>
                                     </th:block>
                                     <th:block
