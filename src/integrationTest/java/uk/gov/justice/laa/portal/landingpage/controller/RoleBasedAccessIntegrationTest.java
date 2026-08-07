@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -253,33 +254,33 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
             externalUsersNoRoles.add(entraUserRepository.saveAndFlush(user));
         }
 
-        // Firm1 Disabled External Users
-        for (int i = 0; i < 2; i++) {
-            EntraUser user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmOne");
-            user.setEnabled(false);
-            user.setDisableType(DisableType.FIRM);
-            UserProfile profile = buildLaaUserProfile(user, UserType.EXTERNAL, true);
-            profile.setAppRoles(Set.of());
-            profile.setFirm(testFirm1);
-            profile.setOffices(Set.of());
-            user.setUserProfiles(Set.of(profile));
-            profile.setEntraUser(user);
-            disabledExternalUsersNoRoles.add(entraUserRepository.saveAndFlush(user));
+        // Disabled External Users
+        for (DisableType disabledType : DisableType.values()) {
+            for (Firm firm : Arrays.asList(testFirm1, testFirm2)) {
+                EntraUser disabledUser = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmOne");
+                disabledUser.setEnabled(false);
+                disabledUser.setDisableType(disabledType);
+                UserProfile profile = buildLaaUserProfile(disabledUser, UserType.EXTERNAL, true);
+                profile.setAppRoles(Set.of());
+                profile.setFirm(firm);
+                profile.setOffices(Set.of());
+                disabledUser.setUserProfiles(Set.of(profile));
+                profile.setEntraUser(disabledUser);
+                disabledExternalUsersNoRoles.add(entraUserRepository.saveAndFlush(disabledUser));
+            }
         }
 
-        // Firm2 Disabled External Users
-        for (int i = 0; i < 2; i++) {
-            EntraUser user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmTwo");
-            user.setEnabled(false);
-            user.setDisableType(DisableType.FIRM);
-            UserProfile profile = buildLaaUserProfile(user, UserType.EXTERNAL, true);
-            profile.setAppRoles(Set.of());
-            profile.setFirm(testFirm2);
-            profile.setOffices(Set.of());
-            user.setUserProfiles(Set.of(profile));
-            profile.setEntraUser(user);
-            disabledExternalUsersNoRoles.add(entraUserRepository.saveAndFlush(user));
-        }
+        // User disable type is null
+        EntraUser disabledUser = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmOne");
+        disabledUser.setEnabled(false);
+        disabledUser.setDisableType(null);
+        UserProfile disabledUserProfile = buildLaaUserProfile(disabledUser, UserType.EXTERNAL, true);
+        disabledUserProfile.setAppRoles(Set.of());
+        disabledUserProfile.setFirm(testFirm2);
+        disabledUserProfile.setOffices(Set.of());
+        disabledUser.setUserProfiles(Set.of(disabledUserProfile));
+        disabledUserProfile.setEntraUser(disabledUser);
+        disabledExternalUsersNoRoles.add(entraUserRepository.saveAndFlush(disabledUser));
 
         // Setup Firm1 admin
         EntraUser user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmOneAdmin");

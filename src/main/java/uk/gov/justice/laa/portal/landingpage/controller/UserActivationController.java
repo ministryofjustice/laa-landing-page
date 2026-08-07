@@ -118,7 +118,7 @@ public class UserActivationController {
         model.addAttribute("referer", referer);
         model.addAttribute("profileId", profileId);
 
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User - " + user.getFullName());
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User");
         return "redirect:/admin/user/delegate-reactivate-user-comment/" + user.getId();
     }
 
@@ -147,7 +147,7 @@ public class UserActivationController {
         model.addAttribute("user", user);
         model.addAttribute("delegateReactivateUserCommentForm", delegateReactivateUserCommentForm);
         model.addAttribute("profileId", profileId);
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User - " + user.getFullName());
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User");
 
         return "delegate-reactivate-user-comment";
     }
@@ -169,7 +169,7 @@ public class UserActivationController {
             model.addAttribute("profileId", profileId);
             model.addAttribute("delegateReactivateUserCommentForm", delegateReactivateUserCommentForm);
             model.addAttribute("errorMessage", errorMessage);
-            model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User - " + user.getFullName());
+            model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User");
             return "delegate-reactivate-user-comment";
         }
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
@@ -178,7 +178,7 @@ public class UserActivationController {
         model.addAttribute("profileId", profileId);
         model.addAttribute("delegateReactivateUserCommentForm", delegateReactivateUserCommentForm);
         session.setAttribute("delegateReactivateUserCommentForm", delegateReactivateUserCommentForm);
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User - " + user.getFullName());
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User");
         return "redirect:/admin/user/delegate-reactivate-user-check-answers/" + user.getId();
     }
 
@@ -206,7 +206,7 @@ public class UserActivationController {
         model.addAttribute("user", user);
         model.addAttribute("delegateReactivateUserCommentForm", delegateReactivateUserCommentForm);
         model.addAttribute("profileId", profileId);
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User - " + user.getFullName());
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User");
         return "delegate-reactivate-user-check-answers";
     }
 
@@ -290,7 +290,7 @@ public class UserActivationController {
                 = userReactivationRequestService.getLatestRequestHistoryForUserProfile(profileId);
         model.addAttribute("reactivationRequests", latestRequestHistoryForUserProfile);
 
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User - " + user.getFullName());
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User");
         return "delegate-reactivate-user-tracking";
     }
 
@@ -372,7 +372,7 @@ public class UserActivationController {
                 = userReactivationRequestService.getLatestRequestHistoryForUserProfile(profileId);
         model.addAttribute("reactivationRequests", latestRequestHistoryForUserProfile);
 
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User - " + user.getFullName());
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User");
         return "delegate-reactivate-user-rejection";
     }
 

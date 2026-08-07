@@ -443,8 +443,6 @@ public class UserActivationControllerTest {
         void get_WhenRequestNotInProgress_PopulatesModelAndReturnsTrackingView() {
             String userId = "user-123";
             UUID profileId = UUID.randomUUID();
-            UUID requestId = UUID.randomUUID();
-            String referer = "http://localhost/previous-page";
             MockHttpSession session = new MockHttpSession();
             Model model = new ConcurrentModel();
             RedirectAttributesModelMap redirectAttributes = new RedirectAttributesModelMap();
@@ -453,8 +451,6 @@ public class UserActivationControllerTest {
 
             UserActivationRequest mockRequest = mock(UserActivationRequest.class);
             when(mockRequest.getStatus()).thenReturn(ReactivationRequestStatus.APPROVED);
-
-            List<UserActivationRequestSummaryDto> historyList = List.of(mock(UserActivationRequestSummaryDto.class));
 
             when(userService.getEntraUserById(userId)).thenReturn(Optional.of(mockUser));
             when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId)).thenReturn(Optional.of(mockRequest));
@@ -580,7 +576,6 @@ public class UserActivationControllerTest {
         @DisplayName("Should populate model and return view when valid open request exists")
         void shouldReturnViewWithPopulatedModel() {
             EntraUserDto userDto = mock(EntraUserDto.class);
-            when(userDto.getFullName()).thenReturn("John Doe");
 
             UserActivationRequest request = mock(UserActivationRequest.class);
             when(request.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
@@ -601,7 +596,7 @@ public class UserActivationControllerTest {
             assertThat(model.getAttribute("referer")).isEqualTo("http://example.com");
             assertThat(model.getAttribute("requestId")).isEqualTo(requestId);
             assertThat(model.getAttribute("reactivationRequests")).isEqualTo(history);
-            assertThat(model.getAttribute("pageTitle")).isEqualTo("Delegate Reactivate User - John Doe");
+            assertThat(model.getAttribute("pageTitle")).isEqualTo("Delegate Reactivate User");
         }
     }
 

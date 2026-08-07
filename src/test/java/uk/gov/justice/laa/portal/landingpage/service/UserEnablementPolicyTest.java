@@ -66,8 +66,8 @@ class UserEnablementPolicyTest {
         }
 
         @Test
-        void none_eumCanEnable() {
-            assertThat(policy.canEnable(DisableType.NONE, List.of(EUM))).isTrue();
+        void none_eumCannotEnable() {
+            assertThat(policy.canEnable(DisableType.NONE, List.of(EUM))).isFalse();
         }
 
         @Test
@@ -76,13 +76,13 @@ class UserEnablementPolicyTest {
         }
 
         @Test
-        void none_fumCanEnable() {
-            assertThat(policy.canEnable(DisableType.NONE, List.of(FUM))).isTrue();
+        void none_fumCannotEnable() {
+            assertThat(policy.canEnable(DisableType.NONE, List.of(FUM))).isFalse();
         }
 
         @Test
-        void none_noRoleCanEnable() {
-            assertThat(policy.canEnable(DisableType.NONE, List.of())).isTrue();
+        void none_noRoleCannotEnable() {
+            assertThat(policy.canEnable(DisableType.NONE, List.of())).isFalse();
         }
 
         // --- SYNC disable type (Automatic User Sync — EUM/EUA+ only) ---
@@ -216,9 +216,9 @@ class UserEnablementPolicyTest {
         // --- Multi-role scenarios: highest delegation of the enabling user is used ---
 
         @Test
-        void none_fumWithEumRole_canEnable() {
+        void none_fumWithEumRole_cannotEnable() {
             // FUM alone cannot re-enable a NONE-disabled user, but EUM (higher delegation) can
-            assertThat(policy.canEnable(DisableType.NONE, List.of(FUM, EUM))).isTrue();
+            assertThat(policy.canEnable(DisableType.NONE, List.of(FUM, EUM))).isFalse();
         }
 
         @Test
