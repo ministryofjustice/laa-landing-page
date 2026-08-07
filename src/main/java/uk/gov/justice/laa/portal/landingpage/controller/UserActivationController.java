@@ -40,6 +40,7 @@ import uk.gov.justice.laa.portal.landingpage.forms.DelegateReactivateUserComment
 import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
+import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
@@ -53,6 +54,7 @@ public class UserActivationController {
     private final UserService userService;
     private final UserReactivationRequestService userReactivationRequestService;
     private final AccessControlService accessControlService;
+    private final UserAccountStatusService userAccountStatusService;
 
     @Value("${feature.flag.disable.user}")
     public boolean disableUserFeatureEnabled;
@@ -431,6 +433,7 @@ public class UserActivationController {
         CurrentUserDto actor = loginService.getCurrentUser(authentication);
 
         userReactivationRequestService.saveRequestState(requestId, profileId, ReactivationRequestStatus.APPROVED, "Approved", user.getEntraOid());
+        userAccountStatusService.enableUser(UUID.fromString(id), user.getId());
         log.info("A delegate enable user request {} has been approved by {} for {}", requestId, actor.getUserId(), id);
 
         clearSessionAttributes(session);

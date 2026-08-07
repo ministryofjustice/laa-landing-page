@@ -1,16 +1,17 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import lombok.extern.slf4j.Slf4j;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
 import org.springframework.stereotype.Component;
+
+import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
 
 @Slf4j
 @Component
@@ -45,7 +46,8 @@ public class ReactivationTypeResolver {
 
         // Check from highest to lowest delegation
         if (roleNames.contains(AuthzRole.GLOBAL_ADMIN.getRoleName())
-                || roleNames.contains(AuthzRole.SECURITY_RESPONSE.getRoleName())) {
+                || roleNames.contains(AuthzRole.SECURITY_RESPONSE.getRoleName())
+                || roleNames.contains(AuthzRole.EXTERNAL_USER_SUPPORT.getRoleName())) {
             return ReactivationRoleType.LAA;
         }
 

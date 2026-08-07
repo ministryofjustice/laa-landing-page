@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -13,8 +14,10 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.Mock;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -50,12 +53,9 @@ import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestPageMode;
 import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
+import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
-
-import java.util.Collections;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 public class UserActivationControllerTest {
@@ -77,6 +77,8 @@ public class UserActivationControllerTest {
     @Mock
     private AccessControlService accessControlService;
     @Mock
+    private UserAccountStatusService userAccountStatusService;
+    @Mock
     private HttpSession session;
     @Mock
     private Authentication authentication;
@@ -88,7 +90,7 @@ public class UserActivationControllerTest {
 
     @BeforeEach
     void setUp() {
-        userActivationController = new UserActivationController(loginService, userService, userReactivationRequestService, accessControlService);
+        userActivationController = new UserActivationController(loginService, userService, userReactivationRequestService, accessControlService, userAccountStatusService);
         userActivationController.disableUserFeatureEnabled = true;
         model = new ExtendedModelMap();
         lenient().when(session.getAttributeNames()).thenReturn(Collections.emptyEnumeration());
@@ -659,10 +661,11 @@ public class UserActivationControllerTest {
     class ApprovePostTests {
 
         @Test
-        @DisplayName("Should save state as APPROVED and return confirmation view")
+        @DisplayName("Should save state as APPROVED, enable the user, and return confirmation view")
         void shouldSaveStateAndReturnConfirmation() {
             EntraUser entraUser = mock(EntraUser.class);
             when(entraUser.getEntraOid()).thenReturn("actor-oid-2");
+            when(entraUser.getId()).thenReturn(ACTOR_USER_ID);
 
             CurrentUserDto currentUserDto = mock(CurrentUserDto.class);
             when(currentUserDto.getUserId()).thenReturn(ACTOR_USER_ID);
@@ -678,6 +681,7 @@ public class UserActivationControllerTest {
 
             assertThat(viewName).isEqualTo("delegate-reactivate-user-approve-confirmation");
             verify(userReactivationRequestService).saveRequestState(requestId, profileId, ReactivationRequestStatus.APPROVED, "Approved", "actor-oid-2");
+            verify(userAccountStatusService).enableUser(UUID.fromString(userId), ACTOR_USER_ID);
             assertThat(model.getAttribute("pageTitle")).isEqualTo("Delegate Reactivate User");
             assertThat(model.getAttribute("userName")).isEqualTo("Alice Johnson");
         }
