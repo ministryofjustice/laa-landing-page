@@ -5,12 +5,12 @@
       pageCategory=${'register'},
       breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>Enable User Access</title>
+    <title>Activate User Access</title>
 </head>
 <body>
 <main class="govuk-main-wrapper" id="main-content">
 
-    <a class="govuk-back-link" th:href="@{/templates/home}">Back</a>
+    <a class="govuk-back-link" th:href="${cancelPath}">Back</a>
 
     <h1 class="govuk-heading-l">
         Reactivate <span th:text="${user.fullName}"></span>
@@ -51,7 +51,8 @@
     </div>
 
     <!-- nosemgrep -->
-    <form th:action="@{/admin/users/manage/{id}/enable(id=${user.id}, referer=${referer})}" method="post" style="display: inline;">
+    <form th:action="@{/admin/users/manage/{id}/activate(id=${user.id}, referer=${referer})}" method="post"
+          style="display: inline;">
         <div class="moj-button-group">
             <button type="submit" class="govuk-button" data-module="govuk-button">
                 Reactivate user

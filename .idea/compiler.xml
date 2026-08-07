@@ -16,5 +16,13 @@
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_STRING" value="-parameters" />
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="laa-landing-page.internal-user-polling-service" options="-parameters" />
+      <module name="laa-landing-page.internal-user-polling-service.main" options="-parameters" />
+      <module name="laa-landing-page.internal-user-polling-service.test" options="-parameters" />
+      <module name="laa-landing-page.laa-silas" options="-parameters" />
+      <module name="laa-landing-page.laa-silas.main" options="-parameters" />
+      <module name="laa-landing-page.laa-silas.test" options="-parameters" />
+    </option>
   </component>
 </project>

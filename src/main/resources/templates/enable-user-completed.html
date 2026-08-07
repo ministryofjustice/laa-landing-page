@@ -23,14 +23,8 @@
         </div>
         <p class="govuk-body">We have notified the user to tell them they have access.</p>
 
-        <form th:if="${referer != null && referer.equals('manage')}" class="govuk-!-padding-top-6" th:action="@{/admin/users}" method="get">
-            <button class="govuk-button govuk-button--secondary" type="submit">Return to Manage Your Users</button>
-        </form>
-        <form th:if="${referer != null && referer.equals('audit')}" class="govuk-!-padding-top-6" th:action="@{/admin/users/audit}" method="get">
-            <button class="govuk-button govuk-button--primary" type="submit">Go back to audit table</button>
-        </form>
-        <form th:if="${referer == null}" class="govuk-!-padding-top-6" th:action="@{/admin/users/audit}" method="get">
-            <button class="govuk-button govuk-button--primary" type="submit">Go back to home page</button>
+        <form class="govuk-!-padding-top-6" th:action="${cancelPath}" method="get">
+            <button class="govuk-button govuk-button--primary" type="submit">Go back to previous page</button>
         </form>
     </div>
 </main>
