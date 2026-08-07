@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -28,6 +27,7 @@ class UserEnablementPolicyTest {
     private static final String SR = AuthzRole.SECURITY_RESPONSE.getRoleName();
     private static final String EUM = AuthzRole.EXTERNAL_USER_MANAGER.getRoleName();
     private static final String EUA = AuthzRole.EXTERNAL_USER_ADMIN.getRoleName();
+    private static final String EUS = AuthzRole.EXTERNAL_USER_SUPPORT.getRoleName();
     private static final String FUM = AuthzRole.FIRM_USER_MANAGER.getRoleName();
     private static final String IUM = AuthzRole.INTERNAL_USER_MANAGER.getRoleName();
 
@@ -39,6 +39,7 @@ class UserEnablementPolicyTest {
             assertThat(policy.canEnable(null, List.of(IUM))).isTrue();
             assertThat(policy.canEnable(null, List.of(EUM))).isFalse();
             assertThat(policy.canEnable(null, List.of(EUA))).isTrue();
+            assertThat(policy.canEnable(null, List.of(EUS))).isTrue();
             assertThat(policy.canEnable(null, List.of(SR))).isTrue();
             assertThat(policy.canEnable(null, List.of(GA))).isTrue();
         }
@@ -76,6 +77,11 @@ class UserEnablementPolicyTest {
         }
 
         @Test
+        void none_eusCanEnable() {
+            assertThat(policy.canEnable(DisableType.NONE, List.of(EUS))).isTrue();
+        }
+
+        @Test
         void none_fumCannotEnable() {
             assertThat(policy.canEnable(DisableType.NONE, List.of(FUM))).isFalse();
         }
@@ -108,6 +114,11 @@ class UserEnablementPolicyTest {
         }
 
         @Test
+        void sync_eusCanEnable() {
+            assertThat(policy.canEnable(DisableType.SYNC, List.of(EUS))).isTrue();
+        }
+
+        @Test
         void sync_fumCannotEnable() {
             assertThat(policy.canEnable(DisableType.SYNC, List.of(FUM))).isFalse();
         }
@@ -135,6 +146,11 @@ class UserEnablementPolicyTest {
         }
 
         @Test
+        void firm_eusCanEnable() {
+            assertThat(policy.canEnable(DisableType.FIRM, List.of(EUS))).isTrue();
+        }
+
+        @Test
         void firm_srCanEnable() {
             assertThat(policy.canEnable(DisableType.FIRM, List.of(SR))).isTrue();
         }
@@ -159,6 +175,11 @@ class UserEnablementPolicyTest {
         @Test
         void laa_euaCanEnable() {
             assertThat(policy.canEnable(DisableType.LAA, List.of(EUA))).isTrue();
+        }
+
+        @Test
+        void laa_eusCanEnable() {
+            assertThat(policy.canEnable(DisableType.LAA, List.of(EUS))).isTrue();
         }
 
         @Test
@@ -201,6 +222,11 @@ class UserEnablementPolicyTest {
         @Test
         void privileged_euaCannotEnable() {
             assertThat(policy.canEnable(DisableType.PRIVILEGED, List.of(EUA))).isFalse();
+        }
+
+        @Test
+        void privileged_eusCannotEnable() {
+            assertThat(policy.canEnable(DisableType.PRIVILEGED, List.of(EUS))).isFalse();
         }
 
         @Test
@@ -280,6 +306,11 @@ class UserEnablementPolicyTest {
         @Test
         void firm_euaBypassesSameFirmCheck() {
             assertThat(policy.requiresSameFirmCheck(DisableType.FIRM, List.of(EUA))).isFalse();
+        }
+
+        @Test
+        void firm_eusBypassesSameFirmCheck() {
+            assertThat(policy.requiresSameFirmCheck(DisableType.FIRM, List.of(EUS))).isFalse();
         }
 
         @Test
