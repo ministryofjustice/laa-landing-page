@@ -20,7 +20,8 @@ public enum AuthzRole {
     FIRM_DIRECTORY("Firm Directory", AuthzRoleType.LAA),
     SECURITY_RESPONSE("Security Response", AuthzRoleType.PRIVILEGED),
     MULTI_FIRM_DELEGATION("Multi-firm Delegation", AuthzRoleType.LAA),
-    AUDIT_EXPORT("Audit Export", AuthzRoleType.LAA);
+    AUDIT_EXPORT("Audit Export", AuthzRoleType.LAA),
+    EXTERNAL_USER_SUPPORT("External User Support", AuthzRoleType.LAA);
     private final String roleName;
     private final AuthzRoleType authzRoleType;
 
