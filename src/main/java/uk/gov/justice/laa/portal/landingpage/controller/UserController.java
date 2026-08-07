@@ -65,12 +65,14 @@ import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
@@ -92,6 +94,7 @@ import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
@@ -105,6 +108,7 @@ import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
+import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
@@ -142,7 +146,7 @@ public class UserController {
     private final AppService appService;
     private final UserAccountStatusService userAccountStatusService;
     private final NotificationService notificationService;
-
+    private final UserReactivationRequestService userReactivationRequestService;
 
     @Value("${feature.flag.disable.user}")
     public boolean disableUserFeatureEnabled;
@@ -263,6 +267,8 @@ public class UserController {
         model.addAttribute("allowDelegateUserAccess", allowDelegateUserAccess);
         boolean allowCreateUser = accessControlService.authenticatedUserHasPermission(Permission.CREATE_EXTERNAL_USER);
         model.addAttribute("allowCreateUser", allowCreateUser);
+        boolean allowViewReactivationRequests = accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
+        model.addAttribute("allowViewReactivationRequests", allowViewReactivationRequests);
 
         // If firmSearchForm is already populated from session (e.g., validation
         // errors), keep it
@@ -402,11 +408,24 @@ public class UserController {
         final boolean canDisableUser = disableUserFeatureEnabled
                 && accessControlService.canDisableUser(user.getEntraUser().getId());
         model.addAttribute("canDisableUser", canDisableUser);
+        Optional<UserActivationRequest> userActivationRequest = userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(UUID.fromString(id));
+        boolean isActiveDelegateRequestPresent = userActivationRequest.isPresent()
+                && !(userActivationRequest.get().getStatus() == ReactivationRequestStatus.APPROVED
+                || userActivationRequest.get().getStatus() == ReactivationRequestStatus.REJECTED);
+        boolean canManageDelegateEnableUser = isActiveDelegateRequestPresent && accessControlService.canManageDelegateEnableUser(user.getEntraUser().getId());
+        model.addAttribute("canManageDelegateEnableUser", isActiveDelegateRequestPresent && canManageDelegateEnableUser);
+        boolean canTrackDelegateRequest = isActiveDelegateRequestPresent && !canManageDelegateEnableUser && accessControlService.canTrackDelegateEnableUser(user.getEntraUser().getId());
+        model.addAttribute("canTrackDelegateEnableUser", canTrackDelegateRequest);
+        model.addAttribute("reactivationRequestStatus", isActiveDelegateRequestPresent
+                ? userActivationRequest.get().getStatus() : null);
         AccessControlService.EnablementFlags enablementFlags = disableUserFeatureEnabled
                 ? accessControlService.getEnablementFlags(user.getEntraUser().getId())
-                : new AccessControlService.EnablementFlags(false, false);
-        model.addAttribute("canEnableUser", enablementFlags.canEnable());
+                : new AccessControlService.EnablementFlags(false, false, false);
+        model.addAttribute("canEnableUser", !canTrackDelegateRequest && !canManageDelegateEnableUser && enablementFlags.canEnable());
         model.addAttribute("cannotEnableUser", enablementFlags.blockedByHierarchy());
+
+        boolean canDelegateEnableUser = !isActiveDelegateRequestPresent && enablementFlags.canDelegate();
+        model.addAttribute("canDelegateEnableUser", canDelegateEnableUser);
         final boolean userIsEnabled = user.getEntraUser().isEnabled();
         model.addAttribute("userIsEnabled", userIsEnabled);
         boolean showResendVerificationLink = accessControlService.canSendVerificationEmail(id);
@@ -423,6 +442,12 @@ public class UserController {
 
         model.addAttribute("isMultiFirmUser", isMultiFirmUser);
         model.addAttribute("canViewAllFirmsOfMultiFirmUser", accessControlService.canViewAllFirmsOfMultiFirmUser());
+
+        boolean isProviderAdmin = user != null
+                && accessControlService.userHasAuthzRole(authentication,
+                AuthzRole.FIRM_USER_MANAGER.getRoleName());
+        model.addAttribute("silasUserType",
+                isInternalUser ? "Internal" : isMultiFirmUser ? "3rd Party" : isProviderAdmin ? "Firm Admin" : "Provider");
 
         // Check if this profile belongs to the logged-in user
         boolean isOwnProfile = editorUserProfile.getId().equals(user.getId());
@@ -674,15 +699,17 @@ public class UserController {
     public String enableUserGet(@PathVariable String id,
                                  Model model,
                                  String referer,
-                                 String profileId) {
+                                 String profileId,
+                                 Authentication authentication) {
 
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
-
-        String cancelPath = getCancelPathFromReferer(referer, id, profileId);
+        EntraUser currentEntraUser = loginService.getCurrentEntraUser(authentication);
+        boolean isInternalActor = userService.isInternal(currentEntraUser.getId());
         model.addAttribute("user", user);
         model.addAttribute("referer", referer);
-        model.addAttribute("cancelPath", cancelPath);
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Enable User - " + user.getFullName());
+        model.addAttribute("cancelPath", getCancelPathFromReferer(referer, id, profileId));
+        model.addAttribute("isInternalActor", isInternalActor);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User - " + user.getFullName());
         return "enable-user-confirmation";
     }
 
@@ -703,12 +730,12 @@ public class UserController {
         model.addAttribute("user", user);
         model.addAttribute("referer", referer);
         model.addAttribute("cancelPath", cancelPath);
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Enable User Success - " + user.getFullName());
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User Success - " + user.getFullName());
         return "enable-user-completed";
     }
 
     @NotNull
-    private static String buildErrorString(BindingResult result) {
+    protected static String buildErrorString(BindingResult result) {
         StringBuilder errorMessage = new StringBuilder();
         List<ObjectError> errors = result.getAllErrors();
         for (int i = 0; i < errors.size(); i++) {
@@ -1087,6 +1114,10 @@ public class UserController {
         session.removeAttribute("firmSearchForm");
         session.removeAttribute("firmSearchTerm");
         session.removeAttribute("createUserFlowStage");
+        session.removeAttribute("delegateReactivateUserId");
+        session.removeAttribute("delegateReactivateUserReasonForm");
+        session.removeAttribute("delegateReactivateUserId");
+        session.removeAttribute("profileId");
         return "redirect:/admin/users";
     }
 
@@ -1103,7 +1134,7 @@ public class UserController {
     @GetMapping("/users/edit/{id}/details")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_DETAILS)")
     public String editUserDetails(@PathVariable String id, Model model, HttpSession session) {
-        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();;
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         EditUserDetailsForm editUserDetailsForm = new EditUserDetailsForm();
         editUserDetailsForm.setFirstName(user.getEntraUser().getFirstName());
         editUserDetailsForm.setLastName(user.getEntraUser().getLastName());
