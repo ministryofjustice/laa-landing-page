@@ -103,6 +103,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.exception.OfficeAssignmentException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.exception.UserAlreadyAssignedToFirmException;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
@@ -2171,6 +2172,39 @@ class UserServiceTest {
         EntraUser entraUser = userService.getUserByEntraId(UUID.randomUUID());
         // Then
         assertThat(entraUser).isNull();
+    }
+
+    @Test
+    void addMultiFirmUserProfile_officeFromDifferentFirm_shouldThrow() {
+        // Arrange
+
+        EntraUserDto entraUserDto = new EntraUserDto();
+        entraUserDto.setId(UUID.randomUUID().toString());
+        entraUserDto.setEntraOid("entra-oid");
+        entraUserDto.setMultiFirmUser(true);
+
+        FirmDto firmDto = new FirmDto();
+        UUID targetFirmId = UUID.randomUUID();
+        firmDto.setId(targetFirmId);
+
+        OfficeDto officeDto = new OfficeDto();
+        UUID officeId = UUID.randomUUID();
+        officeDto.setId(officeId);
+
+        // officeRepository.findById will return an Office that belongs to a different firm
+        UUID otherFirmId = UUID.randomUUID();
+        Office otherOffice = Office.builder().id(officeId).firm(Firm.builder().id(otherFirmId).build()).build();
+        when(mockOfficeRepository.findById(officeId)).thenReturn(Optional.of(otherOffice));
+
+        // firmService returns the target firm
+        when(firmService.getById(targetFirmId)).thenReturn(Firm.builder().id(targetFirmId).build());
+
+        // entraUserRepository.findById should return an existing EntraUser
+        EntraUser existing = EntraUser.builder().id(UUID.fromString(entraUserDto.getId())).build();
+
+        // Act & Assert
+        assertThrows(OfficeAssignmentException.class,
+                () -> userService.addMultiFirmUserProfile(entraUserDto, firmDto, List.of(officeDto), null, "admin"));
     }
 
     @Test
@@ -5129,21 +5163,28 @@ class UserServiceTest {
             UserProfile existingProfile = UserProfile.builder().firm(existingFirm).build();
             entraUser.setUserProfiles(new HashSet<>(Set.of(existingProfile)));
 
-            Office office = Office.builder().id(UUID.randomUUID()).build();
+            UUID newFirmId = UUID.randomUUID();
+
+            UUID officeId = UUID.randomUUID();
+            Office office = Office.builder().id(officeId).firm(Firm.builder().id(newFirmId).build()).build();
             OfficeDto officeDto = new OfficeDto();
+            officeDto.setId(officeId);
+
             AppRole appRole = AppRole.builder().id(UUID.randomUUID()).name("role").build();
             AppRoleDto appRoleDto = AppRoleDto.builder().id(UUID.randomUUID().toString()).build();
-            FirmDto newFirmDto = FirmDto.builder().id(UUID.randomUUID()).name("Test Firm").build();
 
             when(entraUserRepository.findById(entraUserId)).thenReturn(Optional.of(entraUser));
             when(officeRepository.findById(any())).thenReturn(Optional.ofNullable(office));
             when(appRoleRepository.findById(any())).thenReturn(Optional.ofNullable(appRole));
             when(userProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
             doNothing().when(notificationService).notifyDeleteFirmAccess(isNull(), anyString(), anyString(), anyString());
+            // firmService.getById should return the firm corresponding to newFirmDto
+            when(firmService.getById(newFirmId)).thenReturn(Firm.builder().id(newFirmId).build());
 
             EntraUserDto user = EntraUserDto.builder().id(entraUserId.toString())
                     .firstName("FirstName").email("test@email.com").multiFirmUser(true).build();
 
+            FirmDto newFirmDto = FirmDto.builder().id(newFirmId).name("Test Firm").build();
             UserProfile result = userService.addMultiFirmUserProfile(user, newFirmDto, List.of(officeDto),
                     List.of(appRoleDto), "admin");
 

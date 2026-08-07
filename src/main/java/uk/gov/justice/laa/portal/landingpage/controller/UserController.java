@@ -677,9 +677,11 @@ public class UserController {
                                  String profileId) {
 
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+
+        String cancelPath = getCancelPathFromReferer(referer, id, profileId);
         model.addAttribute("user", user);
         model.addAttribute("referer", referer);
-        model.addAttribute("cancelPath", getCancelPathFromReferer(referer, id, profileId));
+        model.addAttribute("cancelPath", cancelPath);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Enable User - " + user.getFullName());
         return "enable-user-confirmation";
     }
@@ -689,15 +691,18 @@ public class UserController {
     public String enableUserPost(@PathVariable String id,
                                          Authentication authentication,
                                          Model model,
-                                         String referer) {
+                                         String referer,
+                                         String profileId) {
 
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
         UUID enabledUserId = UUID.fromString(user.getId());
         UUID enabledByUserId = loginService.getCurrentEntraUser(authentication).getId();
         userAccountStatusService.enableUser(enabledUserId, enabledByUserId);
 
+        String cancelPath = getCancelPathFromReferer(referer, id, profileId);
         model.addAttribute("user", user);
         model.addAttribute("referer", referer);
+        model.addAttribute("cancelPath", cancelPath);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Enable User Success - " + user.getFullName());
         return "enable-user-completed";
     }
