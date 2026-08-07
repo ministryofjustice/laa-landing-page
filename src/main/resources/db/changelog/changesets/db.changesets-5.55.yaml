@@ -2,7 +2,7 @@ databaseChangeLog:
   - changeSet:
       id: 1786102293409
       author: joshua.halladey
-      comment: "Update status_change values from ENABLED/DISABLED to ACTIVATED/DEACTIVATED"
+      comment: "Update status_change in user_account_status_audit values from ENABLED/DISABLED to ACTIVATED/DEACTIVATED"
 
       changes:
         - sql:
