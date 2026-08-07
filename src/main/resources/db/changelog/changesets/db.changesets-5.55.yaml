@@ -14,21 +14,6 @@ databaseChangeLog:
         - sql:
             dbms: postgresql
             sql: >
-              ALTER TABLE user_account_status_audit
-              ADD CONSTRAINT user_account_status_audit_status_change_check
-              CHECK (
-                status_change IN (
-                  'ENABLED',
-                  'DISABLED',
-                  'DELETED',
-                  'ACTIVATED',
-                  'DEACTIVATED'
-                )
-              )
-
-        - sql:
-            dbms: postgresql
-            sql: >
               UPDATE user_account_status_audit
               SET status_change = 'ACTIVATED'
               WHERE status_change = 'ENABLED'
@@ -44,7 +29,35 @@ databaseChangeLog:
             dbms: postgresql
             sql: >
               ALTER TABLE user_account_status_audit
+              ADD CONSTRAINT user_account_status_audit_status_change_check
+              CHECK (
+                status_change IN (
+                  'ACTIVATED',
+                  'DEACTIVATED',
+                  'DELETED'
+                )
+              )
+
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: >
+              ALTER TABLE user_account_status_audit
               DROP CONSTRAINT user_account_status_audit_status_change_check
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              UPDATE user_account_status_audit
+              SET status_change = 'ENABLED'
+              WHERE status_change = 'ACTIVATED'
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              UPDATE user_account_status_audit
+              SET status_change = 'DISABLED'
+              WHERE status_change = 'DEACTIVATED'
 
         - sql:
             dbms: postgresql
@@ -53,8 +66,8 @@ databaseChangeLog:
               ADD CONSTRAINT user_account_status_audit_status_change_check
               CHECK (
                 status_change IN (
-                  'ACTIVATED',
-                  'DEACTIVATED',
+                  'ENABLED',
+                  'DISABLED',
                   'DELETED'
                 )
               )
