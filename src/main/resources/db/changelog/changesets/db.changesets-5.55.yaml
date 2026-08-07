@@ -43,6 +43,8 @@ databaseChangeLog:
                 ('CONVERT_USER_TO_MULTI_FIRM'),
                 ('DISABLE_EXTERNAL_USER'),
                 ('DELETE_EXTERNAL_USER'),
+                ('MANAGE_REACTIVATE_REQUEST'),
+                ('SUBMIT_REACTIVATE_REQUEST'),
                 ('VIEW_AUDIT_TABLE'),
                 ('VIEW_FIRM_DIRECTORY'),
                 ('CREATE_LAA_APP_ROLE'),
