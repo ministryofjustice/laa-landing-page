@@ -11,7 +11,7 @@ databaseChangeLog:
             stripComments: true
             sql: |
               INSERT INTO app_role (app_id, id, name, description, user_type_restriction, authz_role, ccms_code, legacy_sync, ordinal, firm_type_restriction)
-              SELECT (SELECT id FROM app WHERE name = 'Manage Your Users'),
+              SELECT (SELECT id FROM app WHERE name = 'Manage your users'),
                      gen_random_uuid(),
                      'External User Support',
                      'An internal user able to investigate and resolve user-access issues, combining key user-management and SiLAS administration permissions',
