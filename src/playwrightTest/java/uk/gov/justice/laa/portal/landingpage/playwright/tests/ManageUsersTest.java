@@ -169,7 +169,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
     }
 
     @Test
-    @DisplayName("Verify Disable User link is accessible for EUM")
+    @DisplayName("Verify Reactivate User link is accessible for EUM")
     void verifyUserDetailsPageShowsDisableUserLink() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
         manageUsersPage.searchForUser("playwright-firmtwouserviewer@playwrighttest.com");
@@ -182,7 +182,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
     }
 
     @Test
-    @DisplayName("Verify Disable User link is not visible for unverified users")
+    @DisplayName("Verify Reactivate User link is not visible for unverified users")
     void verifyUserDetailsPageDonotShowsDisableUserLinkForUnVerifiedUsers() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
         manageUsersPage.searchForUser("externaluser-incomplete3@playwrighttest.com");
@@ -190,7 +190,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         manageUsersPage.verifyUserDetailsPopulated();
         // Disable link visible
-        assertFalse(page.locator("#user-details .govuk-summary-list__actions a.govuk-link:has-text(\"Disable user\")").isVisible());
+        assertFalse(page.locator("#user-details .govuk-summary-list__actions a.govuk-link:has-text(\"Reactivate user\")").isVisible());
     }
 
     @Test

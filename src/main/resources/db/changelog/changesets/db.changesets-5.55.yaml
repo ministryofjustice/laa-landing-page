@@ -1,86 +1,105 @@
 databaseChangeLog:
   - changeSet:
-      id: 20260806-1-create-external-user-support-role
-      author: paul.snowdon
-      dbms: postgresql
-      comment: "Create External User Support role combining Manage Your Users and SiLAS Administration permissions for support staff"
+      id: 20260721-01-create-user-activation-requests-table
+      author: suresh kavali
       changes:
+        - createTable:
+            tableName: user_activation_request
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: request_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_profile_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: INT
+                  defaultValueNumeric: 1
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: comments
+                  type: TEXT
+              - column:
+                  name: actor_entra_oid
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: actor_role_type
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+
+        - addUniqueConstraint:
+            tableName: user_activation_request
+            columnNames: request_id, version
+            constraintName: unq_request_version
+
+        - createIndex:
+            tableName: user_activation_request
+            indexName: idx_user_act_req_latest
+            columns:
+              - column:
+                  name: request_id
+              - column:
+                  name: version
+                  descending: true
+        - createIndex:
+            tableName: user_activation_request
+            indexName: idx_user_act_req_user_profile_id
+            columns:
+              - column:
+                  name: user_profile_id
+        - createIndex:
+            tableName: user_activation_request
+            indexName: idx_user_act_req_actor_entra_oid
+            columns:
+              - column:
+                  name: actor_entra_oid
+        - createIndex:
+            tableName: user_activation_request
+            indexName: idx_user_act_req_status
+            columns:
+              - column:
+                  name: status
+        - createIndex:
+            tableName: user_activation_request
+            indexName: idx_user_act_req_created_at
+            columns:
+              - column:
+                  name: created_at
+
         - sql:
-            dbms: postgresql
-            splitStatements: true
-            stripComments: true
-            sql: |
-              INSERT INTO app_role (app_id, id, name, description, user_type_restriction, authz_role, ccms_code, legacy_sync, ordinal, firm_type_restriction)
-              SELECT (SELECT id FROM app WHERE name = 'Manage Your Users'),
-                     gen_random_uuid(),
-                     'External User Support',
-                     'An internal user able to investigate and resolve user-access issues, combining key user-management and SiLAS administration permissions',
-                     ARRAY['INTERNAL'],
-                     true,
-                     NULL,
-                     false,
-                     0,
-                     NULL
-              WHERE NOT EXISTS (
-                SELECT 1 FROM app_role WHERE name = 'External User Support'
-              );
-        - sql:
-            dbms: postgresql
-            splitStatements: true
-            stripComments: true
-            sql: |
-              INSERT INTO role_permission (app_role_id, permission)
-              SELECT (SELECT id FROM app_role WHERE name = 'External User Support'), permission
-              FROM (VALUES
-                ('VIEW_INTERNAL_USER'),
-                ('VIEW_EXTERNAL_USER'),
-                ('CREATE_EXTERNAL_USER'),
-                ('EDIT_EXTERNAL_USER'),
-                ('EDIT_USER_OFFICE'),
-                ('EDIT_USER_DETAILS'),
-                ('EDIT_USER_FIRM'),
-                ('DELEGATE_EXTERNAL_USER_ACCESS_INTERNAL'),
-                ('CONVERT_USER_TO_MULTI_FIRM'),
-                ('DISABLE_EXTERNAL_USER'),
-                ('DELETE_EXTERNAL_USER'),
-                ('MANAGE_REACTIVATE_REQUEST'),
-                ('SUBMIT_REACTIVATE_REQUEST'),
-                ('VIEW_AUDIT_TABLE'),
-                ('VIEW_FIRM_DIRECTORY'),
-                ('CREATE_LAA_APP_ROLE'),
-                ('DELETE_LAA_APP_ROLE'),
-                ('EDIT_LAA_APP_METADATA'),
-                ('EDIT_LAA_APP_ROLE_ASSIGN_RESTRICTIONS'),
-                ('TRIGGER_CCMS_ROLE_SYNC'),
-                ('TRIGGER_LAA_APP_SYNC'),
-                ('VIEW_LAA_APP_METADATA')
-              ) AS required_permissions(permission)
-              WHERE NOT EXISTS (
-                SELECT 1 FROM role_permission
-                WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'External User Support')
-                  AND permission = required_permissions.permission
-              );
-        - sql:
-            dbms: postgresql
-            splitStatements: true
-            stripComments: true
-            sql: |
-              INSERT INTO role_assignment (assignable_role_id, assigning_role_id)
-              SELECT (SELECT id FROM app_role WHERE name = 'External User Support'), assigning.id
-              FROM app_role assigning
-              WHERE assigning.name IN ('Global Admin', 'Internal User Manager')
-                AND NOT EXISTS (
-                  SELECT 1 FROM role_assignment ra
-                  WHERE ra.assignable_role_id = (SELECT id FROM app_role WHERE name = 'External User Support')
-                    AND ra.assigning_role_id = assigning.id
-                );
-      rollback:
-        - sql:
-            dbms: postgresql
-            sql: "DELETE FROM role_assignment WHERE assignable_role_id = (SELECT id FROM app_role WHERE name = 'External User Support');"
-        - sql:
-            dbms: postgresql
-            sql: "DELETE FROM role_permission WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'External User Support');"
-        - sql:
-            dbms: postgresql
-            sql: "DELETE FROM app_role WHERE name = 'External User Support';"
+            sql: ALTER TABLE user_activation_request ADD CONSTRAINT chk_status 
+                  CHECK (status IN ('IN_REVIEW', 'INFORMATION_REQUIRED', 'REJECTED', 'APPROVED'))
+
+        - addForeignKeyConstraint:
+            baseTableName: user_activation_request
+            baseColumnNames: user_profile_id
+            referencedTableName: user_profile
+            referencedColumnNames: id
+            constraintName: fk_user_act_req_user_profile_id
+            onDelete: RESTRICT

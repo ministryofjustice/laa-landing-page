@@ -1,0 +1,412 @@
+package uk.gov.justice.laa.portal.landingpage.service;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import jakarta.persistence.EntityNotFoundException;
+import lombok.extern.slf4j.Slf4j;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.ReactivationRequestsPageData;
+import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.model.PaginatedReactivationRequests;
+import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestListItem;
+import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestPageMode;
+import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserActivationRequestRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+
+@Service
+@Transactional
+@Slf4j
+public class UserReactivationRequestService {
+    private static final int DEFAULT_PAGE_SIZE = 10;
+    private static final String UNKNOWN_USER_NAME = "Unknown user";
+
+    private final LoginService loginService;
+    private final FirmService firmService;
+    private final UserActivationRequestRepository userActivationRequestRepository;
+    private final UserProfileRepository userProfileRepository;
+    private final EntraUserRepository entraUserRepository;
+    private final ReactivationTypeResolver roleTypeResolver;
+
+    public UserReactivationRequestService(LoginService loginService,
+                                          FirmService firmService,
+                                          UserActivationRequestRepository userActivationRequestRepository,
+                                          UserProfileRepository userRepository,
+                                          EntraUserRepository entraUserRepository,
+                                          ReactivationTypeResolver roleTypeResolver) {
+        this.loginService = loginService;
+        this.firmService = firmService;
+        this.userActivationRequestRepository = userActivationRequestRepository;
+        this.userProfileRepository = userRepository;
+        this.entraUserRepository = entraUserRepository;
+        this.roleTypeResolver = roleTypeResolver;
+    }
+
+    public Optional<UserActivationRequest> findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(UUID profileId) {
+        return userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId);
+    }
+
+    public UserActivationRequest createNewRequest(UUID requestId, UUID profileId, String comment, String actorEntraOid) {
+        Optional<UserActivationRequest> request = userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId);
+
+        if (request.isPresent() && !(ReactivationRequestStatus.REJECTED.equals(request.get().getStatus()) || ReactivationRequestStatus.APPROVED.equals(request.get().getStatus()))) {
+            log.error("Request already being processed for user {}", profileId);
+            throw new IllegalStateException("Request already being processed for user " + profileId);
+        }
+
+        EntraUser entraUser = entraUserRepository.findByEntraOid(actorEntraOid).orElseThrow();
+        UserProfile actorActiveUserProfile = entraUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
+        List<String> appRoles = actorActiveUserProfile.getAppRoles().stream().map(AppRole::getName).toList();
+        ReactivationRoleType actorRoleType = roleTypeResolver.resolveFromRoles(appRoles);
+
+        UserActivationRequest newRecord = new UserActivationRequest();
+        newRecord.setRequestId(requestId);
+        newRecord.setUserProfileId(profileId);
+        newRecord.setStatus(ReactivationRequestStatus.IN_REVIEW);
+        newRecord.setComments(comment);
+        newRecord.setActorEntraOid(actorEntraOid);
+        newRecord.setCreatedAt(Instant.now());
+        newRecord.setActorRoleType(actorRoleType);
+
+        userActivationRequestRepository.save(newRecord);
+
+        return newRecord;
+    }
+
+    public UserActivationRequest saveRequestState(UUID requestId, UUID userId, ReactivationRequestStatus status, String comments, String actorEntraOid) {
+
+        if (!userProfileRepository.existsById(userId)) {
+            throw new EntityNotFoundException("Target user not found with ID: " + userId);
+        }
+
+        int nextVersion = 1;
+        UUID activeRequestId = (requestId != null) ? requestId : UUID.randomUUID();
+
+        if (requestId != null) {
+            Optional<UserActivationRequest> firstByRequestIdOrderByVersionDesc = userActivationRequestRepository.findFirstByRequestIdOrderByVersionDesc(requestId);
+            if (firstByRequestIdOrderByVersionDesc.isPresent()) {
+                UserActivationRequest existingRecord = firstByRequestIdOrderByVersionDesc.get();
+                if (ReactivationRequestStatus.APPROVED.equals(existingRecord.getStatus()) || ReactivationRequestStatus.REJECTED.equals(existingRecord.getStatus())) {
+                    log.error("Reactivation request already processed for user {}. Request ID: {}", userId, requestId);
+                    throw new IllegalStateException(String.format("Request already processed for user %s. Request ID: %s", userId, requestId));
+                }
+                nextVersion = firstByRequestIdOrderByVersionDesc.get().getVersion() + 1;
+            }
+        }
+
+        EntraUser entraUser = entraUserRepository.findByEntraOid(actorEntraOid).orElseThrow();
+        ReactivationRoleType roleType = roleTypeResolver.resolve(entraUser);
+
+        UserActivationRequest newRecord = new UserActivationRequest();
+        newRecord.setRequestId(activeRequestId);
+        newRecord.setUserProfileId(userId);
+        newRecord.setVersion(nextVersion);
+        newRecord.setStatus(status);
+        newRecord.setComments(comments);
+        newRecord.setActorEntraOid(actorEntraOid);
+        newRecord.setActorRoleType(roleType);
+        newRecord.setCreatedAt(Instant.now());
+
+        return userActivationRequestRepository.save(newRecord);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserActivationRequestSummaryDto> getLatestRequestHistoryForUserProfile(UUID userProfileId) {
+        log.debug("Fetching latest activation request history for user profile ID: {}", userProfileId);
+
+        Optional<UserActivationRequest> latestRequest = userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(userProfileId);
+
+        if (latestRequest.isEmpty()) {
+            log.info("No activation request found for user profile ID: {}", userProfileId);
+            return Collections.emptyList();
+        }
+
+        List<UserActivationRequestSummaryDto> history = userActivationRequestRepository.findRequestHistoryByRequestId(latestRequest.get().getRequestId());
+
+        if (history.isEmpty()) {
+            log.info("No activation request history found for user profile ID: {}", userProfileId);
+            return Collections.emptyList();
+        }
+
+        return history;
+    }
+
+    public ReactivationRequestStatus calculateNextReactivationRequestStatus(Authentication authentication) {
+        EntraUser actor = loginService.getCurrentEntraUser(authentication);
+        ReactivationRoleType roleType = roleTypeResolver.resolve(actor);
+
+        return roleType == ReactivationRoleType.PROVIDER_ADMIN ? ReactivationRequestStatus.IN_REVIEW : ReactivationRequestStatus.INFORMATION_REQUIRED;
+    }
+
+    @Transactional(readOnly = true)
+    public ReactivationRequestsPageData getPage(
+            Authentication authentication,
+            String search,
+            List<ReactivationRequestStatus> selectedStatuses,
+            List<ReactivationRoleType> selectedActorRoleTypes,
+            int page,
+            int size,
+            String sort,
+            String direction) {
+
+        EntraUser currentUser = loginService.getCurrentEntraUser(authentication);
+        ReactivationRequestPageMode pageMode = resolvePageMode(currentUser);
+        List<ReactivationRequestStatus> effectiveStatuses = selectedStatuses == null
+                ? List.of()
+                : List.copyOf(selectedStatuses);
+        List<ReactivationRoleType> effectiveActorRoleTypes = selectedActorRoleTypes == null
+                ? List.of()
+                : List.copyOf(selectedActorRoleTypes);
+
+        List<ReactivationRequestListItem> requests = filterAndSortRequests(
+                buildRequests(currentUser, pageMode),
+                normalizeSearch(search),
+                effectiveStatuses,
+                effectiveActorRoleTypes,
+                sort,
+                direction);
+
+        PaginatedReactivationRequests paginated = paginate(requests, page, size);
+        return new ReactivationRequestsPageData(pageMode, effectiveStatuses, effectiveActorRoleTypes, paginated);
+    }
+
+    public ReactivationRequestPageMode getPageMode(Authentication authentication) {
+        return resolvePageMode(loginService.getCurrentEntraUser(authentication));
+    }
+
+    private ReactivationRequestPageMode resolvePageMode(EntraUser currentUser) {
+        if (currentUser == null) {
+            return ReactivationRequestPageMode.MANAGE;
+        }
+
+        boolean isManageRole = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_MANAGER.getRoleName())
+                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())
+                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_VIEWER.getRoleName())
+                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.GLOBAL_ADMIN.getRoleName())
+                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.SECURITY_RESPONSE.getRoleName());
+
+        boolean isProviderAdminOnly = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.FIRM_USER_MANAGER.getRoleName())
+                && !isManageRole;
+
+        return isProviderAdminOnly ? ReactivationRequestPageMode.TRACK : ReactivationRequestPageMode.MANAGE;
+    }
+
+    private List<ReactivationRequestListItem> buildRequests(EntraUser currentUser, ReactivationRequestPageMode pageMode) {
+        List<UserActivationRequest> latestRequests = userActivationRequestRepository.findAllLatestRequests();
+
+        if (latestRequests.isEmpty()) {
+            return List.of();
+        }
+
+        Set<UUID> profileIds = latestRequests.stream()
+                .map(UserActivationRequest::getUserProfileId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<UUID, UserProfile> profilesById = userProfileRepository.findAllByIdInWithFirm(profileIds).stream()
+                .collect(Collectors.toMap(UserProfile::getId, profile -> profile));
+
+        Set<String> actorEntraOids = latestRequests.stream()
+                .map(UserActivationRequest::getActorEntraOid)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<String, EntraUser> actorsByEntraOid = new HashMap<>();
+        if (!actorEntraOids.isEmpty()) {
+            entraUserRepository.findByEntraOidIn(actorEntraOids)
+                    .forEach(actor -> actorsByEntraOid.put(actor.getEntraOid(), actor));
+        }
+
+        Set<UUID> requestIds = latestRequests.stream()
+                .map(UserActivationRequest::getRequestId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<UUID, Instant> submittedAtByRequestId = userActivationRequestRepository
+                .findAllFirstVersionsByRequestIdIn(requestIds).stream()
+                .collect(Collectors.toMap(UserActivationRequest::getRequestId, UserActivationRequest::getCreatedAt));
+
+        List<ReactivationRequestListItem> items = latestRequests.stream()
+                .map(request -> toListItem(request, profilesById.get(request.getUserProfileId()),
+                        actorsByEntraOid.get(request.getActorEntraOid()),
+                        submittedAtByRequestId.get(request.getRequestId())))
+                .toList();
+
+        if (pageMode == ReactivationRequestPageMode.TRACK && currentUser != null) {
+            Set<UUID> allowedFirmIds = firmService.getUserActiveAllFirms(currentUser).stream()
+                    .map(FirmDto::getId)
+                    .collect(Collectors.toSet());
+
+            if (allowedFirmIds.isEmpty()) {
+                return List.of();
+            }
+
+            return items.stream()
+                    .filter(item -> item.firmId() != null && allowedFirmIds.contains(item.firmId()))
+                    .toList();
+        }
+
+        return items;
+    }
+
+    private ReactivationRequestListItem toListItem(UserActivationRequest request, UserProfile profile, EntraUser actor,
+                                                   Instant submittedAt) {
+        UUID firmId = profile != null && profile.getFirm() != null ? profile.getFirm().getId() : null;
+        String actorName = actor != null
+                ? (nullToEmpty(actor.getFirstName()) + " " + nullToEmpty(actor.getLastName())).trim()
+                : UNKNOWN_USER_NAME;
+        String actorEmail = actor != null ? actor.getEmail() : null;
+        EntraUser targetUser = profile != null ? profile.getEntraUser() : null;
+        String userName = targetUser != null
+                ? (nullToEmpty(targetUser.getFirstName()) + " " + nullToEmpty(targetUser.getLastName())).trim()
+                : UNKNOWN_USER_NAME;
+        String userEmail = targetUser != null ? targetUser.getEmail() : null;
+        String actorRoleType = request.getActorRoleType() != null ? request.getActorRoleType().getDisplayName() : null;
+        ReactivationRequestStatus status = ReactivationRequestStatus.valueOf(request.getStatus().name());
+        // dateSubmitted reflects when the request was originally raised (version 1),
+        // while lastActivity reflects the most recent version's timestamp (this row).
+        Instant originalSubmission = submittedAt != null ? submittedAt : request.getCreatedAt();
+        LocalDate dateSubmitted = originalSubmission != null
+                ? LocalDate.ofInstant(originalSubmission, ZoneId.systemDefault())
+                : null;
+        LocalDate lastActivity = request.getCreatedAt() != null
+                ? LocalDate.ofInstant(request.getCreatedAt(), ZoneId.systemDefault())
+                : null;
+
+        return new ReactivationRequestListItem(
+                request.getId(),
+                request.getRequestId(),
+                request.getUserProfileId(),
+                request.getVersion(),
+                status,
+                request.getComments(),
+                request.getActorEntraOid(),
+                actorRoleType,
+                actorName.isBlank() ? UNKNOWN_USER_NAME : actorName,
+                actorEmail,
+                userName.isBlank() ? UNKNOWN_USER_NAME : userName,
+                userEmail,
+                dateSubmitted,
+                lastActivity,
+                firmId);
+    }
+
+    private String nullToEmpty(String value) {
+        return value == null ? "" : value;
+    }
+
+    private List<ReactivationRequestListItem> filterAndSortRequests(
+            List<ReactivationRequestListItem> requests,
+            String search,
+            List<ReactivationRequestStatus> selectedStatuses,
+            List<ReactivationRoleType> selectedActorRoleTypes,
+            String sort,
+            String direction) {
+
+        Set<ReactivationRequestStatus> statusFilter = selectedStatuses == null
+                ? Set.of()
+                : new HashSet<>(selectedStatuses);
+        Set<String> actorRoleTypeLabelFilter = selectedActorRoleTypes == null || selectedActorRoleTypes.isEmpty()
+                ? Set.of()
+                : selectedActorRoleTypes.stream().map(ReactivationRoleType::getDisplayName).collect(Collectors.toSet());
+
+        Comparator<ReactivationRequestListItem> comparator = resolveComparator(sort);
+        if (!"asc".equalsIgnoreCase(direction)) {
+            comparator = comparator.reversed();
+        }
+
+        return requests.stream()
+                .filter(item -> search.isBlank() || matchesSearch(item, search))
+                .filter(item -> statusFilter.isEmpty() || statusFilter.contains(item.requestStatus()))
+                .filter(item -> actorRoleTypeLabelFilter.isEmpty() || actorRoleTypeLabelFilter.contains(item.actorRoleType()))
+                .sorted(comparator)
+                .toList();
+    }
+
+    private boolean matchesSearch(ReactivationRequestListItem item, String search) {
+        return containsIgnoreCase(item.requestId(), search)
+                || containsIgnoreCase(item.userProfileId(), search)
+                || containsIgnoreCase(item.userName(), search)
+                || containsIgnoreCase(item.userEmail(), search)
+                || containsIgnoreCase(item.actorName(), search)
+                || containsIgnoreCase(item.actorEntraOid(), search)
+                || containsIgnoreCase(item.comments(), search);
+    }
+
+    private boolean containsIgnoreCase(Object value, String search) {
+        return value != null && value.toString().toLowerCase(Locale.UK).contains(search);
+    }
+
+    private PaginatedReactivationRequests paginate(List<ReactivationRequestListItem> requests, int page, int requestedSize) {
+        int pageSize = requestedSize > 0 ? requestedSize : DEFAULT_PAGE_SIZE;
+        int safePage = Math.max(1, page);
+
+        int totalItems = requests.size();
+        int totalPages = totalItems == 0 ? 0 : (int) Math.ceil((double) totalItems / pageSize);
+        int boundedPage = totalPages == 0 ? 0 : Math.min(safePage, totalPages);
+        int startIndex = boundedPage == 0 ? 0 : (boundedPage - 1) * pageSize;
+        int endIndex = Math.min(startIndex + pageSize, totalItems);
+
+        List<ReactivationRequestListItem> pageItems = startIndex >= totalItems
+                ? List.of()
+                : requests.subList(startIndex, endIndex);
+
+        PaginatedReactivationRequests paginated = new PaginatedReactivationRequests();
+        paginated.setRequests(pageItems);
+        paginated.setTotalRequests(totalItems);
+        paginated.setTotalPages(totalPages);
+        paginated.setCurrentPage(boundedPage);
+        paginated.setPageSize(pageSize);
+        return paginated;
+    }
+
+    private Comparator<ReactivationRequestListItem> resolveComparator(String sort) {
+        if (sort == null) {
+            return Comparator.comparing(ReactivationRequestListItem::dateSubmitted, Comparator.nullsLast(LocalDate::compareTo));
+        }
+
+        return switch (sort) {
+            case "requestId" -> Comparator.comparing(item -> item.requestId().toString(), String.CASE_INSENSITIVE_ORDER);
+            case "userProfileId" -> Comparator.comparing(item -> item.userProfileId().toString(), String.CASE_INSENSITIVE_ORDER);
+            case "version" -> Comparator.comparing(ReactivationRequestListItem::version, Comparator.nullsLast(Integer::compareTo));
+            case "requestStatus" -> Comparator.comparing(item -> item.requestStatus().name(), String.CASE_INSENSITIVE_ORDER);
+            case "actorName" -> Comparator.comparing(ReactivationRequestListItem::actorName, String.CASE_INSENSITIVE_ORDER);
+            case "actorRoleType" -> Comparator.comparing(ReactivationRequestListItem::actorRoleType,
+                    Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+            case "lastActivity" -> Comparator.comparing(ReactivationRequestListItem::lastActivity,
+                    Comparator.nullsLast(LocalDate::compareTo));
+            case "userName" -> Comparator.comparing(ReactivationRequestListItem::userName,
+                    Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+            case "userEmail" -> Comparator.comparing(ReactivationRequestListItem::userEmail,
+                    Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+            default -> Comparator.comparing(ReactivationRequestListItem::dateSubmitted,
+                    Comparator.nullsLast(LocalDate::compareTo));
+        };
+    }
+
+    private String normalizeSearch(String search) {
+        return search == null ? "" : search.trim().toLowerCase(Locale.UK);
+    }
+}

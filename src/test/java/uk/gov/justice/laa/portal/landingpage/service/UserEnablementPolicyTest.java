@@ -1,11 +1,19 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
@@ -29,7 +37,7 @@ class UserEnablementPolicyTest {
         @Test
         void nullDisableType_internalDelegationRoles_returnTrue() {
             assertThat(policy.canEnable(null, List.of(IUM))).isTrue();
-            assertThat(policy.canEnable(null, List.of(EUM))).isTrue();
+            assertThat(policy.canEnable(null, List.of(EUM))).isFalse();
             assertThat(policy.canEnable(null, List.of(EUA))).isTrue();
             assertThat(policy.canEnable(null, List.of(SR))).isTrue();
             assertThat(policy.canEnable(null, List.of(GA))).isTrue();
@@ -58,8 +66,8 @@ class UserEnablementPolicyTest {
         }
 
         @Test
-        void none_eumCanEnable() {
-            assertThat(policy.canEnable(DisableType.NONE, List.of(EUM))).isTrue();
+        void none_eumCannotEnable() {
+            assertThat(policy.canEnable(DisableType.NONE, List.of(EUM))).isFalse();
         }
 
         @Test
@@ -68,13 +76,13 @@ class UserEnablementPolicyTest {
         }
 
         @Test
-        void none_fumCanEnable() {
-            assertThat(policy.canEnable(DisableType.NONE, List.of(FUM))).isTrue();
+        void none_fumCannotEnable() {
+            assertThat(policy.canEnable(DisableType.NONE, List.of(FUM))).isFalse();
         }
 
         @Test
-        void none_noRoleCanEnable() {
-            assertThat(policy.canEnable(DisableType.NONE, List.of())).isTrue();
+        void none_noRoleCannotEnable() {
+            assertThat(policy.canEnable(DisableType.NONE, List.of())).isFalse();
         }
 
         // --- SYNC disable type (Automatic User Sync — EUM/EUA+ only) ---
@@ -90,8 +98,8 @@ class UserEnablementPolicyTest {
         }
 
         @Test
-        void sync_eumCanEnable() {
-            assertThat(policy.canEnable(DisableType.SYNC, List.of(EUM))).isTrue();
+        void sync_eumCannotEnable() {
+            assertThat(policy.canEnable(DisableType.SYNC, List.of(EUM))).isFalse();
         }
 
         @Test
@@ -117,8 +125,8 @@ class UserEnablementPolicyTest {
         }
 
         @Test
-        void firm_eumCanEnable() {
-            assertThat(policy.canEnable(DisableType.FIRM, List.of(EUM))).isTrue();
+        void firm_eumCannotEnable() {
+            assertThat(policy.canEnable(DisableType.FIRM, List.of(EUM))).isFalse();
         }
 
         @Test
@@ -144,8 +152,8 @@ class UserEnablementPolicyTest {
         // --- LAA disable type (External User Manager / External User Admin disabled the user) ---
 
         @Test
-        void laa_eumCanEnable() {
-            assertThat(policy.canEnable(DisableType.LAA, List.of(EUM))).isTrue();
+        void laa_eumCannotEnable() {
+            assertThat(policy.canEnable(DisableType.LAA, List.of(EUM))).isFalse();
         }
 
         @Test
@@ -208,9 +216,9 @@ class UserEnablementPolicyTest {
         // --- Multi-role scenarios: highest delegation of the enabling user is used ---
 
         @Test
-        void none_fumWithEumRole_canEnable() {
+        void none_fumWithEumRole_cannotEnable() {
             // FUM alone cannot re-enable a NONE-disabled user, but EUM (higher delegation) can
-            assertThat(policy.canEnable(DisableType.NONE, List.of(FUM, EUM))).isTrue();
+            assertThat(policy.canEnable(DisableType.NONE, List.of(FUM, EUM))).isFalse();
         }
 
         @Test
@@ -220,9 +228,9 @@ class UserEnablementPolicyTest {
         }
 
         @Test
-        void laa_fumWithEumRole_canEnable() {
+        void laa_fumWithEumRole_cannotEnable() {
             // FUM alone cannot re-enable a LAA-disabled user, but EUM (higher delegation) can
-            assertThat(policy.canEnable(DisableType.LAA, List.of(FUM, EUM))).isTrue();
+            assertThat(policy.canEnable(DisableType.LAA, List.of(FUM, EUM))).isFalse();
         }
 
         @Test
@@ -280,4 +288,123 @@ class UserEnablementPolicyTest {
             assertThat(policy.requiresSameFirmCheck(DisableType.FIRM, List.of(FUM, EUA))).isFalse();
         }
     }
+
+    @Nested
+    class AccessControlServiceTest {
+
+        private static Stream<Arguments> provideRolesForNullDisableTypeTrue() {
+            return Stream.of(
+                    Arguments.of(List.of(AuthzRole.INTERNAL_USER_MANAGER.getRoleName())),
+                    Arguments.of(List.of(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())),
+                    Arguments.of(List.of(AuthzRole.GLOBAL_ADMIN.getRoleName())),
+                    Arguments.of(List.of(AuthzRole.SECURITY_RESPONSE.getRoleName())),
+                    Arguments.of(List.of(AuthzRole.GLOBAL_ADMIN.getRoleName(), AuthzRole.SECURITY_RESPONSE.getRoleName()))
+            );
+        }
+
+        @ParameterizedTest
+        @MethodSource("provideRolesForNullDisableTypeTrue")
+        @DisplayName("Should return true for null disableType when actor has qualifying roles")
+        void shouldReturnTrueWhenNullDisableTypeAndHasQualifyingRole(List<String> actorRoles) {
+            boolean result = policy.canDelegateReactivationRequest(null, actorRoles);
+
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        @DisplayName("Should return false for null disableType when actor lacks qualifying roles")
+        void shouldReturnFalseWhenNullDisableTypeAndLacksQualifyingRole() {
+            List<String> roles = List.of(
+                    AuthzRole.EXTERNAL_USER_MANAGER.getRoleName(),
+                    AuthzRole.FIRM_USER_MANAGER.getRoleName(),
+                    "UNKNOWN_ROLE"
+            );
+
+            boolean result = policy.canDelegateReactivationRequest(null, roles);
+
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        @DisplayName("Should return false for null disableType when actor roles list is empty")
+        void shouldReturnFalseWhenNullDisableTypeAndEmptyRoles() {
+            boolean result = policy.canDelegateReactivationRequest(null, Collections.emptyList());
+
+            assertThat(result).isFalse();
+        }
+
+
+        @ParameterizedTest
+        @EnumSource(value = DisableType.class, names = {"NONE", "SYNC", "LAA", "FIRM"})
+        @DisplayName("Should return true when role is FIRM_USER_MANAGER")
+        void shouldReturnTrueForFirmUserManager(DisableType disableType) {
+            List<String> roles = List.of(AuthzRole.FIRM_USER_MANAGER.getRoleName());
+
+            boolean result = policy.canDelegateReactivationRequest(disableType, roles);
+
+            assertThat(result).isTrue();
+        }
+
+        @ParameterizedTest
+        @EnumSource(value = DisableType.class, names = {"NONE", "SYNC", "LAA", "FIRM"})
+        @DisplayName("Should return true when role is EXTERNAL_USER_MANAGER")
+        void shouldReturnTrueForExternalUserManager(DisableType disableType) {
+            List<String> roles = List.of(AuthzRole.EXTERNAL_USER_MANAGER.getRoleName());
+
+            boolean result = policy.canDelegateReactivationRequest(disableType, roles);
+
+            assertThat(result).isTrue();
+        }
+
+        @ParameterizedTest
+        @EnumSource(value = DisableType.class, names = {"NONE", "SYNC", "LAA", "FIRM"})
+        @DisplayName("Should return false when role is neither FIRM_USER_MANAGER nor EXTERNAL_USER_MANAGER")
+        void shouldReturnFalseForOtherRoles(DisableType disableType) {
+            List<String> roles = List.of(
+                    AuthzRole.GLOBAL_ADMIN.getRoleName(),
+                    AuthzRole.SECURITY_RESPONSE.getRoleName(),
+                    AuthzRole.EXTERNAL_USER_ADMIN.getRoleName(),
+                    AuthzRole.INTERNAL_USER_MANAGER.getRoleName()
+            );
+
+            boolean result = policy.canDelegateReactivationRequest(disableType, roles);
+
+            assertThat(result).isFalse();
+        }
+
+        @ParameterizedTest
+        @EnumSource(value = DisableType.class, names = {"NONE", "SYNC", "LAA", "FIRM"})
+        @DisplayName("Should return false when actor roles list is empty")
+        void shouldReturnFalseForEmptyRoles(DisableType disableType) {
+            boolean result = policy.canDelegateReactivationRequest(disableType, Collections.emptyList());
+
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        @DisplayName("Should always return false for PRIVILEGED disableType regardless of actor roles")
+        void shouldAlwaysReturnFalseForPrivileged() {
+            List<String> allRoles = List.of(
+                    AuthzRole.GLOBAL_ADMIN.getRoleName(),
+                    AuthzRole.SECURITY_RESPONSE.getRoleName(),
+                    AuthzRole.EXTERNAL_USER_ADMIN.getRoleName(),
+                    AuthzRole.EXTERNAL_USER_MANAGER.getRoleName(),
+                    AuthzRole.INTERNAL_USER_MANAGER.getRoleName(),
+                    AuthzRole.FIRM_USER_MANAGER.getRoleName()
+            );
+
+            boolean result = policy.canDelegateReactivationRequest(DisableType.PRIVILEGED, allRoles);
+
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        @DisplayName("Should return false for PRIVILEGED disableType when roles list is empty")
+        void shouldReturnFalseForPrivilegedAndEmptyRoles() {
+            boolean result = policy.canDelegateReactivationRequest(DisableType.PRIVILEGED, Collections.emptyList());
+
+            assertThat(result).isFalse();
+        }
+    }
+
 }

@@ -79,28 +79,52 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 8px;
-    padding: 10px 0;
-    border-top: 1px solid #b1b4b6;
+    padding: 10px 15px;
+    background-color: #f3f2f1;
+    border: 1px solid #b1b4b6;
+    font-family: "GDS Transport", arial, sans-serif;
+    font-size: 1rem;
+}
+
+.active-filters-banner .filter-tag-label {
+    display: flex;
+    align-items: center;
+    margin: 0;
+}
+
+.active-filters-banner .filter-tag-clear-link {
+    margin-left: auto;
+    font-family: "GDS Transport", arial, sans-serif;
+    font-size: 1rem;
 }
 
 .filter-tag {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
+    background-color: #f3f2f1;
+    border: 1px solid #b1b4b6;
+    border-radius: 4px;
+    padding: 3px 10px 3px 6px;
+    font-family: "GDS Transport", arial, sans-serif;
+    font-size: 1rem;
+    line-height: 1.25;
+    color: #0b0c0c;
 }
 
 .filter-tag__remove {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     color: #0b0c0c;
     text-decoration: none;
-    font-size: 14px;
+    font-size: 12px;
     font-weight: bold;
     border-radius: 50%;
     background: #b1b4b6;
+    flex-shrink: 0;
 }
 
 .filter-tag__remove:hover {

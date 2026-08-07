@@ -1,5 +1,6 @@
 package uk.gov.justice.laa.portal.landingpage.repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -269,5 +270,12 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
             nativeQuery = true)
     List<CountFirms> countFirmsById(@Param("firmId") UUID firmId);
 
+    @Query("""
+            SELECT ups FROM UserProfile ups
+                        LEFT JOIN FETCH ups.firm
+                        LEFT JOIN FETCH ups.entraUser
+            WHERE ups.id IN :ids
+            """)
+    List<UserProfile> findAllByIdInWithFirm(@Param("ids") Collection<UUID> ids);
 
 }
