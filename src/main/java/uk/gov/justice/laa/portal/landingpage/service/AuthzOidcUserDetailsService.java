@@ -4,7 +4,6 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
-import org.springframework.security.oauth2.core.oidc.OidcIdToken;
 import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.stereotype.Service;
@@ -17,16 +16,20 @@ public class AuthzOidcUserDetailsService extends OidcUserService {
 
     private final UserService userService;
 
+    private final OidcUserService delegate;
+
     public AuthzOidcUserDetailsService(UserService userService) {
         this.userService = userService;
+        delegate = new OidcUserService();
     }
 
 
     @Override
     public OidcUser loadUser(OidcUserRequest userRequest) throws OAuth2AuthenticationException {
-        OidcIdToken idToken = userRequest.getIdToken();
+        // Call the delegate instead of super
+        OidcUser oidcUser = delegate.loadUser(userRequest);
 
-        String userId = idToken.getClaimAsString("oid");
+        String userId = oidcUser.getAttribute("oid");
         if (userId == null) {
             throw new OAuth2AuthenticationException("Missing 'oid' claim in OIDC token.");
         }
@@ -45,6 +48,6 @@ public class AuthzOidcUserDetailsService extends OidcUserService {
             nameAttributeKey = "sub";
         }
 
-        return new DefaultOidcUser(grantedAuthorities, idToken, nameAttributeKey);
+        return new DefaultOidcUser(grantedAuthorities, oidcUser.getIdToken(), oidcUser.getUserInfo(), nameAttributeKey);
     }
 }
