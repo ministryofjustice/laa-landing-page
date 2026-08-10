@@ -216,6 +216,10 @@ public class AuditController {
                     ? OffsetDateTime.parse(user.getLastSignIn())
                     : null;
 
+            OffsetDateTime lastSuccessfulLoginTime = user.getLastSuccessfulSignIn() != null
+                    ? OffsetDateTime.parse(user.getLastSuccessfulSignIn())
+                    : null;
+
             Optional<Boolean> optionalAccountEnabled = Optional.of(entraUserResponse)
                     .map(TechServicesApiResponse::getData)
                     .map(GetUserResponse::getUser)
@@ -237,6 +241,7 @@ public class AuditController {
             String disableUserReason = formatDisableUserReason(user);
 
             model.addAttribute("lastLogin", lastLoginTime);
+            model.addAttribute("lastSuccessfulLogin", lastSuccessfulLoginTime);
             model.addAttribute("entraUser", entraUserResponse.getData().getUser());
             model.addAttribute("entraVerificationStatus", getEntraVerificationStatus(entraUserResponse));
             model.addAttribute("entraUserDisableReason", disableUserReason);
