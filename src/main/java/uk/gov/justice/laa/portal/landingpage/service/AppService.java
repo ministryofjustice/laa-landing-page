@@ -10,20 +10,26 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AppSyncResultDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppSynchronizationAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
@@ -51,6 +57,7 @@ public class AppService {
 
     private final ModelMapper mapper;
     private final EventService eventService;
+    private final PlatformTransactionManager transactionManager;
 
     public Optional<App> getById(UUID id) {
         return appRepository.findById(id);
@@ -130,15 +137,14 @@ public class AppService {
                 .toList();
     }
 
-    @Transactional
-    public List<AppDto> synchronizeAndGetApplicationsFromTechServices(CurrentUserDto currentUserDto, UserProfileDto userProfile) {
+    public AppSyncResultDto synchronizeAndGetApplicationsFromTechServices(CurrentUserDto currentUserDto, UserProfileDto userProfile) {
         log.info("Synchronizing applications from Tech Services...");
 
         if (!Boolean.parseBoolean(syncAppsFromEntra)) {
             log.info("Synchronizing applications has been disabled. App syncing not performed.");
             List<AppDto> result = getAllLaaApps();
             result.forEach(app -> app.setChangeType(AppDto.ChangeType.NONE));
-            return result;
+            return AppSyncResultDto.builder().apps(result).build();
         }
 
         TechServicesApiResponse<GetAllApplicationsResponse> apiResponse = techServicesClient.getAllApplications();
@@ -169,6 +175,11 @@ public class AppService {
         allIds.addAll(remoteById.keySet());
         allIds.addAll(localById.keySet());
 
+        // Duplicate counts computed across the whole remote batch, so two clashing apps are both flagged
+        Map<String, Long> securityGroupOidCounts = countByRemoteField(remoteApps, this::remoteSecurityGroupOid);
+        Map<String, Long> appOidCounts = countByRemoteField(remoteApps, GetAllApplicationsResponse.TechServicesApplication::getAppId);
+        Map<String, Long> securityGroupNameCounts = countByRemoteField(remoteApps, this::remoteSecurityGroupName);
+
         int totalProcessed = 0;
         int noChanges = 0;
         int newApps = 0;
@@ -176,7 +187,7 @@ public class AppService {
         int deletedApps = 0;
 
         List<AppDto> result = new ArrayList<>(allIds.size());
-        List<App> modifiedApps = new ArrayList<>();
+        AppSyncResultDto syncResult = AppSyncResultDto.builder().apps(result).build();
 
         for (String id : allIds) {
             GetAllApplicationsResponse.TechServicesApplication remote = remoteById.get(id);
@@ -196,19 +207,19 @@ public class AppService {
                 AppDto.ChangeType changeType = getChangeType(remote, local);
                 switch (changeType) {
                     case REVIEW:
-                        applyRemoteFieldsToLocal(remote, local);
-                        modifiedApps.add(local);
-                        syncedApp = toDtoWithChangeType(local, changeType);
-                        updatedApps++;
-                        log.info("REVIEW: Updated local metadata (id={}, name={})", id, safe(remote.getName()));
-                        break;
-
                     case UPDATED:
-                        applyRemoteFieldsToLocal(remote, local);
-                        modifiedApps.add(local);
-                        syncedApp = toDtoWithChangeType(local, changeType);
-                        updatedApps++;
-                        log.info("UPDATED: Applied remote updates (id={}, name={})", id, safe(remote.getName()));
+                        Optional<String> validationError = validateRemoteApp(remote, securityGroupOidCounts, appOidCounts, securityGroupNameCounts);
+                        if (validationError.isPresent()) {
+                            syncResult.addError(buildErrorMessage(remote, validationError.get()));
+                            syncedApp = toDtoWithChangeType(local, AppDto.ChangeType.NONE);
+                            log.warn("SKIPPED: Invalid remote app data (id={}, name={}): {}", id, safe(remote.getName()), validationError.get());
+                        } else {
+                            applyRemoteFieldsToLocal(remote, local);
+                            persistApp(local, syncResult, remote);
+                            syncedApp = toDtoWithChangeType(local, changeType);
+                            updatedApps++;
+                            log.info("{}: Applied remote updates (id={}, name={})", changeType, id, safe(remote.getName()));
+                        }
                         break;
 
                     case NONE:
@@ -222,18 +233,27 @@ public class AppService {
                 totalProcessed++;
 
             } else if (remote != null) {
+                Optional<String> validationError = validateRemoteApp(remote, securityGroupOidCounts, appOidCounts, securityGroupNameCounts);
+                if (validationError.isPresent()) {
+                    syncResult.addError(buildErrorMessage(remote, validationError.get()));
+                    log.warn("SKIPPED: Invalid new remote app data (app id={}, name={}): {}", remote.getAppId(), safe(remote.getName()), validationError.get());
+                    totalProcessed++;
+                    continue;
+                }
                 App newApp = createLocalFromRemote(remote, ++maxOrdinal);
-                modifiedApps.add(newApp);
+                persistApp(newApp, syncResult, remote);
                 syncedApp = toDtoWithChangeType(newApp, AppDto.ChangeType.ADDED);
                 newApps++;
                 totalProcessed++;
                 log.info("ADDED: New app added to DB (oid={}, app id={} and name={})", remote.getId(), remote.getAppId(), safe(remote.getName()));
+                result.add(syncedApp);
+                continue;
 
             } else {
                 assert local != null;
                 if (local.isEnabled()) {
                     local.setEnabled(false);
-                    modifiedApps.add(local);
+                    persistApp(local, syncResult, null);
                     syncedApp = toDtoWithChangeType(local, AppDto.ChangeType.DELETED);
                     deletedApps++;
                     log.info("DELETED: App missing from remote; disabled locally (id={}, name={})", id, safe(local.getName()));
@@ -248,20 +268,105 @@ public class AppService {
             result.add(syncedApp);
         }
 
-        appRepository.saveAll(modifiedApps);
-
-        log.info("Finished synchronization. Total: {}, No changes: {}, New: {}, Updated: {}, Deleted: {}",
-                totalProcessed, noChanges, newApps, updatedApps, deletedApps);
+        log.info("Finished synchronization. Total: {}, No changes: {}, New: {}, Updated: {}, Deleted: {}, Errors: {}",
+                totalProcessed, noChanges, newApps, updatedApps, deletedApps, syncResult.getErrors().size());
 
         String auditMessage = String.format(
-                "Total apps processed: %s, No changes: %s, New apps: %s, Updated apps: %s, Deleted apps: %s",
-                totalProcessed, noChanges, newApps, updatedApps, deletedApps
+                "Total apps processed: %s, No changes: %s, New apps: %s, Updated apps: %s, Deleted apps: %s, Errors: %s",
+                totalProcessed, noChanges, newApps, updatedApps, deletedApps, syncResult.getErrors().size()
         );
         AppSynchronizationAuditEvent auditEvent =
                 new AppSynchronizationAuditEvent(currentUserDto, userProfile.getId(), auditMessage);
         eventService.logEvent(auditEvent);
 
-        return result.stream().sorted().toList();
+        syncResult.setApps(result.stream().sorted().toList());
+        return syncResult;
+    }
+
+    /**
+     * Persists a single app change in its own transaction so one bad row cannot roll back others.
+     */
+    private void persistApp(App app, AppSyncResultDto syncResult, GetAllApplicationsResponse.TechServicesApplication remote) {
+        TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+        transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        try {
+            transactionTemplate.executeWithoutResult(status -> appRepository.save(app));
+        } catch (DataAccessException e) {
+            log.error("Failed to persist app (name={}): {}", safe(app.getName()), e.getMessage());
+            syncResult.addError(remote != null
+                    ? buildErrorMessage(remote, "Failed to save app: " + e.getMessage())
+                    : String.format("Failed to save app '%s': %s", safe(app.getName()), e.getMessage()));
+        }
+    }
+
+    private String buildErrorMessage(GetAllApplicationsResponse.TechServicesApplication remote, String reason) {
+        return String.format("App '%s' (app id: %s): %s", safe(remote.getName()), safe(remote.getAppId()), reason);
+    }
+
+    private <T> Map<T, Long> countByRemoteField(List<GetAllApplicationsResponse.TechServicesApplication> remoteApps,
+            Function<GetAllApplicationsResponse.TechServicesApplication, T> fieldExtractor) {
+        return remoteApps.stream()
+                .filter(Objects::nonNull)
+                .map(fieldExtractor)
+                .filter(Objects::nonNull)
+                .collect(Collectors.groupingBy(v -> v, Collectors.counting()));
+    }
+
+    private String remoteSecurityGroupOid(GetAllApplicationsResponse.TechServicesApplication remote) {
+        var securityGroups = remote.getSecurityGroups();
+        return (securityGroups != null && !securityGroups.isEmpty()) ? securityGroups.getFirst().getId() : null;
+    }
+
+    private String remoteSecurityGroupName(GetAllApplicationsResponse.TechServicesApplication remote) {
+        var securityGroups = remote.getSecurityGroups();
+        return (securityGroups != null && !securityGroups.isEmpty()) ? securityGroups.getFirst().getName() : null;
+    }
+
+    /**
+     * Validates a remote app's data integrity using application logic only (not DB constraints):
+     * security group OID, app OID and security group name must each be present, unique across the batch, and OIDs must be valid UUIDs.
+     */
+    private Optional<String> validateRemoteApp(GetAllApplicationsResponse.TechServicesApplication remote,
+            Map<String, Long> securityGroupOidCounts, Map<String, Long> appOidCounts, Map<String, Long> securityGroupNameCounts) {
+        String securityGroupOid = remoteSecurityGroupOid(remote);
+        String securityGroupName = remoteSecurityGroupName(remote);
+        String appOid = remote.getAppId();
+
+        if (StringUtils.isBlank(securityGroupOid)) {
+            return Optional.of("Security group OID is missing");
+        }
+        if (StringUtils.isBlank(appOid)) {
+            return Optional.of("App OID is missing");
+        }
+        if (StringUtils.isBlank(securityGroupName)) {
+            return Optional.of("Security group name is missing");
+        }
+        if (!isValidUuid(securityGroupOid)) {
+            return Optional.of("Security group OID is not a valid UUID: " + securityGroupOid);
+        }
+        if (!isValidUuid(appOid)) {
+            return Optional.of("App OID is not a valid UUID: " + appOid);
+        }
+        if (securityGroupOidCounts.getOrDefault(securityGroupOid, 0L) > 1) {
+            return Optional.of("Security group OID is duplicated across apps: " + securityGroupOid);
+        }
+        if (appOidCounts.getOrDefault(appOid, 0L) > 1) {
+            return Optional.of("App OID is duplicated across apps: " + appOid);
+        }
+        if (securityGroupNameCounts.getOrDefault(securityGroupName, 0L) > 1) {
+            return Optional.of("Security group name is duplicated across apps: " + securityGroupName);
+        }
+
+        return Optional.empty();
+    }
+
+    private boolean isValidUuid(String value) {
+        try {
+            UUID.fromString(value);
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 
     private void applyRemoteFieldsToLocal(GetAllApplicationsResponse.TechServicesApplication remote, App local) {
