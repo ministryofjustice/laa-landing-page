@@ -127,6 +127,11 @@ spec:
                 secretKeyRef:
                   name: laa-landing-page-base-url-k8s
                   key: BASE_URL
+            - name: BASE_API_URI
+              valueFrom:
+                secretKeyRef:
+                  name: laa-landing-page-base-api-url-k8s
+                  key: BASE_API_URI
             - name: GOV_NOTIFY_API_KEY
               valueFrom:
                 secretKeyRef:
