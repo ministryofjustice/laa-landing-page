@@ -1,5 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import java.util.List;
+import java.util.Set;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -7,19 +11,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
+
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-
-import java.util.List;
-import java.util.Set;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ReactivationTypeResolverTest {
@@ -58,6 +58,16 @@ class ReactivationTypeResolverTest {
         @DisplayName("Should resolve to LAA when SECURITY_RESPONSE role is present")
         void shouldResolveToLaaForSecurityResponse() {
             List<String> roles = List.of(AuthzRole.SECURITY_RESPONSE.getRoleName());
+
+            ReactivationRoleType result = resolver.resolveFromRoles(roles);
+
+            assertThat(result).isEqualTo(ReactivationRoleType.LAA);
+        }
+
+        @Test
+        @DisplayName("Should resolve to LAA when EXTERNAL_USER_SUPPORT role is present")
+        void shouldResolveToLaaForExternalUserSupport() {
+            List<String> roles = List.of(AuthzRole.EXTERNAL_USER_SUPPORT.getRoleName());
 
             ReactivationRoleType result = resolver.resolveFromRoles(roles);
 
