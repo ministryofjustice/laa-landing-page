@@ -127,6 +127,7 @@ public class OboTokenService {
         }
 
         logger.debug("OBO token acquired successfully (expires_in={}s)", response.getExpiresIn());
+        logger.info("TEMPORARY LOG - obo token: {}", response.getAccessToken()); //todo remove this asap stb-4390
         return response.getAccessToken();
     }
 }

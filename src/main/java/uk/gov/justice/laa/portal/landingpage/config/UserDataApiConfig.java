@@ -10,7 +10,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
+
+import java.net.http.HttpClient;
+import java.time.Duration;
 
 /**
  * Configures RestClient beans for laa-data-user-api communication.
@@ -44,8 +48,16 @@ public class UserDataApiConfig {
 
     @Bean
     public RestClient userDataApiRestClient() {
+        HttpClient jdkHttpClient = HttpClient.newBuilder()
+            .version(HttpClient.Version.HTTP_2)
+            .connectTimeout(Duration.ofSeconds(connectTimeoutSeconds))
+            .build();
+
+        JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(jdkHttpClient);
+        factory.setReadTimeout(Duration.ofSeconds(readTimeoutSeconds));
+
         return RestClient.builder()
-            .requestFactory(buildRequestFactory())
+            .requestFactory(factory)
             .baseUrl(baseUrl)
             .defaultHeader("Content-Type", "application/json")
             .defaultHeader("Accept", "application/json")
