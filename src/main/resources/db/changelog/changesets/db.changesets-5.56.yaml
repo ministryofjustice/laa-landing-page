@@ -1,0 +1,27 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1786025398212
+      author: joshua.halladey
+      comment: "Assign DELETE_AUDIT_USER permission to Global Admin, External User Admin, and Security Response roles"
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO role_permission (app_role_id, permission)
+              VALUES
+                ((SELECT id FROM app_role WHERE name = 'Global Admin'), 'DELETE_AUDIT_USER'),
+                ((SELECT id FROM app_role WHERE name = 'External User Admin'), 'DELETE_AUDIT_USER'),
+                ((SELECT id FROM app_role WHERE name = 'Security Response'), 'DELETE_AUDIT_USER')
+              ON CONFLICT DO NOTHING;
+      # Global Admin and Security Response are already granted DELETE_AUDIT_USER by
+      # db.changesets-5.02 and db.changesets-5.17 respectively, so the rollback only removes the
+      # grant this changeset introduces.
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: >
+              DELETE FROM role_permission rp
+              USING app_role ar
+              WHERE rp.app_role_id = ar.id
+                AND rp.permission = 'DELETE_AUDIT_USER'
+                AND ar.name = 'External User Admin';

@@ -129,6 +129,13 @@
                         <div class="govuk-summary-card govuk-!-margin-bottom-6">
                             <div class="govuk-summary-card__title-wrapper">
                                 <h3 class="govuk-summary-card__title">User details</h3>
+                                <ul class="govuk-summary-card__actions">
+                                    <li th:if="${enableDeleteUser}" class="govuk-summary-card__action">
+                                        <a class="govuk-link govuk-!-font-weight-regular" style="font-weight: normal;"
+                                           th:href="@{/admin/users/audit/entra/{id}/delete(id=${user.userId})}">Delete
+                                            user</a>
+                                    </li>
+                                </ul>
                             </div>
                             <div class="govuk-summary-card__content">
                                 <dl class="govuk-summary-list">
@@ -506,13 +513,6 @@
                     <!-- Back Button -->
                     <a class="govuk-button" th:href="@{/admin/users/audit}">
                         Back to Audit Users
-                    </a>
-
-                    <!-- Delete Button - Only for users without profiles -->
-                    <a class="govuk-button govuk-button--warning"
-                        th:if="${user.hasNoProfile and @accessControlService.canDeleteUserWithoutProfile(user.userId)}"
-                        th:href="@{/admin/users/audit/entra/{id}/delete(id=${user.userId})}">
-                        Delete User
                     </a>
                 </div>
             </div>

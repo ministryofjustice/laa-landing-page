@@ -924,7 +924,7 @@ class AuditControllerTest {
                 .thenReturn(userDetail);
 
         // When
-        String viewName = auditController.deleteUserWithoutProfileConfirm(entraUserId, model);
+        String viewName = auditController.deleteUserAuditConfirm(entraUserId, model);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/delete-user-without-profile-reason");
@@ -956,7 +956,7 @@ class AuditControllerTest {
         when(userService.getDeleteUserReasons(true)).thenReturn(List.of(reason));
 
         // When
-        String viewName = auditController.deleteUserWithoutProfileConfirm(entraUserId, model);
+        String viewName = auditController.deleteUserAuditConfirm(entraUserId, model);
 
         // Then
         assertThat(viewName).isEqualTo("user-audit/delete-user-without-profile-reason");
@@ -1014,7 +1014,7 @@ class AuditControllerTest {
                 .thenReturn(deletedUser);
 
         // When
-        String viewName = auditController.deleteUserWithoutProfile(
+        String viewName = auditController.deleteUserAudit(
                 entraUserId, reasonId, null, null, model);
 
         // Then
@@ -1046,7 +1046,7 @@ class AuditControllerTest {
         when(userService.getDeleteUserReasons(true)).thenReturn(Collections.emptyList());
 
         // When
-        String viewName = auditController.deleteUserWithoutProfile(
+        String viewName = auditController.deleteUserAudit(
                 entraUserId, shortReason, null, null, model);
 
         // Then
@@ -1078,7 +1078,7 @@ class AuditControllerTest {
         when(userService.getDeleteUserReasons(true)).thenReturn(Collections.emptyList());
 
         // When
-        String viewName = auditController.deleteUserWithoutProfile(
+        String viewName = auditController.deleteUserAudit(
                 entraUserId, null, null, null, model);
 
         // Then
@@ -1127,7 +1127,7 @@ class AuditControllerTest {
                 .thenThrow(new RuntimeException("Failed to delete user from Entra"));
 
         // When
-        String viewName = auditController.deleteUserWithoutProfile(
+        String viewName = auditController.deleteUserAudit(
                 entraUserId, reasonId, null, null, model);
 
         // Then

@@ -592,6 +592,87 @@ public class UserService {
         return builder.build();
     }
 
+    @Transactional
+    public DeletedUser deleteSingleFirmAuditUser(UUID entraUserId,
+                                       UUID deleteReasonId,
+                                       String actorId) {
+
+        EntraUser entraUser = entraUserRepository.findById(entraUserId)
+                .orElseThrow(() ->
+                        new RuntimeException("Entra user not found: " + entraUserId));
+
+        DeleteUserReason deleteUserReason = deleteReasonId != null
+                ? deleteUserReasonRepository.findById(deleteReasonId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Unknown delete reason id: " + deleteReasonId))
+                : null;
+
+        List<UserProfile> profiles = userProfileRepository.findAllByEntraUser(entraUser);
+
+        DeletedUser.DeletedUserBuilder builder = DeletedUser.builder()
+                .deletedUserEntraOid(entraUser.getEntraOid())
+                .deletedUserId(profiles.isEmpty() ? null : profiles.getFirst().getId())
+                .encounteredTsErrors(false)
+                .deleteReasonLabel(
+                        deleteUserReason != null ? deleteUserReason.getLabel() : null);
+
+        for (UserProfile profile : profiles) {
+
+            if (profile.getAppRoles() != null) {
+                builder.removedRolesCount(profile.getAppRoles().size());
+                profile.getAppRoles().clear();
+            }
+
+            if (profile.getOffices() != null) {
+                builder.detachedOfficesCount(profile.getOffices().size());
+                profile.getOffices().clear();
+            }
+        }
+
+        userProfileRepository.flush();
+
+        if (!profiles.isEmpty()) {
+            userProfileRepository.deleteAll(profiles);
+            userProfileRepository.flush();
+        }
+
+        List<UserAccountStatusAudit> auditRecords =
+                userAccountStatusAuditRepository.findByEntraUser(entraUser);
+
+        if (!auditRecords.isEmpty()) {
+            userAccountStatusAuditRepository.deleteAll(auditRecords);
+            userAccountStatusAuditRepository.flush();
+        }
+
+        String userEmail = entraUser.getEmail();
+        String userName = entraUser.getFirstName() + " " + entraUser.getLastName();
+
+        Optional<EntraUser> actorEntraUserOpt =
+                entraUserRepository.findByEntraOid(actorId);
+
+        String deletedByName = actorEntraUserOpt
+                .map(actor -> actor.getFirstName() + " " + actor.getLastName())
+                .orElse("System");
+
+        entraUserRepository.delete(entraUser);
+        entraUserRepository.flush();
+
+        UserAccountStatusAudit deletedAudit =
+                UserAccountStatusAudit.builder()
+                        .entraUser(null)
+                        .userEmail(userEmail)
+                        .userName(userName)
+                        .statusChange(UserAccountStatus.DELETED)
+                        .statusChangedBy(deletedByName)
+                        .statusChangedDate(LocalDateTime.now())
+                        .deleteUserReason(deleteUserReason)
+                        .build();
+
+        userAccountStatusAuditRepository.save(deletedAudit);
+
+        return builder.build();
+    }
+
     /**
      * Delete a specific firm profile from a multi-firm user.
      *

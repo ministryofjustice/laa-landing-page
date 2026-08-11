@@ -42,13 +42,13 @@ import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent;
-import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import static uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus.VERIFICATION_SUCCESS;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
@@ -263,6 +263,9 @@ public class AuditController {
         model.addAttribute("userActivated",
                 Objects.equals(userDetail.getUserType(), "Internal") || Objects.equals(userDetail.getActivationStatus(), VERIFICATION_SUCCESS.name()));
 
+        model.addAttribute("enableDeleteUser",
+                accessControlService.canDeleteAuditUser(userDetail.getUserId()));
+
         return "user-audit/details";
     }
 
@@ -355,12 +358,12 @@ public class AuditController {
     }
 
     /**
-     * Display delete confirmation page for a user without a profile
+     * Display delete confirmation page for a user viewed via the Audit drill-down
      */
     @GetMapping("/users/audit/entra/{id}/delete")
-    @PreAuthorize("@accessControlService.canDeleteUserWithoutProfile(#id)")
-    public String deleteUserWithoutProfileConfirm(@PathVariable String id, Model model) {
-        log.debug("AuditController.deleteUserWithoutProfileConfirm - entraUserId: '{}'", id);
+    @PreAuthorize("@accessControlService.canDeleteAuditUser(#id)")
+    public String deleteUserAuditConfirm(@PathVariable String id, Model model) {
+        log.debug("AuditController.deleteUserAuditConfirm - entraUserId: '{}'", id);
 
         AuditUserDetailDto userDetail = userService.getAuditUserDetailByEntraId(UUID.fromString(id));
         model.addAttribute("user", userDetail);
@@ -371,15 +374,15 @@ public class AuditController {
     }
 
     /**
-     * Delete a user without a profile Notifies Entra and removes from database
+     * Delete a user viewed via the Audit drill-down Notifies Entra and removes from database
      */
     @PostMapping("/users/audit/entra/{id}/delete")
-    @PreAuthorize("@accessControlService.canDeleteUserWithoutProfile(#id)")
-    public String deleteUserWithoutProfile(@PathVariable String id,
+    @PreAuthorize("@accessControlService.canDeleteAuditUser(#id)")
+    public String deleteUserAudit(@PathVariable String id,
             @RequestParam(value = "reasonId", required = false) String reasonId, Authentication authentication,
             HttpSession session, Model model) {
 
-        log.debug("AuditController.deleteUserWithoutProfile - entraUserId: '{}', reasonId: '{}'", id,
+        log.debug("AuditController.deleteUserAudit - entraUserId: '{}', reasonId: '{}'", id,
                 reasonId);
 
         AuditUserDetailDto userDetail = userService.getAuditUserDetailByEntraId(UUID.fromString(id));
@@ -420,8 +423,16 @@ public class AuditController {
         EntraUser current = loginService.getCurrentEntraUser(authentication);
         UUID currentEntraOidUuid = UUID.fromString(current.getEntraOid());
         String deleteReasonLabel = matchedReason.get().getLabel();
+
         try {
-            DeletedUser deletedUser = userService.deleteEntraUserWithoutProfile(id, deleteReasonId, current.getId());
+           List<UserProfile> profiles = userService.getUserProfilesByEntraUserId(UUID.fromString(id));
+            DeletedUser deletedUser;
+            if (profiles == null || profiles.isEmpty()) {
+                deletedUser = userService.deleteEntraUserWithoutProfile(id, deleteReasonId, current.getId());
+            } else {
+                deletedUser = userService.deleteSingleFirmAuditUser(UUID.fromString(id),
+                        deleteReasonId, current.getEntraOid());
+            }
             DeleteUserSuccessAuditEvent deleteUserAuditEvent = new DeleteUserSuccessAuditEvent(
                     deletedUser.getDeleteReasonLabel(), currentEntraOidUuid, deletedUser);
             eventService.logEvent(deleteUserAuditEvent);
@@ -433,7 +444,7 @@ public class AuditController {
             populateDeleteReasonsModel(model);
             return "user-audit/delete-user-without-profile-reason";
         } catch (RuntimeException ex) {
-            log.error("Failed to delete user without profile {}: {}", id, ex.getMessage(), ex);
+            log.error("Failed to delete audit user {}: {}", id, ex.getMessage(), ex);
             DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(id, deleteReasonLabel,
                     currentEntraOidUuid,
                     ex.getMessage());
