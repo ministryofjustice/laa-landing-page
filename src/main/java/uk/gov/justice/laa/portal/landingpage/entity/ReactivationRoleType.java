@@ -8,7 +8,8 @@ public enum ReactivationRoleType {
     NONE("None"), LAA_OST("Legal Aid Agency (Online Support)"), // External User Manager
     PROVIDER_ADMIN("Provider Admin"), // Firm user manager
     LAA_USER_REGISTRATION("Legal Aid Agency (User Registration)"),  // External User Admin
-    LAA("Legal Aid Agency"); // Global Admin, Security Response and External User Support
+    LAA_SUPPORT("Legal Aid Agency (User Support)"), // External User Support
+    LAA("Legal Aid Agency"); // Global Admin, Security Response
 
     private final String displayName;
 

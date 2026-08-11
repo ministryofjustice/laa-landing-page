@@ -65,13 +65,13 @@ class ReactivationTypeResolverTest {
         }
 
         @Test
-        @DisplayName("Should resolve to LAA when EXTERNAL_USER_SUPPORT role is present")
-        void shouldResolveToLaaForExternalUserSupport() {
+        @DisplayName("Should resolve to LAA_SUPPORT when EXTERNAL_USER_SUPPORT role is present")
+        void shouldResolveToLaaSupportForExternalUserSupport() {
             List<String> roles = List.of(AuthzRole.EXTERNAL_USER_SUPPORT.getRoleName());
 
             ReactivationRoleType result = resolver.resolveFromRoles(roles);
 
-            assertThat(result).isEqualTo(ReactivationRoleType.LAA);
+            assertThat(result).isEqualTo(ReactivationRoleType.LAA_SUPPORT);
         }
 
         @Test

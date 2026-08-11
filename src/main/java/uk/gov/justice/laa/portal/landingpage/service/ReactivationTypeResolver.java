@@ -46,13 +46,17 @@ public class ReactivationTypeResolver {
 
         // Check from highest to lowest delegation
         if (roleNames.contains(AuthzRole.GLOBAL_ADMIN.getRoleName())
-                || roleNames.contains(AuthzRole.SECURITY_RESPONSE.getRoleName())
-                || roleNames.contains(AuthzRole.EXTERNAL_USER_SUPPORT.getRoleName())) {
+                || roleNames.contains(AuthzRole.SECURITY_RESPONSE.getRoleName())) {
             return ReactivationRoleType.LAA;
         }
 
         if (roleNames.contains(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())) {
             return ReactivationRoleType.LAA_USER_REGISTRATION;
+        }
+
+        // EUS tracks only requests it raised itself, distinct from EUM's own LAA_OST bucket
+        if (roleNames.contains(AuthzRole.EXTERNAL_USER_SUPPORT.getRoleName())) {
+            return ReactivationRoleType.LAA_SUPPORT;
         }
 
         if (roleNames.contains(AuthzRole.EXTERNAL_USER_MANAGER.getRoleName())) {

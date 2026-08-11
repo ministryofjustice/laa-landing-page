@@ -49,8 +49,8 @@ public class UserEnablementPolicy {
         boolean isGlobalAdminOrSecurityResponse = actorRoles.contains(AuthzRole.GLOBAL_ADMIN.getRoleName())
                 || actorRoles.contains(AuthzRole.SECURITY_RESPONSE.getRoleName());
 
-        boolean isEuaLevel = actorRoles.contains(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())
-                || actorRoles.contains(AuthzRole.EXTERNAL_USER_SUPPORT.getRoleName());
+        // EUS is delegate-only (see canDelegateReactivationRequest), not a direct-enable role
+        boolean isEuaLevel = actorRoles.contains(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName());
 
         boolean isInternalUserManager = actorRoles.contains(AuthzRole.INTERNAL_USER_MANAGER.getRoleName());
 
@@ -85,16 +85,18 @@ public class UserEnablementPolicy {
 
         boolean isEumLevel = actorRoles.contains(AuthzRole.EXTERNAL_USER_MANAGER.getRoleName());
 
+        boolean isEusLevel = actorRoles.contains(AuthzRole.EXTERNAL_USER_SUPPORT.getRoleName());
+
         boolean isInternalUserManager = actorRoles.contains(AuthzRole.INTERNAL_USER_MANAGER.getRoleName());
 
         boolean isFirmUserManager = actorRoles.contains(AuthzRole.FIRM_USER_MANAGER.getRoleName());
 
         if (disableType == null) {
-            return isInternalUserManager || isEuaLevel || isGlobalAdminOrSecurityResponse;
+            return isInternalUserManager || isEuaLevel || isEusLevel || isGlobalAdminOrSecurityResponse;
         }
 
         return switch (disableType) {
-            case NONE, SYNC, LAA, FIRM -> isFirmUserManager || isEumLevel;
+            case NONE, SYNC, LAA, FIRM -> isFirmUserManager || isEumLevel || isEusLevel;
             case PRIVILEGED -> false;
         };
     }

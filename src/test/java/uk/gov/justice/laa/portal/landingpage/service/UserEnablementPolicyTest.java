@@ -39,7 +39,7 @@ class UserEnablementPolicyTest {
             assertThat(policy.canEnable(null, List.of(IUM))).isTrue();
             assertThat(policy.canEnable(null, List.of(EUM))).isFalse();
             assertThat(policy.canEnable(null, List.of(EUA))).isTrue();
-            assertThat(policy.canEnable(null, List.of(EUS))).isTrue();
+            assertThat(policy.canEnable(null, List.of(EUS))).isFalse();
             assertThat(policy.canEnable(null, List.of(SR))).isTrue();
             assertThat(policy.canEnable(null, List.of(GA))).isTrue();
         }
@@ -77,8 +77,8 @@ class UserEnablementPolicyTest {
         }
 
         @Test
-        void none_eusCanEnable() {
-            assertThat(policy.canEnable(DisableType.NONE, List.of(EUS))).isTrue();
+        void none_eusCannotEnable() {
+            assertThat(policy.canEnable(DisableType.NONE, List.of(EUS))).isFalse();
         }
 
         @Test
@@ -114,8 +114,8 @@ class UserEnablementPolicyTest {
         }
 
         @Test
-        void sync_eusCanEnable() {
-            assertThat(policy.canEnable(DisableType.SYNC, List.of(EUS))).isTrue();
+        void sync_eusCannotEnable() {
+            assertThat(policy.canEnable(DisableType.SYNC, List.of(EUS))).isFalse();
         }
 
         @Test
@@ -146,8 +146,8 @@ class UserEnablementPolicyTest {
         }
 
         @Test
-        void firm_eusCanEnable() {
-            assertThat(policy.canEnable(DisableType.FIRM, List.of(EUS))).isTrue();
+        void firm_eusCannotEnable() {
+            assertThat(policy.canEnable(DisableType.FIRM, List.of(EUS))).isFalse();
         }
 
         @Test
@@ -178,8 +178,8 @@ class UserEnablementPolicyTest {
         }
 
         @Test
-        void laa_eusCanEnable() {
-            assertThat(policy.canEnable(DisableType.LAA, List.of(EUS))).isTrue();
+        void laa_eusCannotEnable() {
+            assertThat(policy.canEnable(DisableType.LAA, List.of(EUS))).isFalse();
         }
 
         @Test
@@ -327,6 +327,7 @@ class UserEnablementPolicyTest {
             return Stream.of(
                     Arguments.of(List.of(AuthzRole.INTERNAL_USER_MANAGER.getRoleName())),
                     Arguments.of(List.of(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())),
+                    Arguments.of(List.of(AuthzRole.EXTERNAL_USER_SUPPORT.getRoleName())),
                     Arguments.of(List.of(AuthzRole.GLOBAL_ADMIN.getRoleName())),
                     Arguments.of(List.of(AuthzRole.SECURITY_RESPONSE.getRoleName())),
                     Arguments.of(List.of(AuthzRole.GLOBAL_ADMIN.getRoleName(), AuthzRole.SECURITY_RESPONSE.getRoleName()))
@@ -381,6 +382,17 @@ class UserEnablementPolicyTest {
         @DisplayName("Should return true when role is EXTERNAL_USER_MANAGER")
         void shouldReturnTrueForExternalUserManager(DisableType disableType) {
             List<String> roles = List.of(AuthzRole.EXTERNAL_USER_MANAGER.getRoleName());
+
+            boolean result = policy.canDelegateReactivationRequest(disableType, roles);
+
+            assertThat(result).isTrue();
+        }
+
+        @ParameterizedTest
+        @EnumSource(value = DisableType.class, names = {"NONE", "SYNC", "LAA", "FIRM"})
+        @DisplayName("Should return true when role is EXTERNAL_USER_SUPPORT")
+        void shouldReturnTrueForExternalUserSupport(DisableType disableType) {
+            List<String> roles = List.of(AuthzRole.EXTERNAL_USER_SUPPORT.getRoleName());
 
             boolean result = policy.canDelegateReactivationRequest(disableType, roles);
 

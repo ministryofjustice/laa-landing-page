@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 20260811-1-remove-manage-reactivate-request-from-external-user-support
+      author: paul.snowdon
+      dbms: postgresql
+      comment: "Remove CAN_MANAGE_DELEGATE_ENABLE_USER permission from External User Support role"
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "DELETE FROM role_permission WHERE permission = 'CAN_MANAGE_DELEGATE_ENABLE_USER' AND app_role_id = (SELECT id FROM app_role WHERE name = 'External User Support')"
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: "INSERT INTO role_permission (app_role_id, permission) VALUES ((SELECT id FROM app_role WHERE name = 'External User Support'), 'CAN_MANAGE_DELEGATE_ENABLE_USER')"
