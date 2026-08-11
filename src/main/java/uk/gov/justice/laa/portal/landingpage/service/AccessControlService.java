@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
+import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.FIRM_USER_MANAGER;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -33,10 +35,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
 import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
-import org.springframework.beans.factory.annotation.Value;
 import uk.gov.justice.laa.portal.landingpage.repository.UserActivationRequestRepository;
-
-import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.FIRM_USER_MANAGER;
 
 @Service
 public class AccessControlService {
@@ -344,8 +343,9 @@ public class AccessControlService {
             return actorFirm != null && targetFirm != null && actorFirm.getId().equals(targetFirm.getId());
         }
 
-        if (ReactivationRoleType.LAA_OST.equals(actorRoleType)) {
-            return ReactivationRoleType.LAA_OST.equals(firstRequestInitiatorRole);
+        if (ReactivationRoleType.LAA_OST.equals(actorRoleType) || ReactivationRoleType.LAA_SUPPORT.equals(actorRoleType)) {
+            // EUM and EUS each only track requests originally raised by their own role type
+            return actorRoleType.equals(firstRequestInitiatorRole);
         }
 
         return ReactivationRoleType.LAA.equals(actorRoleType)
@@ -527,7 +527,8 @@ public class AccessControlService {
             return EnablementState.DENIED;
         }
 
-        if (!userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER)) {
+        if (!userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER)
+                && !userHasPermission(authenticatedUser, Permission.CAN_REQUEST_DELEGATE_ENABLE_USER)) {
             return EnablementState.DENIED;
         }
 
