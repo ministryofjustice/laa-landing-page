@@ -49,7 +49,6 @@ public class UserEnablementPolicy {
         boolean isGlobalAdminOrSecurityResponse = actorRoles.contains(AuthzRole.GLOBAL_ADMIN.getRoleName())
                 || actorRoles.contains(AuthzRole.SECURITY_RESPONSE.getRoleName());
 
-        // EUS is delegate-only (see canDelegateReactivationRequest), not a direct-enable role
         boolean isEuaLevel = actorRoles.contains(AuthzRole.EXTERNAL_USER_ADMIN.getRoleName());
 
         boolean isInternalUserManager = actorRoles.contains(AuthzRole.INTERNAL_USER_MANAGER.getRoleName());
