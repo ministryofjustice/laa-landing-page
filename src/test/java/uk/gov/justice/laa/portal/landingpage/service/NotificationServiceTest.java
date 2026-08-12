@@ -271,12 +271,7 @@ public class NotificationServiceTest {
         notificationService.notifyUserAccessChange(userProfileId, firstName, email, firmName);
 
         // Assert
-        Mockito.verify(emailService, Mockito.times(1)).sendMail(
-                eq(null),
-                eq("testUserAccessChangeEmailTemplate"),
-                eq(Map.of("first_name", firstName, "firm_name", firmName)),
-                eq(String.format("laa-portal-notice-of-access-change-%s", userProfileId))
-        );
+        Mockito.verify(emailService, Mockito.times(0)).sendMail(any(), any(), any(), any());
     }
 
     @Test
@@ -323,22 +318,16 @@ public class NotificationServiceTest {
         // Act
         notificationService.notifyUserAccessChange(userProfileId, firstName, email, firmName);
 
-        // Assert – emailService is called even when email is null
-        Mockito.verify(emailService, Mockito.times(1)).sendMail(
-                eq(null),
-                eq("testUserAccessChangeEmailTemplate"),
-                eq(Map.of("first_name", firstName, "firm_name", firmName)),
-                eq(String.format("laa-portal-notice-of-access-change-%s", userProfileId))
-        );
+        // Assert – emailService is not called when email is null
+        Mockito.verify(emailService, Mockito.times(0)).sendMail(any(), any(), any(), any());
 
         List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
-        assertEquals(2, infoLogs.size());
+        assertEquals(1, infoLogs.size());
 
         // Verify the log message content
         assertThat(infoLogs)
                 .extracting(ILoggingEvent::getFormattedMessage)
                 .containsExactly(
-                        String.format("Sending user access change notification for User: %s", userProfileId),
-                        String.format("User access change notification sent for User ID: %s", userProfileId));
+                        String.format("No email address provided, skipping access change notification for User: %s", userProfileId));
     }
 }
