@@ -5,7 +5,7 @@
       pageCategory=${'register'},
       breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>Activate User Access</title>
+    <title>Enable User Access</title>
 </head>
 <body>
 <main class="govuk-main-wrapper" id="main-content">
@@ -13,17 +13,16 @@
     <a class="govuk-back-link" th:href="${cancelPath}">Back</a>
 
     <h1 class="govuk-heading-l">
-        Activate User Access
+        Enable User Access
     </h1>
     <p class="govuk-body">
-        You are about to activate <span th:text="${user.fullName}"></span>'s access to LAA services via SiLAS.
+        You are about to enable <span th:text="${user.fullName}"></span>'s access to LAA services via SiLAS.
     </p>
     <!-- nosemgrep -->
-    <form th:action="@{/admin/users/manage/{id}/activate(id=${user.id}, referer=${referer})}" method="post"
-          style="display: inline;">
+    <form th:action="@{/admin/users/manage/{id}/enable(id=${user.id}, referer=${referer})}" method="post" style="display: inline;">
         <div class="moj-button-group">
             <button type="submit" class="govuk-button" data-module="govuk-button">
-                Confirm and activate
+                Confirm and enable
             </button>
             <a class="govuk-link" th:href="${cancelPath}">Cancel</a>
         </div>
