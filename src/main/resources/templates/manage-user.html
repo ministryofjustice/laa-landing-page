@@ -86,7 +86,7 @@
                     <div class="moj-page-header-actions__title" style="display: flex; align-items: center; gap: 1rem;">
                         <h1 class="govuk-heading-xl" th:text="${user.fullName}"></h1>
                         <th:block th:if="${silasStatus == 'DISABLED'}">
-                                <span class="govuk-tag govuk-tag--red govuk-!-font-weight-bold govuk-!-margin-top-1">DEACTIVATED</span>
+                                <span class="govuk-tag govuk-tag--red govuk-!-font-weight-bold govuk-!-margin-top-1">DISABLED</span>
                             </th:block>
                             <th:block th:if="${silasStatus == 'INCOMPLETE'}">
                                 <span class="govuk-tag govuk-tag--blue govuk-!-font-weight-bold govuk-!-margin-top-1">INCOMPLETE</span>
@@ -239,18 +239,15 @@
                                         <dt class="govuk-summary-list__key">SiLAS Account Status</dt>
                                         <dd class="govuk-summary-list__value">
                                             <strong class="govuk-tag govuk-tag--green" style="white-space: nowrap; padding-right: 20px;" th:if="${!userActivated}">Awaiting verification</strong>
-                                            <strong class="govuk-tag govuk-tag--green"
-                                                    th:if="${userActivated and user.entraUser.enabled}">Active</strong>
-                                            <strong class="govuk-tag govuk-tag--red"
-                                                    th:if="${userActivated and !user.entraUser.enabled}">Deactivated
-                                            </strong>
+                                            <strong class="govuk-tag govuk-tag--green" th:if="${userActivated and user.entraUser.enabled}">Enabled</strong>
+                                            <strong class="govuk-tag govuk-tag--red" th:if="${userActivated and !user.entraUser.enabled}">Disabled</strong>
                                         </dd>
                                         <dd class="govuk-summary-list__actions" th:if="${userActivated}">
                                             <a th:if="${canDisableUser}" class="govuk-link"
-                                               th:href="@{/admin/users/manage/{id}/deactivate(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">Deactivate user</a>
+                                               th:href="@{/admin/users/manage/{id}/disable(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">Disable user</a>
                                             <a th:if="${canEnableUser}" class="govuk-link"
-                                               th:href="@{/admin/users/manage/{id}/activate(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">Activate user</a>
-                                            <span th:if="${cannotEnableUser}">You cannot activate this user</span>
+                                               th:href="@{/admin/users/manage/{id}/enable(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">Enable user</a>
+                                            <span th:if="${cannotEnableUser}">You cannot enable this user</span>
                                         </dd>
                                     </div>
                                 </dl>
