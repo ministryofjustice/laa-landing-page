@@ -66,48 +66,6 @@
     padding: 0.4em;
 }
 
-/* Filter panel */
-.filter-panel-content {
-    border-top: 1px solid #b1b4b6;
-    padding-top: 20px;
-    padding-bottom: 10px;
-}
-
-/* Active filters banner */
-.active-filters-banner {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 0;
-    border-top: 1px solid #b1b4b6;
-}
-
-.filter-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.filter-tag__remove {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    color: #0b0c0c;
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: bold;
-    border-radius: 50%;
-    background: #b1b4b6;
-}
-
-.filter-tag__remove:hover {
-    background: #505a5f;
-    color: #ffffff;
-}
-
 /* Vertically centre the checkbox visual when a hint (description) is present */
 .govuk-checkboxes__item:has(.govuk-checkboxes__hint) .govuk-checkboxes__label::before {
     top: 50%;
@@ -165,18 +123,4 @@
    responsive and fixed-width elements. */
 .search-width-container {
     max-width: 960px;
-}
-
-.govuk-button--yellow {
-    background-color: #ffdd00;
-    color: #0b0c0c;
-    box-shadow: 0 2px 0 #594d00;
-}
-
-.govuk-button--yellow:hover {
-    background-color: #e6c800;
-}
-
-.govuk-button--yellow:focus {
-    background-color: #ffdd00;
 }
