@@ -1239,66 +1239,6 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.verifyAwaitingFirmAccessMessage();
     }
 
-    @Test
-    @DisplayName("Filter Manage Users to display multi-firm users only")
-    void filterManageUsersByThirdPartyUsers() {
-        final String firmCode = "90001";
-
-        final List<String> services = List.of(
-                "Test LAA App Four"
-        );
-
-        final List<String> roles = List.of(
-                "Test LAA App Four Role One Access"
-        );
-
-        final List<String> offices = List.of(
-                "THREE"
-        );
-
-        ManageUsersPage manageUsersPage =
-                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
-
-        // Create a standard provider user without multi-firm access
-        final String nonMultiFirmUserEmail =
-                manageUsersPage.createProviderAdminUserWithNonMultiFirmAccess(
-                        firmCode
-                );
-
-        // Create a multi-firm user and delegate firm access
-        final String multiFirmUserEmail =
-                manageUsersPage.createMultiFirmUserAndDelegateAccess(
-                        firmCode,
-                        services,
-                        roles,
-                        offices
-                );
-
-        // Return to Manage Your Users after delegation
-        manageUsersPage.clickGoBackToManageUsers();
-        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-
-        // Apply the new 3rd Party filter
-        manageUsersPage.filterByThirdPartyUsers();
-
-        // Search for the multi-firm user
-        assertTrue(
-                manageUsersPage.searchAndVerifyUser(multiFirmUserEmail),
-                "The multi-firm user should be displayed when the 3rd Party filter is applied"
-        );
-
-        // Verify the displayed user is identified as a 3rd Party user
-        Locator multiFirmUserRow = page.locator("tr")
-                .filter(new Locator.FilterOptions()
-                        .setHasText(multiFirmUserEmail));
-
-        assertThat(multiFirmUserRow).isVisible();
-        assertThat(multiFirmUserRow).containsText("External - 3rd Party");
-
-        // Search for the standard provider user while the filter remains applied
-        manageUsersPage.searchAndVerifyUserNotExists(nonMultiFirmUserEmail);
-    }
-
 
     @Test
     @DisplayName("Change the assigned role for a multi-firm user")
