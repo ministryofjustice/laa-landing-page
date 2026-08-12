@@ -118,9 +118,9 @@
     }
 }
 
-/* Fixed-width search section (960px max-width, left-aligned).
+/* Full-width search section, left-aligned.
    Sits inside .full-width-container on pages with mixed
    responsive and fixed-width elements. */
 .search-width-container {
-    max-width: 960px;
+    width: 100%;
 }
