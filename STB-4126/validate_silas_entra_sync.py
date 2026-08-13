@@ -8,29 +8,30 @@ Also flags users where the 'User already exists in Entra' fix was triggered
 (fingerprint: audit ENABLED event recorded at creation time).
 
 Usage:
+    python validate_silas_entra_sync.py --env dev
     python validate_silas_entra_sync.py --env staging
     python validate_silas_entra_sync.py --env prod
 
 Prerequisites:
     1. Port-forward to the target DB:
+       - Dev:           kubectl -n laa-landing-page-dev port-forward ... 5434:5432
        - Staging (NLE): kubectl -n laa-landing-page-test port-forward ... 5433:5433
        - Prod:          kubectl -n laa-landing-page-prod port-forward ... 5435:5432
        (See scripts/setup-port-forwards.sh for the full commands)
 
-    2. Export DB credentials (from scripts/get-db-credentials.sh):
-       export POSTGRES_DB_ADDRESS=localhost
-       export POSTGRES_DB_NAME=<db_name>
-       export POSTGRES_USERNAME=<username>
-       export POSTGRES_PASSWORD=<password>
+    2. Set DB and Entra credentials in STB-4126/.env (copy STB-4126/.env.template):
+       POSTGRES_DB_ADDRESS=localhost
+       POSTGRES_DB_NAME=<db_name>
+       POSTGRES_USERNAME=<username>
+       POSTGRES_PASSWORD=<password>
+       ENTRA_TENANT_ID=<tenant_id>
+       ENTRA_CLIENT_ID=<client_id>
+       ENTRA_CLIENT_SECRET=<client_secret>
 
-    3. Export Entra credentials (service principal with User.Read.All):
-       export ENTRA_TENANT_ID=<tenant_id>
-       export ENTRA_CLIENT_ID=<client_id>
-       export ENTRA_CLIENT_SECRET=<client_secret>
-
-    4. Install dependencies:
+    3. Install dependencies:
        pip install -r STB-4126/requirements.txt
 """
+from __future__ import annotations
 
 import argparse
 import csv
@@ -57,10 +58,20 @@ except ImportError:
     print("Error: pandas is not installed. Run: pip install pandas")
     sys.exit(1)
 
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    print("Error: python-dotenv is not installed. Run: pip install python-dotenv")
+    sys.exit(1)
+
+# Load credentials from STB-4126/.env (falls back to already-exported env vars if absent)
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
+
 
 # ── Environment configuration ─────────────────────────────────────────────────
 
 ENV_DB_PORTS = {
+    "dev": 5434,
     "staging": 5433,
     "prod": 5435,
 }
@@ -376,8 +387,10 @@ def print_summary(env: str, silas_rows: list[dict], entra_users: dict, all_rows:
 
 def write_csvs(env: str, all_rows: list[dict], mismatch_rows: list[dict]) -> tuple[str, str]:
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    all_path      = f"silas_entra_comparison_{env}_{ts}.csv"
-    mismatch_path = f"silas_entra_mismatches_{env}_{ts}.csv"
+    results_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results", env)
+    os.makedirs(results_dir, exist_ok=True)
+    all_path      = os.path.join(results_dir, f"silas_entra_comparison_{env}_{ts}.csv")
+    mismatch_path = os.path.join(results_dir, f"silas_entra_mismatches_{env}_{ts}.csv")
 
     if all_rows:
         pd.DataFrame(all_rows).to_csv(all_path, index=False)
@@ -417,8 +430,8 @@ def main():
     parser.add_argument(
         "--env",
         required=True,
-        choices=["staging", "prod"],
-        help="Environment to validate (staging uses port 5433, prod uses port 5435)",
+        choices=["dev", "staging", "prod"],
+        help="Environment to validate (dev uses port 5434, staging uses port 5433, prod uses port 5435)",
     )
     args = parser.parse_args()
     env = args.env
