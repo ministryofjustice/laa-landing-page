@@ -133,7 +133,7 @@
                             <div class="govuk-summary-card__content">
                                 <dl class="govuk-summary-list">
                                     <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Email</dt>
+                                        <dt class="govuk-summary-list__key" th:text="${uiLabels.email}">Email</dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.email}"></dd>
                                         <dd class="govuk-summary-list__actions" style="width: 30%">
                                             <a th:if="${showResendVerificationLink}"  class="govuk-link"
@@ -142,12 +142,12 @@
                                         </dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">First name</dt>
+                                        <dt class="govuk-summary-list__key" th:text="${uiLabels.firstName}">First name</dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.firstName}"></dd>
                                         <dd style="width: 30%"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Last name</dt>
+                                        <dt class="govuk-summary-list__key" th:text="${uiLabels.lastName}">Last name</dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.lastName}"></dd>
                                         <dd style="width: 30%"></dd>
                                     </div>
@@ -174,7 +174,7 @@
                             <div class="govuk-summary-card__content">
                                 <dl class="govuk-summary-list">
                                     <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">User type</dt>
+                                        <dt class="govuk-summary-list__key" th:text="${uiLabels.userType}">User type</dt>
                                         <dd class="govuk-summary-list__value" th:text="${user.userType}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
@@ -248,12 +248,12 @@
                                             th:text="${entraUser.createdDateTime != null ? #dates.format(entraUser.createdDateTime, 'dd MMM yyyy HH:mm') : 'Unknown'}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Email</dt>
+                                        <dt class="govuk-summary-list__key" th:text="${uiLabels.email}">Email</dt>
                                         <dd class="govuk-summary-list__value" th:if="${entraUser == null}">Unknown</dd>
                                         <dd class="govuk-summary-list__value" th:if="${entraUser != null}" th:text="${entraUser.email}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Last Login Time</dt>
+                                        <dt class="govuk-summary-list__key">Last Login Attempt</dt>
                                         <dd class="govuk-summary-list__value" th:if="${entraUser == null}">Unknown</dd>
                                         <dd class="govuk-summary-list__value" th:if="${entraUser != null}" th:text="${lastLogin != null ? #temporals.format(lastLogin, 'dd MMM yyyy HH:mm') : 'Unknown'}"></dd>
                                     </div>
@@ -269,7 +269,9 @@
                 <div class="moj-page-header-actions govuk-!-display-flex govuk-!-justify-content-space-between govuk-!-align-items-center">
                     <h2 class="govuk-heading-m govuk-!-margin-top-2" th:unless="${user.hasNoProfile or user.userType == 'Internal'}">Profile information</h2>
                     <div>
-                            <a class="govuk-link govuk-body-m govuk-!-font-weight-bold" th:href="@{/admin/users/audit/{id}/full(id=${profileId})}">View complete profile information</a>
+                            <a class="govuk-link govuk-body-m govuk-!-font-weight-bold"
+                               th:if = "${!user.hasNoProfile and user.userType != 'Internal' and !user.isMultiFirmUser}"
+                               th:href="@{/admin/users/audit/{id}/full(id=${profileId})}">View complete profile information</a>
                     </div>
                 </div>
 
@@ -291,11 +293,11 @@
                         <caption class="govuk-table__caption govuk-visually-hidden">User profiles</caption>
                         <thead class="govuk-table__head">
                             <tr class="govuk-table__row">
-                                <th scope="col" class="govuk-table__header">Firm name</th>
+                                <th scope="col" class="govuk-table__header" th:text="${uiLabels.firmName}">Firm name</th>
                                 <th scope="col" class="govuk-table__header">Firm code</th>
                                 <th scope="col" class="govuk-table__header">Office restrictions</th>
                                 <th scope="col" class="govuk-table__header">Services</th>
-                                <th scope="col" class="govuk-table__header">Status</th>
+                                <th scope="col" class="govuk-table__header" th:text="${uiLabels.status}">Status</th>
                             </tr>
                         </thead>
                         <tbody class="govuk-table__body">
@@ -420,7 +422,7 @@
                             <div class="govuk-summary-card__content">
                                 <dl class="govuk-summary-list">
                                     <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Firm name</dt>
+                                        <dt class="govuk-summary-list__key" th:text="${uiLabels.firmName}">Firm name</dt>
                                         <dd class="govuk-summary-list__value">
                                             <span th:text="${profile.firmName}"></span>
                                         </dd>
@@ -471,7 +473,7 @@
                                         <dd class="govuk-summary-list__value" th:text="${record.statusChangedDate != null ? #temporals.format(record.statusChangedDate, 'dd MMM yyyy HH:mm') : ''}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">
-                                        <dt class="govuk-summary-list__key">Status</dt>
+                                        <dt class="govuk-summary-list__key" th:text="${uiLabels.status}">Status</dt>
                                         <dd class="govuk-summary-list__value" th:text="${record.statusChange}"></dd>
                                     </div>
                                     <div class="govuk-summary-list__row">

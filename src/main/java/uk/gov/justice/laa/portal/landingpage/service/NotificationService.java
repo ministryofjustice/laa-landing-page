@@ -94,6 +94,11 @@ public class NotificationService {
             return;
         }
 
+        if (email == null || email.isBlank()) {
+            log.info("No email address provided, skipping access change notification for User: {}", userProfileId);
+            return;
+        }
+
         log.info("Sending user access change notification for User: {}", userProfileId);
 
         emailService.sendMail(
@@ -121,7 +126,7 @@ public class NotificationService {
                             firstName
                     )
             );
-            log.info("Existing user notification sent for User ID: {}", userProfileId);
+            log.info("Existing user notification email sent for User ID: {}", userProfileId);
         }
     }
 

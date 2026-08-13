@@ -666,9 +666,11 @@ public class UserController {
                                  String profileId) {
 
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+
+        String cancelPath = getCancelPathFromReferer(referer, id, profileId);
         model.addAttribute("user", user);
         model.addAttribute("referer", referer);
-        model.addAttribute("cancelPath", getCancelPathFromReferer(referer, id, profileId));
+        model.addAttribute("cancelPath", cancelPath);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Enable User - " + user.getFullName());
         return "enable-user-confirmation";
     }
@@ -678,15 +680,18 @@ public class UserController {
     public String enableUserPost(@PathVariable String id,
                                          Authentication authentication,
                                          Model model,
-                                         String referer) {
+                                         String referer,
+                                         String profileId) {
 
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
         UUID enabledUserId = UUID.fromString(user.getId());
         UUID enabledByUserId = loginService.getCurrentEntraUser(authentication).getId();
         userAccountStatusService.enableUser(enabledUserId, enabledByUserId);
 
+        String cancelPath = getCancelPathFromReferer(referer, id, profileId);
         model.addAttribute("user", user);
         model.addAttribute("referer", referer);
+        model.addAttribute("cancelPath", cancelPath);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Enable User Success - " + user.getFullName());
         return "enable-user-completed";
     }
@@ -999,6 +1004,7 @@ public class UserController {
 
         } else {
             log.error("No user attribute was present in request. User not created.");
+            return cancelUserCreation(session);
         }
 
         session.removeAttribute("firm");
@@ -1035,7 +1041,8 @@ public class UserController {
                 }
             }
         } else {
-            log.error("No user attribute was present in request. User not added to model.");
+            log.warn("No user attribute was present in request. Redirecting to /admin/users.");
+            return "redirect:/admin/users";
         }
 
         model.addAttribute("isMultiFirmUser", isMultiFirmUser != null ? isMultiFirmUser : false);
@@ -1582,11 +1589,19 @@ public class UserController {
                 .map(UUID::fromString)
                 .toList();
 
-        Map<String, Long> totalAssignableRolesForApps = roleAssignmentService.filterRoles(editorUserProfile.getAppRoles(), roleIds).stream()
-                .collect(Collectors.groupingBy(
-                        role -> role.getApp().getId(),
-                        Collectors.counting()
-                ));
+        Map<String, Long> totalAssignableRolesForApps = new HashMap<>();
+        for (AppDto app : editableApps.values()) {
+            List<AppRoleDto> availableRoles =
+                    userService.getAppRolesByAppIdAndUserType(app.getId(), userType, null);
+            List<AppRoleDto> assignableRoles =
+                    roleAssignmentService.filterRoles(
+                            editorUserProfile.getAppRoles(),
+                            availableRoles.stream()
+                                    .map(r -> UUID.fromString(r.getId()))
+                                    .toList()
+                    );
+            totalAssignableRolesForApps.put(app.getId(), (long) assignableRoles.size());
+        }
 
         Map<String, AppRoleDto> roles = userService.getRolesByIdIn(roleIds);
         String backUrl = "";
@@ -2148,8 +2163,6 @@ public class UserController {
 
         // Clear role selections
         session.removeAttribute("grantAccessUserRolesModel");
-        session.removeAttribute("grantAccessAllSelectedRoles");
-        session.removeAttribute("allSelectedRoles");
         session.removeAttribute("nonEditableRoles");
 
         // Store the model in session to handle validation errors later
@@ -2627,8 +2640,7 @@ public class UserController {
                                           Model model,
                                           HttpSession session,
                                           Authentication authentication) {
-        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
-        UserType userType = user.getUserType();
+        final UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         // Get user's current app roles from session
         Optional<Set<String>> allSelectedRolesOptional = getSetFromHttpSession(session, "allSelectedRoles", String.class);
         if (allSelectedRolesOptional.isEmpty()) {
@@ -2715,8 +2727,27 @@ public class UserController {
         model.addAttribute("hasAllOffices", selectedOffices.contains(ALL));
         model.addAttribute("hasNoOffices", selectedOffices.contains(NO_OFFICES));
         model.addAttribute("errorMessage", errorMessage);
-
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Grant access - Check your answers - " + user.getFullName());
+
+        Map<String, Long> totalRolesByApp = new HashMap<>();
+        for (AppRoleDto role : editableUserAppRoles) {
+            String appName = role.getApp().getName();
+            String appId = role.getApp().getId();
+            if (!totalRolesByApp.containsKey(appName)) {
+                List<AppRoleDto> availableRoles =
+                        userService.getAppRolesByAppIdAndUserType(appId, user.getUserType(), null);
+                List<AppRoleDto> assignableRoles =
+                        roleAssignmentService.filterRoles(
+                                editorUserProfile.getAppRoles(),
+                                availableRoles.stream()
+                                        .map(r -> UUID.fromString(r.getId()))
+                                        .toList()
+                        );
+                totalRolesByApp.put(appName, (long) assignableRoles.size());
+            }
+        }
+        model.addAttribute("totalRolesByApp", totalRolesByApp);
+
 
         return "grant-access-check-answers";
     }

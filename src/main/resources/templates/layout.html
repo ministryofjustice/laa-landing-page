@@ -4,7 +4,7 @@
 <head th:replace="~{partials/head :: head}">
 </head>
 
-<body class="govuk-template__body">
+<body class="govuk-template__body" th:classappend="${bodyClass}">
     <script>document.body.className += ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '');</script>
 
     <a href="#main-content" class="govuk-skip-link" data-module="govuk-skip-link">Skip to main content</a>
@@ -14,8 +14,8 @@
              data-govuk-service-navigation-init=""><div class="govuk-width-container"><div
             class="govuk-service-navigation__container"><span class="govuk-service-navigation__service-name"><a
             class="govuk-service-navigation__link" href="/?locale=en">Your legal aid services</a></span></div></div></section>
-    <div class="govuk-width-container">
-        <div class="govuk-phase-banner" id="feedback">
+    <div th:class="${bodyClass == 'full-width-page'} ? 'full-width-container' : 'govuk-width-container'">
+        <div class="govuk-phase-banner" id="feedback" th:unless="${suppressPhaseBanner}">
             <p class="govuk-phase-banner__content">
                 <strong class="govuk-tag govuk-phase-banner__content__tag">
                     Beta
@@ -26,11 +26,11 @@
                 </span>
             </p>
         </div>
-        <div class="govuk-!-padding-top-2 govuk-!-padding-bottom-2" style="border-bottom: 1px solid #b1b4b6;"
+        <div class="govuk-!-padding-top-4 govuk-!-padding-bottom-4" style="border-bottom: 1px solid #b1b4b6;"
             th:if="${activeFirm != null and isExternal}">
             <div class="govuk-grid-row">
                 <div class="govuk-grid-column-two-thirds">
-                    <p class="govuk-body-m govuk-!-margin-bottom-0">
+                    <p class="govuk-body-l govuk-!-margin-bottom-0">
                         <strong th:text="${activeFirm.getName() + (activeFirm.getCode() != null ? ' - ' + activeFirm.getCode() : '')}"></strong>
                     </p>
                 </div>

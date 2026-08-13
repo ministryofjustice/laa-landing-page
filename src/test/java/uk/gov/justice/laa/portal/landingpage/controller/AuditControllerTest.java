@@ -60,9 +60,11 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AuditExportService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
+import uk.gov.justice.laa.portal.landingpage.service.ExternalUserPollingService;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.TechServicesClient;
@@ -109,6 +111,12 @@ class AuditControllerTest {
     @Mock
     private UserAccountStatusService userAccountStatusService;
 
+    @Mock
+    private ExternalUserPollingService externalUserPollingService;
+
+    @Mock
+    private EntraUserRepository entraUserRepository;
+
     private PaginatedAuditUsers mockPaginatedUsers;
     private List<AppRoleDto> mockSilasRoles;
     private Model model;
@@ -116,7 +124,8 @@ class AuditControllerTest {
     @BeforeEach
     void setUp() {
         auditController = new AuditController(userService, loginService, eventService, accessControlService,
-                auditExportService, firmService, authenticatedUser, techServicesClient, userAccountStatusService);
+                auditExportService, firmService, authenticatedUser, techServicesClient, userAccountStatusService, externalUserPollingService,
+                entraUserRepository);
         model = new ExtendedModelMap();
 
         // Setup mock audit users
@@ -644,6 +653,87 @@ class AuditControllerTest {
 
         assertThat(model.getAttribute("showResendVerificationLink"))
                 .isEqualTo(true);
+
+        assertThat(model.getAttribute("lastSuccessfulLogin"))
+                .isNull();
+
+        verify(accessControlService, times(1))
+                .canResendActivationForAuditUser(userId.toString());
+
+        verify(userService, times(1))
+                .getAuditUserDetail(userId, 1, 5);
+    }
+
+    @Test
+    void displayUserAuditDetail_withValidUserId_returnsDetailView_LastSuccessfulLoginIsNotNull() {
+        // Given
+        UUID userId = UUID.randomUUID();
+
+        AuditUserDetailDto mockUserDetail = AuditUserDetailDto
+                .builder()
+                .userId(userId.toString())
+                .email("john.doe@example.com")
+                .firstName("John")
+                .lastName("Doe")
+                .fullName("John Doe")
+                .isMultiFirmUser(false)
+                .profiles(Collections.emptyList())
+                .build();
+
+        TechServicesUser.GuestUserStatus guestUserStatus = TechServicesUser.GuestUserStatus.builder()
+                .disabledReason("UserRequest")
+                .build();
+
+        TechServicesUser.CustomSecurityAttributes customSecurityAttributes = TechServicesUser.CustomSecurityAttributes.builder()
+                .guestUserStatus(guestUserStatus)
+                .build();
+
+        TechServicesUser techServicesUser = TechServicesUser.builder()
+                .id(UUID.randomUUID().toString())
+                .givenName("Test")
+                .surname("User")
+                .lastSuccessfulSignIn("1970-01-01T00:00:00Z")
+                .customSecurityAttributes(customSecurityAttributes)
+                .build();
+
+        GetUserResponse getUserResponse = GetUserResponse.builder()
+                .success(true)
+                .user(techServicesUser)
+                .build();
+
+        TechServicesApiResponse<GetUserResponse> techServicesResponse =
+                TechServicesApiResponse.success(getUserResponse);
+
+        when(accessControlService.canResendActivationForAuditUser(userId.toString()))
+                .thenReturn(true);
+
+        when(techServicesClient.getUser(any())).thenReturn(techServicesResponse);
+        when(userService.getAuditUserDetail(userId, 1, 5)).thenReturn(mockUserDetail);
+
+        when(userAccountStatusService
+                .getDisableUserReasonNameByEntraDescription(eq("UserRequest")))
+                .thenReturn("User Request");
+
+        when(userService.determineStatusBadgeForAuditUser(any(AuditUserDetailDto.class)))
+                .thenReturn(UserProfileSilasStatus.COMPLETE);
+
+        String viewName = auditController.displayUserAuditDetail(userId, 1, 5, false, model);
+
+        assertThat(viewName).isEqualTo("user-audit/details");
+
+        assertThat(model.getAttribute("user")).isEqualTo(mockUserDetail);
+
+        TechServicesUser returnedTechServicesUser =
+                (TechServicesUser) model.getAttribute("entraUser");
+
+        assertThat(returnedTechServicesUser).isNotNull();
+        assertThat(model.getAttribute("entraUserDisableReason"))
+                .isEqualTo("User Request");
+
+        assertThat(model.getAttribute("showResendVerificationLink"))
+                .isEqualTo(true);
+
+        assertThat(model.getAttribute("lastSuccessfulLogin")).isNotNull();
 
         verify(accessControlService, times(1))
                 .canResendActivationForAuditUser(userId.toString());

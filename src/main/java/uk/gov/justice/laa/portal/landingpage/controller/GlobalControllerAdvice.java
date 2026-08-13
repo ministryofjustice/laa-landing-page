@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.servlet.view.RedirectView;
 
 import jakarta.servlet.http.HttpServletRequest;
+import uk.gov.justice.laa.portal.landingpage.config.UiLabelsProperties;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -25,6 +26,7 @@ public class GlobalControllerAdvice {
 
     private static final Logger logger = LoggerFactory.getLogger(GlobalControllerAdvice.class);
     private final LoginService loginService;
+    private final UiLabelsProperties uiLabelsProperties;
 
     @Value("${feature.flag.enable.user.audit.table}")
     private boolean enableUserAuditTable;
@@ -32,8 +34,9 @@ public class GlobalControllerAdvice {
     @Value("${feature.flag.firm.directory.enabled}")
     private boolean firmDirectoryEnabled;
 
-    public GlobalControllerAdvice(LoginService loginService) {
+    public GlobalControllerAdvice(LoginService loginService, UiLabelsProperties uiLabelsProperties) {
         this.loginService = loginService;
+        this.uiLabelsProperties = uiLabelsProperties;
     }
 
     @ModelAttribute("activeFirm")
@@ -89,6 +92,17 @@ public class GlobalControllerAdvice {
         return null;
     }
 
+
+    @ModelAttribute("uiLabels")
+    public UiLabelsProperties getUiLabels(HttpServletRequest request) {
+        if (request != null) {
+            String uri = request.getRequestURI();
+            if (uri != null && uri.startsWith("/api/")) {
+                return null;
+            }
+        }
+        return uiLabelsProperties;
+    }
 
     @ModelAttribute("enableUserAuditTable")
     public boolean getUserAuditTableEnabledFlag() {

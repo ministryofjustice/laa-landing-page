@@ -48,21 +48,7 @@ Once exported be sure to source your latest bash profile: `source ~/.bash_profil
 
 - If you do not have the necessary permissions to view the client ID and secret, request them from an Entra admin.
 
-#### Creating a GitHub Token
-
-1. Ensure you have created a classic GitHub Personal Access Token with the following permissions:
-   1. repo
-   2. write:packages
-   3. read:packages
-2. The token **must be authorised with (MoJ) SSO**.
-3. Add the following parameters to `~/.gradle/gradle.properties`
-
-```
-project.ext.gitPackageUser = <your GitHub username>
-project.ext.gitPackageKey = <your GitHub access token>
-```
-
-For more detailed instructions, refer to the laa-ccms-spring-boot-common repository [here](https://github.com/ministryofjustice/laa-ccms-spring-boot-common?tab=readme-ov-file).
+For more detailed instructions, refer to the laa-ccms-spring-boot-common repository [here](https://github.com/ministryofjustice/laa-spring-boot-common?tab=readme-ov-file).
 
 More information on GDS can be found [here](https://gds-way.digital.cabinet-office.gov.uk/).
 
@@ -75,7 +61,7 @@ The pre-commit hooks will only be enabled for this repository, and won't affect 
 To enable the pre-commit hooks:
 1. Download and install [Homebrew](https://github.com/Homebrew/brew/releases/latest)
 2. Authorise GitGuardian with your Ministry of Justice GitHub user account [here](https://dashboard.gitguardian.com/api/v1/auth/user/github_login/authorize) (you only have to link your account, you do not need to go on to grant GitGuardian access to any personal or MoJ repository in this step as it shouldn't be necessary for running GitGuardian Shield locally)
-3. Run the setup script (will take a few minutes to complete the first time it is ran):
+3. Run the setup script (will take a few minutes to complete the first time it is run):
 
 ```sh
 ./setup_precommits.sh
