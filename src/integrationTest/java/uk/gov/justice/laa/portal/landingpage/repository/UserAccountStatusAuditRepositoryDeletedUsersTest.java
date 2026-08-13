@@ -81,8 +81,8 @@ class UserAccountStatusAuditRepositoryDeletedUsersTest extends BaseRepositoryTes
         // Arrange - Create users with different statuses
         createAuditRecord("deleted1@example.com", UserAccountStatus.DELETED, "John Doe", testStartTime.minusDays(1));
         createAuditRecord("deleted2@example.com", UserAccountStatus.DELETED, "Jane Smith", testStartTime.minusDays(2));
-        createAuditRecord("enabled@example.com", UserAccountStatus.ACTIVATED, "Enabled User", testStartTime.minusDays(3));
-        createAuditRecord("disabled@example.com", UserAccountStatus.DEACTIVATED, "Disabled User", testStartTime.minusDays(4));
+        createAuditRecord("enabled@example.com", UserAccountStatus.ENABLED, "Enabled User", testStartTime.minusDays(3));
+        createAuditRecord("disabled@example.com", UserAccountStatus.DISABLED, "Disabled User", testStartTime.minusDays(4));
 
         Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "statusChangedDate"));
 
@@ -103,8 +103,8 @@ class UserAccountStatusAuditRepositoryDeletedUsersTest extends BaseRepositoryTes
     @DisplayName("Should return empty page when no deleted users exist")
     void findDeletedUsers_shouldReturnEmptyWhenNoDeletedUsers() {
         // Arrange - Create only non-deleted users
-        createAuditRecord("enabled@example.com", UserAccountStatus.ACTIVATED, "User", testStartTime);
-        createAuditRecord("disabled@example.com", UserAccountStatus.DEACTIVATED, "User", testStartTime);
+        createAuditRecord("enabled@example.com", UserAccountStatus.ENABLED, "User", testStartTime);
+        createAuditRecord("disabled@example.com", UserAccountStatus.DISABLED, "User", testStartTime);
 
         Pageable pageable = PageRequest.of(0, 10);
 

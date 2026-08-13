@@ -6,7 +6,7 @@
       breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
 
 <head>
-    <title>Deactivate User</title>
+    <title>Disable User</title>
 </head>
 
 <body>
@@ -37,7 +37,7 @@
             <fieldset class="govuk-fieldset" aria-describedby="reasons-hint">
                 <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
                     <h1 class="govuk-fieldset__heading">
-                        Choose a reason for deactivating access from all <span th:text="${firm.name}" />
+                        Choose a reason for disabling access from all <span th:text="${firm.name}" />
                     </h1>
                 </legend>
 
@@ -61,7 +61,7 @@
             </fieldset>
         </div>
         <div class="govuk-button-group">
-            <button type="submit" class="govuk-button govuk-button--warning">Confirm and deactivate all users</button>
+            <button type="submit" class="govuk-button govuk-button--warning">Confirm and disable all users</button>
             <a th:href="@{/admin/firmDirectory/cancel}" class="govuk-link">Cancel</a>
         </div>
     </form>

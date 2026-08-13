@@ -117,7 +117,7 @@ public class RoleBaseAccessDisableUserTest extends RoleBasedAccessIntegrationTes
         assertThat(statusChanges.size()).isEqualTo(1);
         UserAccountStatusAudit statusChange = statusChanges.getFirst();
         assertThat(statusChange.getEntraUser().getId()).isEqualTo(accessedUser.getId());
-        assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DEACTIVATED);
+        assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DISABLED);
         assertThat(statusChange.getStatusChangedBy()).isEqualTo(loggedInUser.getFirstName() + " " + loggedInUser.getLastName());
         // Teardown
         accessedUser.setEnabled(true);
@@ -137,7 +137,7 @@ public class RoleBaseAccessDisableUserTest extends RoleBasedAccessIntegrationTes
         assertThat(statusChanges.size()).isEqualTo(1);
         UserAccountStatusAudit statusChange = statusChanges.getFirst();
         assertThat(statusChange.getEntraUser().getId()).isEqualTo(accessedUser.getId());
-        assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DEACTIVATED);
+        assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DISABLED);
         assertThat(statusChange.getStatusChangedBy()).isEqualTo(loggedInUser.getFirstName() + " " + loggedInUser.getLastName());
         // Teardown
         accessedUser.setEnabled(true);
@@ -157,7 +157,7 @@ public class RoleBaseAccessDisableUserTest extends RoleBasedAccessIntegrationTes
         assertThat(statusChanges.size()).isEqualTo(1);
         UserAccountStatusAudit statusChange = statusChanges.getFirst();
         assertThat(statusChange.getEntraUser().getId()).isEqualTo(accessedUser.getId());
-        assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DEACTIVATED);
+        assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DISABLED);
         assertThat(statusChange.getStatusChangedBy()).isEqualTo(loggedInUser.getFirstName() + " " + loggedInUser.getLastName());
         // Teardown
         accessedUser.setEnabled(true);
@@ -187,7 +187,7 @@ public class RoleBaseAccessDisableUserTest extends RoleBasedAccessIntegrationTes
         assertThat(statusChanges.size()).isEqualTo(1);
         UserAccountStatusAudit statusChange = statusChanges.getFirst();
         assertThat(statusChange.getEntraUser().getId()).isEqualTo(accessedUser.getId());
-        assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DEACTIVATED);
+        assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DISABLED);
         assertThat(statusChange.getStatusChangedBy()).isEqualTo(loggedInUser.getFirstName() + " " + loggedInUser.getLastName());
         // Teardown
         accessedUser.setEnabled(true);
@@ -207,7 +207,7 @@ public class RoleBaseAccessDisableUserTest extends RoleBasedAccessIntegrationTes
         assertThat(statusChanges.size()).isEqualTo(1);
         UserAccountStatusAudit statusChange = statusChanges.getFirst();
         assertThat(statusChange.getEntraUser().getId()).isEqualTo(accessedUser.getId());
-        assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DEACTIVATED);
+        assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DISABLED);
         assertThat(statusChange.getStatusChangedBy()).isEqualTo(loggedInUser.getFirstName() + " " + loggedInUser.getLastName());
         // Teardown
         accessedUser.setEnabled(true);
@@ -256,14 +256,14 @@ public class RoleBaseAccessDisableUserTest extends RoleBasedAccessIntegrationTes
     }
 
     public void requestDisableUserReasonPage(EntraUser loggedInUser, EntraUser accessedUser, ResultMatcher expectedResult) throws Exception {
-        this.mockMvc.perform(get(String.format("/admin/users/manage/%s/deactivate", accessedUser.getId()))
+        this.mockMvc.perform(get(String.format("/admin/users/manage/%s/disable", accessedUser.getId()))
                         .with(userOauth2Login(loggedInUser)))
                 .andExpect(expectedResult);
     }
 
     public MvcResult sendDisableUserPost(EntraUser loggedInUser, EntraUser accessedUser, ResultMatcher expectedResult) throws Exception {
         DisableUserReason reason = disableUserReasonRepository.findAll().getFirst();
-        return this.mockMvc.perform(post(String.format("/admin/users/manage/%s/deactivate", accessedUser.getId()))
+        return this.mockMvc.perform(post(String.format("/admin/users/manage/%s/disable", accessedUser.getId()))
                         .param("reasonId", reason.getId().toString())
                         .with(csrf())
                         .with(userOauth2Login(loggedInUser)))

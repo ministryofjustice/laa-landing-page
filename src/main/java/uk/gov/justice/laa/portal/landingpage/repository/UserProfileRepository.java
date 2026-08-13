@@ -66,25 +66,13 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                         AND (:#{#criteria.userType} IS NULL OR ups.userType = :#{#criteria.userType})
                         AND ((:#{#criteria.searchTerm} IS NULL OR :#{#criteria.searchTerm} = '')
                                 OR LOWER(u.email) LIKE LOWER(CONCAT('%', :#{#criteria.searchTerm}, '%'))
-                                OR LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :#{#criteria.searchTerm}, '%'))
-                                OR LOWER(f.name) LIKE LOWER(CONCAT('%', :#{#criteria.searchTerm}, '%'))
-                                OR LOWER(f.code) LIKE LOWER(CONCAT('%', :#{#criteria.searchTerm}, '%')))
-                        AND (
-                            (:#{#criteria.showFirmAdmins} = false AND :#{#criteria.showMultiFirmUsers} = false AND :#{#criteria.showProviderUsers} = false)
-                            OR (:#{#criteria.showFirmAdmins} = true AND EXISTS (
-                                SELECT 1 FROM ups.appRoles ar
-                                WHERE ar.authzRole = true
-                                AND (ar.name = 'External User Manager' OR ar.name = 'Firm User Manager')
-                            ))
-                            OR (:#{#criteria.showMultiFirmUsers} = true AND u.multiFirmUser = true)
-                            OR (:#{#criteria.showProviderUsers} = true AND u.multiFirmUser = false
-                                AND NOT EXISTS (
-                                    SELECT 1 FROM ups.appRoles ar2
-                                    WHERE ar2.authzRole = true
-                                    AND (ar2.name = 'External User Manager' OR ar2.name = 'Firm User Manager')
-                                ))
-                        )
-                        AND (:#{#criteria.hasSelectedStatuses()} = false OR ups.silasStatus IN :#{#criteria.selectedStatuses})
+                                OR LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :#{#criteria.searchTerm}, '%')))
+                        AND (:#{#criteria.showFirmAdmins} = false OR EXISTS (
+                            SELECT 1 FROM ups.appRoles ar
+                            WHERE ar.authzRole = true
+                            AND (ar.name = 'External User Manager' OR ar.name = 'Firm User Manager')
+                        ))
+                        AND (:#{#criteria.showMultiFirmUsers} = false OR u.multiFirmUser = true)
             """,
             countQuery = """
                         SELECT COUNT(ups) FROM UserProfile ups
@@ -96,25 +84,13 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                         AND (:#{#criteria.userType} IS NULL OR ups.userType = :#{#criteria.userType})
                         AND ((:#{#criteria.searchTerm} IS NULL OR :#{#criteria.searchTerm} = '')
                                         OR LOWER(u.email) LIKE LOWER(CONCAT('%', :#{#criteria.searchTerm}, '%'))
-                                        OR LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :#{#criteria.searchTerm}, '%'))
-                                        OR LOWER(f.name) LIKE LOWER(CONCAT('%', :#{#criteria.searchTerm}, '%'))
-                                        OR LOWER(f.code) LIKE LOWER(CONCAT('%', :#{#criteria.searchTerm}, '%')))
-                        AND (
-                            (:#{#criteria.showFirmAdmins} = false AND :#{#criteria.showMultiFirmUsers} = false AND :#{#criteria.showProviderUsers} = false)
-                            OR (:#{#criteria.showFirmAdmins} = true AND EXISTS (
-                                SELECT 1 FROM ups.appRoles ar
-                                WHERE ar.authzRole = true
-                                AND (ar.name = 'External User Manager' OR ar.name = 'Firm User Manager')
-                            ))
-                            OR (:#{#criteria.showMultiFirmUsers} = true AND u.multiFirmUser = true)
-                            OR (:#{#criteria.showProviderUsers} = true AND u.multiFirmUser = false
-                                AND NOT EXISTS (
-                                    SELECT 1 FROM ups.appRoles ar2
-                                    WHERE ar2.authzRole = true
-                                    AND (ar2.name = 'External User Manager' OR ar2.name = 'Firm User Manager')
-                                ))
-                        )
-                        AND (:#{#criteria.hasSelectedStatuses()} = false OR ups.silasStatus IN :#{#criteria.selectedStatuses})
+                                        OR LOWER(CONCAT(u.firstName, ' ', u.lastName)) LIKE LOWER(CONCAT('%', :#{#criteria.searchTerm}, '%')))
+                        AND (:#{#criteria.showFirmAdmins} = false OR EXISTS (
+                            SELECT 1 FROM ups.appRoles ar
+                            WHERE ar.authzRole = true
+                            AND (ar.name = 'External User Manager' OR ar.name = 'Firm User Manager')
+                        ))
+                        AND (:#{#criteria.showMultiFirmUsers} = false OR u.multiFirmUser = true)
             """)
     Page<UserSearchResultsDto> findBySearchParams(@Param("criteria") UserSearchCriteria criteria, Pageable pageable);
 

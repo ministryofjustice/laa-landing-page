@@ -144,7 +144,7 @@ public class RoleBasedAccessEnableUserTest extends RoleBasedAccessIntegrationTes
 
 
     public void sendEnableUserPost(EntraUser loggedInUser, EntraUser accessedUser, ResultMatcher expectedResult) throws Exception {
-        this.mockMvc.perform(post(String.format("/admin/users/manage/%s/activate", accessedUser.getId()))
+        this.mockMvc.perform(post(String.format("/admin/users/manage/%s/enable", accessedUser.getId()))
                         .with(csrf())
                         .with(userOauth2Login(loggedInUser)))
                 .andExpect(expectedResult)

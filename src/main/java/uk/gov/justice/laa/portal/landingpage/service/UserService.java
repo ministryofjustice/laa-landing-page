@@ -1043,7 +1043,7 @@ public class UserService {
         // Add audit entry
         UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
                 .entraUser(newUser)
-                .statusChange(UserAccountStatus.ACTIVATED)
+                .statusChange(UserAccountStatus.ENABLED)
                 .statusChangedBy(newUser.getCreatedBy())
                 .statusChangedDate(LocalDateTime.now())
                 .build();

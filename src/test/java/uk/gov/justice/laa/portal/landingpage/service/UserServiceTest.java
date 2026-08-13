@@ -8998,7 +8998,7 @@ class UserServiceTest {
         UserAccountStatusAudit auditRecord = UserAccountStatusAudit.builder()
                 .id(UUID.randomUUID())
                 .entraUser(mockEntraUser)
-                .statusChange(UserAccountStatus.DEACTIVATED)
+                .statusChange(UserAccountStatus.DISABLED)
                 .disableUserReason(mockReason)
                 .statusChangedBy("Admin User")
                 .statusChangedDate(statusChangeDate)
@@ -9019,7 +9019,7 @@ class UserServiceTest {
         assertEquals(1, result.getAccountStatusHistory().size());
 
         AccountStatusHistoryDto history = result.getAccountStatusHistory().get(0);
-        assertEquals("Deactivated", history.getStatusChange());
+        assertEquals("Disabled", history.getStatusChange());
         assertEquals("Absence", history.getDisableReason());
         assertEquals("Admin User", history.getStatusChangedBy());
         assertEquals(statusChangeDate, history.getStatusChangedDate());
@@ -9031,7 +9031,7 @@ class UserServiceTest {
         LocalDateTime now = LocalDateTime.now();
         UserAccountStatusAudit audit1 = UserAccountStatusAudit.builder()
                 .statusChangedDate(now.minusDays(1))
-                .statusChange(UserAccountStatus.DEACTIVATED)
+                .statusChange(UserAccountStatus.DISABLED)
                 .statusChangedBy("John Doe")
                 .disableUserReason(DisableUserReason.builder()
                         .name("Absence")
@@ -9040,7 +9040,7 @@ class UserServiceTest {
 
         UserAccountStatusAudit audit2 = UserAccountStatusAudit.builder()
                 .statusChangedDate(now)
-                .statusChange(UserAccountStatus.ACTIVATED)
+                .statusChange(UserAccountStatus.ENABLED)
                 .statusChangedBy("Jane Smith")
                 .disableUserReason(null)
                 .build();
@@ -9054,10 +9054,10 @@ class UserServiceTest {
         assertThat(result).hasSize(2);
         assertThat(result.get(0))
                 .extracting("statusChange", "statusChangedBy", "disableReason")
-                .containsExactly("Deactivated", "John Doe", "Absence");
+                .containsExactly("Disabled", "John Doe", "Absence");
         assertThat(result.get(1))
                 .extracting("statusChange", "statusChangedBy", "disableReason")
-                .containsExactly("Activated", "Jane Smith", null);
+                .containsExactly("Enabled", "Jane Smith", null);
     }
 
     @Test
