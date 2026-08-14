@@ -1,0 +1,25 @@
+databaseChangeLog:
+  - changeSet:
+      id: 20260813-1-add-comments-to-user-account-status-audit
+      author: paul.snowdon
+      dbms: postgresql
+      comment: "Add comments column to user_account_status_audit to record the reason given when directly reactivating a user (STB reactivation journey)"
+      preConditions:
+        - onFail: MARK_RAN
+        - not:
+            - columnExists:
+                tableName: user_account_status_audit
+                columnName: comments
+      changes:
+        - addColumn:
+            tableName: user_account_status_audit
+            columns:
+              - column:
+                  name: comments
+                  type: TEXT
+                  constraints:
+                    nullable: true
+      rollback:
+        - dropColumn:
+            tableName: user_account_status_audit
+            columnName: comments

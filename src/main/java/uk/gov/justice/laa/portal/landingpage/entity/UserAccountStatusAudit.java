@@ -1,6 +1,12 @@
 package uk.gov.justice.laa.portal.landingpage.entity;
 
+import java.time.LocalDateTime;
+
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -18,10 +24,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
-import org.springframework.data.annotation.CreatedBy;
-import org.springframework.data.annotation.CreatedDate;
-
-import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -77,5 +79,9 @@ public class UserAccountStatusAudit extends BaseEntity {
     @ToString.Exclude
     @JsonIgnore
     private DeleteUserReason deleteUserReason;
+
+    @Column(name = "comments", nullable = true, length = 4000, columnDefinition = "TEXT")
+    @Size(max = 4000, message = "Comments must not exceed 4000 characters")
+    private String comments;
 
 }

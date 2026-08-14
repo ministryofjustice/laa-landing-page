@@ -53,6 +53,7 @@ import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestPageMode;
 import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
+import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
@@ -79,6 +80,8 @@ public class UserActivationControllerTest {
     @Mock
     private UserAccountStatusService userAccountStatusService;
     @Mock
+    private NotificationService notificationService;
+    @Mock
     private HttpSession session;
     @Mock
     private Authentication authentication;
@@ -90,7 +93,7 @@ public class UserActivationControllerTest {
 
     @BeforeEach
     void setUp() {
-        userActivationController = new UserActivationController(loginService, userService, userReactivationRequestService, accessControlService, userAccountStatusService);
+        userActivationController = new UserActivationController(loginService, userService, userReactivationRequestService, accessControlService, userAccountStatusService, notificationService);
         userActivationController.disableUserFeatureEnabled = true;
         model = new ExtendedModelMap();
         lenient().when(session.getAttributeNames()).thenReturn(Collections.emptyEnumeration());

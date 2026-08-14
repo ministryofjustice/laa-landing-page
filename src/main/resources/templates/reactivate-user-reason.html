@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'manage-access'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>${pageTitle}</title>
+</head>
+
+<body>
+<nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+    <a class="govuk-back-link govuk-!-margin-bottom-3"
+       th:href="@{/admin/user/reactivate/{id}(id=${user.id}, referer=${referer}, profileId=${profileId})}">
+        Back </a>
+</nav>
+<main class="govuk-main-wrapper" id="main-content">
+    <div class="govuk-grid-row">
+        <div class="govuk-grid-column-full">
+
+            <div th:if="${errorMessage}" class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title" tabindex="-1" data-module="govuk-error-summary">
+                <h2 class="govuk-error-summary__title" id="error-summary-title">
+                    There is a problem
+                </h2>
+                <div class="govuk-error-summary__body">
+                    <ul class="govuk-list govuk-error-summary__list">
+                        <li>
+                            <a href="#reason-error" th:text="${errorMessage}"></a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <h1 class="govuk-heading-l">Why is <span th:text="${user.fullName}"></span> being reactivated?</h1>
+
+            <p class="govuk-body">Provide a reason for reactivating this account. This is recorded for audit purposes.</p>
+
+            <form method="post" th:action="@{/admin/user/reactivate-reason/{id}(id=${user.id}, referer=${referer}, profileId=${profileId})}"
+                  th:object="${reactivateUserReasonForm}">
+
+                <div class="govuk-form-group govuk-!-width-full" th:classappend="${#fields.hasErrors('reason')} ? 'govuk-form-group--error' : ''" id="reason-group">
+                    <div th:if="${#fields.hasErrors('reason')}" class="govuk-error-message" id="reason-error">
+                        <span class="govuk-visually-hidden">Error:</span>
+                        <span th:errors="*{reason}"></span>
+                    </div>
+
+                    <label class="govuk-label govuk-label--m" for="reactivation-reason">
+                        Reason for reactivation (minimum 10 characters)
+                    </label>
+
+                    <textarea class="govuk-textarea govuk-!-margin-bottom-0"
+                              th:classappend="${#fields.hasErrors('reason')} ? 'govuk-textarea--error' : ''"
+                              id="reactivation-reason"
+                              name="reason"
+                              rows="4"
+                              th:field="*{reason}"></textarea>
+
+                    <p class="govuk-hint govuk-!-margin-top-0">You can enter up to 500 characters.</p>
+                </div>
+
+                <div class="govuk-button-group">
+                    <button type="submit" class="govuk-button" data-module="govuk-button">
+                        Continue
+                    </button>
+                    <a class="govuk-button govuk-button--secondary" th:href="@{/admin/users/manage/{id}(id=${profileId})}">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</main>
+</body>
+
+</html>

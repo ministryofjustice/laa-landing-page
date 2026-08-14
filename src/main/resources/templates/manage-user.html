@@ -253,7 +253,9 @@
                                         <dd class="govuk-summary-list__actions" th:if="${userActivated}">
                                             <a th:if="${canDisableUser}" class="govuk-link"
                                                th:href="@{/admin/users/manage/{id}/deactivate(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">Deactivate user</a>
-                                            <a th:if="${canEnableUser}" class="govuk-link"
+                                            <a th:if="${canReactivateUserDirectly}" class="govuk-link"
+                                               th:href="@{/admin/user/reactivate/{id}(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">Reactivate user</a>
+                                            <a th:if="${canEnableUser and !canReactivateUserDirectly}" class="govuk-link"
                                                th:href="@{/admin/users/manage/{id}/activate(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">Activate user</a>
                                             <a th:if="${canDelegateEnableUser}" class="govuk-link"
                                                th:href="@{/admin/user/delegate-reactivate/{id}(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">Reactivate user</a>

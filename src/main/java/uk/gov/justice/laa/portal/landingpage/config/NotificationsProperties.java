@@ -1,8 +1,9 @@
 package uk.gov.justice.laa.portal.landingpage.config;
 
+import org.springframework.validation.annotation.Validated;
+
 import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
-import org.springframework.validation.annotation.Validated;
 
 /**
  * A POJO to encapsulate the properties associated with sending email notifications.
@@ -26,5 +27,7 @@ public class NotificationsProperties {
     private String userAccessChangeEmailTemplate;
     @NotEmpty
     private String existingUserEmailTemplate;
+    @NotEmpty
+    private String reactivationEmailTemplate;
 
 }

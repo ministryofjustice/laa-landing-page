@@ -37,9 +37,11 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.forms.DelegateReactivateUserCommentForm;
+import uk.gov.justice.laa.portal.landingpage.forms.ReactivateUserReasonForm;
 import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
+import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
@@ -55,6 +57,7 @@ public class UserActivationController {
     private final UserReactivationRequestService userReactivationRequestService;
     private final AccessControlService accessControlService;
     private final UserAccountStatusService userAccountStatusService;
+    private final NotificationService notificationService;
 
     @Value("${feature.flag.disable.user}")
     public boolean disableUserFeatureEnabled;
@@ -445,6 +448,177 @@ public class UserActivationController {
         return "delegate-reactivate-user-approve-confirmation";
     }
 
+    @GetMapping("/user/reactivate/{id}")
+    @PreAuthorize("@accessControlService.canReactivateUserDirectly(#id)")
+    public String reactivateUserGet(@PathVariable String id,
+                                    HttpSession session,
+                                    Model model,
+                                    String referer,
+                                    UUID profileId) {
+        if (!disableUserFeatureEnabled) {
+            throw new ResponseStatusException(HttpStatusCode.valueOf(404));
+        }
+        clearSessionAttributes(session);
+
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        session.setAttribute("reactivateUserId", id);
+        session.setAttribute("profileId", profileId);
+
+        model.addAttribute("user", user);
+        model.addAttribute("profileId", profileId);
+        model.addAttribute("referer", referer);
+        model.addAttribute("cancelPath", getCancelPathFromReferer(referer, profileId));
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User - " + user.getFullName());
+        return "reactivate-user-guidance";
+    }
+
+    @PostMapping("/user/reactivate/{id}")
+    @PreAuthorize("@accessControlService.canReactivateUserDirectly(#id)")
+    public String reactivateUserPost(@PathVariable String id,
+                                     HttpSession session,
+                                     String referer,
+                                     UUID profileId) {
+        String idFromSession = getObjectFromHttpSession(session, "reactivateUserId", String.class).orElseThrow();
+        if (id == null || !id.equals(idFromSession)) {
+            throw new ResponseStatusException(HttpStatusCode.valueOf(403));
+        }
+        return "redirect:/admin/user/reactivate-reason/" + id + "?referer=" + referer + "&profileId=" + profileId;
+    }
+
+    @GetMapping("/user/reactivate-reason/{id}")
+    @PreAuthorize("@accessControlService.canReactivateUserDirectly(#id)")
+    public String reactivateUserReasonGet(@PathVariable String id,
+                                          Model model,
+                                          HttpSession session,
+                                          String referer,
+                                          UUID profileId) {
+        if (!disableUserFeatureEnabled) {
+            throw new ResponseStatusException(HttpStatusCode.valueOf(404));
+        }
+        String idFromSession = getObjectFromHttpSession(session, "reactivateUserId", String.class).orElseThrow();
+        if (id == null || !id.equals(idFromSession)) {
+            throw new ResponseStatusException(HttpStatusCode.valueOf(403));
+        }
+
+        ReactivateUserReasonForm reactivateUserReasonForm =
+                getObjectFromHttpSession(session, "reactivateUserReasonForm", ReactivateUserReasonForm.class)
+                        .orElse(new ReactivateUserReasonForm());
+
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        model.addAttribute("user", user);
+        model.addAttribute("reactivateUserReasonForm", reactivateUserReasonForm);
+        model.addAttribute("profileId", profileId);
+        model.addAttribute("referer", referer);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User - " + user.getFullName());
+        return "reactivate-user-reason";
+    }
+
+    @PostMapping("/user/reactivate-reason/{id}")
+    @PreAuthorize("@accessControlService.canReactivateUserDirectly(#id)")
+    public String reactivateUserReasonPost(@PathVariable String id,
+                                           @Valid ReactivateUserReasonForm reactivateUserReasonForm,
+                                           BindingResult result,
+                                           Model model,
+                                           HttpSession session,
+                                           String referer,
+                                           UUID profileId) {
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+
+        if (result.hasErrors()) {
+            String errorMessage = buildErrorString(result);
+            model.addAttribute("user", user);
+            model.addAttribute("reactivateUserReasonForm", reactivateUserReasonForm);
+            model.addAttribute("profileId", profileId);
+            model.addAttribute("referer", referer);
+            model.addAttribute("errorMessage", errorMessage);
+            model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User - " + user.getFullName());
+            return "reactivate-user-reason";
+        }
+
+        session.setAttribute("reactivateUserReasonForm", reactivateUserReasonForm);
+        model.addAttribute("user", user);
+        model.addAttribute("profileId", profileId);
+        model.addAttribute("referer", referer);
+        return "redirect:/admin/user/reactivate-check-answers/" + id + "?referer=" + referer + "&profileId=" + profileId;
+    }
+
+    @GetMapping("/user/reactivate-check-answers/{id}")
+    @PreAuthorize("@accessControlService.canReactivateUserDirectly(#id)")
+    public String reactivateUserCheckAnswersGet(@PathVariable String id,
+                                                Model model,
+                                                HttpSession session,
+                                                String referer,
+                                                UUID profileId) {
+        if (!disableUserFeatureEnabled) {
+            throw new ResponseStatusException(HttpStatusCode.valueOf(404));
+        }
+        String idFromSession = getObjectFromHttpSession(session, "reactivateUserId", String.class).orElseThrow();
+        if (id == null || !id.equals(idFromSession)) {
+            throw new ResponseStatusException(HttpStatusCode.valueOf(403));
+        }
+
+        ReactivateUserReasonForm reactivateUserReasonForm =
+                getObjectFromHttpSession(session, "reactivateUserReasonForm", ReactivateUserReasonForm.class)
+                        .orElseThrow();
+
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        model.addAttribute("user", user);
+        model.addAttribute("reactivateUserReasonForm", reactivateUserReasonForm);
+        model.addAttribute("profileId", profileId);
+        model.addAttribute("referer", referer);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User - " + user.getFullName());
+        return "reactivate-user-check-answers";
+    }
+
+    @PostMapping("/user/reactivate-check-answers/{id}")
+    @PreAuthorize("@accessControlService.canReactivateUserDirectly(#id)")
+    public String reactivateUserCheckAnswersPost(@PathVariable String id,
+                                                 Authentication authentication,
+                                                 Model model,
+                                                 HttpSession session,
+                                                 String referer,
+                                                 UUID profileId) {
+        String idFromSession = getObjectFromHttpSession(session, "reactivateUserId", String.class).orElseThrow();
+        if (id == null || !id.equals(idFromSession)) {
+            throw new ResponseStatusException(HttpStatusCode.valueOf(403));
+        }
+
+        ReactivateUserReasonForm reactivateUserReasonForm =
+                getObjectFromHttpSession(session, "reactivateUserReasonForm", ReactivateUserReasonForm.class)
+                        .orElseThrow();
+
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        EntraUser actor = loginService.getCurrentEntraUser(authentication);
+        String reason = reactivateUserReasonForm.getReason();
+
+        userAccountStatusService.enableUser(UUID.fromString(id), actor.getId(), reason);
+
+        UUID requestId = userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId)
+                .filter(req -> !ReactivationRequestStatus.APPROVED.equals(req.getStatus())
+                        && !ReactivationRequestStatus.REJECTED.equals(req.getStatus()))
+                .map(UserActivationRequest::getRequestId)
+                .orElseGet(UUID::randomUUID);
+        userReactivationRequestService.saveRequestState(requestId, profileId, ReactivationRequestStatus.APPROVED, reason, actor.getEntraOid());
+
+        notificationService.notifyReactivation(profileId, user.getFirstName(), user.getEmail());
+        CurrentUserDto currentUser = loginService.getCurrentUser(authentication);
+        log.info("User {} has been directly reactivated by {} with reactivation request {} approved", id, currentUser.getUserId(), requestId);
+
+        clearSessionAttributes(session);
+        model.addAttribute("user", user);
+        model.addAttribute("referer", referer);
+        model.addAttribute("cancelPath", getCancelPathFromReferer(referer, profileId));
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User Success - " + user.getFullName());
+        return "enable-user-completed";
+    }
+
+    private String getCancelPathFromReferer(String referer, UUID profileId) {
+        if ("manage".equals(referer) && profileId != null) {
+            return String.format("/admin/users/manage/%s", profileId);
+        }
+        return "/home";
+    }
+
     @GetMapping("/users/reactivation-requests")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).VIEW_EXTERNAL_USER)")
     public String displayReactivationRequests(
@@ -523,6 +697,8 @@ public class UserActivationController {
         session.removeAttribute("user");
         session.removeAttribute("delegateReactivateUserId");
         session.removeAttribute("delegateReactivateUserCommentForm");
+        session.removeAttribute("reactivateUserId");
+        session.removeAttribute("reactivateUserReasonForm");
         session.removeAttribute("profileId");
     }
 }

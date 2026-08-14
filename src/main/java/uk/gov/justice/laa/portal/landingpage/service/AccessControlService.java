@@ -255,6 +255,22 @@ public class AccessControlService {
         return computeEnablementState(entraUserId).canEnable();
     }
 
+    /**
+     * Whether the authenticated user may use the direct reactivate-with-reason journey.
+     * Restricted to Global Admin, Security Response and External User Admin, regardless of
+     * whether a same-firm Firm User Manager would also be permitted to directly enable via {@link #canEnableUser}.
+     */
+    public boolean canReactivateUserDirectly(String entraUserId) {
+        if (!canEnableUser(entraUserId)) {
+            return false;
+        }
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
+        ReactivationRoleType actorRoleType = reactivationTypeResolver.resolve(authenticatedUser);
+        return actorRoleType == ReactivationRoleType.LAA || actorRoleType == ReactivationRoleType.LAA_USER_REGISTRATION;
+    }
+
     public boolean canDelegateEnableUser(String entraUserId) {
         return computeEnablementState(entraUserId).canDelegate();
     }

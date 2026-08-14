@@ -26,6 +26,7 @@ public class NotificationService {
     private static final String REFERENCE_TEMPLATE_REVOKE_FIRM_ACCESS = "laa-portal-notice-of-revoke-firm-access-%s";
     private static final String REFERENCE_TEMPLATE_ACCESS_CHANGE = "laa-portal-notice-of-access-change-%s";
     private static final String REFERENCE_TEMPLATE_EXISTING_USER = "laa-portal-notice-of-existing-user-%s";
+    private static final String REFERENCE_TEMPLATE_REACTIVATION = "laa-portal-notice-of-reactivation-%s";
     private static final String USER_NAME = "name";
     private static final String INVITATION_URL = "invitationURL";
     private static final String PORTAL_URL = "portalURL";
@@ -122,6 +123,27 @@ public class NotificationService {
                     )
             );
             log.info("Existing user notification email sent for User ID: {}", userProfileId);
+        }
+    }
+
+    public void notifyReactivation(UUID userProfileId, String firstName, String email) {
+        if ("NONE".equalsIgnoreCase(notificationProperties.getReactivationEmailTemplate())) {
+            log.info("Email template for reactivation is not ready, skipping notification email for User: {}", userProfileId);
+            return;
+        }
+
+        log.info("Sending reactivation notification for User: {}", userProfileId);
+        if (null != email) {
+            emailService.sendMail(
+                    email,
+                    notificationProperties.getReactivationEmailTemplate(),
+                    Map.of("first_name", firstName, "portal_url", notificationProperties.getPortalUrl()),
+                    String.format(
+                            REFERENCE_TEMPLATE_REACTIVATION,
+                            userProfileId
+                    )
+            );
+            log.info("Reactivation notification sent for User ID: {}", userProfileId);
         }
     }
 

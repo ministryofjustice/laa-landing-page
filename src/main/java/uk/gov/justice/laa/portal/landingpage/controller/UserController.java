@@ -424,6 +424,11 @@ public class UserController {
         model.addAttribute("canEnableUser", !canTrackDelegateRequest && !canManageDelegateEnableUser && enablementFlags.canEnable());
         model.addAttribute("cannotEnableUser", enablementFlags.blockedByHierarchy());
 
+        boolean canEnableUser = !canTrackDelegateRequest && !canManageDelegateEnableUser && enablementFlags.canEnable();
+        boolean canReactivateUserDirectly = canEnableUser
+                && accessControlService.canReactivateUserDirectly(user.getEntraUser().getId());
+        model.addAttribute("canReactivateUserDirectly", canReactivateUserDirectly);
+
         boolean canDelegateEnableUser = !isActiveDelegateRequestPresent && enablementFlags.canDelegate();
         model.addAttribute("canDelegateEnableUser", canDelegateEnableUser);
         final boolean userIsEnabled = user.getEntraUser().isEnabled();

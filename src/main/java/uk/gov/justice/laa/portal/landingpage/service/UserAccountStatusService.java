@@ -228,8 +228,12 @@ public class UserAccountStatusService {
         eventService.logEvent(auditEvent);
     }
 
-    @SuppressWarnings("checkstyle:VariableDeclarationUsageDistance")
     public void enableUser(UUID enabledUserId, UUID enabledById) {
+        enableUser(enabledUserId, enabledById, null);
+    }
+
+    @SuppressWarnings("checkstyle:VariableDeclarationUsageDistance")
+    public void enableUser(UUID enabledUserId, UUID enabledById, String reason) {
         if (enabledUserId.equals(enabledById)) {
             throw new RuntimeException(String.format("User %s can not be enabled by themselves", enabledUserId));
         }
@@ -264,6 +268,7 @@ public class UserAccountStatusService {
                     .statusChange(UserAccountStatus.ENABLED)
                     .statusChangedBy(enabledByUser.getFirstName() + " " + enabledByUser.getLastName())
                     .statusChangedDate(LocalDateTime.now())
+                    .comments(reason)
                     .build();
             userAccountStatusAuditRepository.saveAndFlush(userAccountStatusAudit);
         } else {
