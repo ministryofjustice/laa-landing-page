@@ -298,3 +298,5 @@ spec:
               value: "${NOTIFICATION_ADD_NEW_USER_TEMPLATE_ID}"
             - name: NOTIFICATION_EXISTING_USER_TEMPLATE_ID
               value: "${NOTIFICATION_EXISTING_USER_TEMPLATE_ID}"
+            - name: AZURE_CLIENT_SCOPES
+              value: "${AZURE_CLIENT_SCOPES}"
