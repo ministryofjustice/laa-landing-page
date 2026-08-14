@@ -64,14 +64,14 @@ metadata:
   name: zap-scan
   namespace: ${NAMESPACE}
 spec:
-  schedule: "48 13 * * 1-5" # At 03:00 on Monday through Friday
+  schedule: "0 3 * * 1-5" # At 03:00 on Monday through Friday
   timeZone: Europe/London
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
   jobTemplate:
     spec:
-      ttlSecondsAfterFinished: 3600
+      ttlSecondsAfterFinished: 86400
       backoffLimit: 3
       activeDeadlineSeconds: 900
       template:
