@@ -26,6 +26,10 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import uk.gov.justice.laa.portal.landingpage.audit.ReactivateUserRequestApprovedAuditEvent;
+import uk.gov.justice.laa.portal.landingpage.audit.ReactivateUserRequestRejectedAuditEvent;
+import uk.gov.justice.laa.portal.landingpage.audit.ReactivateUserRequestUpdatedAuditEvent;
+import uk.gov.justice.laa.portal.landingpage.audit.ReactivateUserRequestSubmittedAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import static uk.gov.justice.laa.portal.landingpage.controller.UserController.buildErrorString;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
@@ -39,6 +43,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.forms.DelegateReactivateUserCommentForm;
 import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
+import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
 import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
@@ -55,6 +60,7 @@ public class UserActivationController {
     private final UserReactivationRequestService userReactivationRequestService;
     private final AccessControlService accessControlService;
     private final UserAccountStatusService userAccountStatusService;
+    private final EventService eventService;
 
     @Value("${feature.flag.disable.user}")
     public boolean disableUserFeatureEnabled;
@@ -68,10 +74,13 @@ public class UserActivationController {
                                             HttpSession session,
                                             Model model,
                                             String referer,
-                                            UUID profileId,
+                                            String profileId,
                                             Authentication authentication,
                                             RedirectAttributes redirectAttributes) {
+        log.info("Initiating delegate reactivate GET flow for userId: {} and profileId: {}", id, profileId);
+
         if (!disableUserFeatureEnabled) {
+            log.info("Delegate reactivate feature disabled. Throwing 404 for userId: {}", id);
             throw new ResponseStatusException(HttpStatusCode.valueOf(404));
         }
         clearSessionAttributes(session);
@@ -81,10 +90,10 @@ public class UserActivationController {
         if (request.isPresent()
                 && !(ReactivationRequestStatus.REJECTED.equals(request.get().getStatus())
                 || ReactivationRequestStatus.APPROVED.equals(request.get().getStatus()))) {
+            log.info("Delegate reactivation request already in progress for profileId: {}, requestId: {}", profileId, request.get().getId());
             redirectAttributes.addFlashAttribute("errorMessage", "A delegate request is already in progress");
-            redirectAttributes.addFlashAttribute("requestId", request.get().getId());
+            redirectAttributes.addFlashAttribute("requestId", request.get().getId().toString());
             return "redirect:/admin/users/manage/" + profileId;
-
         }
 
         EntraUser currentEntraUser = loginService.getCurrentEntraUser(authentication);
@@ -107,9 +116,12 @@ public class UserActivationController {
                                              Model model,
                                              HttpSession session,
                                              String referer,
-                                             UUID profileId) {
+                                             String profileId) {
+        log.info("Processing delegate reactivate POST for userId: {} and profileId: {}", id, profileId);
+
         String idFromSession = getObjectFromHttpSession(session, "delegateReactivateUserId", String.class).orElseThrow();
         if (id == null || !id.equals(idFromSession)) {
+            log.info("Session validation failed in delegateReactivateUserPost. Path ID: {}, Session ID: {}", id, idFromSession);
             throw new ResponseStatusException(HttpStatusCode.valueOf(403));
         }
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
@@ -127,23 +139,26 @@ public class UserActivationController {
     @GetMapping("/user/delegate-reactivate-user-comment/{id}")
     @PreAuthorize("@accessControlService.canDelegateEnableUser(#id)")
     public String delegateReactivateUserCommentsGet(@PathVariable String id,
-                                                   Model model,
-                                                   HttpSession session) {
+                                                    Model model,
+                                                    HttpSession session) {
+        log.info("Rendering delegate reactivate comment view for userId: {}", id);
+
         if (!disableUserFeatureEnabled) {
+            log.info("Delegate reactivate feature disabled. Throwing 404 for userId: {}", id);
             throw new ResponseStatusException(HttpStatusCode.valueOf(404));
         }
 
         String idFromSession = getObjectFromHttpSession(session, "delegateReactivateUserId", String.class).orElseThrow();
         if (id == null || !id.equals(idFromSession)) {
+            log.info("Session mismatch on delegateReactivateUserCommentsGet. Path ID: {}, Session ID: {}", id, idFromSession);
             throw new ResponseStatusException(HttpStatusCode.valueOf(403));
         }
 
-        UUID profileId = getObjectFromHttpSession(session, "profileId", UUID.class).orElseThrow();
+        String profileId = getObjectFromHttpSession(session, "profileId", String.class).orElseThrow();
 
         DelegateReactivateUserCommentForm delegateReactivateUserCommentForm =
                 getObjectFromHttpSession(session, "delegateReactivateUserCommentForm", DelegateReactivateUserCommentForm.class)
                         .orElse(new DelegateReactivateUserCommentForm());
-
 
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
         model.addAttribute("user", user);
@@ -157,14 +172,16 @@ public class UserActivationController {
     @PostMapping("/user/delegate-reactivate-user-comment/{id}")
     @PreAuthorize("@accessControlService.canDelegateEnableUser(#id)")
     public String delegateReactivateUserCommentsPost(@PathVariable String id,
-                                                    @Valid DelegateReactivateUserCommentForm delegateReactivateUserCommentForm,
-                                                    BindingResult result,
-                                                    Model model,
-                                                    HttpSession session) {
+                                                     @Valid DelegateReactivateUserCommentForm delegateReactivateUserCommentForm,
+                                                     BindingResult result,
+                                                     Model model,
+                                                     HttpSession session) {
+        log.info("Processing delegate reactivate comments POST for userId: {}", id);
 
-        UUID profileId = getObjectFromHttpSession(session, "profileId", UUID.class).orElseThrow();
+        String profileId = getObjectFromHttpSession(session, "profileId", String.class).orElseThrow();
 
         if (result.hasErrors()) {
+            log.info("Validation errors encountered on comment form for userId: {}", id);
             String errorMessage = buildErrorString(result);
             EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
             model.addAttribute("user", user);
@@ -187,22 +204,25 @@ public class UserActivationController {
     @GetMapping("/user/delegate-reactivate-user-check-answers/{id}")
     @PreAuthorize("@accessControlService.canDelegateEnableUser(#id)")
     public String delegateReactivateUserCommentsCheckAnswersGet(@PathVariable String id,
-                                                               Model model,
-                                                               HttpSession session) {
+                                                                Model model,
+                                                                HttpSession session) {
+        log.info("Rendering check-answers step for userId: {}", id);
+
         if (!disableUserFeatureEnabled) {
+            log.info("Delegate reactivate feature disabled. Throwing 404 for userId: {}", id);
             throw new ResponseStatusException(HttpStatusCode.valueOf(404));
         }
 
         String idFromSession = getObjectFromHttpSession(session, "delegateReactivateUserId", String.class).orElseThrow();
         if (id == null || !id.equals(idFromSession)) {
+            log.info("Session mismatch in check-answers view for userId: {}", id);
             throw new ResponseStatusException(HttpStatusCode.valueOf(403));
         }
 
-        UUID profileId = getObjectFromHttpSession(session, "profileId", UUID.class).orElseThrow();
+        String profileId = getObjectFromHttpSession(session, "profileId", String.class).orElseThrow();
         DelegateReactivateUserCommentForm delegateReactivateUserCommentForm =
                 getObjectFromHttpSession(session, "delegateReactivateUserCommentForm", DelegateReactivateUserCommentForm.class)
                         .orElseThrow();
-
 
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
         model.addAttribute("user", user);
@@ -215,15 +235,19 @@ public class UserActivationController {
     @PostMapping("/user/delegate-reactivate-user-check-answers/{id}")
     @PreAuthorize("@accessControlService.canDelegateEnableUser(#id)")
     public String delegateReactivateUserCommentsCheckAnswersPost(@PathVariable String id,
-                                                                Authentication authentication,
-                                                                Model model,
-                                                                HttpSession session) {
+                                                                 Authentication authentication,
+                                                                 Model model,
+                                                                 HttpSession session) {
+        log.info("Submitting delegate reactivate request for userId: {}", id);
+
         if (!disableUserFeatureEnabled) {
+            log.info("Delegate reactivate feature disabled. Throwing 404 for userId: {}", id);
             throw new ResponseStatusException(HttpStatusCode.valueOf(404));
         }
 
         String idFromSession = getObjectFromHttpSession(session, "delegateReactivateUserId", String.class).orElseThrow();
         if (id == null || !id.equals(idFromSession)) {
+            log.info("Bad Request: Path ID {} does not match session ID {}", id, idFromSession);
             throw new ResponseStatusException(HttpStatusCode.valueOf(400));
         }
 
@@ -231,18 +255,24 @@ public class UserActivationController {
                 getObjectFromHttpSession(session, "delegateReactivateUserCommentForm", DelegateReactivateUserCommentForm.class)
                         .orElseThrow();
 
-        UUID profileId = getObjectFromHttpSession(session, "profileId", UUID.class).orElseThrow();
+        String profileId = getObjectFromHttpSession(session, "profileId", String.class).orElseThrow();
         UserProfileDto userProfile = userService.getActiveProfileByUserId(id).orElseThrow();
-        if (!userProfile.getId().equals(profileId)) {
+        if (!userProfile.getId().equals(UUID.fromString(profileId))) {
+            log.info("Profile mismatch: profileId from session ({}) does not match active profileId ({}) for userId: {}",
+                    profileId, userProfile.getId(), id);
             throw new ResponseStatusException(HttpStatusCode.valueOf(400));
         }
 
         EntraUser user = loginService.getCurrentEntraUser(authentication);
         CurrentUserDto actor = loginService.getCurrentUser(authentication);
+        CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
 
         UserActivationRequest userActivationRequest = userReactivationRequestService
-                .createNewRequest(UUID.randomUUID(), profileId, delegateReactivateUserCommentForm.getComment(), user.getEntraOid());
+                .createReactivationRequest(id, profileId, delegateReactivateUserCommentForm.getComment(), user.getEntraOid());
         log.info("A delegate enable user request {} has been raised by {} for {}", userActivationRequest.getRequestId(), actor.getUserId(), id);
+
+        ReactivateUserRequestSubmittedAuditEvent event = new ReactivateUserRequestSubmittedAuditEvent(currentUserDto, id, profileId);
+        eventService.logEvent(event);
 
         model.addAttribute("user", user);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User");
@@ -256,9 +286,12 @@ public class UserActivationController {
                                                          HttpSession session,
                                                          Model model,
                                                          String referer,
-                                                         UUID profileId,
+                                                         String profileId,
                                                          RedirectAttributes redirectAttributes) {
+        log.debug("Tracking delegate reactivate requests for userId: {}, profileId: {}", id, profileId);
+
         if (!disableUserFeatureEnabled) {
+            log.info("Delegate reactivate feature disabled. Throwing 404 for userId: {}", id);
             throw new ResponseStatusException(HttpStatusCode.valueOf(404));
         }
 
@@ -266,11 +299,13 @@ public class UserActivationController {
         Optional<UserActivationRequest> request = userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId);
 
         if (request.isEmpty()) {
+            log.info("No delegate activation request found to track for profileId: {}", profileId);
             redirectAttributes.addFlashAttribute("errorMessage", "There is no open delegate activation request");
             return "redirect:/admin/users/manage/" + profileId;
         } else if (ReactivationRequestStatus.APPROVED.equals(request.get().getStatus())) {
+            log.info("Delegate activation request already APPROVED for profileId: {}", profileId);
             redirectAttributes.addFlashAttribute("errorMessage", "There is no open delegate activation request");
-            request.ifPresent(userActivationRequest -> redirectAttributes.addFlashAttribute("requestId", userActivationRequest.getId()));
+            request.ifPresent(userActivationRequest -> redirectAttributes.addFlashAttribute("requestId", userActivationRequest.getId().toString()));
             return "redirect:/admin/users/manage/" + profileId;
         }
 
@@ -286,7 +321,7 @@ public class UserActivationController {
         model.addAttribute("user", user);
         model.addAttribute("profileId", profileId);
         model.addAttribute("referer", referer);
-        model.addAttribute("requestId", request.get().getRequestId());
+        model.addAttribute("requestId", request.get().getRequestId().toString());
 
         List<UserActivationRequestSummaryDto> latestRequestHistoryForUserProfile
                 = userReactivationRequestService.getLatestRequestHistoryForUserProfile(profileId);
@@ -299,15 +334,18 @@ public class UserActivationController {
     @PostMapping("/user/delegate-reactivate/track/{id}")
     @PreAuthorize("@accessControlService.canTrackDelegateEnableUser(#id)")
     public String trackDelegateReactivateUserRequestsPost(
-            @PathVariable UUID id,
-            @RequestParam UUID profileId,
-            @RequestParam UUID requestId,
+            @PathVariable String id,
+            @RequestParam String profileId,
+            @RequestParam String requestId,
             @Valid @ModelAttribute("delegateReactivateUserCommentForm") DelegateReactivateUserCommentForm delegateReactivateUserCommentForm,
             BindingResult bindingResult,
             Authentication authentication,
             RedirectAttributes redirectAttributes) {
 
+        log.debug("Updating tracking info for request ID: {}, profile ID: {}", requestId, profileId);
+
         if (bindingResult.hasErrors()) {
+            log.info("Validation errors encountered while updating tracking for requestId: {}", requestId);
             String errorMessage = buildErrorString(bindingResult);
 
             redirectAttributes.addFlashAttribute(BindingResult.MODEL_KEY_PREFIX + "delegateReactivateUserCommentForm", bindingResult);
@@ -324,9 +362,13 @@ public class UserActivationController {
         EntraUser user = loginService.getCurrentEntraUser(authentication);
         CurrentUserDto actor = loginService.getCurrentUser(authentication);
 
-        ReactivationRequestStatus reactivationRequestStatus = userReactivationRequestService.calculateNextReactivationRequestStatus(authentication);
-        userReactivationRequestService.saveRequestState(requestId, profileId, reactivationRequestStatus, delegateReactivateUserCommentForm.getComment(), user.getEntraOid());
+        UserActivationRequest request = userReactivationRequestService.updateReactivateRequestState(requestId, id, profileId,
+                delegateReactivateUserCommentForm.getComment(), user.getEntraOid());
         log.info("A delegate enable user request {} has been updated by {} for {}", requestId, actor.getUserId(), id);
+
+        String activity = ReactivationRequestStatus.IN_REVIEW.equals(request.getStatus()) ? "information provided" : "information requested";
+        ReactivateUserRequestUpdatedAuditEvent event = new ReactivateUserRequestUpdatedAuditEvent(actor, id, profileId, activity);
+        eventService.logEvent(event);
 
         redirectAttributes.addAttribute("id", id);
         redirectAttributes.addAttribute("profileId", profileId);
@@ -338,12 +380,15 @@ public class UserActivationController {
     @GetMapping("/user/delegate-reactivate/reject/{id}")
     @PreAuthorize("@accessControlService.canManageDelegateEnableUser(#id)")
     public String rejectDelegateReactivateUserRequestsGet(@PathVariable String id,
-                                                         HttpSession session,
-                                                         Model model,
-                                                         String referer,
-                                                         UUID profileId,
-                                                         RedirectAttributes redirectAttributes) {
+                                                          HttpSession session,
+                                                          Model model,
+                                                          String referer,
+                                                          String profileId,
+                                                          RedirectAttributes redirectAttributes) {
+        log.info("Rendering rejection form for userId: {}, profileId: {}", id, profileId);
+
         if (!disableUserFeatureEnabled) {
+            log.info("Delegate reactivate feature disabled. Throwing 404 for userId: {}", id);
             throw new ResponseStatusException(HttpStatusCode.valueOf(404));
         }
 
@@ -351,11 +396,13 @@ public class UserActivationController {
         Optional<UserActivationRequest> request = userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId);
 
         if (request.isEmpty()) {
+            log.info("No delegate activation request found to reject for profileId: {}", profileId);
             redirectAttributes.addFlashAttribute("errorMessage", "There is no open delegate activation request");
             return "redirect:/admin/users/manage/" + profileId;
         } else if (ReactivationRequestStatus.APPROVED.equals(request.get().getStatus()) || ReactivationRequestStatus.REJECTED.equals(request.get().getStatus())) {
+            log.info("Delegate activation request for profileId: {} is already in status: {}", profileId, request.get().getStatus());
             redirectAttributes.addFlashAttribute("errorMessage", "There is no open delegate activation request");
-            request.ifPresent(userActivationRequest -> redirectAttributes.addFlashAttribute("requestId", userActivationRequest.getId()));
+            request.ifPresent(userActivationRequest -> redirectAttributes.addFlashAttribute("requestId", userActivationRequest.getId().toString()));
             return "redirect:/admin/users/manage/" + profileId;
         }
 
@@ -368,7 +415,7 @@ public class UserActivationController {
         model.addAttribute("user", user);
         model.addAttribute("profileId", profileId);
         model.addAttribute("referer", referer);
-        model.addAttribute("requestId", request.get().getRequestId());
+        model.addAttribute("requestId", request.get().getRequestId().toString());
 
         List<UserActivationRequestSummaryDto> latestRequestHistoryForUserProfile
                 = userReactivationRequestService.getLatestRequestHistoryForUserProfile(profileId);
@@ -384,14 +431,17 @@ public class UserActivationController {
             @PathVariable String id,
             HttpSession session,
             Model model,
-            @RequestParam UUID profileId,
-            @RequestParam UUID requestId,
+            @RequestParam String profileId,
+            @RequestParam String requestId,
             @Valid @ModelAttribute("delegateReactivateUserCommentForm") DelegateReactivateUserCommentForm delegateReactivateUserCommentForm,
             BindingResult bindingResult,
             Authentication authentication,
             RedirectAttributes redirectAttributes) {
 
+        log.info("Processing rejection POST for requestId: {}, userId: {}", requestId, id);
+
         if (bindingResult.hasErrors()) {
+            log.info("Validation errors during rejection of requestId: {}", requestId);
             String errorMessage = buildErrorString(bindingResult);
 
             redirectAttributes.addFlashAttribute(BindingResult.MODEL_KEY_PREFIX + "delegateReactivateUserCommentForm", bindingResult);
@@ -408,8 +458,11 @@ public class UserActivationController {
         EntraUser user = loginService.getCurrentEntraUser(authentication);
         CurrentUserDto actor = loginService.getCurrentUser(authentication);
 
-        userReactivationRequestService.saveRequestState(requestId, profileId, ReactivationRequestStatus.REJECTED, delegateReactivateUserCommentForm.getComment(), user.getEntraOid());
+        userReactivationRequestService.rejectReactivationRequest(requestId, id, profileId, delegateReactivateUserCommentForm.getComment(), user.getEntraOid());
         log.info("A delegate enable user request {} has been rejected by {} for {}", requestId, actor.getUserId(), id);
+
+        ReactivateUserRequestRejectedAuditEvent event = new ReactivateUserRequestRejectedAuditEvent(actor, id, profileId);
+        eventService.logEvent(event);
 
         clearSessionAttributes(session);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User");
@@ -426,15 +479,23 @@ public class UserActivationController {
             @PathVariable String id,
             HttpSession session,
             Model model,
-            @RequestParam UUID profileId,
-            @RequestParam UUID requestId,
+            @RequestParam String profileId,
+            @RequestParam String requestId,
             Authentication authentication) {
+
+        log.info("Processing approval POST for requestId: {}, userId: {}", requestId, id);
+
         EntraUser user = loginService.getCurrentEntraUser(authentication);
         CurrentUserDto actor = loginService.getCurrentUser(authentication);
 
-        userReactivationRequestService.saveRequestState(requestId, profileId, ReactivationRequestStatus.APPROVED, "Approved", user.getEntraOid());
-        userAccountStatusService.enableUser(UUID.fromString(id), user.getId());
+        userReactivationRequestService.approveReactivationRequest(requestId, id, profileId, user.getEntraOid());
         log.info("A delegate enable user request {} has been approved by {} for {}", requestId, actor.getUserId(), id);
+
+        ReactivateUserRequestApprovedAuditEvent event = new ReactivateUserRequestApprovedAuditEvent(actor, id, profileId);
+        eventService.logEvent(event);
+
+        userAccountStatusService.enableUser(UUID.fromString(id), user.getId());
+        log.info("User {} has been enabled successfully by {}", id, user.getId());
 
         clearSessionAttributes(session);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User");
@@ -459,10 +520,13 @@ public class UserActivationController {
             Model model,
             Authentication authentication) {
 
+        log.debug("Fetching reactivation requests list. Page: {}, Size: {}, Search: '{}'", page, size, search);
+
         var pageMode = userReactivationRequestService.getPageMode(authentication);
 
         // For manage roles, stamp the default status into the URL once so the default is explicit and user-clearable.
         if (pageMode.isManageMode() && !defaultStatusApplied && (selectedRequestStatuses == null || selectedRequestStatuses.isEmpty())) {
+            log.debug("Applying default status filter IN_REVIEW for manage mode redirect.");
             UriComponentsBuilder builder = UriComponentsBuilder.fromPath("/admin/users/reactivation-requests")
                     .queryParam("size", size)
                     .queryParam("page", page)
@@ -520,6 +584,7 @@ public class UserActivationController {
     }
 
     public void clearSessionAttributes(HttpSession session) {
+        log.debug("Clearing delegate reactivation session attributes");
         session.removeAttribute("user");
         session.removeAttribute("delegateReactivateUserId");
         session.removeAttribute("delegateReactivateUserCommentForm");

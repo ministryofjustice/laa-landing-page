@@ -19,6 +19,8 @@ public interface UserActivationRequestRepository extends JpaRepository<UserActiv
 
     Optional<UserActivationRequest> findFirstByRequestIdOrderByVersionDesc(UUID requestId);
 
+    Optional<UserActivationRequest> findFirstByRequestIdOrderByVersionAsc(UUID requestId);
+
     Optional<UserActivationRequest> findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(UUID userProfileId);
 
     List<UserActivationRequest> findAllByRequestIdOrderByVersionAsc(UUID requestId);

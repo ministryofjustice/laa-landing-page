@@ -408,7 +408,7 @@ public class UserController {
         final boolean canDisableUser = disableUserFeatureEnabled
                 && accessControlService.canDisableUser(user.getEntraUser().getId());
         model.addAttribute("canDisableUser", canDisableUser);
-        Optional<UserActivationRequest> userActivationRequest = userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(UUID.fromString(id));
+        Optional<UserActivationRequest> userActivationRequest = userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(id);
         boolean isActiveDelegateRequestPresent = userActivationRequest.isPresent()
                 && !(userActivationRequest.get().getStatus() == ReactivationRequestStatus.APPROVED
                 || userActivationRequest.get().getStatus() == ReactivationRequestStatus.REJECTED);

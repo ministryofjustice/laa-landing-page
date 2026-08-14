@@ -26,6 +26,12 @@ public class NotificationService {
     private static final String REFERENCE_TEMPLATE_REVOKE_FIRM_ACCESS = "laa-portal-notice-of-revoke-firm-access-%s";
     private static final String REFERENCE_TEMPLATE_ACCESS_CHANGE = "laa-portal-notice-of-access-change-%s";
     private static final String REFERENCE_TEMPLATE_EXISTING_USER = "laa-portal-notice-of-existing-user-%s";
+
+    private static final String REFERENCE_TEMPLATE_REACTIVATION_REQUEST_SUBMIT = "laa-portal-notice-of-delegate-reactivation-request-submit-%s";
+    private static final String REFERENCE_TEMPLATE_REACTIVATION_REQUEST_INFO_REQ = "laa-portal-notice-of-reactivation-request-info-req-%s";
+    private static final String REFERENCE_TEMPLATE_REACTIVATION_REQUEST_APPROVED = "laa-portal-notice-of-reactivation-request-approved-%s";
+    private static final String REFERENCE_TEMPLATE_REACTIVATION_REQUEST_REJECTED = "laa-portal-notice-of-reactivation-request-rejected-%s";
+
     private static final String USER_NAME = "name";
     private static final String INVITATION_URL = "invitationURL";
     private static final String PORTAL_URL = "portalURL";
@@ -122,6 +128,94 @@ public class NotificationService {
                     )
             );
             log.info("Existing user notification email sent for User ID: {}", userProfileId);
+        }
+    }
+
+    public void notifyReactivationRequestSubmitted(String actorUserId, String recipientFirstName, String recipientEmail, String recipientId, String targetUserProfileId, String targetEmail) {
+        log.info("Starting submit user reactivation request notification by Actor User ID {} for User Profile ID: {} to User ID: {}",
+                actorUserId, targetUserProfileId, recipientId);
+        if (null != recipientEmail) {
+            emailService.sendMail(
+                    recipientEmail,
+                    notificationProperties.getReactivationRequestSubmittedEmailTemplate(),
+                    Map.of("first_name", recipientFirstName,
+                            "email", targetEmail),
+                    String.format(
+                            REFERENCE_TEMPLATE_REACTIVATION_REQUEST_SUBMIT,
+                            targetUserProfileId
+                    )
+            );
+            log.info("Reactivate user request by User ID {} on User Profile ID {} notification sent to User ID: {}",
+                    actorUserId, targetUserProfileId, recipientId);
+        } else {
+            log.info("Skipping the submit user reactivation request notification by Actor User ID {} for User Profile ID: {} "
+                    + "to User ID: {}, because email is empty.", actorUserId, targetUserProfileId, recipientId);
+        }
+    }
+
+    public void notifyReactivationRequestInfoRequested(String actorUserId, String recipientFirstName, String recipientEmail, String recipientId, String targetUserProfileId, String targetEmail) {
+        log.info("Reactivate request - Starting more info requested for reactivation request notification by Actor User ID {} for User Profile ID: {}",
+                actorUserId, targetUserProfileId);
+        if (null != recipientEmail) {
+            emailService.sendMail(
+                    recipientEmail,
+                    notificationProperties.getReactivationRequestInfoRequestedEmailTemplate(),
+                    Map.of("first_name", recipientFirstName,
+                            "email", targetEmail),
+                    String.format(
+                            REFERENCE_TEMPLATE_REACTIVATION_REQUEST_INFO_REQ,
+                            targetUserProfileId
+                    )
+            );
+            log.info("Reactivate request - More info requested by User ID {} on User Profile ID {} notification sent to User ID: {}",
+                    actorUserId, targetUserProfileId, recipientId);
+        } else {
+            log.info("Reactivate request - Skipping More info requested by User ID {} on User Profile ID {} notification sent to User ID: {}, because email id empty.",
+                    actorUserId, targetUserProfileId, recipientId);
+        }
+    }
+
+    public void notifyReactivationRequestApproved(String actorUserId, String recipientFirstName, String recipientEmail, String recipientId, String targetUserProfileId, String targetEmail) {
+        log.info("Reactivate request - Starting request approved notification by Actor User ID {} for User Profile ID: {} to User ID: {}",
+                actorUserId, targetUserProfileId, recipientId);
+        if (null != recipientEmail) {
+            emailService.sendMail(
+                    recipientEmail,
+                    notificationProperties.getReactivationRequestApprovedEmailTemplate(),
+                    Map.of("first_name", recipientFirstName,
+                            "email", targetEmail),
+                    String.format(
+                            REFERENCE_TEMPLATE_REACTIVATION_REQUEST_APPROVED,
+                            targetUserProfileId
+                    )
+            );
+            log.info("Reactivate request - Request approved by User ID {} on User Profile ID {} notification sent to User ID: {}",
+                    actorUserId, targetUserProfileId, recipientId);
+        } else {
+            log.info("Reactivate request - Skipping Request approved by User ID {} on User Profile ID {} notification sent to User ID: {}, because email is empty.",
+                    actorUserId, targetUserProfileId, recipientId);
+        }
+    }
+
+    public void notifyReactivationRequestRejected(UUID actorUserId, String recipientFirstName, String recipientEmail, String recipientId, String targetUserProfileId, String targetEmail) {
+        log.info("Reactivate request - Starting request rejected notification by Actor User ID {} for User Profile ID: {} to User ID: {}",
+                actorUserId, targetUserProfileId, recipientId);
+        if (null != recipientEmail) {
+            emailService.sendMail(
+                    recipientEmail,
+                    notificationProperties.getReactivationRequestRejectedEmailTemplate(),
+                    Map.of("first_name", recipientFirstName,
+                            "email", targetEmail),
+                    String.format(
+                            REFERENCE_TEMPLATE_REACTIVATION_REQUEST_REJECTED,
+                            targetUserProfileId
+                    )
+            );
+            log.info("Reactivate request - Request rejection by User ID {} on User Profile ID {} notification sent to User ID: {}",
+                    actorUserId, targetUserProfileId, recipientId);
+        } else {
+            log.info("Reactivate request - Skipping Request rejection by User ID {} on User Profile ID {} notification sent to User ID: {}, because email is empty.",
+                    actorUserId, targetUserProfileId, recipientId);
         }
     }
 
