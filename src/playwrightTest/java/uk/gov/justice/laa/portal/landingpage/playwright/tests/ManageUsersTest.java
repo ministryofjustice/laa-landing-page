@@ -1531,5 +1531,146 @@ public class ManageUsersTest extends BaseFrontEndTest {
         ).not().isVisible();
     }
 
+    @Test
+    @DisplayName("Multi-firm user can switch between delegated firms")
+    void multiFirmUserCanSwitchBetweenDelegatedFirms() {
+        final String firstFirmCode = "90001";
+        final String secondFirmCode = "90002";
+
+        final String firstFirmName = "Automation Firm One";
+        final String secondFirmName = "Automation Firm Two";
+
+        final List<String> services = List.of(
+                "Test LAA App Four"
+        );
+
+        final List<String> roles = List.of(
+                "Test LAA App Four Role One Access"
+        );
+
+        final List<String> firstFirmOffices = List.of(
+                "THREE"
+        );
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        // Create the multi-firm user and delegate access to the first firm
+        final String email =
+                manageUsersPage.createMultiFirmUserAndDelegateAccess(
+                        firstFirmCode,
+                        services,
+                        roles,
+                        firstFirmOffices
+                );
+
+        // Delegate access to the second firm
+        manageUsersPage.delegateAdditionalFirmAccess(
+                email,
+                secondFirmCode,
+                services,
+                roles
+        );
+
+        // Return to Manage Your Users after the second delegation
+        manageUsersPage.clickGoBackToManageUsers();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Sign out as Global Admin
+        manageUsersPage.clickAndConfirmSignOut();
+
+        // Sign in as the newly created multi-firm user
+        loginAs(email);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Verify the user lands on the home page
+        assertTrue(
+                page.url().endsWith("/home"),
+                "The multi-firm user should land on the home page"
+        );
+
+        // Verify Switch firm is available
+        Locator switchFirmLink = page.getByRole(
+                AriaRole.LINK,
+                new Page.GetByRoleOptions()
+                        .setName("Switch firm")
+                        .setExact(true)
+        );
+
+        assertThat(switchFirmLink).isVisible();
+
+        // Open Switch firm page
+        switchFirmLink.click();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Verify the user is on the Switch firm page
+        assertTrue(
+                page.url().contains("/switch-firm"),
+                "The multi-firm user should be taken to the Switch firm page"
+        );
+
+        // Verify both delegated firms are selectable
+        Locator firstFirmButton = page.getByRole(
+                AriaRole.BUTTON,
+                new Page.GetByRoleOptions()
+                        .setName(firstFirmName)
+                        .setExact(true)
+        );
+
+        Locator secondFirmButton = page.getByRole(
+                AriaRole.BUTTON,
+                new Page.GetByRoleOptions()
+                        .setName(secondFirmName)
+                        .setExact(true)
+        );
+
+        assertThat(firstFirmButton).isVisible();
+        assertThat(secondFirmButton).isVisible();
+
+        // Switch to the second firm
+        secondFirmButton.click();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Verify the user returns to the home page
+        assertTrue(
+                page.url().endsWith("/home"),
+                "The user should return to the home page after switching firm"
+        );
+
+        // Verify successful firm switch banner
+        Locator successBanner =
+                page.locator("#firm-switch-success-banner");
+
+        assertThat(successBanner).isVisible();
+
+        assertThat(
+                successBanner.getByText(
+                        "You are now working on behalf of " + secondFirmName,
+                        new Locator.GetByTextOptions()
+                                .setExact(true)
+                )
+        ).isVisible();
+
+        // Verify the active firm shown on the home page has changed
+        assertThat(
+                page.getByText(
+                        secondFirmName + " - " + secondFirmCode,
+                        new Page.GetByTextOptions()
+                                .setExact(true)
+                )
+        ).isVisible();
+
+        // Verify delegated service is available under the second firm
+        assertThat(
+                page.getByRole(
+                        AriaRole.LINK,
+                        new Page.GetByRoleOptions()
+                                .setName("Test LAA App Four")
+                )
+        ).isVisible();
+    }
+
+
+
 
 }

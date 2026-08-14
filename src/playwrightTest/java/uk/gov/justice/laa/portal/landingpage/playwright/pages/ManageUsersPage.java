@@ -1222,6 +1222,60 @@ public class ManageUsersPage {
         return email;
     }
 
+    public void delegateAdditionalFirmAccess(
+            String email,
+            String firmCode,
+            List<String> services,
+            List<String> roles
+    ) {
+        // Return to Manage Your Users after first delegation
+        clickGoBackToManageUsers();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        verifyDelegateAccessButtonVisible();
+        clickDelegateAccess();
+
+        verifyDelegateAccessProfilePageVisible();
+        enterDelegateAccessEmail(email);
+        clickDelegateAccessContinue();
+
+        verifyDelegateAccessFirmSelectionPageVisible();
+        searchAndSelectFirmByCode(firmCode);
+        clickContinueFirmSelectPage();
+
+        checkSelectedServices(services);
+        clickContinueUserDetails();
+
+        checkSelectedRoles(roles);
+        clickContinueUserDetails();
+
+        // Firm 2 may have different offices, so select one that actually exists
+        checkFirstAvailableOffice();
+        clickContinueUserDetails();
+
+        clickConfirmButton();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+
+    public void checkFirstAvailableOffice() {
+        Locator firstOfficeCheckbox = page.locator(
+                ".govuk-checkboxes__item input[name='offices']"
+        ).first();
+
+        firstOfficeCheckbox.waitFor(
+                new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.VISIBLE)
+                        .setTimeout(10000)
+        );
+
+        if (!firstOfficeCheckbox.isChecked()) {
+            firstOfficeCheckbox.check();
+        }
+
+        assertThat(firstOfficeCheckbox).isChecked();
+    }
+
     public void verifyRevokeAccessLinkVisible() {
         assertThat(revokeAccessLink).isVisible();
     }
