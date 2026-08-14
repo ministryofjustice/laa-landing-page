@@ -215,10 +215,13 @@ public class AppService {
                             log.warn("SKIPPED: Invalid remote app data (id={}, name={}): {}", id, safe(remote.getName()), validationError.get());
                         } else {
                             applyRemoteFieldsToLocal(remote, local);
-                            persistApp(local, syncResult, remote);
-                            syncedApp = toDtoWithChangeType(local, changeType);
-                            updatedApps++;
-                            log.info("{}: Applied remote updates (id={}, name={})", changeType, id, safe(remote.getName()));
+                            if (persistApp(local, syncResult, remote)) {
+                                syncedApp = toDtoWithChangeType(local, changeType);
+                                updatedApps++;
+                                log.info("{}: Applied remote updates (id={}, name={})", changeType, id, safe(remote.getName()));
+                            } else {
+                                syncedApp = toDtoWithChangeType(local, AppDto.ChangeType.NONE);
+                            }
                         }
                         break;
 
@@ -241,22 +244,29 @@ public class AppService {
                     continue;
                 }
                 App newApp = createLocalFromRemote(remote, ++maxOrdinal);
-                persistApp(newApp, syncResult, remote);
-                syncedApp = toDtoWithChangeType(newApp, AppDto.ChangeType.ADDED);
-                newApps++;
+                if (persistApp(newApp, syncResult, remote)) {
+                    syncedApp = toDtoWithChangeType(newApp, AppDto.ChangeType.ADDED);
+                    newApps++;
+                    log.info("ADDED: New app added to DB (oid={}, app id={} and name={})", remote.getId(), remote.getAppId(), safe(remote.getName()));
+                    totalProcessed++;
+                    result.add(syncedApp);
+                    continue;
+                }
                 totalProcessed++;
-                log.info("ADDED: New app added to DB (oid={}, app id={} and name={})", remote.getId(), remote.getAppId(), safe(remote.getName()));
-                result.add(syncedApp);
                 continue;
 
             } else {
                 assert local != null;
                 if (local.isEnabled()) {
                     local.setEnabled(false);
-                    persistApp(local, syncResult, null);
-                    syncedApp = toDtoWithChangeType(local, AppDto.ChangeType.DELETED);
-                    deletedApps++;
-                    log.info("DELETED: App missing from remote; disabled locally (id={}, name={})", id, safe(local.getName()));
+                    if (persistApp(local, syncResult, null)) {
+                        syncedApp = toDtoWithChangeType(local, AppDto.ChangeType.DELETED);
+                        deletedApps++;
+                        log.info("DELETED: App missing from remote; disabled locally (id={}, name={})", id, safe(local.getName()));
+                    } else {
+                        local.setEnabled(true);
+                        syncedApp = toDtoWithChangeType(local, AppDto.ChangeType.NONE);
+                    }
                 } else {
                     noChanges++;
                     syncedApp = toDtoWithChangeType(local, AppDto.ChangeType.NONE);
@@ -285,17 +295,21 @@ public class AppService {
 
     /**
      * Persists a single app change in its own transaction so one bad row cannot roll back others.
+     *
+     * @return true if the app was saved successfully, false if persistence failed
      */
-    private void persistApp(App app, AppSyncResultDto syncResult, GetAllApplicationsResponse.TechServicesApplication remote) {
+    private boolean persistApp(App app, AppSyncResultDto syncResult, GetAllApplicationsResponse.TechServicesApplication remote) {
         TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
         transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         try {
             transactionTemplate.executeWithoutResult(status -> appRepository.save(app));
+            return true;
         } catch (DataAccessException e) {
             log.error("Failed to persist app (name={}): {}", safe(app.getName()), e.getMessage());
             syncResult.addError(remote != null
-                    ? buildErrorMessage(remote, "Failed to save app: " + e.getMessage())
-                    : String.format("Failed to save app '%s': %s", safe(app.getName()), e.getMessage()));
+                    ? buildErrorMessage(remote, "Failed to save app due to a persistence error")
+                    : String.format("Failed to save app '%s' due to a persistence error", safe(app.getName())));
+            return false;
         }
     }
 
