@@ -88,7 +88,7 @@ jobs:
 
       # A snyk.sarif file is generated in the above steps, which is uploaded to GitHub Code Scanning
       - name: Upload result to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4
+        uses: github/codeql-action/upload-sarif@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4
         with:
           sarif_file: sarif_files
 
@@ -114,7 +114,7 @@ jobs:
       - name: Send notification to Slack
         id: slack
         if: always() && env.SHOULD_NOTIFY == 'true' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
-        uses: slackapi/slack-github-action@45a88b9581bfab2566dc881e2cd66d334e621e2c # v3.0.3
+        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
         with:
           payload: |
             {
