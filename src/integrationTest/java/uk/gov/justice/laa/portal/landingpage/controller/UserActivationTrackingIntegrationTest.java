@@ -28,35 +28,6 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         userActivationRequestRepository.deleteAll();
     }
 
-    private EntraUser getEntraUserWith(DisableType disableType, Firm firm) {
-        List<UserProfile> allProfiles = disabledExternalUsersNoRoles.stream()
-                .map(EntraUser::getUserProfiles)
-                .flatMap(Collection::stream)
-                .toList();
-
-        return allProfiles.stream()
-                .filter(u -> u.getEntraUser().getDisableType() == disableType)
-                .filter(u -> u.getFirm().getId() == firm.getId()).findFirst()
-                .map(UserProfile::getEntraUser)
-                .orElseThrow();
-    }
-
-    private void createReactivateRequest(UUID userProfileId,
-                                         String actorOid, ReactivationRoleType actorRoleType) {
-        UserActivationRequest requestByEum = UserActivationRequest
-                .builder()
-                .requestId(UUID.randomUUID())
-                .userProfileId(userProfileId)
-                .version(1)
-                .status(ReactivationRequestStatus.IN_REVIEW)
-                .comments("Integration test reactivation request")
-                .actorEntraOid(actorOid)
-                .actorRoleType(actorRoleType)
-                .createdAt(Instant.now())
-                .build();
-        userActivationRequestRepository.saveAndFlush(requestByEum);
-    }
-
     @Nested
     public class ProviderAdminScenarios {
 
@@ -64,7 +35,7 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
          * FUM Can Enable the user so no access to delegate screens
          */
         @Test
-        public void testProviderAdminCannotAccessDelegateReactivationForUserDisabledBySameFirm() throws Exception {
+        public void cannotAccessDelegateReactivationForUserDisabledBySameFirm() throws Exception {
             EntraUser providerAdmin = firmUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.FIRM, testFirm2);
 
@@ -77,7 +48,7 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
          * FUM Can not access user from different firm, so no access to delegate activate page
          */
         @Test
-        public void testProviderAdminCannotAccessDelegateReactivationForDifferentFirm() throws Exception {
+        public void cannotAccessDelegateReactivationForDifferentFirm() throws Exception {
             EntraUser providerAdmin = firmUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.FIRM, testFirm1);
 
@@ -87,7 +58,7 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         }
 
         @Test
-        public void testProviderAdminCannotAccessDelegateReactivationForSameFirmUserDisabledByPriv() throws Exception {
+        public void cannotAccessDelegateReactivationForSameFirmUserDisabledByPriv() throws Exception {
             EntraUser providerAdmin = firmUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.PRIVILEGED, testFirm2);
 
@@ -97,7 +68,7 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         }
 
         @Test
-        public void testProviderAdminCanAccessDelegateReactivationForSameFirmUserDisabledByEum() throws Exception {
+        public void canAccessDelegateReactivationForSameFirmUserDisabledByEum() throws Exception {
             EntraUser providerAdmin = firmUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
 
@@ -109,7 +80,7 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         }
 
         @Test
-        public void testProviderAdminCanAccessDelegateReactivationForSameFirmUserDisabledByNone() throws Exception {
+        public void canAccessDelegateReactivationForSameFirmUserDisabledByNone() throws Exception {
             EntraUser providerAdmin = firmUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.NONE, testFirm2);
 
@@ -121,7 +92,7 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         }
 
         @Test
-        public void testProviderAdminCanAccessDelegateReactivationForSameFirmUserDisabledBySync() throws Exception {
+        public void canAccessDelegateReactivationForSameFirmUserDisabledBySync() throws Exception {
             EntraUser providerAdmin = firmUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.SYNC, testFirm2);
 
@@ -150,11 +121,13 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         @Test
         public void canAccessDelegateReactivationForSameFirmDisabledByEum() throws Exception {
             EntraUser providerAdmin = firmUserManagers.getFirst();
-            EntraUser externalUser = disabledExternalUsersNoRoles.getLast();
+            EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
                             .with(userOauth2Login(providerAdmin)))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isOk())
+                    .andExpect(view().name("delegate-reactivate-user"))
+                    .andExpect(model().attribute("pageTitle", "Delegate Reactivate User"));
         }
 
         @Test
@@ -206,11 +179,13 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
     public class ExternalUserManagerScenarios {
 
         @Test
-        public void canAccessDelegateReactivationForSameFirmUserDisabledByFirm() throws Exception {
+        public void canAccessDelegateReactivationDisabledByFirm() throws Exception {
             EntraUser eum = internalWithExternalOnlyUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.FIRM, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(eum)))
                     .andExpect(status().isOk())
                     .andExpect(view().name("delegate-reactivate-user"))
@@ -218,7 +193,7 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         }
 
         @Test
-        public void cannotAccessDelegateReactivationForSameFirmUserDisabledByPriv() throws Exception {
+        public void cannotAccessDelegateReactivationDisabledByPriv() throws Exception {
             EntraUser eum = internalWithExternalOnlyUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.PRIVILEGED, testFirm2);
 
@@ -228,11 +203,13 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         }
 
         @Test
-        public void cannotAccessDelegateReactivationForSameFirmUserDisabledByNone() throws Exception {
+        public void canAccessDelegateReactivationDisabledByNone() throws Exception {
             EntraUser eum = internalWithExternalOnlyUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.NONE, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(eum)))
                     .andExpect(status().isOk())
                     .andExpect(view().name("delegate-reactivate-user"))
@@ -240,7 +217,7 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         }
 
         @Test
-        public void canAccessDelegateReactivationForSameFirmUserDisabledBySync() throws Exception {
+        public void canAccessDelegateReactivationUserDisabledBySync() throws Exception {
             EntraUser eum = internalWithExternalOnlyUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.SYNC, testFirm2);
 
@@ -252,7 +229,7 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         }
 
         @Test
-        public void canAccessDelegateReactivationForSameFirmUserDisabledByLaa() throws Exception {
+        public void canAccessDelegateReactivationUserDisabledByLaa() throws Exception {
             EntraUser eum = internalWithExternalOnlyUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
 
@@ -264,13 +241,15 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         }
 
         @Test
-        public void canAccessDelegateReactivationForSameFirmDisabledByEum() throws Exception {
+        public void canAccessDelegateReactivationDisabledByEum() throws Exception {
             EntraUser eum = internalWithExternalOnlyUserManagers.getFirst();
-            EntraUser externalUser = disabledExternalUsersNoRoles.getLast();
+            EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
                             .with(userOauth2Login(eum)))
-                    .andExpect(status().isForbidden());
+                    .andExpect(status().isOk())
+                    .andExpect(view().name("delegate-reactivate-user"))
+                    .andExpect(model().attribute("pageTitle", "Delegate Reactivate User"));
         }
 
         @Test
@@ -308,7 +287,7 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
     public class ExternalUserAdminScenarios {
 
         @Test
-        public void cannotAccessDelegateReactivationForSameFirmUserDisabledByFirm() throws Exception {
+        public void cannotAccessDelegateReactivationUserDisabledByFirm() throws Exception {
             EntraUser eua = externalUserAdmins.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.FIRM, testFirm2);
 
@@ -318,7 +297,7 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         }
 
         @Test
-        public void cannotAccessDelegateReactivationForSameFirmUserDisabledByPriv() throws Exception {
+        public void cannotAccessDelegateReactivationUserDisabledByPriv() throws Exception {
             EntraUser eua = externalUserAdmins.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.PRIVILEGED, testFirm2);
 
@@ -328,7 +307,7 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         }
 
         @Test
-        public void cannotAccessDelegateReactivationForSameFirmUserDisabledByNone() throws Exception {
+        public void cannotAccessDelegateReactivationUserDisabledByNone() throws Exception {
             EntraUser eua = externalUserAdmins.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.NONE, testFirm2);
 
@@ -338,7 +317,7 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         }
 
         @Test
-        public void cannotAccessDelegateReactivationForSameFirmUserDisabledBySync() throws Exception {
+        public void cannotAccessDelegateReactivationUserDisabledBySync() throws Exception {
             EntraUser eua = externalUserAdmins.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.SYNC, testFirm2);
 
@@ -348,7 +327,7 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         }
 
         @Test
-        public void cannotAccessDelegateReactivationForSameFirmUserDisabledByLaa() throws Exception {
+        public void cannotAccessDelegateReactivationUserDisabledByLaa() throws Exception {
             EntraUser eua = externalUserAdmins.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
 
@@ -358,45 +337,13 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         }
 
         @Test
-        public void cannotAccessDelegateReactivationForSameFirmDisabledByEum() throws Exception {
+        public void cannotAccessDelegateReactivationDisabledByEum() throws Exception {
             EntraUser eua = externalUserAdmins.getFirst();
-            EntraUser externalUser = disabledExternalUsersNoRoles.getLast();
+            EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
                             .with(userOauth2Login(eua)))
                     .andExpect(status().isForbidden());
-        }
-
-        @Test
-        public void canAccessManageRequestedByProviderAdmin() throws Exception {
-            EntraUser providerAdmin = firmUserManagers.getFirst();
-            EntraUser eua = externalUserAdmins.getFirst();
-            EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
-            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
-            createReactivateRequest(activeProfile.getId(), providerAdmin.getEntraOid(), ReactivationRoleType.PROVIDER_ADMIN);
-
-            mockMvc.perform(get("/admin/user/delegate-reactivate/track/" + externalUser.getId())
-                            .param("profileId", activeProfile.getId().toString())
-                            .with(userOauth2Login(eua)))
-                    .andExpect(status().isOk())
-                    .andExpect(view().name("delegate-reactivate-user-tracking"))
-                    .andExpect(model().attribute("pageTitle", "Delegate Reactivate User"));
-        }
-
-        @Test
-        public void canAccessTrackRequestedByExternalUserManager() throws Exception {
-            EntraUser eum = internalWithExternalOnlyUserManagers.getFirst();
-            EntraUser eua = externalUserAdmins.getFirst();
-            EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
-            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
-            createReactivateRequest(activeProfile.getId(), eum.getEntraOid(), ReactivationRoleType.LAA_OST);
-
-            mockMvc.perform(get("/admin/user/delegate-reactivate/track/" + externalUser.getId())
-                            .param("profileId", activeProfile.getId().toString())
-                            .with(userOauth2Login(eua)))
-                    .andExpect(status().isOk())
-                    .andExpect(view().name("delegate-reactivate-user-tracking"))
-                    .andExpect(model().attribute("pageTitle", "Delegate Reactivate User"));
         }
     }
 
@@ -404,7 +351,7 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
     public class SecurityResponseScenarios {
 
         @Test
-        public void cannotAccessDelegateReactivationForSameFirmUserDisabledByFirm() throws Exception {
+        public void cannotAccessDelegateReactivationUserDisabledByFirm() throws Exception {
             EntraUser sr = securityResponseUsers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.FIRM, testFirm2);
 
@@ -414,7 +361,7 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         }
 
         @Test
-        public void cannotAccessDelegateReactivationForSameFirmUserDisabledByPriv() throws Exception {
+        public void cannotAccessDelegateReactivationUserDisabledByPriv() throws Exception {
             EntraUser sr = securityResponseUsers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.PRIVILEGED, testFirm2);
 
@@ -424,7 +371,7 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         }
 
         @Test
-        public void cannotAccessDelegateReactivationForSameFirmUserDisabledByNone() throws Exception {
+        public void cannotAccessDelegateReactivationUserDisabledByNone() throws Exception {
             EntraUser sr = securityResponseUsers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.NONE, testFirm2);
 
@@ -434,7 +381,7 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         }
 
         @Test
-        public void cannotAccessDelegateReactivationForSameFirmUserDisabledBySync() throws Exception {
+        public void cannotAccessDelegateReactivationUserDisabledBySync() throws Exception {
             EntraUser sr = securityResponseUsers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.SYNC, testFirm2);
 
@@ -444,7 +391,7 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         }
 
         @Test
-        public void cannotAccessDelegateReactivationForSameFirmUserDisabledByLaa() throws Exception {
+        public void cannotAccessDelegateReactivationUserDisabledByLaa() throws Exception {
             EntraUser sr = securityResponseUsers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
 
@@ -454,45 +401,13 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         }
 
         @Test
-        public void cannotAccessDelegateReactivationForSameFirmDisabledByEum() throws Exception {
+        public void cannotAccessDelegateReactivationDisabledByEum() throws Exception {
             EntraUser sr = securityResponseUsers.getFirst();
-            EntraUser externalUser = disabledExternalUsersNoRoles.getLast();
+            EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
                             .with(userOauth2Login(sr)))
                     .andExpect(status().isForbidden());
-        }
-
-        @Test
-        public void canAccessManageRequestedByProviderAdmin() throws Exception {
-            EntraUser providerAdmin = firmUserManagers.getFirst();
-            EntraUser sr = securityResponseUsers.getFirst();
-            EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
-            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
-            createReactivateRequest(activeProfile.getId(), providerAdmin.getEntraOid(), ReactivationRoleType.PROVIDER_ADMIN);
-
-            mockMvc.perform(get("/admin/user/delegate-reactivate/track/" + externalUser.getId())
-                            .param("profileId", activeProfile.getId().toString())
-                            .with(userOauth2Login(sr)))
-                    .andExpect(status().isOk())
-                    .andExpect(view().name("delegate-reactivate-user-tracking"))
-                    .andExpect(model().attribute("pageTitle", "Delegate Reactivate User"));
-        }
-
-        @Test
-        public void canAccessTrackRequestedByExternalUserManager() throws Exception {
-            EntraUser eum = internalWithExternalOnlyUserManagers.getFirst();
-            EntraUser sr = securityResponseUsers.getFirst();
-            EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
-            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
-            createReactivateRequest(activeProfile.getId(), eum.getEntraOid(), ReactivationRoleType.LAA_OST);
-
-            mockMvc.perform(get("/admin/user/delegate-reactivate/track/" + externalUser.getId())
-                            .param("profileId", activeProfile.getId().toString())
-                            .with(userOauth2Login(sr)))
-                    .andExpect(status().isOk())
-                    .andExpect(view().name("delegate-reactivate-user-tracking"))
-                    .andExpect(model().attribute("pageTitle", "Delegate Reactivate User"));
         }
     }
 
@@ -500,7 +415,7 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
     public class GlobalAdminScenarios {
 
         @Test
-        public void cannotAccessDelegateReactivationForSameFirmUserDisabledByFirm() throws Exception {
+        public void cannotAccessDelegateReactivationUserDisabledByFirm() throws Exception {
             EntraUser ga = globalAdmins.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.FIRM, testFirm2);
 
@@ -510,7 +425,7 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         }
 
         @Test
-        public void cannotAccessDelegateReactivationForSameFirmUserDisabledByPriv() throws Exception {
+        public void cannotAccessDelegateReactivationUserDisabledByPriv() throws Exception {
             EntraUser ga = globalAdmins.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.PRIVILEGED, testFirm2);
 
@@ -520,7 +435,7 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         }
 
         @Test
-        public void cannotAccessDelegateReactivationForSameFirmUserDisabledByNone() throws Exception {
+        public void cannotAccessDelegateReactivationUserDisabledByNone() throws Exception {
             EntraUser ga = globalAdmins.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.NONE, testFirm2);
 
@@ -530,7 +445,7 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         }
 
         @Test
-        public void cannotAccessDelegateReactivationForSameFirmUserDisabledBySync() throws Exception {
+        public void cannotAccessDelegateReactivationUserDisabledBySync() throws Exception {
             EntraUser ga = globalAdmins.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.SYNC, testFirm2);
 
@@ -540,7 +455,7 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         }
 
         @Test
-        public void cannotAccessDelegateReactivationForSameFirmUserDisabledByLaa() throws Exception {
+        public void cannotAccessDelegateReactivationUserDisabledByLaa() throws Exception {
             EntraUser ga = globalAdmins.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
 
@@ -550,46 +465,44 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         }
 
         @Test
-        public void cannotAccessDelegateReactivationForSameFirmDisabledByEum() throws Exception {
+        public void cannotAccessDelegateReactivationDisabledByEum() throws Exception {
             EntraUser ga = globalAdmins.getFirst();
-            EntraUser externalUser = disabledExternalUsersNoRoles.getLast();
+            EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
                             .with(userOauth2Login(ga)))
                     .andExpect(status().isForbidden());
         }
 
-        @Test
-        public void canAccessManageRequestedByProviderAdmin() throws Exception {
-            EntraUser providerAdmin = firmUserManagers.getFirst();
-            EntraUser ga = globalAdmins.getFirst();
-            EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
-            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
-            createReactivateRequest(activeProfile.getId(), providerAdmin.getEntraOid(), ReactivationRoleType.PROVIDER_ADMIN);
+    }
 
-            mockMvc.perform(get("/admin/user/delegate-reactivate/track/" + externalUser.getId())
-                            .param("profileId", activeProfile.getId().toString())
-                            .with(userOauth2Login(ga)))
-                    .andExpect(status().isOk())
-                    .andExpect(view().name("delegate-reactivate-user-tracking"))
-                    .andExpect(model().attribute("pageTitle", "Delegate Reactivate User"));
-        }
+    private EntraUser getEntraUserWith(DisableType disableType, Firm firm) {
+        List<UserProfile> allProfiles = disabledExternalUsersNoRoles.stream()
+                .map(EntraUser::getUserProfiles)
+                .flatMap(Collection::stream)
+                .toList();
 
-        @Test
-        public void canAccessTrackRequestedByExternalUserManager() throws Exception {
-            EntraUser eum = internalWithExternalOnlyUserManagers.getFirst();
-            EntraUser ga = globalAdmins.getFirst();
-            EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
-            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
-            createReactivateRequest(activeProfile.getId(), eum.getEntraOid(), ReactivationRoleType.LAA_OST);
+        return allProfiles.stream()
+                .filter(u -> u.getEntraUser().getDisableType() == disableType)
+                .filter(u -> u.getFirm().getId() == firm.getId()).findFirst()
+                .map(UserProfile::getEntraUser)
+                .orElseThrow();
+    }
 
-            mockMvc.perform(get("/admin/user/delegate-reactivate/track/" + externalUser.getId())
-                            .param("profileId", activeProfile.getId().toString())
-                            .with(userOauth2Login(ga)))
-                    .andExpect(status().isOk())
-                    .andExpect(view().name("delegate-reactivate-user-tracking"))
-                    .andExpect(model().attribute("pageTitle", "Delegate Reactivate User"));
-        }
+    private void createReactivateRequest(UUID userProfileId,
+                                         String actorOid, ReactivationRoleType actorRoleType) {
+        UserActivationRequest requestByEum = UserActivationRequest
+                .builder()
+                .requestId(UUID.randomUUID())
+                .userProfileId(userProfileId)
+                .version(1)
+                .status(ReactivationRequestStatus.IN_REVIEW)
+                .comments("Integration test reactivation request")
+                .actorEntraOid(actorOid)
+                .actorRoleType(actorRoleType)
+                .createdAt(Instant.now())
+                .build();
+        userActivationRequestRepository.saveAndFlush(requestByEum);
     }
 
 }

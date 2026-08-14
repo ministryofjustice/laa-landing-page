@@ -27,4 +27,14 @@ public class NotificationsProperties {
     @NotEmpty
     private String existingUserEmailTemplate;
 
+    @NotEmpty
+    private String reactivationRequestSubmittedEmailTemplate;
+    @NotEmpty
+    private String reactivationRequestInfoRequestedEmailTemplate;
+    @NotEmpty
+    private String reactivationRequestApprovedEmailTemplate;
+    @NotEmpty
+    private String reactivationRequestRejectedEmailTemplate;
+
+
 }
