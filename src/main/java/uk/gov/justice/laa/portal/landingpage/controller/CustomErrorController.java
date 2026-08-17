@@ -35,8 +35,12 @@ public class CustomErrorController implements ErrorController {
         Object exception = request.getAttribute(RequestDispatcher.ERROR_EXCEPTION);
         String requestUri = (String) request.getAttribute(RequestDispatcher.ERROR_REQUEST_URI);
 
-        log.debug("Error occurred - Status: {}, URI: {}, Exception: {}", status, requestUri,
-                exception != null ? exception.getClass().getSimpleName() : "None");
+        // Log at ERROR (with stack trace) so root-cause exceptions are visible with the default INFO log level
+        if (exception instanceof Throwable throwable) {
+            log.error("Error occurred - Status: {}, URI: {}", status, requestUri, throwable);
+        } else {
+            log.info("Error occurred - Status: {}, URI: {}, Exception: None", status, requestUri);
+        }
 
         if (status != null) {
             Integer statusCode = Integer.valueOf(status.toString());
