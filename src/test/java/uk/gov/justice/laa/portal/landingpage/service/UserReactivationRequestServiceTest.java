@@ -371,7 +371,7 @@ class UserReactivationRequestServiceTest {
             given(userActivationRequestRepository.findFirstByRequestIdOrderByVersionAsc(REQUEST_ID)).willReturn(Optional.of(initialRequest));
 
             given(entraUserRepository.findByEntraOid(INITIAL_ACTOR_ENTRA_OID)).willReturn(Optional.of(initialAdminUser));
-            given(entraUserRepository.findByEntraOid(USER_ENTRA_ID_STR)).willReturn(Optional.of(targetUser));
+            given(entraUserRepository.findById(UUID.fromString(USER_ENTRA_ID_STR))).willReturn(Optional.of(targetUser));
 
             given(userActivationRequestRepository.save(any(UserActivationRequest.class))).willAnswer(invocation -> invocation.getArgument(0));
 

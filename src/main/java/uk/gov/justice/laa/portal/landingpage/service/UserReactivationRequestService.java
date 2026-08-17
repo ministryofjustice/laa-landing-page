@@ -140,7 +140,7 @@ public class UserReactivationRequestService {
             UserActivationRequest initialRequest = userActivationRequestRepository.findFirstByRequestIdOrderByVersionAsc(parseUuid(requestId)).orElseThrow();
             if (initialRequest.getActorRoleType() == ReactivationRoleType.PROVIDER_ADMIN) {
                 EntraUser providerAdmin = entraUserRepository.findByEntraOid(initialRequest.getActorEntraOid()).orElseThrow();
-                EntraUser providerUser = entraUserRepository.findByEntraOid(userEntraId).orElseThrow();
+                EntraUser providerUser = entraUserRepository.findById(parseUuid(userEntraId)).orElseThrow();
                 log.debug("Notifying provider admin {} that information is required for request ID: {}", providerAdmin.getEmail(), requestId);
                 notificationService.notifyReactivationRequestInfoRequested(
                         entraUser.getId().toString(), providerAdmin.getFirstName(), providerAdmin.getEmail(), providerAdmin.getId().toString(),
