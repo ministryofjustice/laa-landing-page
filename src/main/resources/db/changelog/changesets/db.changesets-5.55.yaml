@@ -1,44 +1,10 @@
 databaseChangeLog:
   - changeSet:
-      id: 1786102293410
+      id: 1786102293409
       author: joshua.halladey
-      comment: "Revert status_change in user_account_status_audit values from ACTIVATED/DEACTIVATED to ENABLED/DISABLED"
+      comment: "Update status_change in user_account_status_audit values from ENABLED/DISABLED to ACTIVATED/DEACTIVATED"
 
       changes:
-        - sql:
-            dbms: postgresql
-            sql: >
-              ALTER TABLE user_account_status_audit
-              DROP CONSTRAINT user_account_status_audit_status_change_check
-
-        - sql:
-            dbms: postgresql
-            sql: >
-              UPDATE user_account_status_audit
-              SET status_change = 'ENABLED'
-              WHERE status_change = 'ACTIVATED'
-
-        - sql:
-            dbms: postgresql
-            sql: >
-              UPDATE user_account_status_audit
-              SET status_change = 'DISABLED'
-              WHERE status_change = 'DEACTIVATED'
-
-        - sql:
-            dbms: postgresql
-            sql: >
-              ALTER TABLE user_account_status_audit
-              ADD CONSTRAINT user_account_status_audit_status_change_check
-              CHECK (
-                status_change IN (
-                  'ENABLED',
-                  'DISABLED',
-                  'DELETED'
-                )
-              )
-
-      rollback:
         - sql:
             dbms: postgresql
             sql: >
@@ -68,6 +34,40 @@ databaseChangeLog:
                 status_change IN (
                   'ACTIVATED',
                   'DEACTIVATED',
+                  'DELETED'
+                )
+              )
+
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: >
+              ALTER TABLE user_account_status_audit
+              DROP CONSTRAINT user_account_status_audit_status_change_check
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              UPDATE user_account_status_audit
+              SET status_change = 'ENABLED'
+              WHERE status_change = 'ACTIVATED'
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              UPDATE user_account_status_audit
+              SET status_change = 'DISABLED'
+              WHERE status_change = 'DEACTIVATED'
+
+        - sql:
+            dbms: postgresql
+            sql: >
+              ALTER TABLE user_account_status_audit
+              ADD CONSTRAINT user_account_status_audit_status_change_check
+              CHECK (
+                status_change IN (
+                  'ENABLED',
+                  'DISABLED',
                   'DELETED'
                 )
               )
