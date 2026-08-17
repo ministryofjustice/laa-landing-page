@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
@@ -25,11 +27,14 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
+import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
-import org.springframework.beans.factory.annotation.Value;
+import uk.gov.justice.laa.portal.landingpage.repository.UserActivationRequestRepository;
 
 import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.FIRM_USER_MANAGER;
 
@@ -46,6 +51,10 @@ public class AccessControlService {
 
     private final UserEnablementPolicy userEnablementPolicy;
 
+    private final UserActivationRequestRepository userActivationRequestRepository;
+
+    private final ReactivationTypeResolver reactivationTypeResolver;
+
     @Value("${feature.flag.bulk.disable.user}")
     private boolean bulkUserDisableFeatureEnabled;
 
@@ -53,12 +62,15 @@ public class AccessControlService {
 
     public AccessControlService(UserService userService, LoginService loginService,
             FirmService firmService, EntraUserRepository entraUserRepository,
-            UserEnablementPolicy userEnablementPolicy) {
+            UserEnablementPolicy userEnablementPolicy, UserActivationRequestRepository userActivationRequestRepository,
+            ReactivationTypeResolver reactivationTypeResolver) {
         this.userService = userService;
         this.loginService = loginService;
         this.firmService = firmService;
         this.entraUserRepository = entraUserRepository;
         this.userEnablementPolicy = userEnablementPolicy;
+        this.userActivationRequestRepository = userActivationRequestRepository;
+        this.reactivationTypeResolver = reactivationTypeResolver;
     }
 
     public boolean canAccessUser(String userProfileId) {
@@ -244,6 +256,187 @@ public class AccessControlService {
         return computeEnablementState(entraUserId).canEnable();
     }
 
+    public boolean canDelegateEnableUser(String entraUserId) {
+        return computeEnablementState(entraUserId).canDelegate();
+    }
+
+    public boolean canTrackDelegateEnableUser(String entraUserId) {
+        if (entraUserId == null || entraUserId.isBlank()) {
+            return false;
+        }
+
+        UUID accessedUserId = parseUuid(entraUserId);
+        if (accessedUserId == null) {
+            return false;
+        }
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
+        if (authenticatedUser == null || !userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)) {
+            return false;
+        }
+
+        if (accessedUserId.equals(authenticatedUser.getId())) {
+            return false;
+        }
+
+        UserProfile actorUserProfile = getActiveProfile(authenticatedUser).orElse(null);
+        if (actorUserProfile == null) {
+            return false;
+        }
+
+        if (userService.isInternal(entraUserId)) {
+            return false;
+        }
+
+        EntraUser accessedUser = entraUserRepository.findById(accessedUserId).orElse(null);
+        if (accessedUser == null || accessedUser.isEnabled()) {
+            return false;
+        }
+
+        UserProfile accessedUserProfile = getActiveProfile(accessedUser).orElse(null);
+        if (accessedUserProfile == null) {
+            return false;
+        }
+
+        UserActivationRequest latestActivationRequest = userActivationRequestRepository
+                .findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedUserProfile.getId())
+                .orElse(null);
+
+        if (latestActivationRequest == null) {
+            return false;
+        }
+
+        ReactivationRequestStatus activationRequestLatestStatus = latestActivationRequest.getStatus();
+        if (ReactivationRequestStatus.APPROVED.equals(activationRequestLatestStatus)
+                || ReactivationRequestStatus.REJECTED.equals(activationRequestLatestStatus)) {
+            return false;
+        }
+
+        Optional<UserActivationRequestSummaryDto> firstActivationRequest = userActivationRequestRepository
+                .findRequestHistoryByRequestId(latestActivationRequest.getRequestId())
+                .stream()
+                .filter(req -> req.version() == 1)
+                .findFirst();
+
+        if (firstActivationRequest.isEmpty()) {
+            return false;
+        }
+
+        ReactivationRoleType firstRequestInitiatorRole = firstActivationRequest.get().actorRoleType();
+
+        List<String> actorRoles = Optional.ofNullable(actorUserProfile.getAppRoles())
+                .orElseGet(Set::of)
+                .stream()
+                .map(AppRole::getName)
+                .toList();
+
+        ReactivationRoleType actorRoleType = reactivationTypeResolver.resolveFromRoles(actorRoles);
+
+        if (ReactivationRoleType.PROVIDER_ADMIN.equals(actorRoleType)) {
+            if (accessedUser.isMultiFirmUser()) {
+                return false;
+            }
+
+            Firm actorFirm = actorUserProfile.getFirm();
+            Firm targetFirm = accessedUserProfile.getFirm();
+
+            return actorFirm != null && targetFirm != null && actorFirm.getId().equals(targetFirm.getId());
+        }
+
+        if (ReactivationRoleType.LAA_OST.equals(actorRoleType) || ReactivationRoleType.LAA_SUPPORT.equals(actorRoleType)) {
+            // EUM and EUS each only track requests originally raised by their own role type
+            return actorRoleType.equals(firstRequestInitiatorRole);
+        }
+
+        return ReactivationRoleType.LAA.equals(actorRoleType)
+                || ReactivationRoleType.LAA_USER_REGISTRATION.equals(actorRoleType);
+    }
+
+    private Optional<UserProfile> getActiveProfile(EntraUser user) {
+        if (user == null || user.getUserProfiles() == null) {
+            return Optional.empty();
+        }
+        return user.getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile)
+                .findFirst();
+    }
+
+    private UUID parseUuid(String uuidStr) {
+        try {
+            return UUID.fromString(uuidStr);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    public boolean canManageDelegateEnableUser(String entraUserId) {
+        if (entraUserId == null || entraUserId.isBlank()) {
+            return false;
+        }
+
+        UUID accessedUserId = parseUuid(entraUserId);
+        if (accessedUserId == null) {
+            return false;
+        }
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        EntraUser authenticatedUser = loginService.getCurrentEntraUser(authentication);
+
+        if (authenticatedUser == null) {
+            return false;
+        }
+
+        String currentUserId = authenticatedUser.getId() != null ? authenticatedUser.getId().toString() : null;
+        if (entraUserId.equals(currentUserId)) {
+            return false;
+        }
+
+        if (!userService.isInternal(currentUserId)) {
+            return false;
+        }
+
+        if (userService.isInternal(entraUserId)) {
+            return false;
+        }
+
+        EntraUser accessedUser = entraUserRepository.findById(accessedUserId).orElse(null);
+        if (accessedUser == null || accessedUser.isEnabled()) {
+            return false;
+        }
+
+        UserProfile accessedUserProfile = getActiveProfile(accessedUser).orElse(null);
+        if (accessedUserProfile == null) {
+            return false;
+        }
+
+        UserActivationRequest latestActivationRequest = userActivationRequestRepository
+                .findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedUserProfile.getId())
+                .orElse(null);
+
+        if (latestActivationRequest == null) {
+            return false;
+        }
+
+        ReactivationRequestStatus activationRequestLatestStatus = latestActivationRequest.getStatus();
+        if (ReactivationRequestStatus.APPROVED.equals(activationRequestLatestStatus)
+                || ReactivationRequestStatus.REJECTED.equals(activationRequestLatestStatus)) {
+            return false;
+        }
+
+        Optional<UserActivationRequestSummaryDto> firstActivationRequest = userActivationRequestRepository
+                .findRequestHistoryByRequestId(latestActivationRequest.getRequestId())
+                .stream()
+                .filter(req -> req.version() == 1)
+                .findFirst();
+
+        if (firstActivationRequest.isEmpty()) {
+            return false;
+        }
+
+        return userHasPermission(authenticatedUser, Permission.CAN_MANAGE_DELEGATE_ENABLE_USER);
+    }
+
     /**
      * Returns {@code true} when the authenticated user has {@code ENABLE_EXTERNAL_USER} permission
      * and the target user is disabled and external, but the enable is blocked by the
@@ -269,11 +462,36 @@ public class AccessControlService {
      */
     public EnablementFlags getEnablementFlags(String entraUserId) {
         EnablementState state = computeEnablementState(entraUserId);
-        return new EnablementFlags(state.canEnable(), state.blockedByHierarchy());
+        return new EnablementFlags(state.canEnable(), state.blockedByHierarchy(), state.canDelegate);
     }
 
     /** Exposes both canEnable and blockedByHierarchy in one object to avoid computing state twice. */
-    public record EnablementFlags(boolean canEnable, boolean blockedByHierarchy) {}
+    public record EnablementFlags(boolean canEnable, boolean blockedByHierarchy, boolean canDelegate) {
+
+        public EnablementFlags {
+            int trueCount = 0;
+            if (canEnable) {
+                trueCount++;
+            }
+            if (blockedByHierarchy) {
+                trueCount++;
+            }
+            if (canDelegate) {
+                trueCount++;
+            }
+
+            if (trueCount > 1) {
+                log.warn("Only one flag can be true at a time. Received: canEnable={}, blockedByHierarchy={}, canDelegate={}",
+                        canEnable, blockedByHierarchy, canDelegate);
+                throw new IllegalArgumentException(
+                        "Only one flag can be true at a time. Received: "
+                                + "canEnable=" + canEnable
+                                + ", blockedByHierarchy=" + blockedByHierarchy
+                                + ", canDelegate=" + canDelegate
+                );
+            }
+        }
+    }
 
     /**
      * Computes the full enablement state for the given target user in a single pass.
@@ -310,7 +528,8 @@ public class AccessControlService {
             return EnablementState.DENIED;
         }
 
-        if (!userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER)) {
+        if (!userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER)
+                && !userHasPermission(authenticatedUser, Permission.CAN_REQUEST_DELEGATE_ENABLE_USER)) {
             return EnablementState.DENIED;
         }
 
@@ -325,10 +544,6 @@ public class AccessControlService {
                 .stream().map(AppRole::getName).toList();
         DisableType disableType = targetUser.getDisableType();
 
-        if (!userEnablementPolicy.canEnable(disableType, actorRoles)) {
-            return EnablementState.BLOCKED_BY_HIERARCHY;
-        }
-
         if (userEnablementPolicy.requiresSameFirmCheck(disableType, actorRoles)) {
             Firm actorFirm = actorUserProfile.getFirm();
             Firm targetFirm = targetUser.getUserProfiles().stream()
@@ -337,19 +552,38 @@ public class AccessControlService {
                     .map(UserProfile::getFirm).orElse(null);
             boolean sameFirm = actorFirm != null && targetFirm != null
                     && actorFirm.getId().equals(targetFirm.getId());
-            if (!sameFirm) {
+            if (!sameFirm || targetUser.isMultiFirmUser()) {
                 return EnablementState.BLOCKED_BY_HIERARCHY;
             }
+
+            return EnablementState.CAN_ENABLE;
+        } else if (actorRoles.contains(AuthzRole.FIRM_USER_MANAGER.getRoleName())) {
+            return userEnablementPolicy.canDelegateReactivationRequest(disableType, actorRoles)
+                    ? EnablementState.CAN_DELEGATE_ENABLE
+                    : EnablementState.BLOCKED_BY_HIERARCHY;
         }
 
-        return EnablementState.CAN_ENABLE;
+        if (userEnablementPolicy.canEnable(disableType, actorRoles)) {
+            return userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER)
+                    ? EnablementState.CAN_ENABLE
+                    : EnablementState.BLOCKED_BY_HIERARCHY;
+        }
+
+        if (userEnablementPolicy.canDelegateReactivationRequest(disableType, actorRoles)) {
+            return userHasPermission(authenticatedUser, Permission.CAN_REQUEST_DELEGATE_ENABLE_USER)
+                    ? EnablementState.CAN_DELEGATE_ENABLE
+                    : EnablementState.BLOCKED_BY_HIERARCHY;
+        }
+
+        return EnablementState.DENIED;
     }
 
     /** Encapsulates the result of computing the enable-user access state. */
-    private record EnablementState(boolean canEnable, boolean blockedByHierarchy) {
-        static final EnablementState DENIED = new EnablementState(false, false);
-        static final EnablementState BLOCKED_BY_HIERARCHY = new EnablementState(false, true);
-        static final EnablementState CAN_ENABLE = new EnablementState(true, false);
+    private record EnablementState(boolean canEnable, boolean blockedByHierarchy, boolean canDelegate) {
+        static final EnablementState DENIED = new EnablementState(false, false, false);
+        static final EnablementState BLOCKED_BY_HIERARCHY = new EnablementState(false, true, false);
+        static final EnablementState CAN_ENABLE = new EnablementState(true, false, false);
+        static final EnablementState CAN_DELEGATE_ENABLE = new EnablementState(false, false, true);
     }
 
     /**

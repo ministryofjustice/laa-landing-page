@@ -1,73 +1,105 @@
 databaseChangeLog:
   - changeSet:
-      id: 1786102293410
-      author: joshua.halladey
-      comment: "Revert status_change in user_account_status_audit values from ACTIVATED/DEACTIVATED to ENABLED/DISABLED"
-
+      id: 20260721-01-create-user-activation-requests-table
+      author: suresh kavali
       changes:
-        - sql:
-            dbms: postgresql
-            sql: >
-              ALTER TABLE user_account_status_audit
-              DROP CONSTRAINT user_account_status_audit_status_change_check
+        - createTable:
+            tableName: user_activation_request
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: request_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_profile_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: INT
+                  defaultValueNumeric: 1
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: comments
+                  type: TEXT
+              - column:
+                  name: actor_entra_oid
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: actor_role_type
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+
+        - addUniqueConstraint:
+            tableName: user_activation_request
+            columnNames: request_id, version
+            constraintName: unq_request_version
+
+        - createIndex:
+            tableName: user_activation_request
+            indexName: idx_user_act_req_latest
+            columns:
+              - column:
+                  name: request_id
+              - column:
+                  name: version
+                  descending: true
+        - createIndex:
+            tableName: user_activation_request
+            indexName: idx_user_act_req_user_profile_id
+            columns:
+              - column:
+                  name: user_profile_id
+        - createIndex:
+            tableName: user_activation_request
+            indexName: idx_user_act_req_actor_entra_oid
+            columns:
+              - column:
+                  name: actor_entra_oid
+        - createIndex:
+            tableName: user_activation_request
+            indexName: idx_user_act_req_status
+            columns:
+              - column:
+                  name: status
+        - createIndex:
+            tableName: user_activation_request
+            indexName: idx_user_act_req_created_at
+            columns:
+              - column:
+                  name: created_at
 
         - sql:
-            dbms: postgresql
-            sql: >
-              UPDATE user_account_status_audit
-              SET status_change = 'ENABLED'
-              WHERE status_change = 'ACTIVATED'
+            sql: ALTER TABLE user_activation_request ADD CONSTRAINT chk_status 
+                  CHECK (status IN ('IN_REVIEW', 'INFORMATION_REQUIRED', 'REJECTED', 'APPROVED'))
 
-        - sql:
-            dbms: postgresql
-            sql: >
-              UPDATE user_account_status_audit
-              SET status_change = 'DISABLED'
-              WHERE status_change = 'DEACTIVATED'
-
-        - sql:
-            dbms: postgresql
-            sql: >
-              ALTER TABLE user_account_status_audit
-              ADD CONSTRAINT user_account_status_audit_status_change_check
-              CHECK (
-                status_change IN (
-                  'ENABLED',
-                  'DISABLED',
-                  'DELETED'
-                )
-              )
-
-      rollback:
-        - sql:
-            dbms: postgresql
-            sql: >
-              ALTER TABLE user_account_status_audit
-              DROP CONSTRAINT user_account_status_audit_status_change_check
-
-        - sql:
-            dbms: postgresql
-            sql: >
-              UPDATE user_account_status_audit
-              SET status_change = 'ACTIVATED'
-              WHERE status_change = 'ENABLED'
-
-        - sql:
-            dbms: postgresql
-            sql: >
-              UPDATE user_account_status_audit
-              SET status_change = 'DEACTIVATED'
-              WHERE status_change = 'DISABLED'
-
-        - sql:
-            dbms: postgresql
-            sql: >
-              ALTER TABLE user_account_status_audit
-              ADD CONSTRAINT user_account_status_audit_status_change_check
-              CHECK (
-                status_change IN (
-                  'ACTIVATED',
-                  'DEACTIVATED',
-                  'DELETED'
-                )
-              )
+        - addForeignKeyConstraint:
+            baseTableName: user_activation_request
+            baseColumnNames: user_profile_id
+            referencedTableName: user_profile
+            referencedColumnNames: id
+            constraintName: fk_user_act_req_user_profile_id
+            onDelete: RESTRICT
