@@ -21,7 +21,7 @@ public class AuthzOidcUserDetailsService extends OidcUserService {
 
     private final OidcUserService delegate;
 
-    @Value("${app.enable.user.data.api.request.token}")
+    @Value("${app.enable.user.data.api.call}")
     private boolean oboEnabled;
 
     public AuthzOidcUserDetailsService(UserService userService) {
