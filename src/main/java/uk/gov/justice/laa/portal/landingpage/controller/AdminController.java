@@ -34,6 +34,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AppSyncResultDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
@@ -166,9 +167,10 @@ public class AdminController {
 
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
         UserProfileDto userProfile = modelMapper.map(loginService.getCurrentProfile(authentication), UserProfileDto.class);
-        List<AppDto> apps = appService.synchronizeAndGetApplicationsFromTechServices(currentUserDto, userProfile);
+        AppSyncResultDto syncResult = appService.synchronizeAndGetApplicationsFromTechServices(currentUserDto, userProfile);
+        List<AppDto> apps = syncResult.getApps();
         model.addAttribute("apps", apps);
-
+        model.addAttribute("syncErrors", syncResult.getErrors());
 
         List<AppRoleAdminDto> roles = appRoleService.getAllLaaAppRoles();
 
