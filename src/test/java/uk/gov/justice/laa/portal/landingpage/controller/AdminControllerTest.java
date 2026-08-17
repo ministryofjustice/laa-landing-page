@@ -19,11 +19,10 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import org.mockito.Mock;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -33,32 +32,33 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.core.Authentication;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.ObjectError;
-import org.springframework.security.core.Authentication;
-
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
+
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AppSyncResultDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
-import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.RoleCreationDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
+import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
-import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.AppDetailsForm;
@@ -72,7 +72,6 @@ import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
 import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
-import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
@@ -3089,7 +3088,7 @@ class AdminControllerTest {
             apps.add(app("2", "Beta"));
             apps.add(app("1", "Alpha"));
             when(appService.synchronizeAndGetApplicationsFromTechServices(eq(currentUser), eq(userProfileDto)))
-                    .thenReturn(apps);
+                    .thenReturn(AppSyncResultDto.builder().apps(apps).build());
 
             // Given: roles
             List<AppRoleAdminDto> mockRoles = createMockRoles();
@@ -3114,6 +3113,7 @@ class AdminControllerTest {
 
             assertThat(model.getAttribute("canTriggerAppSync")).isEqualTo(true);
             assertThat(model.getAttribute("appSyncSuccessful")).isEqualTo(true);
+            assertThat(model.getAttribute("syncErrors")).isEqualTo(List.of());
 
             @SuppressWarnings("unchecked")
             List<String> appNames = (List<String>) model.getAttribute("appNames");
@@ -3152,7 +3152,8 @@ class AdminControllerTest {
 
             UserProfileDto userProfileDto = mapper.map(userProfile, UserProfileDto.class);
 
-            when(appService.synchronizeAndGetApplicationsFromTechServices(eq(currentUser), eq(userProfileDto))).thenReturn(List.of());
+            when(appService.synchronizeAndGetApplicationsFromTechServices(eq(currentUser), eq(userProfileDto)))
+                    .thenReturn(AppSyncResultDto.builder().apps(List.of()).build());
             when(appRoleService.getAllLaaAppRoles()).thenReturn(List.of());
 
             String view = adminController.syncLaaApps(authentication, model, mockHttpSession);
@@ -3206,7 +3207,7 @@ class AdminControllerTest {
                     app("A4", "Alpha") // duplicate name
             );
             when(appService.synchronizeAndGetApplicationsFromTechServices(eq(currentUser), eq(userProfileDto)))
-                    .thenReturn(apps);
+                    .thenReturn(AppSyncResultDto.builder().apps(apps).build());
 
             when(appRoleService.getAllLaaAppRoles()).thenReturn(List.of());
 
@@ -3216,6 +3217,45 @@ class AdminControllerTest {
             @SuppressWarnings("unchecked")
             List<String> appNames = (List<String>) model.getAttribute("appNames");
             assertThat(appNames).containsExactly("Alpha", "beta", "delta");
+        }
+
+        @Test
+        @DisplayName("Tech Services call throws: renders same view with syncFailureMessage instead of propagating")
+        void syncLaaApps_techServicesThrows_showsFailureBannerInsteadOfCrashing() {
+            List<AppDto> adminApps = createMockAdminApps();
+            when(appService.getAllAuthzApps()).thenReturn(adminApps);
+
+            final UUID entraOid = UUID.randomUUID();
+            final UUID profileId = UUID.randomUUID();
+
+            CurrentUserDto currentUser = new CurrentUserDto();
+            currentUser.setUserId(entraOid);
+            currentUser.setName("Admin");
+            UserProfile userProfile = UserProfile.builder().id(profileId).build();
+
+            when(loginService.getCurrentUser(authentication)).thenReturn(currentUser);
+            when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
+
+            UserProfileDto userProfileDto = mapper.map(userProfile, UserProfileDto.class);
+
+            when(appService.synchronizeAndGetApplicationsFromTechServices(eq(currentUser), eq(userProfileDto)))
+                    .thenThrow(new RuntimeException("Error while getting applications from Tech Services. Status=502"));
+
+            List<AppDto> fallbackApps = List.of(app("F1", "Existing App"));
+            when(appService.getAllLaaApps()).thenReturn(fallbackApps);
+
+            List<AppRoleAdminDto> mockRoles = createMockRoles();
+            when(appRoleService.getAllLaaAppRoles()).thenReturn(mockRoles);
+
+            String view = adminController.syncLaaApps(authentication, model, mockHttpSession);
+
+            assertThat(view).isEqualTo(VIEW);
+            assertThat(model.getAttribute("apps")).isEqualTo(fallbackApps);
+            assertThat(model.getAttribute("appSyncSuccessful")).isEqualTo(false);
+            assertThat(model.getAttribute("successMessage")).isNull();
+            assertThat(model.getAttribute("syncFailureMessage")).isNotNull();
+
+            verify(appService, times(1)).getAllLaaApps();
         }
 
         private AppDto app(String id, String name) {
