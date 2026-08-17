@@ -3,7 +3,6 @@
       title=~{::title},
       mainContent=~{::#main-content},
       pageCategory=${'users'},
-      suppressPhaseBanner=${true},
       bodyClass=${'full-width-page'})}" xmlns:th="http://www.thymeleaf.org">
 
 <head>
@@ -31,18 +30,7 @@
                 </p>
             </div>
         </div>
-        <div class="full-width-container">
-            <div class="govuk-phase-banner" id="feedback">
-                <p class="govuk-phase-banner__content">
-                    <strong class="govuk-tag govuk-phase-banner__content__tag">
-                        Beta
-                    </strong>
-                    <span class="govuk-phase-banner__text">
-                        This is a new service. Help us improve it by <a class="govuk-link"
-                            href="https://www.smartsurvey.co.uk/s/LAASiLAS/">completing our short survey.</a>
-                    </span>
-                </p>
-            </div>
+        <div>
                 <a class="govuk-back-link" th:href="@{/home}">Back</a>
                 <h1 class="govuk-heading-l">User Access Audit Table</h1>
 
@@ -1102,13 +1090,13 @@
                                     <th:block
                                             th:if="${!user.enabled and (user.userType == 'Internal' or (user.invitationStatus != null and user.invitationStatus.name() == 'VERIFICATION_SUCCESS'))}">
                                         <strong class="govuk-tag govuk-tag--red">
-                                            Deactivated
+                                            Disabled
                                         </strong>
                                     </th:block>
                                     <th:block
                                             th:if="${user.enabled and (user.userType == 'Internal' or (user.invitationStatus != null and user.invitationStatus.name() == 'VERIFICATION_SUCCESS'))}">
                                         <strong class="govuk-tag govuk-tag--green govuk-!-margin-top-1">
-                                            Active
+                                            Enabled
                                         </strong>
                                     </th:block>
                                     <th:block

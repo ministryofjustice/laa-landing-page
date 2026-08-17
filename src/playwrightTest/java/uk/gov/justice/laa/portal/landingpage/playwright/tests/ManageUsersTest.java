@@ -177,8 +177,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         manageUsersPage.verifyUserDetailsPopulated();
         // Disable link visible
-        assertTrue(page.locator("#user-details .govuk-summary-list__actions a.govuk-link:has-text(\"Deactivate "
-                + "user\")").isVisible());
+        assertTrue(page.locator("#user-details .govuk-summary-list__actions a.govuk-link:has-text(\"Disable user\")").isVisible());
     }
 
     @Test
@@ -1239,66 +1238,6 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.verifyAwaitingFirmAccessMessage();
     }
 
-    @Test
-    @DisplayName("Filter Manage Users to display multi-firm users only")
-    void filterManageUsersByThirdPartyUsers() {
-        final String firmCode = "90001";
-
-        final List<String> services = List.of(
-                "Test LAA App Four"
-        );
-
-        final List<String> roles = List.of(
-                "Test LAA App Four Role One Access"
-        );
-
-        final List<String> offices = List.of(
-                "THREE"
-        );
-
-        ManageUsersPage manageUsersPage =
-                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
-
-        // Create a standard provider user without multi-firm access
-        final String nonMultiFirmUserEmail =
-                manageUsersPage.createProviderAdminUserWithNonMultiFirmAccess(
-                        firmCode
-                );
-
-        // Create a multi-firm user and delegate firm access
-        final String multiFirmUserEmail =
-                manageUsersPage.createMultiFirmUserAndDelegateAccess(
-                        firmCode,
-                        services,
-                        roles,
-                        offices
-                );
-
-        // Return to Manage Your Users after delegation
-        manageUsersPage.clickGoBackToManageUsers();
-        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-
-        // Apply the new 3rd Party filter
-        manageUsersPage.filterByThirdPartyUsers();
-
-        // Search for the multi-firm user
-        assertTrue(
-                manageUsersPage.searchAndVerifyUser(multiFirmUserEmail),
-                "The multi-firm user should be displayed when the 3rd Party filter is applied"
-        );
-
-        // Verify the displayed user is identified as a 3rd Party user
-        Locator multiFirmUserRow = page.locator("tr")
-                .filter(new Locator.FilterOptions()
-                        .setHasText(multiFirmUserEmail));
-
-        assertThat(multiFirmUserRow).isVisible();
-        assertThat(multiFirmUserRow).containsText("External - 3rd Party");
-
-        // Search for the standard provider user while the filter remains applied
-        manageUsersPage.searchAndVerifyUserNotExists(nonMultiFirmUserEmail);
-    }
-
 
     @Test
     @DisplayName("Change the assigned role for a multi-firm user")
@@ -1530,6 +1469,147 @@ public class ManageUsersTest extends BaseFrontEndTest {
                 )
         ).not().isVisible();
     }
+
+    @Test
+    @DisplayName("Multi-firm user can switch between delegated firms")
+    void multiFirmUserCanSwitchBetweenDelegatedFirms() {
+        final String firstFirmCode = "90001";
+        final String secondFirmCode = "90002";
+
+        final String firstFirmName = "Automation Firm One";
+        final String secondFirmName = "Automation Firm Two";
+
+        final List<String> services = List.of(
+                "Test LAA App Four"
+        );
+
+        final List<String> roles = List.of(
+                "Test LAA App Four Role One Access"
+        );
+
+        final List<String> firstFirmOffices = List.of(
+                "THREE"
+        );
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        // Create the multi-firm user and delegate access to the first firm
+        final String email =
+                manageUsersPage.createMultiFirmUserAndDelegateAccess(
+                        firstFirmCode,
+                        services,
+                        roles,
+                        firstFirmOffices
+                );
+
+        // Delegate access to the second firm
+        manageUsersPage.delegateAdditionalFirmAccess(
+                email,
+                secondFirmCode,
+                services,
+                roles
+        );
+
+        // Return to Manage Your Users after the second delegation
+        manageUsersPage.clickGoBackToManageUsers();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Sign out as Global Admin
+        manageUsersPage.clickAndConfirmSignOut();
+
+        // Sign in as the newly created multi-firm user
+        loginAs(email);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Verify the user lands on the home page
+        assertTrue(
+                page.url().endsWith("/home"),
+                "The multi-firm user should land on the home page"
+        );
+
+        // Verify Switch firm is available
+        Locator switchFirmLink = page.getByRole(
+                AriaRole.LINK,
+                new Page.GetByRoleOptions()
+                        .setName("Switch firm")
+                        .setExact(true)
+        );
+
+        assertThat(switchFirmLink).isVisible();
+
+        // Open Switch firm page
+        switchFirmLink.click();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Verify the user is on the Switch firm page
+        assertTrue(
+                page.url().contains("/switch-firm"),
+                "The multi-firm user should be taken to the Switch firm page"
+        );
+
+        // Verify both delegated firms are selectable
+        Locator firstFirmButton = page.getByRole(
+                AriaRole.BUTTON,
+                new Page.GetByRoleOptions()
+                        .setName(firstFirmName)
+                        .setExact(true)
+        );
+
+        Locator secondFirmButton = page.getByRole(
+                AriaRole.BUTTON,
+                new Page.GetByRoleOptions()
+                        .setName(secondFirmName)
+                        .setExact(true)
+        );
+
+        assertThat(firstFirmButton).isVisible();
+        assertThat(secondFirmButton).isVisible();
+
+        // Switch to the second firm
+        secondFirmButton.click();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Verify the user returns to the home page
+        assertTrue(
+                page.url().endsWith("/home"),
+                "The user should return to the home page after switching firm"
+        );
+
+        // Verify successful firm switch banner
+        Locator successBanner =
+                page.locator("#firm-switch-success-banner");
+
+        assertThat(successBanner).isVisible();
+
+        assertThat(
+                successBanner.getByText(
+                        "You are now working on behalf of " + secondFirmName,
+                        new Locator.GetByTextOptions()
+                                .setExact(true)
+                )
+        ).isVisible();
+
+        // Verify the active firm shown on the home page has changed
+        assertThat(
+                page.getByText(
+                        secondFirmName + " - " + secondFirmCode,
+                        new Page.GetByTextOptions()
+                                .setExact(true)
+                )
+        ).isVisible();
+
+        // Verify delegated service is available under the second firm
+        assertThat(
+                page.getByRole(
+                        AriaRole.LINK,
+                        new Page.GetByRoleOptions()
+                                .setName("Test LAA App Four")
+                )
+        ).isVisible();
+    }
+
+
 
 
 }

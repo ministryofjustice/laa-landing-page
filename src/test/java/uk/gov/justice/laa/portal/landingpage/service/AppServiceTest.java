@@ -1,16 +1,37 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import static org.mockito.ArgumentMatchers.any;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.SimpleTransactionStatus;
+
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AppSyncResultDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppSynchronizationAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
@@ -21,23 +42,6 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetAllApplicationsResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesErrorResponse;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AppServiceTest {
@@ -51,11 +55,30 @@ class AppServiceTest {
     @Mock
     private EventService eventService;
 
+    private final PlatformTransactionManager transactionManager = new NoOpTransactionManager();
+
     private AppService appService;
     private CurrentUserDto currentUser;
     private UserProfileDto userProfileDto;
     private App app;
     private AppDto appDto;
+
+    private static class NoOpTransactionManager implements PlatformTransactionManager {
+        @Override
+        public TransactionStatus getTransaction(TransactionDefinition definition) {
+            return new SimpleTransactionStatus();
+        }
+
+        @Override
+        public void commit(TransactionStatus status) {
+            // no-op: tests don't need real transactional behaviour
+        }
+
+        @Override
+        public void rollback(TransactionStatus status) {
+            // no-op: tests don't need real transactional behaviour
+        }
+    }
 
     @BeforeEach
     void setUp() {
@@ -65,7 +88,7 @@ class AppServiceTest {
         userProfileDto = UserProfileDto.builder().id(UUID.randomUUID()).build();
 
         mapper = new ModelMapper();
-        appService = new AppService(appRepository, techServicesClient, mapper, eventService);
+        appService = new AppService(appRepository, techServicesClient, mapper, eventService, transactionManager);
         UUID id = UUID.randomUUID();
         app = App.builder()
                 .id(id)
@@ -495,26 +518,26 @@ class AppServiceTest {
     @Test
     @DisplayName("ADDED: present only in remote → new local app (disabled), saved and returned with changeType=ADDED")
     void added_whenOnlyRemote() throws Exception {
-        GetAllApplicationsResponse.TechServicesApplication r1 = remoteApp("AR1", "OR1", "Remote One", "https://r1", "SG1", "Group 1");
+        String appId = UUID.randomUUID().toString();
+        GetAllApplicationsResponse.TechServicesApplication r1 = remoteApp(appId, UUID.randomUUID().toString(), "Remote One", "https://r1", UUID.randomUUID().toString(), "Group 1");
         when(techServicesClient.getAllApplications())
                 .thenReturn(successResponseWithApps(List.of(r1)));
 
         stubLocalApps(List.of());
 
-        List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
+        AppSyncResultDto syncResult = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
+        List<AppDto> out = syncResult.getApps();
 
+        assertThat(syncResult.getErrors()).isEmpty();
         assertThat(out).hasSize(1);
-        assertThat(out.get(0).getId()).isEqualTo("AR1");
+        assertThat(out.get(0).getId()).isEqualTo(appId);
         assertThat(out.get(0).getName()).isEqualTo("Remote One");
         assertThat(out.get(0).getChangeType()).isEqualTo(AppDto.ChangeType.ADDED);
 
-        // saveAll called once with new entity enabled=false
-        ArgumentCaptor<Iterable<App>> captor = ArgumentCaptor.forClass(Iterable.class);
-        verify(appRepository, times(1)).saveAll(captor.capture());
-        List<App> saved = new ArrayList<>();
-        captor.getValue().forEach(saved::add);
-        assertThat(saved).hasSize(1);
-        assertThat(saved.getFirst().isEnabled()).isFalse();
+        // saved once with new entity enabled=false
+        ArgumentCaptor<App> captor = ArgumentCaptor.forClass(App.class);
+        verify(appRepository, times(1)).save(captor.capture());
+        assertThat(captor.getValue().isEnabled()).isFalse();
 
         verify(eventService).logEvent(any(AppSynchronizationAuditEvent.class));
     }
@@ -528,17 +551,15 @@ class AppServiceTest {
 
         stubLocalApps(List.of(l1));
 
-        List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
+        AppSyncResultDto syncResult = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
+        List<AppDto> out = syncResult.getApps();
         assertThat(out).hasSize(1);
         assertThat(out.getFirst().getId()).isEqualTo("L1");
         assertThat(out.getFirst().getChangeType()).isEqualTo(AppDto.ChangeType.DELETED);
 
-        ArgumentCaptor<Iterable<App>> captor = ArgumentCaptor.forClass(Iterable.class);
-        verify(appRepository).saveAll(captor.capture());
-        List<App> saved = new ArrayList<>();
-        captor.getValue().forEach(saved::add);
-        assertThat(saved).hasSize(1);
-        assertThat(saved.get(0).isEnabled()).isFalse();
+        ArgumentCaptor<App> captor = ArgumentCaptor.forClass(App.class);
+        verify(appRepository).save(captor.capture());
+        assertThat(captor.getValue().isEnabled()).isFalse();
 
         verify(eventService).logEvent(any(AppSynchronizationAuditEvent.class));
     }
@@ -553,11 +574,12 @@ class AppServiceTest {
 
         stubLocalApps(List.of(l1));
 
-        List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
+        AppSyncResultDto syncResult = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
+        List<AppDto> out = syncResult.getApps();
         assertThat(out).hasSize(1);
         assertThat(out.get(0).getChangeType()).isEqualTo(AppDto.ChangeType.NONE);
 
-        verify(appRepository, times(1)).saveAll(any());
+        verify(appRepository, never()).save(any());
         verify(eventService).logEvent(any(AppSynchronizationAuditEvent.class));
     }
 
@@ -572,13 +594,14 @@ class AppServiceTest {
                 .thenReturn(successResponseWithApps(List.of(r1)));
         stubLocalApps(List.of(l1));
 
-        List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
+        AppSyncResultDto syncResult = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
+        List<AppDto> out = syncResult.getApps();
 
         assertThat(out).hasSize(1);
         AppDto dto = out.get(0);
         assertThat(dto.getChangeType()).isEqualTo(AppDto.ChangeType.NONE);
 
-        verify(appRepository, times(1)).saveAll(any());
+        verify(appRepository, never()).save(any());
         verify(eventService).logEvent(any(AppSynchronizationAuditEvent.class));
     }
 
@@ -586,27 +609,28 @@ class AppServiceTest {
     @DisplayName("REVIEW: present in both but local is disabled → metadata updated, saved; changeType=REVIEW")
     void review_whenLocalDisabled() throws Exception {
 
-        GetAllApplicationsResponse.TechServicesApplication r1 = remoteApp("AID", "OID", "RemoteName", "https://remote", "SGX", "RemoteSG");
-        App l1 = localApp("AID", "OID", "OldName", "https://old", "SG0", "OldSG", false);
+        String appId = UUID.randomUUID().toString();
+        String sgOid = UUID.randomUUID().toString();
+        GetAllApplicationsResponse.TechServicesApplication r1 = remoteApp(appId, UUID.randomUUID().toString(), "RemoteName", "https://remote", sgOid, "RemoteSG");
+        App l1 = localApp(appId, "OID", "OldName", "https://old", "SG0", "OldSG", false);
 
         when(techServicesClient.getAllApplications())
                 .thenReturn(successResponseWithApps(List.of(r1)));
         stubLocalApps(List.of(l1));
 
-        List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
+        AppSyncResultDto syncResult = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
+        List<AppDto> out = syncResult.getApps();
 
+        assertThat(syncResult.getErrors()).isEmpty();
         assertThat(out).hasSize(1);
         AppDto dto = out.get(0);
         assertThat(dto.getChangeType()).isEqualTo(AppDto.ChangeType.REVIEW);
-        ArgumentCaptor<Iterable<App>> captor = ArgumentCaptor.forClass(Iterable.class);
-        verify(appRepository).saveAll(captor.capture());
-        List<App> saved = new ArrayList<>();
-        captor.getValue().forEach(saved::add);
-        assertThat(saved).hasSize(1);
-        App savedApp = saved.get(0);
+        ArgumentCaptor<App> captor = ArgumentCaptor.forClass(App.class);
+        verify(appRepository).save(captor.capture());
+        App savedApp = captor.getValue();
         assertThat(savedApp.getName()).isEqualTo("RemoteName");
         assertThat(savedApp.getUrl()).isEqualTo("https://remote");
-        assertThat(savedApp.getSecurityGroupOid()).isEqualTo("SGX");
+        assertThat(savedApp.getSecurityGroupOid()).isEqualTo(sgOid);
 
         // Verify event summary mentions Updated=1
         ArgumentCaptor<AppSynchronizationAuditEvent> eventCaptor = ArgumentCaptor.forClass(AppSynchronizationAuditEvent.class);
@@ -616,22 +640,26 @@ class AppServiceTest {
     }
 
     @Test
-    @DisplayName("UPDATED: present in both, enabled, field differences → saved and returned as UPDATED")
+    @DisplayName("AC2: UPDATED: present in both, enabled, valid field differences → saved and returned as UPDATED")
     void updated_whenDifferencesAndEnabled() throws Exception {
 
-        GetAllApplicationsResponse.TechServicesApplication r1 = remoteApp("AID", "OID", "NewName", "https://new", "SG2", "SG Two");
-        App l1 = localApp("AID", "OID", "OldName", "https://old", "SG1", "SG One", true);
+        String appId = UUID.randomUUID().toString();
+        String sgOid = UUID.randomUUID().toString();
+        GetAllApplicationsResponse.TechServicesApplication r1 = remoteApp(appId, UUID.randomUUID().toString(), "NewName", "https://new", sgOid, "SG Two");
+        App l1 = localApp(appId, "OID", "OldName", "https://old", "SG1", "SG One", true);
         when(techServicesClient.getAllApplications())
                 .thenReturn(successResponseWithApps(List.of(r1)));
         stubLocalApps(List.of(l1));
 
-        List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
+        AppSyncResultDto syncResult = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
+        List<AppDto> out = syncResult.getApps();
 
+        assertThat(syncResult.getErrors()).isEmpty();
         assertThat(out).hasSize(1);
         assertThat(out.get(0).getChangeType()).isEqualTo(AppDto.ChangeType.UPDATED);
 
-        // Must save updated local
-        verify(appRepository).saveAll(any());
+        // Must save updated local, and the update is persisted
+        verify(appRepository).save(any(App.class));
         verify(eventService).logEvent(any(AppSynchronizationAuditEvent.class));
     }
 
@@ -646,7 +674,7 @@ class AppServiceTest {
         App l1 = localApp("L1", "OID", "Local One", "https://l1", null, null, true);
         stubLocalApps(List.of(l1));
 
-        List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
+        List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto).getApps();
         assertThat(out).hasSize(1);
         assertThat(out.getFirst().getChangeType()).isEqualTo(AppDto.ChangeType.DELETED);
     }
@@ -679,8 +707,56 @@ class AppServiceTest {
                 .thenReturn(successResponseWithApps(List.of(r)));
         stubLocalApps(List.of(l));
 
-        List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
+        List<AppDto> out = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto).getApps();
         assertThat(out).hasSize(1);
         assertThat(out.getFirst().getChangeType()).isEqualTo(AppDto.ChangeType.NONE);
+    }
+
+    @Test
+    @DisplayName("AC1: two apps sharing the same security group in Entra → both flagged as errors, no DB update performed")
+    void duplicateSecurityGroup_bothAppsErrorAndNotPersisted() throws Exception {
+        String duplicateSecurityGroupOid = UUID.randomUUID().toString();
+        GetAllApplicationsResponse.TechServicesApplication r1 = remoteApp(UUID.randomUUID().toString(), UUID.randomUUID().toString(),
+                "App One", "https://one", duplicateSecurityGroupOid, "Shared Group");
+        GetAllApplicationsResponse.TechServicesApplication r2 = remoteApp(UUID.randomUUID().toString(), UUID.randomUUID().toString(),
+                "App Two", "https://two", duplicateSecurityGroupOid, "Shared Group");
+
+        when(techServicesClient.getAllApplications())
+                .thenReturn(successResponseWithApps(List.of(r1, r2)));
+        stubLocalApps(List.of());
+
+        AppSyncResultDto syncResult = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
+
+        assertThat(syncResult.getErrors()).hasSize(2);
+        assertThat(syncResult.getErrors()).allSatisfy(err -> assertThat(err).contains("duplicated"));
+        verify(appRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("AC3: two apps with duplicate security groups error out, third valid app is updated and persisted")
+    void duplicateSecurityGroup_thirdValidAppStillPersisted() throws Exception {
+        String duplicateSecurityGroupOid = UUID.randomUUID().toString();
+        GetAllApplicationsResponse.TechServicesApplication r1 = remoteApp(UUID.randomUUID().toString(), UUID.randomUUID().toString(),
+                "App One", "https://one", duplicateSecurityGroupOid, "Shared Group");
+        GetAllApplicationsResponse.TechServicesApplication r2 = remoteApp(UUID.randomUUID().toString(), UUID.randomUUID().toString(),
+                "App Two", "https://two", duplicateSecurityGroupOid, "Shared Group");
+        GetAllApplicationsResponse.TechServicesApplication r3 = remoteApp(UUID.randomUUID().toString(), UUID.randomUUID().toString(),
+                "App Three", "https://three", UUID.randomUUID().toString(), "Unique Group");
+
+        when(techServicesClient.getAllApplications())
+                .thenReturn(successResponseWithApps(List.of(r1, r2, r3)));
+        stubLocalApps(List.of());
+
+        AppSyncResultDto syncResult = appService.synchronizeAndGetApplicationsFromTechServices(currentUser, userProfileDto);
+
+        assertThat(syncResult.getErrors()).hasSize(2);
+        assertThat(syncResult.getApps())
+                .filteredOn(dto -> "App Three".equals(dto.getName()))
+                .singleElement()
+                .satisfies(dto -> assertThat(dto.getChangeType()).isEqualTo(AppDto.ChangeType.ADDED));
+
+        ArgumentCaptor<App> captor = ArgumentCaptor.forClass(App.class);
+        verify(appRepository, times(1)).save(captor.capture());
+        assertThat(captor.getValue().getName()).isEqualTo("App Three");
     }
 }

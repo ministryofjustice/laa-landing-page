@@ -1548,7 +1548,7 @@ class ExternalUserPollingServiceTest {
                 .name("PendingAcceptance").description("Pending").entraDescription("PendingAcceptance")
                 .build();
         UserAccountStatusAudit auditRecord = UserAccountStatusAudit.builder()
-                .statusChange(UserAccountStatus.DEACTIVATED)
+                .statusChange(UserAccountStatus.DISABLED)
                 .statusChangedBy("sync")
                 .statusChangedDate(java.time.LocalDateTime.now())
                 .disableUserReason(pendingAcceptanceReason)
@@ -1585,7 +1585,7 @@ class ExternalUserPollingServiceTest {
                 .name("NotActive").description("Not active").entraDescription("NotActive")
                 .build();
         UserAccountStatusAudit auditRecord = UserAccountStatusAudit.builder()
-                .statusChange(UserAccountStatus.DEACTIVATED)
+                .statusChange(UserAccountStatus.DISABLED)
                 .statusChangedBy("sync")
                 .statusChangedDate(java.time.LocalDateTime.now())
                 .disableUserReason(notActiveReason)

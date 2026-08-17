@@ -54,27 +54,6 @@ public class ManageUsersPage {
     private final Locator providerAdminRadio;
     private final Locator confirmNewUserButton;
 
-    // Search and filters
-    private final Locator searchUsersHeading;
-    private final Locator searchUsersHint;
-
-
-    private final Locator toggleFiltersButton;
-    private final Locator filterPanel;
-    private final Locator filtersHeading;
-
-    private final Locator userTypeHeading;
-    private final Locator providerUserFilter;
-    private final Locator providerAdminFilter;
-    private final Locator thirdPartyUserFilter;
-
-    private final Locator userStatusHeading;
-    private final Locator noRolesAssignedFilter;
-    private final Locator activationPendingFilter;
-    private final Locator completeStatusFilter;
-
-    private final Locator applyFiltersButton;
-
     // Common controls
     private final Locator continueButton;
     private final Locator confirmButton;
@@ -156,6 +135,11 @@ public class ManageUsersPage {
                         .setHasText("Your firm admin is working on giving you access to the services you need"));
 
         // Manage users search and filters
+        this.searchInputByName =
+                page.locator("input#search[type='search']");
+
+        this.searchButton =
+                page.locator("button:has-text('Search')");
 
         this.userFullNameLink =
                 page.locator("a.govuk-link[href*='/admin/users/manage/']");
@@ -163,79 +147,7 @@ public class ManageUsersPage {
         this.thirdPartyFilterCheckbox =
                 page.locator("#showMultiFirmUsers");
 
-
-
-        // Search and filters
-        this.searchUsersHeading = page.getByRole(
-                AriaRole.HEADING,
-                new Page.GetByRoleOptions()
-                        .setName("Search users")
-                        .setExact(true)
-        );
-
-        this.searchUsersHint = page.locator(".search-card .govuk-hint")
-                .filter(new Locator.FilterOptions()
-                        .setHasText(
-                                "You can search by user name, email, firm name, or firm code."
-                        ));
-
-        this.searchInputByName = page.locator("input#search[type='search']");
-
-        this.searchButton = page.locator(".search-card")
-                .getByRole(
-                        AriaRole.BUTTON,
-                        new Locator.GetByRoleOptions()
-                                .setName("Search")
-                                .setExact(true)
-                );
-
-        this.toggleFiltersButton = page.locator("#toggle-filters-btn");
-
-        this.filterPanel = page.locator("#filter-panel");
-
-        this.filtersHeading = filterPanel.getByText(
-                "Filters",
-                new Locator.GetByTextOptions()
-                        .setExact(true)
-        );
-
-        this.userTypeHeading = filterPanel.getByText(
-                "User Type",
-                new Locator.GetByTextOptions()
-                        .setExact(true)
-        );
-
-        this.providerUserFilter = page.locator("#showProviderUsers");
-
-        this.providerAdminFilter = page.locator("#showFirmAdmins");
-
-        this.thirdPartyUserFilter = page.locator("#showMultiFirmUsers");
-
-        this.userStatusHeading = filterPanel.getByText(
-                "User Status",
-                new Locator.GetByTextOptions()
-                        .setExact(true)
-        );
-
-        this.noRolesAssignedFilter =
-                page.locator("#status-NO_ROLES_ASSIGNED");
-
-        this.activationPendingFilter =
-                page.locator("#status-ACTIVATION_PENDING");
-
-        this.completeStatusFilter =
-                page.locator("#status-COMPLETE");
-
-        this.applyFiltersButton = filterPanel.getByRole(
-                AriaRole.BUTTON,
-                new Locator.GetByRoleOptions()
-                        .setName("Apply filters")
-                        .setExact(true)
-        );
-
-
         // Create user
-
         this.createNewUserButton =
                 page.locator(
                         "button.govuk-button[onclick*='/admin/user/create/details']"
@@ -956,50 +868,6 @@ public class ManageUsersPage {
         return email;
     }
 
-    public void showFilters() {
-        if ("false".equals(toggleFiltersButton.getAttribute("aria-expanded"))) {
-            toggleFiltersButton.click();
-        }
-
-        assertThat(toggleFiltersButton).hasAttribute("aria-expanded", "true");
-        assertThat(toggleFiltersButton).containsText("Hide filters");
-        assertThat(filterPanel).isVisible();
-    }
-
-    private void checkFilter(Locator filter) {
-        showFilters();
-
-        if (!filter.isChecked()) {
-            filter.check();
-        }
-
-        assertThat(filter).isChecked();
-    }
-
-    private void uncheckFilter(Locator filter) {
-        showFilters();
-
-        if (filter.isChecked()) {
-            filter.uncheck();
-        }
-
-        assertThat(filter).not().isChecked();
-    }
-
-    public void applyFilters() {
-        assertThat(applyFiltersButton).isVisible();
-        applyFiltersButton.click();
-
-        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-    }
-
-    public void filterByThirdPartyUsers() {
-        selectThirdPartyUserFilter();
-        applyFilters();
-
-        assertThat(page.locator("#showMultiFirmUsers")).isChecked();
-    }
-
     public Locator userRowLocator(String email) {
         return page.locator("tr", new Page.LocatorOptions().setHasText(email));
     }
@@ -1220,6 +1088,60 @@ public class ManageUsersPage {
         );
 
         return email;
+    }
+
+    public void delegateAdditionalFirmAccess(
+            String email,
+            String firmCode,
+            List<String> services,
+            List<String> roles
+    ) {
+        // Return to Manage Your Users after first delegation
+        clickGoBackToManageUsers();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        verifyDelegateAccessButtonVisible();
+        clickDelegateAccess();
+
+        verifyDelegateAccessProfilePageVisible();
+        enterDelegateAccessEmail(email);
+        clickDelegateAccessContinue();
+
+        verifyDelegateAccessFirmSelectionPageVisible();
+        searchAndSelectFirmByCode(firmCode);
+        clickContinueFirmSelectPage();
+
+        checkSelectedServices(services);
+        clickContinueUserDetails();
+
+        checkSelectedRoles(roles);
+        clickContinueUserDetails();
+
+        // Firm 2 may have different offices, so select one that actually exists
+        checkFirstAvailableOffice();
+        clickContinueUserDetails();
+
+        clickConfirmButton();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+
+    public void checkFirstAvailableOffice() {
+        Locator firstOfficeCheckbox = page.locator(
+                ".govuk-checkboxes__item input[name='offices']"
+        ).first();
+
+        firstOfficeCheckbox.waitFor(
+                new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.VISIBLE)
+                        .setTimeout(10000)
+        );
+
+        if (!firstOfficeCheckbox.isChecked()) {
+            firstOfficeCheckbox.check();
+        }
+
+        assertThat(firstOfficeCheckbox).isChecked();
     }
 
     public void verifyRevokeAccessLinkVisible() {
