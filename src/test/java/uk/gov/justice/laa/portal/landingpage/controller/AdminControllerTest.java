@@ -3219,6 +3219,45 @@ class AdminControllerTest {
             assertThat(appNames).containsExactly("Alpha", "beta", "delta");
         }
 
+        @Test
+        @DisplayName("Tech Services call throws: renders same view with syncFailureMessage instead of propagating")
+        void syncLaaApps_techServicesThrows_showsFailureBannerInsteadOfCrashing() {
+            List<AppDto> adminApps = createMockAdminApps();
+            when(appService.getAllAuthzApps()).thenReturn(adminApps);
+
+            final UUID entraOid = UUID.randomUUID();
+            final UUID profileId = UUID.randomUUID();
+
+            CurrentUserDto currentUser = new CurrentUserDto();
+            currentUser.setUserId(entraOid);
+            currentUser.setName("Admin");
+            UserProfile userProfile = UserProfile.builder().id(profileId).build();
+
+            when(loginService.getCurrentUser(authentication)).thenReturn(currentUser);
+            when(loginService.getCurrentProfile(authentication)).thenReturn(userProfile);
+
+            UserProfileDto userProfileDto = mapper.map(userProfile, UserProfileDto.class);
+
+            when(appService.synchronizeAndGetApplicationsFromTechServices(eq(currentUser), eq(userProfileDto)))
+                    .thenThrow(new RuntimeException("Error while getting applications from Tech Services. Status=502"));
+
+            List<AppDto> fallbackApps = List.of(app("F1", "Existing App"));
+            when(appService.getAllLaaApps()).thenReturn(fallbackApps);
+
+            List<AppRoleAdminDto> mockRoles = createMockRoles();
+            when(appRoleService.getAllLaaAppRoles()).thenReturn(mockRoles);
+
+            String view = adminController.syncLaaApps(authentication, model, mockHttpSession);
+
+            assertThat(view).isEqualTo(VIEW);
+            assertThat(model.getAttribute("apps")).isEqualTo(fallbackApps);
+            assertThat(model.getAttribute("appSyncSuccessful")).isEqualTo(false);
+            assertThat(model.getAttribute("successMessage")).isNull();
+            assertThat(model.getAttribute("syncFailureMessage")).isNotNull();
+
+            verify(appService, times(1)).getAllLaaApps();
+        }
+
         private AppDto app(String id, String name) {
             return AppDto.builder().name(name).build();
         }
