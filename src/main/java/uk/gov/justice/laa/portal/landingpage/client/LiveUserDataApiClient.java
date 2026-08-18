@@ -4,11 +4,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import uk.gov.justice.laa.portal.landingpage.service.OboTokenService;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.UUID;
 
@@ -57,14 +57,11 @@ public class LiveUserDataApiClient implements UserDataApiClient {
             .retrieve()
             .onStatus(status -> status.value() == 401 || status.value() == 403,
                 (request, response) -> {
-                    String body = new String(response.getBody().readAllBytes(), StandardCharsets.UTF_8); //todo remove stb-4390
-                    logger.error("Data API auth error: correlationId={}, status={}, uri={}, responseBody={}",
-                        cid, response.getStatusCode(), request.getURI(), body);
                     throw new UserDataApiClientException(
                         "Data API rejected token — check OBO scope and audience configuration",
                         response.getStatusCode().value());
                 })
-            .onStatus(status -> status.is5xxServerError(),
+            .onStatus(HttpStatusCode::is5xxServerError,
                 (request, response) -> {
                     logger.error("Data API server error: correlationId={}, status={}, uri={}",
                         cid, response.getStatusCode(), request.getURI());
