@@ -8998,7 +8998,7 @@ class UserServiceTest {
         UserAccountStatusAudit auditRecord = UserAccountStatusAudit.builder()
                 .id(UUID.randomUUID())
                 .entraUser(mockEntraUser)
-                .statusChange(UserAccountStatus.DISABLED)
+                .statusChange(UserAccountStatus.DEACTIVATED)
                 .disableUserReason(mockReason)
                 .statusChangedBy("Admin User")
                 .statusChangedDate(statusChangeDate)
@@ -9031,7 +9031,7 @@ class UserServiceTest {
         LocalDateTime now = LocalDateTime.now();
         UserAccountStatusAudit audit1 = UserAccountStatusAudit.builder()
                 .statusChangedDate(now.minusDays(1))
-                .statusChange(UserAccountStatus.DISABLED)
+                .statusChange(UserAccountStatus.DEACTIVATED)
                 .statusChangedBy("John Doe")
                 .disableUserReason(DisableUserReason.builder()
                         .name("Absence")
@@ -9040,7 +9040,7 @@ class UserServiceTest {
 
         UserAccountStatusAudit audit2 = UserAccountStatusAudit.builder()
                 .statusChangedDate(now)
-                .statusChange(UserAccountStatus.ENABLED)
+                .statusChange(UserAccountStatus.ACTIVATED)
                 .statusChangedBy("Jane Smith")
                 .disableUserReason(null)
                 .build();
@@ -9054,10 +9054,10 @@ class UserServiceTest {
         assertThat(result).hasSize(2);
         assertThat(result.get(0))
                 .extracting("statusChange", "statusChangedBy", "disableReason")
-                .containsExactly("Disabled", "John Doe", "Absence");
+                .containsExactly("Deactivated", "John Doe", "Absence");
         assertThat(result.get(1))
                 .extracting("statusChange", "statusChangedBy", "disableReason")
-                .containsExactly("Enabled", "Jane Smith", null);
+                .containsExactly("Activated", "Jane Smith", null);
     }
 
     @Test

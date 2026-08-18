@@ -1017,7 +1017,7 @@ public class UserAccountStatusServiceTest {
         UserAccountStatusAudit audit = auditCaptor.getValue();
 
         assertThat(audit.getEntraUser()).isEqualTo(target);
-        assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ENABLED);
+        assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ACTIVATED);
         assertThat(audit.getStatusChangedBy()).isEqualTo("John Doe");
     }
 
@@ -1096,7 +1096,7 @@ public class UserAccountStatusServiceTest {
         UserAccountStatusAudit audit = auditCaptor.getValue();
 
         assertThat(audit.getEntraUser()).isEqualTo(target);
-        assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ENABLED);
+        assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ACTIVATED);
         assertThat(audit.getStatusChangedBy()).isEqualTo("John Doe");
     }
 
@@ -1272,7 +1272,7 @@ public class UserAccountStatusServiceTest {
         UserAccountStatusAudit audit = auditCaptor.getValue();
 
         assertThat(audit.getEntraUser()).isEqualTo(target);
-        assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ENABLED);
+        assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ACTIVATED);
         assertThat(audit.getStatusChangedBy()).isEqualTo("John Doe");
     }
 
@@ -1351,7 +1351,7 @@ public class UserAccountStatusServiceTest {
         UserAccountStatusAudit audit = auditCaptor.getValue();
 
         assertThat(audit.getEntraUser()).isEqualTo(target);
-        assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ENABLED);
+        assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ACTIVATED);
         assertThat(audit.getStatusChangedBy()).isEqualTo("John Doe");
     }
 
@@ -1422,7 +1422,7 @@ public class UserAccountStatusServiceTest {
         UserAccountStatusAudit audit = auditCaptor.getValue();
 
         assertThat(audit.getEntraUser()).isEqualTo(target);
-        assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ENABLED);
+        assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ACTIVATED);
         assertThat(audit.getStatusChangedBy()).isEqualTo("John Doe");
     }
 
