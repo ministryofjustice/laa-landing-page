@@ -171,7 +171,7 @@ public class AccessControlService {
             return canDeleteUserWithoutProfile(entraUserId);
         }
 
-        if (isMultiFirmUser){
+        if (isMultiFirmUser) {
             return false;
         }
 

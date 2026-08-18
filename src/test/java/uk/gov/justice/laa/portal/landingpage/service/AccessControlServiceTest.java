@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +22,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
+
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -3837,5 +3842,95 @@ public class AccessControlServiceTest {
 
     }
 
+    @Test
+    public void testCannotDeleteAuditUserWhenMultiFirmUserWithProfiles() {
+
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID adminId = UUID.randomUUID();
+        Permission permission = Permission.DELETE_AUDIT_USER;
+
+        AppRole appRole = AppRole.builder()
+                .authzRole(true)
+                .name(AuthzRole.GLOBAL_ADMIN.getRoleName())
+                .permissions(Set.of(permission))
+                .build();
+
+        EntraUser admin = EntraUser.builder()
+                .id(adminId)
+                .userProfiles(HashSet.newHashSet(1))
+                .build();
+
+        UserProfile adminProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(admin)
+                .appRoles(Set.of(appRole))
+                .userType(UserType.INTERNAL)
+                .build();
+
+        admin.getUserProfiles().add(adminProfile);
+
+        String entraUserId = UUID.randomUUID().toString();
+
+        EntraUserDto targetEntraUser = EntraUserDto.builder()
+                .id(entraUserId)
+                .multiFirmUser(true)
+                .build();
+
+        UserProfile targetProfile = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .userType(UserType.EXTERNAL)
+                .build();
+
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(admin);
+        when(userService.getEntraUserById(entraUserId)).thenReturn(Optional.of(targetEntraUser));
+        when(userService.getUserProfilesByEntraUserId(UUID.fromString(entraUserId))).thenReturn(List.of(targetProfile));
+
+        boolean canDelete = accessControlService.canDeleteAuditUser(entraUserId);
+
+        assertThat(canDelete).isFalse();
+    }
+
+    @Test
+    public void testCannotDeleteAuditUserWhenInvalidEntraId() {
+
+        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+
+        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        UUID adminId = UUID.randomUUID();
+        Permission permission = Permission.DELETE_AUDIT_USER;
+
+        AppRole appRole = AppRole.builder()
+                .authzRole(true)
+                .name(AuthzRole.GLOBAL_ADMIN.getRoleName())
+                .permissions(Set.of(permission))
+                .build();
+
+        EntraUser admin = EntraUser.builder()
+                .id(adminId)
+                .userProfiles(HashSet.newHashSet(1))
+                .build();
+
+        UserProfile adminProfile = UserProfile.builder()
+                .activeProfile(true)
+                .entraUser(admin)
+                .appRoles(Set.of(appRole))
+                .userType(UserType.INTERNAL)
+                .build();
+
+        admin.getUserProfiles().add(adminProfile);
+
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(admin);
+
+        boolean canDelete = accessControlService.canDeleteAuditUser("not-a-uuid");
+
+        assertThat(canDelete).isFalse();
+    }
 
 }

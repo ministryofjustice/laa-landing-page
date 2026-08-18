@@ -529,7 +529,7 @@ public class UserController {
         UUID deleteReasonId = (UUID) session.getAttribute("deleteReasonId");
 
         if (deleteReasonId == null) {
-            return "redirect:/users/manage/" + id + "/delete";
+            return "redirect:/admin/users/manage/" + id + "/delete";
         }
 
         UserProfile currentProfile = loginService.getCurrentProfile(authentication);

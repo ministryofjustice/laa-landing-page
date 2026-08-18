@@ -376,7 +376,7 @@ public class AuditController {
         model.addAttribute("user", userDetail);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Remove access - " + userDetail.getFullName());
         populateDeleteReasonsModel(model);
-        return "user-audit/delete-user-without-profile-reason";
+        return "user-audit/delete-user-reason";
     }
 
     /**
@@ -400,7 +400,7 @@ public class AuditController {
             model.addAttribute("fieldErrorMessage", "Please select a reason.");
             model.addAttribute(ModelAttributes.PAGE_TITLE, "Remove access - " + userDetail.getFullName());
             populateDeleteReasonsModel(model);
-            return "user-audit/delete-user-without-profile-reason";
+            return "user-audit/delete-user-reason";
         }
 
         try {
@@ -410,7 +410,7 @@ public class AuditController {
             model.addAttribute("fieldErrorMessage", "Please select a valid reason.");
             model.addAttribute(ModelAttributes.PAGE_TITLE, "Remove access - " + userDetail.getFullName());
             populateDeleteReasonsModel(model);
-            return "user-audit/delete-user-without-profile-reason";
+            return "user-audit/delete-user-reason";
         }
 
         final UUID resolvedReasonId = deleteReasonId;
@@ -426,7 +426,7 @@ public class AuditController {
             model.addAttribute("fieldErrorMessage", "Please select a valid reason.");
             model.addAttribute(ModelAttributes.PAGE_TITLE, "Remove access - " + userDetail.getFullName());
             populateDeleteReasonsModel(model);
-            return "user-audit/delete-user-without-profile-reason";
+            return "user-audit/delete-user-reason";
         }
 
         session.setAttribute("deleteReasonId", deleteReasonId);
