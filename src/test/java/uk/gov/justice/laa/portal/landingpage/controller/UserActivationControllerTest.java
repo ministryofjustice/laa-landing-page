@@ -66,9 +66,7 @@ public class UserActivationControllerTest {
     private static final UUID ACTOR_USER_ID = UUID.randomUUID();
     private static final String PROFILE_ID = UUID.randomUUID().toString();
     private static final String REFERER = "http://localhost/admin/users";
-    private final String userId = UUID.randomUUID().toString();
-    private final String profileId = UUID.randomUUID().toString();
-    private final String requestId = UUID.randomUUID().toString();
+    private static final String REQUEST_ID = UUID.randomUUID().toString();
     private UserActivationController userActivationController;
     @Mock
     private LoginService loginService;
@@ -129,6 +127,7 @@ public class UserActivationControllerTest {
             UserActivationRequest pendingRequest = buildUserActivationRequest(ReactivationRequestStatus.IN_REVIEW);
 
             when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(user));
+            when(userService.isValidUserProfileId(USER_ID, PROFILE_ID)).thenReturn(true);
             when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(PROFILE_ID)).thenReturn(Optional.of(pendingRequest));
 
             redirectAttributes = new RedirectAttributesModelMap();
@@ -152,6 +151,7 @@ public class UserActivationControllerTest {
             EntraUser currentEntraUser = mock(EntraUser.class);
             when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentEntraUser);
             when(userService.isInternal(currentEntraUser.getId())).thenReturn(false);
+            when(userService.isValidUserProfileId(USER_ID, PROFILE_ID)).thenReturn(true);
 
             String view = userActivationController.delegateReactivateUserGet(USER_ID, session, model, REFERER, PROFILE_ID, authentication, redirectAttributes);
 
@@ -187,6 +187,7 @@ public class UserActivationControllerTest {
             EntraUserDto user = buildEntraUserDto();
 
             when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(user));
+            when(userService.isValidUserProfileId(USER_ID, PROFILE_ID)).thenReturn(true);
 
             String view = userActivationController.delegateReactivateUserPost(USER_ID, model, session, REFERER, PROFILE_ID);
 
@@ -272,6 +273,7 @@ public class UserActivationControllerTest {
             when(bindingResult.hasErrors()).thenReturn(false);
             EntraUserDto user = buildEntraUserDto();
             when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(user));
+            when(userService.isValidUserProfileId(USER_ID, PROFILE_ID)).thenReturn(true);
 
             String view = userActivationController.delegateReactivateUserCommentsPost(USER_ID, form, bindingResult, model, session);
 
@@ -408,9 +410,6 @@ public class UserActivationControllerTest {
 
         @Test
         void get_WhenRequestStatusIsApproved_RedirectsToManageUsersWithFlashAttributes() {
-            String userId = "user-123";
-            String profileId = UUID.randomUUID().toString();
-            UUID requestId = UUID.randomUUID();
             MockHttpSession session = new MockHttpSession();
             Model model = new ConcurrentModel();
             RedirectAttributesModelMap redirectAttributes = new RedirectAttributesModelMap();
@@ -418,40 +417,40 @@ public class UserActivationControllerTest {
             EntraUserDto mockUser = mock(EntraUserDto.class);
             UserActivationRequest mockRequest = mock(UserActivationRequest.class);
 
-            when(userService.getEntraUserById(userId)).thenReturn(Optional.of(mockUser));
-            when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId)).thenReturn(Optional.of(mockRequest));
+            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(mockUser));
+            when(userService.isValidUserProfileId(USER_ID, PROFILE_ID)).thenReturn(true);
+            when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(PROFILE_ID))
+                    .thenReturn(Optional.of(mockRequest));
             when(mockRequest.getStatus()).thenReturn(ReactivationRequestStatus.APPROVED);
-            when(mockRequest.getId()).thenReturn(requestId);
+            when(mockRequest.getId()).thenReturn(UUID.fromString(REQUEST_ID));
 
-            String view = userActivationController.trackDelegateReactivateUserRequestsGet(userId, session, model, "http://referer.com", profileId, redirectAttributes);
+            String view = userActivationController.trackDelegateReactivateUserRequestsGet(USER_ID, session, model, "http://referer.com", PROFILE_ID, redirectAttributes);
 
-            assertThat(view).isEqualTo("redirect:/admin/users/manage/" + profileId);
+            assertThat(view).isEqualTo("redirect:/admin/users/manage/" + PROFILE_ID);
             assertThat(redirectAttributes.getFlashAttributes()).extractingByKey("errorMessage").isEqualTo("There is no open delegate activation request");
         }
 
         @Test
         void get_WhenRequestIsEmpty_RedirectsToManageUsersWithFlashErrorMessage() {
-            String userId = "user-123";
-            String profileId = UUID.randomUUID().toString();
             MockHttpSession session = new MockHttpSession();
             Model model = new ConcurrentModel();
             RedirectAttributesModelMap redirectAttributes = new RedirectAttributesModelMap();
 
             EntraUserDto mockUser = mock(EntraUserDto.class);
 
-            when(userService.getEntraUserById(userId)).thenReturn(Optional.of(mockUser));
-            when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId)).thenReturn(Optional.empty());
+            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(mockUser));
+            when(userService.isValidUserProfileId(USER_ID, PROFILE_ID)).thenReturn(true);
+            when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(PROFILE_ID))
+                    .thenReturn(Optional.empty());
 
-            String view = userActivationController.trackDelegateReactivateUserRequestsGet(userId, session, model, "http://referer.com", profileId, redirectAttributes);
+            String view = userActivationController.trackDelegateReactivateUserRequestsGet(USER_ID, session, model, "http://referer.com", PROFILE_ID, redirectAttributes);
 
-            assertThat(view).isEqualTo("redirect:/admin/users/manage/" + profileId);
+            assertThat(view).isEqualTo("redirect:/admin/users/manage/" + PROFILE_ID);
             assertThat(redirectAttributes.getFlashAttributes()).extractingByKey("errorMessage").isEqualTo("There is no open delegate activation request");
         }
 
         @Test
         void get_WhenRequestNotInProgress_PopulatesModelAndReturnsTrackingView() {
-            String userId = "user-123";
-            String profileId = UUID.randomUUID().toString();
             MockHttpSession session = new MockHttpSession();
             Model model = new ConcurrentModel();
             RedirectAttributesModelMap redirectAttributes = new RedirectAttributesModelMap();
@@ -462,12 +461,14 @@ public class UserActivationControllerTest {
             when(mockRequest.getStatus()).thenReturn(ReactivationRequestStatus.APPROVED);
             when(mockRequest.getId()).thenReturn(UUID.randomUUID());
 
-            when(userService.getEntraUserById(userId)).thenReturn(Optional.of(mockUser));
-            when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId)).thenReturn(Optional.of(mockRequest));
+            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(mockUser));
+            when(userService.isValidUserProfileId(USER_ID, PROFILE_ID)).thenReturn(true);
+            when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(PROFILE_ID))
+                    .thenReturn(Optional.of(mockRequest));
 
-            String view = userActivationController.trackDelegateReactivateUserRequestsGet(userId, session, model, "http://referer.com", profileId, redirectAttributes);
+            String view = userActivationController.trackDelegateReactivateUserRequestsGet(USER_ID, session, model, "http://referer.com", PROFILE_ID, redirectAttributes);
 
-            assertThat(view).isEqualTo("redirect:/admin/users/manage/" + profileId);
+            assertThat(view).isEqualTo("redirect:/admin/users/manage/" + PROFILE_ID);
             assertThat(redirectAttributes.getFlashAttributes()).extractingByKey("errorMessage").isEqualTo("There is no open delegate activation request");
         }
     }
@@ -547,7 +548,7 @@ public class UserActivationControllerTest {
         void shouldThrow404WhenFeatureDisabled() {
             userActivationController.disableUserFeatureEnabled = false;
 
-            assertThatThrownBy(() -> userActivationController.rejectDelegateReactivateUserRequestsGet(userId, session, model, "referer", profileId, redirectAttributes))
+            assertThatThrownBy(() -> userActivationController.rejectDelegateReactivateUserRequestsGet(USER_ID, session, model, "referer", PROFILE_ID, redirectAttributes))
                     .isInstanceOf(ResponseStatusException.class).extracting(e -> ((ResponseStatusException) e).getStatusCode()).isEqualTo(HttpStatusCode.valueOf(404));
         }
 
@@ -555,12 +556,13 @@ public class UserActivationControllerTest {
         @DisplayName("Should redirect with error message when no request exists")
         void shouldRedirectWhenRequestIsEmpty() {
             EntraUserDto userDto = mock(EntraUserDto.class);
-            when(userService.getEntraUserById(userId)).thenReturn(Optional.of(userDto));
-            when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId)).thenReturn(Optional.empty());
+            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(userDto));
+            when(userService.isValidUserProfileId(USER_ID, PROFILE_ID)).thenReturn(true);
+            when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(PROFILE_ID)).thenReturn(Optional.empty());
 
-            String viewName = userActivationController.rejectDelegateReactivateUserRequestsGet(userId, session, model, "referer", profileId, redirectAttributes);
+            String viewName = userActivationController.rejectDelegateReactivateUserRequestsGet(USER_ID, session, model, "referer", PROFILE_ID, redirectAttributes);
 
-            assertThat(viewName).isEqualTo("redirect:/admin/users/manage/" + profileId);
+            assertThat(viewName).isEqualTo("redirect:/admin/users/manage/" + PROFILE_ID);
             verify(redirectAttributes).addFlashAttribute("errorMessage", "There is no open delegate activation request");
         }
 
@@ -573,12 +575,13 @@ public class UserActivationControllerTest {
 
             when(request.getStatus()).thenReturn(ReactivationRequestStatus.APPROVED);
             when(request.getId()).thenReturn(dbRequestId);
-            when(userService.getEntraUserById(userId)).thenReturn(Optional.of(userDto));
-            when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId)).thenReturn(Optional.of(request));
+            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(userDto));
+            when(userService.isValidUserProfileId(USER_ID, PROFILE_ID)).thenReturn(true);
+            when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(PROFILE_ID)).thenReturn(Optional.of(request));
 
-            String viewName = userActivationController.rejectDelegateReactivateUserRequestsGet(userId, session, model, "referer", profileId, redirectAttributes);
+            String viewName = userActivationController.rejectDelegateReactivateUserRequestsGet(USER_ID, session, model, "referer", PROFILE_ID, redirectAttributes);
 
-            assertThat(viewName).isEqualTo("redirect:/admin/users/manage/" + profileId);
+            assertThat(viewName).isEqualTo("redirect:/admin/users/manage/" + PROFILE_ID);
             verify(redirectAttributes).addFlashAttribute("errorMessage", "There is no open delegate activation request");
         }
 
@@ -589,22 +592,23 @@ public class UserActivationControllerTest {
 
             UserActivationRequest request = mock(UserActivationRequest.class);
             when(request.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
-            when(request.getRequestId()).thenReturn(UUID.fromString(requestId));
+            when(request.getRequestId()).thenReturn(UUID.fromString(REQUEST_ID));
 
             List<UserActivationRequestSummaryDto> history = List.of(mock(UserActivationRequestSummaryDto.class));
 
-            when(userService.getEntraUserById(userId)).thenReturn(Optional.of(userDto));
-            when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId)).thenReturn(Optional.of(request));
-            when(userReactivationRequestService.getLatestRequestHistoryForUserProfile(profileId)).thenReturn(history);
+            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(userDto));
+            when(userService.isValidUserProfileId(USER_ID, PROFILE_ID)).thenReturn(true);
+            when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(PROFILE_ID)).thenReturn(Optional.of(request));
+            when(userReactivationRequestService.getLatestRequestHistoryForUserProfile(PROFILE_ID)).thenReturn(history);
 
-            String viewName = userActivationController.rejectDelegateReactivateUserRequestsGet(userId, session, model, "http://example.com", profileId, redirectAttributes);
+            String viewName = userActivationController.rejectDelegateReactivateUserRequestsGet(USER_ID, session, model, "http://example.com", PROFILE_ID, redirectAttributes);
 
             assertThat(viewName).isEqualTo("delegate-reactivate-user-rejection");
             assertThat(model.getAttribute("delegateReactivateUserCommentForm")).isInstanceOf(DelegateReactivateUserCommentForm.class);
             assertThat(model.getAttribute("user")).isEqualTo(userDto);
-            assertThat(model.getAttribute("profileId")).isEqualTo(profileId);
+            assertThat(model.getAttribute("profileId")).isEqualTo(PROFILE_ID);
             assertThat(model.getAttribute("referer")).isEqualTo("http://example.com");
-            assertThat(model.getAttribute("requestId")).isEqualTo(requestId);
+            assertThat(model.getAttribute("requestId")).isEqualTo(REQUEST_ID);
             assertThat(model.getAttribute("reactivationRequests")).isEqualTo(history);
             assertThat(model.getAttribute("pageTitle")).isEqualTo("Delegate Reactivate User");
         }
@@ -623,15 +627,16 @@ public class UserActivationControllerTest {
             // Mocking the behavior of private helper buildErrorString gracefully by providing dummy errors
             when(bindingResult.getAllErrors()).thenReturn(List.of(new ObjectError("form", "Error message")));
 
-            String viewName = userActivationController.rejectDelegateReactivateUserRequestsPost(userId, session, model, profileId, requestId, form, bindingResult, authentication, redirectAttributes);
+            String viewName = userActivationController.rejectDelegateReactivateUserRequestsPost(USER_ID, session, model,
+                    PROFILE_ID, REQUEST_ID, form, bindingResult, authentication, redirectAttributes);
 
             assertThat(viewName).isEqualTo("redirect:/admin/user/delegate-reactivate/reject/{id}");
             verify(redirectAttributes).addFlashAttribute(eq(BindingResult.MODEL_KEY_PREFIX + "delegateReactivateUserCommentForm"), eq(bindingResult));
             verify(redirectAttributes).addFlashAttribute("delegateReactivateUserCommentForm", form);
             verify(redirectAttributes).addFlashAttribute(eq("errorMessage"), anyString());
-            verify(redirectAttributes).addAttribute("id", userId);
-            verify(redirectAttributes).addAttribute("profileId", profileId);
-            verify(redirectAttributes).addAttribute("requestId", requestId);
+            verify(redirectAttributes).addAttribute("id", USER_ID);
+            verify(redirectAttributes).addAttribute("profileId", PROFILE_ID);
+            verify(redirectAttributes).addAttribute("requestId", REQUEST_ID);
         }
 
         @Test
@@ -653,12 +658,13 @@ public class UserActivationControllerTest {
 
             when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
             when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
-            when(userService.getEntraUserById(userId)).thenReturn(Optional.of(targetUserDto));
+            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(targetUserDto));
 
-            String viewName = userActivationController.rejectDelegateReactivateUserRequestsPost(userId, session, model, profileId, requestId, form, bindingResult, authentication, redirectAttributes);
+            String viewName = userActivationController.rejectDelegateReactivateUserRequestsPost(USER_ID, session, model,
+                    PROFILE_ID, REQUEST_ID, form, bindingResult, authentication, redirectAttributes);
 
             assertThat(viewName).isEqualTo("delegate-reactivate-user-reject-confirmation");
-            verify(userReactivationRequestService).rejectReactivationRequest(requestId, userId, profileId, "Missing info", "actor-oid-1");
+            verify(userReactivationRequestService).rejectReactivationRequest(REQUEST_ID, USER_ID, PROFILE_ID, "Missing info", "actor-oid-1");
             assertThat(model.getAttribute("pageTitle")).isEqualTo("Delegate Reactivate User");
             assertThat(model.getAttribute("userName")).isEqualTo("Jane Smith");
         }
@@ -683,13 +689,13 @@ public class UserActivationControllerTest {
 
             when(loginService.getCurrentEntraUser(authentication)).thenReturn(entraUser);
             when(loginService.getCurrentUser(authentication)).thenReturn(currentUserDto);
-            when(userService.getEntraUserById(userId)).thenReturn(Optional.of(targetUserDto));
+            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(targetUserDto));
 
-            String viewName = userActivationController.approveDelegateReactivateUserRequestsPost(userId, session, model, profileId, requestId, authentication);
+            String viewName = userActivationController.approveDelegateReactivateUserRequestsPost(USER_ID, session, model, PROFILE_ID, REQUEST_ID, authentication);
 
             assertThat(viewName).isEqualTo("delegate-reactivate-user-approve-confirmation");
-            verify(userReactivationRequestService).approveReactivationRequest(requestId, userId, profileId, "actor-oid-2");
-            verify(userAccountStatusService).enableUser(UUID.fromString(userId), ACTOR_USER_ID);
+            verify(userReactivationRequestService).approveReactivationRequest(REQUEST_ID, USER_ID, PROFILE_ID, "actor-oid-2");
+            verify(userAccountStatusService).enableUser(UUID.fromString(USER_ID), ACTOR_USER_ID);
             assertThat(model.getAttribute("pageTitle")).isEqualTo("Delegate Reactivate User");
             assertThat(model.getAttribute("userName")).isEqualTo("Alice Johnson");
         }

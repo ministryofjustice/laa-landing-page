@@ -73,8 +73,8 @@ public class UserActivationController {
     public String delegateReactivateUserGet(@PathVariable String id,
                                             HttpSession session,
                                             Model model,
-                                            String referer,
-                                            String profileId,
+                                            @RequestParam String referer,
+                                            @RequestParam String profileId,
                                             Authentication authentication,
                                             RedirectAttributes redirectAttributes) {
         log.info("Initiating delegate reactivate GET flow for userId: {} and profileId: {}", id, profileId);
@@ -86,6 +86,12 @@ public class UserActivationController {
         clearSessionAttributes(session);
 
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+
+        if (!userService.isValidUserProfileId(id, profileId)) {
+            log.info("Invalid access to reactivate page for profileId: {} for userId: {}", profileId, id);
+            throw new ResponseStatusException(HttpStatusCode.valueOf(403));
+        }
+
         Optional<UserActivationRequest> request = userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId);
         if (request.isPresent()
                 && !(ReactivationRequestStatus.REJECTED.equals(request.get().getStatus())
@@ -115,8 +121,8 @@ public class UserActivationController {
     public String delegateReactivateUserPost(@PathVariable String id,
                                              Model model,
                                              HttpSession session,
-                                             String referer,
-                                             String profileId) {
+                                             @RequestParam String referer,
+                                             @RequestParam String profileId) {
         log.info("Processing delegate reactivate POST for userId: {} and profileId: {}", id, profileId);
 
         String idFromSession = getObjectFromHttpSession(session, "delegateReactivateUserId", String.class).orElseThrow();
@@ -124,6 +130,12 @@ public class UserActivationController {
             log.info("Session validation failed in delegateReactivateUserPost. Path ID: {}, Session ID: {}", id, idFromSession);
             throw new ResponseStatusException(HttpStatusCode.valueOf(403));
         }
+
+        if (!userService.isValidUserProfileId(id, profileId)) {
+            log.info("Invalid submit to reactivate page for profileId: {} for userId: {}", profileId, id);
+            throw new ResponseStatusException(HttpStatusCode.valueOf(403));
+        }
+
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
         session.setAttribute("delegateReactivateUserId", id);
         session.setAttribute("profileId", profileId);
@@ -191,6 +203,12 @@ public class UserActivationController {
             model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User");
             return "delegate-reactivate-user-comment";
         }
+
+        if (!userService.isValidUserProfileId(id, profileId)) {
+            log.info("Invalid access to reactivate comments page for profileId: {} for userId: {}", profileId, id);
+            throw new ResponseStatusException(HttpStatusCode.valueOf(403));
+        }
+
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
 
         model.addAttribute("user", user);
@@ -285,8 +303,8 @@ public class UserActivationController {
     public String trackDelegateReactivateUserRequestsGet(@PathVariable String id,
                                                          HttpSession session,
                                                          Model model,
-                                                         String referer,
-                                                         String profileId,
+                                                         @RequestParam String referer,
+                                                         @RequestParam String profileId,
                                                          RedirectAttributes redirectAttributes) {
         log.debug("Tracking delegate reactivate requests for userId: {}, profileId: {}", id, profileId);
 
@@ -297,6 +315,11 @@ public class UserActivationController {
 
         final EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
         Optional<UserActivationRequest> request = userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId);
+
+        if (!userService.isValidUserProfileId(id, profileId)) {
+            log.info("Invalid access to track reactivate page for profileId: {} for userId: {}", profileId, id);
+            throw new ResponseStatusException(HttpStatusCode.valueOf(403));
+        }
 
         if (request.isEmpty()) {
             log.info("No delegate activation request found to track for profileId: {}", profileId);
@@ -382,14 +405,19 @@ public class UserActivationController {
     public String rejectDelegateReactivateUserRequestsGet(@PathVariable String id,
                                                           HttpSession session,
                                                           Model model,
-                                                          String referer,
-                                                          String profileId,
+                                                          @RequestParam String referer,
+                                                          @RequestParam String profileId,
                                                           RedirectAttributes redirectAttributes) {
         log.info("Rendering rejection form for userId: {}, profileId: {}", id, profileId);
 
         if (!disableUserFeatureEnabled) {
             log.info("Delegate reactivate feature disabled. Throwing 404 for userId: {}", id);
             throw new ResponseStatusException(HttpStatusCode.valueOf(404));
+        }
+
+        if (!userService.isValidUserProfileId(id, profileId)) {
+            log.info("Invalid access to reject reactivate page for profileId: {} for userId: {}", profileId, id);
+            throw new ResponseStatusException(HttpStatusCode.valueOf(403));
         }
 
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
