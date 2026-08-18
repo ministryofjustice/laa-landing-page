@@ -9019,7 +9019,7 @@ class UserServiceTest {
         assertEquals(1, result.getAccountStatusHistory().size());
 
         AccountStatusHistoryDto history = result.getAccountStatusHistory().get(0);
-        assertEquals("Disabled", history.getStatusChange());
+        assertEquals("Deactivated", history.getStatusChange());
         assertEquals("Absence", history.getDisableReason());
         assertEquals("Admin User", history.getStatusChangedBy());
         assertEquals(statusChangeDate, history.getStatusChangedDate());
