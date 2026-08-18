@@ -30,8 +30,8 @@
         </legend>
 
         <p class="govuk-body">Deleting a user begins the process of completely removing a user’s account
-            information and access. This can take up to 1–2 minutes. The user may still be able
-            to access their account during this time .</p>
+            information and access. This can take a few minutes to complete. The user
+            may still be able to access their account during this time .</p>
 
         <form th:action="@{/admin/users/audit/entra/{id}/delete/confirm(id=${user.userId})}"
               method="post">
