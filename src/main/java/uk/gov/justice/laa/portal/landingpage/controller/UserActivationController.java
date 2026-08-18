@@ -62,11 +62,8 @@ public class UserActivationController {
     private final UserAccountStatusService userAccountStatusService;
     private final EventService eventService;
 
-    @Value("${feature.flag.disable.user}")
-    public boolean disableUserFeatureEnabled;
-
-    @Value("${feature.flag.edit.user.details}")
-    public boolean editUserDetailFeatureEnabled;
+    @Value("${feature.flag.delegate.user.activation}")
+    public boolean delegateUserActivationFeatureEnabled;
 
     @GetMapping("/user/delegate-reactivate/{id}")
     @PreAuthorize("@accessControlService.canDelegateEnableUser(#id)")
@@ -78,7 +75,7 @@ public class UserActivationController {
                                             RedirectAttributes redirectAttributes) {
         log.info("Initiating delegate reactivate GET flow for userId: {} and profileId: {}", id, profileId);
 
-        if (!disableUserFeatureEnabled) {
+        if (!delegateUserActivationFeatureEnabled) {
             log.info("Delegate reactivate feature disabled. Throwing 404 for userId: {}", id);
             throw new ResponseStatusException(HttpStatusCode.valueOf(404));
         }
@@ -151,7 +148,7 @@ public class UserActivationController {
                                                     HttpSession session) {
         log.info("Rendering delegate reactivate comment view for userId: {}", id);
 
-        if (!disableUserFeatureEnabled) {
+        if (!delegateUserActivationFeatureEnabled) {
             log.info("Delegate reactivate feature disabled. Throwing 404 for userId: {}", id);
             throw new ResponseStatusException(HttpStatusCode.valueOf(404));
         }
@@ -222,7 +219,7 @@ public class UserActivationController {
                                                                 HttpSession session) {
         log.info("Rendering check-answers step for userId: {}", id);
 
-        if (!disableUserFeatureEnabled) {
+        if (!delegateUserActivationFeatureEnabled) {
             log.info("Delegate reactivate feature disabled. Throwing 404 for userId: {}", id);
             throw new ResponseStatusException(HttpStatusCode.valueOf(404));
         }
@@ -254,7 +251,7 @@ public class UserActivationController {
                                                                  HttpSession session) {
         log.info("Submitting delegate reactivate request for userId: {}", id);
 
-        if (!disableUserFeatureEnabled) {
+        if (!delegateUserActivationFeatureEnabled) {
             log.info("Delegate reactivate feature disabled. Throwing 404 for userId: {}", id);
             throw new ResponseStatusException(HttpStatusCode.valueOf(404));
         }
@@ -303,7 +300,7 @@ public class UserActivationController {
                                                          RedirectAttributes redirectAttributes) {
         log.debug("Tracking delegate reactivate requests for userId: {}, profileId: {}", id, profileId);
 
-        if (!disableUserFeatureEnabled) {
+        if (!delegateUserActivationFeatureEnabled) {
             log.info("Delegate reactivate feature disabled. Throwing 404 for userId: {}", id);
             throw new ResponseStatusException(HttpStatusCode.valueOf(404));
         }
@@ -403,7 +400,7 @@ public class UserActivationController {
                                                           RedirectAttributes redirectAttributes) {
         log.info("Rendering rejection form for userId: {}, profileId: {}", id, profileId);
 
-        if (!disableUserFeatureEnabled) {
+        if (!delegateUserActivationFeatureEnabled) {
             log.info("Delegate reactivate feature disabled. Throwing 404 for userId: {}", id);
             throw new ResponseStatusException(HttpStatusCode.valueOf(404));
         }
