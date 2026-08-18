@@ -36,6 +36,8 @@ databaseChangeLog:
               - column:
                   name: comments
                   type: TEXT
+                  constraints:
+                    nullable: false
               - column:
                   name: actor_entra_oid
                   type: VARCHAR(255)

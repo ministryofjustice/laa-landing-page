@@ -73,7 +73,6 @@ public class UserActivationController {
     public String delegateReactivateUserGet(@PathVariable String id,
                                             HttpSession session,
                                             Model model,
-                                            @RequestParam String referer,
                                             @RequestParam String profileId,
                                             Authentication authentication,
                                             RedirectAttributes redirectAttributes) {
@@ -107,7 +106,6 @@ public class UserActivationController {
 
         model.addAttribute("user", user);
         model.addAttribute("profileId", profileId);
-        model.addAttribute("referer", referer);
         model.addAttribute("isInternalActor", isInternalActor);
         session.setAttribute("delegateReactivateUserId", id);
         session.setAttribute("profileId", profileId);
@@ -121,7 +119,6 @@ public class UserActivationController {
     public String delegateReactivateUserPost(@PathVariable String id,
                                              Model model,
                                              HttpSession session,
-                                             @RequestParam String referer,
                                              @RequestParam String profileId) {
         log.info("Processing delegate reactivate POST for userId: {} and profileId: {}", id, profileId);
 
@@ -141,7 +138,6 @@ public class UserActivationController {
         session.setAttribute("profileId", profileId);
 
         model.addAttribute("user", user);
-        model.addAttribute("referer", referer);
         model.addAttribute("profileId", profileId);
 
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User");
@@ -303,7 +299,6 @@ public class UserActivationController {
     public String trackDelegateReactivateUserRequestsGet(@PathVariable String id,
                                                          HttpSession session,
                                                          Model model,
-                                                         @RequestParam String referer,
                                                          @RequestParam String profileId,
                                                          RedirectAttributes redirectAttributes) {
         log.debug("Tracking delegate reactivate requests for userId: {}, profileId: {}", id, profileId);
@@ -343,7 +338,6 @@ public class UserActivationController {
         model.addAttribute("canActionDelegateEnableUser", canActionDelegateEnableUser);
         model.addAttribute("user", user);
         model.addAttribute("profileId", profileId);
-        model.addAttribute("referer", referer);
         model.addAttribute("requestId", request.get().getRequestId().toString());
 
         List<UserActivationRequestSummaryDto> latestRequestHistoryForUserProfile
@@ -405,7 +399,6 @@ public class UserActivationController {
     public String rejectDelegateReactivateUserRequestsGet(@PathVariable String id,
                                                           HttpSession session,
                                                           Model model,
-                                                          @RequestParam String referer,
                                                           @RequestParam String profileId,
                                                           RedirectAttributes redirectAttributes) {
         log.info("Rendering rejection form for userId: {}, profileId: {}", id, profileId);
@@ -442,7 +435,6 @@ public class UserActivationController {
 
         model.addAttribute("user", user);
         model.addAttribute("profileId", profileId);
-        model.addAttribute("referer", referer);
         model.addAttribute("requestId", request.get().getRequestId().toString());
 
         List<UserActivationRequestSummaryDto> latestRequestHistoryForUserProfile

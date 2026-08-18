@@ -6,7 +6,6 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Builder;
@@ -56,7 +55,6 @@ public class UserActivationRequest extends BaseEntity {
     private ReactivationRequestStatus status;
 
     @Column(name = "comments", nullable = false, length = 4000, columnDefinition = "TEXT")
-    @NotBlank(message = "Reactivate user request comments must be provided")
     @Size(min = 1, max = 4000, message = "Reactivate user request comments must be between 1 and 4000 characters")
     private String comments;
 

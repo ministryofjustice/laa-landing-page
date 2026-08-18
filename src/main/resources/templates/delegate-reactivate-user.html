@@ -19,7 +19,7 @@
 
     <div class="govuk-grid-row">
         <div class="govuk-grid-column-two-thirds">
-            <form method="post" th:action="@{/admin/user/delegate-reactivate/{id}(id=${user.id}, referer=${referer}, profileId=${profileId})}">
+            <form method="post" th:action="@{/admin/user/delegate-reactivate/{id}(id=${user.id}, profileId=${profileId})}">
                 <div class="govuk-form-group">
 
                     <h1 class="govuk-heading-xl govuk-!-margin-top-0">Request for <span th:text="${user.fullName}">Full Name</span>

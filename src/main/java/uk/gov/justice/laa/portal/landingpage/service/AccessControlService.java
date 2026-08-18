@@ -462,7 +462,7 @@ public class AccessControlService {
      */
     public EnablementFlags getEnablementFlags(String entraUserId) {
         EnablementState state = computeEnablementState(entraUserId);
-        return new EnablementFlags(state.canEnable(), state.blockedByHierarchy(), state.canDelegate);
+        return new EnablementFlags(state.canEnable(), state.blockedByHierarchy(), state.canDelegate());
     }
 
     /** Exposes both canEnable and blockedByHierarchy in one object to avoid computing state twice. */
@@ -557,7 +557,8 @@ public class AccessControlService {
             }
 
             return EnablementState.CAN_ENABLE;
-        } else if (actorRoles.contains(AuthzRole.FIRM_USER_MANAGER.getRoleName())) {
+        } else if (!userEnablementPolicy.canEnable(disableType, actorRoles)
+                && actorRoles.contains(AuthzRole.FIRM_USER_MANAGER.getRoleName())) {
             return userEnablementPolicy.canDelegateReactivationRequest(disableType, actorRoles)
                     ? EnablementState.CAN_DELEGATE_ENABLE
                     : EnablementState.BLOCKED_BY_HIERARCHY;

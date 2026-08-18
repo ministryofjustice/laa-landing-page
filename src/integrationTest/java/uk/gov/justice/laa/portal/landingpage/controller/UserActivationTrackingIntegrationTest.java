@@ -38,8 +38,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void cannotAccessDelegateReactivationForUserDisabledBySameFirm() throws Exception {
             EntraUser providerAdmin = firmUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.FIRM, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(providerAdmin)))
                     .andExpect(status().isForbidden());
         }
@@ -51,8 +53,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void cannotAccessDelegateReactivationForDifferentFirm() throws Exception {
             EntraUser providerAdmin = firmUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.FIRM, testFirm1);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(providerAdmin)))
                     .andExpect(status().isForbidden());
         }
@@ -61,8 +65,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void cannotAccessDelegateReactivationForSameFirmUserDisabledByPriv() throws Exception {
             EntraUser providerAdmin = firmUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.PRIVILEGED, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(providerAdmin)))
                     .andExpect(status().isForbidden());
         }
@@ -71,8 +77,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void canAccessDelegateReactivationForSameFirmUserDisabledByEum() throws Exception {
             EntraUser providerAdmin = firmUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(providerAdmin)))
                     .andExpect(status().isOk())
                     .andExpect(view().name("delegate-reactivate-user"))
@@ -83,8 +91,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void canAccessDelegateReactivationForSameFirmUserDisabledByNone() throws Exception {
             EntraUser providerAdmin = firmUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.NONE, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(providerAdmin)))
                     .andExpect(status().isOk())
                     .andExpect(view().name("delegate-reactivate-user"))
@@ -95,8 +105,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void canAccessDelegateReactivationForSameFirmUserDisabledBySync() throws Exception {
             EntraUser providerAdmin = firmUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.SYNC, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(providerAdmin)))
                     .andExpect(status().isOk())
                     .andExpect(view().name("delegate-reactivate-user"))
@@ -107,8 +119,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void canAccessDelegateReactivationForSameFirmUserDisabledByLaa() throws Exception {
             EntraUser providerAdmin = firmUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(providerAdmin)))
                     .andExpect(status().isOk())
                     .andExpect(view().name("delegate-reactivate-user"))
@@ -122,8 +136,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void canAccessDelegateReactivationForSameFirmDisabledByEum() throws Exception {
             EntraUser providerAdmin = firmUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(providerAdmin)))
                     .andExpect(status().isOk())
                     .andExpect(view().name("delegate-reactivate-user"))
@@ -196,8 +212,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void cannotAccessDelegateReactivationDisabledByPriv() throws Exception {
             EntraUser eum = internalWithExternalOnlyUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.PRIVILEGED, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(eum)))
                     .andExpect(status().isForbidden());
         }
@@ -220,8 +238,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void canAccessDelegateReactivationUserDisabledBySync() throws Exception {
             EntraUser eum = internalWithExternalOnlyUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.SYNC, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(eum)))
                     .andExpect(status().isOk())
                     .andExpect(view().name("delegate-reactivate-user"))
@@ -232,8 +252,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void canAccessDelegateReactivationUserDisabledByLaa() throws Exception {
             EntraUser eum = internalWithExternalOnlyUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(eum)))
                     .andExpect(status().isOk())
                     .andExpect(view().name("delegate-reactivate-user"))
@@ -244,8 +266,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void canAccessDelegateReactivationDisabledByEum() throws Exception {
             EntraUser eum = internalWithExternalOnlyUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(eum)))
                     .andExpect(status().isOk())
                     .andExpect(view().name("delegate-reactivate-user"))
@@ -290,8 +314,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void cannotAccessDelegateReactivationUserDisabledByFirm() throws Exception {
             EntraUser eua = externalUserAdmins.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.FIRM, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(eua)))
                     .andExpect(status().isForbidden());
         }
@@ -300,8 +326,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void cannotAccessDelegateReactivationUserDisabledByPriv() throws Exception {
             EntraUser eua = externalUserAdmins.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.PRIVILEGED, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(eua)))
                     .andExpect(status().isForbidden());
         }
@@ -310,8 +338,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void cannotAccessDelegateReactivationUserDisabledByNone() throws Exception {
             EntraUser eua = externalUserAdmins.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.NONE, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(eua)))
                     .andExpect(status().isForbidden());
         }
@@ -320,8 +350,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void cannotAccessDelegateReactivationUserDisabledBySync() throws Exception {
             EntraUser eua = externalUserAdmins.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.SYNC, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(eua)))
                     .andExpect(status().isForbidden());
         }
@@ -330,8 +362,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void cannotAccessDelegateReactivationUserDisabledByLaa() throws Exception {
             EntraUser eua = externalUserAdmins.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(eua)))
                     .andExpect(status().isForbidden());
         }
@@ -340,8 +374,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void cannotAccessDelegateReactivationDisabledByEum() throws Exception {
             EntraUser eua = externalUserAdmins.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(eua)))
                     .andExpect(status().isForbidden());
         }
@@ -354,8 +390,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void cannotAccessDelegateReactivationUserDisabledByFirm() throws Exception {
             EntraUser sr = securityResponseUsers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.FIRM, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(sr)))
                     .andExpect(status().isForbidden());
         }
@@ -364,8 +402,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void cannotAccessDelegateReactivationUserDisabledByPriv() throws Exception {
             EntraUser sr = securityResponseUsers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.PRIVILEGED, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(sr)))
                     .andExpect(status().isForbidden());
         }
@@ -374,8 +414,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void cannotAccessDelegateReactivationUserDisabledByNone() throws Exception {
             EntraUser sr = securityResponseUsers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.NONE, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(sr)))
                     .andExpect(status().isForbidden());
         }
@@ -384,8 +426,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void cannotAccessDelegateReactivationUserDisabledBySync() throws Exception {
             EntraUser sr = securityResponseUsers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.SYNC, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(sr)))
                     .andExpect(status().isForbidden());
         }
@@ -394,8 +438,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void cannotAccessDelegateReactivationUserDisabledByLaa() throws Exception {
             EntraUser sr = securityResponseUsers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(sr)))
                     .andExpect(status().isForbidden());
         }
@@ -404,8 +450,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void cannotAccessDelegateReactivationDisabledByEum() throws Exception {
             EntraUser sr = securityResponseUsers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(sr)))
                     .andExpect(status().isForbidden());
         }
@@ -418,8 +466,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void cannotAccessDelegateReactivationUserDisabledByFirm() throws Exception {
             EntraUser ga = globalAdmins.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.FIRM, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(ga)))
                     .andExpect(status().isForbidden());
         }
@@ -428,8 +478,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void cannotAccessDelegateReactivationUserDisabledByPriv() throws Exception {
             EntraUser ga = globalAdmins.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.PRIVILEGED, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(ga)))
                     .andExpect(status().isForbidden());
         }
@@ -438,8 +490,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void cannotAccessDelegateReactivationUserDisabledByNone() throws Exception {
             EntraUser ga = globalAdmins.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.NONE, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(ga)))
                     .andExpect(status().isForbidden());
         }
@@ -448,8 +502,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void cannotAccessDelegateReactivationUserDisabledBySync() throws Exception {
             EntraUser ga = globalAdmins.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.SYNC, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(ga)))
                     .andExpect(status().isForbidden());
         }
@@ -458,8 +514,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void cannotAccessDelegateReactivationUserDisabledByLaa() throws Exception {
             EntraUser ga = globalAdmins.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(ga)))
                     .andExpect(status().isForbidden());
         }
@@ -468,8 +526,10 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
         public void cannotAccessDelegateReactivationDisabledByEum() throws Exception {
             EntraUser ga = globalAdmins.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
+            UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/" + externalUser.getId())
+                            .param("profileId", activeProfile.getId().toString())
                             .with(userOauth2Login(ga)))
                     .andExpect(status().isForbidden());
         }
