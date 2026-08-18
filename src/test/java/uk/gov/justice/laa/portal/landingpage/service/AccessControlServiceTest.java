@@ -4327,6 +4327,51 @@ public class AccessControlServiceTest {
 
                 when(userActivationRequestRepository.findRequestHistoryByRequestId(requestId))
                         .thenReturn(List.of());
+                assertThat(accessControlService.canManageDelegateEnableUser(accessedUserIdStr)).isFalse();
+            }
+
+            @Test
+            @DisplayName("Should evaluate permission CAN_MANAGE_DELEGATE_ENABLE_USER when all checks pass")
+            void shouldEvaluateFinalPermissionCheck() {
+                setupBaseInternalUserValidation();
+
+                when(accessedUser.getUserProfiles()).thenReturn(Set.of(accessedProfile));
+                when(accessedProfile.getId()).thenReturn(accessedProfileId);
+                when(accessedProfile.isActiveProfile()).thenReturn(true);
+                when(entraUserRepository.findById(accessedUserId)).thenReturn(Optional.of(accessedUser));
+
+                when(latestActivationRequest.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
+                when(latestActivationRequest.getRequestId()).thenReturn(requestId);
+
+                when(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedProfileId))
+                        .thenReturn(Optional.of(latestActivationRequest));
+
+                when(firstActivationRequest.version()).thenReturn(1);
+                when(userActivationRequestRepository.findRequestHistoryByRequestId(requestId))
+                        .thenReturn(List.of(firstActivationRequest));
+
+                try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
+                    mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_MANAGE_DELEGATE_ENABLE_USER)).thenReturn(true);
+                    assertThat(accessControlService.canManageDelegateEnableUser(accessedUserIdStr)).isTrue();
+                }
+
+                try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
+                    mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_MANAGE_DELEGATE_ENABLE_USER)).thenReturn(false);
+                    assertThat(accessControlService.canManageDelegateEnableUser(accessedUserIdStr)).isFalse();
+                }
+            }
+
+            private void setupBaseInternalUserValidation() {
+                when(securityContext.getAuthentication()).thenReturn(authentication);
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+                when(authenticatedUser.getId()).thenReturn(authenticatedUserId);
+
+                when(userService.isInternal(authenticatedUserId.toString())).thenReturn(true);
+                when(userService.isInternal(accessedUserIdStr)).thenReturn(false);
+            }
+        }
+    }
+
     @Test
     public void testCannotDeleteAuditUserWhenMultiFirmUserWithProfiles() {
 
@@ -4416,50 +4461,5 @@ public class AccessControlServiceTest {
         boolean canDelete = accessControlService.canDeleteAuditUser("not-a-uuid");
 
         assertThat(canDelete).isFalse();
-    }
-
-                assertThat(accessControlService.canManageDelegateEnableUser(accessedUserIdStr)).isFalse();
-            }
-
-            @Test
-            @DisplayName("Should evaluate permission CAN_MANAGE_DELEGATE_ENABLE_USER when all checks pass")
-            void shouldEvaluateFinalPermissionCheck() {
-                setupBaseInternalUserValidation();
-
-                when(accessedUser.getUserProfiles()).thenReturn(Set.of(accessedProfile));
-                when(accessedProfile.getId()).thenReturn(accessedProfileId);
-                when(accessedProfile.isActiveProfile()).thenReturn(true);
-                when(entraUserRepository.findById(accessedUserId)).thenReturn(Optional.of(accessedUser));
-
-                when(latestActivationRequest.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
-                when(latestActivationRequest.getRequestId()).thenReturn(requestId);
-
-                when(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedProfileId))
-                        .thenReturn(Optional.of(latestActivationRequest));
-
-                when(firstActivationRequest.version()).thenReturn(1);
-                when(userActivationRequestRepository.findRequestHistoryByRequestId(requestId))
-                        .thenReturn(List.of(firstActivationRequest));
-
-                try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
-                    mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_MANAGE_DELEGATE_ENABLE_USER)).thenReturn(true);
-                    assertThat(accessControlService.canManageDelegateEnableUser(accessedUserIdStr)).isTrue();
-                }
-
-                try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
-                    mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_MANAGE_DELEGATE_ENABLE_USER)).thenReturn(false);
-                    assertThat(accessControlService.canManageDelegateEnableUser(accessedUserIdStr)).isFalse();
-                }
-            }
-
-            private void setupBaseInternalUserValidation() {
-                when(securityContext.getAuthentication()).thenReturn(authentication);
-                when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
-                when(authenticatedUser.getId()).thenReturn(authenticatedUserId);
-
-                when(userService.isInternal(authenticatedUserId.toString())).thenReturn(true);
-                when(userService.isInternal(accessedUserIdStr)).thenReturn(false);
-            }
-        }
     }
 }
