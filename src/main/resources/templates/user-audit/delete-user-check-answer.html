@@ -8,7 +8,7 @@
       xmlns:th="http://www.thymeleaf.org">
 
 <head>
-    <title>Check your answers before removing access</title>
+    <title>Check your answers and delete</title>
 </head>
 
 <body>
@@ -25,9 +25,13 @@
     <fieldset class="govuk-fieldset">
         <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
             <h1 class="govuk-fieldset__heading">
-                Check your answers before removing access
+                Check your answers and delete
             </h1>
         </legend>
+
+        <p class="govuk-body">Deleting a user begins the process of completely removing a user’s account
+            information and access. This can take up to 1–2 minutes. The user may still be able
+            to access their account during this time .</p>
 
         <form th:action="@{/admin/users/audit/entra/{id}/delete/confirm(id=${user.userId})}"
               method="post">
