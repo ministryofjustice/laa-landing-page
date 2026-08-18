@@ -1,0 +1,922 @@
+package uk.gov.justice.laa.portal.landingpage.service;
+
+import jakarta.persistence.EntityNotFoundException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.Authentication;
+import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.ReactivationRequestsPageData;
+import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.Firm;
+import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.model.PaginatedReactivationRequests;
+import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestListItem;
+import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestPageMode;
+import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
+import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserActivationRequestRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
+
+import java.time.Instant;
+import java.util.Collections;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.AdditionalAnswers.returnsFirstArg;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class UserReactivationRequestServiceTest {
+
+    private static final String UNKNOWN_USER_NAME = "Unknown user";
+
+    private static final String REQUEST_ID_STR = "11111111-1111-1111-1111-111111111111";
+    @Mock
+    private UserProfileRepository userProfileRepository;
+    @Mock
+    private EntraUserRepository entraUserRepository;
+    @Mock
+    private ReactivationTypeResolver roleTypeResolver;
+    @InjectMocks
+    private UserReactivationRequestService service;
+    @Mock
+    private LoginService loginService;
+    @Mock
+    private FirmService firmService;
+    @Mock
+    private Authentication authentication;
+    private static final UUID REQUEST_ID = UUID.fromString(REQUEST_ID_STR);
+    private static final String USER_ENTRA_ID_STR = "22222222-2222-2222-2222-222222222222";
+    private static final UUID USER_ENTRA_ID = UUID.fromString(USER_ENTRA_ID_STR);
+    private static final String USER_PROFILE_ID_STR = "33333333-3333-3333-3333-333333333333";
+    private static final UUID USER_PROFILE_ID = UUID.fromString(USER_PROFILE_ID_STR);
+    private static final String ACTOR_ENTRA_OID = "actor-oid-123";
+    private static final String INITIAL_ACTOR_ENTRA_OID = "initial-actor-oid-456";
+    @Mock
+    private UserActivationRequestRepository userActivationRequestRepository;
+    @Mock
+    private NotificationService notificationService;
+    private EntraUser actorUser;
+    private EntraUser initialAdminUser;
+    private EntraUser targetUser;
+
+    @BeforeEach
+    void setUp() {
+        actorUser = EntraUser.builder().id(UUID.randomUUID()).entraOid(ACTOR_ENTRA_OID).firstName("ActorFirst").email("actor@example.com").build();
+
+        initialAdminUser = EntraUser.builder().id(UUID.randomUUID()).entraOid(INITIAL_ACTOR_ENTRA_OID).firstName("AdminFirst").email("admin@example.com").build();
+
+        targetUser = EntraUser.builder().id(USER_ENTRA_ID).firstName("TargetFirst").email("target@example.com").build();
+    }
+
+    private UserActivationRequest buildUserActivationRequest(ReactivationRequestStatus status, int version) {
+        return UserActivationRequest.builder().id(UUID.randomUUID()).requestId(REQUEST_ID).userProfileId(USER_PROFILE_ID).status(status).version(version).actorEntraOid(ACTOR_ENTRA_OID).build();
+    }
+
+    @Nested
+    @DisplayName("findFirstByUserProfileIdOrderByVersionDesc")
+    class FindFirstByUserProfileIdOrderByVersionDescTests {
+
+        @Test
+        @DisplayName("Should return empty optional when no request exists for profile ID")
+        void noRequestFound_returnsEmptyOptional() {
+            given(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID)).willReturn(Optional.empty());
+
+            Optional<UserActivationRequest> result = service.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID_STR);
+
+            assertThat(result).isEmpty();
+            verify(userActivationRequestRepository).findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID);
+        }
+
+        @Test
+        @DisplayName("Should return request when found for profile ID")
+        void requestFound_returnsRequest() {
+            UserActivationRequest existing = buildUserActivationRequest(ReactivationRequestStatus.IN_REVIEW, 1);
+            given(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID)).willReturn(Optional.of(existing));
+
+            Optional<UserActivationRequest> result = service.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID_STR);
+
+            assertThat(result).contains(existing);
+        }
+    }
+
+    @Nested
+    @DisplayName("createNewRequest")
+    class CreateNewRequestTests {
+
+        @Test
+        @DisplayName("Should create new request when no existing request is present")
+        void noExistingRequest_createsNewRequest() {
+            AppRole role = AppRole.builder().id(UUID.randomUUID()).name("Provider Admin").build();
+            UserProfile profile = UserProfile.builder().activeProfile(true).appRoles(Set.of(role)).build();
+            EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).userProfiles(Set.of(profile)).build();
+            given(entraUserRepository.findByEntraOid(any())).willReturn(Optional.of(entraUser));
+            given(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID)).willReturn(Optional.empty());
+            given(entraUserRepository.findById(USER_ENTRA_ID)).willReturn(Optional.of(EntraUser.builder().id(UUID.randomUUID()).email("test@email.com").build()));
+            given(userProfileRepository.existsById(USER_PROFILE_ID)).willReturn(true);
+            given(userActivationRequestRepository.save(any(UserActivationRequest.class))).will(returnsFirstArg());
+
+            UserActivationRequest result = service.createReactivationRequest(USER_ENTRA_ID_STR, USER_PROFILE_ID_STR, "Reactivation comment", ACTOR_ENTRA_OID);
+
+            ArgumentCaptor<UserActivationRequest> captor = ArgumentCaptor.forClass(UserActivationRequest.class);
+            verify(userActivationRequestRepository).save(captor.capture());
+
+            UserActivationRequest saved = captor.getValue();
+            assertThat(saved.getUserProfileId()).isEqualTo(USER_PROFILE_ID);
+            assertThat(saved.getStatus()).isEqualTo(ReactivationRequestStatus.IN_REVIEW);
+            assertThat(saved.getComments()).isEqualTo("Reactivation comment");
+            assertThat(saved.getActorEntraOid()).isEqualTo(ACTOR_ENTRA_OID);
+            assertThat(saved.getCreatedAt()).isNotNull();
+
+            assertThat(result).isEqualTo(saved);
+        }
+
+        @Test
+        @DisplayName("Should create new request when existing request is REJECTED")
+        void existingRejectedRequest_createsNewRequest() {
+            AppRole role = AppRole.builder().id(UUID.randomUUID()).name("Provider Admin").build();
+            UserProfile profile = UserProfile.builder().activeProfile(true).appRoles(Set.of(role)).build();
+            EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).userProfiles(Set.of(profile)).build();
+            given(entraUserRepository.findByEntraOid(any())).willReturn(Optional.of(entraUser));
+            UserActivationRequest rejected = buildUserActivationRequest(ReactivationRequestStatus.REJECTED, 1);
+            given(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID)).willReturn(Optional.of(rejected));
+            given(entraUserRepository.findById(any(UUID.class))).willReturn(Optional.of(EntraUser.builder().id(UUID.randomUUID()).email("test@email.com").build()));
+            given(userActivationRequestRepository.save(any(UserActivationRequest.class))).will(returnsFirstArg());
+            given(userProfileRepository.existsById(USER_PROFILE_ID)).willReturn(true);
+
+            UserActivationRequest result = service.createReactivationRequest(USER_ENTRA_ID_STR, USER_PROFILE_ID_STR, "Retry comment", ACTOR_ENTRA_OID);
+
+            assertThat(result).isNotNull();
+            verify(userActivationRequestRepository).save(any(UserActivationRequest.class));
+        }
+
+        @Test
+        @DisplayName("Should create new request when existing request is APPROVED")
+        void existingApprovedRequest_createsNewRequest() {
+            AppRole role = AppRole.builder().id(UUID.randomUUID()).name("Provider Admin").build();
+            UserProfile profile = UserProfile.builder().activeProfile(true).appRoles(Set.of(role)).build();
+            EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).userProfiles(Set.of(profile)).build();
+            given(entraUserRepository.findByEntraOid(any())).willReturn(Optional.of(entraUser));
+            UserActivationRequest approved = buildUserActivationRequest(ReactivationRequestStatus.APPROVED, 1);
+            given(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID)).willReturn(Optional.of(approved));
+            given(entraUserRepository.findById(USER_ENTRA_ID)).willReturn(Optional.of(EntraUser.builder().id(UUID.randomUUID()).email("test@email.com").build()));
+            given(userProfileRepository.existsById(USER_PROFILE_ID)).willReturn(true);
+            given(userActivationRequestRepository.save(any(UserActivationRequest.class))).will(returnsFirstArg());
+
+            UserActivationRequest result = service.createReactivationRequest(USER_ENTRA_ID_STR, USER_PROFILE_ID_STR, "New request", ACTOR_ENTRA_OID);
+
+            assertThat(result).isNotNull();
+            verify(userActivationRequestRepository).save(any(UserActivationRequest.class));
+        }
+
+        @Test
+        @DisplayName("Should throw IllegalStateException when request is currently IN_REVIEW")
+        void activeRequestInReview_throwsIllegalStateException() {
+            UserActivationRequest inReview = buildUserActivationRequest(ReactivationRequestStatus.IN_REVIEW, 1);
+            given(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID)).willReturn(Optional.of(inReview));
+
+            assertThatThrownBy(() -> service.createReactivationRequest(USER_ENTRA_ID_STR, USER_PROFILE_ID_STR, "Comment", ACTOR_ENTRA_OID))
+                    .isInstanceOf(IllegalStateException.class).hasMessage("Request already being processed for user " + USER_PROFILE_ID);
+
+            verify(userActivationRequestRepository, never()).save(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("rejectReactivationRequest & processReactivationState Tests")
+    class RejectReactivationRequestTests {
+
+        @Test
+        @DisplayName("Should process rejection when initial actor was PROVIDER_ADMIN and notify both admin and target user")
+        void rejectReactivationRequest_WhenActorIsProviderAdmin_NotifiesAdminAndTargetUser() {
+            // Given
+            given(entraUserRepository.findByEntraOid(ACTOR_ENTRA_OID)).willReturn(Optional.of(actorUser));
+            given(roleTypeResolver.resolve(actorUser)).willReturn(ReactivationRoleType.LAA_USER_REGISTRATION);
+
+            UserActivationRequest initialRequest = new UserActivationRequest();
+            initialRequest.setRequestId(REQUEST_ID);
+            initialRequest.setActorRoleType(ReactivationRoleType.PROVIDER_ADMIN);
+            initialRequest.setActorEntraOid(INITIAL_ACTOR_ENTRA_OID);
+
+            given(userActivationRequestRepository.findFirstByRequestIdOrderByVersionAsc(REQUEST_ID)).willReturn(Optional.of(initialRequest));
+            given(userProfileRepository.existsById(USER_PROFILE_ID)).willReturn(true);
+
+            UserActivationRequest latestRequest = new UserActivationRequest();
+            latestRequest.setRequestId(REQUEST_ID);
+            latestRequest.setVersion(2);
+            given(userActivationRequestRepository.findFirstByRequestIdOrderByVersionDesc(REQUEST_ID)).willReturn(Optional.of(latestRequest));
+
+            given(entraUserRepository.findById(USER_ENTRA_ID)).willReturn(Optional.of(targetUser));
+            given(entraUserRepository.findByEntraOid(INITIAL_ACTOR_ENTRA_OID)).willReturn(Optional.of(initialAdminUser));
+
+            given(userActivationRequestRepository.save(any(UserActivationRequest.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+            // When
+            UserActivationRequest result = service.rejectReactivationRequest(REQUEST_ID_STR, USER_ENTRA_ID_STR, USER_PROFILE_ID_STR, "Incomplete documents", ACTOR_ENTRA_OID);
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getStatus()).isEqualTo(ReactivationRequestStatus.REJECTED);
+            assertThat(result.getVersion()).isEqualTo(3);
+            assertThat(result.getComments()).isEqualTo("Incomplete documents");
+            assertThat(result.getActorRoleType()).isEqualTo(ReactivationRoleType.LAA_USER_REGISTRATION);
+
+            // Verify notifications
+            verify(notificationService).notifyReactivationRequestRejected(actorUser.getId(), initialAdminUser.getFirstName(),
+                    initialAdminUser.getEmail(), initialAdminUser.getId().toString(), USER_PROFILE_ID_STR, targetUser.getEmail());
+
+            verify(notificationService).notifyReactivationRequestRejected(actorUser.getId(), targetUser.getFirstName(),
+                    targetUser.getEmail(), targetUser.getId().toString(), targetUser.getId().toString(), targetUser.getEmail());
+        }
+
+        @Test
+        @DisplayName("Should process rejection when initial actor was NOT PROVIDER_ADMIN and notify only target user")
+        void rejectReactivationRequest_WhenInitialActorNotProviderAdmin_NotifiesOnlyTargetUser() {
+            // Given
+            given(entraUserRepository.findByEntraOid(ACTOR_ENTRA_OID)).willReturn(Optional.of(actorUser));
+            given(roleTypeResolver.resolve(actorUser)).willReturn(ReactivationRoleType.LAA_OST);
+
+            UserActivationRequest initialRequest = new UserActivationRequest();
+            initialRequest.setRequestId(REQUEST_ID);
+            initialRequest.setActorRoleType(ReactivationRoleType.LAA_USER_REGISTRATION);
+
+            given(userActivationRequestRepository.findFirstByRequestIdOrderByVersionAsc(REQUEST_ID)).willReturn(Optional.of(initialRequest));
+            given(userProfileRepository.existsById(USER_PROFILE_ID)).willReturn(true);
+            UserActivationRequest latestRequest = new UserActivationRequest();
+            latestRequest.setRequestId(REQUEST_ID);
+            latestRequest.setVersion(1);
+            latestRequest.setStatus(ReactivationRequestStatus.IN_REVIEW);
+            latestRequest.setActorRoleType(ReactivationRoleType.LAA_OST);
+            given(userActivationRequestRepository.findFirstByRequestIdOrderByVersionDesc(REQUEST_ID)).willReturn(Optional.of(latestRequest));
+            given(entraUserRepository.findById(USER_ENTRA_ID)).willReturn(Optional.of(targetUser));
+
+            given(userActivationRequestRepository.save(any(UserActivationRequest.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+            // When
+            UserActivationRequest result = service.rejectReactivationRequest(REQUEST_ID_STR, USER_ENTRA_ID_STR, USER_PROFILE_ID_STR, "Rejected by OST", ACTOR_ENTRA_OID);
+
+            // Then
+            assertThat(result.getVersion()).isEqualTo(2);
+            assertThat(result.getStatus()).isEqualTo(ReactivationRequestStatus.REJECTED);
+
+            // Verify admin is NOT notified
+            verify(notificationService, times(1)).notifyReactivationRequestRejected(eq(actorUser.getId()), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Should throw NoSuchElementException when actor Entra user is not found")
+        void processReactivationState_WhenActorNotFound_ThrowsException() {
+            given(entraUserRepository.findByEntraOid(ACTOR_ENTRA_OID)).willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.rejectReactivationRequest(REQUEST_ID_STR, USER_ENTRA_ID_STR, USER_PROFILE_ID_STR, "Comments", ACTOR_ENTRA_OID)).isInstanceOf(NoSuchElementException.class);
+        }
+
+        @Test
+        @DisplayName("Should throw NoSuchElementException when initial request record is not found")
+        void processReactivationState_WhenInitialRequestNotFound_ThrowsException() {
+            given(entraUserRepository.findByEntraOid(ACTOR_ENTRA_OID)).willReturn(Optional.of(actorUser));
+            given(roleTypeResolver.resolve(actorUser)).willReturn(ReactivationRoleType.LAA_USER_REGISTRATION);
+            given(userActivationRequestRepository.findFirstByRequestIdOrderByVersionAsc(REQUEST_ID)).willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.rejectReactivationRequest(REQUEST_ID_STR, USER_ENTRA_ID_STR, USER_PROFILE_ID_STR, "Comments", ACTOR_ENTRA_OID))
+                    .isInstanceOf(NoSuchElementException.class);
+        }
+
+        @Test
+        @DisplayName("Should throw EntityNotFoundException when user profile does not exist")
+        void createReactivationRequestEntry_WhenProfileNotFound_ThrowsEntityNotFoundException() {
+            given(entraUserRepository.findByEntraOid(ACTOR_ENTRA_OID)).willReturn(Optional.of(actorUser));
+            given(roleTypeResolver.resolve(actorUser)).willReturn(ReactivationRoleType.LAA_USER_REGISTRATION);
+
+            UserActivationRequest initialRequest = new UserActivationRequest();
+            initialRequest.setRequestId(REQUEST_ID);
+            given(userActivationRequestRepository.findFirstByRequestIdOrderByVersionAsc(REQUEST_ID)).willReturn(Optional.of(initialRequest));
+
+            given(userProfileRepository.existsById(USER_PROFILE_ID)).willReturn(false);
+
+            assertThatThrownBy(() -> service.rejectReactivationRequest(REQUEST_ID_STR, USER_ENTRA_ID_STR, USER_PROFILE_ID_STR, "Comments", ACTOR_ENTRA_OID))
+                    .isInstanceOf(EntityNotFoundException.class).hasMessageContaining("Target user not found with ID: " + USER_PROFILE_ID_STR);
+        }
+
+        @Test
+        @DisplayName("Should throw NoSuchElementException when target provider user is not found")
+        void processReactivationState_WhenTargetUserNotFound_ThrowsException() {
+            given(entraUserRepository.findByEntraOid(ACTOR_ENTRA_OID)).willReturn(Optional.of(actorUser));
+            given(roleTypeResolver.resolve(actorUser)).willReturn(ReactivationRoleType.LAA_USER_REGISTRATION);
+
+            UserActivationRequest initialRequest = new UserActivationRequest();
+            initialRequest.setRequestId(REQUEST_ID);
+            given(userActivationRequestRepository.findFirstByRequestIdOrderByVersionAsc(REQUEST_ID)).willReturn(Optional.of(initialRequest));
+            given(userProfileRepository.existsById(USER_PROFILE_ID)).willReturn(true);
+            given(userActivationRequestRepository.findFirstByRequestIdOrderByVersionDesc(REQUEST_ID)).willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.rejectReactivationRequest(REQUEST_ID_STR, USER_ENTRA_ID_STR, USER_PROFILE_ID_STR, "Comments", ACTOR_ENTRA_OID))
+                    .isInstanceOf(NoSuchElementException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("updateReactivateRequestState Tests")
+    class UpdateReactivateRequestStateTests {
+
+        @Test
+        @DisplayName("Should update state to INFORMATION_REQUIRED and send notification when role resolves to external user")
+        void updateReactivateRequestState_WhenInfoRequiredAndActorIsProviderAdmin_NotifiesAdmin() {
+            // Given
+            given(entraUserRepository.findByEntraOid(ACTOR_ENTRA_OID)).willReturn(Optional.of(actorUser));
+            // Non-internal roles result in INFORMATION_REQUIRED
+            given(roleTypeResolver.resolve(actorUser)).willReturn(ReactivationRoleType.NONE);
+
+            // Active request validation passes
+            UserActivationRequest latestRequest = new UserActivationRequest();
+            latestRequest.setRequestId(REQUEST_ID);
+            latestRequest.setStatus(ReactivationRequestStatus.IN_REVIEW);
+            latestRequest.setVersion(1);
+            given(userActivationRequestRepository.findFirstByRequestIdOrderByVersionDesc(REQUEST_ID)).willReturn(Optional.of(latestRequest));
+
+            given(userProfileRepository.existsById(USER_PROFILE_ID)).willReturn(true);
+
+            // Initial request was raised by PROVIDER_ADMIN
+            UserActivationRequest initialRequest = new UserActivationRequest();
+            initialRequest.setRequestId(REQUEST_ID);
+            initialRequest.setActorRoleType(ReactivationRoleType.PROVIDER_ADMIN);
+            initialRequest.setActorEntraOid(INITIAL_ACTOR_ENTRA_OID);
+            given(userActivationRequestRepository.findFirstByRequestIdOrderByVersionAsc(REQUEST_ID)).willReturn(Optional.of(initialRequest));
+
+            given(entraUserRepository.findByEntraOid(INITIAL_ACTOR_ENTRA_OID)).willReturn(Optional.of(initialAdminUser));
+            given(entraUserRepository.findById(UUID.fromString(USER_ENTRA_ID_STR))).willReturn(Optional.of(targetUser));
+
+            given(userActivationRequestRepository.save(any(UserActivationRequest.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+            // When
+            UserActivationRequest result = service.updateReactivateRequestState(REQUEST_ID_STR, USER_ENTRA_ID_STR, USER_PROFILE_ID_STR, "Need ID proof", ACTOR_ENTRA_OID);
+
+            // Then
+            assertThat(result.getStatus()).isEqualTo(ReactivationRequestStatus.INFORMATION_REQUIRED);
+            assertThat(result.getVersion()).isEqualTo(2);
+
+            verify(notificationService).notifyReactivationRequestInfoRequested(actorUser.getId().toString(), initialAdminUser.getFirstName(),
+                    initialAdminUser.getEmail(), initialAdminUser.getId().toString(), USER_PROFILE_ID_STR, targetUser.getEmail());
+        }
+
+        @Test
+        @DisplayName("Should update state to IN_REVIEW and skip info notification when actor is LAA_USER_REGISTRATION")
+        void updateReactivateRequestState_WhenInReview_DoesNotSendInfoRequestedNotification() {
+            // Given
+            given(entraUserRepository.findByEntraOid(ACTOR_ENTRA_OID)).willReturn(Optional.of(actorUser));
+            given(roleTypeResolver.resolve(actorUser)).willReturn(ReactivationRoleType.LAA_USER_REGISTRATION);
+
+            UserActivationRequest latestRequest = new UserActivationRequest();
+            latestRequest.setRequestId(REQUEST_ID);
+            latestRequest.setStatus(ReactivationRequestStatus.IN_REVIEW);
+            latestRequest.setVersion(1);
+            given(userActivationRequestRepository.findFirstByRequestIdOrderByVersionDesc(REQUEST_ID)).willReturn(Optional.of(latestRequest));
+
+            given(userProfileRepository.existsById(USER_PROFILE_ID)).willReturn(true);
+
+            given(userActivationRequestRepository.save(any(UserActivationRequest.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+            // When
+            UserActivationRequest result = service.updateReactivateRequestState(REQUEST_ID_STR, USER_ENTRA_ID_STR, USER_PROFILE_ID_STR, "Updating notes", ACTOR_ENTRA_OID);
+
+            // Then
+            assertThat(result.getStatus()).isEqualTo(ReactivationRequestStatus.IN_REVIEW);
+            assertThat(result.getVersion()).isEqualTo(2);
+
+            verify(notificationService, never()).notifyReactivationRequestInfoRequested(any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Should update state to INFORMATION_REQUIRED but skip notification when initial request was NOT from PROVIDER_ADMIN")
+        void updateReactivateRequestState_WhenInfoRequiredAndInitialActorNotProviderAdmin_SkipsNotification() {
+            // Given
+            given(entraUserRepository.findByEntraOid(ACTOR_ENTRA_OID)).willReturn(Optional.of(actorUser));
+            given(roleTypeResolver.resolve(actorUser)).willReturn(ReactivationRoleType.NONE);
+
+            UserActivationRequest latestRequest = new UserActivationRequest();
+            latestRequest.setRequestId(REQUEST_ID);
+            latestRequest.setStatus(ReactivationRequestStatus.IN_REVIEW);
+            latestRequest.setVersion(1);
+            given(userActivationRequestRepository.findFirstByRequestIdOrderByVersionDesc(REQUEST_ID)).willReturn(Optional.of(latestRequest));
+
+            given(userProfileRepository.existsById(USER_PROFILE_ID)).willReturn(true);
+
+            UserActivationRequest initialRequest = new UserActivationRequest();
+            initialRequest.setRequestId(REQUEST_ID);
+            initialRequest.setActorRoleType(ReactivationRoleType.LAA_OST); // Not PROVIDER_ADMIN
+            given(userActivationRequestRepository.findFirstByRequestIdOrderByVersionAsc(REQUEST_ID)).willReturn(Optional.of(initialRequest));
+
+            given(userActivationRequestRepository.save(any(UserActivationRequest.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+            // When
+            UserActivationRequest result = service.updateReactivateRequestState(REQUEST_ID_STR, USER_ENTRA_ID_STR, USER_PROFILE_ID_STR, "Info needed", ACTOR_ENTRA_OID);
+
+            // Then
+            assertThat(result.getStatus()).isEqualTo(ReactivationRequestStatus.INFORMATION_REQUIRED);
+            verify(notificationService, never()).notifyReactivationRequestInfoRequested(any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Should throw EntityNotFoundException when request does not exist during validation")
+        void updateReactivateRequestState_WhenRequestNotFound_ThrowsException() {
+            given(entraUserRepository.findByEntraOid(ACTOR_ENTRA_OID)).willReturn(Optional.of(actorUser));
+            given(roleTypeResolver.resolve(actorUser)).willReturn(ReactivationRoleType.LAA_USER_REGISTRATION);
+            given(userActivationRequestRepository.findFirstByRequestIdOrderByVersionDesc(REQUEST_ID)).willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.updateReactivateRequestState(REQUEST_ID_STR, USER_ENTRA_ID_STR, USER_PROFILE_ID_STR, "Comments", ACTOR_ENTRA_OID))
+                    .isInstanceOf(EntityNotFoundException.class).hasMessageContaining("Reactivation request not found for ID: " + REQUEST_ID_STR);
+        }
+
+        @Test
+        @DisplayName("Should throw IllegalStateException when request is already APPROVED")
+        void updateReactivateRequestState_WhenRequestAlreadyApproved_ThrowsException() {
+            given(entraUserRepository.findByEntraOid(ACTOR_ENTRA_OID)).willReturn(Optional.of(actorUser));
+            given(roleTypeResolver.resolve(actorUser)).willReturn(ReactivationRoleType.LAA_USER_REGISTRATION);
+
+            UserActivationRequest approvedRequest = new UserActivationRequest();
+            approvedRequest.setRequestId(REQUEST_ID);
+            approvedRequest.setStatus(ReactivationRequestStatus.APPROVED);
+
+            given(userActivationRequestRepository.findFirstByRequestIdOrderByVersionDesc(REQUEST_ID)).willReturn(Optional.of(approvedRequest));
+
+            assertThatThrownBy(() -> service.updateReactivateRequestState(REQUEST_ID_STR, USER_ENTRA_ID_STR, USER_PROFILE_ID_STR, "Comments", ACTOR_ENTRA_OID))
+                    .isInstanceOf(IllegalStateException.class).hasMessageContaining("Reactivation request already processed for ID: " + REQUEST_ID_STR);
+        }
+
+        @Test
+        @DisplayName("Should throw IllegalStateException when request is already REJECTED")
+        void updateReactivateRequestState_WhenRequestAlreadyRejected_ThrowsException() {
+            given(entraUserRepository.findByEntraOid(ACTOR_ENTRA_OID)).willReturn(Optional.of(actorUser));
+            given(roleTypeResolver.resolve(actorUser)).willReturn(ReactivationRoleType.LAA_USER_REGISTRATION);
+
+            UserActivationRequest rejectedRequest = new UserActivationRequest();
+            rejectedRequest.setRequestId(REQUEST_ID);
+            rejectedRequest.setStatus(ReactivationRequestStatus.REJECTED);
+
+            given(userActivationRequestRepository.findFirstByRequestIdOrderByVersionDesc(REQUEST_ID)).willReturn(Optional.of(rejectedRequest));
+
+            assertThatThrownBy(() -> service.updateReactivateRequestState(REQUEST_ID_STR, USER_ENTRA_ID_STR, USER_PROFILE_ID_STR, "Comments", ACTOR_ENTRA_OID))
+                    .isInstanceOf(IllegalStateException.class).hasMessageContaining("Reactivation request already processed for ID: " + REQUEST_ID_STR);
+        }
+    }
+
+
+    @Nested
+    @DisplayName("saveRequestState")
+    class SaveRequestStateTests {
+
+        @Test
+        @DisplayName("Should throw EntityNotFoundException when target user profile does not exist")
+        void targetUserNotFound_throwsException() {
+            assertThatThrownBy(() -> service.updateReactivateRequestState(REQUEST_ID_STR, USER_ENTRA_ID_STR, USER_PROFILE_ID_STR, "Comments", ACTOR_ENTRA_OID))
+                    .isInstanceOf(NoSuchElementException.class).hasMessage("No value present");
+
+            verify(userActivationRequestRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Should return error when non-null requestId has no prior history")
+        void nonNullRequestIdNoHistory_returnsError() {
+            given(userActivationRequestRepository.findFirstByRequestIdOrderByVersionDesc(UUID.fromString(REQUEST_ID_STR))).willReturn(Optional.empty());
+            given(entraUserRepository.findByEntraOid(ACTOR_ENTRA_OID)).willReturn(Optional.of(EntraUser.builder().id(UUID.randomUUID()).build()));
+            given(roleTypeResolver.resolve(any())).willReturn(ReactivationRoleType.PROVIDER_ADMIN);
+
+            assertThatThrownBy(() -> service.updateReactivateRequestState(REQUEST_ID_STR, USER_ENTRA_ID_STR, USER_PROFILE_ID_STR, "Comments", ACTOR_ENTRA_OID))
+                    .isInstanceOf(EntityNotFoundException.class).hasMessage("Reactivation request not found for ID: " + REQUEST_ID);
+
+            assertThatThrownBy(() -> service.updateReactivateRequestState(REQUEST_ID_STR, USER_ENTRA_ID_STR, USER_PROFILE_ID_STR, "Reviewing", ACTOR_ENTRA_OID))
+                    .isInstanceOf(EntityNotFoundException.class).hasMessage(String.format("Reactivation request not found for ID: %s", REQUEST_ID));
+
+            verify(userActivationRequestRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Should increment version when existing record is IN_REVIEW")
+        void activeRequestInReview_incrementsVersion() {
+            UserActivationRequest existing = buildUserActivationRequest(ReactivationRequestStatus.IN_REVIEW, 2);
+            given(userActivationRequestRepository.findFirstByRequestIdOrderByVersionDesc(UUID.fromString(REQUEST_ID_STR))).willReturn(Optional.of(existing));
+            given(userActivationRequestRepository.save(any(UserActivationRequest.class))).willAnswer(invocation -> invocation.getArgument(0));
+            given(entraUserRepository.findByEntraOid(ACTOR_ENTRA_OID)).willReturn(Optional.of(EntraUser.builder().id(UUID.randomUUID()).build()));
+            given(userProfileRepository.existsById(USER_PROFILE_ID)).willReturn(true);
+            given(roleTypeResolver.resolve(any())).willReturn(ReactivationRoleType.PROVIDER_ADMIN);
+            given(entraUserRepository.findById(any(UUID.class))).willReturn(Optional.of(EntraUser.builder().id(UUID.randomUUID()).email("test@email.com").build()));
+            given(userActivationRequestRepository.findFirstByRequestIdOrderByVersionAsc(UUID.fromString(REQUEST_ID_STR))).willReturn(Optional.of(existing));
+
+            UserActivationRequest result = service.approveReactivationRequest(REQUEST_ID_STR, USER_ENTRA_ID_STR, USER_PROFILE_ID_STR, ACTOR_ENTRA_OID);
+
+            assertThat(result.getRequestId()).isEqualTo(UUID.fromString(REQUEST_ID_STR));
+            assertThat(result.getVersion()).isEqualTo(3);
+            assertThat(result.getStatus()).isEqualTo(ReactivationRequestStatus.APPROVED);
+        }
+
+        @Test
+        @DisplayName("Should throw IllegalStateException when request has already been APPROVED")
+        void alreadyApproved_throwsIllegalStateException() {
+            UserActivationRequest existing = buildUserActivationRequest(ReactivationRequestStatus.APPROVED, 1);
+            given(userActivationRequestRepository.findFirstByRequestIdOrderByVersionDesc(UUID.fromString(REQUEST_ID_STR))).willReturn(Optional.of(existing));
+            given(entraUserRepository.findByEntraOid(ACTOR_ENTRA_OID)).willReturn(Optional.of(EntraUser.builder().id(UUID.randomUUID()).build()));
+
+            assertThatThrownBy(() -> service.updateReactivateRequestState(REQUEST_ID_STR, USER_ENTRA_ID_STR, USER_PROFILE_ID_STR, "Cannot approve", ACTOR_ENTRA_OID))
+                    .isInstanceOf(IllegalStateException.class).hasMessage(String.format("Reactivation request already processed for ID: %s", REQUEST_ID));
+
+            verify(userActivationRequestRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Should throw IllegalStateException when request has already been REJECTED")
+        void alreadyRejected_throwsIllegalStateException() {
+            UserActivationRequest existing = buildUserActivationRequest(ReactivationRequestStatus.REJECTED, 1);
+            given(userActivationRequestRepository.findFirstByRequestIdOrderByVersionDesc(UUID.fromString(REQUEST_ID_STR))).willReturn(Optional.of(existing));
+            given(entraUserRepository.findByEntraOid(ACTOR_ENTRA_OID)).willReturn(Optional.of(EntraUser.builder().id(UUID.randomUUID()).build()));
+
+            assertThatThrownBy(() -> service.updateReactivateRequestState(REQUEST_ID_STR, USER_ENTRA_ID_STR, USER_PROFILE_ID_STR, "Cannot reject", ACTOR_ENTRA_OID))
+                    .isInstanceOf(IllegalStateException.class).hasMessage(String.format("Reactivation request already processed for ID: %s", REQUEST_ID));
+
+            verify(userActivationRequestRepository, never()).save(any());
+        }
+
+        @Nested
+        @DisplayName("getLatestRequestHistoryForUserProfile")
+        class GetLatestRequestHistoryForUserProfile {
+
+            @Test
+            @DisplayName("Should return empty list when history query yields no records")
+            void shouldReturnEmptyListWhenHistoryIsEmpty() {
+                UserActivationRequest latestRequest = mock(UserActivationRequest.class);
+                when(latestRequest.getRequestId()).thenReturn(UUID.fromString(REQUEST_ID_STR));
+
+                when(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID))
+                        .thenReturn(Optional.of(latestRequest));
+                when(userActivationRequestRepository.findRequestHistoryByRequestId(UUID.fromString(REQUEST_ID_STR)))
+                        .thenReturn(Collections.emptyList());
+
+                List<UserActivationRequestSummaryDto> result = service.getLatestRequestHistoryForUserProfile(USER_PROFILE_ID_STR);
+
+                assertThat(result).isEmpty();
+            }
+
+            @Test
+            @DisplayName("Should return history when records are found")
+            void shouldReturnHistoryListWhenFound() {
+                UserActivationRequest latestRequest = mock(UserActivationRequest.class);
+                when(latestRequest.getRequestId()).thenReturn(UUID.fromString(REQUEST_ID_STR));
+
+                UserActivationRequestSummaryDto dto = mock(UserActivationRequestSummaryDto.class);
+
+                when(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID)).thenReturn(Optional.of(latestRequest));
+                when(userActivationRequestRepository.findRequestHistoryByRequestId(UUID.fromString(REQUEST_ID_STR))).thenReturn(List.of(dto));
+
+                List<UserActivationRequestSummaryDto> result = service.getLatestRequestHistoryForUserProfile(USER_PROFILE_ID_STR);
+
+                assertThat(result).hasSize(1).containsExactly(dto);
+            }
+        }
+
+        @Nested
+        @DisplayName("calculateNextReactivationRequestStatus")
+        class CalculateNextReactivationRequestStatus {
+
+            @Test
+            @DisplayName("Should return IN_REVIEW when role is PROVIDER_ADMIN")
+            void shouldReturnInReviewForProviderAdmin() {
+                EntraUser actor = mock(EntraUser.class);
+                when(roleTypeResolver.resolve(actor)).thenReturn(ReactivationRoleType.PROVIDER_ADMIN);
+
+                ReactivationRequestStatus status = service.calculateNextReactivationRequestStatus(actor);
+
+                assertThat(status).isEqualTo(ReactivationRequestStatus.IN_REVIEW);
+            }
+
+            @Test
+            @DisplayName("Should return INFORMATION_REQUIRED when role is not PROVIDER_ADMIN")
+            void shouldReturnInformationRequiredForNonProviderAdmin() {
+                EntraUser actor = mock(EntraUser.class);
+                when(roleTypeResolver.resolve(actor)).thenReturn(ReactivationRoleType.LAA);
+
+                ReactivationRequestStatus status = service.calculateNextReactivationRequestStatus(actor);
+
+                assertThat(status).isEqualTo(ReactivationRequestStatus.INFORMATION_REQUIRED);
+            }
+        }
+
+        // ==========================================
+        // 3. getPageMode & resolvePageMode
+        // ==========================================
+        @Nested
+        @DisplayName("getPageMode & resolvePageMode")
+        class PageModeTests {
+
+            @Test
+            @DisplayName("Should return MANAGE mode when current user is null")
+            void shouldReturnManageWhenUserIsNull() {
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(null);
+
+                ReactivationRequestPageMode pageMode = service.getPageMode(authentication);
+
+                assertThat(pageMode).isEqualTo(ReactivationRequestPageMode.MANAGE);
+            }
+
+            @Test
+            @DisplayName("Should return TRACK mode when user has FIRM_USER_MANAGER role and NO manage roles")
+            void shouldReturnTrackForProviderAdminOnly() {
+                EntraUser currentUser = mock(EntraUser.class);
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+
+                try (MockedStatic<AccessControlService> accessControlMock = mockStatic(AccessControlService.class)) {
+                    accessControlMock.when(() -> AccessControlService.userHasAuthzRole(eq(currentUser), any())).thenReturn(false);
+                    accessControlMock.when(() -> AccessControlService.userHasAuthzRole(currentUser, AuthzRole.FIRM_USER_MANAGER.getRoleName())).thenReturn(true);
+
+                    ReactivationRequestPageMode pageMode = service.getPageMode(authentication);
+
+                    assertThat(pageMode).isEqualTo(ReactivationRequestPageMode.TRACK);
+                }
+            }
+
+            @Test
+            @DisplayName("Should return MANAGE mode when user has both FIRM_USER_MANAGER and a Manage role")
+            void shouldReturnManageWhenUserHasManageAndProviderAdminRole() {
+                EntraUser currentUser = mock(EntraUser.class);
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+
+                try (MockedStatic<AccessControlService> accessControlMock = mockStatic(AccessControlService.class)) {
+                    accessControlMock.when(() -> AccessControlService.userHasAuthzRole(currentUser, AuthzRole.GLOBAL_ADMIN.getRoleName())).thenReturn(true);
+                    accessControlMock.when(() -> AccessControlService.userHasAuthzRole(currentUser, AuthzRole.FIRM_USER_MANAGER.getRoleName())).thenReturn(true);
+
+                    ReactivationRequestPageMode pageMode = service.getPageMode(authentication);
+
+                    assertThat(pageMode).isEqualTo(ReactivationRequestPageMode.MANAGE);
+                }
+            }
+        }
+
+        // ==========================================
+        // 4. getPage & buildRequests & Pagination & Filtering
+        // ==========================================
+        @Nested
+        @DisplayName("getPage")
+        class GetPageTests {
+
+            @Test
+            @DisplayName("Should return empty paginatedRequests data when no latest requests are found")
+            void shouldReturnEmptyPageDataWhenNoRequestsExist() {
+                EntraUser currentUser = mock(EntraUser.class);
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+                when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(List.of());
+
+                ReactivationRequestsPageData result = service.getPage(authentication, "", null, null, 1, 10, "requestId", "asc");
+
+                assertThat(result.pageMode()).isEqualTo(ReactivationRequestPageMode.MANAGE);
+                assertThat(result.paginatedRequests().getRequests()).isEmpty();
+                assertThat(result.paginatedRequests().getTotalRequests()).isEqualTo(0);
+            }
+
+            @Test
+            @DisplayName("Should process, filter, sort and paginate requests in MANAGE mode")
+            void shouldBuildFilterSortAndPaginateRequestsInManageMode() {
+                EntraUser currentUser = mock(EntraUser.class);
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+
+                // Set up test entities
+                UUID request1Id = UUID.randomUUID();
+                UUID profile1Id = UUID.randomUUID();
+                String actor1Oid = "actor-oid-1";
+
+                UserActivationRequest request1 = mock(UserActivationRequest.class);
+                when(request1.getId()).thenReturn(UUID.randomUUID());
+                when(request1.getRequestId()).thenReturn(request1Id);
+                when(request1.getUserProfileId()).thenReturn(profile1Id);
+                when(request1.getActorEntraOid()).thenReturn(actor1Oid);
+                when(request1.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
+                when(request1.getVersion()).thenReturn(1);
+                when(request1.getCreatedAt()).thenReturn(Instant.now());
+                when(request1.getComments()).thenReturn("Sample request comment");
+
+                when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(List.of(request1));
+
+                // Target Profile & User
+                EntraUser targetUser = mock(EntraUser.class);
+                when(targetUser.getFirstName()).thenReturn("Jane");
+                when(targetUser.getLastName()).thenReturn("Doe");
+                when(targetUser.getEmail()).thenReturn("jane.doe@example.com");
+
+                Firm targetFirm = mock(Firm.class);
+                UUID firmId = UUID.randomUUID();
+                when(targetFirm.getId()).thenReturn(firmId);
+
+                UserProfile profile1 = mock(UserProfile.class);
+                when(profile1.getId()).thenReturn(profile1Id);
+                when(profile1.getEntraUser()).thenReturn(targetUser);
+                when(profile1.getFirm()).thenReturn(targetFirm);
+
+                when(userProfileRepository.findAllByIdInWithFirm(Set.of(profile1Id))).thenReturn(List.of(profile1));
+
+                // Actor User
+                EntraUser actor1 = mock(EntraUser.class);
+                when(actor1.getEntraOid()).thenReturn(actor1Oid);
+                when(actor1.getFirstName()).thenReturn("John");
+                when(actor1.getLastName()).thenReturn("Smith");
+                when(actor1.getEmail()).thenReturn("john.smith@example.com");
+
+                when(entraUserRepository.findByEntraOidIn(Set.of(actor1Oid))).thenReturn(List.of(actor1));
+
+                // Submission timestamp lookup
+                UserActivationRequest firstVerRequest = mock(UserActivationRequest.class);
+                when(firstVerRequest.getRequestId()).thenReturn(request1Id);
+                when(firstVerRequest.getCreatedAt()).thenReturn(Instant.now());
+
+                when(userActivationRequestRepository.findAllFirstVersionsByRequestIdIn(Set.of(request1Id))).thenReturn(List.of(firstVerRequest));
+
+                // Execute method call
+                ReactivationRequestsPageData result = service.getPage(authentication, "Jane", // Search string matches target user name
+                        List.of(ReactivationRequestStatus.IN_REVIEW), null, 1, 10, "actorName", "asc");
+
+                assertThat(result.paginatedRequests().getTotalRequests()).isEqualTo(1);
+                ReactivationRequestListItem item = result.paginatedRequests().getRequests().getFirst();
+                assertThat(item.userName()).isEqualTo("Jane Doe");
+                assertThat(item.actorName()).isEqualTo("John Smith");
+                assertThat(item.firmId()).isEqualTo(firmId);
+            }
+
+            @Test
+            @DisplayName("Should return empty list in TRACK mode if user has no allowed firms")
+            void shouldReturnEmptyWhenTrackModeHasNoAllowedFirms() {
+                EntraUser currentUser = mock(EntraUser.class);
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+
+                try (MockedStatic<AccessControlService> accessControlMock = mockStatic(AccessControlService.class)) {
+                    accessControlMock.when(() -> AccessControlService.userHasAuthzRole(currentUser, AuthzRole.FIRM_USER_MANAGER.getRoleName())).thenReturn(true);
+
+                    UserActivationRequest request1 = UserActivationRequest
+                            .builder().userProfileId(USER_PROFILE_ID)
+                            .actorEntraOid("actor-1").requestId(UUID.fromString(REQUEST_ID_STR))
+                            .status(ReactivationRequestStatus.IN_REVIEW)
+                            .build();
+
+                    when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(List.of(request1));
+                    when(firmService.getUserActiveAllFirms(currentUser)).thenReturn(List.of());
+
+                    ReactivationRequestsPageData result = service.getPage(authentication, null, null, null, 1, 10, null, "asc");
+
+                    assertThat(result.pageMode()).isEqualTo(ReactivationRequestPageMode.TRACK);
+                    assertThat(result.paginatedRequests().getRequests()).isEmpty();
+                }
+            }
+
+            @Test
+            @DisplayName("Should filter items by allowed firm IDs in TRACK mode")
+            void shouldFilterByAllowedFirmsInTrackMode() {
+                EntraUser currentUser = mock(EntraUser.class);
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+
+                try (MockedStatic<AccessControlService> accessControlMock = mockStatic(AccessControlService.class)) {
+                    accessControlMock.when(() -> AccessControlService.userHasAuthzRole(currentUser, AuthzRole.FIRM_USER_MANAGER.getRoleName())).thenReturn(true);
+
+                    UUID allowedFirmId = UUID.randomUUID();
+                    FirmDto allowedFirmDto = mock(FirmDto.class);
+                    when(allowedFirmDto.getId()).thenReturn(allowedFirmId);
+
+                    when(firmService.getUserActiveAllFirms(currentUser)).thenReturn(List.of(allowedFirmDto));
+
+                    UserActivationRequest request = mock(UserActivationRequest.class);
+                    when(request.getId()).thenReturn(UUID.randomUUID());
+                    when(request.getRequestId()).thenReturn(UUID.fromString(REQUEST_ID_STR));
+                    when(request.getUserProfileId()).thenReturn(USER_PROFILE_ID);
+                    when(request.getActorEntraOid()).thenReturn("actor-oid");
+                    when(request.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
+
+                    when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(List.of(request));
+
+                    Firm allowedFirm = mock(Firm.class);
+                    when(allowedFirm.getId()).thenReturn(allowedFirmId);
+
+                    UserProfile profile = mock(UserProfile.class);
+                    when(profile.getId()).thenReturn(USER_PROFILE_ID);
+                    when(profile.getFirm()).thenReturn(allowedFirm);
+
+                    when(userProfileRepository.findAllByIdInWithFirm(Set.of(USER_PROFILE_ID))).thenReturn(List.of(profile));
+
+                    ReactivationRequestsPageData result = service.getPage(authentication, "", null, null, 1, 10, null, "asc");
+
+                    assertThat(result.paginatedRequests().getRequests()).hasSize(1);
+                    assertThat(result.paginatedRequests().getRequests().getFirst().firmId()).isEqualTo(allowedFirmId);
+                }
+            }
+
+            @Test
+            @DisplayName("Should handle missing optional entity references cleanly and fallback to UNKNOWN_USER_NAME")
+            void shouldHandleMissingActorAndProfileGracefully() {
+                EntraUser currentUser = mock(EntraUser.class);
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+
+                UserActivationRequest request = mock(UserActivationRequest.class);
+                when(request.getId()).thenReturn(UUID.randomUUID());
+                when(request.getRequestId()).thenReturn(UUID.fromString(REQUEST_ID_STR));
+                when(request.getUserProfileId()).thenReturn(null);
+                when(request.getActorEntraOid()).thenReturn(null);
+                when(request.getStatus()).thenReturn(ReactivationRequestStatus.APPROVED);
+
+                when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(List.of(request));
+
+                ReactivationRequestsPageData result = service.getPage(authentication, "", null, null, 1, 10, null, "asc");
+
+                assertThat(result.paginatedRequests().getRequests()).hasSize(1);
+                ReactivationRequestListItem item = result.paginatedRequests().getRequests().getFirst();
+
+                assertThat(item.actorName()).isEqualTo(UNKNOWN_USER_NAME);
+                assertThat(item.userName()).isEqualTo(UNKNOWN_USER_NAME);
+                assertThat(item.actorEmail()).isNull();
+                assertThat(item.userEmail()).isNull();
+                assertThat(item.firmId()).isNull();
+
+                verifyNoInteractions(entraUserRepository);
+            }
+        }
+
+        @Nested
+        @DisplayName("Sorting & Search Branch Tests")
+        class SortingAndSearchTests {
+
+            @Test
+            @DisplayName("Should test all comparator sort branches and reverse direction")
+            void shouldTestComparatorsAndDescSorting() {
+                EntraUser currentUser = mock(EntraUser.class);
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+
+                UserActivationRequest req1 = UserActivationRequest.builder()
+                        .id(UUID.randomUUID())
+                        .requestId(UUID.randomUUID())
+                        .userProfileId(UUID.randomUUID())
+                        .status(ReactivationRequestStatus.IN_REVIEW)
+                        .version(1)
+                        .build();
+
+                UserActivationRequest req2 = UserActivationRequest.builder()
+                        .id(UUID.randomUUID())
+                        .requestId(UUID.randomUUID())
+                        .userProfileId(UUID.randomUUID())
+                        .status(ReactivationRequestStatus.REJECTED)
+                        .version(1)
+                        .build();
+
+                when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(List.of(req1, req2));
+
+                String[] sortFields = {"requestId", "userProfileId", "version", "requestStatus", "actorName", "actorRoleType", "lastActivity", "invalidSortDefault"};
+
+                for (String sortField : sortFields) {
+                    ReactivationRequestsPageData data = service.getPage(authentication, "", null, null, 1, 10, sortField, "desc");
+
+                    assertThat(data.paginatedRequests().getRequests()).hasSize(2);
+                }
+            }
+
+            @Test
+            @DisplayName("Should accurately perform pagination paginatedRequests boundary checks")
+            void shouldHandlePaginationBoundaries() {
+                EntraUser currentUser = mock(EntraUser.class);
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+
+                UserActivationRequest req1 = mock(UserActivationRequest.class);
+                when(req1.getId()).thenReturn(UUID.randomUUID());
+                when(req1.getRequestId()).thenReturn(UUID.randomUUID());
+                when(req1.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
+
+                when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(List.of(req1));
+
+                // Request out-of-bounds paginatedRequests index (e.g., paginatedRequests 55)
+                ReactivationRequestsPageData pageData = service.getPage(authentication, "", null, null, 55, 10, null, "asc");
+
+                PaginatedReactivationRequests paginated = pageData.paginatedRequests();
+                assertThat(paginated.getCurrentPage()).isEqualTo(1); // Bounded back to max total pages (1)
+                assertThat(paginated.getRequests()).hasSize(1);
+            }
+        }
+
+    }
+}

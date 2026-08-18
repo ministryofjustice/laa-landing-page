@@ -66,12 +66,14 @@ import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
@@ -93,6 +95,7 @@ import uk.gov.justice.laa.portal.landingpage.forms.UserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 import uk.gov.justice.laa.portal.landingpage.model.OfficeModel;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.model.UserRole;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
@@ -106,6 +109,7 @@ import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
+import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
@@ -143,6 +147,7 @@ public class UserController {
     private final AppService appService;
     private final UserAccountStatusService userAccountStatusService;
     private final NotificationService notificationService;
+    private final UserReactivationRequestService userReactivationRequestService;
     private final UiLabelsProperties uiLabelsProperties;
 
 
@@ -165,13 +170,18 @@ public class UserController {
             @RequestParam(name = "showFirmAdmins", required = false) boolean showFirmAdmins,
             @RequestParam(name = "backButton", required = false) boolean backButton,
             @RequestParam(name = "showMultiFirmUsers", required = false) boolean showMultiFirmUsers,
+            @RequestParam(name = "showProviderUsers", required = false) boolean showProviderUsers,
+            @RequestParam(name = "selectedStatuses", required = false) List<UserProfileSilasStatus> selectedStatuses,
             FirmSearchForm firmSearchForm,
             Model model, HttpSession session, Authentication authentication) {
 
         // Process request parameters and handle session filters
         search = search == null ? "" : search.trim();
+        if (selectedStatuses == null) {
+            selectedStatuses = new ArrayList<>();
+        }
         Map<String, Object> processedFilters = processRequestFilters(size, page, sort, direction, usertype, search,
-                showFirmAdmins, showMultiFirmUsers, backButton, session, firmSearchForm);
+                showFirmAdmins, showMultiFirmUsers, showProviderUsers, selectedStatuses, backButton, session, firmSearchForm);
         size = (Integer) processedFilters.get("size");
         page = (Integer) processedFilters.get("page");
         sort = (String) processedFilters.get("sort");
@@ -181,6 +191,10 @@ public class UserController {
         firmSearchForm = (FirmSearchForm) processedFilters.get("firmSearchForm");
         showFirmAdmins = Boolean.parseBoolean(String.valueOf(processedFilters.get("showFirmAdmins")));
         showMultiFirmUsers = Boolean.parseBoolean(String.valueOf(processedFilters.get("showMultiFirmUsers")));
+        showProviderUsers = Boolean.parseBoolean(String.valueOf(processedFilters.get("showProviderUsers")));
+        @SuppressWarnings("unchecked")
+        List<UserProfileSilasStatus> processedStatuses = (List<UserProfileSilasStatus>) processedFilters.get("selectedStatuses");
+        selectedStatuses = processedStatuses != null ? processedStatuses : new ArrayList<>();
 
         PaginatedUsers paginatedUsers;
         EntraUser entraUser = loginService.getCurrentEntraUser(authentication);
@@ -194,16 +208,16 @@ public class UserController {
                 search, firmSearchForm, showFirmAdmins, showMultiFirmUsers);
 
         if (canSeeAllUsers) {
-            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, null, showFirmAdmins,
-                    showMultiFirmUsers);
+            UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, null,
+                    showFirmAdmins, showMultiFirmUsers, showProviderUsers, selectedStatuses);
             paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)) {
             UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.INTERNAL,
-                    showFirmAdmins, showMultiFirmUsers);
+                    showFirmAdmins, showMultiFirmUsers, showProviderUsers, selectedStatuses);
             paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else if (accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER) && internal) {
             UserSearchCriteria searchCriteria = new UserSearchCriteria(search, firmSearchForm, UserType.EXTERNAL,
-                    showFirmAdmins, showMultiFirmUsers);
+                    showFirmAdmins, showMultiFirmUsers, showProviderUsers, selectedStatuses);
             paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
         } else {
             // External user - restrict to their firm only
@@ -218,7 +232,7 @@ public class UserController {
                         .orElse(FirmSearchForm.builder().build());
                 searchForm.setSelectedFirmId(optionalFirm.get().getId());
                 UserSearchCriteria searchCriteria = new UserSearchCriteria(search, searchForm, UserType.EXTERNAL,
-                        showFirmAdmins, showMultiFirmUsers);
+                        showFirmAdmins, showMultiFirmUsers, showProviderUsers, selectedStatuses);
                 paginatedUsers = userService.getPageOfUsersBySearch(searchCriteria, page, size, sort, direction);
             } else {
                 // Shouldn't happen, but return nothing if external user has no firm
@@ -250,10 +264,14 @@ public class UserController {
         model.addAttribute("usertype", usertype);
         model.addAttribute("internal", internal);
         model.addAttribute("showFirmAdmins", showFirmAdmins);
-        model.addAttribute("allowDelegateUserAccess", allowDelegateUserAccess);
         model.addAttribute("showMultiFirmUsers", showMultiFirmUsers);
+        model.addAttribute("showProviderUsers", showProviderUsers);
+        model.addAttribute("selectedStatuses", selectedStatuses);
+        model.addAttribute("allowDelegateUserAccess", allowDelegateUserAccess);
         boolean allowCreateUser = accessControlService.authenticatedUserHasPermission(Permission.CREATE_EXTERNAL_USER);
         model.addAttribute("allowCreateUser", allowCreateUser);
+        boolean allowViewReactivationRequests = accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER);
+        model.addAttribute("allowViewReactivationRequests", allowViewReactivationRequests);
 
         // If firmSearchForm is already populated from session (e.g., validation
         // errors), keep it
@@ -393,11 +411,24 @@ public class UserController {
         final boolean canDisableUser = disableUserFeatureEnabled
                 && accessControlService.canDisableUser(user.getEntraUser().getId());
         model.addAttribute("canDisableUser", canDisableUser);
+        Optional<UserActivationRequest> userActivationRequest = userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(id);
+        boolean isActiveDelegateRequestPresent = userActivationRequest.isPresent()
+                && !(userActivationRequest.get().getStatus() == ReactivationRequestStatus.APPROVED
+                || userActivationRequest.get().getStatus() == ReactivationRequestStatus.REJECTED);
+        boolean canManageDelegateEnableUser = isActiveDelegateRequestPresent && accessControlService.canManageDelegateEnableUser(user.getEntraUser().getId());
+        model.addAttribute("canManageDelegateEnableUser", isActiveDelegateRequestPresent && canManageDelegateEnableUser);
+        boolean canTrackDelegateRequest = isActiveDelegateRequestPresent && !canManageDelegateEnableUser && accessControlService.canTrackDelegateEnableUser(user.getEntraUser().getId());
+        model.addAttribute("canTrackDelegateEnableUser", canTrackDelegateRequest);
+        model.addAttribute("reactivationRequestStatus", isActiveDelegateRequestPresent
+                ? userActivationRequest.get().getStatus() : null);
         AccessControlService.EnablementFlags enablementFlags = disableUserFeatureEnabled
                 ? accessControlService.getEnablementFlags(user.getEntraUser().getId())
-                : new AccessControlService.EnablementFlags(false, false);
-        model.addAttribute("canEnableUser", enablementFlags.canEnable());
+                : new AccessControlService.EnablementFlags(false, false, false);
+        model.addAttribute("canEnableUser", !canTrackDelegateRequest && !canManageDelegateEnableUser && enablementFlags.canEnable());
         model.addAttribute("cannotEnableUser", enablementFlags.blockedByHierarchy());
+
+        boolean canDelegateEnableUser = !isActiveDelegateRequestPresent && enablementFlags.canDelegate();
+        model.addAttribute("canDelegateEnableUser", canDelegateEnableUser);
         final boolean userIsEnabled = user.getEntraUser().isEnabled();
         model.addAttribute("userIsEnabled", userIsEnabled);
         boolean showResendVerificationLink = accessControlService.canSendVerificationEmail(id);
@@ -414,6 +445,12 @@ public class UserController {
 
         model.addAttribute("isMultiFirmUser", isMultiFirmUser);
         model.addAttribute("canViewAllFirmsOfMultiFirmUser", accessControlService.canViewAllFirmsOfMultiFirmUser());
+
+        boolean isProviderAdmin = user != null
+                && accessControlService.userHasAuthzRole(authentication,
+                AuthzRole.FIRM_USER_MANAGER.getRoleName());
+        model.addAttribute("silasUserType",
+                isInternalUser ? "Internal" : isMultiFirmUser ? "3rd Party" : isProviderAdmin ? "Firm Admin" : "Provider");
 
         // Check if this profile belongs to the logged-in user
         boolean isOwnProfile = editorUserProfile.getId().equals(user.getId());
@@ -644,7 +681,7 @@ public class UserController {
         model.addAttribute("deleteReasons", deleteReasons);
     }
 
-    @GetMapping("/users/manage/{id}/disable")
+    @GetMapping("/users/manage/{id}/deactivate")
     @PreAuthorize("@accessControlService.canDisableUser(#id)")
     public String disableUserReasonsGet(@PathVariable String id,
                                      DisableUserReasonForm disableUserReasonForm,
@@ -686,7 +723,7 @@ public class UserController {
     }
 
 
-    @PostMapping("/users/manage/{id}/disable")
+    @PostMapping("/users/manage/{id}/deactivate")
     @PreAuthorize("@accessControlService.canDisableUser(#id)")
     public String disableUserReasonsPost(@PathVariable String id,
                                      @Valid DisableUserReasonForm disableUserReasonForm,
@@ -721,24 +758,26 @@ public class UserController {
         return "disable-user-completed";
     }
 
-    @GetMapping("/users/manage/{id}/enable")
+    @GetMapping("/users/manage/{id}/activate")
     @PreAuthorize("@accessControlService.canEnableUser(#id)")
     public String enableUserGet(@PathVariable String id,
                                  Model model,
                                  String referer,
-                                 String profileId) {
+                                 String profileId,
+                                 Authentication authentication) {
 
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
-
-        String cancelPath = getCancelPathFromReferer(referer, id, profileId);
+        EntraUser currentEntraUser = loginService.getCurrentEntraUser(authentication);
+        boolean isInternalActor = userService.isInternal(currentEntraUser.getId());
         model.addAttribute("user", user);
         model.addAttribute("referer", referer);
-        model.addAttribute("cancelPath", cancelPath);
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Enable User - " + user.getFullName());
+        model.addAttribute("cancelPath", getCancelPathFromReferer(referer, id, profileId));
+        model.addAttribute("isInternalActor", isInternalActor);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User - " + user.getFullName());
         return "enable-user-confirmation";
     }
 
-    @PostMapping("/users/manage/{id}/enable")
+    @PostMapping("/users/manage/{id}/activate")
     @PreAuthorize("@accessControlService.canEnableUser(#id)")
     public String enableUserPost(@PathVariable String id,
                                          Authentication authentication,
@@ -755,12 +794,12 @@ public class UserController {
         model.addAttribute("user", user);
         model.addAttribute("referer", referer);
         model.addAttribute("cancelPath", cancelPath);
-        model.addAttribute(ModelAttributes.PAGE_TITLE, "Enable User Success - " + user.getFullName());
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User Success - " + user.getFullName());
         return "enable-user-completed";
     }
 
     @NotNull
-    private static String buildErrorString(BindingResult result) {
+    protected static String buildErrorString(BindingResult result) {
         StringBuilder errorMessage = new StringBuilder();
         List<ObjectError> errors = result.getAllErrors();
         for (int i = 0; i < errors.size(); i++) {
@@ -1139,6 +1178,10 @@ public class UserController {
         session.removeAttribute("firmSearchForm");
         session.removeAttribute("firmSearchTerm");
         session.removeAttribute("createUserFlowStage");
+        session.removeAttribute("delegateReactivateUserId");
+        session.removeAttribute("delegateReactivateUserReasonForm");
+        session.removeAttribute("delegateReactivateUserId");
+        session.removeAttribute("profileId");
         return "redirect:/admin/users";
     }
 
@@ -1155,7 +1198,7 @@ public class UserController {
     @GetMapping("/users/edit/{id}/details")
     @PreAuthorize("@accessControlService.authenticatedUserHasPermission(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).EDIT_USER_DETAILS)")
     public String editUserDetails(@PathVariable String id, Model model, HttpSession session) {
-        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();;
+        UserProfileDto user = userService.getUserProfileById(id).orElseThrow();
         EditUserDetailsForm editUserDetailsForm = new EditUserDetailsForm();
         editUserDetailsForm.setFirstName(user.getEntraUser().getFirstName());
         editUserDetailsForm.setLastName(user.getEntraUser().getLastName());
@@ -3033,6 +3076,7 @@ public class UserController {
 
     private Map<String, Object> processRequestFilters(int size, int page, String sort, String direction,
             String usertype, String search, boolean showFirmAdmins, boolean showMultiFirmUsers,
+            boolean showProviderUsers, List<UserProfileSilasStatus> selectedStatuses,
             boolean backButton, HttpSession session, FirmSearchForm firmSearchForm) {
 
         if (backButton) {
@@ -3054,6 +3098,15 @@ public class UserController {
                 showMultiFirmUsers = sessionFilters.containsKey("showMultiFirmUsers")
                         ? (Boolean) sessionFilters.get("showMultiFirmUsers")
                         : showMultiFirmUsers;
+                showProviderUsers = sessionFilters.containsKey("showProviderUsers")
+                        ? (Boolean) sessionFilters.get("showProviderUsers")
+                        : showProviderUsers;
+                if (sessionFilters.containsKey("selectedStatuses")) {
+                    @SuppressWarnings("unchecked")
+                    List<UserProfileSilasStatus> sessionStatuses =
+                            (List<UserProfileSilasStatus>) sessionFilters.get("selectedStatuses");
+                    selectedStatuses = sessionStatuses;
+                }
                 firmSearchForm = sessionFilters.containsKey("firmSearchForm")
                         ? (FirmSearchForm) sessionFilters.get("firmSearchForm")
                         : firmSearchForm;
@@ -3074,16 +3127,18 @@ public class UserController {
             session.removeAttribute("userListFilters");
         }
 
-        Map<String, Object> result = Map.of(
-                "size", size,
-                "page", page,
-                "sort", sort != null ? sort : "",
-                "direction", direction != null ? direction : "",
-                "search", search != null ? search : "",
-                "showFirmAdmins", showFirmAdmins,
-                "showMultiFirmUsers", showMultiFirmUsers,
-                "usertype", usertype != null ? usertype : "",
-                "firmSearchForm", firmSearchForm != null ? firmSearchForm : FirmSearchForm.builder().build());
+        Map<String, Object> result = new HashMap<>();
+        result.put("size", size);
+        result.put("page", page);
+        result.put("sort", sort != null ? sort : "");
+        result.put("direction", direction != null ? direction : "");
+        result.put("search", search != null ? search : "");
+        result.put("showFirmAdmins", showFirmAdmins);
+        result.put("showMultiFirmUsers", showMultiFirmUsers);
+        result.put("showProviderUsers", showProviderUsers);
+        result.put("selectedStatuses", selectedStatuses != null ? selectedStatuses : new ArrayList<>());
+        result.put("usertype", usertype != null ? usertype : "");
+        result.put("firmSearchForm", firmSearchForm != null ? firmSearchForm : FirmSearchForm.builder().build());
 
         // Store current filter state in session for future back navigation
         session.setAttribute("userListFilters", result);

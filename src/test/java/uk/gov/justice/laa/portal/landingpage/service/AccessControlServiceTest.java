@@ -13,15 +13,25 @@ import org.assertj.core.api.Assertions;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
+
+import static org.mockito.Mockito.mock;
 
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
@@ -29,6 +39,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -38,6 +49,7 @@ import ch.qos.logback.core.read.ListAppender;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
+import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
@@ -52,9 +64,13 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
+import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserActivationRequestRepository;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
 import static uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring.addListAppenderToLogger;
 
@@ -79,10 +95,36 @@ public class AccessControlServiceTest {
     @InjectMocks
     private AccessControlService accessControlService;
 
+    @Mock
+    private UserActivationRequestRepository userActivationRequestRepository;
+
+    @Mock
+    private ReactivationTypeResolver reactivationTypeResolver;
+
+    @Mock
+    private Authentication authentication;
+
+    @Mock
+    private SecurityContext securityContext;
+
+    private final UUID authenticatedUserId = UUID.randomUUID();
+    private final UUID accessedUserId = UUID.randomUUID();
+    private final String accessedUserIdStr = accessedUserId.toString();
+    private final UUID accessedProfileId = UUID.randomUUID();
+    private final UUID requestId = UUID.randomUUID();
+
+    private EntraUser authenticatedUser;
+    private UserProfile actorProfile;
+    private EntraUser accessedUser;
+    private UserProfile accessedProfile;
+    private UserActivationRequest latestActivationRequest;
+    private UserActivationRequestSummaryDto firstActivationRequest;
+
+
     @Test
     public void testCanAccessUserInternalUser() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -108,8 +150,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCannotAccessUserWithNoProfiles() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -123,8 +165,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanAccessUserExternalSameFirm() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -154,8 +196,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testInternalUserWithExternalUserManagerRoleCanAccessExternalUser() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -194,8 +236,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testInternalUserWithExternalUserManagerRoleCanEditExternalUser() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -234,8 +276,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanAccessUserFalseExternalDifferentFirm() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -268,8 +310,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanAccessUserFalseUserFirmsEmpty() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -300,8 +342,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanEditUserInternalUser() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -329,8 +371,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanEditUserExternalSameFirm() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -361,8 +403,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanEditUserFalseExternalDifferentFirmAndLog() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -399,8 +441,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanGrantUserAccess_UserProfileNotFound_ReturnsFalse() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -413,8 +455,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanGrantUserAccess_GlobalAdmin_ReturnsTrue() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -439,8 +481,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanGrantUserAccess_InternalUserManagerEditingInternalUser_ReturnsTrue() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -467,8 +509,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanGrantUserAccess_InternalUserManagerWithViewerRoleEditingExternalUser_ReturnsFalse() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -505,8 +547,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanGrantUserAccess_InternalUserManagerWithEditorRoleEditingExternalUser_ReturnsTrue() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -544,8 +586,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanGrantUserAccess_FirmUserManagerEditingSameFirmUser_ReturnsFalse() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -572,8 +614,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanGrantUserAccess_FirmUserManagerEditingDifferentFirmUser_ReturnsFalse() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -602,8 +644,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanGrantUserAccess_ExternalUserWithPermissionsEditingExternalUser_ReturnsTrue() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -628,8 +670,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanGrantUserAccess_NoPermissions_ReturnsFalse() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -654,8 +696,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testExternalParentFirmUserCanAccessChildFirmUser() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -701,8 +743,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testExternalChildFirmUserCannotAccessParentFirmUser() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -750,8 +792,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanSendVerificationEmail() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -793,8 +835,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanResendActivationForAuditUser() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -828,8 +870,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCannotResendActivationForDisabledAuditUser() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -867,8 +909,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCannotSendVerificationEmailToActivatedUser() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -912,8 +954,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCannotSendVerificationEmailToDisabledUser() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -957,8 +999,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCannotSendVerificationEmailToDisabledUserPendingActivation() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1003,8 +1045,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testFirmAdminCannotSendVerificationEmail() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1042,8 +1084,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCannotSendVerificationEmailToDeletedUser() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1073,8 +1115,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void isUserManager_userNotProviderAdmin() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1102,8 +1144,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void isUserManager() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1131,8 +1173,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCannotDeleteUserWithNoProfiles() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1146,8 +1188,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testGlobalAdminCanDeleteExternalUser() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1180,8 +1222,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testGlobalAdminCanDeleteMultiFirmExternalUser() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1216,8 +1258,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testInternalUserCanDeleteMultiFirmUser() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1251,8 +1293,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testFirmUserManagerCannotDeleteMultiFirmUser() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1286,8 +1328,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testFirmUserManagerCannotDeleteDifferentFirmUser() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1325,8 +1367,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testFirmUserManagerCanDeleteSameFirmUser() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1366,8 +1408,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testInternalUserCannotDeleteInternalUser() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1402,8 +1444,8 @@ public class AccessControlServiceTest {
     @Test
     public void testFirmUserManagerCanDeleteSingleFirmUserInSameFirm() {
 
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1455,8 +1497,8 @@ public class AccessControlServiceTest {
     @Test
     public void testFirmUserManagerCannotDeleteMultiFirmUsers() {
 
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1504,8 +1546,8 @@ public class AccessControlServiceTest {
     @Test
     public void testFirmUserManagerCannotDeleteUserFromDifferentFirm() {
 
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1555,8 +1597,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testFirmUserManagerCanDeleteMultiFirmUser() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1590,8 +1632,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanEditUserAppRoleAssignments_UserProfileNotFound_ReturnsFalse() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1604,8 +1646,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanEditUserAppRoleAssignments_GlobalAdmin_ReturnsTrue() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1630,8 +1672,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanEditUserAppRoleAssignments_InternalUserManagerEditingInternalUser_ReturnsTrue() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1658,8 +1700,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanEditUserAppRoleAssignments_InternalUserManagerEditingExternalUser_ReturnsFalse() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1686,8 +1728,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanEditUserAppRoleAssignments_FirmUserManagerEditingSameFirmExternalUser_ReturnsTrue() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1716,8 +1758,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanEditUserAppRoleAssignments_FirmUserManagerEditingDifferentFirmExternalUser_ReturnsFalse() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1748,8 +1790,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanEditUserAppRoleAssignments_ExternalUserWithPermissionsEditingExternalUser_ReturnsTrue() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1774,8 +1816,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanEditUserAppRoleAssignments_NoPermissions_ReturnsFalse() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1800,8 +1842,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanGrantUserAccess_InternalUserWithExternalRolesEditingExternalUser_ReturnsTrue() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1830,8 +1872,8 @@ public class AccessControlServiceTest {
     @Test
     public void testCanDeleteFirmProfile_InternalUserWithPermission_CannotDelete() {
         // Setup authentication
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1874,8 +1916,8 @@ public class AccessControlServiceTest {
     @Test
     public void testCanDeleteFirmProfile_ExternalFirmAdminInSameFirm_CanDelete() {
         // Setup authentication
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1920,8 +1962,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanDeleteFirmProfile_ProfileNotFound_ReturnsFalse() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1936,8 +1978,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanDeleteFirmProfile_InternalUserProfile_ReturnsFalse() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1962,8 +2004,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanDeleteFirmProfile_NotMultiFirmUser_ReturnsFalse() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -1990,8 +2032,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanDeleteFirmProfile_ExternalUserDifferentFirm_ReturnsFalse() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -2036,8 +2078,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanDeleteFirmProfile_ExternalUserNoPermission_ReturnsFalse() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -2080,8 +2122,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanDeleteFirmProfile_NullAuthenticatedUser_ReturnsFalse() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -2093,8 +2135,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanDeleteFirmProfile_TargetEntraUserNull_ReturnsFalse() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -2117,8 +2159,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanViewAllFirmsOfMultiFirmUser_WithPermission() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -2149,8 +2191,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testCanViewAllFirmsOfMultiFirmUser_WithoutPermission() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -2356,8 +2398,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testAuthenticatedUserIsInternalReturnsTrueWhenUserIsInternal() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -2382,8 +2424,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void testAuthenticatedUserIsExternalReturnsFalseWhenUserIsExternal() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -2417,7 +2459,7 @@ public class AccessControlServiceTest {
 
     @Test
     void canDisableUser_returnsFalse_whenUserIsMultiFirm() {
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         SecurityContextHolder.setContext(securityContext);
 
         EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).email("test@email.com")
@@ -2436,7 +2478,7 @@ public class AccessControlServiceTest {
                 .build();
         when(userService.getEntraUserById(userId)).thenReturn(Optional.of(userDto));
 
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         boolean result = accessControlService.canDisableUser(userId);
@@ -2462,8 +2504,8 @@ public class AccessControlServiceTest {
 
     @Test
     void canDisableUser_returnsFalse_whenSameUser() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -2493,8 +2535,8 @@ public class AccessControlServiceTest {
 
     @Test
     void canDisableUser_returnsFalse_whenUserLacksPermission() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -2522,8 +2564,8 @@ public class AccessControlServiceTest {
 
     @Test
     void canDisableUser_returnsTrue_whenAllConditionsMet() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -2552,7 +2594,7 @@ public class AccessControlServiceTest {
 
     @Test
     void cannotDisableUser_internalUser_disableMultiFirmUser() {
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         SecurityContextHolder.setContext(securityContext);
 
         UUID userId = UUID.randomUUID();
@@ -2569,7 +2611,7 @@ public class AccessControlServiceTest {
 
         when(userService.getEntraUserById(accessedUserId.toString())).thenReturn(Optional.of(accessedEntraUserDto));
         when(userService.isInternal(accessedUserId.toString())).thenReturn(false);
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         boolean result = accessControlService.canDisableUser(accessedUserId.toString());
@@ -2579,8 +2621,8 @@ public class AccessControlServiceTest {
 
     @Test
     void cannotDisableUser_firmUserManager_differentFirm() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -2621,8 +2663,8 @@ public class AccessControlServiceTest {
 
     @Test
     void canDisableUser_firmUserManager_sameFirm() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -2661,8 +2703,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void canConvertUserToMultiFirmReturnsTrueWhenAllConditionsMet() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -2718,8 +2760,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void canConvertUserToMultiFirmReturnsFalseWhenAuthenticatedUserIsNotInternal() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -2760,8 +2802,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void canConvertUserToMultiFirmReturnsFalseWhenMissingEditExternalUserPermission() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -2801,8 +2843,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void canConvertUserToMultiFirmReturnsFalseWhenMissingConvertUserToMultiFirmPermission() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -2853,8 +2895,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void canConvertUserToMultiFirmReturnsFalseWhenAuthenticatedUserHasNoPermissions() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -2893,8 +2935,8 @@ public class AccessControlServiceTest {
 
     @Test
     public void canConvertUserToMultiFirmReturnsFalseWhenAuthenticatedUserHasNoActiveProfile() {
-        AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+        AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+        SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
 
@@ -2933,16 +2975,11 @@ public class AccessControlServiceTest {
         Assertions.assertThat(result).isFalse();
     }
 
-
-    // CanEnableUserTest removed - tested old broken canEnableUser implementation.
-    // Replaced by CanEnableUserUpdatedLogicTest below.
-
     @Nested
     class CanEnableUserUpdatedLogicTest {
 
         private final UUID actingUserId = UUID.randomUUID();
         private final UUID targetUserId = UUID.randomUUID();
-        private final UUID disabledBy = UUID.randomUUID();
 
         @Test
         void shouldReturnFalse_whenAccessedUserMissing() {
@@ -3087,7 +3124,6 @@ public class AccessControlServiceTest {
             when(userService.isInternal(any(String.class))).thenReturn(false);
             when(userService.isInternal(any(UUID.class))).thenReturn(true);
             when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
-            when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
             when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(true);
 
             try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
@@ -3109,10 +3145,12 @@ public class AccessControlServiceTest {
             when(userService.isInternal(any(String.class))).thenReturn(false);
             when(userService.isInternal(any(UUID.class))).thenReturn(true);
             when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
-            when(userEnablementPolicy.canEnable(any(), any())).thenReturn(false);
 
             try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
-                mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.ENABLE_EXTERNAL_USER)).thenReturn(true);
+                mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser,
+                        Permission.ENABLE_EXTERNAL_USER)).thenReturn(true);
+                mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser,
+                        Permission.CAN_REQUEST_DELEGATE_ENABLE_USER)).thenReturn(true);
                 assertThat(accessControlService.canEnableUser(targetUserId.toString())).isFalse();
             }
         }
@@ -3131,7 +3169,6 @@ public class AccessControlServiceTest {
             when(userService.isInternal(any(String.class))).thenReturn(false);
             when(userService.isInternal(any(UUID.class))).thenReturn(true);
             when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
-            when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
             when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(true);
 
             try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
@@ -3220,11 +3257,139 @@ public class AccessControlServiceTest {
             }
         }
 
+        private EntraUser createActorWithRoles(String... roles) {
+            UserProfile profile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .activeProfile(true)
+                    .appRoles(Arrays.stream(roles)
+                            .map(r -> AppRole.builder().name(r).build())
+                            .collect(Collectors.toSet()))
+                    .build();
+
+            return EntraUser.builder()
+                    .id(actingUserId)
+                    .userProfiles(Set.of(profile))
+                    .build();
+        }
+
+        private EntraUser createTargetUser(Firm firm) {
+            return createTargetUser(null, firm);
+        }
+
+        private EntraUser createTargetUser(DisableType disableType, Firm firm) {
+            return EntraUser.builder()
+                    .id(targetUserId)
+                    .disableType(disableType)
+                    .userProfiles(Set.of(
+                            UserProfile.builder()
+                                    .activeProfile(true)
+                                    .firm(firm)
+                                    .build()
+                    ))
+                    .build();
+        }
+
+        private EntraUser setupMockAuthenticatedUser(String roleName, Firm firm, Permission... permissions) {
+            AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+            SecurityContext securityContext = mock(SecurityContext.class);
+            Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+            SecurityContextHolder.setContext(securityContext);
+
+            AppRole appRole = AppRole.builder().name(roleName)
+                    .authzRole(true).permissions(Set.of(permissions)).build();
+            EntraUser authenticatedUser = EntraUser.builder()
+                    .id(actingUserId)
+                    .email("internal@email.com")
+                    .userProfiles(HashSet.newHashSet(1))
+                    .build();
+            UserProfile authenticatedUserProfile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .activeProfile(true)
+                    .entraUser(authenticatedUser)
+                    .appRoles(Set.of(appRole))
+                    .userType(firm == null ? UserType.INTERNAL : UserType.EXTERNAL)
+                    .firm(firm)
+                    .build();
+            authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
+
+            return authenticatedUser;
+        }
+
+        @BeforeEach
+        void setUp() {
+            SecurityContextHolder.setContext(securityContext);
+
+            authenticatedUser = mock(EntraUser.class);
+            actorProfile = mock(UserProfile.class);
+
+            accessedUser = mock(EntraUser.class);
+            accessedProfile = mock(UserProfile.class);
+            latestActivationRequest = mock(UserActivationRequest.class);
+            firstActivationRequest = mock(UserActivationRequestSummaryDto.class);
+        }
+
+        @AfterEach
+        void tearDown() {
+            SecurityContextHolder.clearContext();
+        }
+
+        private void setupSecurityContextAndActor() {
+            when(securityContext.getAuthentication()).thenReturn(authentication);
+            when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+            when(authenticatedUser.getId()).thenReturn(authenticatedUserId);
+
+            when(actorProfile.isActiveProfile()).thenReturn(true);
+            when(authenticatedUser.getUserProfiles()).thenReturn(Set.of(actorProfile));
+        }
+
+        private void setupTargetUserAndRequest() {
+            when(accessedUser.isEnabled()).thenReturn(false);
+
+            when(accessedProfile.getId()).thenReturn(accessedProfileId);
+            when(accessedProfile.isActiveProfile()).thenReturn(true);
+
+            when(accessedUser.getUserProfiles()).thenReturn(Set.of(accessedProfile));
+            when(entraUserRepository.findById(accessedUserId)).thenReturn(Optional.of(accessedUser));
+
+            when(latestActivationRequest.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
+            when(latestActivationRequest.getRequestId()).thenReturn(requestId);
+
+            when(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedProfileId))
+                    .thenReturn(Optional.of(latestActivationRequest));
+
+            when(firstActivationRequest.version()).thenReturn(1);
+            when(userActivationRequestRepository.findRequestHistoryByRequestId(requestId))
+                    .thenReturn(List.of(firstActivationRequest));
+        }
+
         @Nested
         class IsEnableBlockedByHierarchyTest {
 
             @Test
             void shouldReturnTrue_whenPolicyDenies() {
+                // FUM actor, PRIVILEGED-disabled user — policy rejects → hierarchy denial
+                Firm firmA = Firm.builder().id(UUID.randomUUID()).build();
+                EntraUser authenticatedUser = setupMockAuthenticatedUser(FIRM_USER_MANAGER.getRoleName(), firmA,
+                        Permission.ENABLE_EXTERNAL_USER);
+                EntraUserDto targetEntraUserDto = EntraUserDto.builder().id(targetUserId.toString()).enabled(false).build();
+                EntraUser target = createTargetUser(DisableType.FIRM, null);
+
+                when(loginService.getCurrentEntraUser(any())).thenReturn(authenticatedUser);
+                when(entraUserRepository.findByIdWithAssociations(targetUserId)).thenReturn(Optional.of(target));
+                when(userService.isInternal(any(String.class))).thenReturn(false);
+                when(userService.isInternal(any(UUID.class))).thenReturn(true);
+                when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
+                when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(true);
+
+                try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
+                    mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser,
+                            Permission.ENABLE_EXTERNAL_USER)).thenReturn(true);
+                    assertThat(accessControlService.isEnableBlockedByHierarchy(targetUserId.toString())).isTrue();
+                }
+            }
+
+            @Test
+            void shouldReturnFalse_whenPolicyDeniesDelegate() {
                 // FUM actor, PRIVILEGED-disabled user — policy rejects → hierarchy denial
                 Firm firmA = Firm.builder().id(UUID.randomUUID()).build();
                 EntraUser authenticatedUser = setupMockAuthenticatedUser(FIRM_USER_MANAGER.getRoleName(), firmA,
@@ -3237,12 +3402,13 @@ public class AccessControlServiceTest {
                 when(userService.isInternal(any(String.class))).thenReturn(false);
                 when(userService.isInternal(any(UUID.class))).thenReturn(true);
                 when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
-                when(userEnablementPolicy.canEnable(any(), any())).thenReturn(false);
 
                 try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                     mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser,
                             Permission.ENABLE_EXTERNAL_USER)).thenReturn(true);
-                    assertThat(accessControlService.isEnableBlockedByHierarchy(targetUserId.toString())).isTrue();
+                    mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser,
+                            Permission.CAN_REQUEST_DELEGATE_ENABLE_USER)).thenReturn(true);
+                    assertThat(accessControlService.canDelegateEnableUser(targetUserId.toString())).isFalse();
                 }
             }
 
@@ -3261,7 +3427,6 @@ public class AccessControlServiceTest {
                 when(userService.isInternal(any(String.class))).thenReturn(false);
                 when(userService.isInternal(any(UUID.class))).thenReturn(true);
                 when(userService.getEntraUserById(targetUserId.toString())).thenReturn(Optional.of(targetEntraUserDto));
-                when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
                 when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(true);
 
                 try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
@@ -3308,64 +3473,6 @@ public class AccessControlServiceTest {
                     assertThat(accessControlService.isEnableBlockedByHierarchy(targetUserId.toString())).isFalse();
                 }
             }
-        }
-
-        private EntraUser createActorWithRoles(String... roles) {
-            UserProfile profile = UserProfile.builder()
-                    .id(UUID.randomUUID())
-                    .activeProfile(true)
-                    .appRoles(Arrays.stream(roles)
-                            .map(r -> AppRole.builder().name(r).build())
-                            .collect(Collectors.toSet()))
-                    .build();
-
-            return EntraUser.builder()
-                    .id(actingUserId)
-                    .userProfiles(Set.of(profile))
-                    .build();
-        }
-
-        private EntraUser createTargetUser(Firm firm) {
-            return createTargetUser(null, firm);
-        }
-
-        private EntraUser createTargetUser(DisableType disableType, Firm firm) {
-            return EntraUser.builder()
-                    .id(targetUserId)
-                    .disableType(disableType)
-                    .userProfiles(Set.of(
-                            UserProfile.builder()
-                                    .activeProfile(true)
-                                    .firm(firm)
-                                    .build()
-                    ))
-                    .build();
-        }
-
-        private EntraUser setupMockAuthenticatedUser(String roleName, Firm firm, Permission... permissions) {
-            AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-            SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-            Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
-            SecurityContextHolder.setContext(securityContext);
-
-            AppRole appRole = AppRole.builder().name(roleName)
-                    .authzRole(true).permissions(Set.of(permissions)).build();
-            EntraUser authenticatedUser = EntraUser.builder()
-                    .id(actingUserId)
-                    .email("internal@email.com")
-                    .userProfiles(HashSet.newHashSet(1))
-                    .build();
-            UserProfile authenticatedUserProfile = UserProfile.builder()
-                    .id(UUID.randomUUID())
-                    .activeProfile(true)
-                    .entraUser(authenticatedUser)
-                    .appRoles(Set.of(appRole))
-                    .userType(firm == null ? UserType.INTERNAL : UserType.EXTERNAL)
-                    .firm(firm)
-                    .build();
-            authenticatedUser.getUserProfiles().add(authenticatedUserProfile);
-
-            return authenticatedUser;
         }
 
         @Nested
@@ -3831,8 +3938,8 @@ public class AccessControlServiceTest {
             }
 
             private void setupSecurityContext(EntraUser authenticatedUser) {
-                AnonymousAuthenticationToken authentication = Mockito.mock(AnonymousAuthenticationToken.class);
-                SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+                AnonymousAuthenticationToken authentication = mock(AnonymousAuthenticationToken.class);
+                SecurityContext securityContext = mock(SecurityContext.class);
                 when(securityContext.getAuthentication()).thenReturn(authentication);
                 SecurityContextHolder.setContext(securityContext);
 
@@ -3840,8 +3947,386 @@ public class AccessControlServiceTest {
             }
         }
 
-    }
+        @Nested
+        @DisplayName("canTrackDelegateEnableUser Tests")
+        class CanTrackDelegateEnableUserTests {
 
+            @ParameterizedTest
+            @NullAndEmptySource
+            @ValueSource(strings = {"   ", "invalid-uuid"})
+            @DisplayName("Should return false when entraUserId is invalid or non-UUID")
+            void shouldReturnFalseForInvalidUserId(String invalidId) {
+                assertThat(accessControlService.canTrackDelegateEnableUser(invalidId)).isFalse();
+            }
+
+            @Test
+            @DisplayName("Should return false when authenticated user is null or lacks CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS permission")
+            void shouldReturnFalseWhenNoAuthOrNoPermission() {
+                when(securityContext.getAuthentication()).thenReturn(authentication);
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(null);
+
+                assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+
+                try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
+                    mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(false);
+                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                }
+            }
+
+            @Test
+            @DisplayName("Should return false when self-tracking target user ID matches actor user ID")
+            void shouldReturnFalseWhenTrackingSelf() {
+                when(securityContext.getAuthentication()).thenReturn(authentication);
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+                when(authenticatedUser.getId()).thenReturn(accessedUserId);
+
+                try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
+                    mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
+                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                }
+            }
+
+            @Test
+            @DisplayName("Should return false when actor has no active profile or null profile list")
+            void shouldReturnFalseWhenActorHasNoActiveProfile() {
+                when(securityContext.getAuthentication()).thenReturn(authentication);
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+                when(authenticatedUser.getId()).thenReturn(authenticatedUserId);
+                when(authenticatedUser.getUserProfiles()).thenReturn(null);
+
+                try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
+                    mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
+                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                }
+
+            }
+
+            @Test
+            @DisplayName("Should return false when target user is internal")
+            void shouldReturnFalseWhenTargetIsInternal() {
+                setupSecurityContextAndActor();
+                when(userService.isInternal(accessedUserIdStr)).thenReturn(true);
+
+                try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
+                    mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
+                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                }
+            }
+
+            @Test
+            @DisplayName("Should return false when target user is null, enabled, or has no active profile")
+            void shouldReturnFalseWhenTargetUserInvalidOrEnabled() {
+                setupSecurityContextAndActor();
+                when(userService.isInternal(accessedUserIdStr)).thenReturn(false);
+
+                when(entraUserRepository.findById(accessedUserId)).thenReturn(Optional.empty());
+                assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+
+                when(entraUserRepository.findById(accessedUserId)).thenReturn(Optional.of(accessedUser));
+                when(accessedUser.isEnabled()).thenReturn(true);
+                assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+
+                when(accessedUser.isEnabled()).thenReturn(false);
+                when(accessedUser.getUserProfiles()).thenReturn(Set.of());
+
+                try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
+                    mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
+                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                }
+            }
+
+            @Test
+            @DisplayName("Should return false when latest request is missing, APPROVED, or REJECTED")
+            void shouldReturnFalseForInvalidRequestStatus() {
+                setupSecurityContextAndActor();
+                when(userService.isInternal(accessedUserIdStr)).thenReturn(false);
+
+                when(accessedUser.getUserProfiles()).thenReturn(Set.of(accessedProfile));
+                when(accessedProfile.getId()).thenReturn(accessedProfileId);
+                when(accessedProfile.isActiveProfile()).thenReturn(true);
+                when(entraUserRepository.findById(accessedUserId)).thenReturn(Optional.of(accessedUser));
+
+                try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
+                    when(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedProfileId))
+                            .thenReturn(Optional.empty());
+                    mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
+                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                }
+
+                try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
+                    when(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedProfileId))
+                            .thenReturn(Optional.of(latestActivationRequest));
+                    mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
+                    when(latestActivationRequest.getStatus()).thenReturn(ReactivationRequestStatus.APPROVED);
+                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                }
+
+                try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
+                    when(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedProfileId))
+                            .thenReturn(Optional.of(latestActivationRequest));
+                    mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
+                    when(latestActivationRequest.getStatus()).thenReturn(ReactivationRequestStatus.REJECTED);
+                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                }
+
+            }
+
+            @Test
+            @DisplayName("Should return false when initial version 1 request is missing")
+            void shouldReturnFalseWhenFirstRequestVersionNotFound() {
+                setupSecurityContextAndActor();
+                when(userService.isInternal(accessedUserIdStr)).thenReturn(false);
+
+                when(accessedUser.getUserProfiles()).thenReturn(Set.of(accessedProfile));
+                when(accessedProfile.getId()).thenReturn(accessedProfileId);
+                when(accessedProfile.isActiveProfile()).thenReturn(true);
+                when(entraUserRepository.findById(accessedUserId)).thenReturn(Optional.of(accessedUser));
+
+                when(latestActivationRequest.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
+                when(latestActivationRequest.getRequestId()).thenReturn(requestId);
+
+                when(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedProfileId))
+                        .thenReturn(Optional.of(latestActivationRequest));
+                when(userActivationRequestRepository.findRequestHistoryByRequestId(requestId))
+                        .thenReturn(List.of());
+
+                try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
+                    mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
+                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                }
+            }
+
+            @Nested
+            @DisplayName("Role Specific Evaluations")
+            class RoleEvaluationTests {
+
+                @BeforeEach
+                void setupBaseValidState() {
+                    setupSecurityContextAndActor();
+                    setupTargetUserAndRequest();
+                    when(userService.isInternal(accessedUserIdStr)).thenReturn(false);
+
+                    AppRole appRole = mock(AppRole.class);
+                    when(appRole.getName()).thenReturn("ROLE_NAME");
+                    when(actorProfile.getAppRoles()).thenReturn(Set.of(appRole));
+                }
+
+                @Test
+                @DisplayName("PROVIDER_ADMIN: Should return false if target user is multi-firm user")
+                void providerAdmin_ShouldReturnFalseForMultiFirmUser() {
+                    when(reactivationTypeResolver.resolveFromRoles(any())).thenReturn(ReactivationRoleType.PROVIDER_ADMIN);
+                    when(accessedUser.isMultiFirmUser()).thenReturn(true);
+
+                    try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
+                        mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
+                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                    }
+                }
+
+                @Test
+                @DisplayName("PROVIDER_ADMIN: Should return true if actor and target belong to the same firm")
+                void providerAdmin_ShouldReturnTrueForSameFirm() {
+                    when(reactivationTypeResolver.resolveFromRoles(any())).thenReturn(ReactivationRoleType.PROVIDER_ADMIN);
+                    when(accessedUser.isMultiFirmUser()).thenReturn(false);
+
+                    UUID firmId = UUID.randomUUID();
+                    Firm actorFirm = mock(Firm.class);
+                    Firm targetFirm = mock(Firm.class);
+
+                    when(actorFirm.getId()).thenReturn(firmId);
+                    when(targetFirm.getId()).thenReturn(firmId);
+
+                    when(actorProfile.getFirm()).thenReturn(actorFirm);
+                    when(accessedProfile.getFirm()).thenReturn(targetFirm);
+
+                    try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
+                        mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
+                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isTrue();
+                    }
+                }
+
+                @Test
+                @DisplayName("PROVIDER_ADMIN: Should return false if firms do not match or are null")
+                void providerAdmin_ShouldReturnFalseForDifferentOrNullFirm() {
+                    when(reactivationTypeResolver.resolveFromRoles(any())).thenReturn(ReactivationRoleType.PROVIDER_ADMIN);
+                    when(accessedUser.isMultiFirmUser()).thenReturn(false);
+
+                    Firm actorFirm = mock(Firm.class);
+                    Firm targetFirm = mock(Firm.class);
+
+                    when(actorProfile.getFirm()).thenReturn(actorFirm);
+                    when(accessedProfile.getFirm()).thenReturn(targetFirm);
+
+                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+
+                    when(actorProfile.getFirm()).thenReturn(null);
+
+                    try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
+                        mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
+                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                    }
+                }
+
+                @Test
+                @DisplayName("LAA_OST: Should return true only if first request initiator was also LAA_OST")
+                void laaOst_ShouldValidateInitiatorRole() {
+                    when(reactivationTypeResolver.resolveFromRoles(any())).thenReturn(ReactivationRoleType.LAA_OST);
+
+                    when(firstActivationRequest.actorRoleType()).thenReturn(ReactivationRoleType.LAA_OST);
+                    try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
+                        mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
+                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isTrue();
+                    }
+
+                    when(firstActivationRequest.actorRoleType()).thenReturn(ReactivationRoleType.PROVIDER_ADMIN);
+                    try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
+                        mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
+                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                    }
+                }
+
+                @Test
+                @DisplayName("LAA / LAA_USER_REGISTRATION: Should return true")
+                void laaRoles_ShouldReturnTrue() {
+                    when(reactivationTypeResolver.resolveFromRoles(any())).thenReturn(ReactivationRoleType.LAA);
+                    try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
+                        mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
+                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isTrue();
+                    }
+
+                    when(reactivationTypeResolver.resolveFromRoles(any())).thenReturn(ReactivationRoleType.LAA_USER_REGISTRATION);
+                    try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
+                        mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
+                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isTrue();
+                    }
+
+                    when(reactivationTypeResolver.resolveFromRoles(any())).thenReturn(ReactivationRoleType.NONE);
+
+                    try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
+                        mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
+                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                    }
+                }
+            }
+        }
+
+        @Nested
+        @DisplayName("canManageDelegateEnableUser Tests")
+        class CanManageDelegateEnableUserTests {
+
+            @ParameterizedTest
+            @NullAndEmptySource
+            @ValueSource(strings = {"   ", "invalid-uuid"})
+            @DisplayName("Should return false when entraUserId is null, empty, or non-UUID")
+            void shouldReturnFalseForInvalidUserId(String invalidId) {
+                assertThat(accessControlService.canManageDelegateEnableUser(invalidId)).isFalse();
+            }
+
+            @Test
+            @DisplayName("Should return false when authenticated user is null")
+            void shouldReturnFalseWhenAuthenticatedUserIsNull() {
+                when(securityContext.getAuthentication()).thenReturn(authentication);
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(null);
+
+                assertThat(accessControlService.canManageDelegateEnableUser(accessedUserIdStr)).isFalse();
+            }
+
+            @Test
+            @DisplayName("Should return false when target user ID matches current user ID")
+            void shouldReturnFalseWhenTargetMatchesCurrentUser() {
+                when(securityContext.getAuthentication()).thenReturn(authentication);
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+                when(authenticatedUser.getId()).thenReturn(accessedUserId);
+
+                assertThat(accessControlService.canManageDelegateEnableUser(accessedUserIdStr)).isFalse();
+            }
+
+            @Test
+            @DisplayName("Should return false when current user is not internal")
+            void shouldReturnFalseWhenCurrentUserIsNotInternal() {
+                when(securityContext.getAuthentication()).thenReturn(authentication);
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+                when(authenticatedUser.getId()).thenReturn(authenticatedUserId);
+
+                when(userService.isInternal(authenticatedUserId.toString())).thenReturn(false);
+
+                assertThat(accessControlService.canManageDelegateEnableUser(accessedUserIdStr)).isFalse();
+            }
+
+            @Test
+            @DisplayName("Should return false when target user is internal")
+            void shouldReturnFalseWhenTargetUserIsInternal() {
+                when(securityContext.getAuthentication()).thenReturn(authentication);
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+                when(authenticatedUser.getId()).thenReturn(authenticatedUserId);
+
+                when(userService.isInternal(authenticatedUserId.toString())).thenReturn(true);
+                when(userService.isInternal(accessedUserIdStr)).thenReturn(true);
+
+                assertThat(accessControlService.canManageDelegateEnableUser(accessedUserIdStr)).isFalse();
+            }
+
+            @Test
+            @DisplayName("Should return false when target user is null, enabled, or active profile is absent")
+            void shouldReturnFalseWhenTargetUserInvalidOrEnabled() {
+                setupBaseInternalUserValidation();
+
+                when(entraUserRepository.findById(accessedUserId)).thenReturn(Optional.empty());
+                assertThat(accessControlService.canManageDelegateEnableUser(accessedUserIdStr)).isFalse();
+
+                when(entraUserRepository.findById(accessedUserId)).thenReturn(Optional.of(accessedUser));
+                when(accessedUser.isEnabled()).thenReturn(true);
+                assertThat(accessControlService.canManageDelegateEnableUser(accessedUserIdStr)).isFalse();
+
+                when(accessedUser.isEnabled()).thenReturn(false);
+                when(accessedUser.getUserProfiles()).thenReturn(Set.of());
+                assertThat(accessControlService.canManageDelegateEnableUser(accessedUserIdStr)).isFalse();
+            }
+
+            @Test
+            @DisplayName("Should return false when latest request is absent, APPROVED, or REJECTED")
+            void shouldReturnFalseForInvalidRequestStatus() {
+                setupBaseInternalUserValidation();
+
+                when(accessedUser.getUserProfiles()).thenReturn(Set.of(accessedProfile));
+                when(accessedProfile.getId()).thenReturn(accessedProfileId);
+                when(accessedProfile.isActiveProfile()).thenReturn(true);
+                when(entraUserRepository.findById(accessedUserId)).thenReturn(Optional.of(accessedUser));
+
+                when(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedProfileId))
+                        .thenReturn(Optional.empty());
+                assertThat(accessControlService.canManageDelegateEnableUser(accessedUserIdStr)).isFalse();
+
+                when(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedProfileId))
+                        .thenReturn(Optional.of(latestActivationRequest));
+
+                when(latestActivationRequest.getStatus()).thenReturn(ReactivationRequestStatus.APPROVED);
+                assertThat(accessControlService.canManageDelegateEnableUser(accessedUserIdStr)).isFalse();
+
+                when(latestActivationRequest.getStatus()).thenReturn(ReactivationRequestStatus.REJECTED);
+                assertThat(accessControlService.canManageDelegateEnableUser(accessedUserIdStr)).isFalse();
+            }
+
+            @Test
+            @DisplayName("Should return false when initial version 1 request is missing")
+            void shouldReturnFalseWhenFirstRequestVersionNotFound() {
+                setupBaseInternalUserValidation();
+
+                when(accessedUser.getUserProfiles()).thenReturn(Set.of(accessedProfile));
+                when(accessedProfile.getId()).thenReturn(accessedProfileId);
+                when(accessedProfile.isActiveProfile()).thenReturn(true);
+                when(entraUserRepository.findById(accessedUserId)).thenReturn(Optional.of(accessedUser));
+
+                when(latestActivationRequest.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
+                when(latestActivationRequest.getRequestId()).thenReturn(requestId);
+
+                when(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedProfileId))
+                        .thenReturn(Optional.of(latestActivationRequest));
+
+                when(userActivationRequestRepository.findRequestHistoryByRequestId(requestId))
+                        .thenReturn(List.of());
     @Test
     public void testCannotDeleteAuditUserWhenMultiFirmUserWithProfiles() {
 
@@ -3933,4 +4418,48 @@ public class AccessControlServiceTest {
         assertThat(canDelete).isFalse();
     }
 
+                assertThat(accessControlService.canManageDelegateEnableUser(accessedUserIdStr)).isFalse();
+            }
+
+            @Test
+            @DisplayName("Should evaluate permission CAN_MANAGE_DELEGATE_ENABLE_USER when all checks pass")
+            void shouldEvaluateFinalPermissionCheck() {
+                setupBaseInternalUserValidation();
+
+                when(accessedUser.getUserProfiles()).thenReturn(Set.of(accessedProfile));
+                when(accessedProfile.getId()).thenReturn(accessedProfileId);
+                when(accessedProfile.isActiveProfile()).thenReturn(true);
+                when(entraUserRepository.findById(accessedUserId)).thenReturn(Optional.of(accessedUser));
+
+                when(latestActivationRequest.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
+                when(latestActivationRequest.getRequestId()).thenReturn(requestId);
+
+                when(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedProfileId))
+                        .thenReturn(Optional.of(latestActivationRequest));
+
+                when(firstActivationRequest.version()).thenReturn(1);
+                when(userActivationRequestRepository.findRequestHistoryByRequestId(requestId))
+                        .thenReturn(List.of(firstActivationRequest));
+
+                try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
+                    mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_MANAGE_DELEGATE_ENABLE_USER)).thenReturn(true);
+                    assertThat(accessControlService.canManageDelegateEnableUser(accessedUserIdStr)).isTrue();
+                }
+
+                try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
+                    mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_MANAGE_DELEGATE_ENABLE_USER)).thenReturn(false);
+                    assertThat(accessControlService.canManageDelegateEnableUser(accessedUserIdStr)).isFalse();
+                }
+            }
+
+            private void setupBaseInternalUserValidation() {
+                when(securityContext.getAuthentication()).thenReturn(authentication);
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
+                when(authenticatedUser.getId()).thenReturn(authenticatedUserId);
+
+                when(userService.isInternal(authenticatedUserId.toString())).thenReturn(true);
+                when(userService.isInternal(accessedUserIdStr)).thenReturn(false);
+            }
+        }
+    }
 }
