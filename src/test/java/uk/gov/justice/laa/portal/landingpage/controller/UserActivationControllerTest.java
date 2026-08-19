@@ -92,7 +92,7 @@ public class UserActivationControllerTest {
     @BeforeEach
     void setUp() {
         userActivationController = new UserActivationController(loginService, userService, userReactivationRequestService, accessControlService, userAccountStatusService, eventService);
-        userActivationController.disableUserFeatureEnabled = true;
+        userActivationController.delegateUserActivationFeatureEnabled = true;
         model = new ExtendedModelMap();
         lenient().when(session.getAttributeNames()).thenReturn(Collections.emptyEnumeration());
     }
@@ -112,7 +112,7 @@ public class UserActivationControllerTest {
         @Test
         @DisplayName("Should throw 404 when feature flag is disabled")
         void featureDisabled_throws404() {
-            userActivationController.disableUserFeatureEnabled = false;
+            userActivationController.delegateUserActivationFeatureEnabled = false;
 
             assertThatThrownBy(() -> userActivationController.delegateReactivateUserGet(USER_ID, session, model, PROFILE_ID, authentication, redirectAttributes))
                     .isInstanceOf(ResponseStatusException.class)
@@ -202,7 +202,7 @@ public class UserActivationControllerTest {
         @Test
         @DisplayName("Should throw 404 when feature flag is disabled")
         void featureDisabled_throws404() {
-            userActivationController.disableUserFeatureEnabled = false;
+            userActivationController.delegateUserActivationFeatureEnabled = false;
 
             assertThatThrownBy(() -> userActivationController.delegateReactivateUserCommentsGet(USER_ID, model, session)).isInstanceOf(ResponseStatusException.class).hasMessageContaining("404");
         }
@@ -384,7 +384,7 @@ public class UserActivationControllerTest {
 
         @Test
         void get_WhenFeatureDisabled_ThrowsResponseStatusException404() {
-            ReflectionTestUtils.setField(userActivationController, "disableUserFeatureEnabled", false);
+            ReflectionTestUtils.setField(userActivationController, "delegateUserActivationFeatureEnabled", false);
             MockHttpSession session = new MockHttpSession();
             Model model = new ConcurrentModel();
             RedirectAttributesModelMap redirectAttributes = new RedirectAttributesModelMap();
@@ -544,7 +544,7 @@ public class UserActivationControllerTest {
         @Test
         @DisplayName("Should throw 404 ResponseStatusException when disableUserFeatureEnabled is false")
         void shouldThrow404WhenFeatureDisabled() {
-            userActivationController.disableUserFeatureEnabled = false;
+            userActivationController.delegateUserActivationFeatureEnabled = false;
 
             assertThatThrownBy(() -> userActivationController.rejectDelegateReactivateUserRequestsGet(USER_ID, session, model, PROFILE_ID, redirectAttributes))
                     .isInstanceOf(ResponseStatusException.class).extracting(e -> ((ResponseStatusException) e).getStatusCode()).isEqualTo(HttpStatusCode.valueOf(404));

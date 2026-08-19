@@ -117,7 +117,7 @@ public class RoleBaseAccessDisableUserTest extends RoleBasedAccessIntegrationTes
         assertThat(statusChanges.size()).isEqualTo(1);
         UserAccountStatusAudit statusChange = statusChanges.getFirst();
         assertThat(statusChange.getEntraUser().getId()).isEqualTo(accessedUser.getId());
-        assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DISABLED);
+        assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DEACTIVATED);
         assertThat(statusChange.getStatusChangedBy()).isEqualTo(loggedInUser.getFirstName() + " " + loggedInUser.getLastName());
         // Teardown
         accessedUser.setEnabled(true);
@@ -137,7 +137,7 @@ public class RoleBaseAccessDisableUserTest extends RoleBasedAccessIntegrationTes
         assertThat(statusChanges.size()).isEqualTo(1);
         UserAccountStatusAudit statusChange = statusChanges.getFirst();
         assertThat(statusChange.getEntraUser().getId()).isEqualTo(accessedUser.getId());
-        assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DISABLED);
+        assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DEACTIVATED);
         assertThat(statusChange.getStatusChangedBy()).isEqualTo(loggedInUser.getFirstName() + " " + loggedInUser.getLastName());
         // Teardown
         accessedUser.setEnabled(true);
@@ -157,7 +157,7 @@ public class RoleBaseAccessDisableUserTest extends RoleBasedAccessIntegrationTes
         assertThat(statusChanges.size()).isEqualTo(1);
         UserAccountStatusAudit statusChange = statusChanges.getFirst();
         assertThat(statusChange.getEntraUser().getId()).isEqualTo(accessedUser.getId());
-        assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DISABLED);
+        assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DEACTIVATED);
         assertThat(statusChange.getStatusChangedBy()).isEqualTo(loggedInUser.getFirstName() + " " + loggedInUser.getLastName());
         // Teardown
         accessedUser.setEnabled(true);
@@ -187,7 +187,7 @@ public class RoleBaseAccessDisableUserTest extends RoleBasedAccessIntegrationTes
         assertThat(statusChanges.size()).isEqualTo(1);
         UserAccountStatusAudit statusChange = statusChanges.getFirst();
         assertThat(statusChange.getEntraUser().getId()).isEqualTo(accessedUser.getId());
-        assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DISABLED);
+        assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DEACTIVATED);
         assertThat(statusChange.getStatusChangedBy()).isEqualTo(loggedInUser.getFirstName() + " " + loggedInUser.getLastName());
         // Teardown
         accessedUser.setEnabled(true);
@@ -207,7 +207,7 @@ public class RoleBaseAccessDisableUserTest extends RoleBasedAccessIntegrationTes
         assertThat(statusChanges.size()).isEqualTo(1);
         UserAccountStatusAudit statusChange = statusChanges.getFirst();
         assertThat(statusChange.getEntraUser().getId()).isEqualTo(accessedUser.getId());
-        assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DISABLED);
+        assertThat(statusChange.getStatusChange()).isEqualTo(UserAccountStatus.DEACTIVATED);
         assertThat(statusChange.getStatusChangedBy()).isEqualTo(loggedInUser.getFirstName() + " " + loggedInUser.getLastName());
         // Teardown
         accessedUser.setEnabled(true);
