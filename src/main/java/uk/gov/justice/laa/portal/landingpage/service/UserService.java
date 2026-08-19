@@ -1043,7 +1043,7 @@ public class UserService {
         // Add audit entry
         UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
                 .entraUser(newUser)
-                .statusChange(UserAccountStatus.ENABLED)
+                .statusChange(UserAccountStatus.ACTIVATED)
                 .statusChangedBy(newUser.getCreatedBy())
                 .statusChangedDate(LocalDateTime.now())
                 .build();
@@ -2704,4 +2704,8 @@ public class UserService {
         return new PageImpl<>(mappedContent, pageable, rawPage.getTotalElements());
     }
 
+    public boolean isValidUserProfileId(String id, String profileId) {
+        EntraUser entraUser = entraUserRepository.findById(UUID.fromString(id)).orElseThrow();
+        return entraUser.getUserProfiles().stream().anyMatch(up -> up.getId().toString().equals(profileId));
+    }
 }
