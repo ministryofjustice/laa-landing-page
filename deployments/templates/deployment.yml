@@ -67,8 +67,6 @@ spec:
           env:
             - name: SENTRY_SAMPLE_RATE
               value: "${SENTRY_SAMPLE_RATE}"
-            - name: JWT_URL
-              value: "${JWT_URL}"
             - name: SPRING_PROFILE
               value: "${SPRING_PROFILE}"
             - name: LOG_LEVEL
@@ -127,11 +125,6 @@ spec:
                 secretKeyRef:
                   name: laa-landing-page-base-url-k8s
                   key: BASE_URL
-            - name: BASE_API_URI
-              valueFrom:
-                secretKeyRef:
-                  name: laa-landing-page-base-api-url-k8s
-                  key: BASE_API_URI
             - name: GOV_NOTIFY_API_KEY
               valueFrom:
                 secretKeyRef:
@@ -157,11 +150,6 @@ spec:
                 secretKeyRef:
                   name: rds-postgresql-instance-output
                   key: rds_instance_address
-            - name: POSTGRES_DB_ENDPOINT
-              valueFrom:
-                secretKeyRef:
-                  name: rds-postgresql-instance-output
-                  key: rds_instance_endpoint
             - name: POLLING_ENABLED
               value: "${POLLING_ENABLED}"
             - name: POLLING_SCHEDULE
@@ -204,8 +192,6 @@ spec:
               value: "${TECH_SERVICES_REQ_READ_TIMEOUT}"
             - name: TECH_SERVICES_REQ_CONNECT_TIMEOUT
               value: "${TECH_SERVICES_REQ_CONNECT_TIMEOUT}"
-            - name: PDA_SYNC_SCHEDULER_ENABLED
-              value: "${PDA_SYNC_SCHEDULER_ENABLED}"
             - name: PDA_SYNC_SCHEDULER_CRON
               value: "${PDA_SYNC_SCHEDULER_CRON}"
             - name: PDA_SYNC_SCHEDULER_RUN_ON_STARTUP
@@ -228,36 +214,6 @@ spec:
               value: "${SENTRY_ENVIRONMENT}"
             - name: SENTRY_ENABLED
               value: "${SENTRY_ENABLED}"
-            - name: CCMS_APP_ENTRA_OBJECT_ID
-              value: "${CCMS_APP_ENTRA_OBJECT_ID}"
-            - name: CCMS_USER_MANAGEMENT_API_BASE_URL
-              value: "${CCMS_USER_MANAGEMENT_API_BASE_URL}"
-            - name: CCMS_USER_MANAGEMENT_API_KEY
-              value: "${CCMS_USER_MANAGEMENT_API_KEY}"
-            - name: CCMS_USER_API_SQS_ARN
-              value: "${CCMS_USER_API_SQS_ARN}"
-            - name: CCMS_UDA_API_BASE_URL
-              value: "${CCMS_UDA_API_BASE_URL}"
-            - name: CCMS_UDA_API_KEY
-              value: "${CCMS_UDA_API_KEY}"
-            - name: CIVIL_APPLY_APP_ENTRA_OBJECT_ID
-              value: "${CIVIL_APPLY_APP_ENTRA_OBJECT_ID}"
-            - name: CCMS_EBS_APP_ENTRA_OBJECT_ID
-              value: "${CCMS_EBS_APP_ENTRA_OBJECT_ID}"
-            - name: CCMS_EBS_APP_TWO_ENTRA_OBJECT_ID
-              value: "${CCMS_EBS_APP_TWO_ENTRA_OBJECT_ID}"
-            - name: CCMS_APP_TWO_ENTRA_OBJECT_ID
-              value: "${CCMS_APP_TWO_ENTRA_OBJECT_ID}"
-            - name: CCMS_APP_TWO_USER_MANAGEMENT_API_BASE_URL
-              value: "${CCMS_APP_TWO_USER_MANAGEMENT_API_BASE_URL}"
-            - name: CCMS_APP_TWO_USER_MANAGEMENT_API_KEY
-              value: "${CCMS_APP_TWO_USER_MANAGEMENT_API_KEY}"
-            - name: CCMS_APP_TWO_USER_API_SQS_ARN
-              value: "${CCMS_APP_TWO_USER_API_SQS_ARN}"
-            - name: CCMS_APP_TWO_UDA_API_BASE_URL
-              value: "${CCMS_APP_TWO_UDA_API_BASE_URL}"
-            - name: CCMS_APP_TWO_UDA_API_KEY
-              value: "${CCMS_APP_TWO_UDA_API_KEY}"
             - name: ENABLE_DISTRIBUTED_DB_LOCKING
               value: "${ENABLE_DISTRIBUTED_DB_LOCKING}"
             - name: DISTRIBUTED_DB_LOCKING_PERIOD
@@ -278,8 +234,6 @@ spec:
               value: "${FEATURE_FLAG_EDIT_USER_DETAILS}"
             - name: FEATURE_FLAG_DELEGATE_USER_ACTIVATION
               value: "${FEATURE_FLAG_DELEGATE_USER_ACTIVATION}"
-            - name: SPRING_SESSION_JDBC_ENABLED
-              value: "${SPRING_SESSION_JDBC_ENABLED}"
             - name: APP_MEANS_AND_MATCH_UI1_NAME
               value: "${APP_MEANS_AND_MATCH_UI1_NAME}"
             - name: APP_MEANS_AND_MATCH_UI1_URL
