@@ -1,5 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -182,7 +184,7 @@ class AuditControllerTest {
         when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_INTERNAL_USER)).thenReturn(viewInternalUsers);
         when(accessControlService.authenticatedUserHasPermission(Permission.VIEW_EXTERNAL_USER)).thenReturn(viewExternalUsers);
         when(userService.getAuditUsers(anyString(), any(), any(), any(), any(), anyInt(), anyInt(),
-                anyString(), anyString(), eq(false), any())).thenReturn(mockPaginatedUsers);
+                anyString(), anyString(), eq(false), any(), any(), any(), any())).thenReturn(mockPaginatedUsers);
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
         criteria.setSelectedUserType(searchByUserType);
@@ -207,7 +209,7 @@ class AuditControllerTest {
 
         UserTypeForm userTypeForm = StringUtils.isEmpty(userTypeusedInService) ? null : UserTypeForm.valueOf(userTypeusedInService);
         verify(userService, times(1)).getAuditUsers("", null, null, null,
-                userTypeForm, 1, 10, "name", "asc", false, null);
+                userTypeForm, 1, 10, "name", "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
         verify(userService, times(1)).getAllSilasRoles();
     }
 
@@ -216,7 +218,7 @@ class AuditControllerTest {
         // Given
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
         when(userService.getAuditUsers(eq("john"), any(), any(), any(), any(), anyInt(), anyInt(),
-                anyString(), anyString(), eq(false), any())).thenReturn(mockPaginatedUsers);
+                anyString(), anyString(), eq(false), any(), any(), any(), any())).thenReturn(mockPaginatedUsers);
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
         criteria.setSearch("john");
@@ -228,7 +230,7 @@ class AuditControllerTest {
         assertThat(viewName).isEqualTo("user-audit/users");
         assertThat(model.getAttribute("search")).isEqualTo("john");
 
-        verify(userService, times(1)).getAuditUsers("john", null, null, null, null,  1, 10, "name", "asc", false, null);
+        verify(userService, times(1)).getAuditUsers("john", null, null, null, null,  1, 10, "name", "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -237,7 +239,7 @@ class AuditControllerTest {
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
         UUID firmId = UUID.randomUUID();
         when(userService.getAuditUsers(anyString(), eq(firmId), any(), any(), any(), anyInt(), anyInt(),
-                anyString(), anyString(), eq(false), any())).thenReturn(mockPaginatedUsers);
+                anyString(), anyString(), eq(false), any(), any(), any(), any())).thenReturn(mockPaginatedUsers);
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
         criteria.setSelectedFirmId(firmId.toString());
@@ -248,7 +250,7 @@ class AuditControllerTest {
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
 
-        verify(userService, times(1)).getAuditUsers("", firmId, null, null, null,  1, 10, "name", "asc", false, null);
+        verify(userService, times(1)).getAuditUsers("", firmId, null, null, null,  1, 10, "name", "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -256,7 +258,7 @@ class AuditControllerTest {
         // Given
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
         when(userService.getAuditUsers(anyString(), isNull(), any(), any(), any(), anyInt(), anyInt(),
-                anyString(), anyString(), eq(false), any())).thenReturn(mockPaginatedUsers);
+                anyString(), anyString(), eq(false), any(), any(), any(), any())).thenReturn(mockPaginatedUsers);
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
         criteria.setSelectedFirmId("invalid-uuid");
@@ -267,7 +269,7 @@ class AuditControllerTest {
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
 
-        verify(userService, times(1)).getAuditUsers("", null, null, null, null,  1, 10, "name", "asc", false, null);
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null,  1, 10, "name", "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -275,7 +277,7 @@ class AuditControllerTest {
         // Given
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
         when(userService.getAuditUsers(anyString(), any(), eq("Global Admin"), any(), any(), anyInt(), anyInt(),
-                anyString(), anyString(), eq(false), any())).thenReturn(mockPaginatedUsers);
+                anyString(), anyString(), eq(false), any(), any(), any(), any())).thenReturn(mockPaginatedUsers);
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
         criteria.setSilasRole("Global Admin");
@@ -287,7 +289,7 @@ class AuditControllerTest {
         assertThat(viewName).isEqualTo("user-audit/users");
         assertThat(model.getAttribute("selectedSilasRole")).isEqualTo("Global Admin");
 
-        verify(userService, times(1)).getAuditUsers("", null, "Global Admin", null, null, 1, 10, "name", "asc", false, null);
+        verify(userService, times(1)).getAuditUsers("", null, "Global Admin", null, null, 1, 10, "name", "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -295,7 +297,7 @@ class AuditControllerTest {
         // Given
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
         when(userService.getAuditUsers(anyString(), any(), any(), any(), any(), anyInt(), eq(25),
-                anyString(), anyString(), eq(false), any())).thenReturn(mockPaginatedUsers);
+                anyString(), anyString(), eq(false), any(), any(), any(), any())).thenReturn(mockPaginatedUsers);
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
         criteria.setSize(25);
@@ -307,7 +309,7 @@ class AuditControllerTest {
         assertThat(viewName).isEqualTo("user-audit/users");
         assertThat(model.getAttribute("requestedPageSize")).isEqualTo(25);
 
-        verify(userService, times(1)).getAuditUsers("", null, null, null, null, 1, 25, "name", "asc", false, null);
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null, 1, 25, "name", "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -315,7 +317,7 @@ class AuditControllerTest {
         // Given
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
         when(userService.getAuditUsers(anyString(), any(), any(), any(), any(), eq(2), anyInt(),
-                anyString(), anyString(), eq(false), any())).thenReturn(mockPaginatedUsers);
+                anyString(), anyString(), eq(false), any(), any(), any(), any())).thenReturn(mockPaginatedUsers);
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
         criteria.setPage(2);
@@ -327,7 +329,7 @@ class AuditControllerTest {
         assertThat(viewName).isEqualTo("user-audit/users");
         assertThat(model.getAttribute("page")).isEqualTo(2);
 
-        verify(userService, times(1)).getAuditUsers("", null, null, null, null, 2, 10, "name", "asc", false, null);
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null, 2, 10, "name", "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -335,7 +337,7 @@ class AuditControllerTest {
         // Given
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
         when(userService.getAuditUsers(anyString(), any(), anyString(), any(), any(), anyInt(), anyInt(),
-                eq("email"), eq("desc"), eq(false), any())).thenReturn(mockPaginatedUsers);
+                eq("email"), eq("desc"), eq(false), any(), any(), any(), any())).thenReturn(mockPaginatedUsers);
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
         criteria.setSilasRole("");
@@ -350,7 +352,7 @@ class AuditControllerTest {
         assertThat(model.getAttribute("sort")).isEqualTo("email");
         assertThat(model.getAttribute("direction")).isEqualTo("desc");
 
-        verify(userService, times(1)).getAuditUsers("", null, "", null, null, 1, 10, "email", "desc", false, null);
+        verify(userService, times(1)).getAuditUsers("", null, "", null, null, 1, 10, "email", "desc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -359,7 +361,7 @@ class AuditControllerTest {
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
         UUID firmId = UUID.randomUUID();
         when(userService.getAuditUsers(eq("test"), eq(firmId), eq("Global Admin"), any(), any(), eq(2), eq(25),
-                eq("email"), eq("desc"), eq(false), any())).thenReturn(mockPaginatedUsers);
+                eq("email"), eq("desc"), eq(false), any(), any(), any(), any())).thenReturn(mockPaginatedUsers);
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
         criteria.setSearch("test");
@@ -384,7 +386,7 @@ class AuditControllerTest {
         assertThat(model.getAttribute("direction")).isEqualTo("desc");
 
         verify(userService, times(1)).getAuditUsers("test", firmId, "Global Admin", null, null,  2, 25, "email",
-                "desc", false, null);
+                "desc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -399,7 +401,7 @@ class AuditControllerTest {
                 .build();
 
         when(userService.getAuditUsers(anyString(), any(), any(), any(), any(), anyInt(), anyInt(),
-                anyString(), anyString(), eq(false), any())).thenReturn(emptyResults);
+                anyString(), anyString(), eq(false), any(), any(), any(), any())).thenReturn(emptyResults);
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
 
@@ -418,7 +420,7 @@ class AuditControllerTest {
     void displayAuditTable_withFirmSearchText_setsFirmSearchForm() {
         // Given
         when(userService.getAuditUsers(anyString(), any(), any(), any(), any(), anyInt(), anyInt(),
-                anyString(), anyString(), eq(false), any())).thenReturn(mockPaginatedUsers);
+                anyString(), anyString(), eq(false), any(), any(), any(), any())).thenReturn(mockPaginatedUsers);
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
         criteria.setFirmSearch("Test Firm");
@@ -437,7 +439,7 @@ class AuditControllerTest {
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
         UUID appId = UUID.randomUUID();
         when(userService.getAuditUsers(anyString(), any(), any(), eq(appId), any(), anyInt(), anyInt(),
-                anyString(), anyString(), eq(false), any())).thenReturn(mockPaginatedUsers);
+                anyString(), anyString(), eq(false), any(), any(), any(), any())).thenReturn(mockPaginatedUsers);
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
         criteria.setSelectedAppId(appId.toString());
@@ -448,7 +450,7 @@ class AuditControllerTest {
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
 
-        verify(userService, times(1)).getAuditUsers("", null, null, appId, null, 1, 10, "name", "asc", false, null);
+        verify(userService, times(1)).getAuditUsers("", null, null, appId, null, 1, 10, "name", "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -456,7 +458,7 @@ class AuditControllerTest {
         // Given
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
         when(userService.getAuditUsers(anyString(), any(), any(), eq(null), any(), anyInt(), anyInt(),
-                anyString(), anyString(), eq(false), any())).thenReturn(mockPaginatedUsers);
+                anyString(), anyString(), eq(false), any(), any(), any(), any())).thenReturn(mockPaginatedUsers);
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
         ListAppender<ILoggingEvent> listAppender = LogMonitoring
                 .addListAppenderToLogger(AuditTableSearchCriteria.class);
@@ -474,7 +476,7 @@ class AuditControllerTest {
         assertThat(logEvents.size()).isEqualTo(1);
         ILoggingEvent logEvent = logEvents.getFirst();
         assertThat(logEvent.getFormattedMessage()).isEqualTo("Invalid app ID format: " + selectedAppId);
-        verify(userService, times(1)).getAuditUsers("", null, null, null, null, 1, 10, "name", "asc", false, null);
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null, 1, 10, "name", "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -483,7 +485,7 @@ class AuditControllerTest {
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
         String userType = "invalidUserType";
         when(userService.getAuditUsers(anyString(), any(), any(), any(), eq(null), anyInt(), anyInt(),
-                anyString(), anyString(), eq(false), any())).thenReturn(mockPaginatedUsers);
+                anyString(), anyString(), eq(false), any(), any(), any(), any())).thenReturn(mockPaginatedUsers);
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
         ListAppender<ILoggingEvent> listAppender = LogMonitoring
                 .addListAppenderToLogger(AuditTableSearchCriteria.class);
@@ -500,7 +502,7 @@ class AuditControllerTest {
         assertThat(logEvents.size()).isEqualTo(1);
         ILoggingEvent logEvent = logEvents.getFirst();
         assertThat(logEvent.getFormattedMessage()).isEqualTo("Invalid user type provided: " + userType);
-        verify(userService, times(1)).getAuditUsers("", null, null, null, null,  1, 10, "name", "asc", false, null);
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null,  1, 10, "name", "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -508,7 +510,7 @@ class AuditControllerTest {
         // Given
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
         when(userService.getAuditUsers(anyString(), any(), any(), any(), eq(null), anyInt(), anyInt(),
-                anyString(), anyString(), eq(false), any())).thenReturn(mockPaginatedUsers);
+                anyString(), anyString(), eq(false), any(), any(), any(), any())).thenReturn(mockPaginatedUsers);
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
 
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
@@ -520,7 +522,7 @@ class AuditControllerTest {
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
 
-        verify(userService, times(1)).getAuditUsers("", null, null, null, null,  1, 10, "name", "asc", false, null);
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null,  1, 10, "name", "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -529,7 +531,7 @@ class AuditControllerTest {
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
         when(userService.getAuditUsers(anyString(), any(), any(), any(), eq(UserTypeForm.INTERNAL), anyInt(),
                 anyInt(),
-                anyString(), anyString(), eq(false), any())).thenReturn(mockPaginatedUsers);
+                anyString(), anyString(), eq(false), any(), any(), any(), any())).thenReturn(mockPaginatedUsers);
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
         criteria.setSelectedUserType(UserTypeForm.INTERNAL.name());
@@ -542,7 +544,7 @@ class AuditControllerTest {
         assertThat(model.getAttribute("selectedUserType")).isEqualTo("INTERNAL");
 
         verify(userService, times(1)).getAuditUsers("", null, null, null, UserTypeForm.INTERNAL, 1, 10, "name",
-                "asc", false, null);
+                "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
 
@@ -550,7 +552,7 @@ class AuditControllerTest {
     void displayAuditTable_withMultiFirm_filtersResults() {
         // Given
         when(userService.getAuditUsers(anyString(), any(), any(), any(), any(), anyInt(), anyInt(),
-                anyString(), anyString(), eq(false), any())).thenReturn(mockPaginatedUsers);
+                anyString(), anyString(), eq(false), any(), any(), any(), any())).thenReturn(mockPaginatedUsers);
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
         criteria.setSelectedUserType(UserTypeForm.MULTI_FIRM.name());
@@ -563,7 +565,7 @@ class AuditControllerTest {
         assertThat(model.getAttribute("selectedUserType")).isEqualTo("MULTI_FIRM");
 
         verify(userService, times(1)).getAuditUsers("", null, null, null, UserTypeForm.MULTI_FIRM, 1, 10, "name",
-                "asc", false, null);
+                "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -572,7 +574,7 @@ class AuditControllerTest {
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
         String selectedAppId = "";
         when(userService.getAuditUsers(anyString(), any(), any(), eq(null), any(), anyInt(), anyInt(),
-                anyString(), anyString(), eq(false), any())).thenReturn(mockPaginatedUsers);
+                anyString(), anyString(), eq(false), any(), any(), any(), any())).thenReturn(mockPaginatedUsers);
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
         criteria.setSelectedAppId(selectedAppId);
@@ -583,7 +585,7 @@ class AuditControllerTest {
         // Then
         assertThat(viewName).isEqualTo("user-audit/users");
 
-        verify(userService, times(1)).getAuditUsers("", null, null, null, null, 1, 10, "name", "asc", false, null);
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null, 1, 10, "name", "asc", false, null, null, null, criteria.getSelectedSilasStatuses());
     }
 
     @Test
@@ -1252,10 +1254,10 @@ class AuditControllerTest {
 
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
         when(userService.getAuditUsers(
-                eq("TestSearch"), any(), any(), any(), any(), eq(1), eq(500), eq("name"), eq("asc"), eq(true), any())).thenReturn(page1);
+                eq("TestSearch"), any(), any(), any(), any(), eq(1), eq(500), eq("name"), eq("asc"), eq(true), any(), any(), any(), any())).thenReturn(page1);
 
         when(userService.getAuditUsers(
-                eq("TestSearch"), any(), any(), any(), any(), eq(2), eq(500), eq("name"), eq("asc"), eq(true), any())).thenReturn(page2);
+                eq("TestSearch"), any(), any(), any(), any(), eq(2), eq(500), eq("name"), eq("asc"), eq(true), any(), any(), any(), any())).thenReturn(page2);
 
         byte[] csvBytes = "Name,Email\nP1,p1@example.com\n".getBytes(java.nio.charset.StandardCharsets.UTF_8);
         AuditExportService.AuditCsvExport export = new AuditExportService.AuditCsvExport("audit.csv", csvBytes);
@@ -1271,8 +1273,8 @@ class AuditControllerTest {
         assertThat(headers.getContentDisposition().getType()).isEqualTo("attachment");
         assertThat(headers.getContentDisposition().getFilename()).isEqualTo("audit.csv");
 
-        verify(userService, times(1)).getAuditUsers("TestSearch", selectedFirmId, null, null, null, 1, 500, "name", "asc", true, null);
-        verify(userService, times(1)).getAuditUsers("TestSearch", selectedFirmId, null, null, null, 2, 500, "name", "asc", true, null);
+        verify(userService, times(1)).getAuditUsers("TestSearch", selectedFirmId, null, null, null, 1, 500, "name", "asc", true, null, null, null, criteria.getSelectedSilasStatuses());
+        verify(userService, times(1)).getAuditUsers("TestSearch", selectedFirmId, null, null, null, 2, 500, "name", "asc", true, null, null, null, criteria.getSelectedSilasStatuses());
         verify(auditExportService, times(1)).downloadAuditCsv(any(), any(), any());
     }
 
@@ -1309,10 +1311,10 @@ class AuditControllerTest {
 
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
         when(userService.getAuditUsers(
-                eq("TestSearch"), any(), any(), any(), any(), eq(1), eq(500), eq("name"), eq("asc"), eq(true), any())).thenReturn(page1);
+                eq("TestSearch"), any(), any(), any(), any(), eq(1), eq(500), eq("name"), eq("asc"), eq(true), any(), any(), any(), any())).thenReturn(page1);
 
         when(userService.getAuditUsers(
-                eq("TestSearch"), any(), any(), any(), any(), eq(2), eq(500), eq("name"), eq("asc"), eq(true), any())).thenReturn(page2);
+                eq("TestSearch"), any(), any(), any(), any(), eq(2), eq(500), eq("name"), eq("asc"), eq(true), any(), any(), any(), any())).thenReturn(page2);
 
         byte[] csvBytes = "Name,Email\nP1,p1@example.com\n".getBytes(java.nio.charset.StandardCharsets.UTF_8);
         AuditExportService.AuditCsvExport export = new AuditExportService.AuditCsvExport("audit.csv", csvBytes);
@@ -1328,8 +1330,8 @@ class AuditControllerTest {
         assertThat(headers.getContentDisposition().getType()).isEqualTo("attachment");
         assertThat(headers.getContentDisposition().getFilename()).isEqualTo("audit.csv");
 
-        verify(userService, times(1)).getAuditUsers("TestSearch", selectedFirmId, null, null, null, 1, 500, "name", "asc", true, true);
-        verify(userService, times(1)).getAuditUsers("TestSearch", selectedFirmId, null, null, null, 2, 500, "name", "asc", true, true);
+        verify(userService, times(1)).getAuditUsers("TestSearch", selectedFirmId, null, null, null, 1, 500, "name", "asc", true, true, null, null, criteria.getSelectedSilasStatuses());
+        verify(userService, times(1)).getAuditUsers("TestSearch", selectedFirmId, null, null, null, 2, 500, "name", "asc", true, true, null, null, criteria.getSelectedSilasStatuses());
         verify(auditExportService, times(1)).downloadAuditCsv(any(), any(), any());
     }
 
@@ -1364,10 +1366,10 @@ class AuditControllerTest {
 
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
         when(userService.getAuditUsers(
-                eq("TestSearch"), any(), any(), any(), any(), eq(1), eq(500), eq("name"), eq("asc"), eq(true), any())).thenReturn(page1);
+                eq("TestSearch"), any(), any(), any(), any(), eq(1), eq(500), eq("name"), eq("asc"), eq(true), any(), any(), any(), any())).thenReturn(page1);
 
         when(userService.getAuditUsers(
-                eq("TestSearch"), any(), any(), any(), any(), eq(2), eq(500), eq("name"), eq("asc"), eq(true), any())).thenReturn(page2);
+                eq("TestSearch"), any(), any(), any(), any(), eq(2), eq(500), eq("name"), eq("asc"), eq(true), any(), any(), any(), any())).thenReturn(page2);
 
         byte[] csvBytes = "Name,Email\nP1,p1@example.com\n".getBytes(java.nio.charset.StandardCharsets.UTF_8);
         AuditExportService.AuditCsvExport export = new AuditExportService.AuditCsvExport("audit.csv", csvBytes);
@@ -1384,9 +1386,9 @@ class AuditControllerTest {
         assertThat(headers.getContentDisposition().getFilename()).isEqualTo("audit.csv");
 
         verify(userService, times(1)).getAuditUsers("TestSearch", null,
-                null, null, UserTypeForm.INTERNAL, 1, 500, "name", "asc", true, null);
+                null, null, UserTypeForm.INTERNAL, 1, 500, "name", "asc", true, null, null, null, criteria.getSelectedSilasStatuses());
         verify(userService, times(1)).getAuditUsers("TestSearch", null,
-                null, null, UserTypeForm.INTERNAL, 2, 500, "name", "asc", true, null);
+                null, null, UserTypeForm.INTERNAL, 2, 500, "name", "asc", true, null, null, null, criteria.getSelectedSilasStatuses());
         verify(auditExportService, times(1)).downloadAuditCsv(any(), any(), any());
     }
 
@@ -1425,7 +1427,7 @@ class AuditControllerTest {
                 .build();
 
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
-        when(userService.getAuditUsers(eq(""), any(), any(), any(), any(), eq(1), eq(500), eq("name"), eq("asc"), eq(true), any())).thenReturn(page);
+        when(userService.getAuditUsers(eq(""), any(), any(), any(), any(), eq(1), eq(500), eq("name"), eq("asc"), eq(true), any(), any(), any(), any())).thenReturn(page);
 
         byte[] csvBytes = "Name,Email\nP1,p1@example.com\n".getBytes(java.nio.charset.StandardCharsets.UTF_8);
         AuditExportService.AuditCsvExport export = new AuditExportService.AuditCsvExport("audit.csv", csvBytes);
@@ -1484,6 +1486,82 @@ class AuditControllerTest {
     }
 
     @Test
+    void displayAuditTable_withCreatedDateRange_filtersResults() {
+        // Given
+        LocalDate fromDate = LocalDate.of(2024, 1, 1);
+        LocalDate toDate = LocalDate.of(2024, 12, 31);
+        when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
+        when(userService.getAuditUsers(anyString(), any(), any(), any(), any(), anyInt(), anyInt(),
+                anyString(), anyString(), eq(false), any(), eq(fromDate), eq(toDate), any())).thenReturn(mockPaginatedUsers);
+        when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
+        
+        AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
+        criteria.setCreatedFrom(fromDate);
+        criteria.setCreatedTo(toDate);
+
+        // When
+        String viewName = auditController.displayAuditTable(criteria, model, mockAuthentication);
+
+        // Then
+        assertThat(viewName).isEqualTo("user-audit/users");
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null, 1, 10, "name", "asc", false, null, fromDate, toDate, criteria.getSelectedSilasStatuses());
+    }
+
+    @Test
+    void displayAuditTable_withSilasStatuses_filtersResults() {
+        // Given
+        when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
+        when(userService.getAuditUsers(anyString(), any(), any(), any(), any(), anyInt(), anyInt(),
+                anyString(), anyString(), eq(false), any(), any(), any(),
+                org.mockito.ArgumentMatchers.<UserProfileSilasStatus>anyList())).thenReturn(mockPaginatedUsers);
+        when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
+        
+        List<String> selectedStatuses = List.of("COMPLETE", "DISABLED");
+        List<UserProfileSilasStatus> expectedStatuses = List.of(
+                UserProfileSilasStatus.COMPLETE,
+                UserProfileSilasStatus.DISABLED);
+        
+        AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
+        criteria.setSelectedSilasStatuses(selectedStatuses);
+
+        // When
+        String viewName = auditController.displayAuditTable(criteria, model, mockAuthentication);
+
+        // Then
+        assertThat(viewName).isEqualTo("user-audit/users");
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null, 1, 10, "name", "asc", false, null, null, null, expectedStatuses);
+    }
+
+    @Test
+    void displayAuditTable_withInvalidSilasStatus_logsWarning() {
+        // Given
+        when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
+        when(userService.getAuditUsers(anyString(), any(), any(), any(), any(), anyInt(), anyInt(),
+                anyString(), anyString(), eq(false), any(), any(), any(), any())).thenReturn(mockPaginatedUsers);
+        when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
+        
+        // Set up logging capture
+        ch.qos.logback.classic.Logger logger = (ch.qos.logback.classic.Logger) 
+            org.slf4j.LoggerFactory.getLogger(AuditTableSearchCriteria.class);
+        ListAppender<ILoggingEvent> listAppender = new ListAppender<>();
+        listAppender.start();
+        logger.addAppender(listAppender);
+        
+        AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
+        criteria.setSelectedSilasStatuses(java.util.List.of("INVALID_STATUS"));
+
+        // When
+        String viewName = auditController.displayAuditTable(criteria, model, mockAuthentication);
+
+        // Then
+        assertThat(viewName).isEqualTo("user-audit/users");
+        List<ILoggingEvent> logEvents = listAppender.list;
+        assertThat(logEvents).anySatisfy(event -> assertThat(event.getLevel()).isEqualTo(Level.WARN));
+        
+        logger.detachAppender(listAppender);
+    }
+
+    @Test
     void displayAuditTable_externalSingleFirmUser_firmAutoAppliedInModel() {
         // Given - user can only see external users; their firm is auto-applied server-side
         UUID autoFirmId = UUID.randomUUID();
@@ -1494,7 +1572,7 @@ class AuditControllerTest {
         when(loginService.getCurrentEntraUser(mockAuthentication)).thenReturn(entraUser);
         when(firmService.getUserFirm(entraUser)).thenReturn(Optional.of(FirmDto.builder().id(autoFirmId).name("Auto Firm").build()));
         when(userService.getAuditUsers(anyString(), eq(autoFirmId), any(), any(), any(), anyInt(), anyInt(),
-                anyString(), anyString(), eq(false), any())).thenReturn(mockPaginatedUsers);
+                anyString(), anyString(), eq(false), any(), any(), any(), any())).thenReturn(mockPaginatedUsers);
         when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
 
         AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
@@ -1530,7 +1608,7 @@ class AuditControllerTest {
                 .users(List.of(user)).currentPage(1).pageSize(500).build();
 
         when(userService.getAuditUsers(eq(""), eq(autoFirmId), any(), any(), any(),
-                eq(1), eq(500), eq("name"), eq("asc"), eq(true), any())).thenReturn(singlePage);
+                eq(1), eq(500), eq("name"), eq("asc"), eq(true), any(), any(), any(), any())).thenReturn(singlePage);
 
         byte[] csvBytes = "Name,Email\nJane Doe,jane@example.com\n".getBytes(java.nio.charset.StandardCharsets.UTF_8);
         AuditExportService.AuditCsvExport export = new AuditExportService.AuditCsvExport("audit.csv", csvBytes);
@@ -1543,7 +1621,7 @@ class AuditControllerTest {
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
         assertThat(response.getBody()).isEqualTo(csvBytes);
         verify(userService, times(1)).getAuditUsers("", autoFirmId, null, null,
-                UserTypeForm.ALL_EXTERNAL, 1, 500, "name", "asc", true, null);
+                UserTypeForm.ALL_EXTERNAL, 1, 500, "name", "asc", true, null, null, null, criteria.getSelectedSilasStatuses());
         verify(auditExportService, times(1)).downloadAuditCsv(any(), any(), any());
     }
 
