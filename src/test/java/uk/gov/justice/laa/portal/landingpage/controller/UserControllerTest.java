@@ -67,6 +67,7 @@ import ch.qos.logback.core.read.ListAppender;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
+import uk.gov.justice.laa.portal.landingpage.config.UiLabelsProperties;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -85,6 +86,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
+import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
@@ -167,6 +169,8 @@ class UserControllerTest {
     @Mock
     private UserAccountStatusService disableUserService;
     @Mock
+    private UiLabelsProperties uiLabelsProperties;
+    @Mock
     private NotificationService notificationService;
     @Mock
     private UserReactivationRequestService userReactivationRequestService;
@@ -177,7 +181,8 @@ class UserControllerTest {
     void setUp() {
         userController = new UserController(loginService, userService, officeService, eventService, firmService,
                 new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService,
-                appRoleService, appService, disableUserService, notificationService, userReactivationRequestService);
+                appRoleService, appService, disableUserService, notificationService, userReactivationRequestService,
+                uiLabelsProperties);
         userController.disableUserFeatureEnabled = true;
         lenient().when(accessControlService.getEnablementFlags(any()))
                 .thenReturn(new AccessControlService.EnablementFlags(false, false, false));
@@ -791,174 +796,154 @@ class UserControllerTest {
     }
 
     @Test
-    void deleteExternalUserConfirm_populatesDeleteReasonsInModel() {
-        // Arrange
+    void deleteExternalUser_whenValidReason_shouldRedirectToCheckAnswer() {
+
         String userProfileId = UUID.randomUUID().toString();
-        EntraUserDto entraUserDto = new EntraUserDto();
-        entraUserDto.setFullName("Target User");
-        UserProfileDto targetProfile = UserProfileDto.builder()
+        String reasonId = UUID.randomUUID().toString();
+
+        UserProfileDto profile = UserProfileDto.builder()
                 .id(UUID.fromString(userProfileId))
-                .entraUser(entraUserDto)
-                .userType(UserType.EXTERNAL)
                 .build();
 
-        UserProfile currentProfile = UserProfile.builder().userType(UserType.INTERNAL).build();
-        uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason reason = uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason
-                .builder()
-                .code("CyberRisk").label("Cyber risk").build();
-        reason.setId(UUID.randomUUID());
+        DeleteUserReason deleteReason = DeleteUserReason.builder()
+                .label("Test reason")
+                .build();
 
-        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(targetProfile));
-        when(loginService.getCurrentProfile(authentication)).thenReturn(currentProfile);
-        when(userService.getDeleteUserReasons(true)).thenReturn(List.of(reason));
+        deleteReason.setId(UUID.fromString(reasonId));
 
-        // Act
-        String view = userController.deleteExternalUserConfirm(userProfileId, model, authentication);
+        UserProfile currentProfile = UserProfile.builder()
+                .userType(UserType.INTERNAL)
+                .build();
 
-        // Assert
-        assertThat(view).isEqualTo("delete-user-reason");
-        assertThat(model.getAttribute("deleteReasons")).isNotNull();
-        @SuppressWarnings("unchecked")
-        List<uk.gov.justice.laa.portal.landingpage.viewmodel.DeleteUserReasonViewModel> reasons = (List<uk.gov.justice.laa.portal.landingpage.viewmodel.DeleteUserReasonViewModel>) model
-                .getAttribute("deleteReasons");
-        assertThat(reasons).hasSize(1);
-        assertThat(reasons.getFirst().getCode()).isEqualTo("CyberRisk");
-        verify(userService).getDeleteUserReasons(true);
+        when(userService.getUserProfileById(userProfileId))
+                .thenReturn(Optional.of(profile));
+
+        when(loginService.getCurrentProfile(authentication))
+                .thenReturn(currentProfile);
+
+        when(userService.getDeleteUserReasons(true))
+                .thenReturn(List.of(deleteReason));
+
+        String view = userController.deleteExternalUser(
+                userProfileId,
+                reasonId,
+                authentication,
+                session,
+                model);
+
+        assertThat(view)
+                .isEqualTo(
+                        "redirect:/admin/users/manage/"
+                                + userProfileId
+                                + "/delete/check-answer");
+
+        verify(session)
+                .setAttribute("deleteReasonId",
+                        UUID.fromString(reasonId));
     }
 
     @Test
-    void deleteExternalUser_whenServiceSucceeds_returnsSuccessViewAndLogsAuditEvent() {
-        // Arrange
+    void deleteUserCheckAnswer_shouldDisplayPage() {
+
+        UUID reasonId = UUID.randomUUID();
+        String userProfileId = UUID.randomUUID().toString();
+        DeleteUserReason deleteReason = DeleteUserReason.builder().label("Test reason").build();
+        deleteReason.setId(reasonId);
+
+        when(session.getAttribute("deleteReasonId")).thenReturn(reasonId);
+
+        UserProfile currentProfile = UserProfile.builder().userType(UserType.INTERNAL).build();
+        UserProfileDto profile = UserProfileDto.builder().id(UUID.fromString(userProfileId)).build();
+
+        when(loginService.getCurrentProfile(authentication)).thenReturn(currentProfile);
+        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(profile));
+        when(userService.getDeleteUserReasons(true)).thenReturn(List.of(deleteReason));
+
+        String view = userController.deleteUserCheckAnswer(userProfileId, authentication, session, model);
+
+        assertThat(view).isEqualTo("delete-user-check-answer");
+        assertThat(model.getAttribute("deleteReason")).isEqualTo(deleteReason);
+    }
+
+    @Test
+    void deleteUserCheckAnswer_whenReasonMissing_shouldRedirect() {
+
         String userProfileId = UUID.randomUUID().toString();
 
-        EntraUserDto entraUserDto = new EntraUserDto();
-        entraUserDto.setId(UUID.randomUUID().toString());
-        entraUserDto.setFullName("Delete Target");
-        UserProfileDto targetProfile = UserProfileDto.builder()
-                .id(UUID.fromString(userProfileId))
-                .entraUser(entraUserDto)
-                .userType(UserType.EXTERNAL)
-                .build();
-        EntraUser currentUser = EntraUser.builder().id(UUID.randomUUID()).entraOid(UUID.randomUUID().toString())
-                .build();
-        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(targetProfile));
-        when(userService.deleteExternalUser(anyString(), any(UUID.class), any(String.class)))
-                .thenReturn(DeletedUser.builder().build());
-        when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
-        String reasonId = UUID.randomUUID().toString();
-        UserProfile currentProfile = UserProfile.builder().userType(UserType.EXTERNAL).build();
-        when(loginService.getCurrentProfile(authentication)).thenReturn(currentProfile);
-        uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason deleteReason = uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason
-                .builder()
-                .code("Reason").label("Test reason").build();
-        deleteReason.setId(UUID.fromString(reasonId));
-        when(userService.getDeleteUserReasons(anyBoolean())).thenReturn(List.of(deleteReason));
-        // Act
-        String view = userController.deleteExternalUser(userProfileId, reasonId, authentication, session, model);
+        when(session.getAttribute("deleteReasonId")).thenReturn(null);
 
-        // Assert
+        UserProfileDto profile = UserProfileDto.builder().id(UUID.fromString(userProfileId)).build();
+
+        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(profile));
+
+        String view = userController.deleteUserCheckAnswer(userProfileId, authentication, session, model);
+
+        assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userProfileId + "/delete");
+    }
+
+    @Test
+    void confirmDeleteExternalUser_whenServiceSucceeds_returnsSuccessView() {
+
+        UUID reasonId = UUID.randomUUID();
+        String userProfileId = UUID.randomUUID().toString();
+
+        when(session.getAttribute("deleteReasonId")).thenReturn(reasonId);
+
+        UserProfileDto profile = UserProfileDto.builder().id(UUID.fromString(userProfileId)).build();
+
+        DeleteUserReason deleteReason = DeleteUserReason.builder().label("Test reason").build();
+        deleteReason.setId(reasonId);
+
+        EntraUser currentUser = EntraUser.builder().entraOid(UUID.randomUUID().toString()).build();
+
+        DeletedUser deletedUser = mock(DeletedUser.class);
+
+        when(deletedUser.getDeleteReasonLabel()).thenReturn("Test reason");
+        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(profile));
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().userType(UserType.INTERNAL).build());
+        when(userService.getDeleteUserReasons(true)).thenReturn(List.of(deleteReason));
+        when(userService.deleteExternalUser(anyString(), any(UUID.class), anyString())).thenReturn(deletedUser);
+
+        String view = userController.confirmDeleteExternalUser(userProfileId, authentication, session, model);
+
         assertThat(view).isEqualTo("delete-user-success");
-        verify(userService).deleteExternalUser(eq(userProfileId), any(UUID.class), eq(currentUser.getEntraOid()));
+        verify(session).removeAttribute("deleteReasonId");
         verify(eventService).logEvent(any(DeleteUserSuccessAuditEvent.class));
     }
 
     @Test
-    void deleteExternalUser_whenServiceReturnsTsErrors_returnsErrorViewAndLogsAttemptEvent() {
-        // Arrange
-        String userProfileId = UUID.randomUUID().toString();
+    void confirmDeleteExternalUser_whenDeleteFails_returnsCheckAnswerView() {
+        UUID reasonId = UUID.randomUUID();
+        when(session.getAttribute("deleteReasonId")).thenReturn(reasonId);
 
         EntraUserDto entraUserDto = new EntraUserDto();
         entraUserDto.setId(UUID.randomUUID().toString());
         entraUserDto.setFullName("Delete Target");
-
-        UserProfileDto targetProfile = UserProfileDto.builder()
-                .id(UUID.fromString(userProfileId))
-                .entraUser(entraUserDto)
-                .userType(UserType.EXTERNAL)
-                .build();
-
-        EntraUser currentUser = EntraUser.builder().id(UUID.randomUUID()).entraOid(UUID.randomUUID().toString())
-                .build();
-
-        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(targetProfile));
-        when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
-
-        String reasonId = UUID.randomUUID().toString();
-        UserProfile currentProfile = UserProfile.builder().userType(UserType.EXTERNAL).build();
-        when(loginService.getCurrentProfile(authentication)).thenReturn(currentProfile);
-        uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason deleteReason = uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason
-                .builder()
-                .code("Reason").label("Test reason").build();
-        deleteReason.setId(UUID.fromString(reasonId));
-        when(userService.getDeleteUserReasons(anyBoolean())).thenReturn(List.of(deleteReason));
-
-        when(userService.deleteExternalUser(
-                eq(userProfileId),
-                any(UUID.class),
-                eq(currentUser.getEntraOid()))).thenReturn(DeletedUser.builder().encounteredTsErrors(true).build());
-
-        // Act
-        String view = userController.deleteExternalUser(userProfileId, reasonId, authentication, session, model);
-
-        // Assert
-        assertThat(view).isEqualTo("errors/error-generic");
-        assertThat(model.getAttribute("errorMessage"))
-                .isEqualTo("An unexpected error occurred while deleting user. Please contact support.");
-
-        verify(userService).deleteExternalUser(
-                eq(userProfileId),
-                any(UUID.class),
-                eq(currentUser.getEntraOid()));
-        verify(eventService).logEvent(any(DeleteUserAttemptAuditEvent.class));
-    }
-
-    @Test
-    void deleteExternalUser_whenServiceThrows_returnsReasonViewAndLogsAttemptEvent() {
-        // Arrange
         String userProfileId = UUID.randomUUID().toString();
 
-        EntraUserDto entraUserDto = new EntraUserDto();
-        entraUserDto.setId(UUID.randomUUID().toString());
-        entraUserDto.setFullName("Delete Target");
-
-        UserProfileDto targetProfile = UserProfileDto.builder()
-                .id(UUID.fromString(userProfileId))
-                .entraUser(entraUserDto)
+        UserProfileDto profile = UserProfileDto.builder().id(UUID.fromString(userProfileId)).entraUser(entraUserDto)
                 .userType(UserType.EXTERNAL)
                 .build();
 
-        EntraUser currentUser = EntraUser.builder().id(UUID.randomUUID()).entraOid(UUID.randomUUID().toString())
-                .build();
+        DeleteUserReason deleteReason = DeleteUserReason.builder().label("Test reason").build();
+        deleteReason.setId(reasonId);
 
-        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(targetProfile));
+        EntraUser currentUser = EntraUser.builder().id(UUID.randomUUID()).entraOid(UUID.randomUUID().toString()).build();
+
+        when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(profile));
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
-
-        String reasonId = UUID.randomUUID().toString();
-        UserProfile currentProfile = UserProfile.builder().userType(UserType.INTERNAL).build();
-        when(loginService.getCurrentProfile(authentication)).thenReturn(currentProfile);
-        uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason deleteReason = uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason
-                .builder()
-                .code("Reason").label("Test reason").build();
-        deleteReason.setId(UUID.fromString(reasonId));
-        when(userService.getDeleteUserReasons(anyBoolean())).thenReturn(List.of(deleteReason));
-
+        when(loginService.getCurrentProfile(authentication)).thenReturn(UserProfile.builder().userType(UserType.INTERNAL).build());
+        when(userService.getDeleteUserReasons(true)).thenReturn(List.of(deleteReason));
         when(userService.deleteExternalUser(
-                eq(userProfileId),
+                anyString(),
                 any(UUID.class),
-                eq(currentUser.getEntraOid()))).thenThrow(new RuntimeException("Tech Services unavailable"));
+                anyString()))
+                .thenThrow(new RuntimeException("Tech Services unavailable"));
 
-        // Act
-        String view = userController.deleteExternalUser(userProfileId, reasonId, authentication, session, model);
+        String view = userController.confirmDeleteExternalUser(userProfileId, authentication, session, model);
 
-        // Assert
-        assertThat(view).isEqualTo("delete-user-reason");
-        assertThat(model.getAttribute("globalErrorMessage"))
-                .isEqualTo("User delete failed, please try again later");
-
-        verify(userService).deleteExternalUser(
-                eq(userProfileId),
-                any(UUID.class),
-                eq(currentUser.getEntraOid()));
+        assertThat(view).isEqualTo("delete-user-check-answer");
         verify(eventService).logEvent(any(DeleteUserAttemptAuditEvent.class));
     }
 
