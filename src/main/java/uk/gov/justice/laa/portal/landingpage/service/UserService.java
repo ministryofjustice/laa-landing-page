@@ -525,7 +525,7 @@ public class UserService {
         }
 
         // Reject reactivation request if there is an open request
-        rejectOpenActivationRequestsOnUserDelete(entraUser, deleteUserReason, actorId);
+        rejectOpenActivationRequestsOnUserDelete(entraUser.getId(), userProfileId, entraUser.isEnabled(), deleteUserReason, actorId);
 
         // Clean up old UserAccountStatusAudit records to avoid foreign key constraint violations
         List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
@@ -600,13 +600,11 @@ public class UserService {
     }
 
     @Transactional
-    public void rejectOpenActivationRequestsOnUserDelete(EntraUser entraUser, DeleteUserReason deleteUserReason, String actorId) {
-        UserProfile activeUserProfile = entraUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
-
+    public void rejectOpenActivationRequestsOnUserDelete(UUID entraId, String userProfileId, boolean enabled, DeleteUserReason deleteUserReason, String actorId) {
         // Reject reactivation request if there is an open request
-        if (!entraUser.isEnabled() && userReactivationRequestService.hasOpenReactivationRequest(entraUser.getId())) {
+        if (!enabled && userReactivationRequestService.hasOpenReactivationRequest(entraId)) {
             Optional<UserActivationRequest> latestUserActivationRequest =
-                    userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(String.valueOf(activeUserProfile.getId()));
+                    userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(userProfileId);
             if (latestUserActivationRequest.isPresent()) {
                 UserActivationRequest request = latestUserActivationRequest.get();
                 String deletionReasonStr = deleteUserReason == null ? "Unknown"
@@ -614,7 +612,7 @@ public class UserService {
                 if (ReactivationRequestStatus.IN_REVIEW.equals(request.getStatus())
                         || ReactivationRequestStatus.INFORMATION_REQUIRED.equals(request.getStatus())) {
                     userReactivationRequestService.rejectReactivationRequest(request.getRequestId().toString(),
-                            String.valueOf(entraUser.getId()), String.valueOf(activeUserProfile.getId()), deletionReasonStr, actorId);
+                            String.valueOf(entraId), String.valueOf(userProfileId), deletionReasonStr, actorId);
                 }
             }
         }
@@ -674,7 +672,7 @@ public class UserService {
         }
 
         // Reject any open reactivation requests
-        rejectOpenActivationRequestsOnUserDelete(entraUser, null, actorId.toString());
+        rejectOpenActivationRequestsOnUserDelete(entraUser.getId(), userProfileId, entraUser.isEnabled(), null, actorId.toString());
 
         // Remove bidirectional association: profile from entra user and entra user from
         // profile

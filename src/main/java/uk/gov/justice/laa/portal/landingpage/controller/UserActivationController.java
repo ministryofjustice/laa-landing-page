@@ -381,7 +381,7 @@ public class UserActivationController {
         log.info("A delegate enable user request {} has been updated by {} for {}", requestId, actor.getUserId(), id);
 
         String activity = ReactivationRequestStatus.IN_REVIEW.equals(request.getStatus()) ? "information provided" : "information requested";
-        ReactivateUserRequestUpdatedAuditEvent event = new ReactivateUserRequestUpdatedAuditEvent(actor, id, profileId, activity);
+        ReactivateUserRequestUpdatedAuditEvent event = new ReactivateUserRequestUpdatedAuditEvent(actor, id, profileId, activity, request.getComments());
         eventService.logEvent(event);
 
         redirectAttributes.addAttribute("id", id);
@@ -478,7 +478,7 @@ public class UserActivationController {
         userReactivationRequestService.rejectReactivationRequest(requestId, id, profileId, delegateReactivateUserCommentForm.getComment(), user.getEntraOid());
         log.info("A delegate enable user request {} has been rejected by {} for {}", requestId, actor.getUserId(), id);
 
-        ReactivateUserRequestRejectedAuditEvent event = new ReactivateUserRequestRejectedAuditEvent(actor, id, profileId);
+        ReactivateUserRequestRejectedAuditEvent event = new ReactivateUserRequestRejectedAuditEvent(actor, id, profileId, delegateReactivateUserCommentForm.getComment());
         eventService.logEvent(event);
 
         clearSessionAttributes(session);
