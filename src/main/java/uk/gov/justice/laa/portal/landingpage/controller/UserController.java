@@ -430,7 +430,10 @@ public class UserController {
         model.addAttribute("userIsEnabled", userIsEnabled);
         boolean showResendVerificationLink = accessControlService.canSendVerificationEmail(id);
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
+        boolean userHasActiveReactivationRequest = !user.getEntraUser().isEnabled()
+                && userReactivationRequestService.hasOpenReactivationRequest(UUID.fromString(user.getEntraUser().getId()));
         boolean canConvertToMultiFirm = externalUser
+                && !userHasActiveReactivationRequest
                 && accessControlService.canConvertUserToMultiFirm(user.getEntraUser().getId());
         model.addAttribute("canConvertUserToMultiFirm", canConvertToMultiFirm);
         model.addAttribute("userActivated", isInternalUser
@@ -2068,6 +2071,17 @@ public class UserController {
             return "redirect:/admin/users/manage/" + id;
         }
 
+        boolean userHasActiveReactivationRequest = !user.getEntraUser().isEnabled()
+                && userReactivationRequestService.hasOpenReactivationRequest(UUID.fromString(user.getEntraUser().getId()));
+        if (userHasActiveReactivationRequest) {
+            log.warn("Attempt to convert user {} with active reactivation request to multi-firm", id);
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "This user is deactivated. There is an open reactivation request. "
+                            + "The request must be closed before try convert the user to multi-firm user.");
+            return "redirect:/admin/users/manage/" + id;
+        }
+
+
         // Pre-populate form from session if it exists
         ConvertToMultiFirmForm sessionForm = (ConvertToMultiFirmForm) session.getAttribute("convertToMultiFirmForm");
         if (sessionForm != null) {
@@ -2103,7 +2117,7 @@ public class UserController {
 
         // Check if already multi-firm
         if (user.getEntraUser().isMultiFirmUser()) {
-            log.warn("Attempt to convert user {} who is already multi-firm", id);
+            log.warn("Attempt to convert user {} to multi-firm with active reactivation request", id);
             redirectAttributes.addFlashAttribute("errorMessage", "This user is already a multi-firm user");
             return "redirect:/admin/users/manage/" + id;
         }
