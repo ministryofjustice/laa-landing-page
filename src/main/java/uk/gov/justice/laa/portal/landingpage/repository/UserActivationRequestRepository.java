@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -22,6 +23,19 @@ public interface UserActivationRequestRepository extends JpaRepository<UserActiv
     Optional<UserActivationRequest> findFirstByRequestIdOrderByVersionAsc(UUID requestId);
 
     Optional<UserActivationRequest> findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(UUID userProfileId);
+
+    @Query("""
+                SELECT u FROM UserActivationRequest u
+                WHERE u.userProfileId IN :userProfileIds
+                  AND u.createdAt = (
+                      SELECT MAX(sub.createdAt)
+                      FROM UserActivationRequest sub
+                      WHERE sub.userProfileId = u.userProfileId
+                  )
+            """)
+    List<UserActivationRequest> findTopForEachUserProfileId(
+            @Param("userProfileIds") Collection<UUID> userProfileIds
+    );
 
     List<UserActivationRequest> findAllByRequestIdOrderByVersionAsc(UUID requestId);
 

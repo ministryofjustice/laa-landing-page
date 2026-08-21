@@ -39,7 +39,7 @@ public class NotificationServiceTest {
     private NotificationService notificationService;
 
     private static final String ACTOR_USER_ID = "actor-123";
-    private static final UUID ACTOR_USER_UUID = UUID.fromString("11111111-1111-1111-1111-111111111111");
+    private static final String ACTOR_USER_UUID = "11111111-1111-1111-1111-111111111111";
     private static final String RECIPIENT_FIRST_NAME = "John";
     private static final String RECIPIENT_EMAIL = "john.doe@example.com";
     private static final String RECIPIENT_ID = "recipient-456";
@@ -78,7 +78,6 @@ public class NotificationServiceTest {
         String username = "testUser";
         String email = null;
         String userId = "testUserId";
-        String url = "url.com";
         // Add list appender to logger to capture and verify logs
         ListAppender<ILoggingEvent> listAppender = addListAppenderToLogger(NotificationService.class);
 

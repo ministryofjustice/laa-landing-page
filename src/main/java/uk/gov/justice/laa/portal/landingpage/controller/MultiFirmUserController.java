@@ -69,6 +69,7 @@ import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
+import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
@@ -104,6 +105,8 @@ public class MultiFirmUserController {
     private final ModelMapper mapper;
 
     private final FirmService firmService;
+
+    private final UserReactivationRequestService userReactivationRequestService;
 
     @GetMapping("/user/add/profile/select/internalUserFirm")
     @PreAuthorize("@accessControlService.authenticatedUserHasAnyGivenPermissions(T(uk.gov.justice.laa.portal.landingpage.entity.Permission).DELEGATE_EXTERNAL_USER_ACCESS_INTERNAL)")
@@ -304,6 +307,19 @@ public class MultiFirmUserController {
                             "This user already has access for your firm. Manage them from the Manage Your Users screen.");
                     result.rejectValue("email", "error.email",
                             "This user already has a profile for this firm. You can amend their access from the Manage your users table.");
+                    UserProfile cur = loginService.getCurrentProfile(authentication);
+                    Firm f = cur.getFirm();
+                    String backUrl = (f != null && f.getChildFirms() != null && !f.getChildFirms().isEmpty())
+                            ? "/admin/multi-firm/user/add/profile/select/firm" : "/admin/users";
+                    model.addAttribute("backUrl", backUrl);
+                    return "multi-firm-user/select-user";
+                }
+
+                if (!entraUser.isEnabled() && userReactivationRequestService.hasOpenReactivationRequest(entraUser.getId())) {
+                    log.debug("This user already has an open reactivation request for user Entra ID {}", entraUser.getId());
+                    result.rejectValue("email", "error.email",
+                            "This user is deactivated. There is an open reactivation request. The request must be closed before this action can be taken. "
+                                    + "You can track the status of the reactivation request in the User Details page for this user.");
                     UserProfile cur = loginService.getCurrentProfile(authentication);
                     Firm f = cur.getFirm();
                     String backUrl = (f != null && f.getChildFirms() != null && !f.getChildFirms().isEmpty())

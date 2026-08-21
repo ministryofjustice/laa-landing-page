@@ -5,7 +5,9 @@ import lombok.Getter;
 @Getter
 public enum ReactivationRoleType {
 
-    NONE("None"), LAA_OST("Legal Aid Agency (Online Support)"), // External User Manager
+    NONE("None"),
+    SYNC("System User Sync"),
+    LAA_OST("Legal Aid Agency (Online Support)"), // External User Manager
     PROVIDER_ADMIN("Provider Admin"), // Firm user manager
     LAA_USER_REGISTRATION("Legal Aid Agency (User Registration)"),  // External User Admin
     LAA_SUPPORT("Legal Aid Agency (User Support)"), // External User Support

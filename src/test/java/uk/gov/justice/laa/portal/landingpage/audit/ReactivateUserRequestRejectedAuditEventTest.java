@@ -33,7 +33,7 @@ class ReactivateUserRequestRejectedAuditEventTest {
 
         // When
         ReactivateUserRequestRejectedAuditEvent event =
-                new ReactivateUserRequestRejectedAuditEvent(currentUserDto, targetUserId, targetUserProfileId);
+                new ReactivateUserRequestRejectedAuditEvent(currentUserDto, targetUserId, targetUserProfileId, "Comments");
 
         // Then
         assertThat(event.getUserId()).isEqualTo(expectedUserId);
@@ -48,7 +48,7 @@ class ReactivateUserRequestRejectedAuditEventTest {
         given(currentUserDto.getName()).willReturn("Test User");
 
         ReactivateUserRequestRejectedAuditEvent event =
-                new ReactivateUserRequestRejectedAuditEvent(currentUserDto, "target-1", "profile-1");
+                new ReactivateUserRequestRejectedAuditEvent(currentUserDto, "target-1", "profile-1", "Comments");
 
         // When
         EventType actualEventType = event.getEventType();
@@ -70,10 +70,10 @@ class ReactivateUserRequestRejectedAuditEventTest {
         given(currentUserDto.getName()).willReturn("Jane Smith");
 
         ReactivateUserRequestRejectedAuditEvent event =
-                new ReactivateUserRequestRejectedAuditEvent(currentUserDto, targetUserId, targetUserProfileId);
+                new ReactivateUserRequestRejectedAuditEvent(currentUserDto, targetUserId, targetUserProfileId, "Comments");
 
         String expectedDescription = String.format(
-                "User (Entra OID: %s) has rejected reactivation request for (User Entra ID: %s; User Profile ID: %s)",
+                "User (Entra OID: %s) has rejected reactivation request for (User Entra ID: %s; User Profile ID: %s), with comments: Comments",
                 rejectorOid, targetUserId, targetUserProfileId
         );
 
