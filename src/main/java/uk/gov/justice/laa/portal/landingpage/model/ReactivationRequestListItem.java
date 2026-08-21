@@ -8,6 +8,7 @@ public record ReactivationRequestListItem(
         UUID id,
         UUID requestId,
         UUID userProfileId,
+        UUID userId,
         Integer version,
         ReactivationRequestStatus requestStatus,
         String comments,

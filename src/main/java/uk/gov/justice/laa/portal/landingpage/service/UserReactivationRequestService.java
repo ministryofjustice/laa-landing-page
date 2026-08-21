@@ -365,6 +365,7 @@ public class UserReactivationRequestService {
                 .collect(Collectors.toMap(UserActivationRequest::getRequestId, UserActivationRequest::getCreatedAt));
 
         List<ReactivationRequestListItem> items = latestRequests.stream()
+                .filter(request -> isVisibleToViewer(request, profilesById.get(request.getUserProfileId()), currentUser, pageMode))
                 .map(request -> toListItem(request, profilesById.get(request.getUserProfileId()),
                         actorsByEntraOid.get(request.getActorEntraOid()),
                         submittedAtByRequestId.get(request.getRequestId())))
@@ -386,6 +387,28 @@ public class UserReactivationRequestService {
         }
 
         return items;
+    }
+
+    private boolean isVisibleToViewer(UserActivationRequest request, UserProfile profile,
+                                      EntraUser currentUser, ReactivationRequestPageMode pageMode) {
+        if (currentUser == null || profile == null || profile.getEntraUser() == null
+                || !profile.getEntraUser().isMultiFirmUser()) {
+            return true;
+        }
+
+        boolean isProviderAdmin = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.FIRM_USER_MANAGER.getRoleName());
+        if (pageMode == ReactivationRequestPageMode.TRACK || isProviderAdmin) {
+            return false;
+        }
+
+        boolean isLaaViewer = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())
+                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.SECURITY_RESPONSE.getRoleName())
+                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.GLOBAL_ADMIN.getRoleName());
+        boolean isRequestingEum = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_MANAGER.getRoleName())
+                && request.getActorRoleType() == ReactivationRoleType.LAA_OST
+                && Objects.equals(currentUser.getEntraOid(), request.getActorEntraOid());
+
+        return isLaaViewer || isRequestingEum;
     }
 
     private ReactivationRequestListItem toListItem(UserActivationRequest request, UserProfile profile, EntraUser actor,
@@ -416,6 +439,7 @@ public class UserReactivationRequestService {
                 request.getId(),
                 request.getRequestId(),
                 request.getUserProfileId(),
+            targetUser != null ? targetUser.getId() : null,
                 request.getVersion(),
                 status,
                 request.getComments(),
