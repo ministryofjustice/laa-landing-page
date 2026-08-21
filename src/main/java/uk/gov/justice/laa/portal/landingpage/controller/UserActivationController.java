@@ -336,6 +336,7 @@ public class UserActivationController {
         model.addAttribute("user", user);
         model.addAttribute("profileId", profileId);
         model.addAttribute("requestId", request.get().getRequestId().toString());
+        model.addAttribute("requestCurrentStatus", request.get().getStatus());
 
         List<UserActivationRequestSummaryDto> latestRequestHistoryForUserProfile
                 = userReactivationRequestService.getLatestRequestHistoryForUserProfile(profileId);
