@@ -296,7 +296,7 @@ public class UserActivationController {
     public String trackDelegateReactivateUserRequestsGet(@PathVariable String id,
                                                          HttpSession session,
                                                          Model model,
-                                                         @RequestParam(required = false) String profileId,
+                                                         @RequestParam String profileId,
                                                          RedirectAttributes redirectAttributes) {
         log.debug("Tracking delegate reactivate requests for userId: {}, profileId: {}", id, profileId);
 
@@ -306,7 +306,6 @@ public class UserActivationController {
         }
 
         final EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
-        profileId = resolveProfileId(id, profileId);
         Optional<UserActivationRequest> request = userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(profileId);
 
         if (!userService.isValidUserProfileId(id, profileId)) {
@@ -344,19 +343,6 @@ public class UserActivationController {
 
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User");
         return "delegate-reactivate-user-tracking";
-    }
-
-    private String resolveProfileId(String userId, String profileId) {
-        if (profileId != null && !profileId.isBlank()) {
-            return profileId;
-        }
-
-        String activeProfileId = userService.getActiveProfileByUserId(userId)
-                .map(activeProfile -> activeProfile.getId().toString())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatusCode.valueOf(400), "A user profile is required to track this request"));
-        log.debug("No profileId supplied; using active profile {} for userId: {}", activeProfileId, userId);
-        return activeProfileId;
     }
 
     @PostMapping("/user/delegate-reactivate/track/{id}")
