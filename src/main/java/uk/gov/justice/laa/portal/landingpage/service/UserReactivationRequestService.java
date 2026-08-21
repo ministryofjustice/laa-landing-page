@@ -439,7 +439,7 @@ public class UserReactivationRequestService {
                 request.getId(),
                 request.getRequestId(),
                 request.getUserProfileId(),
-            targetUser != null ? targetUser.getId() : null,
+                targetUser != null ? targetUser.getId() : null,
                 request.getVersion(),
                 status,
                 request.getComments(),
