@@ -216,10 +216,10 @@
                 </tr>
                 <tr class="govuk-table__row" th:each="request : ${requests}">
                     <td class="govuk-table__cell">
-                        <a class="govuk-link" th:if="${request.userProfileId() != null}"
-                           th:href="@{/admin/users/manage/{id}(id=${request.userProfileId()})}"
+                                <a class="govuk-link" th:if="${request.userId() != null and request.userProfileId() != null}"
+                                    th:href="@{/admin/user/delegate-reactivate/track/{id}(id=${request.userId()}, profileId=${request.userProfileId()}, requestId=${request.requestId()})}"
                            th:text="${request.userName()}"></a>
-                        <span th:if="${request.userProfileId() == null}" th:text="${request.userName()}"></span>
+                                <span th:if="${request.userId() == null or request.userProfileId() == null}" th:text="${request.userName()}"></span>
                     </td>
                     <td class="govuk-table__cell" th:text="${request.userEmail()}"></td>
                     <td class="govuk-table__cell" th:text="${#temporals.format(request.dateSubmitted(), 'd MMMM yyyy')}"></td>
