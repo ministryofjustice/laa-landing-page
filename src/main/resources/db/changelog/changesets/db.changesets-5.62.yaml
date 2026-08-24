@@ -1,0 +1,23 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1787563733745
+      author: joshua.halladey
+      comment: "Enforce unique non-legacy role names within the same app"
+
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: "DROP INDEX IF EXISTS app_role_name_legacy_sync_idx"
+
+        - sql:
+            dbms: postgresql
+            sql: |
+              CREATE UNIQUE INDEX IF NOT EXISTS app_role_name_legacy_sync_idx
+              ON app_role (app_id, lower(name))
+              WHERE legacy_sync = false;
+
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: |
+              DROP INDEX IF EXISTS app_role_name_legacy_sync_idx;
