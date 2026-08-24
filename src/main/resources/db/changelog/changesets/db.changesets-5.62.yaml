@@ -19,5 +19,11 @@ databaseChangeLog:
       rollback:
         - sql:
             dbms: postgresql
+            sql: "DROP INDEX IF EXISTS app_role_name_legacy_sync_idx"
+
+        - sql:
+            dbms: postgresql
             sql: |
-              DROP INDEX IF EXISTS app_role_name_legacy_sync_idx;
+              CREATE UNIQUE INDEX IF NOT EXISTS app_role_name_legacy_sync_idx
+              ON app_role (name, user_type_restriction)
+              WHERE legacy_sync = false;
