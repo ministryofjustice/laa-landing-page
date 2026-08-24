@@ -68,7 +68,7 @@ class ReactivationRoleTypeTest {
         @Test
         @DisplayName("Should contain expected number of enum values")
         void shouldHaveCorrectNumberOfValues() {
-            assertThat(ReactivationRoleType.values()).hasSize(6);
+            assertThat(ReactivationRoleType.values()).hasSize(7);
         }
 
         @Test

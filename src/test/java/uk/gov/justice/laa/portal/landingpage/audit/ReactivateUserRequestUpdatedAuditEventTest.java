@@ -34,7 +34,7 @@ class ReactivateUserRequestUpdatedAuditEventTest {
 
         // When
         ReactivateUserRequestUpdatedAuditEvent event =
-                new ReactivateUserRequestUpdatedAuditEvent(currentUserDto, targetUserId, targetUserProfileId, activity);
+                new ReactivateUserRequestUpdatedAuditEvent(currentUserDto, targetUserId, targetUserProfileId, activity, "Comments");
 
         // Then
         assertThat(event.getUserId()).isEqualTo(expectedUserId);
@@ -49,7 +49,7 @@ class ReactivateUserRequestUpdatedAuditEventTest {
         given(currentUserDto.getName()).willReturn("Test User");
 
         ReactivateUserRequestUpdatedAuditEvent event =
-                new ReactivateUserRequestUpdatedAuditEvent(currentUserDto, "target-1", "profile-1", "amended");
+                new ReactivateUserRequestUpdatedAuditEvent(currentUserDto, "target-1", "profile-1", "amended", "Comments");
 
         // When
         EventType actualEventType = event.getEventType();
@@ -72,10 +72,10 @@ class ReactivateUserRequestUpdatedAuditEventTest {
         given(currentUserDto.getName()).willReturn("Jane Smith");
 
         ReactivateUserRequestUpdatedAuditEvent event =
-                new ReactivateUserRequestUpdatedAuditEvent(currentUserDto, targetUserId, targetUserProfileId, activity);
+                new ReactivateUserRequestUpdatedAuditEvent(currentUserDto, targetUserId, targetUserProfileId, activity, "Comments");
 
         String expectedDescription = String.format(
-                "User (Entra OID: %s) has %s reactivation request for (User Entra ID: %s; User Profile ID: %s)",
+                "User (Entra OID: %s) has %s reactivation request for (User Entra ID: %s; User Profile ID: %s), with comments: Comments",
                 updaterOid, activity, targetUserId, targetUserProfileId
         );
 
