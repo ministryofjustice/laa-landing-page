@@ -364,51 +364,57 @@ public class UserReactivationRequestService {
                 .findAllFirstVersionsByRequestIdIn(requestIds).stream()
                 .collect(Collectors.toMap(UserActivationRequest::getRequestId, UserActivationRequest::getCreatedAt));
 
+        boolean isGlobalAdminOrSecurityResponse = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.SECURITY_RESPONSE.getRoleName())
+                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.GLOBAL_ADMIN.getRoleName());
+        boolean isExternalUserAdmin = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName());
+        boolean isExternalUserManager = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_MANAGER.getRoleName());
+        boolean isProviderAdmin = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.FIRM_USER_MANAGER.getRoleName());
+        Set<UUID> viewerFirmIds = (isExternalUserAdmin || isProviderAdmin) && currentUser != null
+                ? firmService.getUserActiveAllFirms(currentUser).stream()
+                .map(FirmDto::getId)
+                .collect(Collectors.toSet())
+                : Set.of();
+
         List<ReactivationRequestListItem> items = latestRequests.stream()
-                .filter(request -> isVisibleToViewer(request, profilesById.get(request.getUserProfileId()), currentUser, pageMode))
+                .filter(request -> isVisibleToViewer(request, profilesById.get(request.getUserProfileId()), currentUser,
+                        isGlobalAdminOrSecurityResponse, isExternalUserAdmin, isExternalUserManager,
+                        isProviderAdmin, viewerFirmIds))
                 .map(request -> toListItem(request, profilesById.get(request.getUserProfileId()),
                         actorsByEntraOid.get(request.getActorEntraOid()),
                         submittedAtByRequestId.get(request.getRequestId())))
                 .toList();
 
-        if (pageMode == ReactivationRequestPageMode.TRACK && currentUser != null) {
-            Set<UUID> allowedFirmIds = firmService.getUserActiveAllFirms(currentUser).stream()
-                    .map(FirmDto::getId)
-                    .collect(Collectors.toSet());
-
-            if (allowedFirmIds.isEmpty()) {
-                log.debug("User {} has no active firms; returning empty request list in TRACK mode", currentUser.getId());
-                return List.of();
-            }
-
-            return items.stream()
-                    .filter(item -> item.firmId() != null && allowedFirmIds.contains(item.firmId()))
-                    .toList();
-        }
-
         return items;
     }
 
     private boolean isVisibleToViewer(UserActivationRequest request, UserProfile profile,
-                                      EntraUser currentUser, ReactivationRequestPageMode pageMode) {
-        if (currentUser == null || profile == null || profile.getEntraUser() == null
-                || !profile.getEntraUser().isMultiFirmUser()) {
+                                      EntraUser currentUser, boolean isGlobalAdminOrSecurityResponse,
+                                      boolean isExternalUserAdmin, boolean isExternalUserManager,
+                                      boolean isProviderAdmin, Set<UUID> viewerFirmIds) {
+        if (isGlobalAdminOrSecurityResponse) {
             return true;
         }
 
-        boolean isProviderAdmin = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.FIRM_USER_MANAGER.getRoleName());
-        if (pageMode == ReactivationRequestPageMode.TRACK || isProviderAdmin) {
+        if (profile == null || profile.getEntraUser() == null) {
             return false;
         }
 
-        boolean isLaaViewer = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())
-                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.SECURITY_RESPONSE.getRoleName())
-                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.GLOBAL_ADMIN.getRoleName());
-        boolean isRequestingEum = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_MANAGER.getRoleName())
-                && request.getActorRoleType() == ReactivationRoleType.LAA_OST
-                && Objects.equals(currentUser.getEntraOid(), request.getActorEntraOid());
+        boolean isMultiFirmTarget = profile.getEntraUser().isMultiFirmUser();
+        UUID targetFirmId = profile.getFirm() == null ? null : profile.getFirm().getId();
 
-        return isLaaViewer || isRequestingEum;
+        if (isExternalUserAdmin) {
+            return !isMultiFirmTarget && targetFirmId != null && viewerFirmIds.contains(targetFirmId);
+        }
+
+        if (isExternalUserManager) {
+            return request.getActorRoleType() == ReactivationRoleType.LAA_OST;
+        }
+
+        if (isProviderAdmin) {
+            return !isMultiFirmTarget && targetFirmId != null && viewerFirmIds.contains(targetFirmId);
+        }
+
+        return false;
     }
 
     private ReactivationRequestListItem toListItem(UserActivationRequest request, UserProfile profile, EntraUser actor,

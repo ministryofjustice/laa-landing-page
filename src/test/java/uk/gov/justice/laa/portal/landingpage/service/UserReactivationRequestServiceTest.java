@@ -702,6 +702,7 @@ class UserReactivationRequestServiceTest {
             void shouldBuildFilterSortAndPaginateRequestsInManageMode() {
                 EntraUser currentUser = mock(EntraUser.class);
                 when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+                stubGlobalAdmin(currentUser);
 
                 // Set up test entities
                 UUID request1Id = UUID.randomUUID();
@@ -765,10 +766,9 @@ class UserReactivationRequestServiceTest {
             }
 
             @Test
-            @DisplayName("Should show a multi-firm request only to the EUM who raised it")
-            void multiFirmRequest_isVisibleOnlyToInitiatingEum() {
+            @DisplayName("Should show a multi-firm request to all EUMs")
+            void multiFirmRequest_isVisibleToAllEums() {
                 EntraUser currentUser = mock(EntraUser.class);
-                when(currentUser.getEntraOid()).thenReturn(ACTOR_ENTRA_OID);
                 when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
 
                 UUID requestId = UUID.randomUUID();
@@ -799,13 +799,6 @@ class UserReactivationRequestServiceTest {
                             authentication, "", null, null, 1, 10, null, "asc");
 
                     assertThat(result.paginatedRequests().getRequests()).hasSize(1);
-
-                    when(currentUser.getEntraOid()).thenReturn("different-eum");
-
-                    ReactivationRequestsPageData hiddenResult = service.getPage(
-                            authentication, "", null, null, 1, 10, null, "asc");
-
-                    assertThat(hiddenResult.paginatedRequests().getRequests()).isEmpty();
                 }
             }
 
@@ -863,6 +856,7 @@ class UserReactivationRequestServiceTest {
 
                     UserProfile profile = mock(UserProfile.class);
                     when(profile.getId()).thenReturn(USER_PROFILE_ID);
+                    when(profile.getEntraUser()).thenReturn(EntraUser.builder().multiFirmUser(false).build());
                     when(profile.getFirm()).thenReturn(allowedFirm);
 
                     when(userProfileRepository.findAllByIdInWithFirm(Set.of(USER_PROFILE_ID))).thenReturn(List.of(profile));
@@ -879,6 +873,7 @@ class UserReactivationRequestServiceTest {
             void shouldHandleMissingActorAndProfileGracefully() {
                 EntraUser currentUser = mock(EntraUser.class);
                 when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+                stubGlobalAdmin(currentUser);
 
                 UserActivationRequest request = mock(UserActivationRequest.class);
                 when(request.getId()).thenReturn(UUID.randomUUID());
@@ -913,6 +908,7 @@ class UserReactivationRequestServiceTest {
             void shouldTestComparatorsAndDescSorting() {
                 EntraUser currentUser = mock(EntraUser.class);
                 when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+                stubGlobalAdmin(currentUser);
 
                 UserActivationRequest req1 = UserActivationRequest.builder()
                         .id(UUID.randomUUID())
@@ -946,6 +942,7 @@ class UserReactivationRequestServiceTest {
             void shouldHandlePaginationBoundaries() {
                 EntraUser currentUser = mock(EntraUser.class);
                 when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+                stubGlobalAdmin(currentUser);
 
                 UserActivationRequest req1 = mock(UserActivationRequest.class);
                 when(req1.getId()).thenReturn(UUID.randomUUID());
@@ -963,5 +960,15 @@ class UserReactivationRequestServiceTest {
             }
         }
 
+    }
+
+    private void stubGlobalAdmin(EntraUser currentUser) {
+        AppRole globalAdminRole = mock(AppRole.class);
+        when(globalAdminRole.isAuthzRole()).thenReturn(true);
+        when(globalAdminRole.getName()).thenReturn(AuthzRole.GLOBAL_ADMIN.getRoleName());
+        UserProfile profile = mock(UserProfile.class);
+        when(profile.isActiveProfile()).thenReturn(true);
+        when(profile.getAppRoles()).thenReturn(Set.of(globalAdminRole));
+        when(currentUser.getUserProfiles()).thenReturn(Set.of(profile));
     }
 }
