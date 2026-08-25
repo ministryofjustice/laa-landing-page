@@ -4033,7 +4033,7 @@ public class AccessControlServiceTest {
                 when(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedProfileId))
                         .thenReturn(Optional.of(latestActivationRequest));
                 when(firstActivationRequest.version()).thenReturn(1);
-                    lenient().when(firstActivationRequest.actorRoleType()).thenReturn(ReactivationRoleType.LAA);
+                lenient().when(firstActivationRequest.actorRoleType()).thenReturn(ReactivationRoleType.LAA);
                 when(userActivationRequestRepository.findRequestHistoryByRequestId(requestId))
                         .thenReturn(List.of(firstActivationRequest));
 
@@ -4201,17 +4201,17 @@ public class AccessControlServiceTest {
                     }
                 }
 
-                        @Test
-                        @DisplayName("LAA_OST: Should allow a different EUM to track the request")
-                        void laaOst_ShouldAllowDifferentRequester() {
-                                when(reactivationTypeResolver.resolveFromRoles(any())).thenReturn(ReactivationRoleType.LAA_OST);
-                                when(firstActivationRequest.actorRoleType()).thenReturn(ReactivationRoleType.LAA_OST);
+                @Test
+                @DisplayName("LAA_OST: Should allow a different EUM to track the request")
+                void laaOst_ShouldAllowDifferentRequester() {
+                    when(reactivationTypeResolver.resolveFromRoles(any())).thenReturn(ReactivationRoleType.LAA_OST);
+                    when(firstActivationRequest.actorRoleType()).thenReturn(ReactivationRoleType.LAA_OST);
 
-                                try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
-                                        mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
-                                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isTrue();
-                                }
-                        }
+                    try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
+                        mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
+                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isTrue();
+                    }
+                }
 
                 @Test
                 @DisplayName("LAA / LAA_USER_REGISTRATION: Should return true")
