@@ -22,7 +22,8 @@
             <form method="post" th:action="@{/admin/user/delegate-reactivate/{id}(id=${user.id}, profileId=${profileId})}">
                 <div class="govuk-form-group">
 
-                    <h1 class="govuk-heading-xl govuk-!-margin-top-0">Request for <span th:text="${user.fullName}">Full Name</span>
+                    <h1 class="govuk-heading-l govuk-!-margin-top-0" style="white-space: nowrap">Request for <span
+                            th:text="${user.fullName}">Full Name</span>
                         to be reactivated</h1>
 
                     <div class="govuk-warning-text" th:if="${isInternalActor}">
@@ -61,6 +62,8 @@
                             </span>
                         </summary>
                         <div class="govuk-details__text">
+                            <p>If the person requesting reactivation is not a third party user or the sole
+                                provider admin at their firm, they should:</p>
                             <ul class="govuk-list govuk-list--bullet">
                                 <li>Contact a provider admin who does have access to SiLAS</li>
                                 <li>Ask the provider admin to submit a reactivation request</li>
