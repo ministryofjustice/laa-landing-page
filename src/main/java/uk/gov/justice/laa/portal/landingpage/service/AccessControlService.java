@@ -290,7 +290,7 @@ public class AccessControlService {
         }
 
         EntraUser accessedUser = entraUserRepository.findById(accessedUserId).orElse(null);
-        if (accessedUser == null || accessedUser.isEnabled()) {
+        if (accessedUser == null) {
             return false;
         }
 
@@ -345,7 +345,7 @@ public class AccessControlService {
         }
 
         if (ReactivationRoleType.LAA_OST.equals(actorRoleType) || ReactivationRoleType.LAA_SUPPORT.equals(actorRoleType)) {
-            // EUM and EUS each only track requests originally raised by their own role type
+            // EUM and EUS each track requests originally raised by their own role type.
             return actorRoleType.equals(firstRequestInitiatorRole);
         }
 

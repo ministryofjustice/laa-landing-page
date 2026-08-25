@@ -369,9 +369,13 @@ public class UserReactivationRequestService {
                 .map(UserActivationRequest::getRequestId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
-        Map<UUID, Instant> submittedAtByRequestId = userActivationRequestRepository
-                .findAllFirstVersionsByRequestIdIn(requestIds).stream()
+        List<UserActivationRequest> firstVersions = userActivationRequestRepository
+            .findAllFirstVersionsByRequestIdIn(requestIds);
+        Map<UUID, Instant> submittedAtByRequestId = firstVersions.stream()
                 .collect(Collectors.toMap(UserActivationRequest::getRequestId, UserActivationRequest::getCreatedAt));
+        Map<UUID, ReactivationRoleType> submittedByRoleByRequestId = firstVersions.stream()
+            .filter(firstVersion -> firstVersion.getActorRoleType() != null)
+            .collect(Collectors.toMap(UserActivationRequest::getRequestId, UserActivationRequest::getActorRoleType));
 
         boolean isGlobalAdminOrSecurityResponse = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.SECURITY_RESPONSE.getRoleName())
                 || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.GLOBAL_ADMIN.getRoleName());
@@ -387,7 +391,7 @@ public class UserReactivationRequestService {
         List<ReactivationRequestListItem> items = latestRequests.stream()
                 .filter(request -> isVisibleToViewer(request, profilesById.get(request.getUserProfileId()), currentUser,
                         isGlobalAdminOrSecurityResponse, isExternalUserAdmin, isExternalUserManager,
-                        isProviderAdmin, viewerFirmIds))
+                    isProviderAdmin, viewerFirmIds, submittedByRoleByRequestId.get(request.getRequestId())))
                 .map(request -> toListItem(request, profilesById.get(request.getUserProfileId()),
                         actorsByEntraOid.get(request.getActorEntraOid()),
                         submittedAtByRequestId.get(request.getRequestId())))
@@ -399,7 +403,7 @@ public class UserReactivationRequestService {
     private boolean isVisibleToViewer(UserActivationRequest request, UserProfile profile,
                                       EntraUser currentUser, boolean isGlobalAdminOrSecurityResponse,
                                       boolean isExternalUserAdmin, boolean isExternalUserManager,
-                                      boolean isProviderAdmin, Set<UUID> viewerFirmIds) {
+                                      boolean isProviderAdmin, Set<UUID> viewerFirmIds, ReactivationRoleType submittedByRole) {
         if (isGlobalAdminOrSecurityResponse) {
             return true;
         }
@@ -412,11 +416,12 @@ public class UserReactivationRequestService {
         UUID targetFirmId = profile.getFirm() == null ? null : profile.getFirm().getId();
 
         if (isExternalUserAdmin) {
-            return !isMultiFirmTarget && targetFirmId != null && viewerFirmIds.contains(targetFirmId);
+            return isMultiFirmTarget || targetFirmId != null && viewerFirmIds.contains(targetFirmId);
         }
 
         if (isExternalUserManager) {
-            return request.getActorRoleType() == ReactivationRoleType.LAA_OST;
+            return submittedByRole == ReactivationRoleType.LAA_OST
+                    || submittedByRole == ReactivationRoleType.LAA_SUPPORT;
         }
 
         if (isProviderAdmin) {

@@ -897,8 +897,8 @@ class UserReactivationRequestServiceTest {
             }
 
             @Test
-            @DisplayName("Should show a multi-firm request to all EUMs")
-            void multiFirmRequest_isVisibleToAllEums() {
+            @DisplayName("Should show a multi-firm request to the External User Manager who raised it")
+            void multiFirmRequest_isVisibleToRequestingEum() {
                 EntraUser currentUser = mock(EntraUser.class);
                 when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
 
@@ -932,6 +932,43 @@ class UserReactivationRequestServiceTest {
                     assertThat(result.paginatedRequests().getRequests()).hasSize(1);
                 }
             }
+
+                    @Test
+                    @DisplayName("Should show a multi-firm request to an External User Admin")
+                    void multiFirmRequest_isVisibleToExternalUserAdmin() {
+                    EntraUser currentUser = mock(EntraUser.class);
+                    when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+
+                    UUID requestId = UUID.randomUUID();
+                    UserActivationRequest request = mock(UserActivationRequest.class);
+                    when(request.getId()).thenReturn(UUID.randomUUID());
+                    when(request.getRequestId()).thenReturn(requestId);
+                    when(request.getUserProfileId()).thenReturn(USER_PROFILE_ID);
+                    when(request.getActorEntraOid()).thenReturn(ACTOR_ENTRA_OID);
+                    when(request.getActorRoleType()).thenReturn(ReactivationRoleType.LAA_OST);
+                    when(request.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
+                    when(request.getCreatedAt()).thenReturn(Instant.now());
+                    when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(List.of(request));
+
+                    EntraUser multiFirmTarget = mock(EntraUser.class);
+                    when(multiFirmTarget.isMultiFirmUser()).thenReturn(true);
+                    UserProfile profile = mock(UserProfile.class);
+                    when(profile.getId()).thenReturn(USER_PROFILE_ID);
+                    when(profile.getEntraUser()).thenReturn(multiFirmTarget);
+                    when(userProfileRepository.findAllByIdInWithFirm(Set.of(USER_PROFILE_ID))).thenReturn(List.of(profile));
+                    when(userActivationRequestRepository.findAllFirstVersionsByRequestIdIn(Set.of(requestId)))
+                        .thenReturn(List.of(request));
+
+                    try (MockedStatic<AccessControlService> accessControlMock = mockStatic(AccessControlService.class)) {
+                        accessControlMock.when(() -> AccessControlService.userHasAuthzRole(
+                            currentUser, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())).thenReturn(true);
+
+                        ReactivationRequestsPageData result = service.getPage(
+                            authentication, "", null, null, 1, 10, null, "asc");
+
+                        assertThat(result.paginatedRequests().getRequests()).hasSize(1);
+                    }
+                    }
 
             @Test
             @DisplayName("Should return empty list in TRACK mode if user has no allowed firms")
