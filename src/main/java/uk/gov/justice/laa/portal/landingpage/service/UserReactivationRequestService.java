@@ -155,8 +155,17 @@ public class UserReactivationRequestService {
 
     private UserActivationRequest processReactivationState(String requestId, String userEntraId, String userProfileId, String comments,
                                                            String actorEntraOid, ReactivationRequestStatus status, boolean isApproved) {
-        EntraUser entraUser = entraUserRepository.findByEntraOid(actorEntraOid).orElseThrow();
-        ReactivationRoleType roleType = roleTypeResolver.resolve(entraUser);
+        String actor;
+        ReactivationRoleType roleType;
+        if ("SYNC".equalsIgnoreCase(actorEntraOid)) {
+            actor = "SYSTEM";
+            roleType = ReactivationRoleType.SYNC;
+        } else {
+            EntraUser entraUser = entraUserRepository.findByEntraOid(actorEntraOid).orElseThrow();
+            actor = String.valueOf(entraUser.getId());
+            roleType = roleTypeResolver.resolve(entraUser);
+        }
+
         UserActivationRequest initialRequest = userActivationRequestRepository.findFirstByRequestIdOrderByVersionAsc(parseUuid(requestId)).orElseThrow();
 
         final UserActivationRequest result = createReactivationRequestEntry(requestId, userProfileId, status, comments, actorEntraOid, roleType);
@@ -167,22 +176,22 @@ public class UserReactivationRequestService {
             EntraUser providerAdmin = entraUserRepository.findByEntraOid(initialRequest.getActorEntraOid()).orElseThrow();
             if (isApproved) {
                 log.debug("Notifying Provider Admin {} of approval for request ID: {}", providerAdmin.getEmail(), requestId);
-                notificationService.notifyReactivationRequestApproved(entraUser.getId().toString(), providerAdmin.getFirstName(),
+                notificationService.notifyReactivationRequestApproved(actor, providerAdmin.getFirstName(),
                         providerAdmin.getEmail(), providerAdmin.getId().toString(), userProfileId, providerUser.getEmail());
             } else {
                 log.debug("Notifying Provider Admin {} of rejection for request ID: {}", providerAdmin.getEmail(), requestId);
-                notificationService.notifyReactivationRequestRejected(entraUser.getId(), providerAdmin.getFirstName(),
+                notificationService.notifyReactivationRequestRejected(actor, providerAdmin.getFirstName(),
                         providerAdmin.getEmail(), providerAdmin.getId().toString(), userProfileId, providerUser.getEmail());
             }
         }
 
         if (isApproved) {
             log.debug("Notifying target user {} of approval for request ID: {}", providerUser.getEmail(), requestId);
-            notificationService.notifyReactivationRequestApproved(entraUser.getId().toString(), providerUser.getFirstName(),
+            notificationService.notifyReactivationRequestApproved(actor, providerUser.getFirstName(),
                     providerUser.getEmail(), providerUser.getId().toString(), providerUser.getId().toString(), providerUser.getEmail());
         } else {
             log.debug("Notifying target user {} of rejection for request ID: {}", providerUser.getEmail(), requestId);
-            notificationService.notifyReactivationRequestRejected(entraUser.getId(), providerUser.getFirstName(),
+            notificationService.notifyReactivationRequestRejected(actor, providerUser.getFirstName(),
                     providerUser.getEmail(), providerUser.getId().toString(), providerUser.getId().toString(), providerUser.getEmail());
         }
 
@@ -559,9 +568,18 @@ public class UserReactivationRequestService {
 
     private UUID parseUuid(String uuidStr) {
         try {
-            return uuidStr == null ? null : UUID.fromString(uuidStr);
-        } catch (IllegalArgumentException e) {
-            return null;
+            return UUID.fromString(uuidStr);
+        } catch (Exception ex) {
+            throw new RuntimeException("Invalid UUID format: " + uuidStr, ex);
         }
+    }
+
+    public boolean hasOpenReactivationRequest(UUID id) {
+        EntraUser entraUser = entraUserRepository.findById(id).orElseThrow();
+        List<UUID> userProfileIds = entraUser.getUserProfiles().stream().map(UserProfile::getId).toList();
+        List<UserActivationRequest> requestsByUserProfileIds = userActivationRequestRepository.findTopForEachUserProfileId(userProfileIds);
+        return requestsByUserProfileIds.stream()
+                .anyMatch(request -> (request.getStatus() == ReactivationRequestStatus.IN_REVIEW
+                        || request.getStatus() == ReactivationRequestStatus.INFORMATION_REQUIRED));
     }
 }

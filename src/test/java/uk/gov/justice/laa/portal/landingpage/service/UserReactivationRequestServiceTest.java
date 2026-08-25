@@ -6,6 +6,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -42,6 +44,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
@@ -249,10 +252,10 @@ class UserReactivationRequestServiceTest {
             assertThat(result.getActorRoleType()).isEqualTo(ReactivationRoleType.LAA_USER_REGISTRATION);
 
             // Verify notifications
-            verify(notificationService).notifyReactivationRequestRejected(actorUser.getId(), initialAdminUser.getFirstName(),
+            verify(notificationService).notifyReactivationRequestRejected(String.valueOf(actorUser.getId()), initialAdminUser.getFirstName(),
                     initialAdminUser.getEmail(), initialAdminUser.getId().toString(), USER_PROFILE_ID_STR, targetUser.getEmail());
 
-            verify(notificationService).notifyReactivationRequestRejected(actorUser.getId(), targetUser.getFirstName(),
+            verify(notificationService).notifyReactivationRequestRejected(String.valueOf(actorUser.getId()), targetUser.getFirstName(),
                     targetUser.getEmail(), targetUser.getId().toString(), targetUser.getId().toString(), targetUser.getEmail());
         }
 
@@ -287,7 +290,46 @@ class UserReactivationRequestServiceTest {
             assertThat(result.getStatus()).isEqualTo(ReactivationRequestStatus.REJECTED);
 
             // Verify admin is NOT notified
-            verify(notificationService, times(1)).notifyReactivationRequestRejected(eq(actorUser.getId()), any(), any(), any(), any(), any());
+            verify(notificationService, times(1)).notifyReactivationRequestRejected(eq(String.valueOf(actorUser.getId())), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Should process rejection when initial actor was PROVIDER_ADMIN and notify both admin and target user when rejected by Sync")
+        void rejectReactivationRequest_WhenActorIsProviderAdmin_NotifiesAdminAndTargetUserWhenRejectedBySync() {
+            UserActivationRequest initialRequest = new UserActivationRequest();
+            initialRequest.setRequestId(REQUEST_ID);
+            initialRequest.setActorRoleType(ReactivationRoleType.PROVIDER_ADMIN);
+            initialRequest.setActorEntraOid(INITIAL_ACTOR_ENTRA_OID);
+
+            given(userActivationRequestRepository.findFirstByRequestIdOrderByVersionAsc(REQUEST_ID)).willReturn(Optional.of(initialRequest));
+            given(userProfileRepository.existsById(USER_PROFILE_ID)).willReturn(true);
+
+            UserActivationRequest latestRequest = new UserActivationRequest();
+            latestRequest.setRequestId(REQUEST_ID);
+            latestRequest.setVersion(2);
+            given(userActivationRequestRepository.findFirstByRequestIdOrderByVersionDesc(REQUEST_ID)).willReturn(Optional.of(latestRequest));
+
+            given(entraUserRepository.findById(USER_ENTRA_ID)).willReturn(Optional.of(targetUser));
+            given(entraUserRepository.findByEntraOid(INITIAL_ACTOR_ENTRA_OID)).willReturn(Optional.of(initialAdminUser));
+
+            given(userActivationRequestRepository.save(any(UserActivationRequest.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+            // When
+            UserActivationRequest result = service.rejectReactivationRequest(REQUEST_ID_STR, USER_ENTRA_ID_STR, USER_PROFILE_ID_STR, "Incomplete documents", "SYNC");
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getStatus()).isEqualTo(ReactivationRequestStatus.REJECTED);
+            assertThat(result.getVersion()).isEqualTo(3);
+            assertThat(result.getComments()).isEqualTo("Incomplete documents");
+            assertThat(result.getActorRoleType()).isEqualTo(ReactivationRoleType.SYNC);
+
+            // Verify notifications
+            verify(notificationService).notifyReactivationRequestRejected("SYSTEM", initialAdminUser.getFirstName(),
+                    initialAdminUser.getEmail(), initialAdminUser.getId().toString(), USER_PROFILE_ID_STR, targetUser.getEmail());
+
+            verify(notificationService).notifyReactivationRequestRejected("SYSTEM", targetUser.getFirstName(),
+                    targetUser.getEmail(), targetUser.getId().toString(), targetUser.getId().toString(), targetUser.getEmail());
         }
 
         @Test
@@ -623,6 +665,95 @@ class UserReactivationRequestServiceTest {
                 ReactivationRequestStatus status = service.calculateNextReactivationRequestStatus(actor);
 
                 assertThat(status).isEqualTo(ReactivationRequestStatus.INFORMATION_REQUIRED);
+            }
+        }
+
+        @Nested
+        class HasOpenReactivationRequestTests {
+
+            @ParameterizedTest
+            @EnumSource(
+                    value = ReactivationRequestStatus.class,
+                    names = {"IN_REVIEW", "INFORMATION_REQUIRED"}
+            )
+            @DisplayName("Should return true when at least one request has an open status")
+            void hasOpenReactivationRequest_ShouldReturnTrue_WhenStatusIsOpen(ReactivationRequestStatus openStatus) {
+                UUID userId = UUID.randomUUID();
+                UUID profileId1 = UUID.randomUUID();
+                UUID profileId2 = UUID.randomUUID();
+
+                UserProfile profile1 = mock(UserProfile.class);
+                when(profile1.getId()).thenReturn(profileId1);
+
+                UserProfile profile2 = mock(UserProfile.class);
+                when(profile2.getId()).thenReturn(profileId2);
+
+                EntraUser entraUser = mock(EntraUser.class);
+                when(entraUser.getUserProfiles()).thenReturn(Set.of(profile1, profile2));
+                when(entraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
+
+                UserActivationRequest request1 = UserActivationRequest.builder().status(openStatus).build();
+
+                UserActivationRequest request2 = UserActivationRequest.builder().status(ReactivationRequestStatus.REJECTED).build();
+
+                when(userActivationRequestRepository.findTopForEachUserProfileId(anyList()))
+                        .thenReturn(List.of(request1, request2));
+
+                boolean result = service.hasOpenReactivationRequest(userId);
+
+                assertThat(result).isTrue();
+            }
+
+            @Test
+            @DisplayName("Should return false when requests exist but none have an open status")
+            void hasOpenReactivationRequest_ShouldReturnFalse_WhenNoMatchingStatus() {
+                UUID userId = UUID.randomUUID();
+                UUID profileId = UUID.randomUUID();
+
+                UserProfile profile = mock(UserProfile.class);
+                when(profile.getId()).thenReturn(profileId);
+
+                EntraUser entraUser = mock(EntraUser.class);
+                when(entraUser.getUserProfiles()).thenReturn(Set.of(profile));
+                when(entraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
+
+                UserActivationRequest request = mock(UserActivationRequest.class);
+                when(request.getStatus()).thenReturn(ReactivationRequestStatus.APPROVED);
+
+                when(userActivationRequestRepository.findTopForEachUserProfileId(List.of(profileId)))
+                        .thenReturn(List.of(request));
+
+                boolean result = service.hasOpenReactivationRequest(userId);
+
+                assertThat(result).isFalse();
+            }
+
+            @Test
+            @DisplayName("Should return false when user has no profiles or no activation requests found")
+            void hasOpenReactivationRequest_ShouldReturnFalse_WhenNoRequestsFound() {
+                UUID userId = UUID.randomUUID();
+
+                EntraUser entraUser = mock(EntraUser.class);
+                when(entraUser.getUserProfiles()).thenReturn(Collections.emptySet());
+                when(entraUserRepository.findById(userId)).thenReturn(Optional.of(entraUser));
+                when(userActivationRequestRepository.findTopForEachUserProfileId(Collections.emptyList()))
+                        .thenReturn(Collections.emptyList());
+
+                boolean result = service.hasOpenReactivationRequest(userId);
+
+                assertThat(result).isFalse();
+            }
+
+            @Test
+            @DisplayName("Should throw NoSuchElementException when EntraUser is not found")
+            void hasOpenReactivationRequest_ShouldThrowException_WhenUserNotFound() {
+                UUID userId = UUID.randomUUID();
+                when(entraUserRepository.findById(userId)).thenReturn(Optional.empty());
+
+                assertThatThrownBy(() -> service.hasOpenReactivationRequest(userId))
+                        .isInstanceOf(NoSuchElementException.class);
+
+                verifyNoInteractions(userActivationRequestRepository);
             }
         }
 

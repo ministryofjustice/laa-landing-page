@@ -36,6 +36,10 @@
             <h1 class="govuk-heading-l">
                 <span class="govuk-caption-l" th:text="'Reactivation request'">Reactivation request</span>
                 <span th:text="${user.fullName}">[[User Full Name]]</span>
+                <span th:if="${requestCurrentStatus.name() == 'IN_REVIEW'}" class="govuk-tag govuk-tag--yellow" th:text="${requestCurrentStatus.label}"></span>
+                <span th:if="${requestCurrentStatus.name() == 'INFORMATION_REQUIRED'}" class="govuk-tag govuk-tag--blue" style="min-width: 200px" th:text="${requestCurrentStatus.label}"></span>
+                <span th:if="${requestCurrentStatus.name() == 'APPROVED'}" class="govuk-tag govuk-tag--green" th:text="${requestCurrentStatus.label}"></span>
+                <span th:if="${requestCurrentStatus.name() == 'REJECTED'}" class="govuk-tag govuk-tag--red" th:text="${requestCurrentStatus.label}"></span>
             </h1>
 
             <h2 class="govuk-heading-m" th:text="'Review evidence'">
