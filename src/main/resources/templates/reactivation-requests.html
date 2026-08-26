@@ -44,27 +44,27 @@
                             <legend class="govuk-fieldset__legend govuk-fieldset__legend--s">User Type</legend>
                             <div class="govuk-checkboxes govuk-checkboxes--small" data-module="govuk-checkboxes">
                                 <div class="govuk-checkboxes__item">
-                                    <input class="govuk-checkboxes__input" id="usertype-provider-admin"
-                                           name="selectedUserTypes" type="checkbox" value="PROVIDER_ADMIN"
-                                           th:checked="${selectedUserTypes != null and selectedUserTypes.contains(T(uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType).PROVIDER_ADMIN)}">
-                                    <label class="govuk-label govuk-checkboxes__label" for="usertype-provider-admin">
+                                    <input class="govuk-checkboxes__input" id="showProviderUsers"
+                                           name="showProviderUsers" type="checkbox" value="true"
+                                           th:checked="${showProviderUsers}">
+                                    <label class="govuk-label govuk-checkboxes__label" for="showProviderUsers">
+                                        Provider User
+                                    </label>
+                                </div>
+                                <div class="govuk-checkboxes__item">
+                                    <input class="govuk-checkboxes__input" id="showFirmAdmins"
+                                           name="showFirmAdmins" type="checkbox" value="true"
+                                           th:checked="${showFirmAdmins}">
+                                    <label class="govuk-label govuk-checkboxes__label" for="showFirmAdmins">
                                         Provider Admin
                                     </label>
                                 </div>
                                 <div class="govuk-checkboxes__item">
-                                    <input class="govuk-checkboxes__input" id="usertype-laa"
-                                           name="selectedUserTypes" type="checkbox" value="LAA"
-                                           th:checked="${selectedUserTypes != null and selectedUserTypes.contains(T(uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType).LAA)}">
-                                    <label class="govuk-label govuk-checkboxes__label" for="usertype-laa">
-                                        Legal Aid Agency
-                                    </label>
-                                </div>
-                                <div class="govuk-checkboxes__item">
-                                    <input class="govuk-checkboxes__input" id="usertype-privileged"
-                                           name="selectedUserTypes" type="checkbox" value="PRIVILEGED"
-                                           th:checked="${selectedUserTypes != null and selectedUserTypes.contains(T(uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType).PRIVILEGED)}">
-                                    <label class="govuk-label govuk-checkboxes__label" for="usertype-privileged">
-                                        Privileged
+                                    <input class="govuk-checkboxes__input" id="showMultiFirmUsers"
+                                           name="showMultiFirmUsers" type="checkbox" value="true"
+                                           th:checked="${showMultiFirmUsers}">
+                                    <label class="govuk-label govuk-checkboxes__label" for="showMultiFirmUsers">
+                                        3rd Party
                                     </label>
                                 </div>
                             </div>
@@ -113,18 +113,21 @@
             </div>
 
             <div id="request-active-filters">
-                <div th:if="${(selectedUserTypes != null and !selectedUserTypes.isEmpty()) or (selectedRequestStatuses != null and !selectedRequestStatuses.isEmpty())}"
+                <div th:if="${showProviderUsers or showFirmAdmins or showMultiFirmUsers or (selectedRequestStatuses != null and !selectedRequestStatuses.isEmpty())}"
                      class="active-filters-banner govuk-!-margin-top-2 govuk-!-margin-bottom-3" aria-label="Active filters">
                     <span class="govuk-body govuk-!-font-weight-bold govuk-!-margin-right-2 filter-tag-label">Filters</span>
-                    <th:block th:each="userType : ${selectedUserTypes}">
-                        <span class="filter-tag">
-                            <a href="#" data-remove-array-param="selectedUserTypes"
-                               th:attr="data-remove-array-value=${userType.name()}"
-                               class="filter-tag__remove"
-                               th:aria-label="'Remove ' + ${userType.getDisplayName()} + ' filter'">&#x2715;</a>
-                            <span th:text="${userType.getDisplayName()}"></span>
-                        </span>
-                    </th:block>
+                    <span th:if="${showProviderUsers}" class="filter-tag">
+                        <a href="#" data-remove-filter="showProviderUsers" class="filter-tag__remove" aria-label="Remove Provider User filter">&#x2715;</a>
+                        Provider User
+                    </span>
+                    <span th:if="${showFirmAdmins}" class="filter-tag">
+                        <a href="#" data-remove-filter="showFirmAdmins" class="filter-tag__remove" aria-label="Remove Provider Admin filter">&#x2715;</a>
+                        Provider Admin
+                    </span>
+                    <span th:if="${showMultiFirmUsers}" class="filter-tag">
+                        <a href="#" data-remove-filter="showMultiFirmUsers" class="filter-tag__remove" aria-label="Remove 3rd Party filter">&#x2715;</a>
+                        3rd Party
+                    </span>
                     <th:block th:each="status : ${selectedRequestStatuses}">
                         <span class="filter-tag">
                             <a href="#" data-remove-array-param="selectedRequestStatuses"
@@ -135,7 +138,7 @@
                         </span>
                     </th:block>
                     <a href="#" id="clear-filters-link" class="govuk-link filter-tag-clear-link"
-                       data-filter-params="selectedUserTypes,selectedRequestStatuses">Clear filters</a>
+                       data-filter-params="showProviderUsers,showFirmAdmins,showMultiFirmUsers,selectedRequestStatuses">Clear filters</a>
                 </div>
             </div>
         </th:block>
@@ -156,7 +159,7 @@
                 <tr class="govuk-table__row">
                     <th scope="col" class="govuk-table__header" style="width: 18%;"
                         th:aria-sort="${sort == 'userName' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
-                        <a class="govuk-link" th:href="@{/admin/users/reactivation-requests(size=${requestedPageSize}, search=${search}, sort='userName', direction=${sort == 'userName' and direction == 'asc' ? 'desc' : 'asc'}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=true)}">
+                        <a class="govuk-link" th:href="@{/admin/users/reactivation-requests(size=${requestedPageSize}, search=${search}, sort='userName', direction=${sort == 'userName' and direction == 'asc' ? 'desc' : 'asc'}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers}, showProviderUsers=${showProviderUsers}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=true)}">
                             Name
                             <img th:if="${sort == 'userName' and direction == 'asc'}" th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
                             <img th:if="${sort == 'userName' and direction == 'desc'}" th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
@@ -165,7 +168,7 @@
                     </th>
                     <th scope="col" class="govuk-table__header" style="width: 22%;"
                         th:aria-sort="${sort == 'userEmail' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
-                        <a class="govuk-link" th:href="@{/admin/users/reactivation-requests(size=${requestedPageSize}, search=${search}, sort='userEmail', direction=${sort == 'userEmail' and direction == 'asc' ? 'desc' : 'asc'}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=true)}">
+                        <a class="govuk-link" th:href="@{/admin/users/reactivation-requests(size=${requestedPageSize}, search=${search}, sort='userEmail', direction=${sort == 'userEmail' and direction == 'asc' ? 'desc' : 'asc'}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers}, showProviderUsers=${showProviderUsers}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=true)}">
                             Email
                             <img th:if="${sort == 'userEmail' and direction == 'asc'}" th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
                             <img th:if="${sort == 'userEmail' and direction == 'desc'}" th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
@@ -174,7 +177,7 @@
                     </th>
                     <th scope="col" class="govuk-table__header" style="width: 14%;"
                         th:aria-sort="${sort == 'dateSubmitted' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
-                        <a class="govuk-link" th:href="@{/admin/users/reactivation-requests(size=${requestedPageSize}, search=${search}, sort='dateSubmitted', direction=${sort == 'dateSubmitted' and direction == 'asc' ? 'desc' : 'asc'}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=true)}">
+                        <a class="govuk-link" th:href="@{/admin/users/reactivation-requests(size=${requestedPageSize}, search=${search}, sort='dateSubmitted', direction=${sort == 'dateSubmitted' and direction == 'asc' ? 'desc' : 'asc'}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers}, showProviderUsers=${showProviderUsers}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=true)}">
                             Date submitted
                             <img th:if="${sort == 'dateSubmitted' and direction == 'asc'}" th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
                             <img th:if="${sort == 'dateSubmitted' and direction == 'desc'}" th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
@@ -183,7 +186,7 @@
                     </th>
                     <th scope="col" class="govuk-table__header" style="width: 14%;"
                         th:aria-sort="${sort == 'lastActivity' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
-                        <a class="govuk-link" th:href="@{/admin/users/reactivation-requests(size=${requestedPageSize}, search=${search}, sort='lastActivity', direction=${sort == 'lastActivity' and direction == 'asc' ? 'desc' : 'asc'}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=true)}">
+                        <a class="govuk-link" th:href="@{/admin/users/reactivation-requests(size=${requestedPageSize}, search=${search}, sort='lastActivity', direction=${sort == 'lastActivity' and direction == 'asc' ? 'desc' : 'asc'}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers}, showProviderUsers=${showProviderUsers}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=true)}">
                             Last activity
                             <img th:if="${sort == 'lastActivity' and direction == 'asc'}" th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
                             <img th:if="${sort == 'lastActivity' and direction == 'desc'}" th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
@@ -191,17 +194,17 @@
                         </a>
                     </th>
                     <th scope="col" class="govuk-table__header" style="width: 12%;"
-                        th:aria-sort="${sort == 'actorRoleType' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
-                        <a class="govuk-link" th:href="@{/admin/users/reactivation-requests(size=${requestedPageSize}, search=${search}, sort='actorRoleType', direction=${sort == 'actorRoleType' and direction == 'asc' ? 'desc' : 'asc'}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=true)}">
+                        th:aria-sort="${sort == 'userType' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
+                        <a class="govuk-link" th:href="@{/admin/users/reactivation-requests(size=${requestedPageSize}, search=${search}, sort='userType', direction=${sort == 'userType' and direction == 'asc' ? 'desc' : 'asc'}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers}, showProviderUsers=${showProviderUsers}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=true)}">
                             User type
-                            <img th:if="${sort == 'actorRoleType' and direction == 'asc'}" th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
-                            <img th:if="${sort == 'actorRoleType' and direction == 'desc'}" th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
-                            <img th:if="${sort != 'actorRoleType'}" th:src="@{/assets/images/sort-none.svg}" width="22" height="22" alt="">
+                            <img th:if="${sort == 'userType' and direction == 'asc'}" th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
+                            <img th:if="${sort == 'userType' and direction == 'desc'}" th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
+                            <img th:if="${sort != 'userType'}" th:src="@{/assets/images/sort-none.svg}" width="22" height="22" alt="">
                         </a>
                     </th>
                     <th scope="col" class="govuk-table__header" style="width: 20%;"
                         th:aria-sort="${sort == 'requestStatus' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
-                        <a class="govuk-link" th:href="@{/admin/users/reactivation-requests(size=${requestedPageSize}, search=${search}, sort='requestStatus', direction=${sort == 'requestStatus' and direction == 'asc' ? 'desc' : 'asc'}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=true)}">
+                        <a class="govuk-link" th:href="@{/admin/users/reactivation-requests(size=${requestedPageSize}, search=${search}, sort='requestStatus', direction=${sort == 'requestStatus' and direction == 'asc' ? 'desc' : 'asc'}, showFirmAdmins=${showFirmAdmins}, showMultiFirmUsers=${showMultiFirmUsers}, showProviderUsers=${showProviderUsers}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=true)}">
                             Request status
                             <img th:if="${sort == 'requestStatus' and direction == 'asc'}" th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
                             <img th:if="${sort == 'requestStatus' and direction == 'desc'}" th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
@@ -224,7 +227,7 @@
                     <td class="govuk-table__cell" th:text="${request.userEmail()}"></td>
                     <td class="govuk-table__cell" th:text="${#temporals.format(request.dateSubmitted(), 'd MMMM yyyy')}"></td>
                     <td class="govuk-table__cell" th:text="${#temporals.format(request.lastActivity(), 'd MMMM yyyy')}"></td>
-                    <td class="govuk-table__cell" th:text="${request.actorRoleType()}"></td>
+                    <td class="govuk-table__cell" th:text="${request.userType()}"></td>
                     <td class="govuk-table__cell">
                         <span th:if="${request.requestStatus().name() == 'IN_REVIEW'}" class="govuk-tag govuk-tag--yellow" th:text="${request.requestStatus().label}"></span>
                         <span th:if="${request.requestStatus().name() == 'INFORMATION_REQUIRED'}" class="govuk-tag govuk-tag--blue" th:text="${request.requestStatus().label}"></span>
@@ -245,11 +248,11 @@
             sort=${sort},
             direction=${direction},
             usertype=${null},
-            showFirmAdmins=${null},
-            showMultiFirmUsers=${null},
-            showProviderUsers=${null},
+            showFirmAdmins=${showFirmAdmins},
+            showMultiFirmUsers=${showMultiFirmUsers},
+            showProviderUsers=${showProviderUsers},
             selectedStatuses=${null},
-            selectedUserTypes=${selectedUserTypes},
+            selectedUserTypes=${null},
             selectedRequestStatuses=${selectedRequestStatuses},
             defaultStatusApplied=${defaultStatusApplied}
         )}"/>
