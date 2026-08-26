@@ -100,6 +100,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserTypeReasonDisable;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
+import uk.gov.justice.laa.portal.landingpage.forms.DelegateReactivateUserCommentForm;
 import uk.gov.justice.laa.portal.landingpage.forms.DisableUserReasonForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
@@ -187,6 +188,7 @@ class UserControllerTest {
 
     @Test
     public void testEnableUserPostReturnsCorrectViewAndModelWhenIdIsValid() {
+        MockHttpSession httpSession = new MockHttpSession();
         UUID enabledUserId = UUID.randomUUID();
         UUID enabledByUserId = UUID.randomUUID();
         EntraUserDto enabledUser = EntraUserDto.builder()
@@ -202,8 +204,12 @@ class UserControllerTest {
 
         String referer = "manage";
         String profileId = UUID.randomUUID().toString();
+        DelegateReactivateUserCommentForm delegateReactivateUserCommentForm = DelegateReactivateUserCommentForm.builder()
+                .comment("Reactivating user for testing")
+                .build();
+        httpSession.setAttribute("delegateReactivateUserCommentForm", delegateReactivateUserCommentForm);
 
-        String view = userController.enableUserPost(enabledUserId.toString(), authentication, model, referer, profileId);
+        String view = userController.enableUserCheckAnswersPost(enabledUserId.toString(), authentication, model, httpSession, referer, profileId);
 
         assertThat(view).isEqualTo("enable-user-completed");
         assertThat(model.getAttribute("user")).isEqualTo(enabledUser);
@@ -216,7 +222,8 @@ class UserControllerTest {
         UUID noUserId = UUID.randomUUID();
         when(userService.getEntraUserById(noUserId.toString())).thenReturn(Optional.empty());
 
-        assertThrows(NoSuchElementException.class, () -> userController.enableUserPost(noUserId.toString(), authentication, model, null, null));
+        assertThrows(NoSuchElementException.class, () -> userController.enableUserCheckAnswersPost(noUserId.toString(),
+                authentication, model, session, null, null));
 
     }
 
