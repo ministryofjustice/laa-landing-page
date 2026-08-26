@@ -38,7 +38,6 @@ import uk.gov.justice.laa.portal.landingpage.dto.ReactivationRequestsPageData;
 import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.forms.DelegateReactivateUserCommentForm;
 import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
@@ -533,7 +532,9 @@ public class UserActivationController {
             @RequestParam(name = "direction", defaultValue = "desc") String direction,
             @RequestParam(name = "search", required = false, defaultValue = "") String search,
             @RequestParam(name = "selectedRequestStatuses", required = false) List<ReactivationRequestStatus> selectedRequestStatuses,
-            @RequestParam(name = "selectedUserTypes", required = false) List<ReactivationRoleType> selectedUserTypes,
+            @RequestParam(name = "showFirmAdmins", required = false) boolean showFirmAdmins,
+            @RequestParam(name = "showMultiFirmUsers", required = false) boolean showMultiFirmUsers,
+            @RequestParam(name = "showProviderUsers", required = false) boolean showProviderUsers,
             @RequestParam(name = "defaultStatusApplied", defaultValue = "false") boolean defaultStatusApplied,
             Model model,
             Authentication authentication) {
@@ -553,9 +554,14 @@ public class UserActivationController {
                     .queryParam("defaultStatusApplied", true)
                     .queryParam("selectedRequestStatuses", ReactivationRequestStatus.IN_REVIEW.name());
 
-            if (selectedUserTypes != null && !selectedUserTypes.isEmpty()) {
-                builder.queryParam("selectedUserTypes",
-                        selectedUserTypes.stream().map(Enum::name).toArray());
+            if (showFirmAdmins) {
+                builder.queryParam("showFirmAdmins", true);
+            }
+            if (showMultiFirmUsers) {
+                builder.queryParam("showMultiFirmUsers", true);
+            }
+            if (showProviderUsers) {
+                builder.queryParam("showProviderUsers", true);
             }
 
             if (search != null && !search.trim().isEmpty()) {
@@ -568,15 +574,14 @@ public class UserActivationController {
         List<ReactivationRequestStatus> statusFilters = selectedRequestStatuses == null
                 ? new ArrayList<>()
                 : selectedRequestStatuses;
-        List<ReactivationRoleType> userTypeFilters = selectedUserTypes == null
-                ? new ArrayList<>()
-                : selectedUserTypes;
 
         ReactivationRequestsPageData pageData = userReactivationRequestService.getPage(
                 authentication,
                 search,
                 statusFilters,
-                userTypeFilters,
+                showFirmAdmins,
+                showMultiFirmUsers,
+                showProviderUsers,
                 page,
                 size,
                 sort,
@@ -594,7 +599,9 @@ public class UserActivationController {
         model.addAttribute("sort", sort);
         model.addAttribute("direction", direction);
         model.addAttribute("selectedRequestStatuses", pageData.appliedStatuses());
-        model.addAttribute("selectedUserTypes", pageData.appliedActorRoleTypes());
+        model.addAttribute("showFirmAdmins", pageData.showFirmAdmins());
+        model.addAttribute("showMultiFirmUsers", pageData.showMultiFirmUsers());
+        model.addAttribute("showProviderUsers", pageData.showProviderUsers());
         model.addAttribute("defaultStatusApplied", pageMode.isManageMode() || defaultStatusApplied);
         model.addAttribute(ModelAttributes.PAGE_TITLE, pageData.pageMode().getHeading());
 
