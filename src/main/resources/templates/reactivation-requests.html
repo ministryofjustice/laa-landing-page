@@ -35,7 +35,8 @@
             filterContent=~{:: #request-filter-checkboxes},
             activeFiltersContent=~{:: #request-active-filters},
             searchHeading='Search reactivation requests',
-            formAriaLabel='Search and filter reactivation requests'
+            formAriaLabel='Search and filter reactivation requests',
+            filterDefaultClosed=${true}
         )}">
             <div id="request-filter-checkboxes">
                 <div style="display: flex; gap: 0;">
@@ -191,12 +192,12 @@
                         </a>
                     </th>
                     <th scope="col" class="govuk-table__header" style="width: 12%;"
-                        th:aria-sort="${sort == 'actorRoleType' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
-                        <a class="govuk-link" th:href="@{/admin/users/reactivation-requests(size=${requestedPageSize}, search=${search}, sort='actorRoleType', direction=${sort == 'actorRoleType' and direction == 'asc' ? 'desc' : 'asc'}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=true)}">
+                        th:aria-sort="${sort == 'userType' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}">
+                        <a class="govuk-link" th:href="@{/admin/users/reactivation-requests(size=${requestedPageSize}, search=${search}, sort='userType', direction=${sort == 'userType' and direction == 'asc' ? 'desc' : 'asc'}, selectedUserTypes=${selectedUserTypes}, selectedRequestStatuses=${selectedRequestStatuses}, defaultStatusApplied=true)}">
                             User type
-                            <img th:if="${sort == 'actorRoleType' and direction == 'asc'}" th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
-                            <img th:if="${sort == 'actorRoleType' and direction == 'desc'}" th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
-                            <img th:if="${sort != 'actorRoleType'}" th:src="@{/assets/images/sort-none.svg}" width="22" height="22" alt="">
+                            <img th:if="${sort == 'userType' and direction == 'asc'}" th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
+                            <img th:if="${sort == 'userType' and direction == 'desc'}" th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
+                            <img th:if="${sort != 'userType'}" th:src="@{/assets/images/sort-none.svg}" width="22" height="22" alt="">
                         </a>
                     </th>
                     <th scope="col" class="govuk-table__header" style="width: 20%;"
@@ -216,15 +217,15 @@
                 </tr>
                 <tr class="govuk-table__row" th:each="request : ${requests}">
                     <td class="govuk-table__cell">
-                                <a class="govuk-link" th:if="${request.userId() != null and request.userProfileId() != null}"
-                                    th:href="@{/admin/user/delegate-reactivate/track/{id}(id=${request.userId()}, profileId=${request.userProfileId()}, requestId=${request.requestId()})}"
+                        <a class="govuk-link" th:if="${request.userProfileId() != null}"
+                           th:href="@{/admin/users/manage/{id}(id=${request.userProfileId()})}"
                            th:text="${request.userName()}"></a>
-                                <span th:if="${request.userId() == null or request.userProfileId() == null}" th:text="${request.userName()}"></span>
+                        <span th:if="${request.userProfileId() == null}" th:text="${request.userName()}"></span>
                     </td>
                     <td class="govuk-table__cell" th:text="${request.userEmail()}"></td>
                     <td class="govuk-table__cell" th:text="${#temporals.format(request.dateSubmitted(), 'd MMMM yyyy')}"></td>
                     <td class="govuk-table__cell" th:text="${#temporals.format(request.lastActivity(), 'd MMMM yyyy')}"></td>
-                    <td class="govuk-table__cell" th:text="${request.actorRoleType()}"></td>
+                    <td class="govuk-table__cell" th:text="${request.userTypeLabel()}"></td>
                     <td class="govuk-table__cell">
                         <span th:if="${request.requestStatus().name() == 'IN_REVIEW'}" class="govuk-tag govuk-tag--yellow" th:text="${request.requestStatus().label}"></span>
                         <span th:if="${request.requestStatus().name() == 'INFORMATION_REQUIRED'}" class="govuk-tag govuk-tag--blue" th:text="${request.requestStatus().label}"></span>

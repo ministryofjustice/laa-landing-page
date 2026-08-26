@@ -44,6 +44,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.ReactivationRequestsPageData;
 import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
@@ -738,7 +739,7 @@ public class UserActivationControllerTest {
             paginated.setTotalPages(1);
 
             List<ReactivationRequestStatus> statuses = List.of(ReactivationRequestStatus.IN_REVIEW);
-            List<ReactivationRoleType> userTypes = List.of(ReactivationRoleType.LAA);
+            List<AuthzRoleType> userTypes = List.of(AuthzRoleType.LAA);
 
             ReactivationRequestsPageData pageData = new ReactivationRequestsPageData(pageMode, statuses, userTypes, paginated);
 

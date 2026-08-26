@@ -22,6 +22,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
+import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.FIRM_USER_MANAGER;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -35,8 +36,6 @@ import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
 import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserActivationRequestRepository;
-
-import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.FIRM_USER_MANAGER;
 
 @Service
 public class AccessControlService {
@@ -345,8 +344,8 @@ public class AccessControlService {
         }
 
         if (ReactivationRoleType.LAA_OST.equals(actorRoleType) || ReactivationRoleType.LAA_SUPPORT.equals(actorRoleType)) {
-            // EUM and EUS each track requests originally raised by their own role type.
-            return actorRoleType.equals(firstRequestInitiatorRole);
+            return ReactivationRoleType.LAA_OST.equals(firstRequestInitiatorRole)
+                    || ReactivationRoleType.LAA_SUPPORT.equals(firstRequestInitiatorRole);
         }
 
         return ReactivationRoleType.LAA.equals(actorRoleType)

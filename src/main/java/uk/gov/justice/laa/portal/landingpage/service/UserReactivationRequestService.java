@@ -25,7 +25,9 @@ import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.ReactivationRequestsPageData;
 import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
+import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
@@ -284,7 +286,7 @@ public class UserReactivationRequestService {
             Authentication authentication,
             String search,
             List<ReactivationRequestStatus> selectedStatuses,
-            List<ReactivationRoleType> selectedActorRoleTypes,
+            List<AuthzRoleType> selectedUserTypes,
             int page,
             int size,
             String sort,
@@ -297,15 +299,15 @@ public class UserReactivationRequestService {
         List<ReactivationRequestStatus> effectiveStatuses = selectedStatuses == null
                 ? List.of()
                 : List.copyOf(selectedStatuses);
-        List<ReactivationRoleType> effectiveActorRoleTypes = selectedActorRoleTypes == null
+        List<AuthzRoleType> effectiveUserTypes = selectedUserTypes == null
                 ? List.of()
-                : List.copyOf(selectedActorRoleTypes);
+                : List.copyOf(selectedUserTypes);
 
         List<ReactivationRequestListItem> requests = filterAndSortRequests(
                 buildRequests(currentUser, pageMode),
                 normalizeSearch(search),
                 effectiveStatuses,
-                effectiveActorRoleTypes,
+                effectiveUserTypes,
                 sort,
                 direction);
 
@@ -313,7 +315,7 @@ public class UserReactivationRequestService {
         log.debug("Returning {} filtered items across {} pages for mode: {}",
                 paginated.getTotalRequests(), paginated.getTotalPages(), pageMode);
 
-        return new ReactivationRequestsPageData(pageMode, effectiveStatuses, effectiveActorRoleTypes, paginated);
+        return new ReactivationRequestsPageData(pageMode, effectiveStatuses, effectiveUserTypes, paginated);
     }
 
     public ReactivationRequestPageMode getPageMode(Authentication authentication) {
@@ -327,6 +329,7 @@ public class UserReactivationRequestService {
         }
 
         boolean isManageRole = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_MANAGER.getRoleName())
+            || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_SUPPORT.getRoleName())
                 || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())
                 || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_VIEWER.getRoleName())
                 || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.GLOBAL_ADMIN.getRoleName())
@@ -381,8 +384,9 @@ public class UserReactivationRequestService {
                 || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.GLOBAL_ADMIN.getRoleName());
         boolean isExternalUserAdmin = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName());
         boolean isExternalUserManager = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_MANAGER.getRoleName());
+        boolean isExternalUserSupport = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_SUPPORT.getRoleName());
         boolean isProviderAdmin = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.FIRM_USER_MANAGER.getRoleName());
-        Set<UUID> viewerFirmIds = (isExternalUserAdmin || isProviderAdmin) && currentUser != null
+        Set<UUID> viewerFirmIds = isProviderAdmin && currentUser != null
                 ? firmService.getUserActiveAllFirms(currentUser).stream()
                 .map(FirmDto::getId)
                 .collect(Collectors.toSet())
@@ -391,7 +395,7 @@ public class UserReactivationRequestService {
         List<ReactivationRequestListItem> items = latestRequests.stream()
                 .filter(request -> isVisibleToViewer(request, profilesById.get(request.getUserProfileId()), currentUser,
                         isGlobalAdminOrSecurityResponse, isExternalUserAdmin, isExternalUserManager,
-                    isProviderAdmin, viewerFirmIds, submittedByRoleByRequestId.get(request.getRequestId())))
+                    isExternalUserSupport, isProviderAdmin, viewerFirmIds, submittedByRoleByRequestId.get(request.getRequestId())))
                 .map(request -> toListItem(request, profilesById.get(request.getUserProfileId()),
                         actorsByEntraOid.get(request.getActorEntraOid()),
                         submittedAtByRequestId.get(request.getRequestId())))
@@ -400,11 +404,35 @@ public class UserReactivationRequestService {
         return items;
     }
 
+    private AuthzRoleType determineTargetUserType(UserProfile profile, EntraUser targetUser) {
+        if (targetUser != null && targetUser.isMultiFirmUser()) {
+            return AuthzRoleType.PROVIDER_ADMIN;
+        }
+        if (profile == null || profile.getAppRoles() == null) {
+            return AuthzRoleType.NONE;
+        }
+        for (AppRole appRole : profile.getAppRoles()) {
+            if (appRole.isAuthzRole()) {
+                for (AuthzRole role : AuthzRole.values()) {
+                    if (role.getRoleName().equals(appRole.getName())) {
+                        return role.getAuthzRoleType();
+                    }
+                }
+            }
+        }
+        return AuthzRoleType.NONE;
+    }
+
     private boolean isVisibleToViewer(UserActivationRequest request, UserProfile profile,
                                       EntraUser currentUser, boolean isGlobalAdminOrSecurityResponse,
                                       boolean isExternalUserAdmin, boolean isExternalUserManager,
-                                      boolean isProviderAdmin, Set<UUID> viewerFirmIds, ReactivationRoleType submittedByRole) {
+                                      boolean isExternalUserSupport, boolean isProviderAdmin,
+                                      Set<UUID> viewerFirmIds, ReactivationRoleType submittedByRole) {
         if (isGlobalAdminOrSecurityResponse) {
+            return true;
+        }
+
+        if (isExternalUserAdmin) {
             return true;
         }
 
@@ -415,11 +443,7 @@ public class UserReactivationRequestService {
         boolean isMultiFirmTarget = profile.getEntraUser().isMultiFirmUser();
         UUID targetFirmId = profile.getFirm() == null ? null : profile.getFirm().getId();
 
-        if (isExternalUserAdmin) {
-            return isMultiFirmTarget || targetFirmId != null && viewerFirmIds.contains(targetFirmId);
-        }
-
-        if (isExternalUserManager) {
+        if (isExternalUserManager || isExternalUserSupport) {
             return submittedByRole == ReactivationRoleType.LAA_OST
                     || submittedByRole == ReactivationRoleType.LAA_SUPPORT;
         }
@@ -444,6 +468,7 @@ public class UserReactivationRequestService {
                 : UNKNOWN_USER_NAME;
         String userEmail = targetUser != null ? targetUser.getEmail() : null;
         String actorRoleType = request.getActorRoleType() != null ? request.getActorRoleType().getDisplayName() : null;
+        AuthzRoleType authzRoleType = determineTargetUserType(profile, targetUser);
         ReactivationRequestStatus status = ReactivationRequestStatus.valueOf(request.getStatus().name());
         // dateSubmitted reflects when the request was originally raised (version 1),
         // while lastActivity reflects the most recent version's timestamp (this row).
@@ -469,6 +494,8 @@ public class UserReactivationRequestService {
                 actorEmail,
                 userName.isBlank() ? UNKNOWN_USER_NAME : userName,
                 userEmail,
+                authzRoleType.name(),
+                authzRoleType.getLabel(),
                 dateSubmitted,
                 lastActivity,
                 firmId);
@@ -482,16 +509,16 @@ public class UserReactivationRequestService {
             List<ReactivationRequestListItem> requests,
             String search,
             List<ReactivationRequestStatus> selectedStatuses,
-            List<ReactivationRoleType> selectedActorRoleTypes,
+            List<AuthzRoleType> selectedUserTypes,
             String sort,
             String direction) {
 
         Set<ReactivationRequestStatus> statusFilter = selectedStatuses == null
                 ? Set.of()
                 : new HashSet<>(selectedStatuses);
-        Set<String> actorRoleTypeLabelFilter = selectedActorRoleTypes == null || selectedActorRoleTypes.isEmpty()
+        Set<String> userTypeFilter = selectedUserTypes == null || selectedUserTypes.isEmpty()
                 ? Set.of()
-                : selectedActorRoleTypes.stream().map(ReactivationRoleType::getDisplayName).collect(Collectors.toSet());
+                : selectedUserTypes.stream().map(AuthzRoleType::name).collect(Collectors.toSet());
 
         Comparator<ReactivationRequestListItem> comparator = resolveComparator(sort);
         if (!"asc".equalsIgnoreCase(direction)) {
@@ -501,7 +528,7 @@ public class UserReactivationRequestService {
         return requests.stream()
                 .filter(item -> search.isBlank() || matchesSearch(item, search))
                 .filter(item -> statusFilter.isEmpty() || statusFilter.contains(item.requestStatus()))
-                .filter(item -> actorRoleTypeLabelFilter.isEmpty() || actorRoleTypeLabelFilter.contains(item.actorRoleType()))
+                .filter(item -> userTypeFilter.isEmpty() || userTypeFilter.contains(item.userType()))
                 .sorted(comparator)
                 .toList();
     }
@@ -555,6 +582,8 @@ public class UserReactivationRequestService {
             case "requestStatus" -> Comparator.comparing(item -> item.requestStatus().name(), String.CASE_INSENSITIVE_ORDER);
             case "actorName" -> Comparator.comparing(ReactivationRequestListItem::actorName, String.CASE_INSENSITIVE_ORDER);
             case "actorRoleType" -> Comparator.comparing(ReactivationRequestListItem::actorRoleType,
+                    Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+            case "userType" -> Comparator.comparing(ReactivationRequestListItem::userTypeLabel,
                     Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
             case "lastActivity" -> Comparator.comparing(ReactivationRequestListItem::lastActivity,
                     Comparator.nullsLast(LocalDate::compareTo));

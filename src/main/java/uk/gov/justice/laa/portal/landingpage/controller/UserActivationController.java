@@ -28,8 +28,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.audit.ReactivateUserRequestApprovedAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.audit.ReactivateUserRequestRejectedAuditEvent;
-import uk.gov.justice.laa.portal.landingpage.audit.ReactivateUserRequestUpdatedAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.audit.ReactivateUserRequestSubmittedAuditEvent;
+import uk.gov.justice.laa.portal.landingpage.audit.ReactivateUserRequestUpdatedAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import static uk.gov.justice.laa.portal.landingpage.controller.UserController.buildErrorString;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
@@ -37,8 +37,8 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.ReactivationRequestsPageData;
 import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
+import uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.forms.DelegateReactivateUserCommentForm;
 import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
@@ -533,7 +533,7 @@ public class UserActivationController {
             @RequestParam(name = "direction", defaultValue = "desc") String direction,
             @RequestParam(name = "search", required = false, defaultValue = "") String search,
             @RequestParam(name = "selectedRequestStatuses", required = false) List<ReactivationRequestStatus> selectedRequestStatuses,
-            @RequestParam(name = "selectedUserTypes", required = false) List<ReactivationRoleType> selectedUserTypes,
+            @RequestParam(name = "selectedUserTypes", required = false) List<AuthzRoleType> selectedUserTypes,
             @RequestParam(name = "defaultStatusApplied", defaultValue = "false") boolean defaultStatusApplied,
             Model model,
             Authentication authentication) {
@@ -568,7 +568,7 @@ public class UserActivationController {
         List<ReactivationRequestStatus> statusFilters = selectedRequestStatuses == null
                 ? new ArrayList<>()
                 : selectedRequestStatuses;
-        List<ReactivationRoleType> userTypeFilters = selectedUserTypes == null
+        List<AuthzRoleType> userTypeFilters = selectedUserTypes == null
                 ? new ArrayList<>()
                 : selectedUserTypes;
 
