@@ -202,7 +202,7 @@ public class NotificationService {
         }
     }
 
-    public void notifyReactivationRequestRejected(UUID actorUserId, String recipientFirstName, String recipientEmail, String recipientId, String targetUserProfileId, String targetEmail) {
+    public void notifyReactivationRequestRejected(String actorUserId, String recipientFirstName, String recipientEmail, String recipientId, String targetUserProfileId, String targetEmail) {
         log.info("Reactivate request - Starting request rejected notification by Actor User ID {} for User Profile ID: {} to User ID: {}",
                 actorUserId, targetUserProfileId, recipientId);
         if (null != recipientEmail) {
