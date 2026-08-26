@@ -300,10 +300,23 @@ public class UserActivationControllerTest {
         @Test
         @DisplayName("Should throw NoSuchElementException if form is missing from session")
         void missingFormInSession_throwsException() {
+            session = new MockHttpSession();
             session.setAttribute("profileId", PROFILE_ID);
             session.setAttribute("delegateReactivateUserId", USER_ID);
 
             assertThatThrownBy(() -> userActivationController.delegateReactivateUserCommentsCheckAnswersGet(USER_ID, model, session)).isInstanceOf(NoSuchElementException.class);
+        }
+
+        @Test
+        @DisplayName("Should return journey-complete when user id is missing from session")
+        void missingUserIdInSession_returnsJourneyComplete() {
+            session.setAttribute("profileId", PROFILE_ID);
+
+            String view = userActivationController
+                    .delegateReactivateUserCommentsCheckAnswersGet(
+                            USER_ID, model, session);
+
+            assertThat(view).isEqualTo("journey-completed");
         }
 
         @Test
