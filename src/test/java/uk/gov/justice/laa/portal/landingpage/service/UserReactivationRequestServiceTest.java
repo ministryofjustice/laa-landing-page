@@ -821,7 +821,7 @@ class UserReactivationRequestServiceTest {
                 when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
                 when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(List.of());
 
-                ReactivationRequestsPageData result = service.getPage(authentication, "", null, null, 1, 10, "requestId", "asc");
+                ReactivationRequestsPageData result = service.getPage(authentication, "", null, false, false, false, 1, 10, "requestId", "asc");
 
                 assertThat(result.pageMode()).isEqualTo(ReactivationRequestPageMode.MANAGE);
                 assertThat(result.paginatedRequests().getRequests()).isEmpty();
@@ -887,12 +887,13 @@ class UserReactivationRequestServiceTest {
 
                 // Execute method call
                 ReactivationRequestsPageData result = service.getPage(authentication, "Jane", // Search string matches target user name
-                        List.of(ReactivationRequestStatus.IN_REVIEW), null, 1, 10, "actorName", "asc");
+                    List.of(ReactivationRequestStatus.IN_REVIEW), false, false, false, 1, 10, "actorName", "asc");
 
                 assertThat(result.paginatedRequests().getTotalRequests()).isEqualTo(1);
                 ReactivationRequestListItem item = result.paginatedRequests().getRequests().getFirst();
                 assertThat(item.userName()).isEqualTo("Jane Doe");
                 assertThat(item.actorName()).isEqualTo("John Smith");
+                assertThat(item.userType()).isEqualTo("Provider User");
                 assertThat(item.firmId()).isEqualTo(firmId);
             }
 
@@ -1061,7 +1062,7 @@ class UserReactivationRequestServiceTest {
                     when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(List.of(request1));
                     when(firmService.getUserActiveAllFirms(currentUser)).thenReturn(List.of());
 
-                    ReactivationRequestsPageData result = service.getPage(authentication, null, null, null, 1, 10, null, "asc");
+                    ReactivationRequestsPageData result = service.getPage(authentication, null, null, false, false, false, 1, 10, null, "asc");
 
                     assertThat(result.pageMode()).isEqualTo(ReactivationRequestPageMode.TRACK);
                     assertThat(result.paginatedRequests().getRequests()).isEmpty();
@@ -1102,7 +1103,7 @@ class UserReactivationRequestServiceTest {
 
                     when(userProfileRepository.findAllByIdInWithFirm(Set.of(USER_PROFILE_ID))).thenReturn(List.of(profile));
 
-                    ReactivationRequestsPageData result = service.getPage(authentication, "", null, null, 1, 10, null, "asc");
+                    ReactivationRequestsPageData result = service.getPage(authentication, "", null, false, false, false, 1, 10, null, "asc");
 
                     assertThat(result.paginatedRequests().getRequests()).hasSize(1);
                     assertThat(result.paginatedRequests().getRequests().getFirst().firmId()).isEqualTo(allowedFirmId);
@@ -1125,7 +1126,7 @@ class UserReactivationRequestServiceTest {
 
                 when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(List.of(request));
 
-                ReactivationRequestsPageData result = service.getPage(authentication, "", null, null, 1, 10, null, "asc");
+                ReactivationRequestsPageData result = service.getPage(authentication, "", null, false, false, false, 1, 10, null, "asc");
 
                 assertThat(result.paginatedRequests().getRequests()).hasSize(1);
                 ReactivationRequestListItem item = result.paginatedRequests().getRequests().getFirst();
@@ -1169,10 +1170,10 @@ class UserReactivationRequestServiceTest {
 
                 when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(List.of(req1, req2));
 
-                String[] sortFields = {"requestId", "userProfileId", "version", "requestStatus", "actorName", "actorRoleType", "lastActivity", "invalidSortDefault"};
+                String[] sortFields = {"requestId", "userProfileId", "version", "requestStatus", "actorName", "actorRoleType", "userType", "lastActivity", "invalidSortDefault"};
 
                 for (String sortField : sortFields) {
-                    ReactivationRequestsPageData data = service.getPage(authentication, "", null, null, 1, 10, sortField, "desc");
+                    ReactivationRequestsPageData data = service.getPage(authentication, "", null, false, false, false, 1, 10, sortField, "desc");
 
                     assertThat(data.paginatedRequests().getRequests()).hasSize(2);
                 }
@@ -1193,7 +1194,7 @@ class UserReactivationRequestServiceTest {
                 when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(List.of(req1));
 
                 // Request out-of-bounds paginatedRequests index (e.g., paginatedRequests 55)
-                ReactivationRequestsPageData pageData = service.getPage(authentication, "", null, null, 55, 10, null, "asc");
+                ReactivationRequestsPageData pageData = service.getPage(authentication, "", null, false, false, false, 55, 10, null, "asc");
 
                 PaginatedReactivationRequests paginated = pageData.paginatedRequests();
                 assertThat(paginated.getCurrentPage()).isEqualTo(1); // Bounded back to max total pages (1)

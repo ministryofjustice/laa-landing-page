@@ -46,7 +46,6 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.forms.DelegateReactivateUserCommentForm;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedReactivationRequests;
@@ -712,13 +711,14 @@ public class UserActivationControllerTest {
 
             String viewName = userActivationController
                     .displayReactivationRequests(10, 1, "dateSubmitted", "desc",
-                            "testSearch", null, null, false, model, authentication);
+                            "testSearch", null, false, true, false, false, model, authentication);
 
             assertThat(viewName).startsWith("redirect:/admin/users/reactivation-requests");
             assertThat(viewName).contains("size=10");
             assertThat(viewName).contains("page=1");
             assertThat(viewName).contains("defaultStatusApplied=true");
             assertThat(viewName).contains("selectedRequestStatuses=IN_REVIEW");
+            assertThat(viewName).contains("showMultiFirmUsers=true");
             assertThat(viewName).contains("search=testSearch");
         }
 
@@ -739,15 +739,14 @@ public class UserActivationControllerTest {
             paginated.setTotalPages(1);
 
             List<ReactivationRequestStatus> statuses = List.of(ReactivationRequestStatus.IN_REVIEW);
-            List<AuthzRoleType> userTypes = List.of(AuthzRoleType.LAA);
 
-            ReactivationRequestsPageData pageData = new ReactivationRequestsPageData(pageMode, statuses, userTypes, paginated);
+            ReactivationRequestsPageData pageData = new ReactivationRequestsPageData(pageMode, statuses, true, false, true, paginated);
 
-            when(userReactivationRequestService.getPage(authentication, "testSearch", statuses, userTypes, 1,
+            when(userReactivationRequestService.getPage(authentication, "testSearch", statuses, true, false, true, 1,
                     10, "dateSubmitted", "desc")).thenReturn(pageData);
 
             String viewName = userActivationController.displayReactivationRequests(10, 1, "dateSubmitted",
-                    "desc", "testSearch", statuses, userTypes, true, model, authentication);
+                    "desc", "testSearch", statuses, true, false, true, true, model, authentication);
 
             assertThat(viewName).isEqualTo("reactivation-requests");
 
@@ -763,7 +762,9 @@ public class UserActivationControllerTest {
             assertThat(model.getAttribute("sort")).isEqualTo("dateSubmitted");
             assertThat(model.getAttribute("direction")).isEqualTo("desc");
             assertThat(model.getAttribute("selectedRequestStatuses")).isEqualTo(statuses);
-            assertThat(model.getAttribute("selectedUserTypes")).isEqualTo(userTypes);
+            assertThat(model.getAttribute("showFirmAdmins")).isEqualTo(true);
+            assertThat(model.getAttribute("showMultiFirmUsers")).isEqualTo(false);
+            assertThat(model.getAttribute("showProviderUsers")).isEqualTo(true);
             assertThat(model.getAttribute("defaultStatusApplied")).isEqualTo(true);
             assertThat(model.getAttribute("pageTitle")).isEqualTo("Manage Requests");
         }
