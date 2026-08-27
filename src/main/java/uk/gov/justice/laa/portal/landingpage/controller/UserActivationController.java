@@ -38,7 +38,6 @@ import uk.gov.justice.laa.portal.landingpage.dto.ReactivationRequestsPageData;
 import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.forms.DelegateReactivateUserCommentForm;
 import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
@@ -336,6 +335,7 @@ public class UserActivationController {
         model.addAttribute("user", user);
         model.addAttribute("profileId", profileId);
         model.addAttribute("requestId", request.get().getRequestId().toString());
+        model.addAttribute("requestCurrentStatus", request.get().getStatus());
 
         List<UserActivationRequestSummaryDto> latestRequestHistoryForUserProfile
                 = userReactivationRequestService.getLatestRequestHistoryForUserProfile(profileId);
@@ -381,7 +381,7 @@ public class UserActivationController {
         log.info("A delegate enable user request {} has been updated by {} for {}", requestId, actor.getUserId(), id);
 
         String activity = ReactivationRequestStatus.IN_REVIEW.equals(request.getStatus()) ? "information provided" : "information requested";
-        ReactivateUserRequestUpdatedAuditEvent event = new ReactivateUserRequestUpdatedAuditEvent(actor, id, profileId, activity);
+        ReactivateUserRequestUpdatedAuditEvent event = new ReactivateUserRequestUpdatedAuditEvent(actor, id, profileId, activity, request.getComments());
         eventService.logEvent(event);
 
         redirectAttributes.addAttribute("id", id);
@@ -478,7 +478,7 @@ public class UserActivationController {
         userReactivationRequestService.rejectReactivationRequest(requestId, id, profileId, delegateReactivateUserCommentForm.getComment(), user.getEntraOid());
         log.info("A delegate enable user request {} has been rejected by {} for {}", requestId, actor.getUserId(), id);
 
-        ReactivateUserRequestRejectedAuditEvent event = new ReactivateUserRequestRejectedAuditEvent(actor, id, profileId);
+        ReactivateUserRequestRejectedAuditEvent event = new ReactivateUserRequestRejectedAuditEvent(actor, id, profileId, delegateReactivateUserCommentForm.getComment());
         eventService.logEvent(event);
 
         clearSessionAttributes(session);
@@ -532,7 +532,9 @@ public class UserActivationController {
             @RequestParam(name = "direction", defaultValue = "desc") String direction,
             @RequestParam(name = "search", required = false, defaultValue = "") String search,
             @RequestParam(name = "selectedRequestStatuses", required = false) List<ReactivationRequestStatus> selectedRequestStatuses,
-            @RequestParam(name = "selectedUserTypes", required = false) List<ReactivationRoleType> selectedUserTypes,
+            @RequestParam(name = "showFirmAdmins", required = false) boolean showFirmAdmins,
+            @RequestParam(name = "showMultiFirmUsers", required = false) boolean showMultiFirmUsers,
+            @RequestParam(name = "showProviderUsers", required = false) boolean showProviderUsers,
             @RequestParam(name = "defaultStatusApplied", defaultValue = "false") boolean defaultStatusApplied,
             Model model,
             Authentication authentication) {
@@ -552,9 +554,14 @@ public class UserActivationController {
                     .queryParam("defaultStatusApplied", true)
                     .queryParam("selectedRequestStatuses", ReactivationRequestStatus.IN_REVIEW.name());
 
-            if (selectedUserTypes != null && !selectedUserTypes.isEmpty()) {
-                builder.queryParam("selectedUserTypes",
-                        selectedUserTypes.stream().map(Enum::name).toArray());
+            if (showFirmAdmins) {
+                builder.queryParam("showFirmAdmins", true);
+            }
+            if (showMultiFirmUsers) {
+                builder.queryParam("showMultiFirmUsers", true);
+            }
+            if (showProviderUsers) {
+                builder.queryParam("showProviderUsers", true);
             }
 
             if (search != null && !search.trim().isEmpty()) {
@@ -567,15 +574,14 @@ public class UserActivationController {
         List<ReactivationRequestStatus> statusFilters = selectedRequestStatuses == null
                 ? new ArrayList<>()
                 : selectedRequestStatuses;
-        List<ReactivationRoleType> userTypeFilters = selectedUserTypes == null
-                ? new ArrayList<>()
-                : selectedUserTypes;
 
         ReactivationRequestsPageData pageData = userReactivationRequestService.getPage(
                 authentication,
                 search,
                 statusFilters,
-                userTypeFilters,
+                showFirmAdmins,
+                showMultiFirmUsers,
+                showProviderUsers,
                 page,
                 size,
                 sort,
@@ -593,7 +599,9 @@ public class UserActivationController {
         model.addAttribute("sort", sort);
         model.addAttribute("direction", direction);
         model.addAttribute("selectedRequestStatuses", pageData.appliedStatuses());
-        model.addAttribute("selectedUserTypes", pageData.appliedActorRoleTypes());
+        model.addAttribute("showFirmAdmins", pageData.showFirmAdmins());
+        model.addAttribute("showMultiFirmUsers", pageData.showMultiFirmUsers());
+        model.addAttribute("showProviderUsers", pageData.showProviderUsers());
         model.addAttribute("defaultStatusApplied", pageMode.isManageMode() || defaultStatusApplied);
         model.addAttribute(ModelAttributes.PAGE_TITLE, pageData.pageMode().getHeading());
 

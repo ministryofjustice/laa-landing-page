@@ -95,7 +95,7 @@ spec:
                 - name: SLACK_WEBHOOK_URL
                   valueFrom:
                     secretKeyRef:
-                      name: slack-alert-webhook-secret
+                      name: slack-vuln-webhook-secret
                       key: webhook_url
               volumeMounts:
                 - name: zap-wrk

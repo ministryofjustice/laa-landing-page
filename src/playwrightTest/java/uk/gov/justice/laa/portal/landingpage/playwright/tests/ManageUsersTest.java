@@ -1670,6 +1670,58 @@ public class ManageUsersTest extends BaseFrontEndTest {
         ).isVisible();
     }
 
+    @Test
+    @DisplayName("Global Admin can deactivate and reactivate an external user")
+    void globalAdminCanDeactivateAndReactivateExternalUser() {
+
+        final String externalUserEmail =
+                "playwright-firmtwouserviewer@playwrighttest.com";
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        // Find active user
+        manageUsersPage.searchAndVerifyUser(externalUserEmail);
+        manageUsersPage.clickUserLink(externalUserEmail);
+
+        manageUsersPage.verifySilasAccountStatus("Active");
+        manageUsersPage.verifyDeactivateUserVisible();
+
+        // Deactivate user
+        manageUsersPage.clickDeactivateUser();
+
+        manageUsersPage.verifyDeactivateUserReasonPageVisible();
+        manageUsersPage.selectDeactivateUserReason("Provider Discretion");
+        manageUsersPage.clickDeactivateUserContinue();
+
+        manageUsersPage.verifyUserDeactivatedSuccessfully();
+
+        // Return to Manage Users
+        manageUsersPage.clickGoBackToManageUsers();
+
+        // Find same user and verify deactivated state
+        manageUsersPage.searchAndVerifyUser(externalUserEmail);
+        manageUsersPage.clickUserLink(externalUserEmail);
+
+        manageUsersPage.verifySilasAccountStatus("Deactivated");
+        manageUsersPage.verifyActivateUserVisible();
+
+        // Reactivate user
+        manageUsersPage.clickActivateUser();
+
+        // Click continue button
+        manageUsersPage.clickContinueLink();
+
+        // Add comments Click Comment button
+        manageUsersPage.populateEnableReason();
+        manageUsersPage.clickContinueLink();
+
+        // Now on Check your answers
+        manageUsersPage.confirmReactivateUser();
+
+        // Verify reactivation succeeded
+        manageUsersPage.verifyReactivationSuccessful();
+    }
 
 
 

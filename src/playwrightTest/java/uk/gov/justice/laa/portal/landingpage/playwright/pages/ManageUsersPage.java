@@ -45,6 +45,7 @@ public class ManageUsersPage {
     private final Locator userFullNameLink;
     private final Locator thirdPartyFilterCheckbox;
 
+
     // Create user
     private final Locator createNewUserButton;
     private final Locator emailInput;
@@ -53,6 +54,21 @@ public class ManageUsersPage {
     private final Locator providerUserRadio;
     private final Locator providerAdminRadio;
     private final Locator confirmNewUserButton;
+
+    // Enable / disable user
+    private final Locator silasAccountStatusRow;
+
+
+    // Activate / deactivate user
+    private final Locator deactivateUserLink;
+
+    // Enable user
+    private final Locator enableUserLink;
+
+    // Deactivate user workflow
+    private final Locator deactivateUserReasonHeading;
+    private final Locator deactivateUserContinueButton;
+    private final Locator userDeactivatedHeading;
 
     // Search and filters
     private final Locator searchUsersHeading;
@@ -107,6 +123,14 @@ public class ManageUsersPage {
     private final Locator lastNameInvalidCharsError;
     private final Locator selectUserTypeError;
 
+
+    // Reactivate user
+    private final Locator activateUserLink;
+    private final Locator reactivationSuccessfulHeading;
+    private final Locator goBackToPreviousPageButton;
+    private final Locator reactivateUserHeading;
+    private final Locator reactivateUserButton;
+
     // Convert to multi-firm
     private final Locator convertToMultiFirmLink;
     private final Locator convertToMultiFirmYesRadio;
@@ -130,6 +154,10 @@ public class ManageUsersPage {
     private final Locator revokeAccessConfirmButton;
     private final Locator revokeAccessSuccessBanner;
     private final Locator revokeAccessSuccessMessage;
+
+    private final Locator commentInput;
+
+
 
     public ManageUsersPage(Page page, int port) {
         this.page = page;
@@ -155,6 +183,22 @@ public class ManageUsersPage {
                 .filter(new Locator.FilterOptions()
                         .setHasText("Your firm admin is working on giving you access to the services you need"));
 
+        this.deactivateUserReasonHeading =
+                page.getByRole(
+                        AriaRole.HEADING,
+                        new Page.GetByRoleOptions()
+                                .setName("Choose a reason for deactivating access")
+                                .setExact(true)
+                );
+
+        this.deactivateUserContinueButton =
+                page.getByRole(
+                        AriaRole.BUTTON,
+                        new Page.GetByRoleOptions()
+                                .setName("Continue")
+                                .setExact(true)
+                );
+
         // Manage users search and filters
         this.searchInputByName =
                 page.locator("input#search[type='search']");
@@ -167,6 +211,34 @@ public class ManageUsersPage {
 
         this.thirdPartyFilterCheckbox =
                 page.locator("#showMultiFirmUsers");
+
+        // Enable / disable user
+
+
+        this.silasAccountStatusRow =
+                page.locator(".govuk-summary-list__row")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("SiLAS Account Status"));
+
+
+
+
+
+        this.enableUserLink =
+                silasAccountStatusRow.getByRole(
+                        AriaRole.LINK,
+                        new Locator.GetByRoleOptions()
+                                .setName("Enable user")
+                                .setExact(true)
+                );
+
+        this.goBackToPreviousPageButton =
+                page.getByRole(
+                        AriaRole.BUTTON,
+                        new Page.GetByRoleOptions()
+                                .setName("Go back to previous page")
+                                .setExact(true)
+                );
 
 
 
@@ -228,6 +300,31 @@ public class ManageUsersPage {
                         .setExact(true)
         );
 
+        this.userDeactivatedHeading =
+                page.getByRole(
+                        AriaRole.HEADING,
+                        new Page.GetByRoleOptions()
+                                .setName("User deactivated")
+                                .setExact(true)
+                );
+
+
+        this.deactivateUserLink =
+                silasAccountStatusRow.getByRole(
+                        AriaRole.LINK,
+                        new Locator.GetByRoleOptions()
+                                .setName("Deactivate user")
+                                .setExact(true)
+                );
+
+        this.activateUserLink =
+                silasAccountStatusRow.getByRole(
+                        AriaRole.LINK,
+                        new Locator.GetByRoleOptions()
+                                .setName("Activate user")
+                                .setExact(true)
+                );
+
 
         // Create user
         this.createNewUserButton =
@@ -238,6 +335,7 @@ public class ManageUsersPage {
         this.emailInput = page.locator("input#email");
         this.firstNameInput = page.locator("input#firstName");
         this.lastNameInput = page.locator("input#lastName");
+        this.commentInput = page.locator("textarea#comment");
 
         this.providerUserRadio =
                 page.locator("input#providerUser");
@@ -446,7 +544,33 @@ public class ManageUsersPage {
                 page.locator(
                         ".govuk-notification-banner__heading"
                 );
+
+        this.reactivateUserHeading =
+                page.getByRole(
+                        AriaRole.HEADING,
+                        new Page.GetByRoleOptions()
+                                .setName("Reactivate")
+                                .setExact(false)
+                );
+
+        this.reactivateUserButton =
+                page.getByRole(
+                        AriaRole.BUTTON,
+                        new Page.GetByRoleOptions()
+                                .setName("Reactivate user")
+                                .setExact(true)
+                );
+
+        this.reactivationSuccessfulHeading =
+                page.getByRole(
+                        AriaRole.HEADING,
+                        new Page.GetByRoleOptions()
+                                .setName("Reactivation successful")
+                                .setExact(true)
+                );
     }
+
+
 
 
 
@@ -1470,6 +1594,93 @@ public class ManageUsersPage {
                         "If you still don’t have access after 2 working days");
     }
 
+    public void verifyDeactivateUserReasonPageVisible() {
+        assertThat(deactivateUserReasonHeading).isVisible();
+    }
+
+    public void selectDeactivateUserReason(String reason) {
+        Locator reasonRadio = page.getByLabel(
+                reason,
+                new Page.GetByLabelOptions().setExact(true)
+        );
+
+        assertThat(reasonRadio).isVisible();
+        reasonRadio.check();
+        assertThat(reasonRadio).isChecked();
+    }
+
+    public void verifySilasAccountStatus(String expectedStatus) {
+        Locator statusTag = silasAccountStatusRow.locator(".govuk-tag");
+
+        assertThat(statusTag).isVisible();
+        assertThat(statusTag).hasText(expectedStatus);
+    }
+
+    public void clickDeactivateUserContinue() {
+        assertThat(deactivateUserContinueButton).isVisible();
+        deactivateUserContinueButton.click();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void verifyUserDeactivatedSuccessfully() {
+        assertThat(userDeactivatedHeading).isVisible();
+    }
+
+    public void verifyEnableUserVisible() {
+        assertThat(enableUserLink).isVisible();
+    }
+
+    public void clickEnableUser() {
+        assertThat(enableUserLink).isVisible();
+        enableUserLink.click();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+
+    public void clickGoBackToPreviousPage() {
+        assertThat(goBackToPreviousPageButton).isVisible();
+        goBackToPreviousPageButton.click();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void verifyDeactivateUserVisible() {
+        assertThat(deactivateUserLink).isVisible();
+    }
+
+    public void clickDeactivateUser() {
+        assertThat(deactivateUserLink).isVisible();
+        deactivateUserLink.click();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void verifyActivateUserVisible() {
+        assertThat(activateUserLink).isVisible();
+    }
+
+    public void clickActivateUser() {
+        assertThat(activateUserLink).isVisible();
+        activateUserLink.click();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void verifyReactivateUserPageVisible() {
+        assertThat(reactivateUserHeading).isVisible();
+        assertThat(reactivateUserButton).isVisible();
+    }
+
+    public void confirmReactivateUser() {
+        assertThat(reactivateUserButton).isVisible();
+        reactivateUserButton.click();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+    }
+
+    public void verifyReactivationSuccessful() {
+        assertThat(reactivationSuccessfulHeading).isVisible();
+    }
+
+    public void populateEnableReason() {
+        commentInput.fill("Test enable user reason");
+    }
 }
 
 

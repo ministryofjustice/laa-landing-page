@@ -1,48 +1,20 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import java.io.IOException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.Assertions;
-
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyCollection;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -54,18 +26,13 @@ import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
+import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.ObjectError;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import org.springframework.web.servlet.view.RedirectView;
-
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpSession;
 import uk.gov.justice.laa.portal.landingpage.config.MapperConfig;
 import uk.gov.justice.laa.portal.landingpage.config.UiLabelsProperties;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
@@ -102,6 +69,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserTypeReasonDisable;
 import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncompleteException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
+import uk.gov.justice.laa.portal.landingpage.forms.DelegateReactivateUserCommentForm;
 import uk.gov.justice.laa.portal.landingpage.forms.DisableUserReasonForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
@@ -129,11 +97,46 @@ import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.LogMonitoring;
+import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
+import uk.gov.justice.laa.portal.landingpage.viewmodel.DisableUserReasonViewModel;
+
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static uk.gov.justice.laa.portal.landingpage.utils.UserRoleType.EXTERNAL_USER_ADMIN;
 import static uk.gov.justice.laa.portal.landingpage.utils.UserRoleType.FIRM_USER_MANAGER;
 import static uk.gov.justice.laa.portal.landingpage.utils.UserRoleType.GLOBAL_ADMIN;
-import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
-import uk.gov.justice.laa.portal.landingpage.viewmodel.DisableUserReasonViewModel;
 
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
@@ -166,6 +169,7 @@ class UserControllerTest {
     private AppRoleService appRoleService;
     @Mock
     private AppService appService;
+    private static final String USER_ID = UUID.randomUUID().toString();
     @Mock
     private UserAccountStatusService disableUserService;
     @Mock
@@ -176,6 +180,12 @@ class UserControllerTest {
     private UserReactivationRequestService userReactivationRequestService;
     private Model model;
     private FirmSearchForm firmSearchForm;
+    private static final UUID CURRENT_USER_UUID = UUID.randomUUID();
+    private static final String PROFILE_ID = UUID.randomUUID().toString();
+    private static final String REFERER = "manage";
+    private static final String SESSION_ATTR_FORM = "delegateReactivateUserCommentForm";
+    @Mock
+    private UserAccountStatusService userAccountStatusService;
 
     @BeforeEach
     void setUp() {
@@ -183,6 +193,7 @@ class UserControllerTest {
                 new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService,
                 appRoleService, appService, disableUserService, notificationService, userReactivationRequestService,
                 uiLabelsProperties);
+                appRoleService, appService, userAccountStatusService, notificationService, userReactivationRequestService);
         userController.disableUserFeatureEnabled = true;
         lenient().when(accessControlService.getEnablementFlags(any()))
                 .thenReturn(new AccessControlService.EnablementFlags(false, false, false));
@@ -192,6 +203,7 @@ class UserControllerTest {
 
     @Test
     public void testEnableUserPostReturnsCorrectViewAndModelWhenIdIsValid() {
+        MockHttpSession httpSession = new MockHttpSession();
         UUID enabledUserId = UUID.randomUUID();
         UUID enabledByUserId = UUID.randomUUID();
         EntraUserDto enabledUser = EntraUserDto.builder()
@@ -207,8 +219,12 @@ class UserControllerTest {
 
         String referer = "manage";
         String profileId = UUID.randomUUID().toString();
+        DelegateReactivateUserCommentForm delegateReactivateUserCommentForm = DelegateReactivateUserCommentForm.builder()
+                .comment("Reactivating user for testing")
+                .build();
+        httpSession.setAttribute("delegateReactivateUserCommentForm", delegateReactivateUserCommentForm);
 
-        String view = userController.enableUserPost(enabledUserId.toString(), authentication, model, referer, profileId);
+        String view = userController.enableUserCheckAnswersPost(enabledUserId.toString(), authentication, model, httpSession, referer, profileId);
 
         assertThat(view).isEqualTo("enable-user-completed");
         assertThat(model.getAttribute("user")).isEqualTo(enabledUser);
@@ -221,7 +237,8 @@ class UserControllerTest {
         UUID noUserId = UUID.randomUUID();
         when(userService.getEntraUserById(noUserId.toString())).thenReturn(Optional.empty());
 
-        assertThrows(NoSuchElementException.class, () -> userController.enableUserPost(noUserId.toString(), authentication, model, null, null));
+        assertThrows(NoSuchElementException.class, () -> userController.enableUserCheckAnswersPost(noUserId.toString(),
+                authentication, model, session, null, null));
 
     }
 
@@ -6954,7 +6971,7 @@ class UserControllerTest {
         String profileId = UUID.randomUUID().toString();
 
         when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(returnedUser));
-        when(disableUserService.getDisableUserReasons(any())).thenReturn(List.of(reason));
+        when(userAccountStatusService.getDisableUserReasons(any())).thenReturn(List.of(reason));
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
 
@@ -7000,7 +7017,7 @@ class UserControllerTest {
         when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(returnedUser));
         when(loginService.getCurrentProfile(authentication))
                 .thenReturn(UserProfile.builder().appRoles(new HashSet<>()).build());
-        when(disableUserService.getDisableUserReasons(UserTypeReasonDisable.DEFAULT)).thenReturn(List.of(reason));
+        when(userAccountStatusService.getDisableUserReasons(UserTypeReasonDisable.DEFAULT)).thenReturn(List.of(reason));
 
         String view = userController.disableUserReasonsGet(userId.toString(), form, model, session, authentication,
                 referer, profileId);
@@ -7039,7 +7056,7 @@ class UserControllerTest {
         form.setReasonId(reason.getId().toString());
 
         when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(returnedUser));
-        when(disableUserService.getDisableUserReasons(UserTypeReasonDisable.IS_USER_DISABLE))
+        when(userAccountStatusService.getDisableUserReasons(UserTypeReasonDisable.IS_USER_DISABLE))
                 .thenReturn(List.of(reason));
 
         Set<AppRole> editorRoles = Set.of(AppRole.builder()
@@ -7090,7 +7107,7 @@ class UserControllerTest {
         String profileId = UUID.randomUUID().toString();
 
         when(userService.getEntraUserById(userId.toString())).thenReturn(Optional.of(returnedUser));
-        when(disableUserService.getDisableUserReasons(any())).thenReturn(List.of(reason));
+        when(userAccountStatusService.getDisableUserReasons(any())).thenReturn(List.of(reason));
         Set<AppRole> editorRoles = Set.of(AppRole.builder()
                 .name(FIRM_USER_MANAGER.getDescription())
                 .build());
@@ -8525,4 +8542,272 @@ class UserControllerTest {
             assertThat(view).isEqualTo("redirect:/admin/users");
         }
     }
+
+    // =========================================================================
+    // reactivateUserInitGet
+    // =========================================================================
+    @Nested
+    @DisplayName("GET /users/manage/{id}/activate-init")
+    class ReactivateUserInitGetTests {
+
+        @Test
+        @DisplayName("Should populate model attributes, clear session form, and return enable-user-initiation view")
+        void shouldReturnEnableUserInitiationView() {
+            EntraUserDto entraUserDto = EntraUserDto.builder().id(USER_ID).firstName("Jane").lastName("Smith").fullName("Jane Smith").build();
+            EntraUser currentEntraUser = EntraUser.builder().id(CURRENT_USER_UUID).firstName("Jane").lastName("Smith").build();
+            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(entraUserDto));
+            when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentEntraUser);
+            when(userService.isInternal(CURRENT_USER_UUID)).thenReturn(true);
+
+            String viewName = userController.reactivateUserInitGet(
+                    USER_ID, model, session, REFERER, PROFILE_ID, authentication
+            );
+
+            assertThat(viewName).isEqualTo("enable-user-initiation");
+            verify(session).removeAttribute(SESSION_ATTR_FORM);
+            assertThat(model.getAttribute("user")).isEqualTo(entraUserDto);
+            assertThat(model.getAttribute("profileId")).isEqualTo(PROFILE_ID);
+            assertThat(model.getAttribute("referer")).isEqualTo(REFERER);
+            assertThat(model.getAttribute("isInternalActor")).isEqualTo(true);
+            assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Reactivate User - Jane Smith");
+            assertThat(model.containsAttribute("cancelPath")).isTrue();
+        }
+
+        @Test
+        @DisplayName("Should throw NoSuchElementException when user not found")
+        void shouldThrowExceptionWhenUserNotFound() {
+            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> userController.reactivateUserInitGet(
+                    USER_ID, model, session, REFERER, PROFILE_ID, authentication
+            )).isInstanceOf(NoSuchElementException.class);
+
+            verify(session).removeAttribute(SESSION_ATTR_FORM);
+        }
+    }
+
+    // =========================================================================
+    // reactivateUserInitPost
+    // =========================================================================
+    @Nested
+    @DisplayName("POST /users/manage/{id}/activate-init")
+    class ReactivateUserInitPostTests {
+
+        @Test
+        @DisplayName("Should populate model with existing session form when present")
+        void shouldPopulateModelWithSessionFormWhenPresent() {
+            DelegateReactivateUserCommentForm sessionForm = new DelegateReactivateUserCommentForm();
+            sessionForm.setComment("Existing reactivate note");
+
+            EntraUserDto entraUserDto = EntraUserDto.builder()
+                    .firstName("Jane")
+                    .lastName("Smith")
+                    .fullName("Jane Smith")
+                    .build();
+            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(entraUserDto));
+            when(session.getAttribute(SESSION_ATTR_FORM)).thenReturn(sessionForm);
+
+            String viewName = userController.reactivateUserInitPost(
+                    USER_ID, authentication, model, session, REFERER, PROFILE_ID
+            );
+
+            assertThat(viewName).isEqualTo("enable-user-reason");
+            assertThat(model.getAttribute("user")).isEqualTo(entraUserDto);
+            assertThat(model.getAttribute("profileId")).isEqualTo(PROFILE_ID);
+            assertThat(model.getAttribute("referer")).isEqualTo(REFERER);
+            assertThat(model.getAttribute("delegateReactivateUserCommentForm")).isEqualTo(sessionForm);
+            assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Reactivate User Success - Jane Smith");
+        }
+
+        @Test
+        @DisplayName("Should instantiate new form when session form is absent")
+        void shouldInstantiateNewFormWhenSessionFormIsAbsent() {
+            EntraUserDto entraUserDto = EntraUserDto.builder().firstName("Jane").lastName("Smith").build();
+            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(entraUserDto));
+            when(session.getAttribute(SESSION_ATTR_FORM)).thenReturn(null);
+
+            String viewName = userController.reactivateUserInitPost(
+                    USER_ID, authentication, model, session, REFERER, PROFILE_ID
+            );
+
+            assertThat(viewName).isEqualTo("enable-user-reason");
+            assertThat(model.getAttribute("delegateReactivateUserCommentForm"))
+                    .isInstanceOf(DelegateReactivateUserCommentForm.class);
+        }
+    }
+
+    // =========================================================================
+    // reactivateUserCommentsGet
+    // =========================================================================
+    @Nested
+    @DisplayName("GET /users/manage/{id}/activate-comments")
+    class ReactivateUserCommentsGetTests {
+
+        @Test
+        @DisplayName("Should return enable-user-reason view with form from session")
+        void shouldReturnEnableUserReasonView() {
+            EntraUserDto entraUserDto = EntraUserDto.builder().firstName("Jane").lastName("Smith").fullName("Jane Smith").build();
+            DelegateReactivateUserCommentForm sessionForm = new DelegateReactivateUserCommentForm();
+            sessionForm.setComment("Prior reason");
+
+            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(entraUserDto));
+            when(session.getAttribute(SESSION_ATTR_FORM)).thenReturn(sessionForm);
+
+            String viewName = userController.reactivateUserCommentsGet(
+                    USER_ID, model, session, REFERER, PROFILE_ID
+            );
+
+            assertThat(viewName).isEqualTo("enable-user-reason");
+            assertThat(model.getAttribute("user")).isEqualTo(entraUserDto);
+            assertThat(model.getAttribute("delegateReactivateUserCommentForm")).isEqualTo(sessionForm);
+            assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Reactivate User Success - Jane Smith");
+        }
+    }
+
+    // =========================================================================
+    // reactivateUserCommentsPost
+    // =========================================================================
+    @Nested
+    @DisplayName("POST /users/manage/{id}/activate-comments")
+    class ReactivateUserCommentsPostTests {
+
+        @Test
+        @DisplayName("Should store form in session and navigate to check-answers on valid submission")
+        void shouldProceedToCheckAnswersOnSuccess() {
+            DelegateReactivateUserCommentForm form = new DelegateReactivateUserCommentForm();
+            form.setComment("Valid reactivation justification comment.");
+            BindingResult bindingResult = new BeanPropertyBindingResult(form, "delegateReactivateUserCommentForm");
+
+            EntraUserDto entraUserDto = EntraUserDto.builder().firstName("Jane").lastName("Smith").fullName("Jane Smith").build();
+            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(entraUserDto));
+
+            String viewName = userController.reactivateUserCommentsPost(
+                    USER_ID, form, bindingResult, model, session, REFERER, PROFILE_ID
+            );
+
+            assertThat(viewName).isEqualTo("enable-user-check-answers");
+            verify(session).setAttribute(SESSION_ATTR_FORM, form);
+            assertThat(model.getAttribute("user")).isEqualTo(entraUserDto);
+            assertThat(model.getAttribute("delegateReactivateUserCommentForm")).isEqualTo(form);
+            assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Reactivate User Success - Jane Smith");
+        }
+
+        @Test
+        @DisplayName("Should return to reason form and set error attributes when validation fails")
+        void shouldReturnToReasonFormWhenValidationErrorsPresent() {
+            DelegateReactivateUserCommentForm form = new DelegateReactivateUserCommentForm();
+            form.setComment("Short");
+            BindingResult bindingResult = new BeanPropertyBindingResult(form, "delegateReactivateUserCommentForm");
+            bindingResult.rejectValue("comment", "Size", "Too short");
+
+            EntraUserDto entraUserDto = EntraUserDto.builder().firstName("Jane").lastName("Smith").build();
+            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(entraUserDto));
+
+            String viewName = userController.reactivateUserCommentsPost(
+                    USER_ID, form, bindingResult, model, session, REFERER, PROFILE_ID
+            );
+
+            assertThat(viewName).isEqualTo("enable-user-reason");
+            verify(session, never()).setAttribute(eq(SESSION_ATTR_FORM), any());
+            assertThat(model.getAttribute("errorMessage")).isEqualTo("Please provide reason for reactivating the user");
+            assertThat(bindingResult.hasFieldErrors("comment")).isTrue();
+            assertThat(bindingResult.getFieldError("comment").getDefaultMessage())
+                    .isEqualTo("Too short");
+        }
+    }
+
+    // =========================================================================
+    // enableUserCheckAnswersGet
+    // =========================================================================
+    @Nested
+    @DisplayName("GET /users/manage/{id}/activate-check-answers")
+    class EnableUserCheckAnswersGetTests {
+
+        @Test
+        @DisplayName("Should populate model and return enable-user-check-answers view when session form exists")
+        void shouldReturnCheckAnswersViewWhenSessionExists() {
+            DelegateReactivateUserCommentForm form = new DelegateReactivateUserCommentForm();
+            form.setComment("Reactivation details confirmed.");
+
+            EntraUserDto entraUserDto = EntraUserDto.builder().firstName("Jane").lastName("Smith").fullName("Jane Smith").build();
+            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(entraUserDto));
+            when(session.getAttribute(SESSION_ATTR_FORM)).thenReturn(form);
+
+            String viewName = userController.enableUserCheckAnswersGet(
+                    USER_ID, model, session, REFERER, PROFILE_ID
+            );
+
+            assertThat(viewName).isEqualTo("enable-user-check-answers");
+            assertThat(model.getAttribute("user")).isEqualTo(entraUserDto);
+            assertThat(model.getAttribute("delegateReactivateUserCommentForm")).isEqualTo(form);
+            assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Reactivate User Success - Jane Smith");
+        }
+
+        @Test
+        @DisplayName("Should throw ResponseStatusException (404) when form is missing from session")
+        void shouldThrow404WhenSessionFormIsMissing() {
+            EntraUserDto entraUserDto = EntraUserDto.builder().firstName("Jane").lastName("Smith").build();
+            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(entraUserDto));
+            when(session.getAttribute(SESSION_ATTR_FORM)).thenReturn(null);
+
+            assertThatThrownBy(() -> userController.enableUserCheckAnswersGet(
+                    USER_ID, model, session, REFERER, PROFILE_ID
+            )).isInstanceOf(ResponseStatusException.class)
+                    .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode().value()).isEqualTo(404));
+        }
+    }
+
+    // =========================================================================
+    // enableUserCheckAnswersPost
+    // =========================================================================
+    @Nested
+    @DisplayName("POST /users/manage/{id}/activate-check-answers")
+    class EnableUserCheckAnswersPostTests {
+
+        @Test
+        @DisplayName("Should execute enableUser service call, clear session, and return completed view")
+        void shouldCompleteUserReactivation() {
+            DelegateReactivateUserCommentForm form = new DelegateReactivateUserCommentForm();
+            form.setComment("Final confirmed reason.");
+            EntraUserDto entraUserDto = EntraUserDto.builder().id(USER_ID).firstName("Jane").lastName("Smith").fullName("Jane Smith").build();
+            EntraUser currentEntraUser = EntraUser.builder().id(CURRENT_USER_UUID).firstName("Jane").lastName("Smith").build();
+
+            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(entraUserDto));
+            when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentEntraUser);
+            when(session.getAttribute(SESSION_ATTR_FORM)).thenReturn(form);
+
+            String viewName = userController.enableUserCheckAnswersPost(
+                    USER_ID, authentication, model, session, REFERER, PROFILE_ID
+            );
+
+            assertThat(viewName).isEqualTo("enable-user-completed");
+            verify(userAccountStatusService).enableUser(
+                    UUID.fromString(USER_ID),
+                    CURRENT_USER_UUID,
+                    "Final confirmed reason."
+            );
+            verify(session).removeAttribute(SESSION_ATTR_FORM);
+            assertThat(model.getAttribute("user")).isEqualTo(entraUserDto);
+            assertThat(model.getAttribute(ModelAttributes.PAGE_TITLE)).isEqualTo("Reactivate User Success - Jane Smith");
+        }
+
+        @Test
+        @DisplayName("Should throw ResponseStatusException (404) on submission when form is missing from session")
+        void shouldThrow404WhenFormMissingOnSubmit() {
+            EntraUserDto entraUserDto = EntraUserDto.builder().id(USER_ID).firstName("Jane").lastName("Smith").build();
+            EntraUser currentEntraUser = EntraUser.builder().firstName("Jane").lastName("Smith").build();
+            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(entraUserDto));
+            when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentEntraUser);
+            when(session.getAttribute(SESSION_ATTR_FORM)).thenReturn(null);
+
+            assertThatThrownBy(() -> userController.enableUserCheckAnswersPost(
+                    USER_ID, authentication, model, session, REFERER, PROFILE_ID
+            )).isInstanceOf(ResponseStatusException.class)
+                    .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode().value()).isEqualTo(404));
+
+            verify(userAccountStatusService, never()).enableUser(any(), any(), any());
+            verify(session, never()).removeAttribute(anyString());
+        }
+    }
+
 }
