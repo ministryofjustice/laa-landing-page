@@ -32,12 +32,15 @@
                 </div>
             </div>
 
-            <h1 class="govuk-heading-l" th:text="'Provide a comment'">
-                Provide a comment
+            <h1 class="govuk-heading-l" th:text="'Provide a reason'">
+                Provide a reason
             </h1>
 
-            <p class="govuk-body">This user has been deactivated by the Legal Aid Agency. You need to request
-                for their account to be reactivated.</p>
+            <p class="govuk-body">
+                This user has been deactivated by the Legal Aid Agency. You need to request
+                <br>
+                for their account to be reactivated.
+            </p>
 
             <p class="govuk-body">The justification should include:</p>
 
@@ -57,9 +60,7 @@
                     </div>
 
                     <label class="govuk-label govuk-label--m" for="reassignment-comment">
-                        Please enter a comment (minimum 10 characters).
                     </label>
-
                     <textarea class="govuk-textarea govuk-!-margin-bottom-0"
                               th:classappend="${#fields.hasErrors('comment')} ? 'govuk-textarea--error' : ''"
                               id="reassignment-comment"
