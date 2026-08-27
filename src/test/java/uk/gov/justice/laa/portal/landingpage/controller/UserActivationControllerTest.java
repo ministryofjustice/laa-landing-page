@@ -403,7 +403,9 @@ public class UserActivationControllerTest {
 
             when(userService.getEntraUserById(userId)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> userActivationController.trackDelegateReactivateUserRequestsGet(userId, session, model, profileId, null, redirectAttributes)).isInstanceOf(NoSuchElementException.class);
+            assertThatThrownBy(() -> userActivationController.trackDelegateReactivateUserRequestsGet(
+                    userId, session, model, profileId, null, redirectAttributes)
+            ).isInstanceOf(NoSuchElementException.class);
         }
 
         @Test
