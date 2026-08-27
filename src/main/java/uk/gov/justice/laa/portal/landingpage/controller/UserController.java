@@ -1233,7 +1233,7 @@ public class UserController {
                 .sorted()
                 .toList();
 
-               List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
+        List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
                 .orElse(List.of());
         @SuppressWarnings("unchecked")
         Map<Integer, List<String>> selectedAppRole = (Map<Integer, List<String>>) session
