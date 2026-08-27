@@ -216,6 +216,11 @@ public class UserActivationController {
     public String delegateReactivateUserCommentsCheckAnswersGet(@PathVariable String id,
                                                                 Model model,
                                                                 HttpSession session) {
+
+        if (getObjectFromHttpSession(session, "delegateReactivateUserId", String.class).isEmpty()) {
+            return "journey-completed";
+        }
+
         log.info("Rendering check-answers step for userId: {}", id);
 
         if (!delegateUserActivationFeatureEnabled) {
