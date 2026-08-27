@@ -18,7 +18,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
-import uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
@@ -230,39 +229,40 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
     }
 
     @Test
-    public void testSelectedUserTypesFiltersResultsByActorRoleType() throws Exception {
+    public void testShowMultiFirmUsersFiltersResultsByThirdPartyTargetUser() throws Exception {
         EntraUser globalAdmin = globalAdmins.getFirst();
-        UUID globalAdminProfileId = globalAdmin.getUserProfiles().stream()
-                .map(UserProfile::getId)
+        EntraUser multiFirmUser = multiFirmUsers.getFirst();
+        UUID multiFirmProfileId = multiFirmUser.getUserProfiles().stream()
+                .map(profile -> profile.getId())
                 .findFirst()
                 .orElseThrow();
 
-        seedActivationRequest(globalAdminProfileId);
+        UUID providerAdminProfileId = firmUserManagers.getFirst().getUserProfiles().stream()
+                .map(profile -> profile.getId())
+                .findFirst()
+                .orElseThrow();
+        seedActivationRequest(providerAdminProfileId);
 
-        UserActivationRequest laaActorRequest = new UserActivationRequest();
-        laaActorRequest.setRequestId(UUID.randomUUID());
-        laaActorRequest.setUserProfileId(globalAdminProfileId);
-        laaActorRequest.setVersion(1);
-        laaActorRequest.setStatus(ReactivationRequestStatus.IN_REVIEW);
-        laaActorRequest.setComments("Raised by an LAA actor");
-        laaActorRequest.setActorEntraOid(UUID.randomUUID().toString());
-        laaActorRequest.setActorRoleType(ReactivationRoleType.LAA);
-        laaActorRequest.setCreatedAt(Instant.now());
-        userActivationRequestRepository.saveAndFlush(laaActorRequest);
+        UserActivationRequest thirdPartyRequest = seedActivationRequest(multiFirmProfileId);
 
         var result = mockMvc.perform(get("/admin/users/reactivation-requests")
                         .param("defaultStatusApplied", "true")
                         .param("selectedRequestStatuses", "IN_REVIEW")
-                        .param("selectedUserTypes", "LAA")
+                        .param("showMultiFirmUsers", "true")
                         .with(userOauth2Login(globalAdmin)))
                 .andExpect(status().isOk())
                 .andReturn();
+
+        assertThat(result.getResponse().getContentAsString())
+                .contains("3rd Party")
+                .doesNotContain("value=\"PRIVILEGED\"");
 
         @SuppressWarnings("unchecked")
         List<ReactivationRequestListItem> requests =
                 (List<ReactivationRequestListItem>) result.getModelAndView().getModel().get("requests");
 
         assertThat(requests).hasSize(1);
-        assertThat(requests.getFirst().actorRoleType()).isEqualTo(AuthzRoleType.LAA.getLabel());
+        assertThat(requests.getFirst().requestId()).isEqualTo(thirdPartyRequest.getRequestId());
+        assertThat(requests.getFirst().userType()).isEqualTo("3rd Party");
     }
 }
