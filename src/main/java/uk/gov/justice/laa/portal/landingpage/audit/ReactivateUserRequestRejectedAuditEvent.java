@@ -8,14 +8,17 @@ public class ReactivateUserRequestRejectedAuditEvent extends AuditEvent {
 
     private final String targetUserId;
     private final String targetUserProfileId;
+    private final String comments;
 
 
-    public ReactivateUserRequestRejectedAuditEvent(CurrentUserDto currentUserDto, String targetUserId, String targetUserProfileId) {
+    public ReactivateUserRequestRejectedAuditEvent(CurrentUserDto currentUserDto, String targetUserId,
+                                                   String targetUserProfileId, String comments) {
         super();
         this.userId = currentUserDto.getUserId();
         this.userName = currentUserDto.getName();
         this.targetUserId = targetUserId;
         this.targetUserProfileId = targetUserProfileId;
+        this.comments = comments;
     }
 
     @Override
@@ -25,7 +28,7 @@ public class ReactivateUserRequestRejectedAuditEvent extends AuditEvent {
 
     @Override
     public String getDescription() {
-        return String.format("User (Entra OID: %s) has rejected reactivation request for (User Entra ID: %s; User Profile ID: %s)",
-                userId, targetUserId, targetUserProfileId);
+        return String.format("User (Entra OID: %s) has rejected reactivation request for (User Entra ID: %s; User Profile ID: %s), with comments: %s",
+                userId, targetUserId, targetUserProfileId, comments);
     }
 }

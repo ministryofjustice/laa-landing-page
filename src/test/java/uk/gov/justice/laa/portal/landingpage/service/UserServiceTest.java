@@ -98,6 +98,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
+import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
@@ -110,8 +111,10 @@ import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.DeleteUserReasonRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
@@ -160,7 +163,9 @@ class UserServiceTest {
     @Mock
     private AccessControlService accessControlService;
     @Mock
-    private uk.gov.justice.laa.portal.landingpage.repository.DeleteUserReasonRepository mockDeleteUserReasonRepository;
+    private UserReactivationRequestService userReactivationRequestService;
+    @Mock
+    private DeleteUserReasonRepository mockDeleteUserReasonRepository;
 
     @BeforeEach
     void setUp() {
@@ -180,7 +185,8 @@ class UserServiceTest {
                 mockEventService,
                 notificationService,
                 accessControlService,
-                mockDeleteUserReasonRepository);
+                mockDeleteUserReasonRepository,
+                userReactivationRequestService);
     }
 
     @Test
@@ -405,6 +411,71 @@ class UserServiceTest {
         verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
         verify(mockEntraUserRepository, times(1)).delete(entraUser);
+        assertThat(result).isNotNull();
+        assertEquals(result.getDeletedUserEntraOid(), entraId.toString());
+    }
+
+    @Test
+    void deleteExternalUser_successPath_rejectsOpenReactivationRequests() {
+        // Arrange
+        UUID entraId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        String actorId = UUID.randomUUID().toString();
+
+        EntraUser entraUser = EntraUser.builder()
+                .id(entraId)
+                .email("user@example.com")
+                .entraOid(entraId.toString())
+                .enabled(false)
+                .build();
+
+        AppRole role1 = AppRole.builder().name("Role1").build();
+
+        UserProfile profile = UserProfile.builder()
+                .id(profileId)
+                .activeProfile(true)
+                .userType(UserType.EXTERNAL)
+                .entraUser(entraUser)
+                .appRoles(new HashSet<>(Set.of(role1)))
+                .build();
+        entraUser.setUserProfiles(new HashSet<>(Set.of(profile)));
+
+        EntraUserDto entraUserDto = new MapperConfig().modelMapper().map(entraUser, EntraUserDto.class);
+
+        EntraUser actorUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .entraOid(actorId)
+                .firstName("Actor")
+                .lastName("User")
+                .build();
+
+        when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(profile));
+        when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
+        when(mockEntraUserRepository.findByEntraOid(actorId)).thenReturn(Optional.of(actorUser));
+        when(mockUserAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
+        when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
+        when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
+        when(userReactivationRequestService.hasOpenReactivationRequest(entraId)).thenReturn(true);
+
+        UserActivationRequest openReactivationRequest = UserActivationRequest.builder().requestId(UUID.randomUUID())
+                .userProfileId(profileId).status(ReactivationRequestStatus.INFORMATION_REQUIRED).build();
+        when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(String.valueOf(profileId))).thenReturn(Optional.of(openReactivationRequest));
+
+        // Act
+        var result = userService.deleteExternalUser(profileId.toString(), null, actorId);
+
+        // Assert
+        verify(techServicesClient).disableUser(entraUserDto, "RoleChangeorNoLongerRequired");
+        verify(techServicesClient).deleteRoleAssignment(entraId);
+        verify(mockEntraUserRepository).findByEntraOid(actorId);
+        verify(mockUserAccountStatusAuditRepository).save(any(UserAccountStatusAudit.class));
+        verify(mockUserAccountStatusAuditRepository).findByEntraUser(entraUser);
+        verify(mockUserProfileRepository, times(1)).deleteAll(any());
+        verify(mockEntraUserRepository, times(1)).delete(entraUser);
+        verify(userReactivationRequestService, times(1)).hasOpenReactivationRequest(entraId);
+        verify(userReactivationRequestService).findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(String.valueOf(profileId));
+        verify(userReactivationRequestService).rejectReactivationRequest(String.valueOf(openReactivationRequest.getRequestId()),
+                String.valueOf(entraId), String.valueOf(profileId), "Unknown", actorId);
         assertThat(result).isNotNull();
         assertEquals(result.getDeletedUserEntraOid(), entraId.toString());
     }
@@ -2205,6 +2276,36 @@ class UserServiceTest {
         // Act & Assert
         assertThrows(OfficeAssignmentException.class,
                 () -> userService.addMultiFirmUserProfile(entraUserDto, firmDto, List.of(officeDto), null, "admin"));
+    }
+
+    @Test
+    void addMultiFirmUserProfile_userHasOpenReactivationRequest_shouldThrow() {
+        // Arrange
+
+        EntraUserDto entraUserDto = new EntraUserDto();
+        entraUserDto.setId(UUID.randomUUID().toString());
+        entraUserDto.setEntraOid("entra-oid");
+        entraUserDto.setMultiFirmUser(true);
+        entraUserDto.setEnabled(false);
+
+        FirmDto firmDto = new FirmDto();
+        UUID targetFirmId = UUID.randomUUID();
+        firmDto.setId(targetFirmId);
+
+        OfficeDto officeDto = new OfficeDto();
+        UUID officeId = UUID.randomUUID();
+        officeDto.setId(officeId);
+
+        // officeRepository.findById will return an Office that belongs to a different firm
+        UUID otherFirmId = UUID.randomUUID();
+        Office otherOffice = Office.builder().id(officeId).firm(Firm.builder().id(otherFirmId).build()).build();
+        when(mockOfficeRepository.findById(officeId)).thenReturn(Optional.of(otherOffice));
+        when(userReactivationRequestService.hasOpenReactivationRequest(UUID.fromString(entraUserDto.getId()))).thenReturn(true);
+
+        // Act & Assert
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> userService.addMultiFirmUserProfile(entraUserDto, firmDto, List.of(officeDto), null, "admin"));
+        assertThat(exception.getMessage()).contains("This user already has an open reactivation request for user Entra ID");
     }
 
     @Test
@@ -5970,6 +6071,142 @@ class UserServiceTest {
         }
 
         @Test
+        void deleteFirmProfile_Success_RejectsOpenReactivationRequests() {
+            // Given
+            ListAppender<ILoggingEvent> listAppender = LogMonitoring.addListAppenderToLogger(UserService.class);
+            UUID userProfileId = UUID.randomUUID();
+            UUID entraUserId = UUID.randomUUID();
+            UUID firmId = UUID.randomUUID();
+            UUID actorId = UUID.randomUUID();
+
+            // Create EntraUser with multi-firm flag
+            EntraUser entraUser = EntraUser.builder()
+                    .id(entraUserId)
+                    .firstName("John")
+                    .lastName("Doe")
+                    .enabled(false)
+                    .email("john.doe@example.com")
+                    .multiFirmUser(true)
+                    .userProfiles(new HashSet<>())
+                    .build();
+
+            // Create firm
+            Firm firm = Firm.builder()
+                    .id(firmId)
+                    .name("Test Law Firm")
+                    .code("12345")
+                    .build();
+
+            // Create offices
+            Office office1 = Office.builder()
+                    .id(UUID.randomUUID())
+                    .firm(firm)
+                    .build();
+            Office office2 = Office.builder()
+                    .id(UUID.randomUUID())
+                    .firm(firm)
+                    .build();
+
+            // Create app roles with CCMS codes for PUI roles
+            App puiApp = App.builder()
+                    .id(UUID.randomUUID())
+                    .entraOid(UUID.randomUUID().toString())
+                    .name("PUI")
+                    .build();
+            AppRole puiRole1 = AppRole.builder()
+                    .id(UUID.randomUUID())
+                    .name("PUI_CASE_WORKER")
+                    .app(puiApp)
+                    .ccmsCode("CCMS.PUI.CASEWORKER")
+                    .legacySync(true)
+                    .build();
+            AppRole puiRole2 = AppRole.builder()
+                    .id(UUID.randomUUID())
+                    .name("PUI_FINANCE")
+                    .app(puiApp)
+                    .ccmsCode("CCMS.PUI.FINANCE")
+                    .legacySync(true)
+                    .build();
+            AppRole nonPuiRole = AppRole.builder()
+                    .id(UUID.randomUUID())
+                    .name("SOME_OTHER_ROLE")
+                    .app(App.builder().id(UUID.randomUUID()).name("OtherApp").build())
+                    .build();
+
+            // Create user profile to delete (active profile)
+            UserProfile profileToDelete = UserProfile.builder()
+                    .id(userProfileId)
+                    .entraUser(entraUser)
+                    .firm(firm)
+                    .activeProfile(true)
+                    .appRoles(new HashSet<>(Arrays.asList(puiRole1, puiRole2, nonPuiRole)))
+                    .offices(new HashSet<>(Arrays.asList(office1, office2)))
+                    .build();
+
+            // Create another profile for the same user (will become active)
+            UUID otherFirmId = UUID.randomUUID();
+            Firm otherFirm = Firm.builder()
+                    .id(otherFirmId)
+                    .name("Other Law Firm")
+                    .code("67890")
+                    .build();
+            UserProfile otherProfile = UserProfile.builder()
+                    .id(UUID.randomUUID())
+                    .entraUser(entraUser)
+                    .firm(otherFirm)
+                    .activeProfile(false)
+                    .build();
+
+            // Set up bidirectional relationship
+            entraUser.getUserProfiles().add(profileToDelete);
+            entraUser.getUserProfiles().add(otherProfile);
+
+            // Mock repository calls
+            when(mockUserProfileRepository.findById(userProfileId)).thenReturn(Optional.of(profileToDelete));
+            when(mockUserProfileRepository.findAllByEntraUser(entraUser))
+                    .thenReturn(Arrays.asList(profileToDelete, otherProfile));
+            when(mockUserProfileRepository.save(any(UserProfile.class))).thenAnswer(returnsFirstArg());
+            when(userReactivationRequestService.hasOpenReactivationRequest(entraUserId)).thenReturn(true);
+
+            UserActivationRequest openReactivationRequest = UserActivationRequest.builder().requestId(UUID.randomUUID())
+                    .userProfileId(userProfileId).status(ReactivationRequestStatus.IN_REVIEW).build();
+            when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(String.valueOf(userProfileId)))
+                    .thenReturn(Optional.of(openReactivationRequest));
+
+            // When
+            boolean result = userService.deleteFirmProfile(userProfileId.toString(), actorId);
+
+            // Then
+            assertThat(result).isTrue();
+
+            List<ILoggingEvent> infoLogs = LogMonitoring.getLogsByLevel(listAppender, Level.INFO);
+            assertThat(infoLogs.size()).isEqualTo(1);
+            assertThat(infoLogs.getFirst().getFormattedMessage())
+                    .contains(String.format("Deleting firm profile for multi-firm user. actorId=%s, userProfileId=%s, entraUserId=%s,firm=%s",
+                            actorId, userProfileId, entraUser.getId(), firm.getName()));
+
+            // Verify profile was cleared of roles and offices
+            assertThat(profileToDelete.getAppRoles()).isEmpty();
+            assertThat(profileToDelete.getOffices()).isEmpty();
+
+            // Verify profile was deleted
+            verify(mockUserProfileRepository).delete(profileToDelete);
+
+            // Verify save was called at least once (for clearing entra user ref before
+            // deletion,
+            // and potentially setting new active profile after deletion)
+            verify(mockUserProfileRepository, atLeast(1)).save(any(UserProfile.class));
+
+            // Verify PUI notifications were sent (once with empty new roles and PUI old
+            // roles)
+            verify(mockRoleChangeNotificationService, times(1)).sendMessage(eq(profileToDelete), anyString(), any(), any());
+
+            // Verify reject open reactivation request triggered
+            verify(userReactivationRequestService, times(1)).rejectReactivationRequest(String.valueOf(openReactivationRequest.getRequestId()),
+                    String.valueOf(entraUserId), String.valueOf(userProfileId), "Unknown", String.valueOf(actorId));
+        }
+
+        @Test
         void deleteFirmProfile_NotMultiFirmUser_ThrowsException() {
             // Given
             UUID userProfileId = UUID.randomUUID();
@@ -9667,6 +9904,26 @@ class UserServiceTest {
             assertThatThrownBy(() -> userService.convertToMultiFirmUser(userId.toString()))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessageContaining("already a multi-firm user");
+        }
+
+        @Test
+        void convertToMultiFirmUser_userGotOpenReactivationRequest() {
+            // Given
+            UUID userId = UUID.randomUUID();
+            EntraUser user = EntraUser.builder()
+                    .id(userId)
+                    .email("user@example.com")
+                    .enabled(false)
+                    .build();
+
+            when(mockEntraUserRepository.findById(userId)).thenReturn(Optional.of(user));
+            when(userReactivationRequestService.hasOpenReactivationRequest(userId)).thenReturn(true);
+
+            // When/Then
+            assertThatThrownBy(() -> userService.convertToMultiFirmUser(userId.toString()))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("This user is deactivated. There is an open reactivation request. "
+                            + "The request must be closed before try convert the user to multi-firm user.");
         }
     }
 
