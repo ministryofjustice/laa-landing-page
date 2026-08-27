@@ -191,7 +191,8 @@ class UserControllerTest {
     void setUp() {
         userController = new UserController(loginService, userService, officeService, eventService, firmService,
                 new MapperConfig().modelMapper(), accessControlService, roleAssignmentService, emailValidationService,
-                appRoleService, appService, userAccountStatusService,notificationService, userReactivationRequestService, uiLabelsProperties);
+                appRoleService, appService, userAccountStatusService, notificationService,
+                userReactivationRequestService, uiLabelsProperties);
 
         userController.disableUserFeatureEnabled = true;
         lenient().when(accessControlService.getEnablementFlags(any()))
