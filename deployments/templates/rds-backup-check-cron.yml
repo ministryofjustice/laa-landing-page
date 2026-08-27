@@ -75,7 +75,7 @@ spec:
         spec:
           serviceAccountName: "irsa-laa-landing-page-${ENV_NAME}-rds-backup-check"
           securityContext:
-            runAsUser: 1000
+            runAsUser: 10000
             runAsNonRoot: true
             seccompProfile:
               type: RuntimeDefault
@@ -83,7 +83,7 @@ spec:
           containers:
             - name: rds-backup-check
               image: public.ecr.aws/lambda/python:3.12 # ships boto3 pre-installed; entrypoint overridden below
-              imagePullPolicy: IfNotPresent
+              imagePullPolicy: Always
               resources:
                 limits:
                   cpu: 250m
