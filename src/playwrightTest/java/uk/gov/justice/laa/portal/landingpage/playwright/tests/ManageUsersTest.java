@@ -1709,7 +1709,14 @@ public class ManageUsersTest extends BaseFrontEndTest {
         // Reactivate user
         manageUsersPage.clickActivateUser();
 
-        manageUsersPage.verifyReactivateUserPageVisible();
+        // Click continue button
+        manageUsersPage.clickContinueLink();
+
+        // Add comments Click Comment button
+        manageUsersPage.populateEnableReason();
+        manageUsersPage.clickContinueLink();
+
+        // Now on Check your answers
         manageUsersPage.confirmReactivateUser();
 
         // Verify reactivation succeeded

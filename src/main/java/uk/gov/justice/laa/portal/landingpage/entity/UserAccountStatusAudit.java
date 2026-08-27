@@ -78,4 +78,8 @@ public class UserAccountStatusAudit extends BaseEntity {
     @JsonIgnore
     private DeleteUserReason deleteUserReason;
 
+    @Column(name = "comments", nullable = true, length = 500, columnDefinition = "VARCHAR(500)")
+    @Size(max = 500, message = "Comments must not exceed 500 characters")
+    private String comments;
+
 }
