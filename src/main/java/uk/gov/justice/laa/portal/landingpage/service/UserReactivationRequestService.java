@@ -25,9 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.ReactivationRequestsPageData;
 import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
-import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
-import uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
@@ -409,25 +407,6 @@ public class UserReactivationRequestService {
         return items;
     }
 
-    private AuthzRoleType determineTargetUserType(UserProfile profile, EntraUser targetUser) {
-        if (targetUser != null && targetUser.isMultiFirmUser()) {
-            return AuthzRoleType.PROVIDER_ADMIN;
-        }
-        if (profile == null || profile.getAppRoles() == null) {
-            return AuthzRoleType.NONE;
-        }
-        for (AppRole appRole : profile.getAppRoles()) {
-            if (appRole.isAuthzRole()) {
-                for (AuthzRole role : AuthzRole.values()) {
-                    if (role.getRoleName().equals(appRole.getName())) {
-                        return role.getAuthzRoleType();
-                    }
-                }
-            }
-        }
-        return AuthzRoleType.NONE;
-    }
-
     private boolean isVisibleToViewer(UserActivationRequest request, UserProfile profile,
                                       EntraUser currentUser, boolean isGlobalAdminOrSecurityResponse,
                                       boolean isExternalUserAdmin, boolean isExternalUserManager,
@@ -474,7 +453,6 @@ public class UserReactivationRequestService {
         String userEmail = targetUser != null ? targetUser.getEmail() : null;
         String userType = determineTargetUserType(profile, targetUser);
         String actorRoleType = request.getActorRoleType() != null ? request.getActorRoleType().getDisplayName() : null;
-        AuthzRoleType authzRoleType = determineTargetUserType(profile, targetUser);
         ReactivationRequestStatus status = ReactivationRequestStatus.valueOf(request.getStatus().name());
         // dateSubmitted reflects when the request was originally raised (version 1),
         // while lastActivity reflects the most recent version's timestamp (this row).

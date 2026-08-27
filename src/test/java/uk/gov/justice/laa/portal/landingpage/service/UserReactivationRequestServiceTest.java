@@ -927,7 +927,7 @@ class UserReactivationRequestServiceTest {
                             currentUser, AuthzRole.EXTERNAL_USER_MANAGER.getRoleName())).thenReturn(true);
 
                     ReactivationRequestsPageData result = service.getPage(
-                            authentication, "", null, null, 1, 10, null, "asc");
+                            authentication, "", null, false, false, false, 1, 10, null, "asc");
 
                     assertThat(result.paginatedRequests().getRequests()).hasSize(1);
                 }
@@ -963,7 +963,7 @@ class UserReactivationRequestServiceTest {
                             currentUser, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())).thenReturn(true);
 
                     ReactivationRequestsPageData result = service.getPage(
-                            authentication, "", null, null, 1, 10, null, "asc");
+                            authentication, "", null, false, false, false, 1, 10, null, "asc");
 
                     assertThat(result.paginatedRequests().getRequests()).hasSize(1);
                 }
@@ -1036,7 +1036,7 @@ class UserReactivationRequestServiceTest {
                             currentUser, AuthzRole.EXTERNAL_USER_SUPPORT.getRoleName())).thenReturn(true);
 
                     ReactivationRequestsPageData result = service.getPage(
-                            authentication, "", null, null, 1, 10, null, "asc");
+                            authentication, "", null, false, false, false, 1, 10, null, "asc");
 
                     assertThat(result.paginatedRequests().getRequests())
                             .extracting(ReactivationRequestListItem::requestId)
