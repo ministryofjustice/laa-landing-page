@@ -37,7 +37,6 @@ import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.ReactivationRequestsPageData;
 import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
-import uk.gov.justice.laa.portal.landingpage.entity.AuthzRoleType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.forms.DelegateReactivateUserCommentForm;
@@ -342,9 +341,9 @@ public class UserActivationController {
         List<UserActivationRequestSummaryDto> latestRequestHistoryForUserProfile
                 = userReactivationRequestService.getLatestRequestHistoryForUserProfile(profileId);
         model.addAttribute("reactivationRequests", latestRequestHistoryForUserProfile);
-        
-        String cancelPath = "list".equals(referer) 
-            ? "/admin/users/reactivation-requests" 
+
+        String cancelPath = "list".equals(referer)
+            ? "/admin/users/reactivation-requests"
             : "/admin/users/manage/" + profileId;
         model.addAttribute("cancelPath", cancelPath);
 
@@ -550,9 +549,9 @@ public class UserActivationController {
 
         var pageMode = userReactivationRequestService.getPageMode(authentication);
 
-        // For manage roles, stamp the default status into the URL once so the default is explicit and user-clearable.
-        if (pageMode.isManageMode() && !defaultStatusApplied && (selectedRequestStatuses == null || selectedRequestStatuses.isEmpty())) {
-            log.debug("Applying default status filter IN_REVIEW for manage mode redirect.");
+        // Stamp the default status into the URL once so the default is explicit and user-clearable.
+        if (!defaultStatusApplied && (selectedRequestStatuses == null || selectedRequestStatuses.isEmpty())) {
+            log.debug("Applying default status filter IN_REVIEW for redirect.");
             UriComponentsBuilder builder = UriComponentsBuilder.fromPath("/admin/users/reactivation-requests")
                     .queryParam("size", size)
                     .queryParam("page", page)
@@ -609,7 +608,7 @@ public class UserActivationController {
         model.addAttribute("showFirmAdmins", pageData.showFirmAdmins());
         model.addAttribute("showMultiFirmUsers", pageData.showMultiFirmUsers());
         model.addAttribute("showProviderUsers", pageData.showProviderUsers());
-        model.addAttribute("defaultStatusApplied", pageMode.isManageMode() || defaultStatusApplied);
+        model.addAttribute("defaultStatusApplied", true);
         model.addAttribute(ModelAttributes.PAGE_TITLE, pageData.pageMode().getHeading());
 
         return "reactivation-requests";

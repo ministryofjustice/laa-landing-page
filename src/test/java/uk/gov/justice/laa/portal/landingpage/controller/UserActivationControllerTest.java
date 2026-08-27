@@ -705,10 +705,9 @@ public class UserActivationControllerTest {
     class DisplayReactivationRequestsTests {
 
         @Test
-        @DisplayName("Should build URL and redirect when in manage mode and default status is not applied")
-        void shouldRedirectWithDefaultStatusInManageMode() {
+        @DisplayName("Should build URL and redirect when default status is not applied")
+        void shouldRedirectWithDefaultStatus() {
             ReactivationRequestPageMode pageMode = mock(ReactivationRequestPageMode.class);
-            when(pageMode.isManageMode()).thenReturn(true);
             when(userReactivationRequestService.getPageMode(authentication)).thenReturn(pageMode);
 
             String viewName = userActivationController
