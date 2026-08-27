@@ -297,6 +297,7 @@ public class UserActivationController {
                                                          HttpSession session,
                                                          Model model,
                                                          @RequestParam String profileId,
+                                                         @RequestParam(required = false) String referer,
                                                          RedirectAttributes redirectAttributes) {
         log.debug("Tracking delegate reactivate requests for userId: {}, profileId: {}", id, profileId);
 
@@ -341,6 +342,11 @@ public class UserActivationController {
         List<UserActivationRequestSummaryDto> latestRequestHistoryForUserProfile
                 = userReactivationRequestService.getLatestRequestHistoryForUserProfile(profileId);
         model.addAttribute("reactivationRequests", latestRequestHistoryForUserProfile);
+        
+        String cancelPath = "list".equals(referer) 
+            ? "/admin/users/reactivation-requests" 
+            : "/admin/users/manage/" + profileId;
+        model.addAttribute("cancelPath", cancelPath);
 
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User");
         return "delegate-reactivate-user-tracking";
