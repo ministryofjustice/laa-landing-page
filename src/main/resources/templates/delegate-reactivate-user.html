@@ -19,12 +19,16 @@
 
     <div class="govuk-grid-row">
         <div class="govuk-grid-column-two-thirds">
-            <form method="post" th:action="@{/admin/user/delegate-reactivate/{id}(id=${user.id}, profileId=${profileId})}">
+            <form method="post"
+                  th:action="@{/admin/user/delegate-reactivate/{id}(id=${user.id}, profileId=${profileId})}">
                 <div class="govuk-form-group">
 
-                    <h1 class="govuk-heading-l govuk-!-margin-top-0" style="white-space: nowrap">Request for <span
+                    <h1 class="govuk-heading-l govuk-!-margin-top-0" style="white-space: nowrap" th:if="${isInternalActor}">Request for
+                        <span
                             th:text="${user.fullName}">Full Name</span>
                         to be reactivated</h1>
+                    <h1 class="govuk-heading-xl govuk-!-margin-top-0" th:if="${!isInternalActor}">Reactivate <span
+                            th:text="${user.fullName}">Full Name</span></h1>
 
                     <div class="govuk-warning-text" th:if="${isInternalActor}">
                         <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
@@ -33,6 +37,13 @@
                             This form submits a reactivation request on behalf of an external user.
                         </strong>
                     </div>
+
+                    <p class="govuk-body" th:if="${!isInternalActor}">You can reactivate this user directly. When you
+                        reactivate <span th:text="${user.fullName}">Full Name</span>,
+                        they will regain access to their SiLAS account.</p>
+
+                    <p class="govuk-body" th:if="${!isInternalActor}">You do not need to submit a reactivation
+                        request.</p>
 
                     <div th:if="${isInternalActor}">
                         <p class="govuk-body">You should only do this when:</p>
@@ -48,9 +59,10 @@
                         </ul>
                     </div>
 
-                    <p class="govuk-body">Before you start, ask the deactivated user to provide a justification for:</p>
+                    <p class="govuk-body" th:if="${isInternalActor}">Before you start, ask the deactivated user to
+                        provide a justification for:</p>
 
-                    <ul class="govuk-list govuk-list--bullet">
+                    <ul class="govuk-list govuk-list--bullet" th:if="${isInternalActor}">
                         <li>Why they did not use their SiLAS account for that length of time</li>
                         <li>What has changed that means they now require regular access</li>
                     </ul>
@@ -62,7 +74,8 @@
                             </span>
                         </summary>
                         <div class="govuk-details__text">
-                            <p>If the person requesting reactivation is not a third party user or the sole
+                            <p class="govuk-body">
+                                If the person requesting reactivation is not a third party user or the sole
                                 provider admin at their firm, they should:</p>
                             <ul class="govuk-list govuk-list--bullet">
                                 <li>Contact a provider admin who does have access to SiLAS</li>

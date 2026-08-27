@@ -44,6 +44,9 @@ import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 public class UserReactivationRequestService {
     private static final int DEFAULT_PAGE_SIZE = 10;
     private static final String UNKNOWN_USER_NAME = "Unknown user";
+    private static final String USER_TYPE_PROVIDER_USER = "Provider User";
+    private static final String USER_TYPE_PROVIDER_ADMIN = "Provider Admin";
+    private static final String USER_TYPE_THIRD_PARTY = "3rd Party";
 
     private final LoginService loginService;
     private final FirmService firmService;
@@ -284,7 +287,9 @@ public class UserReactivationRequestService {
             Authentication authentication,
             String search,
             List<ReactivationRequestStatus> selectedStatuses,
-            List<ReactivationRoleType> selectedActorRoleTypes,
+            boolean showFirmAdmins,
+            boolean showMultiFirmUsers,
+            boolean showProviderUsers,
             int page,
             int size,
             String sort,
@@ -297,15 +302,14 @@ public class UserReactivationRequestService {
         List<ReactivationRequestStatus> effectiveStatuses = selectedStatuses == null
                 ? List.of()
                 : List.copyOf(selectedStatuses);
-        List<ReactivationRoleType> effectiveActorRoleTypes = selectedActorRoleTypes == null
-                ? List.of()
-                : List.copyOf(selectedActorRoleTypes);
 
         List<ReactivationRequestListItem> requests = filterAndSortRequests(
                 buildRequests(currentUser, pageMode),
                 normalizeSearch(search),
                 effectiveStatuses,
-                effectiveActorRoleTypes,
+            showFirmAdmins,
+            showMultiFirmUsers,
+            showProviderUsers,
                 sort,
                 direction);
 
@@ -313,7 +317,8 @@ public class UserReactivationRequestService {
         log.debug("Returning {} filtered items across {} pages for mode: {}",
                 paginated.getTotalRequests(), paginated.getTotalPages(), pageMode);
 
-        return new ReactivationRequestsPageData(pageMode, effectiveStatuses, effectiveActorRoleTypes, paginated);
+        return new ReactivationRequestsPageData(pageMode, effectiveStatuses, showFirmAdmins,
+            showMultiFirmUsers, showProviderUsers, paginated);
     }
 
     public ReactivationRequestPageMode getPageMode(Authentication authentication) {
@@ -409,6 +414,7 @@ public class UserReactivationRequestService {
                 ? (nullToEmpty(targetUser.getFirstName()) + " " + nullToEmpty(targetUser.getLastName())).trim()
                 : UNKNOWN_USER_NAME;
         String userEmail = targetUser != null ? targetUser.getEmail() : null;
+        String userType = determineTargetUserType(profile, targetUser);
         String actorRoleType = request.getActorRoleType() != null ? request.getActorRoleType().getDisplayName() : null;
         ReactivationRequestStatus status = ReactivationRequestStatus.valueOf(request.getStatus().name());
         // dateSubmitted reflects when the request was originally raised (version 1),
@@ -434,9 +440,29 @@ public class UserReactivationRequestService {
                 actorEmail,
                 userName.isBlank() ? UNKNOWN_USER_NAME : userName,
                 userEmail,
+                userType,
                 dateSubmitted,
                 lastActivity,
                 firmId);
+    }
+
+    private String determineTargetUserType(UserProfile profile, EntraUser targetUser) {
+        if (targetUser != null && targetUser.isMultiFirmUser()) {
+            return USER_TYPE_THIRD_PARTY;
+        }
+
+        if (profile != null && isProviderAdminProfile(profile)) {
+            return USER_TYPE_PROVIDER_ADMIN;
+        }
+
+        return USER_TYPE_PROVIDER_USER;
+    }
+
+    private boolean isProviderAdminProfile(UserProfile profile) {
+        return Optional.ofNullable(profile.getAppRoles()).orElse(Set.of()).stream()
+                .anyMatch(appRole -> appRole.isAuthzRole()
+                        && (AuthzRole.EXTERNAL_USER_MANAGER.getRoleName().equals(appRole.getName())
+                        || AuthzRole.FIRM_USER_MANAGER.getRoleName().equals(appRole.getName())));
     }
 
     private String nullToEmpty(String value) {
@@ -447,16 +473,16 @@ public class UserReactivationRequestService {
             List<ReactivationRequestListItem> requests,
             String search,
             List<ReactivationRequestStatus> selectedStatuses,
-            List<ReactivationRoleType> selectedActorRoleTypes,
+            boolean showFirmAdmins,
+            boolean showMultiFirmUsers,
+            boolean showProviderUsers,
             String sort,
             String direction) {
 
         Set<ReactivationRequestStatus> statusFilter = selectedStatuses == null
                 ? Set.of()
                 : new HashSet<>(selectedStatuses);
-        Set<String> actorRoleTypeLabelFilter = selectedActorRoleTypes == null || selectedActorRoleTypes.isEmpty()
-                ? Set.of()
-                : selectedActorRoleTypes.stream().map(ReactivationRoleType::getDisplayName).collect(Collectors.toSet());
+        boolean filterByUserType = showFirmAdmins || showMultiFirmUsers || showProviderUsers;
 
         Comparator<ReactivationRequestListItem> comparator = resolveComparator(sort);
         if (!"asc".equalsIgnoreCase(direction)) {
@@ -466,9 +492,19 @@ public class UserReactivationRequestService {
         return requests.stream()
                 .filter(item -> search.isBlank() || matchesSearch(item, search))
                 .filter(item -> statusFilter.isEmpty() || statusFilter.contains(item.requestStatus()))
-                .filter(item -> actorRoleTypeLabelFilter.isEmpty() || actorRoleTypeLabelFilter.contains(item.actorRoleType()))
+                .filter(item -> !filterByUserType || matchesUserTypeFilter(item,
+                        showFirmAdmins, showMultiFirmUsers, showProviderUsers))
                 .sorted(comparator)
                 .toList();
+    }
+
+    private boolean matchesUserTypeFilter(ReactivationRequestListItem item,
+                                          boolean showFirmAdmins,
+                                          boolean showMultiFirmUsers,
+                                          boolean showProviderUsers) {
+        return (showFirmAdmins && USER_TYPE_PROVIDER_ADMIN.equals(item.userType()))
+                || (showMultiFirmUsers && USER_TYPE_THIRD_PARTY.equals(item.userType()))
+                || (showProviderUsers && USER_TYPE_PROVIDER_USER.equals(item.userType()));
     }
 
     private boolean matchesSearch(ReactivationRequestListItem item, String search) {
@@ -520,6 +556,8 @@ public class UserReactivationRequestService {
             case "requestStatus" -> Comparator.comparing(item -> item.requestStatus().name(), String.CASE_INSENSITIVE_ORDER);
             case "actorName" -> Comparator.comparing(ReactivationRequestListItem::actorName, String.CASE_INSENSITIVE_ORDER);
             case "actorRoleType" -> Comparator.comparing(ReactivationRequestListItem::actorRoleType,
+                    Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+            case "userType" -> Comparator.comparing(item -> item.userType(),
                     Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
             case "lastActivity" -> Comparator.comparing(ReactivationRequestListItem::lastActivity,
                     Comparator.nullsLast(LocalDate::compareTo));
