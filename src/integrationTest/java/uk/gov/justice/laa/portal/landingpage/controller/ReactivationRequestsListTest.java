@@ -46,6 +46,13 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
 
         mockMvc.perform(get("/admin/users/reactivation-requests")
                         .with(userOauth2Login(providerAdmin)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/users/reactivation-requests?size=10&page=1&sort=dateSubmitted&direction=desc&defaultStatusApplied=true&selectedRequestStatuses=IN_REVIEW"));
+
+        mockMvc.perform(get("/admin/users/reactivation-requests")
+                        .param("defaultStatusApplied", "true")
+                        .param("selectedRequestStatuses", "IN_REVIEW")
+                        .with(userOauth2Login(providerAdmin)))
                 .andExpect(status().isOk())
                 .andExpect(view().name("reactivation-requests"))
                 .andExpect(model().attribute("pageHeading", "Track reactivation requests"))
@@ -71,6 +78,7 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
         seedActivationRequest(otherFirmProfileId);
 
         var result = mockMvc.perform(get("/admin/users/reactivation-requests")
+                        .param("defaultStatusApplied", "true")
                         .with(userOauth2Login(providerAdmin)))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -285,6 +293,8 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
         userActivationRequestRepository.saveAndFlush(v2);
 
         var result = mockMvc.perform(get("/admin/users/reactivation-requests")
+                        .param("defaultStatusApplied", "true")
+                        .param("selectedRequestStatuses", "INFORMATION_REQUIRED")
                         .with(userOauth2Login(providerAdmin)))
                 .andExpect(status().isOk())
                 .andReturn();
