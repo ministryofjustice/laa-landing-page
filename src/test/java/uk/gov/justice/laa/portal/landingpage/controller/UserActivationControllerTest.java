@@ -390,7 +390,7 @@ public class UserActivationControllerTest {
             RedirectAttributesModelMap redirectAttributes = new RedirectAttributesModelMap();
 
             assertThatThrownBy(() -> userActivationController.trackDelegateReactivateUserRequestsGet("user-123", session, model,
-                    UUID.randomUUID().toString(), redirectAttributes)).isInstanceOf(ResponseStatusException.class).hasMessageContaining("404");
+                    UUID.randomUUID().toString(), null, redirectAttributes)).isInstanceOf(ResponseStatusException.class).hasMessageContaining("404");
         }
 
         @Test
@@ -403,7 +403,7 @@ public class UserActivationControllerTest {
 
             when(userService.getEntraUserById(userId)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> userActivationController.trackDelegateReactivateUserRequestsGet(userId, session, model, profileId, redirectAttributes)).isInstanceOf(NoSuchElementException.class);
+            assertThatThrownBy(() -> userActivationController.trackDelegateReactivateUserRequestsGet(userId, session, model, profileId, null, redirectAttributes)).isInstanceOf(NoSuchElementException.class);
         }
 
         @Test
@@ -422,7 +422,7 @@ public class UserActivationControllerTest {
             when(mockRequest.getStatus()).thenReturn(ReactivationRequestStatus.APPROVED);
             when(mockRequest.getId()).thenReturn(UUID.fromString(REQUEST_ID));
 
-            String view = userActivationController.trackDelegateReactivateUserRequestsGet(USER_ID, session, model, PROFILE_ID, redirectAttributes);
+            String view = userActivationController.trackDelegateReactivateUserRequestsGet(USER_ID, session, model, PROFILE_ID, null, redirectAttributes);
 
             assertThat(view).isEqualTo("redirect:/admin/users/manage/" + PROFILE_ID);
             assertThat(redirectAttributes.getFlashAttributes()).extractingByKey("errorMessage").isEqualTo("There is no open delegate activation request");
@@ -441,7 +441,7 @@ public class UserActivationControllerTest {
             when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(PROFILE_ID))
                     .thenReturn(Optional.empty());
 
-            String view = userActivationController.trackDelegateReactivateUserRequestsGet(USER_ID, session, model, PROFILE_ID, redirectAttributes);
+            String view = userActivationController.trackDelegateReactivateUserRequestsGet(USER_ID, session, model, PROFILE_ID, null, redirectAttributes);
 
             assertThat(view).isEqualTo("redirect:/admin/users/manage/" + PROFILE_ID);
             assertThat(redirectAttributes.getFlashAttributes()).extractingByKey("errorMessage").isEqualTo("There is no open delegate activation request");
@@ -464,7 +464,7 @@ public class UserActivationControllerTest {
             when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(PROFILE_ID))
                     .thenReturn(Optional.of(mockRequest));
 
-            String view = userActivationController.trackDelegateReactivateUserRequestsGet(USER_ID, session, model, PROFILE_ID, redirectAttributes);
+            String view = userActivationController.trackDelegateReactivateUserRequestsGet(USER_ID, session, model, PROFILE_ID, null, redirectAttributes);
 
             assertThat(view).isEqualTo("redirect:/admin/users/manage/" + PROFILE_ID);
             assertThat(redirectAttributes.getFlashAttributes()).extractingByKey("errorMessage").isEqualTo("There is no open delegate activation request");
