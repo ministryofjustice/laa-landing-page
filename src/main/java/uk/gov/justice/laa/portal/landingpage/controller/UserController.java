@@ -1362,21 +1362,21 @@ public class UserController {
                 .sorted()
                 .toList();
 
+        List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
+                .orElse(List.of());
         @SuppressWarnings("unchecked")
         Map<Integer, List<String>> selectedAppRole = (Map<Integer, List<String>>) session
                 .getAttribute("editUserAllSelectedRoles");
-        if (Objects.isNull(selectedAppRole)) {
+        if (!selectedApps.isEmpty()) {
+            editableApps.forEach(app -> {
+                app.setSelected(selectedApps.contains(app.getId()));
+            });
+            flagEditableApps(id, editableApps);
+        } else if (selectedAppRole == null) {
             // Add selected attribute to available apps based on user assigned apps
             editableApps.forEach(app -> {
                 app.setSelected(userAssignedApps.stream()
                         .anyMatch(userApp -> userApp.getId().equals(app.getId())));
-            });
-            flagEditableApps(id, editableApps);
-        } else {
-            List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
-                    .orElse(List.of());
-            editableApps.forEach(app -> {
-                app.setSelected(selectedApps.contains(app.getId()));
             });
             flagEditableApps(id, editableApps);
         }
