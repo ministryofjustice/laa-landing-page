@@ -307,9 +307,9 @@ public class UserReactivationRequestService {
                 buildRequests(currentUser, pageMode),
                 normalizeSearch(search),
                 effectiveStatuses,
-            showFirmAdmins,
-            showMultiFirmUsers,
-            showProviderUsers,
+                showFirmAdmins,
+                showMultiFirmUsers,
+                showProviderUsers,
                 sort,
                 direction);
 
@@ -332,6 +332,7 @@ public class UserReactivationRequestService {
         }
 
         boolean isManageRole = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_MANAGER.getRoleName())
+            || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_SUPPORT.getRoleName())
                 || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())
                 || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_VIEWER.getRoleName())
                 || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.GLOBAL_ADMIN.getRoleName())
@@ -374,32 +375,68 @@ public class UserReactivationRequestService {
                 .map(UserActivationRequest::getRequestId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
-        Map<UUID, Instant> submittedAtByRequestId = userActivationRequestRepository
-                .findAllFirstVersionsByRequestIdIn(requestIds).stream()
+        List<UserActivationRequest> firstVersions = userActivationRequestRepository
+            .findAllFirstVersionsByRequestIdIn(requestIds);
+        Map<UUID, Instant> submittedAtByRequestId = firstVersions.stream()
                 .collect(Collectors.toMap(UserActivationRequest::getRequestId, UserActivationRequest::getCreatedAt));
+        Map<UUID, ReactivationRoleType> submittedByRoleByRequestId = firstVersions.stream()
+            .filter(firstVersion -> firstVersion.getActorRoleType() != null)
+            .collect(Collectors.toMap(UserActivationRequest::getRequestId, UserActivationRequest::getActorRoleType));
+
+        boolean isGlobalAdminOrSecurityResponse = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.SECURITY_RESPONSE.getRoleName())
+                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.GLOBAL_ADMIN.getRoleName());
+        boolean isExternalUserAdmin = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName());
+        boolean isExternalUserManager = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_MANAGER.getRoleName());
+        boolean isExternalUserSupport = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_SUPPORT.getRoleName());
+        boolean isProviderAdmin = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.FIRM_USER_MANAGER.getRoleName());
+        Set<UUID> viewerFirmIds = isProviderAdmin && currentUser != null
+                ? firmService.getUserActiveAllFirms(currentUser).stream()
+                .map(FirmDto::getId)
+                .collect(Collectors.toSet())
+                : Set.of();
 
         List<ReactivationRequestListItem> items = latestRequests.stream()
+                .filter(request -> isVisibleToViewer(request, profilesById.get(request.getUserProfileId()), currentUser,
+                        isGlobalAdminOrSecurityResponse, isExternalUserAdmin, isExternalUserManager,
+                    isExternalUserSupport, isProviderAdmin, viewerFirmIds, submittedByRoleByRequestId.get(request.getRequestId())))
                 .map(request -> toListItem(request, profilesById.get(request.getUserProfileId()),
                         actorsByEntraOid.get(request.getActorEntraOid()),
                         submittedAtByRequestId.get(request.getRequestId())))
                 .toList();
 
-        if (pageMode == ReactivationRequestPageMode.TRACK && currentUser != null) {
-            Set<UUID> allowedFirmIds = firmService.getUserActiveAllFirms(currentUser).stream()
-                    .map(FirmDto::getId)
-                    .collect(Collectors.toSet());
+        return items;
+    }
 
-            if (allowedFirmIds.isEmpty()) {
-                log.debug("User {} has no active firms; returning empty request list in TRACK mode", currentUser.getId());
-                return List.of();
-            }
-
-            return items.stream()
-                    .filter(item -> item.firmId() != null && allowedFirmIds.contains(item.firmId()))
-                    .toList();
+    private boolean isVisibleToViewer(UserActivationRequest request, UserProfile profile,
+                                      EntraUser currentUser, boolean isGlobalAdminOrSecurityResponse,
+                                      boolean isExternalUserAdmin, boolean isExternalUserManager,
+                                      boolean isExternalUserSupport, boolean isProviderAdmin,
+                                      Set<UUID> viewerFirmIds, ReactivationRoleType submittedByRole) {
+        if (isGlobalAdminOrSecurityResponse) {
+            return true;
         }
 
-        return items;
+        if (isExternalUserAdmin) {
+            return true;
+        }
+
+        if (profile == null || profile.getEntraUser() == null) {
+            return false;
+        }
+
+        boolean isMultiFirmTarget = profile.getEntraUser().isMultiFirmUser();
+        UUID targetFirmId = profile.getFirm() == null ? null : profile.getFirm().getId();
+
+        if (isExternalUserManager || isExternalUserSupport) {
+            return submittedByRole == ReactivationRoleType.LAA_OST
+                    || submittedByRole == ReactivationRoleType.LAA_SUPPORT;
+        }
+
+        if (isProviderAdmin) {
+            return !isMultiFirmTarget && targetFirmId != null && viewerFirmIds.contains(targetFirmId);
+        }
+
+        return false;
     }
 
     private ReactivationRequestListItem toListItem(UserActivationRequest request, UserProfile profile, EntraUser actor,
@@ -431,6 +468,7 @@ public class UserReactivationRequestService {
                 request.getId(),
                 request.getRequestId(),
                 request.getUserProfileId(),
+                targetUser != null ? targetUser.getId() : null,
                 request.getVersion(),
                 status,
                 request.getComments(),

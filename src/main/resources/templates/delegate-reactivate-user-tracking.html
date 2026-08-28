@@ -12,7 +12,7 @@
 <body>
 <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
     <a class="govuk-back-link govuk-!-margin-bottom-3"
-       th:href="@{/admin/users/manage/{id}(id=${profileId})}">
+       th:href="${cancelPath != null ? cancelPath : '/admin/users/manage/' + profileId}">
         Back </a>
 </nav>
 <main class="govuk-main-wrapper" id="main-content">
@@ -69,8 +69,8 @@
                      th:classappend="${#fields.hasErrors('comment')} ? 'govuk-form-group--error'"
                      id="comment-group">
 
-                    <label class="govuk-label govuk-label--m" for="comment">
-                        Please enter a comment (minimum 10 characters).
+                    <label class="govuk-label govuk-visually-hidden" for="comment">
+                        Comments
                     </label>
 
                     <textarea class="govuk-textarea govuk-!-margin-bottom-0"
