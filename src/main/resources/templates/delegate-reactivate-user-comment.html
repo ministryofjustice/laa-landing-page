@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" th:replace="~{layout :: layout(
+      title=~{::title},
+      mainContent=~{::#main-content},
+      pageCategory=${'manage-access'},
+      breadcrumbs=~{::#breadcrumbs})}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+
+<head>
+    <title>${pageTitle}</title>
+</head>
+
+<body>
+<nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
+    <a class="govuk-back-link govuk-!-margin-bottom-3"
+       th:href="@{/admin/user/delegate-reactivate/{id}(id=${user.id}, profileId=${profileId})}">
+        Back </a>
+</nav>
+<main class="govuk-main-wrapper" id="main-content">
+    <div class="govuk-grid-row">
+        <div class="govuk-grid-column-full">
+
+            <div th:if="${errorMessage}" class="govuk-error-summary" role="alert" aria-labelledby="error-summary-title" tabindex="-1" data-module="govuk-error-summary">
+                <h2 class="govuk-error-summary__title" id="error-summary-title">
+                    There is a problem
+                </h2>
+                <div class="govuk-error-summary__body">
+                    <ul class="govuk-list govuk-error-summary__list">
+                        <li>
+                            <a href="#comment-error" th:text="${errorMessage}"></a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <h1 class="govuk-heading-l" th:text="'Provide a reason'">
+                Provide a reason
+            </h1>
+
+            <p class="govuk-body">
+                This user has been deactivated by the Legal Aid Agency. You need to request
+                <br>
+                for their account to be reactivated.
+            </p>
+
+            <p class="govuk-body">The justification should include:</p>
+
+            <ul class="govuk-list govuk-list--bullet">
+                <li>Why they did not use their SiLAS account for that length of time</li>
+                <li>What has changed that means they now require regular access</li>
+            </ul>
+
+            <form method="post" th:action="@{/admin/user/delegate-reactivate-user-comment/{id}(id=${user.id}, profileId=${profileId})}"
+                  th:object="${delegateReactivateUserCommentForm}">
+
+                <!-- Comment Field -->
+                <div class="govuk-form-group govuk-!-width-full" th:classappend="${#fields.hasErrors('comment')} ? 'govuk-form-group--error' : ''" id="comment-group">
+                    <div th:if="${#fields.hasErrors('comment')}" class="govuk-error-message" id="comment-error">
+                        <span class="govuk-visually-hidden">Error:</span>
+                        <span th:errors="*{comment}"></span>
+                    </div>
+
+                    <label class="govuk-label govuk-label--m" for="reassignment-comment">
+                    </label>
+                    <textarea class="govuk-textarea govuk-!-margin-bottom-0"
+                              th:classappend="${#fields.hasErrors('comment')} ? 'govuk-textarea--error' : ''"
+                              id="reassignment-comment"
+                              name="comment"
+                              rows="4"
+                              th:field="*{comment}"></textarea>
+
+                    <p class="govuk-hint govuk-!-margin-top-0">You can enter up to 500 characters.</p>
+                </div>
+
+                <div class="govuk-button-group">
+                    <button type="submit" class="govuk-button" data-module="govuk-button">
+                        Continue
+                    </button>
+                    <a class="govuk-button govuk-button--secondary" th:href="@{/admin/users/manage/{id}(id=${profileId})}">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</main>
+</body>
+
+</html>

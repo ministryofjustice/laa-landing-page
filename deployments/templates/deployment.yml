@@ -127,6 +127,11 @@ spec:
                 secretKeyRef:
                   name: laa-landing-page-base-url-k8s
                   key: BASE_URL
+            - name: BASE_API_URI
+              valueFrom:
+                secretKeyRef:
+                  name: laa-landing-page-base-api-url-k8s
+                  key: BASE_API_URI
             - name: GOV_NOTIFY_API_KEY
               valueFrom:
                 secretKeyRef:
@@ -209,6 +214,16 @@ spec:
               value: "${APP_DATA_PROVIDER_BASE_URL}"
             - name: APP_DATA_PROVIDER_API_KEY
               value: "${APP_DATA_PROVIDER_API_KEY}"
+            - name: USER_DATA_API_BASE_URL
+              value: "${USER_DATA_API_BASE_URL}"
+            - name: USER_DATA_API_SCOPE
+              value: "${USER_DATA_API_SCOPE}"
+            - name: USER_DATA_API_CALLS_ENABLED
+              value: "${USER_DATA_API_CALLS_ENABLED}"
+            - name: USER_DATA_API_DEBUG_ENABLED
+              value: "${USER_DATA_API_DEBUG_ENABLED}"
+            - name: USER_DATA_API_USER_REQUEST_TOKEN_ENABLED
+              value: "${USER_DATA_API_USER_REQUEST_TOKEN_ENABLED}"
             - name: SENTRY_ENVIRONMENT
               value: "${SENTRY_ENVIRONMENT}"
             - name: SENTRY_ENABLED
@@ -261,6 +276,8 @@ spec:
               value: "${FEATURE_FLAG_SYNC_APP_UPDATES_FROM_ENTRA}"
             - name: FEATURE_FLAG_EDIT_USER_DETAILS
               value: "${FEATURE_FLAG_EDIT_USER_DETAILS}"
+            - name: FEATURE_FLAG_DELEGATE_USER_ACTIVATION
+              value: "${FEATURE_FLAG_DELEGATE_USER_ACTIVATION}"
             - name: SPRING_SESSION_JDBC_ENABLED
               value: "${SPRING_SESSION_JDBC_ENABLED}"
             - name: APP_MEANS_AND_MATCH_UI1_NAME
@@ -285,3 +302,13 @@ spec:
               value: "${NOTIFICATION_ADD_NEW_USER_TEMPLATE_ID}"
             - name: NOTIFICATION_EXISTING_USER_TEMPLATE_ID
               value: "${NOTIFICATION_EXISTING_USER_TEMPLATE_ID}"
+            - name: AZURE_CLIENT_SCOPES
+              value: "${AZURE_CLIENT_SCOPES}"
+            - name: NOTIFICATION_REACTIVATION_REQUESTED_TEMPLATE_ID
+              value: "${NOTIFICATION_REACTIVATION_REQUESTED_TEMPLATE_ID}"
+            - name: NOTIFICATION_REACTIVATION_INFO_REQUESTED_TEMPLATE_ID
+              value: "${NOTIFICATION_REACTIVATION_INFO_REQUESTED_TEMPLATE_ID}"
+            - name: NOTIFICATION_REACTIVATION_APPROVED_TEMPLATE_ID
+              value: "${NOTIFICATION_REACTIVATION_APPROVED_TEMPLATE_ID}"
+            - name: NOTIFICATION_REACTIVATION_REJECTED_TEMPLATE_ID
+              value: "${NOTIFICATION_REACTIVATION_REJECTED_TEMPLATE_ID}"

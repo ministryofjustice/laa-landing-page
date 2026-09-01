@@ -9,8 +9,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import jakarta.servlet.http.HttpSession;
-import jakarta.validation.Valid;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -18,6 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,16 +25,18 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleAdminDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
+import uk.gov.justice.laa.portal.landingpage.dto.AppSyncResultDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.RoleCreationDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UpdateAppDetailsAuditEvent;
@@ -45,8 +46,8 @@ import uk.gov.justice.laa.portal.landingpage.dto.UpdateAppRoleDisplayOrderAuditE
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
-import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
+import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.AppDetailsForm;
@@ -61,10 +62,9 @@ import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
-import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
-
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
 import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
+import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 
 /**
  * Controller for SiLAS Administration section
@@ -164,18 +164,32 @@ public class AdminController {
         // Load all admin apps data for admin-apps tab
         model.addAttribute("adminApps", appService.getAllAuthzApps());
 
-        CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
-        UserProfileDto userProfile = modelMapper.map(loginService.getCurrentProfile(authentication), UserProfileDto.class);
-        List<AppDto> apps = appService.synchronizeAndGetApplicationsFromTechServices(currentUserDto, userProfile);
+        List<AppDto> apps;
+        boolean appSyncSuccessful;
+        try {
+            CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
+            UserProfileDto userProfile = modelMapper.map(loginService.getCurrentProfile(authentication), UserProfileDto.class);
+            AppSyncResultDto syncResult = appService.synchronizeAndGetApplicationsFromTechServices(currentUserDto, userProfile);
+            apps = syncResult.getApps();
+            model.addAttribute("syncErrors", syncResult.getErrors());
+            appSyncSuccessful = true;
+            model.addAttribute("successMessage", "App Syncing successful");
+        } catch (Exception ex) {
+            // Keep the page usable when Tech Services is unreachable/erroring, instead of a full 500 error page
+            log.error("App sync failed while calling Tech Services", ex);
+            apps = appService.getAllLaaApps();
+            appSyncSuccessful = false;
+            model.addAttribute("syncFailureMessage",
+                    "App syncing failed. Please try again later or contact support if the problem continues.");
+        }
         model.addAttribute("apps", apps);
-
 
         List<AppRoleAdminDto> roles = appRoleService.getAllLaaAppRoles();
 
         model.addAttribute("roles", roles);
         model.addAttribute("canTriggerAppSync", Boolean.parseBoolean(syncAppsFromEntra)
                 && accessControlService.authenticatedUserHasPermission(Permission.TRIGGER_LAA_APP_SYNC));
-        model.addAttribute("appSyncSuccessful", true);
+        model.addAttribute("appSyncSuccessful", appSyncSuccessful);
 
         model.addAttribute("appNames", apps.stream()
                 .map(AppDto::getName)
@@ -183,7 +197,6 @@ public class AdminController {
                 .sorted()
                 .collect(Collectors.toList()));
 
-        model.addAttribute("successMessage", "App Syncing successful");
         return "silas-administration/administration";
     }
 

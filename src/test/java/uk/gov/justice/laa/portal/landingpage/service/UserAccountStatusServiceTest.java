@@ -613,6 +613,54 @@ public class UserAccountStatusServiceTest {
     }
 
     @Test
+    public void testEnableUserEnablesWithComments() {
+        UUID disabledById = UUID.randomUUID();
+        UserProfileDto disabledByUserProfile = UserProfileDto.builder()
+                .id(disabledById)
+                .activeProfile(true)
+                .appRoles(List.of(AppRoleDto.builder().id(UUID.randomUUID().toString()).name("External User Admin").build()))
+                .build();
+        Firm firm = Firm.builder().id(UUID.randomUUID()).name("Test Firm").build();
+        UserProfile enabledUserProfile = UserProfile.builder().id(UUID.randomUUID())
+                .activeProfile(true)
+                .firm(firm)
+                .build();
+        EntraUser enabledUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .firstName("Enabled")
+                .lastName("User")
+                .enabled(false)
+                .userProfiles(Set.of(enabledUserProfile))
+                .disabledBy(disabledById)
+                .build();
+        UserProfile enabledByUserProfile = UserProfile.builder().id(UUID.randomUUID())
+                .activeProfile(true)
+                .userType(UserType.INTERNAL)
+                .appRoles(Set.of(AppRole.builder().id(UUID.randomUUID()).name("External User Admin").build()))
+                .build();
+        EntraUser enabledByUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .firstName("EnabledBy")
+                .lastName("User")
+                .userProfiles(Set.of(enabledByUserProfile))
+                .build();
+        TechServicesApiResponse<ChangeAccountEnabledResponse> techServicesResponse = TechServicesApiResponse.success(null);
+
+        when(entraUserRepository.findByIdWithAssociations(eq(enabledUser.getId()))).thenReturn(Optional.of(enabledUser));
+        when(entraUserRepository.findByIdWithAssociations(eq(enabledByUser.getId()))).thenReturn(Optional.of(enabledByUser));
+        when(techServicesClient.enableUser(any())).thenReturn(techServicesResponse);
+        when(userService.isInternal(any(UUID.class))).thenReturn(true);
+        when(userEnablementPolicy.canEnable(any(), any())).thenReturn(true);
+        when(userEnablementPolicy.requiresSameFirmCheck(any(), any())).thenReturn(false);
+
+        userAccountStatusService.enableUser(enabledUser.getId(), enabledByUser.getId(), "Test Comment");
+
+        assertThat(enabledUser.isEnabled()).isTrue();
+        verify(entraUserRepository, times(1)).saveAndFlush(any());
+        verify(userAccountStatusAuditRepository, times(1)).saveAndFlush(any());
+    }
+
+    @Test
     public void testEnableUserThrowsExceptionWhenEnableMultiFirmUser() {
         Firm firm = Firm.builder().id(UUID.randomUUID()).name("Test Firm").build();
         UserProfile enabledUserProfile = UserProfile.builder().id(UUID.randomUUID())
@@ -1017,7 +1065,7 @@ public class UserAccountStatusServiceTest {
         UserAccountStatusAudit audit = auditCaptor.getValue();
 
         assertThat(audit.getEntraUser()).isEqualTo(target);
-        assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ENABLED);
+        assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ACTIVATED);
         assertThat(audit.getStatusChangedBy()).isEqualTo("John Doe");
     }
 
@@ -1096,7 +1144,7 @@ public class UserAccountStatusServiceTest {
         UserAccountStatusAudit audit = auditCaptor.getValue();
 
         assertThat(audit.getEntraUser()).isEqualTo(target);
-        assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ENABLED);
+        assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ACTIVATED);
         assertThat(audit.getStatusChangedBy()).isEqualTo("John Doe");
     }
 
@@ -1272,7 +1320,7 @@ public class UserAccountStatusServiceTest {
         UserAccountStatusAudit audit = auditCaptor.getValue();
 
         assertThat(audit.getEntraUser()).isEqualTo(target);
-        assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ENABLED);
+        assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ACTIVATED);
         assertThat(audit.getStatusChangedBy()).isEqualTo("John Doe");
     }
 
@@ -1351,7 +1399,7 @@ public class UserAccountStatusServiceTest {
         UserAccountStatusAudit audit = auditCaptor.getValue();
 
         assertThat(audit.getEntraUser()).isEqualTo(target);
-        assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ENABLED);
+        assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ACTIVATED);
         assertThat(audit.getStatusChangedBy()).isEqualTo("John Doe");
     }
 
@@ -1422,7 +1470,7 @@ public class UserAccountStatusServiceTest {
         UserAccountStatusAudit audit = auditCaptor.getValue();
 
         assertThat(audit.getEntraUser()).isEqualTo(target);
-        assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ENABLED);
+        assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ACTIVATED);
         assertThat(audit.getStatusChangedBy()).isEqualTo("John Doe");
     }
 

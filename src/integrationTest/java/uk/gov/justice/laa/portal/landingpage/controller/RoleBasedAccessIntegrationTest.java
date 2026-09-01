@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -8,13 +9,14 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
-import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 
+import jakarta.persistence.EntityManager;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
+import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
@@ -26,6 +28,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
+import uk.gov.justice.laa.portal.landingpage.repository.UserActivationRequestRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
 public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest {
@@ -56,6 +59,10 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
+    protected UserActivationRequestRepository userActivationRequestRepository;
+
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    @Autowired
     protected EntityManager entityManager;
 
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
@@ -70,6 +77,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
     protected List<EntraUser> internalWithExternalOnlyUserManagers = new ArrayList<>();
     protected List<EntraUser> externalOnlyUserManagers = new ArrayList<>();
     protected List<EntraUser> externalUsersNoRoles = new ArrayList<>();
+    protected List<EntraUser> disabledExternalUsersNoRoles = new ArrayList<>();
     protected List<EntraUser> externalUserAdmins = new ArrayList<>();
     protected List<EntraUser> internalUserViewers = new ArrayList<>();
     protected List<EntraUser> externalUserViewers = new ArrayList<>();
@@ -78,6 +86,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
     protected List<EntraUser> silasAdmins = new ArrayList<>();
     protected List<EntraUser> firmUserManagers = new ArrayList<>();
     protected List<EntraUser> securityResponseUsers = new ArrayList<>();
+    protected List<EntraUser> externalUserSupportUsers = new ArrayList<>();
     protected List<EntraUser> allUsers = new ArrayList<>();
 
     @BeforeEach
@@ -115,7 +124,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
             officeRepository.save(firm2Office2);
             testFirm2.setOffices(new java.util.HashSet<>(Set.of(firm2Office1, firm2Office2)));
             testFirm2 = firmRepository.save(testFirm2);
-            
+
             firmRepository.flush();
             entityManager.createNativeQuery("SET session_replication_role = DEFAULT").executeUpdate();
             transactionManager.commit(txStatus);
@@ -132,6 +141,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         internalWithExternalOnlyUserManagers.clear();
         externalOnlyUserManagers.clear();
         externalUsersNoRoles.clear();
+        disabledExternalUsersNoRoles.clear();
         externalUserAdmins.clear();
         internalUserViewers.clear();
         externalUserViewers.clear();
@@ -140,6 +150,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         silasAdmins.clear();
         firmUserManagers.clear();
         securityResponseUsers.clear();
+        externalUserSupportUsers.clear();
         allUsers.clear();
         // Index to keep all email addresses unique.
         int emailIndex = 0;
@@ -244,6 +255,34 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
             profile.setEntraUser(user);
             externalUsersNoRoles.add(entraUserRepository.saveAndFlush(user));
         }
+
+        // Disabled External Users
+        for (DisableType disabledType : DisableType.values()) {
+            for (Firm firm : Arrays.asList(testFirm1, testFirm2)) {
+                EntraUser disabledUser = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmOne");
+                disabledUser.setEnabled(false);
+                disabledUser.setDisableType(disabledType);
+                UserProfile profile = buildLaaUserProfile(disabledUser, UserType.EXTERNAL, true);
+                profile.setAppRoles(Set.of());
+                profile.setFirm(firm);
+                profile.setOffices(Set.of());
+                disabledUser.setUserProfiles(Set.of(profile));
+                profile.setEntraUser(disabledUser);
+                disabledExternalUsersNoRoles.add(entraUserRepository.saveAndFlush(disabledUser));
+            }
+        }
+
+        // User disable type is null
+        EntraUser disabledUser = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmOne");
+        disabledUser.setEnabled(false);
+        disabledUser.setDisableType(null);
+        UserProfile disabledUserProfile = buildLaaUserProfile(disabledUser, UserType.EXTERNAL, true);
+        disabledUserProfile.setAppRoles(Set.of());
+        disabledUserProfile.setFirm(testFirm2);
+        disabledUserProfile.setOffices(Set.of());
+        disabledUser.setUserProfiles(Set.of(disabledUserProfile));
+        disabledUserProfile.setEntraUser(disabledUser);
+        disabledExternalUsersNoRoles.add(entraUserRepository.saveAndFlush(disabledUser));
 
         // Setup Firm1 admin
         EntraUser user = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "External", "FirmOneAdmin");
@@ -355,6 +394,21 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         profile.setEntraUser(user);
         silasAdmins.add(entraUserRepository.saveAndFlush(user));
 
+        // Setup 5 External User Support users
+        for (int i = 0; i < 5; i++) {
+            EntraUser eusUser = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "Internal", "ExternalUserSupport");
+            UserProfile eusProfile = buildLaaUserProfile(eusUser, UserType.INTERNAL, true);
+            AppRole eusRole = allAppRoles.stream()
+                    .filter(AppRole::isAuthzRole)
+                    .filter(role -> role.getName().equals("External User Support"))
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Could not find app role"));
+            eusProfile.setAppRoles(Set.of(eusRole));
+            eusUser.setUserProfiles(Set.of(eusProfile));
+            eusProfile.setEntraUser(eusUser);
+            externalUserSupportUsers.add(entraUserRepository.saveAndFlush(eusUser));
+        }
+
 
         allUsers.addAll(internalUsersNoRoles);
         allUsers.addAll(internalUserManagers);
@@ -370,6 +424,8 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         allUsers.addAll(multiFirmUsers);
         allUsers.addAll(securityResponseUsers);
         allUsers.addAll(silasAdmins);
+        allUsers.addAll(externalUserSupportUsers);
+        allUsers.addAll(disabledExternalUsersNoRoles);
     }
 
     protected void clearRepositories() {
@@ -377,12 +433,13 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         try {
             // Temporarily disable constraint triggers during cleanup
             entityManager.createNativeQuery("SET session_replication_role = replica").executeUpdate();
-            
+
+            userActivationRequestRepository.deleteAllInBatch();
             userProfileRepository.deleteAllInBatch();
             entraUserRepository.deleteAllInBatch();
             firmRepository.deleteAllInBatch();
             officeRepository.deleteAllInBatch();
-            
+
             entityManager.createNativeQuery("SET session_replication_role = DEFAULT").executeUpdate();
             transactionManager.commit(txStatus);
         } catch (Exception e) {

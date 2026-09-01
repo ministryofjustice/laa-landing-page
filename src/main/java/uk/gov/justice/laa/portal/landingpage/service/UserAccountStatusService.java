@@ -135,7 +135,7 @@ public class UserAccountStatusService {
             UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
                     .entraUser(disabledUser)
                     .disableUserReason(reason)
-                    .statusChange(UserAccountStatus.DISABLED)
+                    .statusChange(UserAccountStatus.DEACTIVATED)
                     .statusChangedBy(disabledByUser.getFirstName() + " " + disabledByUser.getLastName())
                     .statusChangedDate(LocalDateTime.now())
                     .disableType(disableType)
@@ -212,7 +212,7 @@ public class UserAccountStatusService {
             UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
                     .entraUser(entraUser)
                     .disableUserReason(reason)
-                    .statusChange(UserAccountStatus.DISABLED)
+                    .statusChange(UserAccountStatus.DEACTIVATED)
                     .statusChangedBy(disabledByUser.getFirstName() + " " + disabledByUser.getLastName())
                     .statusChangedDate(LocalDateTime.now())
                     .disableType(bulkDisableType)
@@ -228,8 +228,12 @@ public class UserAccountStatusService {
         eventService.logEvent(auditEvent);
     }
 
-    @SuppressWarnings("checkstyle:VariableDeclarationUsageDistance")
     public void enableUser(UUID enabledUserId, UUID enabledById) {
+        enableUser(enabledUserId, enabledById, null);
+    }
+
+    @SuppressWarnings("checkstyle:VariableDeclarationUsageDistance")
+    public void enableUser(UUID enabledUserId, UUID enabledById, String comments) {
         if (enabledUserId.equals(enabledById)) {
             throw new RuntimeException(String.format("User %s can not be enabled by themselves", enabledUserId));
         }
@@ -261,9 +265,10 @@ public class UserAccountStatusService {
             // Add audit entry
             UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
                     .entraUser(enabledUser)
-                    .statusChange(UserAccountStatus.ENABLED)
+                    .statusChange(UserAccountStatus.ACTIVATED)
                     .statusChangedBy(enabledByUser.getFirstName() + " " + enabledByUser.getLastName())
                     .statusChangedDate(LocalDateTime.now())
+                    .comments(comments)
                     .build();
             userAccountStatusAuditRepository.saveAndFlush(userAccountStatusAudit);
         } else {

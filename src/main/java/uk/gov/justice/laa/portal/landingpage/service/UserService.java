@@ -75,11 +75,13 @@ import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
+import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
+import uk.gov.justice.laa.portal.landingpage.exception.OfficeAssignmentException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.exception.UserAlreadyAssignedToFirmException;
 import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
@@ -87,6 +89,7 @@ import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 import uk.gov.justice.laa.portal.landingpage.model.LaaApplicationForView;
 import uk.gov.justice.laa.portal.landingpage.model.PaginatedUsers;
+import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.DeleteUserReasonRepository;
@@ -125,19 +128,21 @@ public class UserService {
     private final NotificationService notificationService;
     private final AccessControlService accessControlService;
     private final DeleteUserReasonRepository deleteUserReasonRepository;
+    private final UserReactivationRequestService userReactivationRequestService;
     Logger logger = LoggerFactory.getLogger(this.getClass());
 
     public UserService(@Qualifier("graphServiceClient") GraphServiceClient graphClient,
-           EntraUserRepository entraUserRepository, AppRepository appRepository,
-           AppRoleRepository appRoleRepository, ModelMapper mapper,
-           OfficeRepository officeRepository,
-           TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
-           UserAccountStatusAuditRepository userAccountStatusAuditRepository,
-           RoleChangeNotificationService roleChangeNotificationService, FirmService firmService,
-           FirmRepository firmRepository, EventService eventService,
-           NotificationService notificationService,
-           @Lazy AccessControlService accessControlService,
-           DeleteUserReasonRepository deleteUserReasonRepository) {
+                       EntraUserRepository entraUserRepository, AppRepository appRepository,
+                       AppRoleRepository appRoleRepository, ModelMapper mapper,
+                       OfficeRepository officeRepository,
+                       TechServicesClient techServicesClient, UserProfileRepository userProfileRepository,
+                       UserAccountStatusAuditRepository userAccountStatusAuditRepository,
+                       RoleChangeNotificationService roleChangeNotificationService, FirmService firmService,
+                       FirmRepository firmRepository, EventService eventService,
+                       NotificationService notificationService,
+                       @Lazy AccessControlService accessControlService,
+                       DeleteUserReasonRepository deleteUserReasonRepository,
+                       @Lazy UserReactivationRequestService userReactivationRequestService) {
         this.graphClient = graphClient;
         this.entraUserRepository = entraUserRepository;
         this.appRepository = appRepository;
@@ -154,6 +159,7 @@ public class UserService {
         this.notificationService = notificationService;
         this.accessControlService = accessControlService;
         this.deleteUserReasonRepository = deleteUserReasonRepository;
+        this.userReactivationRequestService = userReactivationRequestService;
     }
 
     public boolean hasUserFirmAlreadyAssigned(String email, UUID firmId) {
@@ -519,6 +525,8 @@ public class UserService {
             logger.warn("Failed to delete role assignment in tech services: {}, but continuing to delete user", ex.getMessage());
         }
 
+        // Reject reactivation request if there is an open request
+        rejectOpenActivationRequestsOnUserDelete(entraUser.getId(), userProfileId, entraUser.isEnabled(), deleteUserReason, actorId);
 
         // Clean up old UserAccountStatusAudit records to avoid foreign key constraint violations
         List<UserAccountStatusAudit> auditRecords = userAccountStatusAuditRepository.findByEntraUser(entraUser);
@@ -592,6 +600,25 @@ public class UserService {
         return builder.build();
     }
 
+    @Transactional
+    public void rejectOpenActivationRequestsOnUserDelete(UUID entraId, String userProfileId, boolean enabled, DeleteUserReason deleteUserReason, String actorId) {
+        // Reject reactivation request if there is an open request
+        if (!enabled && userReactivationRequestService.hasOpenReactivationRequest(entraId)) {
+            Optional<UserActivationRequest> latestUserActivationRequest =
+                    userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(userProfileId);
+            if (latestUserActivationRequest.isPresent()) {
+                UserActivationRequest request = latestUserActivationRequest.get();
+                String deletionReasonStr = deleteUserReason == null ? "Unknown"
+                        : String.format("User Deleted with reason - %s (%s)", deleteUserReason.getLabel(), deleteUserReason.getCode());
+                if (ReactivationRequestStatus.IN_REVIEW.equals(request.getStatus())
+                        || ReactivationRequestStatus.INFORMATION_REQUIRED.equals(request.getStatus())) {
+                    userReactivationRequestService.rejectReactivationRequest(request.getRequestId().toString(),
+                            String.valueOf(entraId), String.valueOf(userProfileId), deletionReasonStr, actorId);
+                }
+            }
+        }
+    }
+
     /**
      * Delete a specific firm profile from a multi-firm user.
      *
@@ -644,6 +671,9 @@ public class UserService {
         if (userProfile.getOffices() != null && !userProfile.getOffices().isEmpty()) {
             userProfile.getOffices().clear();
         }
+
+        // Reject any open reactivation requests
+        rejectOpenActivationRequestsOnUserDelete(entraUser.getId(), userProfileId, entraUser.isEnabled(), null, actorId.toString());
 
         // Remove bidirectional association: profile from entra user and entra user from
         // profile
@@ -1043,7 +1073,7 @@ public class UserService {
         // Add audit entry
         UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
                 .entraUser(newUser)
-                .statusChange(UserAccountStatus.ENABLED)
+                .statusChange(UserAccountStatus.ACTIVATED)
                 .statusChangedBy(newUser.getCreatedBy())
                 .statusChangedDate(LocalDateTime.now())
                 .build();
@@ -1107,6 +1137,15 @@ public class UserService {
                     .collect(Collectors.toSet());
         }
 
+        if (!entraUserDto.isEnabled() && userReactivationRequestService.hasOpenReactivationRequest(UUID.fromString(entraUserDto.getId()))) {
+            logger.error("This user already has an open reactivation request for user Entra ID {}. "
+                    + "This user is deactivated. There is an open reactivation request. The request must be closed before this action can be taken. "
+                    + "You can track the status of the reactivation request in the User Details page for this user.", entraUserDto.getId());
+
+            throw new RuntimeException(String.format("This user already has an open reactivation request for user Entra ID %s, "
+                    + "The request must be closed before this action can be taken.", entraUserDto.getId()));
+        }
+
         Firm firm;
         if (!(firmDto == null || firmDto.getId() == null)) {
             firm = firmService.getById(firmDto.getId());
@@ -1114,6 +1153,16 @@ public class UserService {
             logger.error("Invalid firm details provided for user with entra oid: {}", entraUserDto.getEntraOid());
             throw new RuntimeException(String.format("Invalid firm details provided for user with entra oid: %s",
                     entraUserDto.getEntraOid()));
+        }
+
+        // Validate that any requested offices belong to the specified firm
+        if (offices != null && !offices.isEmpty()) {
+            boolean allOfficesBelongToFirm = offices.stream()
+                    .allMatch(o -> o.getFirm() != null && o.getFirm().getId().equals(firm.getId()));
+            if (!allOfficesBelongToFirm) {
+                logger.error("Attempt to assign offices not belonging to firm: {} for user: {}", firm.getId(), entraUserDto.getEntraOid());
+                throw new OfficeAssignmentException("Office assignment is not permitted for offices that do not belong to the specified firm.");
+            }
         }
 
         Set<AppRole> appRoles = null;
@@ -1408,6 +1457,15 @@ public class UserService {
         if (entraUser.isMultiFirmUser()) {
             logger.warn("User with id {} is already a multi-firm user.", userId);
             throw new RuntimeException("User is already a multi-firm user");
+        }
+
+
+        boolean userHasActiveReactivationRequest = !entraUser.isEnabled()
+                && userReactivationRequestService.hasOpenReactivationRequest(entraUser.getId());
+        if (userHasActiveReactivationRequest) {
+            logger.warn("Convert user {} to multi-firm with active reactivation request is not permitted", userId);
+            throw new RuntimeException("This user is deactivated. There is an open reactivation request. "
+                    + "The request must be closed before try convert the user to multi-firm user.");
         }
 
         // Set the multi-firm flag
@@ -2702,4 +2760,8 @@ public class UserService {
         return new PageImpl<>(mappedContent, pageable, rawPage.getTotalElements());
     }
 
+    public boolean isValidUserProfileId(String id, String profileId) {
+        EntraUser entraUser = entraUserRepository.findById(UUID.fromString(id)).orElseThrow();
+        return entraUser.getUserProfiles().stream().anyMatch(up -> up.getId().toString().equals(profileId));
+    }
 }

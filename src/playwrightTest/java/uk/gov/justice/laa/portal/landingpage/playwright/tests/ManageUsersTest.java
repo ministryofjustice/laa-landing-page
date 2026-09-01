@@ -169,7 +169,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
     }
 
     @Test
-    @DisplayName("Verify Disable User link is accessible for EUM")
+    @DisplayName("Verify Reactivate User link is accessible for EUM")
     void verifyUserDetailsPageShowsDisableUserLink() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
         manageUsersPage.searchForUser("playwright-firmtwouserviewer@playwrighttest.com");
@@ -177,11 +177,12 @@ public class ManageUsersTest extends BaseFrontEndTest {
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         manageUsersPage.verifyUserDetailsPopulated();
         // Disable link visible
-        assertTrue(page.locator("#user-details .govuk-summary-list__actions a.govuk-link:has-text(\"Disable user\")").isVisible());
+        assertTrue(page.locator("#user-details .govuk-summary-list__actions a.govuk-link:has-text(\"Deactivate "
+                + "user\")").isVisible());
     }
 
     @Test
-    @DisplayName("Verify Disable User link is not visible for unverified users")
+    @DisplayName("Verify Reactivate User link is not visible for unverified users")
     void verifyUserDetailsPageDonotShowsDisableUserLinkForUnVerifiedUsers() {
         ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
         manageUsersPage.searchForUser("externaluser-incomplete3@playwrighttest.com");
@@ -189,7 +190,7 @@ public class ManageUsersTest extends BaseFrontEndTest {
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
         manageUsersPage.verifyUserDetailsPopulated();
         // Disable link visible
-        assertFalse(page.locator("#user-details .govuk-summary-list__actions a.govuk-link:has-text(\"Disable user\")").isVisible());
+        assertFalse(page.locator("#user-details .govuk-summary-list__actions a.govuk-link:has-text(\"Reactivate user\")").isVisible());
     }
 
     @Test
@@ -874,27 +875,68 @@ public class ManageUsersTest extends BaseFrontEndTest {
         final String userName = "Playwright FirmTwoUserViewer";
         final String service = "Manage your users";
 
-        ManageUsersPage manageUsersPage = loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+
+        // Search for and open the complete user
+        manageUsersPage.searchForUser(userName);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(userName),
+                userName + " should appear in the search results"
+        );
 
         manageUsersPage.clickExternalUserLink(userName);
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
         manageUsersPage.assertStatusVisible("COMPLETE");
+
+        // Remove the user's Manage your users service
         manageUsersPage.clickServicesTab();
         manageUsersPage.clickChangeLink();
 
         Locator serviceCheckbox = page.getByLabel(service);
+
+        assertTrue(
+                serviceCheckbox.isChecked(),
+                service + " should be selected before removal"
+        );
+
         serviceCheckbox.uncheck();
-        assertFalse(serviceCheckbox.isChecked(), service + " checkbox should be unchecked after removal");
+
+        assertFalse(
+                serviceCheckbox.isChecked(),
+                service + " checkbox should be unchecked after removal"
+        );
 
         manageUsersPage.clickContinueUserDetails();
         manageUsersPage.clickConfirmButton();
 
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
-        assertTrue(page.locator(".govuk-panel__title:has-text('Access and permissions updated')").isVisible());
 
-        loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+        assertThat(
+                page.locator(".govuk-panel__title")
+                        .filter(new Locator.FilterOptions()
+                                .setHasText("Access and permissions updated"))
+        ).isVisible();
+
+        // Return to Manage Users as the External User Manager
+        manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.EXTERNAL_USER_MANAGER);
+
+        // Search again because the results page is not guaranteed
+        // to display the user without a search
+        manageUsersPage.searchForUser(userName);
+
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(userName),
+                userName + " should still appear after all roles are removed"
+        );
+
         manageUsersPage.clickExternalUserLink(userName);
         page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Verify the status has changed
         manageUsersPage.assertStatusVisible("NO ROLES ASSIGNED");
     }
 
@@ -1197,6 +1239,66 @@ public class ManageUsersTest extends BaseFrontEndTest {
         manageUsersPage.verifyAwaitingFirmAccessMessage();
     }
 
+    @Test
+    @DisplayName("Filter Manage Users to display multi-firm users only")
+    void filterManageUsersByThirdPartyUsers() {
+        final String firmCode = "90001";
+
+        final List<String> services = List.of(
+                "Test LAA App Four"
+        );
+
+        final List<String> roles = List.of(
+                "Test LAA App Four Role One Access"
+        );
+
+        final List<String> offices = List.of(
+                "THREE"
+        );
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        // Create a standard provider user without multi-firm access
+        final String nonMultiFirmUserEmail =
+                manageUsersPage.createProviderAdminUserWithNonMultiFirmAccess(
+                        firmCode
+                );
+
+        // Create a multi-firm user and delegate firm access
+        final String multiFirmUserEmail =
+                manageUsersPage.createMultiFirmUserAndDelegateAccess(
+                        firmCode,
+                        services,
+                        roles,
+                        offices
+                );
+
+        // Return to Manage Your Users after delegation
+        manageUsersPage.clickGoBackToManageUsers();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Apply the new 3rd Party filter
+        manageUsersPage.filterByThirdPartyUsers();
+
+        // Search for the multi-firm user
+        assertTrue(
+                manageUsersPage.searchAndVerifyUser(multiFirmUserEmail),
+                "The multi-firm user should be displayed when the 3rd Party filter is applied"
+        );
+
+        // Verify the displayed user is identified as a 3rd Party user
+        Locator multiFirmUserRow = page.locator("tr")
+                .filter(new Locator.FilterOptions()
+                        .setHasText(multiFirmUserEmail));
+
+        assertThat(multiFirmUserRow).isVisible();
+        assertThat(multiFirmUserRow).containsText("External - 3rd Party");
+
+        // Search for the standard provider user while the filter remains applied
+        manageUsersPage.searchAndVerifyUserNotExists(nonMultiFirmUserEmail);
+    }
+
 
     @Test
     @DisplayName("Change the assigned role for a multi-firm user")
@@ -1428,6 +1530,199 @@ public class ManageUsersTest extends BaseFrontEndTest {
                 )
         ).not().isVisible();
     }
+
+    @Test
+    @DisplayName("Multi-firm user can switch between delegated firms")
+    void multiFirmUserCanSwitchBetweenDelegatedFirms() {
+        final String firstFirmCode = "90001";
+        final String secondFirmCode = "90002";
+
+        final String firstFirmName = "Automation Firm One";
+        final String secondFirmName = "Automation Firm Two";
+
+        final List<String> services = List.of(
+                "Test LAA App Four"
+        );
+
+        final List<String> roles = List.of(
+                "Test LAA App Four Role One Access"
+        );
+
+        final List<String> firstFirmOffices = List.of(
+                "THREE"
+        );
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        // Create the multi-firm user and delegate access to the first firm
+        final String email =
+                manageUsersPage.createMultiFirmUserAndDelegateAccess(
+                        firstFirmCode,
+                        services,
+                        roles,
+                        firstFirmOffices
+                );
+
+        // Delegate access to the second firm
+        manageUsersPage.delegateAdditionalFirmAccess(
+                email,
+                secondFirmCode,
+                services,
+                roles
+        );
+
+        // Return to Manage Your Users after the second delegation
+        manageUsersPage.clickGoBackToManageUsers();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Sign out as Global Admin
+        manageUsersPage.clickAndConfirmSignOut();
+
+        // Sign in as the newly created multi-firm user
+        loginAs(email);
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Verify the user lands on the home page
+        assertTrue(
+                page.url().endsWith("/home"),
+                "The multi-firm user should land on the home page"
+        );
+
+        // Verify Switch firm is available
+        Locator switchFirmLink = page.getByRole(
+                AriaRole.LINK,
+                new Page.GetByRoleOptions()
+                        .setName("Switch firm")
+                        .setExact(true)
+        );
+
+        assertThat(switchFirmLink).isVisible();
+
+        // Open Switch firm page
+        switchFirmLink.click();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Verify the user is on the Switch firm page
+        assertTrue(
+                page.url().contains("/switch-firm"),
+                "The multi-firm user should be taken to the Switch firm page"
+        );
+
+        // Verify both delegated firms are selectable
+        Locator firstFirmButton = page.getByRole(
+                AriaRole.BUTTON,
+                new Page.GetByRoleOptions()
+                        .setName(firstFirmName)
+                        .setExact(true)
+        );
+
+        Locator secondFirmButton = page.getByRole(
+                AriaRole.BUTTON,
+                new Page.GetByRoleOptions()
+                        .setName(secondFirmName)
+                        .setExact(true)
+        );
+
+        assertThat(firstFirmButton).isVisible();
+        assertThat(secondFirmButton).isVisible();
+
+        // Switch to the second firm
+        secondFirmButton.click();
+        page.waitForLoadState(LoadState.DOMCONTENTLOADED);
+
+        // Verify the user returns to the home page
+        assertTrue(
+                page.url().endsWith("/home"),
+                "The user should return to the home page after switching firm"
+        );
+
+        // Verify successful firm switch banner
+        Locator successBanner =
+                page.locator("#firm-switch-success-banner");
+
+        assertThat(successBanner).isVisible();
+
+        assertThat(
+                successBanner.getByText(
+                        "You are now working on behalf of " + secondFirmName,
+                        new Locator.GetByTextOptions()
+                                .setExact(true)
+                )
+        ).isVisible();
+
+        // Verify the active firm shown on the home page has changed
+        assertThat(
+                page.getByText(
+                        secondFirmName + " - " + secondFirmCode,
+                        new Page.GetByTextOptions()
+                                .setExact(true)
+                )
+        ).isVisible();
+
+        // Verify delegated service is available under the second firm
+        assertThat(
+                page.getByRole(
+                        AriaRole.LINK,
+                        new Page.GetByRoleOptions()
+                                .setName("Test LAA App Four")
+                )
+        ).isVisible();
+    }
+
+    @Test
+    @DisplayName("Global Admin can deactivate and reactivate an external user")
+    void globalAdminCanDeactivateAndReactivateExternalUser() {
+
+        final String externalUserEmail =
+                "playwright-firmtwouserviewer@playwrighttest.com";
+
+        ManageUsersPage manageUsersPage =
+                loginAndGetManageUsersPage(TestUser.GLOBAL_ADMIN);
+
+        // Find active user
+        manageUsersPage.searchAndVerifyUser(externalUserEmail);
+        manageUsersPage.clickUserLink(externalUserEmail);
+
+        manageUsersPage.verifySilasAccountStatus("Active");
+        manageUsersPage.verifyDeactivateUserVisible();
+
+        // Deactivate user
+        manageUsersPage.clickDeactivateUser();
+
+        manageUsersPage.verifyDeactivateUserReasonPageVisible();
+        manageUsersPage.selectDeactivateUserReason("Provider Discretion");
+        manageUsersPage.clickDeactivateUserContinue();
+
+        manageUsersPage.verifyUserDeactivatedSuccessfully();
+
+        // Return to Manage Users
+        manageUsersPage.clickGoBackToManageUsers();
+
+        // Find same user and verify deactivated state
+        manageUsersPage.searchAndVerifyUser(externalUserEmail);
+        manageUsersPage.clickUserLink(externalUserEmail);
+
+        manageUsersPage.verifySilasAccountStatus("Deactivated");
+        manageUsersPage.verifyActivateUserVisible();
+
+        // Reactivate user
+        manageUsersPage.clickActivateUser();
+
+        // Click continue button
+        manageUsersPage.clickContinueLink();
+
+        // Add comments Click Comment button
+        manageUsersPage.populateEnableReason();
+        manageUsersPage.clickContinueLink();
+
+        // Now on Check your answers
+        manageUsersPage.confirmReactivateUser();
+
+        // Verify reactivation succeeded
+        manageUsersPage.verifyReactivationSuccessful();
+    }
+
 
 
 }

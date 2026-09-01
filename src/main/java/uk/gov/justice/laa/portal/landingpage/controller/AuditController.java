@@ -221,6 +221,10 @@ public class AuditController {
                     ? OffsetDateTime.parse(user.getLastSignIn())
                     : null;
 
+            OffsetDateTime lastSuccessfulLoginTime = user.getLastSuccessfulSignIn() != null
+                    ? OffsetDateTime.parse(user.getLastSuccessfulSignIn())
+                    : null;
+
             Optional<Boolean> optionalAccountEnabled = Optional.of(entraUserResponse)
                     .map(TechServicesApiResponse::getData)
                     .map(GetUserResponse::getUser)
@@ -242,6 +246,7 @@ public class AuditController {
             String disableUserReason = formatDisableUserReason(user);
 
             model.addAttribute("lastLogin", lastLoginTime);
+            model.addAttribute("lastSuccessfulLogin", lastSuccessfulLoginTime);
             model.addAttribute("entraUser", entraUserResponse.getData().getUser());
             model.addAttribute("entraVerificationStatus", getEntraVerificationStatus(entraUserResponse));
             model.addAttribute("entraUserDisableReason", disableUserReason);
@@ -251,9 +256,10 @@ public class AuditController {
         model.addAttribute("showResendVerificationLink", showResendVerificationLink);
         AccessControlService.EnablementFlags enablementFlags = disableUserFeatureEnabled
                 ? accessControlService.getEnablementFlags(userDetail.getUserId())
-                : new AccessControlService.EnablementFlags(false, false);
+                : new AccessControlService.EnablementFlags(false, false, false);
         boolean canEnableUser = enablementFlags.canEnable();
         boolean cannotEnableUser = enablementFlags.blockedByHierarchy();
+        boolean canDelegateEnableUser = enablementFlags.canDelegate();
 
         // Add attributes to model
         model.addAttribute("user", userDetail);
@@ -264,6 +270,7 @@ public class AuditController {
         model.addAttribute("canDisableUser", disableUserFeatureEnabled && canDisableUser);
         model.addAttribute("canEnableUser", canEnableUser);
         model.addAttribute("cannotEnableUser", cannotEnableUser);
+        model.addAttribute("canDelegateEnableUser", canDelegateEnableUser);
         model.addAttribute("userIsEnabled", userDetail.isEnabled());
         model.addAttribute("userActivated",
                 Objects.equals(userDetail.getUserType(), "Internal") || Objects.equals(userDetail.getActivationStatus(), VERIFICATION_SUCCESS.name()));

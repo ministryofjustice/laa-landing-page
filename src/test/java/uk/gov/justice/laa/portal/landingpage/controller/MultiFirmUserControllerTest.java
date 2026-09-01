@@ -13,6 +13,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -76,6 +78,7 @@ import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.OfficeService;
 import uk.gov.justice.laa.portal.landingpage.service.RoleAssignmentService;
+import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
@@ -104,6 +107,8 @@ public class MultiFirmUserControllerTest {
     @Mock
     private AppService appService;
     @Mock
+    private UserReactivationRequestService userReactivationRequestService;
+    @Mock
     private BindingResult bindingResult;
     @Mock
     private ApplicationsForm applicationsForm;
@@ -119,7 +124,7 @@ public class MultiFirmUserControllerTest {
         model = new ExtendedModelMap();
         session = new MockHttpSession();
         controller = new MultiFirmUserController(userService, loginService, appRoleService,
-                appService, roleAssignmentService, officeService, eventService, mapper, firmService);
+                appService, roleAssignmentService, officeService, eventService, mapper, firmService, userReactivationRequestService);
         firmSearchForm = FirmSearchForm.builder()
                 .build();
         multiFirmUserForm = MultiFirmUserForm.builder()
@@ -453,6 +458,35 @@ public class MultiFirmUserControllerTest {
 
         assertThat(result).isEqualTo("multi-firm-user/select-user");
         assertSessionAndModelPopulated(model, session);
+        assertThat(model.getAttribute("entraUser")).isNull();
+        assertThat(session.getAttribute("entraUser")).isNull();
+    }
+
+    @Test
+    public void addUserProfilePost_existingReactivationRequest() {
+        MultiFirmUserForm form = createForm();
+        BindingResult bindingResult = mockBindingResult(false);
+
+        Firm userFirm = Firm.builder().name("test").build();
+        UserProfile userProfile = UserProfile.builder().firm(userFirm).build();
+        EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).email(form.getEmail()).enabled(false)
+                .multiFirmUser(true).userProfiles(Set.of(userProfile)).build();
+        when(userService.findEntraUserByEmail(form.getEmail())).thenReturn(Optional.of(entraUser));
+        when(userReactivationRequestService.hasOpenReactivationRequest(entraUser.getId())).thenReturn(true);
+
+        Firm adminFirm = Firm.builder().name("admin firm").build();
+        UserProfile adminUserProfile = UserProfile.builder().firm(adminFirm).build();
+        when(loginService.getCurrentProfile(authentication)).thenReturn(adminUserProfile);
+
+        String result = controller.addUserProfilePost(form, bindingResult, model, session, authentication);
+
+        assertThat(result).isEqualTo("multi-firm-user/select-user");
+        verify(bindingResult).rejectValue("email", "error.email",
+                "This user is deactivated. There is an open reactivation request. The request must be closed before this action can be taken. "
+                + "You can track the status of the reactivation request in the User Details page for this user.");
+
+        assertThat(model.getAttribute("multiFirmUserForm")).isNull();
+        assertThat(session.getAttribute("multiFirmUserForm")).isNotNull();
         assertThat(model.getAttribute("entraUser")).isNull();
         assertThat(session.getAttribute("entraUser")).isNull();
     }
@@ -1806,7 +1840,7 @@ public class MultiFirmUserControllerTest {
         CurrentUserDto currentUserDto = new CurrentUserDto();
         currentUserDto.setName("admin");
 
-        OfficeDto officeDto = OfficeDto.builder().code("office1").build();
+        OfficeDto officeDto = OfficeDto.builder().id(office.getId()).code("office1").build();
 
         when(appRoleService.getByIds(List.of("role1", "role2"))).thenReturn(List.of(role1, role2));
         when(loginService.getCurrentProfile(authentication)).thenReturn(profile);
@@ -2333,6 +2367,42 @@ public class MultiFirmUserControllerTest {
 
         assertThat(view).isEqualTo("multi-firm-user/select-user-app-roles");
         verify(userService).getAppRolesByAppIdAndUserType(appId, UserType.EXTERNAL, null);
+    }
+
+    @Test
+    void checkAnswerAndAddProfilePost_submittedOfficeNotInTargetFirm_shouldThrow() {
+        //Arrange
+        EntraUserDto user = new EntraUserDto();
+        user.setId(UUID.randomUUID().toString());
+        user.setEntraOid("entra-oid");
+        session.setAttribute("entraUser", user);
+
+        // editor profile (external)
+        UserProfile editorProfile = UserProfile.builder().userType(UserType.EXTERNAL).firm(Firm.builder().id(UUID.randomUUID()).build()).build();
+        when(loginService.getCurrentProfile(org.mockito.Mockito.any())).thenReturn(editorProfile);
+
+        // session contains userOffices with an office that does not belong to target firm
+        UUID otherOfficeId = UUID.randomUUID();
+        session.setAttribute("userOffices", List.of(otherOfficeId.toString()));
+
+        // officeService will resolve the OfficeDto list (returned id does not match any office on firm)
+        OfficeDto officeDto = new OfficeDto();
+        officeDto.setId(otherOfficeId);
+        when(officeService.getOfficesByIds(List.of(otherOfficeId.toString()))).thenReturn(List.of(officeDto));
+
+        // target firm has no offices (or offices not containing this id)
+        UUID targetFirmId = UUID.randomUUID();
+        Firm targetFirm = Firm.builder().id(targetFirmId).offices(Set.of()).build();
+        when(firmService.getById(targetFirmId)).thenReturn(targetFirm);
+        session.setAttribute("delegateTargetFirmId", targetFirmId.toString());
+
+        // allow role assignment validation to pass so office validation is reached
+        when(roleAssignmentService.canAssignRole(org.mockito.Mockito.any(), org.mockito.Mockito.anyList())).thenReturn(true);
+
+        // Act & Assert
+        Assertions.assertThatThrownBy(() -> controller.checkAnswerAndAddProfilePost(org.mockito.Mockito.mock(org.springframework.security.core.Authentication.class), null, session, model))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Office assignment is not permitted");
     }
 
 }
