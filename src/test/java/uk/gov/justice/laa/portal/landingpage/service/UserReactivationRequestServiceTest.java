@@ -1,6 +1,15 @@
 package uk.gov.justice.laa.portal.landingpage.service;
 
-import jakarta.persistence.EntityNotFoundException;
+import java.time.Instant;
+import java.util.Collections;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -8,12 +17,26 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import static org.mockito.AdditionalAnswers.returnsFirstArg;
 import org.mockito.ArgumentCaptor;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.Authentication;
+
+import jakarta.persistence.EntityNotFoundException;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.ReactivationRequestsPageData;
 import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto;
@@ -31,29 +54,6 @@ import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserActivationRequestRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
-
-import java.time.Instant;
-import java.util.Collections;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.AdditionalAnswers.returnsFirstArg;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UserReactivationRequestServiceTest {
@@ -833,6 +833,7 @@ class UserReactivationRequestServiceTest {
             void shouldBuildFilterSortAndPaginateRequestsInManageMode() {
                 EntraUser currentUser = mock(EntraUser.class);
                 when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+                stubGlobalAdmin(currentUser);
 
                 // Set up test entities
                 UUID request1Id = UUID.randomUUID();
@@ -897,6 +898,153 @@ class UserReactivationRequestServiceTest {
             }
 
             @Test
+            @DisplayName("Should show a multi-firm request to the External User Manager who raised it")
+            void multiFirmRequest_isVisibleToRequestingEum() {
+                EntraUser currentUser = mock(EntraUser.class);
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+
+                UUID requestId = UUID.randomUUID();
+                UserActivationRequest request = mock(UserActivationRequest.class);
+                when(request.getId()).thenReturn(UUID.randomUUID());
+                when(request.getRequestId()).thenReturn(requestId);
+                when(request.getUserProfileId()).thenReturn(USER_PROFILE_ID);
+                when(request.getActorEntraOid()).thenReturn(ACTOR_ENTRA_OID);
+                when(request.getActorRoleType()).thenReturn(ReactivationRoleType.LAA_OST);
+                when(request.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
+                when(request.getCreatedAt()).thenReturn(Instant.now());
+                when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(List.of(request));
+
+                EntraUser multiFirmTarget = mock(EntraUser.class);
+                UserProfile profile = mock(UserProfile.class);
+                when(profile.getId()).thenReturn(USER_PROFILE_ID);
+                when(profile.getEntraUser()).thenReturn(multiFirmTarget);
+                when(userProfileRepository.findAllByIdInWithFirm(Set.of(USER_PROFILE_ID))).thenReturn(List.of(profile));
+                when(userActivationRequestRepository.findAllFirstVersionsByRequestIdIn(Set.of(requestId)))
+                        .thenReturn(List.of(request));
+
+                try (MockedStatic<AccessControlService> accessControlMock = mockStatic(AccessControlService.class)) {
+                    accessControlMock.when(() -> AccessControlService.userHasAuthzRole(
+                            currentUser, AuthzRole.EXTERNAL_USER_MANAGER.getRoleName())).thenReturn(true);
+
+                    ReactivationRequestsPageData result = service.getPage(
+                            authentication, "", null, false, false, false, 1, 10, null, "asc");
+
+                    assertThat(result.paginatedRequests().getRequests()).hasSize(1);
+                }
+            }
+
+            @Test
+            @DisplayName("Should show a multi-firm request to an External User Admin")
+            void multiFirmRequest_isVisibleToExternalUserAdmin() {
+                EntraUser currentUser = mock(EntraUser.class);
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+
+                UUID requestId = UUID.randomUUID();
+                UserActivationRequest request = mock(UserActivationRequest.class);
+                when(request.getId()).thenReturn(UUID.randomUUID());
+                when(request.getRequestId()).thenReturn(requestId);
+                when(request.getUserProfileId()).thenReturn(USER_PROFILE_ID);
+                when(request.getActorEntraOid()).thenReturn(ACTOR_ENTRA_OID);
+                when(request.getActorRoleType()).thenReturn(ReactivationRoleType.LAA_OST);
+                when(request.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
+                when(request.getCreatedAt()).thenReturn(Instant.now());
+                when(userActivationRequestRepository.findAllLatestRequests()).thenReturn(List.of(request));
+
+                EntraUser multiFirmTarget = mock(EntraUser.class);
+                UserProfile profile = mock(UserProfile.class);
+                when(profile.getId()).thenReturn(USER_PROFILE_ID);
+                when(profile.getEntraUser()).thenReturn(multiFirmTarget);
+                when(userProfileRepository.findAllByIdInWithFirm(Set.of(USER_PROFILE_ID))).thenReturn(List.of(profile));
+                when(userActivationRequestRepository.findAllFirstVersionsByRequestIdIn(Set.of(requestId)))
+                        .thenReturn(List.of(request));
+
+                try (MockedStatic<AccessControlService> accessControlMock = mockStatic(AccessControlService.class)) {
+                    accessControlMock.when(() -> AccessControlService.userHasAuthzRole(
+                            currentUser, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())).thenReturn(true);
+
+                    ReactivationRequestsPageData result = service.getPage(
+                            authentication, "", null, false, false, false, 1, 10, null, "asc");
+
+                    assertThat(result.paginatedRequests().getRequests()).hasSize(1);
+                }
+            }
+
+            @Test
+            @DisplayName("Should show EUM and EUS originated requests to External User Support")
+            void eumAndEusRequests_areVisibleToExternalUserSupport() {
+                EntraUser currentUser = mock(EntraUser.class);
+                when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+
+                UUID eumRequestId = UUID.randomUUID();
+                UUID eusRequestId = UUID.randomUUID();
+                UUID providerRequestId = UUID.randomUUID();
+                UUID eumProfileId = UUID.randomUUID();
+                UUID eusProfileId = UUID.randomUUID();
+                UUID providerProfileId = UUID.randomUUID();
+
+                UserActivationRequest eumRequest = mock(UserActivationRequest.class);
+                when(eumRequest.getId()).thenReturn(UUID.randomUUID());
+                when(eumRequest.getRequestId()).thenReturn(eumRequestId);
+                when(eumRequest.getUserProfileId()).thenReturn(eumProfileId);
+                when(eumRequest.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
+                when(eumRequest.getActorRoleType()).thenReturn(ReactivationRoleType.LAA_OST);
+
+                UserActivationRequest eusRequest = mock(UserActivationRequest.class);
+                when(eusRequest.getId()).thenReturn(UUID.randomUUID());
+                when(eusRequest.getRequestId()).thenReturn(eusRequestId);
+                when(eusRequest.getUserProfileId()).thenReturn(eusProfileId);
+                when(eusRequest.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
+                when(eusRequest.getActorRoleType()).thenReturn(ReactivationRoleType.LAA_SUPPORT);
+
+                UserActivationRequest providerRequest = mock(UserActivationRequest.class);
+                when(providerRequest.getRequestId()).thenReturn(providerRequestId);
+                when(providerRequest.getUserProfileId()).thenReturn(providerProfileId);
+
+                when(userActivationRequestRepository.findAllLatestRequests())
+                        .thenReturn(List.of(eumRequest, eusRequest, providerRequest));
+
+                EntraUser targetUser = mock(EntraUser.class);
+                UserProfile eumProfile = mock(UserProfile.class);
+                when(eumProfile.getId()).thenReturn(eumProfileId);
+                when(eumProfile.getEntraUser()).thenReturn(targetUser);
+                UserProfile eusProfile = mock(UserProfile.class);
+                when(eusProfile.getId()).thenReturn(eusProfileId);
+                when(eusProfile.getEntraUser()).thenReturn(targetUser);
+                UserProfile providerProfile = mock(UserProfile.class);
+                when(providerProfile.getId()).thenReturn(providerProfileId);
+                when(providerProfile.getEntraUser()).thenReturn(targetUser);
+                when(userProfileRepository.findAllByIdInWithFirm(Set.of(eumProfileId, eusProfileId, providerProfileId)))
+                        .thenReturn(List.of(eumProfile, eusProfile, providerProfile));
+
+                UserActivationRequest eumFirstVersion = mock(UserActivationRequest.class);
+                when(eumFirstVersion.getRequestId()).thenReturn(eumRequestId);
+                when(eumFirstVersion.getCreatedAt()).thenReturn(Instant.now());
+                when(eumFirstVersion.getActorRoleType()).thenReturn(ReactivationRoleType.LAA_OST);
+                UserActivationRequest eusFirstVersion = mock(UserActivationRequest.class);
+                when(eusFirstVersion.getRequestId()).thenReturn(eusRequestId);
+                when(eusFirstVersion.getCreatedAt()).thenReturn(Instant.now());
+                when(eusFirstVersion.getActorRoleType()).thenReturn(ReactivationRoleType.LAA_SUPPORT);
+                UserActivationRequest providerFirstVersion = mock(UserActivationRequest.class);
+                when(providerFirstVersion.getRequestId()).thenReturn(providerRequestId);
+                when(providerFirstVersion.getCreatedAt()).thenReturn(Instant.now());
+                when(providerFirstVersion.getActorRoleType()).thenReturn(ReactivationRoleType.PROVIDER_ADMIN);
+                when(userActivationRequestRepository.findAllFirstVersionsByRequestIdIn(Set.of(eumRequestId, eusRequestId, providerRequestId)))
+                        .thenReturn(List.of(eumFirstVersion, eusFirstVersion, providerFirstVersion));
+
+                try (MockedStatic<AccessControlService> accessControlMock = mockStatic(AccessControlService.class)) {
+                    accessControlMock.when(() -> AccessControlService.userHasAuthzRole(
+                            currentUser, AuthzRole.EXTERNAL_USER_SUPPORT.getRoleName())).thenReturn(true);
+
+                    ReactivationRequestsPageData result = service.getPage(
+                            authentication, "", null, false, false, false, 1, 10, null, "asc");
+
+                    assertThat(result.paginatedRequests().getRequests())
+                            .extracting(ReactivationRequestListItem::requestId)
+                            .containsExactlyInAnyOrder(eumRequestId, eusRequestId);
+                }
+            }
+
+            @Test
             @DisplayName("Should return empty list in TRACK mode if user has no allowed firms")
             void shouldReturnEmptyWhenTrackModeHasNoAllowedFirms() {
                 EntraUser currentUser = mock(EntraUser.class);
@@ -950,6 +1098,7 @@ class UserReactivationRequestServiceTest {
 
                     UserProfile profile = mock(UserProfile.class);
                     when(profile.getId()).thenReturn(USER_PROFILE_ID);
+                    when(profile.getEntraUser()).thenReturn(EntraUser.builder().multiFirmUser(false).build());
                     when(profile.getFirm()).thenReturn(allowedFirm);
 
                     when(userProfileRepository.findAllByIdInWithFirm(Set.of(USER_PROFILE_ID))).thenReturn(List.of(profile));
@@ -966,6 +1115,7 @@ class UserReactivationRequestServiceTest {
             void shouldHandleMissingActorAndProfileGracefully() {
                 EntraUser currentUser = mock(EntraUser.class);
                 when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+                stubGlobalAdmin(currentUser);
 
                 UserActivationRequest request = mock(UserActivationRequest.class);
                 when(request.getId()).thenReturn(UUID.randomUUID());
@@ -1000,6 +1150,7 @@ class UserReactivationRequestServiceTest {
             void shouldTestComparatorsAndDescSorting() {
                 EntraUser currentUser = mock(EntraUser.class);
                 when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+                stubGlobalAdmin(currentUser);
 
                 UserActivationRequest req1 = UserActivationRequest.builder()
                         .id(UUID.randomUUID())
@@ -1033,6 +1184,7 @@ class UserReactivationRequestServiceTest {
             void shouldHandlePaginationBoundaries() {
                 EntraUser currentUser = mock(EntraUser.class);
                 when(loginService.getCurrentEntraUser(authentication)).thenReturn(currentUser);
+                stubGlobalAdmin(currentUser);
 
                 UserActivationRequest req1 = mock(UserActivationRequest.class);
                 when(req1.getId()).thenReturn(UUID.randomUUID());
@@ -1050,5 +1202,15 @@ class UserReactivationRequestServiceTest {
             }
         }
 
+    }
+
+    private void stubGlobalAdmin(EntraUser currentUser) {
+        AppRole globalAdminRole = mock(AppRole.class);
+        when(globalAdminRole.isAuthzRole()).thenReturn(true);
+        when(globalAdminRole.getName()).thenReturn(AuthzRole.GLOBAL_ADMIN.getRoleName());
+        UserProfile profile = mock(UserProfile.class);
+        when(profile.isActiveProfile()).thenReturn(true);
+        when(profile.getAppRoles()).thenReturn(Set.of(globalAdminRole));
+        when(currentUser.getUserProfiles()).thenReturn(Set.of(profile));
     }
 }
