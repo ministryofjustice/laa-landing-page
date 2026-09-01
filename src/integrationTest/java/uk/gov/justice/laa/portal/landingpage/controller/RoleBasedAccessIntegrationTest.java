@@ -9,12 +9,12 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
-import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 
+import jakarta.persistence.EntityManager;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
@@ -86,6 +86,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
     protected List<EntraUser> silasAdmins = new ArrayList<>();
     protected List<EntraUser> firmUserManagers = new ArrayList<>();
     protected List<EntraUser> securityResponseUsers = new ArrayList<>();
+    protected List<EntraUser> externalUserSupportUsers = new ArrayList<>();
     protected List<EntraUser> allUsers = new ArrayList<>();
 
     @BeforeEach
@@ -149,6 +150,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         silasAdmins.clear();
         firmUserManagers.clear();
         securityResponseUsers.clear();
+        externalUserSupportUsers.clear();
         allUsers.clear();
         // Index to keep all email addresses unique.
         int emailIndex = 0;
@@ -392,6 +394,21 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         profile.setEntraUser(user);
         silasAdmins.add(entraUserRepository.saveAndFlush(user));
 
+        // Setup 5 External User Support users
+        for (int i = 0; i < 5; i++) {
+            EntraUser eusUser = buildEntraUser(UUID.randomUUID().toString(), String.format("test%d@test.com", emailIndex++), "Internal", "ExternalUserSupport");
+            UserProfile eusProfile = buildLaaUserProfile(eusUser, UserType.INTERNAL, true);
+            AppRole eusRole = allAppRoles.stream()
+                    .filter(AppRole::isAuthzRole)
+                    .filter(role -> role.getName().equals("External User Support"))
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Could not find app role"));
+            eusProfile.setAppRoles(Set.of(eusRole));
+            eusUser.setUserProfiles(Set.of(eusProfile));
+            eusProfile.setEntraUser(eusUser);
+            externalUserSupportUsers.add(entraUserRepository.saveAndFlush(eusUser));
+        }
+
 
         allUsers.addAll(internalUsersNoRoles);
         allUsers.addAll(internalUserManagers);
@@ -407,6 +424,7 @@ public abstract class RoleBasedAccessIntegrationTest extends BaseIntegrationTest
         allUsers.addAll(multiFirmUsers);
         allUsers.addAll(securityResponseUsers);
         allUsers.addAll(silasAdmins);
+        allUsers.addAll(externalUserSupportUsers);
         allUsers.addAll(disabledExternalUsersNoRoles);
     }
 

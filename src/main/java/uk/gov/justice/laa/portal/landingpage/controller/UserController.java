@@ -1,23 +1,10 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,12 +31,6 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
-
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -82,6 +63,7 @@ import uk.gov.justice.laa.portal.landingpage.exception.CreateUserDetailsIncomple
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
 import uk.gov.justice.laa.portal.landingpage.forms.ApplicationsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.ConvertToMultiFirmForm;
+import uk.gov.justice.laa.portal.landingpage.forms.DelegateReactivateUserCommentForm;
 import uk.gov.justice.laa.portal.landingpage.forms.DisableUserReasonForm;
 import uk.gov.justice.laa.portal.landingpage.forms.EditUserDetailsForm;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmReassignmentForm;
@@ -101,7 +83,6 @@ import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
 import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
-import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
@@ -113,14 +94,34 @@ import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getSetFromHttpSession;
 import uk.gov.justice.laa.portal.landingpage.utils.RolesUtils;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.DeleteUserReasonViewModel;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.DisableUserReasonViewModel;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getSetFromHttpSession;
 
 /**
  * User Controller
@@ -661,7 +662,6 @@ public class UserController {
         }
     }
 
-
     @PostMapping("/users/manage/{id}/deactivate")
     @PreAuthorize("@accessControlService.canDisableUser(#id)")
     public String disableUserReasonsPost(@PathVariable String id,
@@ -701,39 +701,168 @@ public class UserController {
     @PreAuthorize("@accessControlService.canEnableUser(#id)")
     public String enableUserGet(@PathVariable String id,
                                  Model model,
+                                HttpSession session,
                                  String referer,
                                  String profileId,
                                  Authentication authentication) {
-
+        session.removeAttribute("delegateReactivateUserCommentForm");
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
         EntraUser currentEntraUser = loginService.getCurrentEntraUser(authentication);
         boolean isInternalActor = userService.isInternal(currentEntraUser.getId());
         model.addAttribute("user", user);
+        model.addAttribute("profileId", profileId);
         model.addAttribute("referer", referer);
         model.addAttribute("cancelPath", getCancelPathFromReferer(referer, id, profileId));
         model.addAttribute("isInternalActor", isInternalActor);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User - " + user.getFullName());
-        return "enable-user-confirmation";
+        return "enable-user-initiation";
     }
 
-    @PostMapping("/users/manage/{id}/activate")
+    @GetMapping("/users/manage/{id}/activate-init")
     @PreAuthorize("@accessControlService.canEnableUser(#id)")
-    public String enableUserPost(@PathVariable String id,
+    public String reactivateUserInitGet(@PathVariable String id,
+                                        Model model,
+                                        HttpSession session,
+                                        String referer,
+                                        String profileId,
+                                        Authentication authentication) {
+        session.removeAttribute("delegateReactivateUserCommentForm");
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        EntraUser currentEntraUser = loginService.getCurrentEntraUser(authentication);
+        boolean isInternalActor = userService.isInternal(currentEntraUser.getId());
+        model.addAttribute("user", user);
+        model.addAttribute("profileId", profileId);
+        model.addAttribute("referer", referer);
+        model.addAttribute("cancelPath", getCancelPathFromReferer(referer, id, profileId));
+        model.addAttribute("isInternalActor", isInternalActor);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User - " + user.getFullName());
+        return "enable-user-initiation";
+    }
+
+    @PostMapping("/users/manage/{id}/activate-init")
+    @PreAuthorize("@accessControlService.canEnableUser(#id)")
+    public String reactivateUserInitPost(@PathVariable String id,
                                          Authentication authentication,
                                          Model model,
+                                         HttpSession session,
+                                         String referer,
+                                         String profileId) {
+
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+
+        DelegateReactivateUserCommentForm delegateReactivateUserCommentForm =
+                getObjectFromHttpSession(session, "delegateReactivateUserCommentForm", DelegateReactivateUserCommentForm.class)
+                        .orElse(new DelegateReactivateUserCommentForm());
+        String cancelPath = getCancelPathFromReferer(referer, id, profileId);
+        model.addAttribute("user", user);
+        model.addAttribute("profileId", profileId);
+        model.addAttribute("referer", referer);
+        model.addAttribute("cancelPath", cancelPath);
+        model.addAttribute("delegateReactivateUserCommentForm", delegateReactivateUserCommentForm);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User Success - " + user.getFullName());
+        return "enable-user-reason";
+    }
+
+    @GetMapping("/users/manage/{id}/activate-comments")
+    @PreAuthorize("@accessControlService.canEnableUser(#id)")
+    public String reactivateUserCommentsGet(@PathVariable String id,
+                                            Model model,
+                                            HttpSession session,
+                                            String referer,
+                                            String profileId) {
+
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+
+        DelegateReactivateUserCommentForm delegateReactivateUserCommentForm =
+                getObjectFromHttpSession(session, "delegateReactivateUserCommentForm", DelegateReactivateUserCommentForm.class)
+                        .orElse(new DelegateReactivateUserCommentForm());
+        String cancelPath = getCancelPathFromReferer(referer, id, profileId);
+        model.addAttribute("user", user);
+        model.addAttribute("profileId", profileId);
+        model.addAttribute("referer", referer);
+        model.addAttribute("cancelPath", cancelPath);
+        model.addAttribute("delegateReactivateUserCommentForm", delegateReactivateUserCommentForm);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User Success - " + user.getFullName());
+        return "enable-user-reason";
+    }
+
+    @PostMapping("/users/manage/{id}/activate-comments")
+    @PreAuthorize("@accessControlService.canEnableUser(#id)")
+    public String reactivateUserCommentsPost(@PathVariable String id,
+                                             @Valid @ModelAttribute DelegateReactivateUserCommentForm delegateReactivateUserCommentForm,
+                                             BindingResult bindingResult,
+                                             Model model,
+                                             HttpSession session,
+                                             String referer,
+                                             String profileId) {
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        if (bindingResult.hasErrors()) {
+            log.debug("Validation errors occurred while enabling user: {}", bindingResult.getAllErrors());
+            model.addAttribute("delegateReactivateUserCommentForm", delegateReactivateUserCommentForm);
+            model.addAttribute("referer", referer);
+            model.addAttribute("user", user);
+            model.addAttribute("profileId", profileId);
+            bindingResult.rejectValue("comment", "error.comment", "Comment must be between 10 and 500 characters");
+            model.addAttribute("errorMessage", "Please provide reason for reactivating the user");
+            model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User Success - " + user.getFullName());
+            return "enable-user-reason";
+        }
+
+        session.setAttribute("delegateReactivateUserCommentForm", delegateReactivateUserCommentForm);
+        String cancelPath = getCancelPathFromReferer(referer, id, profileId);
+        model.addAttribute("user", user);
+        model.addAttribute("referer", referer);
+        model.addAttribute("profileId", profileId);
+        model.addAttribute("cancelPath", cancelPath);
+        model.addAttribute("delegateReactivateUserCommentForm", delegateReactivateUserCommentForm);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User Success - " + user.getFullName());
+        return "enable-user-check-answers";
+    }
+
+    @GetMapping("/users/manage/{id}/activate-check-answers")
+    @PreAuthorize("@accessControlService.canEnableUser(#id)")
+    public String enableUserCheckAnswersGet(@PathVariable String id,
+                                            Model model,
+                                            HttpSession session,
+                                            String referer,
+                                            String profileId) {
+        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
+        DelegateReactivateUserCommentForm delegateReactivateUserCommentForm =
+                getObjectFromHttpSession(session, "delegateReactivateUserCommentForm", DelegateReactivateUserCommentForm.class)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatusCode.valueOf(404)));
+        String cancelPath = getCancelPathFromReferer(referer, id, profileId);
+        model.addAttribute("user", user);
+        model.addAttribute("referer", referer);
+        model.addAttribute("profileId", profileId);
+        model.addAttribute("cancelPath", cancelPath);
+        model.addAttribute("delegateReactivateUserCommentForm", delegateReactivateUserCommentForm);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User Success - " + user.getFullName());
+        return "enable-user-check-answers";
+    }
+
+    @PostMapping("/users/manage/{id}/activate-check-answers")
+    @PreAuthorize("@accessControlService.canEnableUser(#id)")
+    public String enableUserCheckAnswersPost(@PathVariable String id,
+                                         Authentication authentication,
+                                         Model model,
+                                         HttpSession session,
                                          String referer,
                                          String profileId) {
 
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
         UUID enabledUserId = UUID.fromString(user.getId());
         UUID enabledByUserId = loginService.getCurrentEntraUser(authentication).getId();
-        userAccountStatusService.enableUser(enabledUserId, enabledByUserId);
+        DelegateReactivateUserCommentForm delegateReactivateUserCommentForm =
+                getObjectFromHttpSession(session, "delegateReactivateUserCommentForm", DelegateReactivateUserCommentForm.class)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatusCode.valueOf(404)));
+        userAccountStatusService.enableUser(enabledUserId, enabledByUserId, delegateReactivateUserCommentForm.getComment());
 
         String cancelPath = getCancelPathFromReferer(referer, id, profileId);
         model.addAttribute("user", user);
         model.addAttribute("referer", referer);
         model.addAttribute("cancelPath", cancelPath);
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Reactivate User Success - " + user.getFullName());
+        session.removeAttribute("delegateReactivateUserCommentForm");
         return "enable-user-completed";
     }
 
@@ -1233,21 +1362,21 @@ public class UserController {
                 .sorted()
                 .toList();
 
+        List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
+                .orElse(List.of());
         @SuppressWarnings("unchecked")
         Map<Integer, List<String>> selectedAppRole = (Map<Integer, List<String>>) session
                 .getAttribute("editUserAllSelectedRoles");
-        if (Objects.isNull(selectedAppRole)) {
+        if (!selectedApps.isEmpty()) {
+            editableApps.forEach(app -> {
+                app.setSelected(selectedApps.contains(app.getId()));
+            });
+            flagEditableApps(id, editableApps);
+        } else if (selectedAppRole == null) {
             // Add selected attribute to available apps based on user assigned apps
             editableApps.forEach(app -> {
                 app.setSelected(userAssignedApps.stream()
                         .anyMatch(userApp -> userApp.getId().equals(app.getId())));
-            });
-            flagEditableApps(id, editableApps);
-        } else {
-            List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
-                    .orElse(List.of());
-            editableApps.forEach(app -> {
-                app.setSelected(selectedApps.contains(app.getId()));
             });
             flagEditableApps(id, editableApps);
         }

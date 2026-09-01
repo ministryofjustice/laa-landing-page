@@ -46,6 +46,13 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
 
         mockMvc.perform(get("/admin/users/reactivation-requests")
                         .with(userOauth2Login(providerAdmin)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/users/reactivation-requests?size=10&page=1&sort=dateSubmitted&direction=desc&defaultStatusApplied=true&selectedRequestStatuses=IN_REVIEW"));
+
+        mockMvc.perform(get("/admin/users/reactivation-requests")
+                        .param("defaultStatusApplied", "true")
+                        .param("selectedRequestStatuses", "IN_REVIEW")
+                        .with(userOauth2Login(providerAdmin)))
                 .andExpect(status().isOk())
                 .andExpect(view().name("reactivation-requests"))
                 .andExpect(model().attribute("pageHeading", "Track reactivation requests"))
@@ -71,6 +78,7 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
         seedActivationRequest(otherFirmProfileId);
 
         var result = mockMvc.perform(get("/admin/users/reactivation-requests")
+                        .param("defaultStatusApplied", "true")
                         .with(userOauth2Login(providerAdmin)))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -101,6 +109,69 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
                         .param("defaultStatusApplied", "true")
                         .param("selectedRequestStatuses", "IN_REVIEW")
                         .with(userOauth2Login(externalUserAdmin)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("reactivation-requests"))
+                .andExpect(model().attribute("pageHeading", "Manage reactivation requests"))
+                .andExpect(model().attribute("manageMode", true))
+                .andReturn();
+
+        @SuppressWarnings("unchecked")
+        List<ReactivationRequestStatus> statuses =
+                (List<ReactivationRequestStatus>) result.getModelAndView().getModel().get("selectedRequestStatuses");
+
+        assertThat(statuses).containsExactly(ReactivationRequestStatus.IN_REVIEW);
+    }
+
+    @Test
+    public void testExternalUserAdminCanSeeRequestsOutsideTheirFirmAndMultiFirm() throws Exception {
+        EntraUser eua = externalUserAdmins.getFirst();
+
+        // 1. Multi-firm user request
+        EntraUser multiFirmUser = multiFirmUsers.getFirst();
+        UUID multiFirmProfileId = multiFirmUser.getUserProfiles().stream()
+                .filter(UserProfile::isActiveProfile)
+                .map(UserProfile::getId)
+                .findFirst()
+                .orElseThrow();
+        seedActivationRequest(multiFirmProfileId);
+
+        // 2. Different firm request
+        EntraUser otherFirmUser = createExternalUserAtFirm("other-firm-user2@test.com", testFirm2);
+        UUID otherFirmProfileId = otherFirmUser.getUserProfiles().stream()
+                .map(UserProfile::getId)
+                .findFirst()
+                .orElseThrow();
+        seedActivationRequest(otherFirmProfileId);
+
+        var result = mockMvc.perform(get("/admin/users/reactivation-requests")
+                        .param("defaultStatusApplied", "true")
+                        .param("selectedRequestStatuses", "IN_REVIEW")
+                        .with(userOauth2Login(eua)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        @SuppressWarnings("unchecked")
+        List<ReactivationRequestListItem> requests =
+                (List<ReactivationRequestListItem>) result.getModelAndView().getModel().get("requests");
+
+        assertThat(requests).hasSizeGreaterThanOrEqualTo(2);
+        assertThat(requests).extracting(ReactivationRequestListItem::userProfileId)
+                .contains(multiFirmProfileId, otherFirmProfileId);
+    }
+
+    @Test
+    public void testExternalUserSupportGetsManageHeadingAndDefaultInReviewFilter() throws Exception {
+        EntraUser externalUserSupport = externalUserSupportUsers.getFirst();
+
+        mockMvc.perform(get("/admin/users/reactivation-requests")
+                        .with(userOauth2Login(externalUserSupport)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/users/reactivation-requests?size=10&page=1&sort=dateSubmitted&direction=desc&defaultStatusApplied=true&selectedRequestStatuses=IN_REVIEW"));
+
+        var result = mockMvc.perform(get("/admin/users/reactivation-requests")
+                        .param("defaultStatusApplied", "true")
+                        .param("selectedRequestStatuses", "IN_REVIEW")
+                        .with(userOauth2Login(externalUserSupport)))
                 .andExpect(status().isOk())
                 .andExpect(view().name("reactivation-requests"))
                 .andExpect(model().attribute("pageHeading", "Manage reactivation requests"))
@@ -149,6 +220,16 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
 
         mockMvc.perform(get("/admin/users")
                         .with(userOauth2Login(globalAdmin)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Reactivation requests")));
+    }
+
+    @Test
+    public void testManageUsersPageContainsReactivationRequestsButtonForExternalUserSupport() throws Exception {
+        EntraUser externalUserSupport = externalUserSupportUsers.getFirst();
+
+        mockMvc.perform(get("/admin/users")
+                        .with(userOauth2Login(externalUserSupport)))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Reactivation requests")));
     }
@@ -212,6 +293,8 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
         userActivationRequestRepository.saveAndFlush(v2);
 
         var result = mockMvc.perform(get("/admin/users/reactivation-requests")
+                        .param("defaultStatusApplied", "true")
+                        .param("selectedRequestStatuses", "INFORMATION_REQUIRED")
                         .with(userOauth2Login(providerAdmin)))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -264,5 +347,55 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
         assertThat(requests).hasSize(1);
         assertThat(requests.getFirst().requestId()).isEqualTo(thirdPartyRequest.getRequestId());
         assertThat(requests.getFirst().userType()).isEqualTo("3rd Party");
+    }
+
+    @Test
+    public void testExternalUserSupportSeesOnlyLaaOstAndLaaSupportRequests() throws Exception {
+        EntraUser eus = externalUserSupportUsers.getFirst();
+        UUID profileId = eus.getUserProfiles().stream()
+                .map(UserProfile::getId)
+                .findFirst()
+                .orElseThrow();
+
+        // 1. EUM Request (should be visible)
+        UserActivationRequest eumReq = new UserActivationRequest();
+        eumReq.setRequestId(UUID.randomUUID());
+        eumReq.setUserProfileId(profileId);
+        eumReq.setVersion(1);
+        eumReq.setStatus(ReactivationRequestStatus.IN_REVIEW);
+        eumReq.setActorEntraOid(UUID.randomUUID().toString());
+        eumReq.setActorRoleType(ReactivationRoleType.LAA_OST);
+        eumReq.setComments("EUM Request");
+        eumReq.setCreatedAt(Instant.now());
+        userActivationRequestRepository.saveAndFlush(eumReq);
+
+        // 2. EUS Request (should be visible)
+        UserActivationRequest eusReq = new UserActivationRequest();
+        eusReq.setRequestId(UUID.randomUUID());
+        eusReq.setUserProfileId(profileId);
+        eusReq.setVersion(1);
+        eusReq.setStatus(ReactivationRequestStatus.IN_REVIEW);
+        eusReq.setActorEntraOid(UUID.randomUUID().toString());
+        eusReq.setActorRoleType(ReactivationRoleType.LAA_SUPPORT);
+        eusReq.setComments("EUS Request");
+        eusReq.setCreatedAt(Instant.now());
+        userActivationRequestRepository.saveAndFlush(eusReq);
+
+        // 3. Provider Request (should NOT be visible)
+        seedActivationRequest(profileId);
+
+        var result = mockMvc.perform(get("/admin/users/reactivation-requests")
+                        .param("defaultStatusApplied", "true")
+                        .with(userOauth2Login(eus)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        @SuppressWarnings("unchecked")
+        List<ReactivationRequestListItem> requests =
+                (List<ReactivationRequestListItem>) result.getModelAndView().getModel().get("requests");
+
+        assertThat(requests).hasSize(2);
+        assertThat(requests).extracting(ReactivationRequestListItem::actorRoleType)
+                .containsExactlyInAnyOrder(ReactivationRoleType.LAA_OST.getDisplayName(), ReactivationRoleType.LAA_SUPPORT.getDisplayName());
     }
 }

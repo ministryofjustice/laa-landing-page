@@ -155,6 +155,8 @@ public class ManageUsersPage {
     private final Locator revokeAccessSuccessBanner;
     private final Locator revokeAccessSuccessMessage;
 
+    private final Locator commentInput;
+
 
 
     public ManageUsersPage(Page page, int port) {
@@ -333,6 +335,7 @@ public class ManageUsersPage {
         this.emailInput = page.locator("input#email");
         this.firstNameInput = page.locator("input#firstName");
         this.lastNameInput = page.locator("input#lastName");
+        this.commentInput = page.locator("textarea#comment");
 
         this.providerUserRadio =
                 page.locator("input#providerUser");
@@ -1669,6 +1672,9 @@ public class ManageUsersPage {
         assertThat(reactivationSuccessfulHeading).isVisible();
     }
 
+    public void populateEnableReason() {
+        commentInput.fill("Test enable user reason");
+    }
 }
 
 
