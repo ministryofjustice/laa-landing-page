@@ -31,7 +31,7 @@
 
         <th:block th:replace="~{shared-components/search-filter :: searchFilter(
             formAction=@{/admin/users/reactivation-requests(defaultStatusApplied=${defaultStatusApplied})},
-            searchHint='You can search by request ID, user profile ID, actor name, actor Entra OID, or comments.',
+            searchHint='You can search by user name or email.',
             filterContent=~{:: #request-filter-checkboxes},
             activeFiltersContent=~{:: #request-active-filters},
             searchHeading='Search reactivation requests',

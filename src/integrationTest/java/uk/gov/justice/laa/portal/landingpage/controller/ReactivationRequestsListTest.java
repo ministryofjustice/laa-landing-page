@@ -10,6 +10,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import org.junit.jupiter.api.Test;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -56,7 +57,8 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
                 .andExpect(status().isOk())
                 .andExpect(view().name("reactivation-requests"))
                 .andExpect(model().attribute("pageHeading", "Track reactivation requests"))
-                .andExpect(model().attribute("manageMode", false));
+                .andExpect(model().attribute("manageMode", false))
+                .andExpect(content().string(containsString("You can search by user name or email.")));
     }
 
     @Test
@@ -113,6 +115,8 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
                 .andExpect(view().name("reactivation-requests"))
                 .andExpect(model().attribute("pageHeading", "Manage reactivation requests"))
                 .andExpect(model().attribute("manageMode", true))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "You can search by user name or email.")))
                 .andReturn();
 
         @SuppressWarnings("unchecked")
