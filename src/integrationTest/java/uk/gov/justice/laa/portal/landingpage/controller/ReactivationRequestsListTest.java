@@ -28,9 +28,10 @@ import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 
 public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest {
 
-    private UserActivationRequest seedActivationRequest(UUID userProfileId) {
+    private UserActivationRequest seedActivationRequest(UUID userId, UUID userProfileId) {
         UserActivationRequest request = new UserActivationRequest();
         request.setRequestId(UUID.randomUUID());
+        request.setUserEntraId(userId);
         request.setUserProfileId(userProfileId);
         request.setVersion(1);
         request.setStatus(ReactivationRequestStatus.IN_REVIEW);
@@ -70,14 +71,14 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
                 .map(UserProfile::getId)
                 .findFirst()
                 .orElseThrow();
-        seedActivationRequest(providerAdminProfileId);
+        seedActivationRequest(providerAdmin.getId(), providerAdminProfileId);
 
         EntraUser otherFirmUser = createExternalUserAtFirm("other-firm-user@test.com", testFirm1);
         UUID otherFirmProfileId = otherFirmUser.getUserProfiles().stream()
                 .map(UserProfile::getId)
                 .findFirst()
                 .orElseThrow();
-        seedActivationRequest(otherFirmProfileId);
+        seedActivationRequest(otherFirmUser.getId(), otherFirmProfileId);
 
         var result = mockMvc.perform(get("/admin/users/reactivation-requests")
                         .param("defaultStatusApplied", "true")
@@ -137,7 +138,7 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
                 .map(UserProfile::getId)
                 .findFirst()
                 .orElseThrow();
-        seedActivationRequest(multiFirmProfileId);
+        seedActivationRequest(multiFirmUser.getId(), multiFirmProfileId);
 
         // 2. Different firm request
         EntraUser otherFirmUser = createExternalUserAtFirm("other-firm-user2@test.com", testFirm2);
@@ -145,7 +146,7 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
                 .map(UserProfile::getId)
                 .findFirst()
                 .orElseThrow();
-        seedActivationRequest(otherFirmProfileId);
+        seedActivationRequest(otherFirmUser.getId(), otherFirmProfileId);
 
         var result = mockMvc.perform(get("/admin/users/reactivation-requests")
                         .param("defaultStatusApplied", "true")
@@ -275,6 +276,7 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
 
         UserActivationRequest v1 = new UserActivationRequest();
         v1.setRequestId(requestId);
+        v1.setUserEntraId(providerAdmin.getId());
         v1.setUserProfileId(providerAdminProfileId);
         v1.setVersion(1);
         v1.setStatus(ReactivationRequestStatus.IN_REVIEW);
@@ -287,6 +289,7 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
         Instant latestActivityAt = Instant.now();
         UserActivationRequest v2 = new UserActivationRequest();
         v2.setRequestId(requestId);
+        v2.setUserEntraId(providerAdmin.getId());
         v2.setUserProfileId(providerAdminProfileId);
         v2.setVersion(2);
         v2.setStatus(ReactivationRequestStatus.INFORMATION_REQUIRED);
@@ -328,9 +331,9 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
                 .map(profile -> profile.getId())
                 .findFirst()
                 .orElseThrow();
-        seedActivationRequest(providerAdminProfileId);
+        seedActivationRequest(multiFirmUser.getId(), providerAdminProfileId);
 
-        UserActivationRequest thirdPartyRequest = seedActivationRequest(multiFirmProfileId);
+        UserActivationRequest thirdPartyRequest = seedActivationRequest(multiFirmUser.getId(), multiFirmProfileId);
 
         var result = mockMvc.perform(get("/admin/users/reactivation-requests")
                         .param("defaultStatusApplied", "true")
@@ -348,7 +351,7 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
         List<ReactivationRequestListItem> requests =
                 (List<ReactivationRequestListItem>) result.getModelAndView().getModel().get("requests");
 
-        assertThat(requests).hasSize(1);
+        assertThat(requests).hasSize(2);
         assertThat(requests.getFirst().requestId()).isEqualTo(thirdPartyRequest.getRequestId());
         assertThat(requests.getFirst().userType()).isEqualTo("3rd Party");
     }
@@ -364,6 +367,7 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
         // 1. EUM Request (should be visible)
         UserActivationRequest eumReq = new UserActivationRequest();
         eumReq.setRequestId(UUID.randomUUID());
+        eumReq.setUserEntraId(eus.getId());
         eumReq.setUserProfileId(profileId);
         eumReq.setVersion(1);
         eumReq.setStatus(ReactivationRequestStatus.IN_REVIEW);
@@ -376,6 +380,7 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
         // 2. EUS Request (should be visible)
         UserActivationRequest eusReq = new UserActivationRequest();
         eusReq.setRequestId(UUID.randomUUID());
+        eusReq.setUserEntraId(eus.getId());
         eusReq.setUserProfileId(profileId);
         eusReq.setVersion(1);
         eusReq.setStatus(ReactivationRequestStatus.IN_REVIEW);
@@ -386,7 +391,7 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
         userActivationRequestRepository.saveAndFlush(eusReq);
 
         // 3. Provider Request (should NOT be visible)
-        seedActivationRequest(profileId);
+        seedActivationRequest(eus.getId(), profileId);
 
         var result = mockMvc.perform(get("/admin/users/reactivation-requests")
                         .param("defaultStatusApplied", "true")

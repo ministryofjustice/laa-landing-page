@@ -321,7 +321,7 @@ public class ManageUsersPage {
                 silasAccountStatusRow.getByRole(
                         AriaRole.LINK,
                         new Locator.GetByRoleOptions()
-                                .setName("Activate user")
+                                .setName("Reactivate user")
                                 .setExact(true)
                 );
 

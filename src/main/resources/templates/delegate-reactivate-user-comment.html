@@ -12,7 +12,7 @@
 <body>
 <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
     <a class="govuk-back-link govuk-!-margin-bottom-3"
-       th:href="@{/admin/user/delegate-reactivate/{id}(id=${user.id}, profileId=${profileId})}">
+       th:href="@{/admin/user/delegate-reactivate/{id}(id=${user.id}, profileId=${profileId}, referer=${referer})}">
         Back </a>
 </nav>
 <main class="govuk-main-wrapper" id="main-content">
@@ -49,7 +49,7 @@
                 <li>What has changed that means they now require regular access</li>
             </ul>
 
-            <form method="post" th:action="@{/admin/user/delegate-reactivate-user-comment/{id}(id=${user.id}, profileId=${profileId})}"
+            <form method="post" th:action="@{/admin/user/delegate-reactivate-user-comment/{id}(id=${user.id}, profileId=${profileId}, referer=${referer})}"
                   th:object="${delegateReactivateUserCommentForm}">
 
                 <!-- Comment Field -->
@@ -75,7 +75,7 @@
                     <button type="submit" class="govuk-button" data-module="govuk-button">
                         Continue
                     </button>
-                    <a class="govuk-button govuk-button--secondary" th:href="@{/admin/users/manage/{id}(id=${profileId})}">Cancel</a>
+                    <a class="govuk-button govuk-button--secondary" th:href="${cancelPath}">Cancel</a>
                 </div>
             </form>
         </div>

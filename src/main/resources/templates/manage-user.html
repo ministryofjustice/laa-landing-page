@@ -254,10 +254,10 @@
                                             <a th:if="${canDisableUser}" class="govuk-link"
                                                th:href="@{/admin/users/manage/{id}/deactivate(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">Deactivate user</a>
                                             <a th:if="${canEnableUser}" class="govuk-link"
-                                               th:href="@{/admin/users/manage/{id}/activate(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">Activate user</a>
+                                               th:href="@{/admin/users/manage/{id}/activate(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">Reactivate user</a>
                                             <a th:if="${canDelegateEnableUser}" class="govuk-link"
                                                th:href="@{/admin/user/delegate-reactivate/{id}(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">Reactivate user</a>
-                                            <span th:if="${cannotEnableUser}">You cannot activate this user</span>
+                                            <span th:if="${cannotEnableUser and !canDelegateEnableUser}">You cannot activate this user</span>
                                         </dd>
                                     </div>
                                     <div class="govuk-summary-list__row" th:if="${canTrackDelegateEnableUser or canManageDelegateEnableUser}">
