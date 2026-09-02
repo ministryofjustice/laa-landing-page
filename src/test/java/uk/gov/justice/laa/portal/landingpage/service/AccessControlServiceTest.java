@@ -3348,7 +3348,7 @@ public class AccessControlServiceTest {
             when(latestActivationRequest.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
             when(latestActivationRequest.getRequestId()).thenReturn(requestId);
 
-            when(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedProfileId))
+            when(userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(accessedProfileId))
                     .thenReturn(Optional.of(latestActivationRequest));
 
             when(firstActivationRequest.version()).thenReturn(1);
@@ -4029,7 +4029,7 @@ public class AccessControlServiceTest {
                     when(accessedUser.getUserProfiles()).thenReturn(Set.of(accessedProfile));
                     when(latestActivationRequest.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
                     when(latestActivationRequest.getRequestId()).thenReturn(requestId);
-                    when(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedProfileId))
+                    when(userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(accessedUserId))
                             .thenReturn(Optional.of(latestActivationRequest));
                     when(firstActivationRequest.version()).thenReturn(1);
                     lenient().when(firstActivationRequest.actorRoleType()).thenReturn(ReactivationRoleType.LAA);
@@ -4056,14 +4056,14 @@ public class AccessControlServiceTest {
                 when(entraUserRepository.findById(accessedUserId)).thenReturn(Optional.of(accessedUser));
 
                 try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
-                    when(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedProfileId))
+                    when(userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(accessedUserId))
                             .thenReturn(Optional.empty());
                     mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
                     assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
                 }
 
                 try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
-                    when(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedProfileId))
+                    when(userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(accessedProfileId))
                             .thenReturn(Optional.of(latestActivationRequest));
                     mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
                     when(latestActivationRequest.getStatus()).thenReturn(ReactivationRequestStatus.APPROVED);
@@ -4071,7 +4071,7 @@ public class AccessControlServiceTest {
                 }
 
                 try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
-                    when(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedProfileId))
+                    when(userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(accessedProfileId))
                             .thenReturn(Optional.of(latestActivationRequest));
                     mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
                     when(latestActivationRequest.getStatus()).thenReturn(ReactivationRequestStatus.REJECTED);
@@ -4086,15 +4086,12 @@ public class AccessControlServiceTest {
                 setupSecurityContextAndActor();
                 when(userService.isInternal(accessedUserIdStr)).thenReturn(false);
 
-                when(accessedUser.getUserProfiles()).thenReturn(Set.of(accessedProfile));
-                when(accessedProfile.getId()).thenReturn(accessedProfileId);
-                when(accessedProfile.isActiveProfile()).thenReturn(true);
                 when(entraUserRepository.findById(accessedUserId)).thenReturn(Optional.of(accessedUser));
 
                 when(latestActivationRequest.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
                 when(latestActivationRequest.getRequestId()).thenReturn(requestId);
 
-                when(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedProfileId))
+                when(userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(accessedUserId))
                         .thenReturn(Optional.of(latestActivationRequest));
                 when(userActivationRequestRepository.findRequestHistoryByRequestId(requestId))
                         .thenReturn(List.of());
@@ -4320,11 +4317,11 @@ public class AccessControlServiceTest {
                 when(accessedProfile.isActiveProfile()).thenReturn(true);
                 when(entraUserRepository.findById(accessedUserId)).thenReturn(Optional.of(accessedUser));
 
-                when(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedProfileId))
+                when(userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(accessedUserId))
                         .thenReturn(Optional.empty());
                 assertThat(accessControlService.canManageDelegateEnableUser(accessedUserIdStr)).isFalse();
 
-                when(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedProfileId))
+                when(userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(accessedUserId))
                         .thenReturn(Optional.of(latestActivationRequest));
 
                 when(latestActivationRequest.getStatus()).thenReturn(ReactivationRequestStatus.APPROVED);
@@ -4347,7 +4344,7 @@ public class AccessControlServiceTest {
                 when(latestActivationRequest.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
                 when(latestActivationRequest.getRequestId()).thenReturn(requestId);
 
-                when(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedProfileId))
+                when(userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(accessedUserId))
                         .thenReturn(Optional.of(latestActivationRequest));
 
                 when(userActivationRequestRepository.findRequestHistoryByRequestId(requestId))
@@ -4369,7 +4366,7 @@ public class AccessControlServiceTest {
                 when(latestActivationRequest.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
                 when(latestActivationRequest.getRequestId()).thenReturn(requestId);
 
-                when(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedProfileId))
+                when(userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(accessedUserId))
                         .thenReturn(Optional.of(latestActivationRequest));
 
                 when(firstActivationRequest.version()).thenReturn(1);

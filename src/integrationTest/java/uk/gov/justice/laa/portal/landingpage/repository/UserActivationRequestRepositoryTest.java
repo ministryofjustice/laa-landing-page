@@ -132,7 +132,7 @@ class UserActivationRequestRepositoryTest extends BaseRepositoryTest {
                     userProfile, requestId2, 3, Instant.now(), ReactivationRequestStatus.INFORMATION_REQUIRED);
 
             // Act
-            Optional<UserActivationRequest> result = repository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(userProfileId1);
+            Optional<UserActivationRequest> result = repository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(userProfileId1);
 
             // Assert
             assertThat(result).isPresent();

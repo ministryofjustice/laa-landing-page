@@ -96,7 +96,9 @@ class UserReactivationRequestServiceTest {
 
         initialAdminUser = EntraUser.builder().id(UUID.randomUUID()).entraOid(INITIAL_ACTOR_ENTRA_OID).firstName("AdminFirst").email("admin@example.com").build();
 
-        targetUser = EntraUser.builder().id(USER_ENTRA_ID).firstName("TargetFirst").email("target@example.com").build();
+        UserProfile targetUserProfile = UserProfile.builder().id(USER_PROFILE_ID).activeProfile(true).build();
+        targetUser = EntraUser.builder().id(USER_ENTRA_ID).firstName("TargetFirst").email("target@example.com").userProfiles(Set.of(targetUserProfile)).build();
+        targetUserProfile.setEntraUser(targetUser);
     }
 
     private UserActivationRequest buildUserActivationRequest(ReactivationRequestStatus status, int version) {
@@ -110,21 +112,21 @@ class UserReactivationRequestServiceTest {
         @Test
         @DisplayName("Should return empty optional when no request exists for profile ID")
         void noRequestFound_returnsEmptyOptional() {
-            given(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID)).willReturn(Optional.empty());
+            given(userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID)).willReturn(Optional.empty());
 
-            Optional<UserActivationRequest> result = service.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID_STR);
+            Optional<UserActivationRequest> result = service.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID_STR);
 
             assertThat(result).isEmpty();
-            verify(userActivationRequestRepository).findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID);
+            verify(userActivationRequestRepository).findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID);
         }
 
         @Test
         @DisplayName("Should return request when found for profile ID")
         void requestFound_returnsRequest() {
             UserActivationRequest existing = buildUserActivationRequest(ReactivationRequestStatus.IN_REVIEW, 1);
-            given(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID)).willReturn(Optional.of(existing));
+            given(userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID)).willReturn(Optional.of(existing));
 
-            Optional<UserActivationRequest> result = service.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID_STR);
+            Optional<UserActivationRequest> result = service.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID_STR);
 
             assertThat(result).contains(existing);
         }
@@ -141,7 +143,7 @@ class UserReactivationRequestServiceTest {
             UserProfile profile = UserProfile.builder().activeProfile(true).appRoles(Set.of(role)).build();
             EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).userProfiles(Set.of(profile)).build();
             given(entraUserRepository.findByEntraOid(any())).willReturn(Optional.of(entraUser));
-            given(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID)).willReturn(Optional.empty());
+            given(userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID)).willReturn(Optional.empty());
             given(entraUserRepository.findById(USER_ENTRA_ID)).willReturn(Optional.of(EntraUser.builder().id(UUID.randomUUID()).email("test@email.com").build()));
             given(userProfileRepository.existsById(USER_PROFILE_ID)).willReturn(true);
             given(userActivationRequestRepository.save(any(UserActivationRequest.class))).will(returnsFirstArg());
@@ -169,7 +171,7 @@ class UserReactivationRequestServiceTest {
             EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).userProfiles(Set.of(profile)).build();
             given(entraUserRepository.findByEntraOid(any())).willReturn(Optional.of(entraUser));
             UserActivationRequest rejected = buildUserActivationRequest(ReactivationRequestStatus.REJECTED, 1);
-            given(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID)).willReturn(Optional.of(rejected));
+            given(userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID)).willReturn(Optional.of(rejected));
             given(entraUserRepository.findById(any(UUID.class))).willReturn(Optional.of(EntraUser.builder().id(UUID.randomUUID()).email("test@email.com").build()));
             given(userActivationRequestRepository.save(any(UserActivationRequest.class))).will(returnsFirstArg());
             given(userProfileRepository.existsById(USER_PROFILE_ID)).willReturn(true);
@@ -188,7 +190,7 @@ class UserReactivationRequestServiceTest {
             EntraUser entraUser = EntraUser.builder().id(UUID.randomUUID()).userProfiles(Set.of(profile)).build();
             given(entraUserRepository.findByEntraOid(any())).willReturn(Optional.of(entraUser));
             UserActivationRequest approved = buildUserActivationRequest(ReactivationRequestStatus.APPROVED, 1);
-            given(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID)).willReturn(Optional.of(approved));
+            given(userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID)).willReturn(Optional.of(approved));
             given(entraUserRepository.findById(USER_ENTRA_ID)).willReturn(Optional.of(EntraUser.builder().id(UUID.randomUUID()).email("test@email.com").build()));
             given(userProfileRepository.existsById(USER_PROFILE_ID)).willReturn(true);
             given(userActivationRequestRepository.save(any(UserActivationRequest.class))).will(returnsFirstArg());
@@ -203,7 +205,7 @@ class UserReactivationRequestServiceTest {
         @DisplayName("Should throw IllegalStateException when request is currently IN_REVIEW")
         void activeRequestInReview_throwsIllegalStateException() {
             UserActivationRequest inReview = buildUserActivationRequest(ReactivationRequestStatus.IN_REVIEW, 1);
-            given(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID)).willReturn(Optional.of(inReview));
+            given(userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID)).willReturn(Optional.of(inReview));
 
             assertThatThrownBy(() -> service.createReactivationRequest(USER_ENTRA_ID_STR, USER_PROFILE_ID_STR, "Comment", ACTOR_ENTRA_OID))
                     .isInstanceOf(IllegalStateException.class).hasMessage("Request already being processed for user " + USER_PROFILE_ID);
@@ -425,7 +427,7 @@ class UserReactivationRequestServiceTest {
             assertThat(result.getVersion()).isEqualTo(2);
 
             verify(notificationService).notifyReactivationRequestInfoRequested(actorUser.getId().toString(), initialAdminUser.getFirstName(),
-                    initialAdminUser.getEmail(), initialAdminUser.getId().toString(), USER_PROFILE_ID_STR, targetUser.getEmail());
+                    initialAdminUser.getEmail(), initialAdminUser.getId().toString(), USER_ENTRA_ID_STR, targetUser.getEmail());
         }
 
         @Test
@@ -614,12 +616,12 @@ class UserReactivationRequestServiceTest {
                 UserActivationRequest latestRequest = mock(UserActivationRequest.class);
                 when(latestRequest.getRequestId()).thenReturn(UUID.fromString(REQUEST_ID_STR));
 
-                when(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID))
+                when(userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID))
                         .thenReturn(Optional.of(latestRequest));
                 when(userActivationRequestRepository.findRequestHistoryByRequestId(UUID.fromString(REQUEST_ID_STR)))
                         .thenReturn(Collections.emptyList());
 
-                List<UserActivationRequestSummaryDto> result = service.getLatestRequestHistoryForUserProfile(USER_PROFILE_ID_STR);
+                List<UserActivationRequestSummaryDto> result = service.getLatestRequestHistoryForUserId(USER_PROFILE_ID_STR);
 
                 assertThat(result).isEmpty();
             }
@@ -632,10 +634,10 @@ class UserReactivationRequestServiceTest {
 
                 UserActivationRequestSummaryDto dto = mock(UserActivationRequestSummaryDto.class);
 
-                when(userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID)).thenReturn(Optional.of(latestRequest));
+                when(userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID)).thenReturn(Optional.of(latestRequest));
                 when(userActivationRequestRepository.findRequestHistoryByRequestId(UUID.fromString(REQUEST_ID_STR))).thenReturn(List.of(dto));
 
-                List<UserActivationRequestSummaryDto> result = service.getLatestRequestHistoryForUserProfile(USER_PROFILE_ID_STR);
+                List<UserActivationRequestSummaryDto> result = service.getLatestRequestHistoryForUserId(USER_PROFILE_ID_STR);
 
                 assertThat(result).hasSize(1).containsExactly(dto);
             }
