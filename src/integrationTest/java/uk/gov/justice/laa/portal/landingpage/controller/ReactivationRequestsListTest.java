@@ -116,7 +116,7 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
                 .andExpect(model().attribute("pageHeading", "Manage reactivation requests"))
                 .andExpect(model().attribute("manageMode", true))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "You can search by name or email.")))
+                        "You can search by user name or email.")))
                 .andReturn();
 
         @SuppressWarnings("unchecked")
