@@ -244,7 +244,7 @@ public class UserReactivationRequestService {
             return false;
         }
 
-        if(user.isMultiFirmUser() && StringUtils.isEmpty(profileId)) {
+        if (user.isMultiFirmUser() && StringUtils.isEmpty(profileId)) {
             return true;
         }
 
@@ -618,7 +618,7 @@ public class UserReactivationRequestService {
 
         return switch (sort) {
             case "requestId" -> Comparator.comparing(item -> item.requestId().toString(), String.CASE_INSENSITIVE_ORDER);
-            case "userProfileId" -> Comparator.comparing(item -> item.userProfileId().toString(), String.CASE_INSENSITIVE_ORDER);
+            case "userProfileId" -> Comparator.comparing(item -> item.userId().toString(), String.CASE_INSENSITIVE_ORDER);
             case "version" -> Comparator.comparing(ReactivationRequestListItem::version, Comparator.nullsLast(Integer::compareTo));
             case "requestStatus" -> Comparator.comparing(item -> item.requestStatus().name(), String.CASE_INSENSITIVE_ORDER);
             case "actorName" -> Comparator.comparing(ReactivationRequestListItem::actorName, String.CASE_INSENSITIVE_ORDER);
