@@ -1,6 +1,7 @@
 package uk.gov.justice.laa.portal.landingpage.dto;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -90,5 +91,41 @@ public class AuditTableSearchCriteria {
                 log.warn("Invalid SiLAS status provided: {}", s);
             }
         }
+    }
+
+    public void setCreatedFrom(LocalDate createdFrom) {
+        this.createdFrom = createdFrom;
+    }
+
+    public void setCreatedFrom(String createdFrom) {
+        this.createdFrom = parseDate(createdFrom);
+    }
+
+    public void setCreatedTo(LocalDate createdTo) {
+        this.createdTo = createdTo;
+    }
+
+    public void setCreatedTo(String createdTo) {
+        this.createdTo = parseDate(createdTo);
+    }
+
+    private LocalDate parseDate(String dateStr) {
+        if (dateStr == null || dateStr.isBlank()) {
+            return null;
+        }
+        String trimmed = dateStr.trim();
+        List<DateTimeFormatter> formatters = List.of(
+                DateTimeFormatter.ofPattern("d/M/yyyy"),
+                DateTimeFormatter.ofPattern("d-M-yyyy"),
+                DateTimeFormatter.ISO_LOCAL_DATE
+        );
+        for (DateTimeFormatter formatter : formatters) {
+            try {
+                return LocalDate.parse(trimmed, formatter);
+            } catch (Exception ignored) {
+            }
+        }
+        log.warn("Invalid date format provided: {}", dateStr);
+        return null;
     }
 }
