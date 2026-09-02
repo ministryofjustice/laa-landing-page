@@ -1508,6 +1508,28 @@ class AuditControllerTest {
     }
 
     @Test
+    void displayAuditTable_withCreatedDateRangeString_filtersResults() {
+        // Given
+        LocalDate fromDate = LocalDate.of(2024, 1, 1);
+        LocalDate toDate = LocalDate.of(2024, 12, 31);
+        when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
+        when(userService.getAuditUsers(anyString(), any(), any(), any(), any(), anyInt(), anyInt(),
+                anyString(), anyString(), eq(false), any(), eq(fromDate), eq(toDate), any())).thenReturn(mockPaginatedUsers);
+        when(userService.getAllSilasRoles()).thenReturn(mockSilasRoles);
+
+        AuditTableSearchCriteria criteria = new AuditTableSearchCriteria();
+        criteria.setCreatedFrom("01/01/2024");
+        criteria.setCreatedTo("31/12/2024");
+
+        // When
+        String viewName = auditController.displayAuditTable(criteria, model, mockAuthentication);
+
+        // Then
+        assertThat(viewName).isEqualTo("user-audit/users");
+        verify(userService, times(1)).getAuditUsers("", null, null, null, null, 1, 10, "name", "asc", false, null, fromDate, toDate, criteria.getSelectedSilasStatuses());
+    }
+
+    @Test
     void displayAuditTable_withSilasStatuses_filtersResults() {
         // Given
         when(accessControlService.authenticatedUserHasPermission(any())).thenReturn(true);
