@@ -1,12 +1,17 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import org.junit.jupiter.api.Test;
-import org.springframework.test.web.servlet.ResultMatcher;
-import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
-import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import java.util.Map;
 
+import org.junit.jupiter.api.Test;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.ResultMatcher;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.web.servlet.ModelAndView;
+
+import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
+import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
 
 public class RoleBasedAccessGrantAccessTest extends RoleBasedAccessIntegrationTest {
 
@@ -28,6 +33,17 @@ public class RoleBasedAccessGrantAccessTest extends RoleBasedAccessIntegrationTe
     @Test
     public void testGlobalAdminCanOpenExternalUserAppsToGrantAccess() throws Exception {
         canOpenGrantAccessScreen(globalAdmins.getFirst(), externalUsersNoRoles.getFirst(), status().isOk());
+    }
+
+    @Test
+    public void testExternalUserSupportCanManageAccessForExternalUserWithoutRoles() throws Exception {
+        EntraUser externalUserSupportUser = externalUserSupportUsers.getFirst();
+        EntraUser externalUserWithoutRoles = externalUsersNoRoles.getFirst();
+        UserProfile externalUserProfile = externalUserWithoutRoles.getUserProfiles().stream().findFirst().orElseThrow();
+        externalUserProfile.setUserProfileStatus(UserProfileStatus.PENDING);
+        userProfileRepository.saveAndFlush(externalUserProfile);
+        canSeeManageAccess(externalUserSupportUser, externalUserWithoutRoles, true);
+        canOpenGrantAccessScreen(externalUserSupportUser, externalUserWithoutRoles, status().isOk());
     }
 
     @Test
@@ -184,5 +200,22 @@ public class RoleBasedAccessGrantAccessTest extends RoleBasedAccessIntegrationTe
         this.mockMvc.perform(get(String.format("/admin/users/grant-access/%s/apps", accessedUserProfile.getId()))
                         .with(userOauth2Login(loggedInUser)))
                 .andExpect(expectedResult);
+    }
+
+    private void canSeeManageAccess(EntraUser loggedInUser, EntraUser editedUser, boolean canSeeManageAccess) throws Exception {
+        UserProfile accessedUserProfile = editedUser.getUserProfiles().stream().findFirst().orElseThrow();
+        MvcResult result = this.mockMvc.perform(get(String.format("/admin/users/manage/%s", accessedUserProfile.getId()))
+                        .with(userOauth2Login(loggedInUser)))
+                .andExpect(status().isOk())
+                .andReturn();
+        ModelAndView modelAndView = result.getModelAndView();
+        if (modelAndView == null) {
+            throw new IllegalStateException("Expected a ModelAndView for the manage user page");
+        }
+        Map<String, Object> model = modelAndView.getModel();
+        boolean canGrantUserAccess = (boolean) model.get("canGrantUserAccess");
+        boolean isAccessGranted = (boolean) model.get("isAccessGranted");
+        org.junit.jupiter.api.Assertions.assertEquals(canSeeManageAccess,
+                !isAccessGranted && canGrantUserAccess);
     }
 }
