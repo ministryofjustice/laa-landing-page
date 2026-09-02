@@ -40,14 +40,14 @@ public class RoleBasedAccessEnableUserTest extends RoleBasedAccessIntegrationTes
     }
 
     @Test
-    public void testInformationAndAssuranceCannotEnableUser() throws Exception {
+    public void testSecurityResponseCanEnableUser() throws Exception {
         EntraUser loggedInUser = securityResponseUsers.getFirst();
         EntraUser accessedUser = externalUsersNoRoles.getFirst();
         accessedUser.setEnabled(false);
         entraUserRepository.saveAndFlush(accessedUser);
-        sendEnableUserPost(loggedInUser, accessedUser, status().is3xxRedirection());
+        sendEnableUserPost(loggedInUser, accessedUser, status().isOk());
         accessedUser = entraUserRepository.findById(accessedUser.getId()).orElseThrow();
-        assertThat(accessedUser.isEnabled()).isFalse();
+        assertThat(accessedUser.isEnabled()).isTrue();
     }
 
     @Test
