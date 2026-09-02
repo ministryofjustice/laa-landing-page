@@ -229,6 +229,11 @@ public class AuditPage {
         firmSearchInput.fill(firmName);
     }
 
+    public void searchByFirmCode(String firmCode) {
+        log.info("Searching by firm code: {}", firmCode);
+        nameOrEmailSearchInput.fill(firmCode);
+    }
+
     public void filterBySilasRole(String role) {
         log.info("Filtering by SiLAS role: {}", role);
         openFiltersPanel();
