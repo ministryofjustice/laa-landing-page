@@ -11,16 +11,24 @@
 
 <body>
 <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
-    <a class="govuk-back-link govuk-!-margin-bottom-3"
-       th:href="@{/admin/users/manage/{id}(id=${profileId})}">
-        Back </a>
+    <div th:switch="${referer}">
+        <a th:case="audit" class="govuk-back-link govuk-!-margin-bottom-3"
+           th:href="@{/admin/users/audit/{id}(id=${user.id})}">
+            Back </a>
+        <a th:case="list" class="govuk-back-link govuk-!-margin-bottom-3"
+           th:href="@{/admin/users/reactivation-requests}">
+            Back </a>
+        <a th:case="*" class="govuk-back-link govuk-!-margin-bottom-3"
+           th:href="@{/admin/users/manage/{id}(id=${profileId})}">
+            Back </a>
+    </div>
 </nav>
 <main class="govuk-main-wrapper" id="main-content">
 
     <div class="govuk-grid-row">
         <div class="govuk-grid-column-two-thirds">
             <form method="post"
-                  th:action="@{/admin/user/delegate-reactivate/{id}(id=${user.id}, profileId=${profileId})}">
+                  th:action="@{/admin/user/delegate-reactivate/{id}(id=${user.id}, profileId=${profileId}, referer=${referer})}">
                 <div class="govuk-form-group">
 
                     <h1 class="govuk-heading-l govuk-!-margin-top-0" style="white-space: nowrap" th:if="${isInternalActor}">Request for
@@ -38,12 +46,16 @@
                         </strong>
                     </div>
 
-                    <p class="govuk-body" th:if="${!isInternalActor}">You can reactivate this user directly. When you
-                        reactivate <span th:text="${user.fullName}">Full Name</span>,
-                        they will regain access to their SiLAS account.</p>
+                    <p class="govuk-body" th:if="${!isInternalActor}">This user has been deactivated by the Legal Aid Agency. You need to request
+                        for their account to be reactivated.</p>
 
-                    <p class="govuk-body" th:if="${!isInternalActor}">You do not need to submit a reactivation
-                        request.</p>
+                    <div th:if="${!isInternalActor}">
+                        <p class="govuk-body">Before you start, ask the deactivated user to provide a justification for:</p>
+                        <ul class="govuk-list govuk-list--bullet">
+                            <li>Why they did not use their SiLAS account for that length of time</li>
+                            <li>What has changed that means they now require regular access</li>
+                        </ul>
+                    </div>
 
                     <div th:if="${isInternalActor}">
                         <p class="govuk-body">You should only do this when:</p>

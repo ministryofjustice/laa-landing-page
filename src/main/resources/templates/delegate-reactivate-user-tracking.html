@@ -61,7 +61,7 @@
             </div>
 
             <form method="post"
-                  th:action="@{/admin/user/delegate-reactivate/track/{id}(id=${user.id}, profileId=${profileId}, requestId=${requestId})}"
+                  th:action="@{/admin/user/delegate-reactivate/track/{id}(id=${user.id}, profileId=${profileId}, referer=${referer}, requestId=${requestId})}"
                   th:object="${delegateReactivateUserCommentForm}">
 
                 <!-- Comments Field -->
@@ -69,8 +69,8 @@
                      th:classappend="${#fields.hasErrors('comment')} ? 'govuk-form-group--error'"
                      id="comment-group">
 
-                    <label class="govuk-label govuk-visually-hidden" for="comment">
-                        Comments
+                    <label class="govuk-label govuk-label--m" for="comment">
+                        Please enter a comment (minimum 10 characters).
                     </label>
 
                     <textarea class="govuk-textarea govuk-!-margin-bottom-0"
@@ -87,7 +87,7 @@
                         Submit
                     </button>
                     <a class="govuk-button govuk-button--secondary"
-                       th:href="@{/admin/users/manage/{id}(id=${profileId})}">Cancel</a>
+                       th:href="${cancelPath}">Cancel</a>
                 </div>
             </form>
         </div>
@@ -95,7 +95,7 @@
 
     <div class="govuk-grid-row" th:if="${canActionDelegateEnableUser}">
         <form method="post"
-              th:action="@{/admin/user/delegate-reactivate/approve/{id}(id=${user.id}, profileId=${profileId}, requestId=${requestId})}">
+              th:action="@{/admin/user/delegate-reactivate/approve/{id}(id=${user.id}, profileId=${profileId}, referer=${referer}, requestId=${requestId})}">
             <div class="govuk-grid-column-three-quarters">
 
                 <div class="govuk-!-margin-bottom-9 govuk-!-margin-top-9"
@@ -112,7 +112,7 @@
                         Approve
                     </button>
                     <a class="govuk-button govuk-button--warning"
-                       th:href="@{/admin/user/delegate-reactivate/reject/{id}(id=${user.id}, profileId=${profileId}, requestId=${requestId})}">
+                       th:href="@{/admin/user/delegate-reactivate/reject/{id}(id=${user.id}, profileId=${profileId}, referer=${referer}, requestId=${requestId})}">
                         Reject</a>
                 </div>
             </div>

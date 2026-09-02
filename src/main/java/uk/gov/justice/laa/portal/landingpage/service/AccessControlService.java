@@ -293,13 +293,8 @@ public class AccessControlService {
             return false;
         }
 
-        UserProfile accessedUserProfile = getActiveProfile(accessedUser).orElse(null);
-        if (accessedUserProfile == null) {
-            return false;
-        }
-
         UserActivationRequest latestActivationRequest = userActivationRequestRepository
-                .findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedUserProfile.getId())
+                .findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(accessedUserId)
                 .orElse(null);
 
         if (latestActivationRequest == null) {
@@ -337,8 +332,9 @@ public class AccessControlService {
                 return false;
             }
 
+            UserProfile accessedUserProfile = getActiveProfile(accessedUser).orElse(null);
             Firm actorFirm = actorUserProfile.getFirm();
-            Firm targetFirm = accessedUserProfile.getFirm();
+            Firm targetFirm = accessedUserProfile == null ? null : accessedUserProfile.getFirm();
 
             return actorFirm != null && targetFirm != null && actorFirm.getId().equals(targetFirm.getId());
         }
@@ -404,13 +400,8 @@ public class AccessControlService {
             return false;
         }
 
-        UserProfile accessedUserProfile = getActiveProfile(accessedUser).orElse(null);
-        if (accessedUserProfile == null) {
-            return false;
-        }
-
         UserActivationRequest latestActivationRequest = userActivationRequestRepository
-                .findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedUserProfile.getId())
+                .findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(accessedUser.getId())
                 .orElse(null);
 
         if (latestActivationRequest == null) {

@@ -49,6 +49,7 @@ public class UserAccountStatusService {
     private final EventService eventService;
     private final DisableTypeResolver disableTypeResolver;
     private final UserEnablementPolicy userEnablementPolicy;
+    private final UserReactivationRequestService userReactivationRequestService;
 
     public List<DisableUserReasonDto> getDisableUserReasons(UserTypeReasonDisable userTypeReasonDisable) {
         List<DisableUserReason> reasons = disableUserReasonRepository.findAll();
@@ -244,6 +245,13 @@ public class UserAccountStatusService {
                 .orElseThrow(() -> new RuntimeException(String.format("Could not find a user account with id \"%s\"", enabledById)));
 
         boolean isUserEnablementAllowed = isUserEnablementAllowed(enabledUser, enabledByUser);
+
+        boolean isThereAnActiveReactivationRequest = userReactivationRequestService.hasOpenReactivationRequest(enabledUserId);
+
+        if(isThereAnActiveReactivationRequest){
+            log.warn("User {} has an active reactivation request, cannot enable user. The user can be enabled by approving the request", enabledUserId);
+            throw new RuntimeException(String.format("User %s has an active reactivation request, cannot enable user", enabledUserId));
+        }
 
         if (isUserEnablementAllowed) {
             // Enable user in Entra via tech services.

@@ -18,7 +18,7 @@
     <fieldset class="govuk-fieldset">
         <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
             <h1 class="govuk-fieldset__heading">
-                Check your answers and confirm
+                Check your answers
             </h1>
         </legend>
         <form th:action="@{/admin/users/manage/{id}/activate-check-answers(id=${user.id}, profileId=${profileId}, referer=${referer})}"
@@ -63,7 +63,7 @@
                 <div class="govuk-summary-card__content">
                     <dl class="govuk-summary-list">
                         <div class="govuk-summary-list__row">
-                            <dt class="govuk-summary-list__key">Justification</dt>
+                            <dt class="govuk-summary-list__key">Reason</dt>
                             <dd class="govuk-summary-list__value">
                                 <span th:text="${delegateReactivateUserCommentForm.comment}"></span>
                             </dd>
