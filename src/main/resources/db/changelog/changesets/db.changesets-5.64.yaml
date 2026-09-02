@@ -1,0 +1,29 @@
+databaseChangeLog:
+  - changeSet:
+      id: 20260901-1-grant-external-user-support-role-assignment
+      author: paul.snowdon
+      dbms: postgresql
+      comment: "Allow External User Support to assign roles to external users"
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              INSERT INTO role_permission (app_role_id, permission)
+              SELECT id, 'ASSIGN_EXTERNAL_USER_ROLES'
+              FROM app_role
+              WHERE name = 'External User Support'
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM role_permission
+                  WHERE app_role_id = app_role.id
+                    AND permission = 'ASSIGN_EXTERNAL_USER_ROLES'
+                );
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: |
+              DELETE FROM role_permission
+              WHERE app_role_id = (SELECT id FROM app_role WHERE name = 'External User Support')
+                AND permission = 'ASSIGN_EXTERNAL_USER_ROLES';
