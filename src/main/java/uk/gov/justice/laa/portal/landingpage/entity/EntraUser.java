@@ -109,7 +109,7 @@ public class EntraUser extends AuditableEntity {
     @Column(name = "invitation_status", length = 255)
     private InvitationStatus invitationStatus;
 
-    @OneToMany(mappedBy = "entraUser", fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+    @OneToMany(mappedBy = "entraUser", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.REMOVE})
     @ToString.Exclude
     @JsonIgnore
     private Set<UserProfile> userProfiles;

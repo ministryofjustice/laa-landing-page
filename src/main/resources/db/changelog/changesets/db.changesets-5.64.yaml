@@ -1,0 +1,23 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1786025398212
+      author: joshua.halladey
+      comment: "Assign DELETE_AUDIT_USER permission to the External User Admin role"
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: >
+              INSERT INTO role_permission (app_role_id, permission)
+              VALUES ((SELECT id FROM app_role WHERE name = 'External User Admin'), 'DELETE_AUDIT_USER')
+              ON CONFLICT DO NOTHING;
+      # Global Admin and Security Response already have DELETE_AUDIT_USER in earlier changesets (5.02 and 5.17),
+      # so this changeset only adds the missing permission for External User Admin.
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: >
+              DELETE FROM role_permission rp
+              USING app_role ar
+              WHERE rp.app_role_id = ar.id
+                AND rp.permission = 'DELETE_AUDIT_USER'
+                AND ar.name = 'External User Admin';

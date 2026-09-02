@@ -395,7 +395,7 @@ public class ManageUsersPage {
 
         this.confirmAndDeleteUserButton =
                 page.locator(
-                        "button:has-text(\"Confirm and delete user\")"
+                        "button:has-text(\"Confirm and permanently delete user\")"
                 );
 
         this.deleteUserReasonRadioFirst =
@@ -613,11 +613,17 @@ public class ManageUsersPage {
     }
 
     public void confirmAndDeleteUser() {
-        deleteUserLink.click();
-        deleteUserReasonRadioFirst.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
-        deleteUserReasonRadioFirst.click();
-        confirmAndDeleteUserButton.click();
 
+        deleteUserLink.click();
+        deleteUserReasonRadioFirst.waitFor(
+                new Locator.WaitForOptions()
+                        .setState(WaitForSelectorState.VISIBLE)
+        );
+        deleteUserReasonRadioFirst.click();
+
+        continueButton.click();
+        page.waitForURL("**/delete/check-answer");
+        confirmAndDeleteUserButton.click();
         assertEquals(
                 "User deleted",
                 deleteUserMessageHeading.textContent().trim()

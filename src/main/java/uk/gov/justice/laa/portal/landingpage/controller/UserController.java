@@ -31,6 +31,13 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import uk.gov.justice.laa.portal.landingpage.config.UiLabelsProperties;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -148,6 +155,8 @@ public class UserController {
     private final UserAccountStatusService userAccountStatusService;
     private final NotificationService notificationService;
     private final UserReactivationRequestService userReactivationRequestService;
+    private final UiLabelsProperties uiLabelsProperties;
+
 
     @Value("${feature.flag.disable.user}")
     public boolean disableUserFeatureEnabled;
@@ -507,7 +516,8 @@ public class UserController {
 
     @PostMapping("/users/manage/{id}/delete")
     @PreAuthorize("@accessControlService.canDeleteUser(#id)")
-    public String deleteExternalUser(@PathVariable String id,
+    public String deleteExternalUser(
+            @PathVariable String id,
             @RequestParam(value = "reasonId", required = false) String reasonId,
             Authentication authentication,
             HttpSession session,
@@ -517,7 +527,8 @@ public class UserController {
             throw new RuntimeException("User not found.");
         }
 
-        UUID deleteReasonId = null;
+        UUID deleteReasonId;
+
         if (reasonId == null || reasonId.isBlank()) {
             model.addAttribute("user", optionalUser.get());
             model.addAttribute("fieldErrorMessage", "Please select a reason.");
@@ -548,44 +559,100 @@ public class UserController {
             populateDeleteReasonsModel(model, authentication);
             return "delete-user-reason";
         }
+        session.setAttribute("deleteReasonId", deleteReasonId);
+
+        return "redirect:/admin/users/manage/" + id + "/delete/check-answer";
+    }
+
+    @GetMapping("/users/manage/{id}/delete/check-answer")
+    @PreAuthorize("@accessControlService.canDeleteUser(#id)")
+    public String deleteUserCheckAnswer(@PathVariable String id, Authentication authentication,
+                                        HttpSession session, Model model) {
+
+        Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
+        if (optionalUser.isEmpty()) {
+            throw new RuntimeException("User not found.");
+        }
+        UUID deleteReasonId = (UUID) session.getAttribute("deleteReasonId");
+
+        if (deleteReasonId == null) {
+            return "redirect:/admin/users/manage/" + id + "/delete";
+        }
+
+        UserProfile currentProfile = loginService.getCurrentProfile(authentication);
+        boolean isInternalUser = currentProfile != null && currentProfile.getUserType() == UserType.INTERNAL;
+        DeleteUserReason deleteReason = userService.getDeleteUserReasons(isInternalUser)
+                .stream()
+                .filter(r -> r.getId().equals(deleteReasonId))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Delete reason not found."));
+        model.addAttribute("user", optionalUser.get());
+        model.addAttribute("deleteReason", deleteReason);
+        model.addAttribute(ModelAttributes.PAGE_TITLE, "Check answers - Remove access - " + optionalUser.get().getFullName());
+
+        return "delete-user-check-answer";
+    }
+
+    @PostMapping("/users/manage/{id}/delete/confirm")
+    @PreAuthorize("@accessControlService.canDeleteUser(#id)")
+    public String confirmDeleteExternalUser(@PathVariable String id, Authentication authentication,
+                                            HttpSession session, Model model) {
+
+        Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
+
+        if (optionalUser.isEmpty()) {
+            throw new RuntimeException("User not found.");
+        }
+        UUID deleteReasonId = (UUID) session.getAttribute("deleteReasonId");
+        if (deleteReasonId == null) {
+            return "redirect:/admin/users/manage/" + id + "/delete";
+        }
+        UserProfile currentProfile = loginService.getCurrentProfile(authentication);
+        boolean isInternalUser = currentProfile != null && currentProfile.getUserType() == UserType.INTERNAL;
+        DeleteUserReason matchedReason = userService.getDeleteUserReasons(isInternalUser)
+                .stream()
+                .filter(r -> r.getId().equals(deleteReasonId))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Delete reason not found."));
 
         EntraUser current = loginService.getCurrentEntraUser(authentication);
         UUID currentEntraOidUuid = UUID.fromString(current.getEntraOid());
-        String deleteReasonLabel = matchedReason.get().getLabel();
+
+        String deleteReasonLabel = matchedReason.getLabel();
+
         try {
             DeletedUser deletedUser = userService.deleteExternalUser(id, deleteReasonId, current.getEntraOid());
-
             if (deletedUser.isEncounteredTsErrors()) {
                 DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(
-                        optionalUser.get().getEntraUser().getId(),
-                        deleteReasonLabel, currentEntraOidUuid, "The user account has been deleted but there were some issues during the deletion process. Please contact support.");
+                                optionalUser.get().getEntraUser().getId(), deleteReasonLabel, currentEntraOidUuid,
+                                "The user account has been deleted but there were some issues during the deletion process. Please contact support.");
                 eventService.logEvent(deleteUserAttemptAuditEvent);
                 model.addAttribute("errorMessage", "An unexpected error occurred while deleting user. Please contact support.");
+
                 return "errors/error-generic";
             }
 
-            DeleteUserSuccessAuditEvent deleteUserAuditEvent = new DeleteUserSuccessAuditEvent(
-                    deletedUser.getDeleteReasonLabel(), currentEntraOidUuid, deletedUser);
+            DeleteUserSuccessAuditEvent deleteUserAuditEvent = new DeleteUserSuccessAuditEvent(deletedUser.getDeleteReasonLabel(),
+                    currentEntraOidUuid, deletedUser);
+
             eventService.logEvent(deleteUserAuditEvent);
-        } catch (IllegalArgumentException ex) {
-            model.addAttribute("user", optionalUser.get());
-            model.addAttribute("fieldErrorMessage", "Please select a valid reason.");
-            model.addAttribute(ModelAttributes.PAGE_TITLE, "Remove access - " + optionalUser.get().getFullName());
-            populateDeleteReasonsModel(model, authentication);
-            return "delete-user-reason";
+
         } catch (RuntimeException ex) {
             log.error("Failed to delete external user {}: {}", id, ex.getMessage(), ex);
-            DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent = new DeleteUserAttemptAuditEvent(
-                    optionalUser.get().getEntraUser().getId(),
-                    deleteReasonLabel, currentEntraOidUuid, ex.getMessage());
+            DeleteUserAttemptAuditEvent deleteUserAttemptAuditEvent =
+                    new DeleteUserAttemptAuditEvent(optionalUser.get().getEntraUser().getId(), deleteReasonLabel,
+                            currentEntraOidUuid,
+                            ex.getMessage());
+
             eventService.logEvent(deleteUserAttemptAuditEvent);
             model.addAttribute("user", optionalUser.get());
-            model.addAttribute("globalErrorMessage", "User delete failed, please try again later");
-            model.addAttribute(ModelAttributes.PAGE_TITLE, "Remove access - " + optionalUser.get().getFullName());
-            populateDeleteReasonsModel(model, authentication);
-            return "delete-user-reason";
+            model.addAttribute("deleteReason", matchedReason);
+            model.addAttribute(ModelAttributes.PAGE_TITLE, "Check answers - Remove access - " + optionalUser.get().getFullName());
+
+            return "delete-user-check-answer";
         }
 
+        session.removeAttribute("deleteReasonId");
         model.addAttribute("deletedUserFullName", optionalUser.get().getFullName());
         model.addAttribute(ModelAttributes.PAGE_TITLE, "User deleted");
         return "delete-user-success";
@@ -606,15 +673,18 @@ public class UserController {
 
     private void populateDeleteReasonsModel(Model model, Authentication authentication) {
         UserProfile currentProfile = loginService.getCurrentProfile(authentication);
-        boolean isInternalUser = currentProfile != null
-                && currentProfile.getUserType() == UserType.INTERNAL;
+        boolean isInternalUser = currentProfile != null && currentProfile.getUserType() == UserType.INTERNAL;
         List<DeleteUserReasonViewModel> deleteReasons = userService.getDeleteUserReasons(isInternalUser)
                 .stream()
                 .map(r -> {
                     DeleteUserReasonViewModel vm = new DeleteUserReasonViewModel();
                     vm.setId(r.getId());
                     vm.setCode(r.getCode());
-                    vm.setLabel(r.getLabel());
+                    String key = r.getLabel()
+                            .toLowerCase()
+                            .replaceAll("[^a-z0-9]+", "-");
+                    vm.setLabel(uiLabelsProperties.getDeleteReasons()
+                                    .getOrDefault(key, r.getLabel()));
                     return vm;
                 })
                 .toList();

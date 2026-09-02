@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import jakarta.servlet.http.HttpSession;
 import org.apache.commons.lang3.StringUtils;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -29,6 +30,7 @@ import org.mockito.Mock;
 
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -46,13 +48,16 @@ import ch.qos.logback.core.read.ListAppender;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 import uk.gov.justice.laa.portal.landingpage.auth.AuthenticatedUser;
+import uk.gov.justice.laa.portal.landingpage.config.UiLabelsProperties;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditTableSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDetailDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
+import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
+import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
@@ -60,6 +65,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
+import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AuditExportService;
@@ -117,6 +123,9 @@ class AuditControllerTest {
     @Mock
     private EntraUserRepository entraUserRepository;
 
+    @Mock
+    private UiLabelsProperties uiLabelsProperties;
+
     private PaginatedAuditUsers mockPaginatedUsers;
     private List<AppRoleDto> mockSilasRoles;
     private Model model;
@@ -125,7 +134,7 @@ class AuditControllerTest {
     void setUp() {
         auditController = new AuditController(userService, loginService, eventService, accessControlService,
                 auditExportService, firmService, authenticatedUser, techServicesClient, userAccountStatusService, externalUserPollingService,
-                entraUserRepository);
+                entraUserRepository, uiLabelsProperties);
         model = new ExtendedModelMap();
 
         // Setup mock audit users
@@ -988,236 +997,145 @@ class AuditControllerTest {
     }
 
     @Test
-    void deleteUserWithoutProfileConfirm_shouldReturnConfirmationView() {
-        // Given
+    void deleteUserAudit_whenValidReason_shouldRedirectToCheckAnswer() {
+
         String entraUserId = UUID.randomUUID().toString();
-        AuditUserDetailDto userDetail = AuditUserDetailDto.builder()
-                .userId(null)
-                .firstName("John")
-                .lastName("Doe")
-                .fullName("John Doe")
-                .email("john.doe@example.com")
-                .profiles(Collections.emptyList())
-                .hasNoProfile(true)
-                .build();
-
-        when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId)))
-                .thenReturn(userDetail);
-
-        // When
-        String viewName = auditController.deleteUserWithoutProfileConfirm(entraUserId, model);
-
-        // Then
-        assertThat(viewName).isEqualTo("user-audit/delete-user-without-profile-reason");
-        assertThat(model.getAttribute("user")).isEqualTo(userDetail);
-        assertThat(model.getAttribute("pageTitle")).isEqualTo("Remove access - John Doe");
-        verify(userService).getAuditUserDetailByEntraId(UUID.fromString(entraUserId));
-    }
-
-    @Test
-    void deleteUserWithoutProfileConfirm_populatesDeleteReasonsInModel() {
-        // Given
-        String entraUserId = UUID.randomUUID().toString();
-        AuditUserDetailDto userDetail = AuditUserDetailDto.builder()
-                .userId(null)
-                .firstName("John")
-                .lastName("Doe")
-                .fullName("John Doe")
-                .email("john.doe@example.com")
-                .profiles(Collections.emptyList())
-                .hasNoProfile(true)
-                .build();
-
-        uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason reason =
-                uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason.builder()
-                        .code("CyberRisk").label("Cyber risk").build();
-        reason.setId(UUID.randomUUID());
+        String reasonId = UUID.randomUUID().toString();
+        AuditUserDetailDto userDetail = AuditUserDetailDto.builder().fullName("Charlie Wilson").build();
+        DeleteUserReason deleteReason = DeleteUserReason.builder().label("Test reason").build();
+        deleteReason.setId(UUID.fromString(reasonId));
 
         when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId))).thenReturn(userDetail);
-        when(userService.getDeleteUserReasons(true)).thenReturn(List.of(reason));
+        when(userService.getDeleteUserReasons(true)).thenReturn(List.of(deleteReason));
 
-        // When
-        String viewName = auditController.deleteUserWithoutProfileConfirm(entraUserId, model);
+        HttpSession session = mock(HttpSession.class);
+        String viewName = auditController.deleteUserAudit(entraUserId, reasonId, session, model);
 
-        // Then
-        assertThat(viewName).isEqualTo("user-audit/delete-user-without-profile-reason");
-        @SuppressWarnings("unchecked")
-        List<uk.gov.justice.laa.portal.landingpage.viewmodel.DeleteUserReasonViewModel> reasons =
-                (List<uk.gov.justice.laa.portal.landingpage.viewmodel.DeleteUserReasonViewModel>) model.getAttribute("deleteReasons");
-        assertThat(reasons).hasSize(1);
-        assertThat(reasons.get(0).getCode()).isEqualTo("CyberRisk");
-        verify(userService).getDeleteUserReasons(true);
+        assertThat(viewName).isEqualTo("redirect:/admin/users/audit/entra/" + entraUserId + "/delete/check-answer");
+        verify(session).setAttribute("deleteReasonId", UUID.fromString(reasonId));
     }
 
     @Test
-    void deleteUserWithoutProfile_withValidReason_shouldDeleteAndReturnSuccess() {
-        // Given
+    void deleteUserAuditCheckAnswer_shouldDisplayPage() {
+
+        UUID reasonId = UUID.randomUUID();
         String entraUserId = UUID.randomUUID().toString();
-        String reasonId = UUID.randomUUID().toString();
-        UUID currentUserId = UUID.randomUUID();
+        AuditUserDetailDto userDetail = AuditUserDetailDto.builder().fullName("Charlie Wilson").build();
+        DeleteUserReason deleteReason = DeleteUserReason.builder().label("Test reason").build();
+        deleteReason.setId(reasonId);
+        HttpSession session = mock(HttpSession.class);
 
-        AuditUserDetailDto userDetail = AuditUserDetailDto.builder()
-                .userId(null)
-                .firstName("Jane")
-                .lastName("Smith")
-                .fullName("Jane Smith")
-                .email("jane.smith@example.com")
-                .profiles(Collections.emptyList())
-                .hasNoProfile(true)
-                .build();
+        when(session.getAttribute("deleteReasonId")).thenReturn(reasonId);
+        when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId))).thenReturn(userDetail);
+        when(userService.getDeleteUserReasons(true)).thenReturn(List.of(deleteReason));
 
-        uk.gov.justice.laa.portal.landingpage.entity.EntraUser currentUser = uk.gov.justice.laa.portal.landingpage.entity.EntraUser
-                .builder()
-                .id(currentUserId)
-                .entraOid(entraUserId)
-                .firstName("Admin")
-                .lastName("User")
-                .email("admin@example.com")
-                .build();
+        String viewName = auditController.deleteUserAuditCheckAnswer(entraUserId, session, model);
 
-        final uk.gov.justice.laa.portal.landingpage.model.DeletedUser deletedUser = uk.gov.justice.laa.portal.landingpage.model.DeletedUser
-                .builder()
-                .deletedUserId(UUID.fromString(entraUserId))
-                .deletedUserEntraOid(entraUserId)
-                .removedRolesCount(0)
-                .detachedOfficesCount(0)
-                .build();
+        assertThat(viewName).isEqualTo("user-audit/delete-user-check-answer");
+        assertThat(model.getAttribute("user")).isEqualTo(userDetail);
+        assertThat(model.getAttribute("deleteReason")).isEqualTo(deleteReason);
+    }
+
+    @Test
+    void deleteUserAuditCheckAnswer_whenSessionMissingReason_shouldRedirect() {
+
+        String entraUserId = UUID.randomUUID().toString();
+        HttpSession session = mock(HttpSession.class);
+        when(session.getAttribute("deleteReasonId")).thenReturn(null);
+        AuditUserDetailDto userDetail = AuditUserDetailDto.builder().fullName("Charlie Wilson").build();
 
         when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId)))
                 .thenReturn(userDetail);
-        when(loginService.getCurrentEntraUser(any())).thenReturn(currentUser);
-        uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason deleteReason =
-                uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason.builder()
-                        .code("Reason").label("Test reason").build();
-        deleteReason.setId(UUID.fromString(reasonId));
+
+        String viewName = auditController.deleteUserAuditCheckAnswer(entraUserId, session, model);
+
+        assertThat(viewName).isEqualTo("redirect:/admin/users/audit/entra/" + entraUserId + "/delete");
+    }
+
+    @Test
+    void confirmDeleteUserAudit_whenDeleteSucceeds_shouldShowSuccessPage() {
+
+        UUID reasonId = UUID.randomUUID();
+        UUID currentUserId = UUID.randomUUID();
+        HttpSession session = mock(HttpSession.class);
+
+        when(session.getAttribute("deleteReasonId")).thenReturn(reasonId);
+
+        AuditUserDetailDto userDetail = AuditUserDetailDto.builder().fullName("Charlie Wilson").build();
+        DeleteUserReason deleteReason = DeleteUserReason.builder().label("Test reason").build();
+        deleteReason.setId(reasonId);
+
+        EntraUser currentUser = EntraUser.builder().id(currentUserId).entraOid(UUID.randomUUID().toString()).build();
+        DeletedUser deletedUser = mock(DeletedUser.class);
+
+        String entraUserId = UUID.randomUUID().toString();
+        when(deletedUser.getDeleteReasonLabel()).thenReturn("Test reason");
+        when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId))).thenReturn(userDetail);
         when(userService.getDeleteUserReasons(true)).thenReturn(List.of(deleteReason));
-        when(userService.deleteEntraUserWithoutProfile(eq(entraUserId), any(UUID.class), any(UUID.class)))
-                .thenReturn(deletedUser);
+        when(loginService.getCurrentEntraUser(any())).thenReturn(currentUser);
+        when(userService.getUserProfilesByEntraUserId(UUID.fromString(entraUserId))).thenReturn(Collections.emptyList());
+        when(userService.deleteEntraUserWithoutProfile(anyString(), any(UUID.class), any(UUID.class))).thenReturn(deletedUser);
 
-        // When
-        String viewName = auditController.deleteUserWithoutProfile(
-                entraUserId, reasonId, null, null, model);
+        String viewName = auditController.confirmDeleteUserAudit(entraUserId, mockAuthentication, session, model);
 
-        // Then
         assertThat(viewName).isEqualTo("user-audit/delete-user-success");
-        assertThat(model.getAttribute("deletedUserFullName")).isEqualTo("Jane Smith");
-        assertThat(model.getAttribute("pageTitle")).isEqualTo("User deleted");
-        verify(userService).deleteEntraUserWithoutProfile(eq(entraUserId), any(UUID.class), any(UUID.class));
-        verify(eventService).logEvent(any(uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent.class));
+        verify(session).removeAttribute("deleteReasonId");
     }
 
     @Test
-    void deleteUserWithoutProfile_withShortReason_shouldReturnValidationError() {
-        // Given
+    void confirmDeleteUserAudit_whenSessionMissingReason_shouldRedirect() {
+
         String entraUserId = UUID.randomUUID().toString();
-        String shortReason = "short";
+        HttpSession session = mock(HttpSession.class);
 
-        AuditUserDetailDto userDetail = AuditUserDetailDto.builder()
-                .userId(null)
-                .firstName("Bob")
-                .lastName("Jones")
-                .fullName("Bob Jones")
-                .email("bob.jones@example.com")
-                .profiles(Collections.emptyList())
-                .hasNoProfile(true)
-                .build();
+        when(session.getAttribute("deleteReasonId")).thenReturn(null);
 
-        when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId)))
-                .thenReturn(userDetail);
-        when(userService.getDeleteUserReasons(true)).thenReturn(Collections.emptyList());
+        AuditUserDetailDto userDetail = AuditUserDetailDto.builder().fullName("Charlie Wilson").build();
+        when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId))).thenReturn(userDetail);
 
-        // When
-        String viewName = auditController.deleteUserWithoutProfile(
-                entraUserId, shortReason, null, null, model);
+        String viewName = auditController.confirmDeleteUserAudit(entraUserId, mockAuthentication, session, model);
 
-        // Then
-        assertThat(viewName).isEqualTo("user-audit/delete-user-without-profile-reason");
-        assertThat(model.getAttribute("user")).isEqualTo(userDetail);
-        assertThat(model.getAttribute("fieldErrorMessage"))
-                .isEqualTo("Please select a valid reason.");
-        assertThat(model.getAttribute("pageTitle")).isEqualTo("Remove access - Bob Jones");
-        verify(userService, times(0)).deleteEntraUserWithoutProfile(anyString(), any(UUID.class), any());
+        assertThat(viewName).isEqualTo("redirect:/admin/users/audit/entra/" + entraUserId + "/delete");
+        verify(userService, never()).deleteEntraUserWithoutProfile(anyString(), any(), any());
     }
 
     @Test
-    void deleteUserWithoutProfile_withNullReason_shouldReturnValidationError() {
-        // Given
-        String entraUserId = UUID.randomUUID().toString();
+    void confirmDeleteUserAudit_whenDeleteFails_shouldReturnErrorView() {
 
-        AuditUserDetailDto userDetail = AuditUserDetailDto.builder()
-                .userId(null)
-                .firstName("Alice")
-                .lastName("Brown")
-                .fullName("Alice Brown")
-                .email("alice.brown@example.com")
-                .profiles(Collections.emptyList())
-                .hasNoProfile(true)
-                .build();
-
-        when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId)))
-                .thenReturn(userDetail);
-        when(userService.getDeleteUserReasons(true)).thenReturn(Collections.emptyList());
-
-        // When
-        String viewName = auditController.deleteUserWithoutProfile(
-                entraUserId, null, null, null, model);
-
-        // Then
-        assertThat(viewName).isEqualTo("user-audit/delete-user-without-profile-reason");
-        assertThat(model.getAttribute("fieldErrorMessage"))
-                .isEqualTo("Please select a reason.");
-        verify(userService, times(0)).deleteEntraUserWithoutProfile(anyString(), any(UUID.class), any());
-    }
-
-    @Test
-    void deleteUserWithoutProfile_whenDeleteFails_shouldReturnErrorView() {
-        // Given
-        String entraUserId = UUID.randomUUID().toString();
-        String reasonId = UUID.randomUUID().toString();
+        UUID reasonId = UUID.randomUUID();
         UUID currentUserId = UUID.randomUUID();
+        String entraUserId = UUID.randomUUID().toString();
+        HttpSession session = mock(HttpSession.class);
 
-        AuditUserDetailDto userDetail = AuditUserDetailDto.builder()
-                .userId(null)
-                .firstName("Charlie")
-                .lastName("Wilson")
-                .fullName("Charlie Wilson")
-                .email("charlie.wilson@example.com")
-                .profiles(Collections.emptyList())
-                .hasNoProfile(true)
-                .build();
+        when(session.getAttribute("deleteReasonId")).thenReturn(reasonId);
+        AuditUserDetailDto userDetail = AuditUserDetailDto.builder().fullName("Charlie Wilson").build();
+        DeleteUserReason deleteReason = DeleteUserReason.builder().label("Test reason").build();
+        deleteReason.setId(reasonId);
+        EntraUser currentUser = EntraUser.builder().id(currentUserId).entraOid(UUID.randomUUID().toString()).build();
 
-        uk.gov.justice.laa.portal.landingpage.entity.EntraUser currentUser = uk.gov.justice.laa.portal.landingpage.entity.EntraUser
-                .builder()
-                .id(currentUserId)
-                .entraOid(entraUserId)
-                .firstName("Admin")
-                .lastName("User")
-                .email("admin@example.com")
-                .build();
-
-        uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason deleteReason =
-                uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason.builder()
-                        .code("Reason").label("Test reason").build();
-        deleteReason.setId(UUID.fromString(reasonId));
-
-        when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId)))
-                .thenReturn(userDetail);
-        when(loginService.getCurrentEntraUser(any())).thenReturn(currentUser);
+        when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId))).thenReturn(userDetail);
         when(userService.getDeleteUserReasons(true)).thenReturn(List.of(deleteReason));
-        when(userService.deleteEntraUserWithoutProfile(eq(entraUserId), any(UUID.class), any(UUID.class)))
-                .thenThrow(new RuntimeException("Failed to delete user from Entra"));
+        when(loginService.getCurrentEntraUser(any())).thenReturn(currentUser);
+        when(userService.getUserProfilesByEntraUserId(UUID.fromString(entraUserId))).thenReturn(Collections.emptyList());
+        when(userService.deleteEntraUserWithoutProfile(anyString(), any(UUID.class), any(UUID.class))).thenThrow(new RuntimeException("Failed to delete user"));
 
-        // When
-        String viewName = auditController.deleteUserWithoutProfile(
-                entraUserId, reasonId, null, null, model);
+        String viewName = auditController.confirmDeleteUserAudit(entraUserId, mockAuthentication, session, model);
 
-        // Then
-        assertThat(viewName).isEqualTo("user-audit/delete-user-without-profile-reason");
-        assertThat(model.getAttribute("user")).isEqualTo(userDetail);
-        assertThat(model.getAttribute("globalErrorMessage"))
-                .isEqualTo("User delete failed, please try again later");
-        assertThat(model.getAttribute("pageTitle")).isEqualTo("Remove access - Charlie Wilson");
-        verify(eventService).logEvent(any(uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent.class));
+        assertThat(viewName).isEqualTo("user-audit/delete-user-check-answer");
+        assertThat(model.getAttribute("globalErrorMessage")).isEqualTo("User delete failed, please try again later");
+        verify(eventService).logEvent(any(DeleteUserAttemptAuditEvent.class));
+    }
+
+    @Test
+    void deleteUserAudit_whenReasonMissing_shouldReturnValidationError() {
+
+        String entraUserId = UUID.randomUUID().toString();
+        AuditUserDetailDto userDetail = AuditUserDetailDto.builder().fullName("Charlie Wilson").build();
+        when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId))).thenReturn(userDetail);
+        String viewName = auditController.deleteUserAudit(entraUserId, null, mock(HttpSession.class), model);
+
+        assertThat(viewName).isEqualTo("user-audit/delete-user-reason");
+        assertThat(model.getAttribute("fieldErrorMessage")).isEqualTo("Please select a reason.");
     }
 
     @Test
