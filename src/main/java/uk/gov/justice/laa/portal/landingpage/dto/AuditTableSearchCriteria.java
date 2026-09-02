@@ -122,7 +122,8 @@ public class AuditTableSearchCriteria {
         for (DateTimeFormatter formatter : formatters) {
             try {
                 return LocalDate.parse(trimmed, formatter);
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                // Expected: trying different date formats
             }
         }
         log.warn("Invalid date format provided: {}", dateStr);
