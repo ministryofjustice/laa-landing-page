@@ -1,0 +1,60 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-user-entra-id-and-modify-user-profile-id
+      author: suresh kavali
+
+      changes:
+        - addColumn:
+            tableName: user_activation_request
+            columns:
+              - column:
+                  name: user_entra_id
+                  type: UUID
+
+        - dropNotNullConstraint:
+            tableName: user_activation_request
+            columnName: user_profile_id
+            columnDataType: UUID
+
+        - createIndex:
+            tableName: user_activation_request
+            indexName: idx_user_activation_request_request_id
+            columns:
+              - column:
+                  name: request_id
+
+        - createIndex:
+            tableName: user_activation_request
+            indexName: idx_user_activation_request_user_entra_id
+            columns:
+              - column:
+                  name: user_entra_id
+
+        - createIndex:
+            tableName: user_activation_request
+            indexName: idx_user_activation_request_actor_entra_oid
+            columns:
+              - column:
+                  name: actor_entra_oid
+
+      rollback:
+        - dropIndex:
+            tableName: user_activation_request
+            indexName: idx_user_activation_request_actor_entra_oid
+
+        - dropIndex:
+            tableName: user_activation_request
+            indexName: idx_user_activation_request_user_entra_id
+
+        - dropIndex:
+            tableName: user_activation_request
+            indexName: idx_user_activation_request_request_id
+
+        - dropColumn:
+            tableName: user_activation_request
+            columnName: user_entra_id
+
+        - addNotNullConstraint:
+            tableName: user_activation_request
+            columnName: user_profile_id
+            columnDataType: UUID

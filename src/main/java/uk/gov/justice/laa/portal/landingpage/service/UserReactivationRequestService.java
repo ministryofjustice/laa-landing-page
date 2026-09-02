@@ -16,6 +16,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,7 +37,6 @@ import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestPageMode;
 import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserActivationRequestRepository;
-import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 
 @Service
 @Transactional
@@ -51,7 +51,6 @@ public class UserReactivationRequestService {
     private final LoginService loginService;
     private final FirmService firmService;
     private final UserActivationRequestRepository userActivationRequestRepository;
-    private final UserProfileRepository userProfileRepository;
     private final EntraUserRepository entraUserRepository;
     private final ReactivationTypeResolver roleTypeResolver;
     private final NotificationService notificationService;
@@ -59,34 +58,32 @@ public class UserReactivationRequestService {
     public UserReactivationRequestService(LoginService loginService,
                                           FirmService firmService,
                                           UserActivationRequestRepository userActivationRequestRepository,
-                                          UserProfileRepository userRepository,
                                           EntraUserRepository entraUserRepository,
                                           ReactivationTypeResolver roleTypeResolver,
                                           NotificationService notificationService) {
         this.loginService = loginService;
         this.firmService = firmService;
         this.userActivationRequestRepository = userActivationRequestRepository;
-        this.userProfileRepository = userRepository;
         this.entraUserRepository = entraUserRepository;
         this.roleTypeResolver = roleTypeResolver;
         this.notificationService = notificationService;
     }
 
-    public Optional<UserActivationRequest> findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(String profileId) {
-        log.debug("Fetching latest activation request for profile ID: {}", profileId);
-        return userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(parseUuid(profileId));
+    public Optional<UserActivationRequest> findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(String userId) {
+        log.debug("Fetching latest activation request for profile ID: {}", userId);
+        return userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(parseUuid(userId));
     }
 
     public UserActivationRequest createReactivationRequest(String userId, String profileId, String comments, String actorEntraOid) {
-        log.info("A new user activation request is being submitted for user {} with profile ID: {} by User Entra Oid: {}",
-                userId, profileId, actorEntraOid);
+        log.info("A new user activation request is being submitted for user {} by User Entra Oid: {}",
+                userId, actorEntraOid);
 
-        userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(parseUuid(profileId))
+        userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(parseUuid(userId))
                 .ifPresent(existing -> {
                     ReactivationRequestStatus status = existing.getStatus();
                     if (status != ReactivationRequestStatus.REJECTED && status != ReactivationRequestStatus.APPROVED) {
-                        log.error("Request already being processed for profile ID: {}", profileId);
-                        throw new IllegalStateException("Request already being processed for user " + profileId);
+                        log.error("Request already being processed for profile ID: {}", userId);
+                        throw new IllegalStateException("Request already being processed for user " + userId);
                     }
                 });
 
@@ -95,39 +92,39 @@ public class UserReactivationRequestService {
 
         EntraUser providerUser = entraUserRepository.findById(UUID.fromString(userId)).orElseThrow();
 
-        final UserActivationRequest newRequest = createReactivationRequestEntry(null, profileId,
+        final UserActivationRequest newRequest = createReactivationRequestEntry(null, userId, profileId,
                 ReactivationRequestStatus.IN_REVIEW, comments, actorEntraOid, actorRoleType);
 
         if (ReactivationRoleType.PROVIDER_ADMIN.equals(actorRoleType)) {
             log.debug("Sending submission notification to Provider Admin: {}", actor.getEmail());
             notificationService.notifyReactivationRequestSubmitted(
                     actor.getId().toString(), actor.getFirstName(), actor.getEmail(),
-                    actor.getId().toString(), profileId, providerUser.getEmail()
+                    actor.getId().toString(), userId, providerUser.getEmail()
             );
         }
 
         log.debug("Sending submission notification to target user: {}", providerUser.getEmail());
         notificationService.notifyReactivationRequestSubmitted(
-                actor.getId().toString(), providerUser.getFirstName(), providerUser.getEmail(), providerUser.getId().toString(), profileId, providerUser.getEmail()
+                actor.getId().toString(), providerUser.getFirstName(), providerUser.getEmail(), providerUser.getId().toString(), userId, providerUser.getEmail()
         );
 
         log.info("Successfully created reactivation request ID: {} (Version 1) for profile ID: {}",
-                newRequest.getRequestId(), profileId);
+                newRequest.getRequestId(), userId);
         return newRequest;
     }
 
     public UserActivationRequest approveReactivationRequest(String requestId, String userEntraId, String userProfileId, String actorEntraOid) {
-        log.info("Approving reactivation request ID: {} for user profile ID: {} by actor OID: {}", requestId, userProfileId, actorEntraOid);
+        log.info("Approving reactivation request ID: {} for user ID: {} by actor OID: {}", requestId, userEntraId, actorEntraOid);
         return processReactivationState(requestId, userEntraId, userProfileId, "Approved", actorEntraOid, ReactivationRequestStatus.APPROVED, true);
     }
 
     public UserActivationRequest rejectReactivationRequest(String requestId, String userEntraId, String userProfileId, String comments, String actorEntraOid) {
-        log.info("Rejecting reactivation request ID: {} for user profile ID: {} by actor OID: {}", requestId, userProfileId, actorEntraOid);
+        log.info("Rejecting reactivation request ID: {} for user ID: {} by actor OID: {}", requestId, userEntraId, actorEntraOid);
         return processReactivationState(requestId, userEntraId, userProfileId, comments, actorEntraOid, ReactivationRequestStatus.REJECTED, false);
     }
 
     public UserActivationRequest updateReactivateRequestState(String requestId, String userEntraId, String userProfileId, String comments, String actorEntraOid) {
-        log.info("Updating reactivation request ID: {} for user profile ID: {} by actor OID: {}", requestId, userProfileId, actorEntraOid);
+        log.info("Updating reactivation request ID: {} for user ID: {} by actor OID: {}", requestId, userEntraId, actorEntraOid);
 
         EntraUser entraUser = entraUserRepository.findByEntraOid(actorEntraOid).orElseThrow();
         ReactivationRoleType roleType = roleTypeResolver.resolve(entraUser);
@@ -137,7 +134,7 @@ public class UserReactivationRequestService {
         ReactivationRequestStatus reactivationRequestStatus = calculateNextReactivationRequestStatus(entraUser);
         log.debug("Calculated next status: {} for request ID: {}", reactivationRequestStatus, requestId);
 
-        UserActivationRequest result = createReactivationRequestEntry(requestId, userProfileId, reactivationRequestStatus, comments, actorEntraOid, roleType);
+        UserActivationRequest result = createReactivationRequestEntry(requestId, userEntraId, userProfileId, reactivationRequestStatus, comments, actorEntraOid, roleType);
 
         if (ReactivationRequestStatus.INFORMATION_REQUIRED.equals(reactivationRequestStatus)) {
             UserActivationRequest initialRequest = userActivationRequestRepository.findFirstByRequestIdOrderByVersionAsc(parseUuid(requestId)).orElseThrow();
@@ -147,7 +144,7 @@ public class UserReactivationRequestService {
                 log.debug("Notifying provider admin {} that information is required for request ID: {}", providerAdmin.getEmail(), requestId);
                 notificationService.notifyReactivationRequestInfoRequested(
                         entraUser.getId().toString(), providerAdmin.getFirstName(), providerAdmin.getEmail(), providerAdmin.getId().toString(),
-                        userProfileId, providerUser.getEmail()
+                        userEntraId, providerUser.getEmail()
                 );
             }
         }
@@ -156,7 +153,7 @@ public class UserReactivationRequestService {
         return result;
     }
 
-    private UserActivationRequest processReactivationState(String requestId, String userEntraId, String userProfileId, String comments,
+    private UserActivationRequest processReactivationState(String requestId, String userId, String userProfileId, String comments,
                                                            String actorEntraOid, ReactivationRequestStatus status, boolean isApproved) {
         String actor;
         ReactivationRoleType roleType;
@@ -171,20 +168,20 @@ public class UserReactivationRequestService {
 
         UserActivationRequest initialRequest = userActivationRequestRepository.findFirstByRequestIdOrderByVersionAsc(parseUuid(requestId)).orElseThrow();
 
-        final UserActivationRequest result = createReactivationRequestEntry(requestId, userProfileId, status, comments, actorEntraOid, roleType);
+        final UserActivationRequest result = createReactivationRequestEntry(requestId, userId, userProfileId, status, comments, actorEntraOid, roleType);
 
-        EntraUser providerUser = entraUserRepository.findById(parseUuid(userEntraId)).orElseThrow();
+        EntraUser providerUser = entraUserRepository.findById(parseUuid(userId)).orElseThrow();
 
         if (initialRequest.getActorRoleType() == ReactivationRoleType.PROVIDER_ADMIN) {
             EntraUser providerAdmin = entraUserRepository.findByEntraOid(initialRequest.getActorEntraOid()).orElseThrow();
             if (isApproved) {
                 log.debug("Notifying Provider Admin {} of approval for request ID: {}", providerAdmin.getEmail(), requestId);
                 notificationService.notifyReactivationRequestApproved(actor, providerAdmin.getFirstName(),
-                        providerAdmin.getEmail(), providerAdmin.getId().toString(), userProfileId, providerUser.getEmail());
+                        providerAdmin.getEmail(), providerAdmin.getId().toString(), userId, providerUser.getEmail());
             } else {
                 log.debug("Notifying Provider Admin {} of rejection for request ID: {}", providerAdmin.getEmail(), requestId);
                 notificationService.notifyReactivationRequestRejected(actor, providerAdmin.getFirstName(),
-                        providerAdmin.getEmail(), providerAdmin.getId().toString(), userProfileId, providerUser.getEmail());
+                        providerAdmin.getEmail(), providerAdmin.getId().toString(), userId, providerUser.getEmail());
             }
         }
 
@@ -202,13 +199,13 @@ public class UserReactivationRequestService {
         return result;
     }
 
-    private UserActivationRequest createReactivationRequestEntry(String requestId, String userProfileId,
+    private UserActivationRequest createReactivationRequestEntry(String requestId, String userId, String profileId,
                                                                  ReactivationRequestStatus status, String comments,
                                                                  String actorEntraOid, ReactivationRoleType roleType) {
 
-        if (userProfileId == null || !userProfileRepository.existsById(parseUuid(userProfileId))) {
-            log.error("Failed to create request entry. User profile not found for ID: {}", userProfileId);
-            throw new EntityNotFoundException("Target user not found with ID: " + userProfileId);
+        if (!isUserIdsValid(userId, profileId)) {
+            log.error("Failed to create request entry. User id not found for ID: {}", userId);
+            throw new EntityNotFoundException("Target user not found with ID: " + userId);
         }
 
         int nextVersion = 1;
@@ -220,12 +217,13 @@ public class UserReactivationRequestService {
             nextVersion = firstByRequestIdOrderByVersionDesc.getVersion() + 1;
         }
 
-        log.debug("Creating reactivation request entry. Request ID: {}, Profile ID: {}, Version: {}, Status: {}",
-                activeRequestId, userProfileId, nextVersion, status);
+        log.debug("Creating reactivation request entry. Request ID: {}, User ID: {}, Version: {}, Status: {}",
+                activeRequestId, userId, nextVersion, status);
 
         UserActivationRequest newRecord = new UserActivationRequest();
         newRecord.setRequestId(activeRequestId);
-        newRecord.setUserProfileId(parseUuid(userProfileId));
+        newRecord.setUserProfileId(safeParseUuid(profileId));
+        newRecord.setUserEntraId(parseUuid(userId));
         newRecord.setVersion(nextVersion);
         newRecord.setStatus(status);
         newRecord.setComments(comments);
@@ -234,6 +232,24 @@ public class UserReactivationRequestService {
         newRecord.setCreatedAt(Instant.now());
 
         return userActivationRequestRepository.save(newRecord);
+    }
+
+    private boolean isUserIdsValid(String userId, String profileId) {
+        if (userId == null) {
+            return false;
+        }
+
+        EntraUser user = entraUserRepository.findById(parseUuid(userId)).orElse(null);
+        if (user == null) {
+            return false;
+        }
+
+        if (user.isMultiFirmUser() && StringUtils.isEmpty(profileId)) {
+            return true;
+        }
+
+        return user.getUserProfiles().stream()
+                .anyMatch(profile -> profile != null && profile.getId().equals(parseUuid(profileId)));
     }
 
     private void validateActiveReactivationRequestPresent(String requestId) {
@@ -251,24 +267,24 @@ public class UserReactivationRequestService {
     }
 
     @Transactional(readOnly = true)
-    public List<UserActivationRequestSummaryDto> getLatestRequestHistoryForUserProfile(String userProfileId) {
-        log.debug("Fetching latest activation request history for user profile ID: {}", userProfileId);
+    public List<UserActivationRequestSummaryDto> getLatestRequestHistoryForUserId(String userId) {
+        log.debug("Fetching latest activation request history for user ID: {}", userId);
 
-        Optional<UserActivationRequest> latestRequest = userActivationRequestRepository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(parseUuid(userProfileId));
+        Optional<UserActivationRequest> latestRequest = userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(parseUuid(userId));
 
         if (latestRequest.isEmpty()) {
-            log.info("No activation request found for user profile ID: {}", userProfileId);
+            log.info("No activation request found for user ID: {}", userId);
             return Collections.emptyList();
         }
 
         List<UserActivationRequestSummaryDto> history = userActivationRequestRepository.findRequestHistoryByRequestId(latestRequest.get().getRequestId());
 
         if (history.isEmpty()) {
-            log.info("No activation request history found for user profile ID: {}", userProfileId);
+            log.info("No activation request history found for user ID: {}", userId);
             return Collections.emptyList();
         }
 
-        log.debug("Found {} history records for user profile ID: {}", history.size(), userProfileId);
+        log.debug("Found {} history records for user ID: {}", history.size(), userId);
         return history;
     }
 
@@ -277,7 +293,7 @@ public class UserReactivationRequestService {
         log.debug("Resolving next status for user {} with role type: {}", entraUser.getId(), roleType);
 
         return ReactivationRoleType.PROVIDER_ADMIN.equals(roleType)
-                || ReactivationRoleType.LAA_USER_REGISTRATION.equals(roleType)
+                || ReactivationRoleType.LAA_SUPPORT.equals(roleType)
                 || ReactivationRoleType.LAA_OST.equals(roleType)
                 ? ReactivationRequestStatus.IN_REVIEW : ReactivationRequestStatus.INFORMATION_REQUIRED;
     }
@@ -354,12 +370,12 @@ public class UserReactivationRequestService {
             return List.of();
         }
 
-        Set<UUID> profileIds = latestRequests.stream()
-                .map(UserActivationRequest::getUserProfileId)
+        Set<UUID> userIds = latestRequests.stream()
+                .map(UserActivationRequest::getUserEntraId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
-        Map<UUID, UserProfile> profilesById = userProfileRepository.findAllByIdInWithFirm(profileIds).stream()
-                .collect(Collectors.toMap(UserProfile::getId, profile -> profile));
+        Map<UUID, EntraUser> userByIds = entraUserRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(EntraUser::getId, user -> user));
 
         Set<String> actorEntraOids = latestRequests.stream()
                 .map(UserActivationRequest::getActorEntraOid)
@@ -396,10 +412,10 @@ public class UserReactivationRequestService {
                 : Set.of();
 
         List<ReactivationRequestListItem> items = latestRequests.stream()
-                .filter(request -> isVisibleToViewer(request, profilesById.get(request.getUserProfileId()), currentUser,
+                .filter(request -> isVisibleToViewer(request, userByIds.get(request.getUserEntraId()), currentUser,
                         isGlobalAdminOrSecurityResponse, isExternalUserAdmin, isExternalUserManager,
                     isExternalUserSupport, isProviderAdmin, viewerFirmIds, submittedByRoleByRequestId.get(request.getRequestId())))
-                .map(request -> toListItem(request, profilesById.get(request.getUserProfileId()),
+                .map(request -> toListItem(request, userByIds.get(request.getUserEntraId()),
                         actorsByEntraOid.get(request.getActorEntraOid()),
                         submittedAtByRequestId.get(request.getRequestId())))
                 .toList();
@@ -407,7 +423,7 @@ public class UserReactivationRequestService {
         return items;
     }
 
-    private boolean isVisibleToViewer(UserActivationRequest request, UserProfile profile,
+    private boolean isVisibleToViewer(UserActivationRequest request, EntraUser targetUser,
                                       EntraUser currentUser, boolean isGlobalAdminOrSecurityResponse,
                                       boolean isExternalUserAdmin, boolean isExternalUserManager,
                                       boolean isExternalUserSupport, boolean isProviderAdmin,
@@ -420,12 +436,9 @@ public class UserReactivationRequestService {
             return true;
         }
 
-        if (profile == null || profile.getEntraUser() == null) {
+        if (targetUser == null) {
             return false;
         }
-
-        boolean isMultiFirmTarget = profile.getEntraUser().isMultiFirmUser();
-        UUID targetFirmId = profile.getFirm() == null ? null : profile.getFirm().getId();
 
         if (isExternalUserManager || isExternalUserSupport) {
             return submittedByRole == ReactivationRoleType.LAA_OST
@@ -433,25 +446,31 @@ public class UserReactivationRequestService {
         }
 
         if (isProviderAdmin) {
-            return !isMultiFirmTarget && targetFirmId != null && viewerFirmIds.contains(targetFirmId);
+            boolean isMultiFirmTarget = targetUser.isMultiFirmUser();
+            if (isMultiFirmTarget) {
+                return false;
+            }
+            UserProfile activeProfile = activeUserProfile(targetUser);
+            UUID targetFirmId = activeProfile != null && activeProfile.getFirm() != null ? activeProfile.getFirm().getId() : null;
+            return targetFirmId != null && viewerFirmIds.contains(targetFirmId);
         }
 
         return false;
     }
 
-    private ReactivationRequestListItem toListItem(UserActivationRequest request, UserProfile profile, EntraUser actor,
+    private ReactivationRequestListItem toListItem(UserActivationRequest request, EntraUser entraUser, EntraUser actor,
                                                    Instant submittedAt) {
-        UUID firmId = profile != null && profile.getFirm() != null ? profile.getFirm().getId() : null;
+        UserProfile targetUserProfile = activeUserProfile(entraUser);
+        UUID firmId = targetUserProfile != null && targetUserProfile.getFirm() != null ? targetUserProfile.getFirm().getId() : null;
         String actorName = actor != null
                 ? (nullToEmpty(actor.getFirstName()) + " " + nullToEmpty(actor.getLastName())).trim()
                 : UNKNOWN_USER_NAME;
         String actorEmail = actor != null ? actor.getEmail() : null;
-        EntraUser targetUser = profile != null ? profile.getEntraUser() : null;
-        String userName = targetUser != null
-                ? (nullToEmpty(targetUser.getFirstName()) + " " + nullToEmpty(targetUser.getLastName())).trim()
+        String userName = entraUser != null
+                ? (nullToEmpty(entraUser.getFirstName()) + " " + nullToEmpty(entraUser.getLastName())).trim()
                 : UNKNOWN_USER_NAME;
-        String userEmail = targetUser != null ? targetUser.getEmail() : null;
-        String userType = determineTargetUserType(profile, targetUser);
+        String userEmail = entraUser != null ? entraUser.getEmail() : null;
+        String userType = determineTargetUserType(targetUserProfile, entraUser);
         String actorRoleType = request.getActorRoleType() != null ? request.getActorRoleType().getDisplayName() : null;
         ReactivationRequestStatus status = ReactivationRequestStatus.valueOf(request.getStatus().name());
         // dateSubmitted reflects when the request was originally raised (version 1),
@@ -467,8 +486,8 @@ public class UserReactivationRequestService {
         return new ReactivationRequestListItem(
                 request.getId(),
                 request.getRequestId(),
-                request.getUserProfileId(),
-                targetUser != null ? targetUser.getId() : null,
+                request.getUserEntraId(),
+                targetUserProfile != null ? targetUserProfile.getId() : null,
                 request.getVersion(),
                 status,
                 request.getComments(),
@@ -482,6 +501,16 @@ public class UserReactivationRequestService {
                 dateSubmitted,
                 lastActivity,
                 firmId);
+    }
+
+    private UserProfile activeUserProfile(EntraUser entraUser) {
+        return Optional.ofNullable(entraUser)
+                .map(EntraUser::getUserProfiles)
+                .orElse(Set.of())
+                .stream()
+                .filter(profile -> profile != null && profile.isActiveProfile())
+                .findFirst()
+                .orElse(null);
     }
 
     private String determineTargetUserType(UserProfile profile, EntraUser targetUser) {
@@ -589,7 +618,7 @@ public class UserReactivationRequestService {
 
         return switch (sort) {
             case "requestId" -> Comparator.comparing(item -> item.requestId().toString(), String.CASE_INSENSITIVE_ORDER);
-            case "userProfileId" -> Comparator.comparing(item -> item.userProfileId().toString(), String.CASE_INSENSITIVE_ORDER);
+            case "userProfileId" -> Comparator.comparing(item -> item.userId().toString(), String.CASE_INSENSITIVE_ORDER);
             case "version" -> Comparator.comparing(ReactivationRequestListItem::version, Comparator.nullsLast(Integer::compareTo));
             case "requestStatus" -> Comparator.comparing(item -> item.requestStatus().name(), String.CASE_INSENSITIVE_ORDER);
             case "actorName" -> Comparator.comparing(ReactivationRequestListItem::actorName, String.CASE_INSENSITIVE_ORDER);
@@ -617,6 +646,14 @@ public class UserReactivationRequestService {
             return UUID.fromString(uuidStr);
         } catch (Exception ex) {
             throw new RuntimeException("Invalid UUID format: " + uuidStr, ex);
+        }
+    }
+
+    private UUID safeParseUuid(String uuidStr) {
+        try {
+            return StringUtils.isEmpty(uuidStr) ? null : UUID.fromString(uuidStr);
+        } catch (Exception ex) {
+            return null;
         }
     }
 

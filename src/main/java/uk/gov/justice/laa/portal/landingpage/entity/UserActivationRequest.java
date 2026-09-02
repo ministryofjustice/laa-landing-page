@@ -40,8 +40,11 @@ public class UserActivationRequest extends BaseEntity {
     @NotNull(message = "User reactivation request id must be provided")
     private UUID requestId;
 
-    @Column(name = "user_profile_id", nullable = false)
-    @NotNull(message = "User reactivation request user profile id must be provided")
+    @Column(name = "user_entra_id", nullable = false)
+    @NotNull(message = "User reactivation request user entra id must be provided")
+    private UUID userEntraId;
+
+    @Column(name = "user_profile_id", nullable = true)
     private UUID userProfileId;
 
     @Column(name = "version", nullable = false)
