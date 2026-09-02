@@ -184,7 +184,6 @@ public class UserActivationControllerTest {
             session.setAttribute("delegateReactivateUserId", USER_ID);
             EntraUserDto user = buildEntraUserDto();
 
-            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(user));
             when(userService.isValidUserProfileId(USER_ID, PROFILE_ID)).thenReturn(true);
 
             String view = userActivationController.delegateReactivateUserPost(USER_ID, model, session, PROFILE_ID, REFERER, redirectAttributes);
@@ -272,7 +271,6 @@ public class UserActivationControllerTest {
             BindingResult bindingResult = mock(BindingResult.class);
             when(bindingResult.hasErrors()).thenReturn(false);
             EntraUserDto user = buildEntraUserDto();
-            when(userService.getEntraUserById(USER_ID)).thenReturn(Optional.of(user));
             when(userService.isValidUserProfileId(USER_ID, PROFILE_ID)).thenReturn(true);
 
             String view = userActivationController.delegateReactivateUserCommentsPost(USER_ID, form, bindingResult, model, session, PROFILE_ID, REFERER, redirectAttributes);
@@ -355,10 +353,10 @@ public class UserActivationControllerTest {
             session.setAttribute("delegateReactivateUserCommentForm", DelegateReactivateUserCommentForm.builder().build());
 
             UserProfileDto mismatchedProfile = UserProfileDto.builder().id(UUID.randomUUID()).build();
-            when(userService.getActiveProfileByUserId(USER_ID)).thenReturn(Optional.of(mismatchedProfile));
+            when(userService.isValidUserProfileId(USER_ID, PROFILE_ID)).thenReturn(false);
 
             assertThatThrownBy(() -> userActivationController.delegateReactivateUserCommentsCheckAnswersPost(USER_ID, authentication, model, session, PROFILE_ID, REFERER))
-                    .isInstanceOf(ResponseStatusException.class).hasMessageContaining("400");
+                    .isInstanceOf(ResponseStatusException.class).hasMessageContaining("403");
 
             verify(userReactivationRequestService, never()).createReactivationRequest(any(), any(), any(), any());
         }
@@ -379,7 +377,7 @@ public class UserActivationControllerTest {
             actor.setUserId(UUID.randomUUID());
             UserActivationRequest createdRequest = buildUserActivationRequest(ReactivationRequestStatus.IN_REVIEW);
 
-            when(userService.getActiveProfileByUserId(USER_ID)).thenReturn(Optional.of(userProfile));
+            when(userService.isValidUserProfileId(USER_ID, PROFILE_ID)).thenReturn(true);
             when(loginService.getCurrentEntraUser(any())).thenReturn(entraUser);
             when(loginService.getCurrentUser(any())).thenReturn(actor);
             when(userReactivationRequestService.createReactivationRequest(any(String.class), any(String.class), any(), any()))
@@ -642,7 +640,7 @@ public class UserActivationControllerTest {
             when(bindingResult.getAllErrors()).thenReturn(List.of(new ObjectError("form", "Error message")));
 
             String viewName = userActivationController.rejectDelegateReactivateUserRequestsPost(USER_ID, session, model,
-                    PROFILE_ID, REFERER, REQUEST_ID, form, bindingResult, authentication, redirectAttributes);
+                    PROFILE_ID, REQUEST_ID, REFERER, form, bindingResult, authentication, redirectAttributes);
 
             assertThat(viewName).isEqualTo("redirect:/admin/user/delegate-reactivate/reject/{id}");
             verify(redirectAttributes).addFlashAttribute(eq(BindingResult.MODEL_KEY_PREFIX + "delegateReactivateUserCommentForm"), eq(bindingResult));

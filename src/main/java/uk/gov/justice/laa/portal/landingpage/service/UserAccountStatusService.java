@@ -248,7 +248,7 @@ public class UserAccountStatusService {
 
         boolean isThereAnActiveReactivationRequest = userReactivationRequestService.hasOpenReactivationRequest(enabledUserId);
 
-        if(isThereAnActiveReactivationRequest){
+        if (isThereAnActiveReactivationRequest) {
             log.warn("User {} has an active reactivation request, cannot enable user. The user can be enabled by approving the request", enabledUserId);
             throw new RuntimeException(String.format("User %s has an active reactivation request, cannot enable user", enabledUserId));
         }

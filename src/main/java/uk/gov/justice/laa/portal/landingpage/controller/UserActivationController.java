@@ -133,14 +133,13 @@ public class UserActivationController {
             throw new ResponseStatusException(HttpStatusCode.valueOf(403));
         }
 
-        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
         session.setAttribute("delegateReactivateUserId", id);
         session.setAttribute("profileId", profileId);
 
         redirectAttributes.addAttribute("profileId", profileId);
         redirectAttributes.addAttribute("referer", referer);
 
-        return "redirect:/admin/user/delegate-reactivate-user-comment/" + user.getId();
+        return "redirect:/admin/user/delegate-reactivate-user-comment/" + id;
     }
 
     @GetMapping("/user/delegate-reactivate-user-comment/{id}")
@@ -209,14 +208,13 @@ public class UserActivationController {
             throw new ResponseStatusException(HttpStatusCode.valueOf(403));
         }
 
-        EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
-
         redirectAttributes.addAttribute("profileId", profileId);
         redirectAttributes.addAttribute("referer", referer);
         redirectAttributes.addFlashAttribute("delegateReactivateUserCommentForm", delegateReactivateUserCommentForm);
         session.setAttribute("delegateReactivateUserCommentForm", delegateReactivateUserCommentForm);
         redirectAttributes.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User");
-        return "redirect:/admin/user/delegate-reactivate-user-check-answers/" + user.getId();
+
+        return "redirect:/admin/user/delegate-reactivate-user-check-answers/" + id;
     }
 
     @GetMapping("/user/delegate-reactivate-user-check-answers/{id}")
