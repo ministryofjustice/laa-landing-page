@@ -448,7 +448,7 @@ public class UserController {
 
         boolean isProviderAdmin = user.getAppRoles() != null && RolesUtils.isProvideAdmin(user.getAppRoles());
         model.addAttribute("silasUserType",
-                isInternalUser ? "Internal" : isMultiFirmUser ? "3rd Party" : isProviderAdmin ? "Firm Admin" : "Provider");
+            isInternalUser ? "Internal" : isMultiFirmUser ? "3rd Party" : isProviderAdmin ? "Provider Admin" : "Provider User");
 
         // Check if this profile belongs to the logged-in user
         boolean isOwnProfile = editorUserProfile.getId().equals(user.getId());

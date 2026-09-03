@@ -667,12 +667,12 @@ class UserControllerTest {
                 .app(AppDto.builder().enabled(true).build())
                 .build();
 
-        assertSilasUserType(false, false, List.of(providerAdminRole), "Firm Admin");
+        assertSilasUserType(false, false, List.of(providerAdminRole), "Provider Admin");
     }
 
     @Test
     void manageUser_shouldSetSilasUserTypeToProviderByDefault() {
-        assertSilasUserType(false, false, null, "Provider");
+        assertSilasUserType(false, false, null, "Provider User");
     }
 
     private void assertSilasUserType(boolean internalUser, boolean multiFirmUser,
