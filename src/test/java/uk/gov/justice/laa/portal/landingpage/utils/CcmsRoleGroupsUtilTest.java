@@ -167,7 +167,7 @@ public class CcmsRoleGroupsUtilTest {
     }
 
     @Test
-    void organizeCcmsRolesBySection_shouldHandleRolesWithNullCcmsCode() {
+    void organizeCcmsRolesBySection_shouldHandleRolesWithNullRoleIdentifier() {
         // Given
         List<AppRoleViewModel> ccmsRoles = List.of(
             createAppRoleViewModel("role1", "XXCCMS_FIRM_ADMIN"),
@@ -181,7 +181,7 @@ public class CcmsRoleGroupsUtilTest {
         // Then
         assertThat(result.get(CcmsRoleGroupsUtil.PROVIDER_SECTION)).hasSize(1);
         assertThat(result.get(CcmsRoleGroupsUtil.ADVOCATE_SECTION)).hasSize(1);
-        assertThat(result.get(CcmsRoleGroupsUtil.OTHER_SECTION)).hasSize(1); // Role with null ccmsCode goes to Other
+        assertThat(result.get(CcmsRoleGroupsUtil.OTHER_SECTION)).hasSize(1); // Role with null roleIdentifier goes to Other
     }
 
     @Test
@@ -340,10 +340,10 @@ public class CcmsRoleGroupsUtilTest {
     /**
      * Helper method to create AppRoleDto for testing
      */
-    private AppRoleViewModel createAppRoleViewModel(String id, String ccmsCode) {
+    private AppRoleViewModel createAppRoleViewModel(String id, String roleIdentifier) {
         AppRoleViewModel role = new AppRoleViewModel();
         role.setId(id);
-        role.setRoleIdentifier(ccmsCode);
+        role.setRoleIdentifier(roleIdentifier);
         role.setName("Test Role " + id);
         role.setDescription("Test description for role " + id);
         return role;
