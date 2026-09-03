@@ -105,6 +105,7 @@ public class AccessControlServiceTest {
     private final String accessedUserIdStr = accessedUserId.toString();
     private final UUID accessedProfileId = UUID.randomUUID();
     private final UUID requestId = UUID.randomUUID();
+    private final String requestIdStr = requestId.toString();
 
     private EntraUser authenticatedUser;
     private UserProfile actorProfile;
@@ -3341,16 +3342,7 @@ public class AccessControlServiceTest {
 
             when(entraUserRepository.findById(accessedUserId)).thenReturn(Optional.of(accessedUser));
 
-            when(latestActivationRequest.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
-            when(latestActivationRequest.getRequestId()).thenReturn(requestId);
-
-            when(userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(accessedUserId))
-                    .thenReturn(Optional.of(latestActivationRequest));
-
-            when(firstActivationRequest.version()).thenReturn(1);
             lenient().when(firstActivationRequest.actorEntraOid()).thenReturn("requester-oid");
-            when(userActivationRequestRepository.findRequestHistoryByRequestId(requestId))
-                    .thenReturn(List.of(firstActivationRequest));
         }
 
         @Nested
@@ -3947,7 +3939,7 @@ public class AccessControlServiceTest {
             @ValueSource(strings = {"   ", "invalid-uuid"})
             @DisplayName("Should return false when entraUserId is invalid or non-UUID")
             void shouldReturnFalseForInvalidUserId(String invalidId) {
-                assertThat(accessControlService.canTrackDelegateEnableUser(invalidId)).isFalse();
+                assertThat(accessControlService.canTrackDelegateEnableUser(invalidId, requestIdStr)).isFalse();
             }
 
             @Test
@@ -3956,13 +3948,13 @@ public class AccessControlServiceTest {
                 when(securityContext.getAuthentication()).thenReturn(authentication);
                 when(loginService.getCurrentEntraUser(authentication)).thenReturn(null);
 
-                assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr, requestIdStr)).isFalse();
 
                 when(loginService.getCurrentEntraUser(authentication)).thenReturn(authenticatedUser);
 
                 try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                     mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(false);
-                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr, requestIdStr)).isFalse();
                 }
             }
 
@@ -3975,7 +3967,7 @@ public class AccessControlServiceTest {
 
                 try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                     mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
-                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr, requestIdStr)).isFalse();
                 }
             }
 
@@ -3989,7 +3981,7 @@ public class AccessControlServiceTest {
 
                 try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                     mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
-                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr, requestIdStr)).isFalse();
                 }
 
             }
@@ -4002,7 +3994,7 @@ public class AccessControlServiceTest {
 
                 try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                     mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
-                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr, requestIdStr)).isFalse();
                 }
             }
 
@@ -4016,14 +4008,13 @@ public class AccessControlServiceTest {
                     mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
 
                     when(entraUserRepository.findById(accessedUserId)).thenReturn(Optional.empty());
-                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr, requestIdStr)).isFalse();
 
                     when(entraUserRepository.findById(accessedUserId)).thenReturn(Optional.of(accessedUser));
 
                     when(accessedUser.getUserProfiles()).thenReturn(Set.of(accessedProfile));
-                    when(latestActivationRequest.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
                     when(latestActivationRequest.getRequestId()).thenReturn(requestId);
-                    when(userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(accessedUserId))
+                    when(userActivationRequestRepository.findFirstByUserEntraIdAndRequestIdOrderByVersionDesc(accessedUserId, requestId))
                             .thenReturn(Optional.of(latestActivationRequest));
                     when(firstActivationRequest.version()).thenReturn(1);
                     lenient().when(firstActivationRequest.actorRoleType()).thenReturn(ReactivationRoleType.LAA);
@@ -4031,11 +4022,11 @@ public class AccessControlServiceTest {
                             .thenReturn(List.of(firstActivationRequest));
 
                     when(reactivationTypeResolver.resolveFromRoles(any())).thenReturn(ReactivationRoleType.LAA);
-                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isTrue();
+                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr, requestIdStr)).isTrue();
 
                     when(accessedUser.getUserProfiles()).thenReturn(Set.of());
                     when(reactivationTypeResolver.resolveFromRoles(any())).thenReturn(ReactivationRoleType.PROVIDER_ADMIN);
-                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr, requestIdStr)).isFalse();
                 }
             }
 
@@ -4048,20 +4039,20 @@ public class AccessControlServiceTest {
                 when(entraUserRepository.findById(accessedUserId)).thenReturn(Optional.of(accessedUser));
 
                 try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
-                    when(userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(accessedUserId))
+                    when(userActivationRequestRepository.findFirstByUserEntraIdAndRequestIdOrderByVersionDesc(accessedUserId, requestId))
                             .thenReturn(Optional.empty());
                     mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
-                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr, requestIdStr)).isFalse();
                 }
 
                 try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                     mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
-                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr, requestIdStr)).isFalse();
                 }
 
                 try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                     mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
-                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr, requestIdStr)).isFalse();
                 }
 
             }
@@ -4074,17 +4065,16 @@ public class AccessControlServiceTest {
 
                 when(entraUserRepository.findById(accessedUserId)).thenReturn(Optional.of(accessedUser));
 
-                when(latestActivationRequest.getStatus()).thenReturn(ReactivationRequestStatus.IN_REVIEW);
                 when(latestActivationRequest.getRequestId()).thenReturn(requestId);
 
-                when(userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(accessedUserId))
+                when(userActivationRequestRepository.findFirstByUserEntraIdAndRequestIdOrderByVersionDesc(accessedUserId, requestId))
                         .thenReturn(Optional.of(latestActivationRequest));
                 when(userActivationRequestRepository.findRequestHistoryByRequestId(requestId))
                         .thenReturn(List.of());
 
                 try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                     mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
-                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr, requestIdStr)).isFalse();
                 }
             }
 
@@ -4097,21 +4087,14 @@ public class AccessControlServiceTest {
                     setupSecurityContextAndActor();
                     setupTargetUserAndRequest();
                     when(userService.isInternal(accessedUserIdStr)).thenReturn(false);
-
-                    AppRole appRole = mock(AppRole.class);
-                    when(appRole.getName()).thenReturn("ROLE_NAME");
-                    when(actorProfile.getAppRoles()).thenReturn(Set.of(appRole));
                 }
 
                 @Test
                 @DisplayName("PROVIDER_ADMIN: Should return false if target user is multi-firm user")
                 void providerAdmin_ShouldReturnFalseForMultiFirmUser() {
-                    when(reactivationTypeResolver.resolveFromRoles(any())).thenReturn(ReactivationRoleType.PROVIDER_ADMIN);
-                    when(accessedUser.isMultiFirmUser()).thenReturn(true);
-
                     try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                         mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
-                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr, requestIdStr)).isFalse();
                     }
                 }
 
@@ -4120,6 +4103,13 @@ public class AccessControlServiceTest {
                 void providerAdmin_ShouldReturnTrueForSameFirm() {
                     when(reactivationTypeResolver.resolveFromRoles(any())).thenReturn(ReactivationRoleType.PROVIDER_ADMIN);
                     when(accessedUser.isMultiFirmUser()).thenReturn(false);
+                    when(userActivationRequestRepository
+                            .findFirstByUserEntraIdAndRequestIdOrderByVersionDesc(any(UUID.class), any(UUID.class)))
+                            .thenReturn(Optional.of(latestActivationRequest));
+                    when(latestActivationRequest.getRequestId()).thenReturn(requestId);
+                    when(firstActivationRequest.version()).thenReturn(1);
+                    when(userActivationRequestRepository.findRequestHistoryByRequestId(requestId))
+                            .thenReturn(List.of(firstActivationRequest));
 
                     UUID firmId = UUID.randomUUID();
                     Firm actorFirm = mock(Firm.class);
@@ -4134,28 +4124,18 @@ public class AccessControlServiceTest {
 
                     try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                         mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
-                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isTrue();
+                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr, requestIdStr)).isTrue();
                     }
                 }
 
                 @Test
                 @DisplayName("PROVIDER_ADMIN: Should return false if firms do not match or are null")
                 void providerAdmin_ShouldReturnFalseForDifferentOrNullFirm() {
-                    when(reactivationTypeResolver.resolveFromRoles(any())).thenReturn(ReactivationRoleType.PROVIDER_ADMIN);
-                    when(accessedUser.isMultiFirmUser()).thenReturn(false);
-
-                    Firm actorFirm = mock(Firm.class);
-                    Firm targetFirm = mock(Firm.class);
-
-                    when(actorProfile.getFirm()).thenReturn(actorFirm);
-
-                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
-
-                    when(actorProfile.getFirm()).thenReturn(null);
+                    assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr, requestIdStr)).isFalse();
 
                     try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                         mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
-                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr, requestIdStr)).isFalse();
                     }
                 }
 
@@ -4163,23 +4143,30 @@ public class AccessControlServiceTest {
                 @DisplayName("LAA_OST: Should return true for EUM or EUS originated requests")
                 void laaOst_ShouldValidateInitiatorRole() {
                     when(reactivationTypeResolver.resolveFromRoles(any())).thenReturn(ReactivationRoleType.LAA_OST);
+                    when(latestActivationRequest.getRequestId()).thenReturn(requestId);
+                    when(firstActivationRequest.version()).thenReturn(1);
+                    when(userActivationRequestRepository.findRequestHistoryByRequestId(requestId))
+                            .thenReturn(List.of(firstActivationRequest));
+                    when(userActivationRequestRepository
+                            .findFirstByUserEntraIdAndRequestIdOrderByVersionDesc(any(UUID.class), any(UUID.class)))
+                            .thenReturn(Optional.of(latestActivationRequest));
 
                     when(firstActivationRequest.actorRoleType()).thenReturn(ReactivationRoleType.LAA_OST);
                     try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                         mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
-                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isTrue();
+                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr, requestIdStr)).isTrue();
                     }
 
                     when(firstActivationRequest.actorRoleType()).thenReturn(ReactivationRoleType.LAA_SUPPORT);
                     try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                         mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
-                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isTrue();
+                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr, requestIdStr)).isTrue();
                     }
 
                     when(firstActivationRequest.actorRoleType()).thenReturn(ReactivationRoleType.PROVIDER_ADMIN);
                     try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                         mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
-                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr, requestIdStr)).isFalse();
                     }
                 }
 
@@ -4188,10 +4175,17 @@ public class AccessControlServiceTest {
                 void laaOst_ShouldAllowDifferentRequester() {
                     when(reactivationTypeResolver.resolveFromRoles(any())).thenReturn(ReactivationRoleType.LAA_OST);
                     when(firstActivationRequest.actorRoleType()).thenReturn(ReactivationRoleType.LAA_OST);
+                    when(latestActivationRequest.getRequestId()).thenReturn(requestId);
+                    when(firstActivationRequest.version()).thenReturn(1);
+                    when(userActivationRequestRepository.findRequestHistoryByRequestId(requestId))
+                            .thenReturn(List.of(firstActivationRequest));
+                    when(userActivationRequestRepository
+                            .findFirstByUserEntraIdAndRequestIdOrderByVersionDesc(any(UUID.class), any(UUID.class)))
+                            .thenReturn(Optional.of(latestActivationRequest));
 
                     try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                         mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
-                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isTrue();
+                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr, requestIdStr)).isTrue();
                     }
                 }
 
@@ -4199,22 +4193,29 @@ public class AccessControlServiceTest {
                 @DisplayName("LAA / LAA_USER_REGISTRATION: Should return true")
                 void laaRoles_ShouldReturnTrue() {
                     when(reactivationTypeResolver.resolveFromRoles(any())).thenReturn(ReactivationRoleType.LAA);
+                    when(latestActivationRequest.getRequestId()).thenReturn(requestId);
+                    when(firstActivationRequest.version()).thenReturn(1);
+                    when(userActivationRequestRepository.findRequestHistoryByRequestId(requestId))
+                            .thenReturn(List.of(firstActivationRequest));
+                    when(userActivationRequestRepository
+                            .findFirstByUserEntraIdAndRequestIdOrderByVersionDesc(any(UUID.class), any(UUID.class)))
+                            .thenReturn(Optional.of(latestActivationRequest));
                     try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                         mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
-                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isTrue();
+                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr, requestIdStr)).isTrue();
                     }
 
                     when(reactivationTypeResolver.resolveFromRoles(any())).thenReturn(ReactivationRoleType.LAA_USER_REGISTRATION);
                     try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                         mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
-                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isTrue();
+                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr, requestIdStr)).isTrue();
                     }
 
                     when(reactivationTypeResolver.resolveFromRoles(any())).thenReturn(ReactivationRoleType.NONE);
 
                     try (MockedStatic<AccessControlService> mocked = Mockito.mockStatic(AccessControlService.class)) {
                         mocked.when(() -> AccessControlService.userHasPermission(authenticatedUser, Permission.CAN_TRACK_DELEGATE_ACTIVATION_REQUESTS)).thenReturn(true);
-                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr)).isFalse();
+                        assertThat(accessControlService.canTrackDelegateEnableUser(accessedUserIdStr, requestIdStr)).isFalse();
                     }
                 }
             }

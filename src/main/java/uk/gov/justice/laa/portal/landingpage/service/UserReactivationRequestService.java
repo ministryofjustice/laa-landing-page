@@ -70,8 +70,13 @@ public class UserReactivationRequestService {
     }
 
     public Optional<UserActivationRequest> findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(String userId) {
-        log.debug("Fetching latest activation request for profile ID: {}", userId);
+        log.debug("Fetching latest activation request for User ID: {}", userId);
         return userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(parseUuid(userId));
+    }
+
+    public Optional<UserActivationRequest> findFirstByUserEntraIdAndRequestIdOrderByVersionDesc(String userId, String requestId) {
+        log.debug("Fetching latest activation request for User ID: {}, Request ID: {}", userId, requestId);
+        return userActivationRequestRepository.findFirstByUserEntraIdAndRequestIdOrderByVersionDesc(parseUuid(userId), parseUuid(requestId));
     }
 
     public UserActivationRequest createReactivationRequest(String userId, String profileId, String comments, String actorEntraOid) {
@@ -267,24 +272,22 @@ public class UserReactivationRequestService {
     }
 
     @Transactional(readOnly = true)
-    public List<UserActivationRequestSummaryDto> getLatestRequestHistoryForUserId(String userId) {
-        log.debug("Fetching latest activation request history for user ID: {}", userId);
+    public List<UserActivationRequestSummaryDto> getRequestHistoryForUserIdAndRequestId(String userId, String requestId) {
+        log.debug("Fetching activation request history for user ID: {} and request ID: {}", userId, requestId);
 
-        Optional<UserActivationRequest> latestRequest = userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(parseUuid(userId));
-
-        if (latestRequest.isEmpty()) {
+        if (StringUtils.isBlank(requestId)) {
             log.info("No activation request found for user ID: {}", userId);
             return Collections.emptyList();
         }
 
-        List<UserActivationRequestSummaryDto> history = userActivationRequestRepository.findRequestHistoryByRequestId(latestRequest.get().getRequestId());
+        List<UserActivationRequestSummaryDto> history = userActivationRequestRepository.findRequestHistoryByRequestId(parseUuid(requestId));
 
         if (history.isEmpty()) {
-            log.info("No activation request history found for user ID: {}", userId);
+            log.info("No activation request history found for user ID: {}, request ID: {}", userId, requestId);
             return Collections.emptyList();
         }
 
-        log.debug("Found {} history records for user ID: {}", history.size(), userId);
+        log.debug("Found {} history records for user ID: {}, request ID: {}", history.size(), userId, requestId);
         return history;
     }
 

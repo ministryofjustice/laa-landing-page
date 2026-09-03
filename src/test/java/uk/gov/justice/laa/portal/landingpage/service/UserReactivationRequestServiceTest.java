@@ -602,14 +602,11 @@ class UserReactivationRequestServiceTest {
             @DisplayName("Should return empty list when history query yields no records")
             void shouldReturnEmptyListWhenHistoryIsEmpty() {
                 UserActivationRequest latestRequest = mock(UserActivationRequest.class);
-                when(latestRequest.getRequestId()).thenReturn(UUID.fromString(REQUEST_ID_STR));
 
-                when(userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID))
-                        .thenReturn(Optional.of(latestRequest));
                 when(userActivationRequestRepository.findRequestHistoryByRequestId(UUID.fromString(REQUEST_ID_STR)))
                         .thenReturn(Collections.emptyList());
 
-                List<UserActivationRequestSummaryDto> result = service.getLatestRequestHistoryForUserId(USER_PROFILE_ID_STR);
+                List<UserActivationRequestSummaryDto> result = service.getRequestHistoryForUserIdAndRequestId(USER_PROFILE_ID_STR, REQUEST_ID_STR);
 
                 assertThat(result).isEmpty();
             }
@@ -618,14 +615,12 @@ class UserReactivationRequestServiceTest {
             @DisplayName("Should return history when records are found")
             void shouldReturnHistoryListWhenFound() {
                 UserActivationRequest latestRequest = mock(UserActivationRequest.class);
-                when(latestRequest.getRequestId()).thenReturn(UUID.fromString(REQUEST_ID_STR));
 
                 UserActivationRequestSummaryDto dto = mock(UserActivationRequestSummaryDto.class);
 
-                when(userActivationRequestRepository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(USER_PROFILE_ID)).thenReturn(Optional.of(latestRequest));
                 when(userActivationRequestRepository.findRequestHistoryByRequestId(UUID.fromString(REQUEST_ID_STR))).thenReturn(List.of(dto));
 
-                List<UserActivationRequestSummaryDto> result = service.getLatestRequestHistoryForUserId(USER_PROFILE_ID_STR);
+                List<UserActivationRequestSummaryDto> result = service.getRequestHistoryForUserIdAndRequestId(USER_PROFILE_ID_STR, REQUEST_ID_STR);
 
                 assertThat(result).hasSize(1).containsExactly(dto);
             }
