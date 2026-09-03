@@ -255,24 +255,30 @@ public class AuditController {
         AccessControlService.EnablementFlags enablementFlags = disableUserFeatureEnabled
                 ? accessControlService.getEnablementFlags(userDetail.getUserId())
                 : new AccessControlService.EnablementFlags(false, false, false);
-        Optional<UserActivationRequest> userActivationRequest = userReactivationRequestService
-                .findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(userDetail.getUserId());
-        boolean isActiveDelegateRequestPresent = userActivationRequest.isPresent()
-                && !(userActivationRequest.get().getStatus() == ReactivationRequestStatus.APPROVED
-                || userActivationRequest.get().getStatus() == ReactivationRequestStatus.REJECTED);
+        UserActivationRequest userActivationRequest = userReactivationRequestService
+                .findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(userDetail.getUserId())
+                .orElse(null);
+        boolean isActiveDelegateRequestPresent = userActivationRequest != null
+                && !(userActivationRequest.getStatus() == ReactivationRequestStatus.APPROVED
+                || userActivationRequest.getStatus() == ReactivationRequestStatus.REJECTED);
         boolean canEnableUser = !isActiveDelegateRequestPresent && enablementFlags.canEnable();
         boolean cannotEnableUser = enablementFlags.blockedByHierarchy();
         boolean canDelegateEnableUser = !isActiveDelegateRequestPresent && enablementFlags.canDelegate();
         boolean canManageDelegateRequest = isActiveDelegateRequestPresent && accessControlService.canManageDelegateEnableUser(userDetail.getUserId());
         model.addAttribute("canManageDelegateEnableUser", canManageDelegateRequest);
-        boolean canTrackDelegateRequest = isActiveDelegateRequestPresent && !canManageDelegateRequest && accessControlService.canTrackDelegateEnableUser(userDetail.getUserId());
+        String latestRequestId = isActiveDelegateRequestPresent ? String.valueOf(userActivationRequest.getRequestId()) : null;
+        ReactivationRequestStatus latestRequestStatus = isActiveDelegateRequestPresent ? userActivationRequest.getStatus() : null;
+        boolean canTrackDelegateRequest = isActiveDelegateRequestPresent && !canManageDelegateRequest
+                && accessControlService.canTrackDelegateEnableUser(userDetail.getUserId(), latestRequestId);
         model.addAttribute("canTrackDelegateEnableUser", canTrackDelegateRequest);
 
 
         // Add attributes to model
         model.addAttribute("user", userDetail);
         model.addAttribute("silasStatus", userService.determineStatusBadgeForAuditUser(userDetail).name());
+        model.addAttribute("reactivationRequestStatus", latestRequestStatus);
         model.addAttribute("profileId", userId); // Add profile ID for pagination links
+        model.addAttribute("requestId", latestRequestId);
         model.addAttribute("profilePage", profilePage);
         model.addAttribute("profileSize", profileSize);
         model.addAttribute("canDisableUser", disableUserFeatureEnabled && canDisableUser);
