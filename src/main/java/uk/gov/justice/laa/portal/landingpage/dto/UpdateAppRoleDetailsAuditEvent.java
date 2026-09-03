@@ -9,11 +9,14 @@ public class UpdateAppRoleDetailsAuditEvent extends AuditEvent {
     private final UUID userProfileId;
     private final String updatedAppRoleName;
     private final String previousAppRoleName;
+    private final String updatedAppRoleIdentifier;
+    private final String previousAppRoleIdentifier;
     private final String updatedAppRoleDescription;
     private final String previousAppRoleDescription;
 
     public UpdateAppRoleDetailsAuditEvent(CurrentUserDto currentUserDto, UUID userProfileId,
                                           String updatedAppRoleName, String previousAppRoleName,
+                                          String updatedAppRoleIdentifier, String previousAppRoleIdentifier,
                                           String updatedAppRoleDescription, String previousAppRoleDescription) {
         super();
         this.userId = currentUserDto.getUserId();
@@ -21,6 +24,8 @@ public class UpdateAppRoleDetailsAuditEvent extends AuditEvent {
         this.userProfileId = userProfileId;
         this.updatedAppRoleName = updatedAppRoleName;
         this.previousAppRoleName = previousAppRoleName;
+        this.updatedAppRoleIdentifier = updatedAppRoleIdentifier;
+        this.previousAppRoleIdentifier = previousAppRoleIdentifier;
         this.updatedAppRoleDescription = updatedAppRoleDescription;
         this.previousAppRoleDescription = previousAppRoleDescription;
     }
@@ -32,7 +37,15 @@ public class UpdateAppRoleDetailsAuditEvent extends AuditEvent {
 
     @Override
     public String getDescription() {
-        return String.format("User (Profile ID: '%s'; Entra OID: %s) has updated App Role \"%s\" details - Name from '%s' to '%s' and description from '%s' to '%s'",
-                userProfileId, userId, previousAppRoleName, previousAppRoleName, updatedAppRoleName, previousAppRoleDescription, updatedAppRoleDescription);
+        return String.format("User (Profile ID: '%s'; Entra OID: %s) has updated App Role \"%s\" details - Name from '%s' to '%s', Identifier from '%s' to '%s', and description from '%s' to '%s'",
+                userProfileId,
+                userId,
+                updatedAppRoleName,
+                previousAppRoleName,
+                updatedAppRoleName,
+                previousAppRoleIdentifier,
+                updatedAppRoleIdentifier,
+                previousAppRoleDescription,
+                updatedAppRoleDescription);
     }
 }

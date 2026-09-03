@@ -65,9 +65,9 @@ public class AppRoleTest extends BaseEntityTest {
     }
 
     @Test
-    public void testLaaAppRoleNullCcmsCode() {
+    public void testLaaAppRoleNullRoleIdentifier() {
         AppRole appRole = buildTestLaaAppRole();
-        update(appRole, f -> f.setCcmsCode(null));
+        update(appRole, f -> f.setRoleIdentifier(null));
 
         Set<ConstraintViolation<AppRole>> violations = validator.validate(appRole);
 
@@ -75,9 +75,9 @@ public class AppRoleTest extends BaseEntityTest {
     }
 
     @Test
-    public void testLaaAppRoleEmptyCcmsCode() {
+    public void testLaaAppRoleEmptyRoleIdentifier() {
         AppRole appRole = buildTestLaaAppRole();
-        update(appRole, f -> f.setCcmsCode(""));
+        update(appRole, f -> f.setRoleIdentifier(""));
 
         Set<ConstraintViolation<AppRole>> violations = validator.validate(appRole);
 
@@ -85,36 +85,37 @@ public class AppRoleTest extends BaseEntityTest {
         assertThat(violations).hasSize(2);
         Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
         assertThat(messages).hasSameElementsAs(Set.of(
-            "Application role CCMS Code must be between 1 and 30 characters",
-            "Application role CCMS Code cannot be empty or contain only whitespace"));
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("ccmsCode");
+            "Application role Role Identifier must be between 1 and 255 characters",
+            "Application role Role Identifier cannot be empty or contain only whitespace"));
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("roleIdentifier");
     }
 
     @Test
-    public void testLaaAppRoleCcmsCodeWhitespaceOnly() {
+    public void testLaaAppRoleRoleIdentifierWhitespaceOnly() {
         AppRole appRole = buildTestLaaAppRole();
-        update(appRole, f -> f.setCcmsCode("   "));
+        update(appRole, f -> f.setRoleIdentifier("   "));
 
         Set<ConstraintViolation<AppRole>> violations = validator.validate(appRole);
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
         Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
-        assertThat(messages).hasSameElementsAs(Set.of("Application role CCMS Code cannot be empty or contain only whitespace"));
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("ccmsCode");
+        assertThat(messages).hasSameElementsAs(Set.of("Application role Role Identifier cannot be empty or contain only whitespace"));
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("roleIdentifier");
     }
 
     @Test
-    public void testLaaAppRoleCcmsCodeTooLong() {
+    public void testLaaAppRoleRoleIdentifierTooLong() {
         AppRole appRole = buildTestLaaAppRole();
-        update(appRole, f -> f.setCcmsCode("TestAppRoleNameThatIsTooLong".repeat(2)));
+        update(appRole, f -> f.setRoleIdentifier("TestAppRoleNameThatIsTooLong".repeat(10)));
 
         Set<ConstraintViolation<AppRole>> violations = validator.validate(appRole);
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Application role CCMS Code must be between 1 and 30 characters");
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("ccmsCode");
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Application role Role Identifier must be " +
+                "between 1 and 255 characters");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("roleIdentifier");
 
     }
 

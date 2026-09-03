@@ -1,0 +1,58 @@
+databaseChangeLog:
+  - changeSet:
+      id: 20260828-1-role-identifier-migration
+      author: josh-halladey
+      dbms: postgresql
+      comment: "Rename CCMS Code to Role Identifier and backfill missing identifiers from the role name. Add new 
+      index enforcing roleIdentifier unique to application and user type"
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              ALTER TABLE app_role
+                RENAME COLUMN ccms_code TO role_identifier;
+
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+      
+              UPDATE app_role
+              SET role_identifier = name
+              WHERE role_identifier IS NULL OR TRIM(role_identifier) = '';
+
+
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              CREATE UNIQUE INDEX ux_app_role_appid_roleidentifier_usertype
+                ON app_role (app_id, role_identifier, (user_type_restriction[1]));
+      rollback:
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              UPDATE app_role
+              SET role_identifier = NULL
+              WHERE role_identifier = name;
+
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              ALTER TABLE app_role
+                RENAME COLUMN role_identifier TO ccms_code;
+
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              DROP INDEX IF EXISTS ux_app_role_appid_roleidentifier_usertype;

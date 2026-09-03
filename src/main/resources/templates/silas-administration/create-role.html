@@ -50,9 +50,9 @@
                                         th:if="${#fields.hasErrors('legacySync')}">
                                         <a href="#legacySync-true" th:text="${err}"></a>
                                     </li>
-                                    <li th:each="err : ${#fields.errors('ccmsCode')}"
-                                        th:if="${#fields.hasErrors('ccmsCode')}">
-                                        <a href="#ccmsCode" th:text="${err}"></a>
+                                    <li th:each="err : ${#fields.errors('roleIdentifier')}"
+                                        th:if="${#fields.hasErrors('roleIdentifier')}">
+                                        <a href="#roleIdentifier" th:text="${err}"></a>
                                     </li>
                                     <li th:each="err : ${#fields.errors('firmTypeRestriction')}"
                                         th:if="${#fields.hasErrors('firmTypeRestriction')}">
@@ -164,7 +164,7 @@
                     <div class="govuk-form-group" th:classappend="${#fields.hasErrors('legacySync')} ? 'govuk-form-group--error'">
                         <fieldset class="govuk-fieldset">
                             <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
-                                Legacy Sync
+                                Legacy (CCMS) Sync
                             </legend>
                             <div class="govuk-hint">
                                 Enable if this role should be synchronized with legacy systems
@@ -190,21 +190,21 @@
                         </fieldset>
                     </div>
 
-                    <!-- CCMS Code -->
-                    <div class="govuk-form-group" th:classappend="${#fields.hasErrors('ccmsCode')} ? 'govuk-form-group--error'">
-                        <label class="govuk-label govuk-label--m" for="ccmsCode">
-                            CCMS Code (Optional)
+                    <!-- Role Identifier -->
+                    <div class="govuk-form-group" th:classappend="${#fields.hasErrors('roleIdentifier')} ? 'govuk-form-group--error'">
+                        <label class="govuk-label govuk-label--m" for="roleIdentifier">
+                            Role Identifier
                         </label>
-                        <div class="govuk-hint" id="ccmsCode-hint">
-                            Enter the CCMS code if this role maps to a CCMS system role. Required when legacy sync is enabled.
+                        <div class="govuk-hint" id="roleIdentifier-hint">
+                            This value is mandatory and is passed to downstream systems, including CCMS when applicable.
                         </div>
-                        <div th:if="${#fields.hasErrors('ccmsCode')}" class="govuk-error-message">
+                        <div th:if="${#fields.hasErrors('roleIdentifier')}" class="govuk-error-message">
                             <span class="govuk-visually-hidden">Error:</span>
-                            <span th:errors="*{ccmsCode}"></span>
+                            <span th:errors="*{roleIdentifier}"></span>
                         </div>
-                        <input class="govuk-input govuk-!-width-one-third" th:classappend="${#fields.hasErrors('ccmsCode')} ? 'govuk-input--error'"
-                               id="ccmsCode" name="ccmsCode" type="text" th:field="*{ccmsCode}"
-                               aria-describedby="ccmsCode-hint" maxlength="30">
+                        <input class="govuk-input govuk-!-width-one-third" th:classappend="${#fields.hasErrors('roleIdentifier')} ? 'govuk-input--error'"
+                               id="roleIdentifier" name="roleIdentifier" type="text" th:field="*{roleIdentifier}"
+                               aria-describedby="roleIdentifier-hint" maxlength="30">
                     </div>
 
                     <!-- Firm Type Restriction -->

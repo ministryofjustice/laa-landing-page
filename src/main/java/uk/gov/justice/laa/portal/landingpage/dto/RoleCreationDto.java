@@ -34,8 +34,8 @@ public class RoleCreationDto implements Serializable {
     @Size(min = 1, max = 255, message = "Description must be between 1 and 255 characters")
     private String description;
 
-    @Size(max = 30, message = "CCMS code must not exceed 30 characters")
-    private String ccmsCode;
+    @Size(max = 255, message = "Role identifier must not exceed 30 characters")
+    private String roleIdentifier;
 
     @NotNull(message = "Parent app is required")
     private UUID parentAppId;

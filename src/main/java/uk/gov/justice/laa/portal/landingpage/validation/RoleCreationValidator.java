@@ -8,9 +8,13 @@ import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.RoleCreationDto;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
+import java.util.UUID;
+
 /**
- * Custom validator for RoleCreationDto that enforces interdependent validation rules
- * between Legacy Sync and CCMS Code fields.
+ * Custom validator for RoleCreationDto that enforces basic role identifier and metadata validation.
+ *
+ * Uniqueness of the Role Identifier is enforced in the AppRoleService to keep repository access out
+ * of the constraint validator and to keep validation responsibilities clearly separated.
  */
 @Slf4j
 @Component
@@ -21,26 +25,22 @@ public class RoleCreationValidator implements ConstraintValidator<ValidRoleCreat
         boolean valid = true;
         ctx.disableDefaultConstraintViolation();
 
-        boolean legacySyncEnabled = dto.getLegacySync() != null && dto.getLegacySync();
-        String ccmsCode = dto.getCcmsCode();
-        boolean ccmsCodeProvided = ccmsCode != null && !ccmsCode.trim().isEmpty();
-
-
-        if (legacySyncEnabled && !ccmsCodeProvided) {
-            ctx.buildConstraintViolationWithTemplate("Enter a CCMS code for roles that sync with CCMS.")
-                                       .addPropertyNode("ccmsCode")
-                                        .addConstraintViolation();
+        String roleIdentifier = dto.getRoleIdentifier();
+        if (roleIdentifier == null || roleIdentifier.trim().isEmpty()) {
+            ctx.buildConstraintViolationWithTemplate("Role identifier is required.")
+                   .addPropertyNode("roleIdentifier")
+                   .addConstraintViolation();
             valid = false;
-            log.warn("Validation failed: Legacy sync is enabled but CCMS code is missing");
+            log.warn("Validation failed: role identifier is missing");
         }
 
-
-        if (ccmsCodeProvided && !legacySyncEnabled) {
-            ctx.buildConstraintViolationWithTemplate("This role must have legacy sync enabled when a CCMS code is provided.")
-                                        .addPropertyNode("legacySync")
-                                      .addConstraintViolation();
+        UUID parentAppId = dto.getParentAppId();
+        if (parentAppId == null) {
+            ctx.buildConstraintViolationWithTemplate("Parent app is required.")
+               .addPropertyNode("parentAppId")
+                .addConstraintViolation();
             valid = false;
-            log.warn("Validation failed: CCMS code is provided but legacy sync is not enabled");
+            log.warn("Validation failed: parent app is missing");
         }
 
         boolean isInternalOnly = dto.getUserTypeRestriction() != null
@@ -51,8 +51,8 @@ public class RoleCreationValidator implements ConstraintValidator<ValidRoleCreat
 
         if (isInternalOnly && hasFirmTypeRestriction) {
             ctx.buildConstraintViolationWithTemplate(ValidationMessages.FIRM_TYPE_RESTRICTION_INTERNAL_ROLE)
-                                        .addPropertyNode("firmTypeRestriction")
-                                        .addConstraintViolation();
+                                       .addPropertyNode("firmTypeRestriction")
+                                       .addConstraintViolation();
             valid = false;
             log.warn("Validation failed: Firm type restriction cannot be applied to internal roles");
         }

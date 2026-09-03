@@ -61,6 +61,36 @@
 
                 </div>
 
+                <div class="govuk-form-group"
+                     th:classappend="${#fields.hasErrors('roleIdentifier')} ? 'govuk-form-group--error' : ''"
+                     id="app-role-identifier-group">
+
+                    <label class="govuk-label govuk-label--m" for="role-identifier">
+                        Role Identifier
+                    </label>
+
+                    <div th:if="${isLegacySyncRole}" class="govuk-hint">
+                        This role is managed by Legacy Sync. The Role Identifier cannot be changed.
+                    </div>
+
+                    <div th:if="${#fields.hasErrors('roleIdentifier')}"
+                         class="govuk-error-message"
+                         id="role-identifier-error">
+                        <span class="govuk-visually-hidden">Error:</span>
+                        <span th:errors="*{roleIdentifier}"></span>
+                    </div>
+
+                    <input class="govuk-input"
+                           th:classappend="${isLegacySyncRole} ? ' govuk-input--width-20'"
+                           id="role-identifier"
+                           type="text"
+                           th:field="*{roleIdentifier}"
+                           th:readonly="${isLegacySyncRole}"
+                           th:style="${isLegacySyncRole} ? 'background-color:#f3f2f1;color:#505a5f;cursor:not-allowed;' : ''"
+                           th:aria-describedby="${#fields.hasErrors('roleIdentifier')} ? 'role-identifier-error' : null" />
+
+                </div>
+
 
                 <div class="govuk-form-group" th:classappend="${#fields.hasErrors('description')} ? 'govuk-form-group--error' : ''" id="app-description-group">
                     <label class="govuk-label govuk-label--m" for="app-description">

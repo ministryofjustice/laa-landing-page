@@ -115,7 +115,7 @@ public class CcmsRoleGroupsUtil {
      */
     private static List<AppRoleViewModel> filterRolesByPattern(List<AppRoleViewModel> roles, List<String> patterns) {
         return roles.stream()
-            .filter(role -> matchesAnyPattern(role.getCcmsCode(), patterns))
+            .filter(role -> matchesAnyPattern(role.getRoleIdentifier(), patterns))
             .collect(Collectors.toList());
     }
     

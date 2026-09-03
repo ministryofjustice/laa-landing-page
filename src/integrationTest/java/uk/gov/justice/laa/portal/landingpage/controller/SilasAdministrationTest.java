@@ -161,6 +161,7 @@ public class SilasAdministrationTest extends RoleBasedAccessIntegrationTest {
                         .with(csrf())
                         .param("appRoleId", testAppRole.getId().toString())
                         .param("name", "Updated Role Name")
+                        .param("roleIdentifier", "Updated role identifier")
                         .param("description", "Updated role description"))
                 .andExpect(status().is3xxRedirection())
                 .andReturn();
@@ -184,6 +185,7 @@ public class SilasAdministrationTest extends RoleBasedAccessIntegrationTest {
                         .with(csrf())
                         .param("appRoleId", testAppRole.getId().toString())
                         .param("name", "Updated Role Name")
+                        .param("roleIdentifier", "Updated role identifier")
                         .param("description", "Updated role description"))
                 .andExpect(status().is3xxRedirection())
                 .andReturn();

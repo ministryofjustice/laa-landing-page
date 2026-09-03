@@ -18,7 +18,7 @@ class RoleCreationAuditEventTest {
         String roleId = UUID.randomUUID().toString();
         String parentAppName = "Test Application";
         String description = "Test role description";
-        String ccmsCode = "TEST123";
+        String roleIdentifier = "TEST123";
         String userTypeRestriction = "INTERNAL, EXTERNAL";
 
         CurrentUserDto currentUserDto = new CurrentUserDto();
@@ -30,7 +30,9 @@ class RoleCreationAuditEventTest {
 
         // Act
         RoleCreationAuditEvent event = new RoleCreationAuditEvent(
-                roleName, parentAppName, description, ccmsCode, userTypeRestriction, currentUserDto, userProfileId, entraOid
+                roleName, parentAppName, description, roleIdentifier, userTypeRestriction, currentUserDto,
+                userProfileId,
+                entraOid
         );
 
         // Assert
@@ -44,7 +46,7 @@ class RoleCreationAuditEventTest {
         assertThat(auditDescription).contains("for app " + parentAppName);
         assertThat(auditDescription).contains("Name: " + roleName);
         assertThat(auditDescription).contains("Description: " + description);
-        assertThat(auditDescription).contains("CCMS Code: " + ccmsCode);
+        assertThat(auditDescription).contains("Role Identifier: " + roleIdentifier);
         assertThat(auditDescription).contains("User Type Restriction: " + userTypeRestriction);
         assertThat(event.getCreatedDate()).isNotNull();
     }
@@ -79,7 +81,7 @@ class RoleCreationAuditEventTest {
         assertThat(auditDescription).contains("user profile id: " + userProfileId);
         assertThat(auditDescription).contains("for app " + parentAppName);
         assertThat(auditDescription).contains("Name: " + roleName);
-        assertThat(auditDescription).contains("CCMS Code: N/A");
+        assertThat(auditDescription).contains("Role Identifier: N/A");
         assertThat(auditDescription).contains("User Type Restriction: " + userTypeRestriction);
     }
 
@@ -113,7 +115,7 @@ class RoleCreationAuditEventTest {
         assertThat(auditDescription).contains("New app role created by user entra oid: " + entraOid);
         assertThat(auditDescription).contains("user profile id: " + userProfileId);
         assertThat(auditDescription).contains("Name: " + roleName);
-        assertThat(auditDescription).contains("CCMS Code: " + ccmsCode);
+        assertThat(auditDescription).contains("Role Identifier: " + ccmsCode);
         assertThat(auditDescription).contains("User Type Restriction: ");
     }
 

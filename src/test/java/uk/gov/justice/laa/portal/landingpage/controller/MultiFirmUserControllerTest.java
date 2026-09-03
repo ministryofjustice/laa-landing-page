@@ -1183,12 +1183,12 @@ public class MultiFirmUserControllerTest {
 
         AppRoleDto roleDto = new AppRoleDto();
         roleDto.setId(UUID.randomUUID().toString());
-        roleDto.setCcmsCode("XXCCMS_1");
+        roleDto.setRoleIdentifier("XXCCMS_1");
         roleDto.setApp(appDto);
 
         AppRoleDto roleDto2 = new AppRoleDto();
         roleDto2.setId(UUID.randomUUID().toString());
-        roleDto2.setCcmsCode("XXCCMS_2");
+        roleDto2.setRoleIdentifier("XXCCMS_2");
         roleDto2.setApp(appDto);
 
         when(userService.getAppByAppId(appId)).thenReturn(Optional.of(appDto));
@@ -1226,12 +1226,12 @@ public class MultiFirmUserControllerTest {
 
         AppRoleDto ccmsRole = new AppRoleDto();
         ccmsRole.setId(UUID.randomUUID().toString());
-        ccmsRole.setCcmsCode("CCMS_CODE");
+        ccmsRole.setRoleIdentifier("CCMS_CODE");
         ccmsRole.setApp(appDto);
 
         AppRoleDto ccmsRole2 = new AppRoleDto();
         ccmsRole2.setId(UUID.randomUUID().toString());
-        ccmsRole2.setCcmsCode("other");
+        ccmsRole2.setRoleIdentifier("other");
         ccmsRole2.setApp(appDto);
 
         when(userService.getAppRolesByAppIdAndUserType(eq(appId), eq(UserType.EXTERNAL), eq(null)))

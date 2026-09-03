@@ -149,9 +149,9 @@ class AppRoleServiceTest {
         App appA = App.builder().id(UUID.randomUUID()).name("App A").appType(AppType.LAA).build();
         App appB = App.builder().id(UUID.randomUUID()).name("App B").appType(AppType.LAA).build();
 
-        AppRole r1 = AppRole.builder().id(UUID.randomUUID()).name("R1").ordinal(2).app(appA).ccmsCode(null).authzRole(false).build();
-        AppRole r2 = AppRole.builder().id(UUID.randomUUID()).name("R2").ordinal(1).app(appA).ccmsCode(null).authzRole(false).build();
-        AppRole r3 = AppRole.builder().id(UUID.randomUUID()).name("R3").ordinal(0).app(appB).ccmsCode(null).authzRole(false).build();
+        AppRole r1 = AppRole.builder().id(UUID.randomUUID()).name("R1").ordinal(2).app(appA).roleIdentifier(null).authzRole(false).build();
+        AppRole r2 = AppRole.builder().id(UUID.randomUUID()).name("R2").ordinal(1).app(appA).roleIdentifier(null).authzRole(false).build();
+        AppRole r3 = AppRole.builder().id(UUID.randomUUID()).name("R3").ordinal(0).app(appB).roleIdentifier(null).authzRole(false).build();
 
         when(appRoleRepository.findByApp_AppType(AppType.LAA)).thenReturn(List.of(r1, r2, r3));
 
@@ -186,9 +186,9 @@ class AppRoleServiceTest {
 
         when(appRoleRepository.findAllById(List.of(id1, id2))).thenReturn(List.of(ar1, ar2));
         when(modelMapper.map(ar1, AppRoleDto.class)).thenReturn(AppRoleDto.builder().id(ar1.getId().toString())
-                .name(ar1.getName()).ordinal(ar1.getOrdinal()).description(ar1.getDescription()).ccmsCode(ar1.getCcmsCode()).app(null).userTypeRestriction(null).build());
+                .name(ar1.getName()).ordinal(ar1.getOrdinal()).description(ar1.getDescription()).roleIdentifier(ar1.getRoleIdentifier()).app(null).userTypeRestriction(null).build());
         when(modelMapper.map(ar2, AppRoleDto.class)).thenReturn(AppRoleDto.builder().id(ar2.getId().toString())
-                .name(ar2.getName()).ordinal(ar2.getOrdinal()).description(ar2.getDescription()).ccmsCode(ar2.getCcmsCode()).app(null).userTypeRestriction(null).build());
+                .name(ar2.getName()).ordinal(ar2.getOrdinal()).description(ar2.getDescription()).roleIdentifier(ar2.getRoleIdentifier()).app(null).userTypeRestriction(null).build());
 
         List<AppRoleDto> result = appRoleService.getByIds(List.of(id1.toString(), id2.toString()));
 
@@ -214,7 +214,7 @@ class AppRoleServiceTest {
         AppRole ar = AppRole.builder().id(id).name("Name").build();
         when(appRoleRepository.findById(id)).thenReturn(Optional.of(ar));
         when(modelMapper.map(ar, AppRoleDto.class)).thenReturn(AppRoleDto.builder().id(ar.getId().toString())
-                .name(ar.getName()).ordinal(ar.getOrdinal()).description(ar.getDescription()).ccmsCode(ar.getCcmsCode()).app(null).userTypeRestriction(null).build());
+                .name(ar.getName()).ordinal(ar.getOrdinal()).description(ar.getDescription()).roleIdentifier(ar.getRoleIdentifier()).app(null).userTypeRestriction(null).build());
 
         Optional<AppRoleDto> result = appRoleService.findById(id);
 
@@ -226,7 +226,7 @@ class AppRoleServiceTest {
     void save_updatesExistingEntityAndSaves() {
         UUID id = UUID.randomUUID();
         AppRole existing = AppRole.builder().id(id).name("Old").description("Old desc").build();
-        AppRoleDto dto = AppRoleDto.builder().id(id.toString()).name("New").ordinal(0).description("New desc").ccmsCode(null).app(null).userTypeRestriction(null).build();
+        AppRoleDto dto = AppRoleDto.builder().id(id.toString()).name("New").ordinal(0).description("New desc").roleIdentifier(null).app(null).userTypeRestriction(null).build();
 
         when(appRoleRepository.findById(id)).thenReturn(Optional.of(existing));
         when(appRoleRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -240,7 +240,7 @@ class AppRoleServiceTest {
     @Test
     void save_throwsWhenNotFound() {
         UUID id = UUID.randomUUID();
-        AppRoleDto dto = AppRoleDto.builder().id(id.toString()).name("New").ordinal(0).description("New desc").ccmsCode(null).app(null).userTypeRestriction(null).build();
+        AppRoleDto dto = AppRoleDto.builder().id(id.toString()).name("New").ordinal(0).description("New desc").roleIdentifier(null).app(null).userTypeRestriction(null).build();
 
         when(appRoleRepository.findById(id)).thenReturn(Optional.empty());
 
@@ -266,16 +266,16 @@ class AppRoleServiceTest {
         App app = App.builder().id(appId).name("Parent App").build();
 
         AppRole authzRole = AppRole.builder().id(UUID.randomUUID()).name("Authz").description("Authz role").ordinal(1)
-                .authzRole(true).ccmsCode("XXCCMS_TEST").userTypeRestriction(new UserType[]{UserType.INTERNAL, UserType.EXTERNAL}).app(app).build();
+                .authzRole(true).roleIdentifier("XXCCMS_TEST").userTypeRestriction(new UserType[]{UserType.INTERNAL, UserType.EXTERNAL}).app(app).build();
 
         AppRole ccmsRole = AppRole.builder().id(UUID.randomUUID()).name("CCMS").description("CCMS role").ordinal(2).legacySync(true)
-                .authzRole(false).ccmsCode("XXCCMS_FIRM_X").userTypeRestriction(new UserType[]{UserType.INTERNAL}).app(app).build();
+                .authzRole(false).roleIdentifier("XXCCMS_FIRM_X").userTypeRestriction(new UserType[]{UserType.INTERNAL}).app(app).build();
 
         AppRole defaultRole = AppRole.builder().id(UUID.randomUUID()).name("Default").description("Default role").ordinal(3)
-                .authzRole(false).ccmsCode(null).userTypeRestriction(null).app(app).build();
+                .authzRole(false).roleIdentifier(null).userTypeRestriction(null).app(app).build();
 
         AppRole noAppRole = AppRole.builder().id(UUID.randomUUID()).name("NoApp").description("No app role").ordinal(4)
-                .authzRole(false).ccmsCode(null).userTypeRestriction(null).app(null).build();
+                .authzRole(false).roleIdentifier(null).userTypeRestriction(null).app(null).build();
 
         when(appRoleRepository.findByApp_AppType(AppType.LAA)).thenReturn(List.of(authzRole, ccmsRole, defaultRole, noAppRole));
 
@@ -292,17 +292,17 @@ class AppRoleServiceTest {
         assertThat(authzDto.getLegacySync()).isEqualTo("No");
         assertThat(authzDto.getParentApp()).isEqualTo("Parent App");
         assertThat(authzDto.getParentAppId()).isEqualTo(appId.toString());
-        assertThat(authzDto.getCcmsCode()).isEqualTo("XXCCMS_TEST");
+        assertThat(authzDto.getRoleIdentifier()).isEqualTo("XXCCMS_TEST");
 
         // ccms role should have roleGroup CCMS and single user type
         assertThat(ccmsDto.getLegacySync()).isEqualTo("Yes");
         assertThat(ccmsDto.getUserTypeRestriction()).isEqualTo("INTERNAL");
-        assertThat(ccmsDto.getCcmsCode()).isEqualTo("XXCCMS_FIRM_X");
+        assertThat(ccmsDto.getRoleIdentifier()).isEqualTo("XXCCMS_FIRM_X");
 
         // default role should have empty userTypeRestriction and Default roleGroup
         assertThat(defaultDto.getUserTypeRestriction()).isEqualTo("");
         assertThat(defaultDto.getLegacySync()).isEqualTo("No");
-        assertThat(defaultDto.getCcmsCode()).isEqualTo("");
+        assertThat(defaultDto.getRoleIdentifier()).isEqualTo("");
 
         // noAppRole should have empty parent app fields
         assertThat(noAppDto.getParentApp()).isEqualTo("");
@@ -314,8 +314,8 @@ class AppRoleServiceTest {
         String appName = "FilterApp";
         App app = App.builder().id(UUID.randomUUID()).name(appName).build();
 
-        AppRole first = AppRole.builder().id(UUID.randomUUID()).name("First").ordinal(5).app(app).ccmsCode(null).build();
-        AppRole second = AppRole.builder().id(UUID.randomUUID()).name("Second").ordinal(1).app(app).ccmsCode(null).build();
+        AppRole first = AppRole.builder().id(UUID.randomUUID()).name("First").ordinal(5).app(app).roleIdentifier(null).build();
+        AppRole second = AppRole.builder().id(UUID.randomUUID()).name("Second").ordinal(1).app(app).roleIdentifier(null).build();
 
         when(appRoleRepository.findByApp_NameAndApp_AppType(appName, AppType.LAA)).thenReturn(List.of(first, second));
 
@@ -562,7 +562,7 @@ class AppRoleServiceTest {
                 .parentAppId(appId)
                 .userTypeRestriction(List.of(UserType.INTERNAL))
                 .legacySync(true)
-                .ccmsCode("CCMS001")
+                .roleIdentifier("CCMS001")
                 .build();
         // Act
         appRoleService.createRole(dto);
@@ -580,6 +580,7 @@ class AppRoleServiceTest {
         RoleCreationDto dto = RoleCreationDto.builder()
                 .name("Existing Role")
                 .description("Test Description")
+                .roleIdentifier("ROLE_EXISTING")
                 .parentAppId(appId)
                 .userTypeRestriction(List.of(UserType.INTERNAL))
                 .build();
@@ -757,6 +758,7 @@ class AppRoleServiceTest {
                 .parentAppId(appId)
                 .userTypeRestriction(List.of(UserType.EXTERNAL))
                 .legacySync(null)
+                .roleIdentifier("ROLE_EXTERNAL")
                 .build();
         appRoleService.createRole(dto);
 
@@ -812,7 +814,7 @@ class AppRoleServiceTest {
                 .parentAppId(appId)
                 .userTypeRestriction(List.of(UserType.INTERNAL, UserType.EXTERNAL))
                 .legacySync(true)
-                .ccmsCode("CCMS002")
+                .roleIdentifier("CCMS002")
                 .build();
         appRoleService.createRole(dto);
 
@@ -822,7 +824,70 @@ class AppRoleServiceTest {
     }
 
     @Test
-    void testCreateRole_WithEmptyCcmsCode_ConvertsToNull() {
+    void testCreateRole_WithEmptyroleIdentifier_ThrowsException() {
+        // Arrange
+        UUID appId = UUID.randomUUID();
+
+        RoleCreationDto dto = RoleCreationDto.builder()
+                .name("Test Role")
+                .description("Test Description")
+                .parentAppId(appId)
+                .userTypeRestriction(List.of(UserType.INTERNAL))
+                .roleIdentifier("")
+                .legacySync(false)
+                .build();
+
+        // Act & Assert
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> appRoleService.createRole(dto));
+
+        assertEquals("Role identifier is required", exception.getMessage());
+    }
+
+    @Test
+    void testCreateRole_WithLegacySyncTrueAndNoroleIdentifier_ThrowsException() {
+        // Arrange
+        UUID appId = UUID.randomUUID();
+
+        RoleCreationDto dto = RoleCreationDto.builder()
+                .name("Test Role")
+                .description("Test Description")
+                .parentAppId(appId)
+                .userTypeRestriction(List.of(UserType.INTERNAL))
+                .legacySync(true)
+                .roleIdentifier(null)
+                .build();
+
+        // Act & Assert
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> appRoleService.createRole(dto));
+
+        assertEquals("Role identifier is required", exception.getMessage());
+    }
+
+    @Test
+    void testCreateRole_WithLegacySyncTrueAndEmptyroleIdentifier_ThrowsException() {
+        // Arrange
+        UUID appId = UUID.randomUUID();
+
+        RoleCreationDto dto = RoleCreationDto.builder()
+                .name("Test Role")
+                .description("Test Description")
+                .parentAppId(appId)
+                .userTypeRestriction(List.of(UserType.INTERNAL))
+                .legacySync(true)
+                .roleIdentifier("   ")
+                .build();
+
+        // Act & Assert
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> appRoleService.createRole(dto));
+
+        assertEquals("Role identifier is required", exception.getMessage());
+    }
+
+    @Test
+    void testCreateRole_WithroleIdentifierAndLegacySyncFalse_CreatesSuccessfully() {
         // Arrange
         UUID appId = UUID.randomUUID();
 
@@ -843,7 +908,8 @@ class AppRoleServiceTest {
                 .name("Test Role")
                 .description("Test Description")
                 .userTypeRestriction(new UserType[]{UserType.INTERNAL})
-                .ccmsCode(null)  // Should be converted to null
+                .legacySync(false)
+                .roleIdentifier("CCMS001")
                 .app(parentApp)
                 .build();
 
@@ -862,15 +928,16 @@ class AppRoleServiceTest {
                 .build();
         when(loginService.getCurrentEntraUser(authentication)).thenReturn(mockEntraUser);
 
-        // Act
         RoleCreationDto dto = RoleCreationDto.builder()
                 .name("Test Role")
                 .description("Test Description")
                 .parentAppId(appId)
                 .userTypeRestriction(List.of(UserType.INTERNAL))
-                .ccmsCode("")
                 .legacySync(false)
+                .roleIdentifier("CCMS001")
                 .build();
+
+        // Act
         appRoleService.createRole(dto);
 
         // Assert
@@ -879,72 +946,76 @@ class AppRoleServiceTest {
     }
 
     @Test
-    void testCreateRole_WithLegacySyncTrueAndNoCcmsCode_ThrowsException() {
+    void testCreateRole_DuplicateRoleIdentifier_ThrowsException() {
         // Arrange
         UUID appId = UUID.randomUUID();
+        String duplicateId = "DUP001";
 
         RoleCreationDto dto = RoleCreationDto.builder()
-                .name("Test Role")
-                .description("Test Description")
+                .name("Dup Role")
+                .description("Dup desc")
                 .parentAppId(appId)
                 .userTypeRestriction(List.of(UserType.INTERNAL))
-                .legacySync(true)
-                .ccmsCode(null)
-                .build();
-
-        // Act & Assert
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> appRoleService.createRole(dto));
-
-        assertEquals("CCMS code is required when legacy sync is enabled", exception.getMessage());
-    }
-
-    @Test
-    void testCreateRole_WithLegacySyncTrueAndEmptyCcmsCode_ThrowsException() {
-        // Arrange
-        UUID appId = UUID.randomUUID();
-
-        RoleCreationDto dto = RoleCreationDto.builder()
-                .name("Test Role")
-                .description("Test Description")
-                .parentAppId(appId)
-                .userTypeRestriction(List.of(UserType.INTERNAL))
-                .legacySync(true)
-                .ccmsCode("   ")
-                .build();
-
-        // Act & Assert
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> appRoleService.createRole(dto));
-
-        assertEquals("CCMS code is required when legacy sync is enabled", exception.getMessage());
-    }
-
-    @Test
-    void testCreateRole_WithCcmsCodeAndLegacySyncFalse_ThrowsException() {
-        // Arrange
-        UUID appId = UUID.randomUUID();
-
-        RoleCreationDto dto = RoleCreationDto.builder()
-                .name("Test Role")
-                .description("Test Description")
-                .parentAppId(appId)
-                .userTypeRestriction(List.of(UserType.INTERNAL))
+                .roleIdentifier(duplicateId)
                 .legacySync(false)
-                .ccmsCode("CCMS001")
                 .build();
 
-        // Act & Assert
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> appRoleService.createRole(dto));
+        App parentApp = App.builder().id(appId).name("Parent App").build();
+        AppRole existing = AppRole.builder()
+                .id(UUID.randomUUID())
+                .roleIdentifier(duplicateId)
+                .app(parentApp)
+                .userTypeRestriction(new UserType[]{UserType.INTERNAL})
+                .build();
 
-        assertEquals("Legacy sync must be enabled when a CCMS code is provided", exception.getMessage());
+        when(appRoleRepository.findAll()).thenReturn(List.of(existing));
+
+        // Act & Assert
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> appRoleService.createRole(dto));
+        assertThat(ex.getMessage()).contains("already exists for this application");
     }
 
     @Test
-    void testCreateRole_WithCcmsCodeAndLegacySyncNull_ThrowsException() {
+    void testCreateRole_WithroleIdentifierAndLegacySyncNull_CreatesSuccessfully() {
         // Arrange
         UUID appId = UUID.randomUUID();
+
+        App parentApp = App.builder()
+                .id(appId)
+                .name("Test App")
+                .build();
+
+        CurrentUserDto currentUser = new CurrentUserDto();
+        currentUser.setUserId(UUID.randomUUID());
+        currentUser.setName("Test User");
+
+        when(appRepository.findById(appId)).thenReturn(Optional.of(parentApp));
+        when(appRoleRepository.findByName("Test Role")).thenReturn(Optional.empty());
+
+        AppRole savedRole = AppRole.builder()
+                .id(UUID.randomUUID())
+                .name("Test Role")
+                .description("Test Description")
+                .userTypeRestriction(new UserType[]{UserType.INTERNAL})
+                .legacySync(false)
+                .roleIdentifier("CCMS001")
+                .app(parentApp)
+                .build();
+
+        when(appRoleRepository.save(any(AppRole.class))).thenReturn(savedRole);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(loginService.getCurrentUser(authentication)).thenReturn(currentUser);
+
+        EntraUser mockEntraUser = EntraUser.builder()
+                .entraOid("test-entra-oid")
+                .userProfiles(Set.of(
+                        UserProfile.builder()
+                                .id(UUID.randomUUID())
+                                .activeProfile(true)
+                                .build()
+                ))
+                .build();
+        when(loginService.getCurrentEntraUser(authentication)).thenReturn(mockEntraUser);
 
         RoleCreationDto dto = RoleCreationDto.builder()
                 .name("Test Role")
@@ -952,14 +1023,15 @@ class AppRoleServiceTest {
                 .parentAppId(appId)
                 .userTypeRestriction(List.of(UserType.INTERNAL))
                 .legacySync(null)
-                .ccmsCode("CCMS001")
+                .roleIdentifier("CCMS001")
                 .build();
 
-        // Act & Assert
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> appRoleService.createRole(dto));
+        // Act
+        appRoleService.createRole(dto);
 
-        assertEquals("Legacy sync must be enabled when a CCMS code is provided", exception.getMessage());
+        // Assert
+        verify(appRoleRepository).save(any(AppRole.class));
+        verify(eventService).logEvent(any(RoleCreationAuditEvent.class));
     }
 
     @Test
@@ -972,6 +1044,7 @@ class AppRoleServiceTest {
                 .description("Test Description")
                 .parentAppId(appId)
                 .userTypeRestriction(List.of(UserType.INTERNAL))
+                .roleIdentifier("ROLE_123")
                 .build();
 
         when(appRepository.findById(appId)).thenReturn(Optional.empty());
@@ -1028,6 +1101,7 @@ class AppRoleServiceTest {
                 .parentAppId(appId)
                 .userTypeRestriction(List.of(UserType.INTERNAL))
                 .legacySync(false)
+                .roleIdentifier("ROLE_INTERNAL")
                 .build();
         appRoleService.createRole(dto);
 
@@ -1083,6 +1157,7 @@ class AppRoleServiceTest {
                 .parentAppId(appId)
                 .userTypeRestriction(List.of(UserType.EXTERNAL))
                 .legacySync(false)
+                .roleIdentifier("ROLE_EXTERNAL")
                 .build();
         appRoleService.createRole(dto);
 

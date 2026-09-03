@@ -1093,7 +1093,7 @@ class AdminControllerTest {
         RoleCreationDto roleCreationDto = RoleCreationDto.builder()
                 .name("Complete Test Role")
                 .description("Complete test description")
-                .ccmsCode("TEST123")
+                .roleIdentifier("TEST123")
                 .legacySync(true)
                 .authzRole(true)
                 .build();
@@ -1138,7 +1138,7 @@ class AdminControllerTest {
         RoleCreationDto roleCreationDto = RoleCreationDto.builder()
                 .name("Complete Role")
                 .description("Complete description")
-                .ccmsCode("COMPLETE123")
+                .roleIdentifier("COMPLETE123")
                 .legacySync(false)
                 .authzRole(true)
                 .build();
@@ -1405,7 +1405,7 @@ class AdminControllerTest {
     }
 
     @Test
-    void testProcessRoleCreation_WithLegacySyncTrueAndNoCcmsCode_ValidationFails() {
+    void testProcessRoleCreation_WithLegacySyncTrueAndNoroleIdentifier_ValidationFails() {
         // Arrange
         UUID appId = UUID.randomUUID();
         RoleCreationDto roleCreationDto = RoleCreationDto.builder()
@@ -1414,14 +1414,14 @@ class AdminControllerTest {
                 .parentAppId(appId)
                 .userTypeRestriction(List.of(UserType.INTERNAL))
                 .legacySync(true)
-                .ccmsCode(null)  // Missing CCMS code when legacy sync is true
+                .roleIdentifier(null)  // Missing CCMS code when legacy sync is true
                 .build();
 
         BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
 
         when(appRoleService.isRoleNameExistsInApp("Test Role", appId)).thenReturn(false);
         // The validator should add the error
-        bindingResult.rejectValue("ccmsCode", "role.ccmsCode.required.when.legacy.sync",
+        bindingResult.rejectValue("roleIdentifier", "role.roleIdentifier.required.when.legacy.sync",
                 "Enter a CCMS code for roles that sync with CCMS.");
         List<AppDto> apps = createMockApps();
         when(appService.getAllLaaApps()).thenReturn(apps);
@@ -1433,12 +1433,12 @@ class AdminControllerTest {
         // Assert
         assertEquals("silas-administration/create-role", result);
         assertThat(bindingResult.hasErrors()).isTrue();
-        assertThat(bindingResult.hasFieldErrors("ccmsCode")).isTrue();
+        assertThat(bindingResult.hasFieldErrors("roleIdentifier")).isTrue();
         assertThat(model.getAttribute("apps")).isEqualTo(apps);
     }
 
     @Test
-    void testProcessRoleCreation_WithCcmsCodeAndLegacySyncFalse_ValidationFails() {
+    void testProcessRoleCreation_WithroleIdentifierAndLegacySyncFalse_ValidationFails() {
         // Arrange
         UUID appId = UUID.randomUUID();
         RoleCreationDto roleCreationDto = RoleCreationDto.builder()
@@ -1447,7 +1447,7 @@ class AdminControllerTest {
                 .parentAppId(appId)
                 .userTypeRestriction(List.of(UserType.INTERNAL))
                 .legacySync(false)  // Legacy sync is false
-                .ccmsCode("CCMS001")  // But CCMS code is provided
+                .roleIdentifier("CCMS001")  // But CCMS code is provided
                 .build();
 
         BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
@@ -1472,7 +1472,7 @@ class AdminControllerTest {
     }
 
     @Test
-    void testProcessRoleCreation_WithLegacySyncTrueAndCcmsCodeProvided_Succeeds() {
+    void testProcessRoleCreation_WithLegacySyncTrueAndroleIdentifierProvided_Succeeds() {
         // Arrange
         MockHttpSession session = new MockHttpSession();
         UUID appId = UUID.randomUUID();
@@ -1482,7 +1482,7 @@ class AdminControllerTest {
                 .parentAppId(appId)
                 .userTypeRestriction(List.of(UserType.INTERNAL))
                 .legacySync(true)
-                .ccmsCode("CCMS001")
+                .roleIdentifier("CCMS001")
                 .build();
 
         BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
@@ -1493,7 +1493,7 @@ class AdminControllerTest {
                 .parentAppId(appId)
                 .userTypeRestriction(List.of(UserType.INTERNAL))
                 .legacySync(true)
-                .ccmsCode("CCMS001")
+                .roleIdentifier("CCMS001")
                 .ordinal(1)
                 .authzRole(false)
                 .build();
@@ -1548,7 +1548,7 @@ class AdminControllerTest {
                         .name("CCMS case transfer requests - Viewer")
                         .description("CCMS case transfer requests - Internal User Viewer Role")
                         .parentApp("CCMS case transfer requests")
-                        .ccmsCode("ccms.transfer.viewer")
+                        .roleIdentifier("ccms.transfer.viewer")
                         .ordinal(0)
                         .legacySync("No")
                         .build(),
@@ -1556,7 +1556,7 @@ class AdminControllerTest {
                         .name("CCMS case transfer requests - Internal")
                         .description("CCMS case transfer requests - Internal User Role")
                         .parentApp("CCMS case transfer requests")
-                        .ccmsCode("ccms.transfer.internal")
+                        .roleIdentifier("ccms.transfer.internal")
                         .ordinal(1)
                         .legacySync("No")
                         .build()
@@ -1948,6 +1948,14 @@ class AdminControllerTest {
         BindingResult result = mock(BindingResult.class);
         when(result.hasErrors()).thenReturn(false);
 
+        AppRoleDto roleDto = AppRoleDto.builder()
+                .id(roleId)
+                .name("Existing Role")
+                .description("Existing Description")
+                .roleIdentifier("EXISTING_ROLE_IDENTIFIER")
+                .build();
+        when(appRoleService.findById(UUID.fromString(roleId))).thenReturn(Optional.of(roleDto));
+
         AppRoleDetailsForm form =
                 AppRoleDetailsForm.builder()
                         .appRoleId(roleId)
@@ -1998,7 +2006,6 @@ class AdminControllerTest {
         String roleId = UUID.randomUUID().toString();
 
         BindingResult result = mock(BindingResult.class);
-        when(result.hasErrors()).thenReturn(true);
         when(appRoleService.findById(UUID.fromString(roleId))).thenReturn(Optional.empty());
 
         AppRoleDetailsForm form =

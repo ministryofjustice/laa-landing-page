@@ -1575,7 +1575,7 @@ public class UserController {
         // Check if this is the CCMS app and organize roles by section
         boolean isCcmsApp = (currentApp.getName().contains("CCMS")
                 && !currentApp.getName().contains("CCMS case transfer requests"))
-                || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()));
+                || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getRoleIdentifier()));
 
         // Apply CCMS filtering before storing in model
         List<AppRoleViewModel> finalRoles = appRoleViewModels;
@@ -1583,7 +1583,7 @@ public class UserController {
         if (isCcmsApp) {
             // Filter to only CCMS roles for organization
             List<AppRoleViewModel> ccmsRoles = appRoleViewModels.stream()
-                    .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()))
+                    .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getRoleIdentifier()))
                     .sorted().collect(Collectors.toList());
 
             Map<String, List<AppRoleViewModel>> organizedRoles;
@@ -2513,7 +2513,7 @@ public class UserController {
         // Check if this is the CCMS app and organize roles by section
         boolean isCcmsApp = (currentApp.getName().contains("CCMS")
                 && !currentApp.getName().contains("CCMS case transfer requests"))
-                || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()));
+                || roles.stream().anyMatch(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getRoleIdentifier()));
 
         // Apply CCMS filtering before storing in model/session
         List<AppRoleViewModel> finalRoles = appRoleViewModels;
@@ -2521,7 +2521,7 @@ public class UserController {
         if (isCcmsApp) {
             // Filter to only CCMS roles for organization
             List<AppRoleViewModel> ccmsRoles = appRoleViewModels.stream()
-                    .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getCcmsCode()))
+                    .filter(role -> CcmsRoleGroupsUtil.isCcmsRole(role.getRoleIdentifier()))
                     .sorted().collect(Collectors.toList());
 
             Map<String, List<AppRoleViewModel>> organizedRoles;
