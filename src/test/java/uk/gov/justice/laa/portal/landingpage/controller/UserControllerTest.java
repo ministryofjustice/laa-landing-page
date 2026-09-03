@@ -641,6 +641,73 @@ class UserControllerTest {
     }
 
     @Test
+    void manageUser_shouldSetSilasUserTypeToInternalForInternalUser() {
+        AppRoleDto providerAdminRole = AppRoleDto.builder()
+                .name(FIRM_USER_MANAGER.getDescription())
+                .app(AppDto.builder().enabled(true).build())
+                .build();
+
+        assertSilasUserType(true, true, List.of(providerAdminRole), "Internal");
+    }
+
+    @Test
+    void manageUser_shouldSetSilasUserTypeToThirdPartyForMultiFirmUser() {
+        AppRoleDto providerAdminRole = AppRoleDto.builder()
+                .name(FIRM_USER_MANAGER.getDescription())
+                .app(AppDto.builder().enabled(true).build())
+                .build();
+
+        assertSilasUserType(false, true, List.of(providerAdminRole), "3rd Party");
+    }
+
+    @Test
+    void manageUser_shouldSetSilasUserTypeToFirmAdminForProviderAdmin() {
+        AppRoleDto providerAdminRole = AppRoleDto.builder()
+                .name(FIRM_USER_MANAGER.getDescription())
+                .app(AppDto.builder().enabled(true).build())
+                .build();
+
+        assertSilasUserType(false, false, List.of(providerAdminRole), "Firm Admin");
+    }
+
+    @Test
+    void manageUser_shouldSetSilasUserTypeToProviderByDefault() {
+        assertSilasUserType(false, false, null, "Provider");
+    }
+
+    private void assertSilasUserType(boolean internalUser, boolean multiFirmUser,
+            List<AppRoleDto> appRoles, String expectedUserType) {
+        String userId = UUID.randomUUID().toString();
+        EntraUserDto entraUser = EntraUserDto.builder()
+                .id(userId)
+                .fullName("Managed User")
+                .multiFirmUser(multiFirmUser)
+                .enabled(true)
+                .build();
+        UserProfileDto managedUser = UserProfileDto.builder()
+                .id(UUID.randomUUID())
+                .entraUser(entraUser)
+                .appRoles(appRoles)
+                .userType(internalUser ? UserType.INTERNAL : UserType.EXTERNAL)
+                .build();
+        UserProfile editorUser = UserProfile.builder()
+                .id(UUID.randomUUID())
+                .userType(UserType.INTERNAL)
+                .build();
+
+        when(userService.getUserProfileById(userId)).thenReturn(Optional.of(managedUser));
+        when(userService.calculateSilasStatusForUserProfile(managedUser))
+                .thenReturn(UserProfileSilasStatus.COMPLETE);
+        when(userService.isInternal(userId)).thenReturn(internalUser);
+        when(loginService.getCurrentProfile(authentication)).thenReturn(editorUser);
+
+        String view = userController.manageUser(userId, model, session, authentication);
+
+        assertThat(view).isEqualTo("manage-user");
+        assertThat(model.getAttribute("silasUserType")).isEqualTo(expectedUserType);
+    }
+
+    @Test
     void manageUser_shouldSeeEditButtonExternalUserAdmin() {
         // Arrange
         // Given - Editor is an Internal user
