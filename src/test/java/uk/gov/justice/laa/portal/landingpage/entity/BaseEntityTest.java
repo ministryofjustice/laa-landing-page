@@ -47,8 +47,8 @@ public class BaseEntityTest {
     }
 
     protected AppRole buildTestLaaAppRole() {
-        return AppRole.builder().name("Test App Role").roleIdentifier("role_identifier").description("App Role " +
-                        "Description")
+        return AppRole.builder().name("Test App Role").roleIdentifier("role_identifier").description("App Role "
+                        + "Description")
                 .userTypeRestriction(new UserType[] {UserType.INTERNAL}).build();
     }
 

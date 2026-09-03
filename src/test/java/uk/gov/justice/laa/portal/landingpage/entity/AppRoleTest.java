@@ -113,8 +113,8 @@ public class AppRoleTest extends BaseEntityTest {
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).isEqualTo("Application role Role Identifier must be " +
-                "between 1 and 255 characters");
+        assertThat(violations.iterator().next().getMessage()).isEqualTo("Application role Role Identifier must be "
+                + "between 1 and 255 characters");
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("roleIdentifier");
 
     }
