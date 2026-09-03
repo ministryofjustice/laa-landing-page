@@ -359,11 +359,6 @@ public class UserActivationController {
                 = userReactivationRequestService.getRequestHistoryForUserIdAndRequestId(id, requestId);
         model.addAttribute("reactivationRequests", latestRequestHistoryForUser);
 
-        String cancelPath = "list".equals(referer)
-            ? "/admin/users/reactivation-requests"
-            : "/admin/users/manage/" + profileId;
-        model.addAttribute("cancelPath", cancelPath);
-
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User");
         return "delegate-reactivate-user-tracking";
     }
