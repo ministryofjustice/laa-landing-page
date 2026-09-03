@@ -268,9 +268,9 @@
                                         </dd>
                                         <dd class="govuk-summary-list__actions">
                                             <a th:if="${canTrackDelegateEnableUser}" class="govuk-link"
-                                               th:href="@{/admin/user/delegate-reactivate/track/{id}(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">Track request</a>
+                                               th:href="@{/admin/user/delegate-reactivate/track/{id}(id=${user.entraUser.id}, referer='manage', profileId=${user.id}, requestId=${requestId})}">Track request</a>
                                             <a th:if="${canManageDelegateEnableUser}" class="govuk-link"
-                                               th:href="@{/admin/user/delegate-reactivate/track/{id}(id=${user.entraUser.id}, referer='manage', profileId=${user.id})}">Manage request</a>
+                                               th:href="@{/admin/user/delegate-reactivate/track/{id}(id=${user.entraUser.id}, referer='manage', profileId=${user.id}, requestId=${requestId})}">Manage request</a>
                                         </dd>
                                     </div>
                                 </dl>

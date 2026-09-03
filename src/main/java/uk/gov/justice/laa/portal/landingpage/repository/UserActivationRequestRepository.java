@@ -96,4 +96,6 @@ public interface UserActivationRequestRepository extends JpaRepository<UserActiv
             """)
     List<UserActivationRequestSummaryDto> findRequestHistoryByRequestId(@Param("requestId") UUID requestId);
 
+    Optional<UserActivationRequest> findFirstByUserEntraIdAndRequestIdOrderByVersionDesc(UUID userEntraId, UUID requestId);
+
 }

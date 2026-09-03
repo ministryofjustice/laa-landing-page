@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -259,8 +260,8 @@ public class AccessControlService {
         return computeEnablementState(entraUserId).canDelegate();
     }
 
-    public boolean canTrackDelegateEnableUser(String entraUserId) {
-        if (entraUserId == null || entraUserId.isBlank()) {
+    public boolean canTrackDelegateEnableUser(String entraUserId, String requestId) {
+        if (StringUtils.isBlank(entraUserId) || StringUtils.isBlank(requestId)) {
             return false;
         }
 
@@ -294,16 +295,10 @@ public class AccessControlService {
         }
 
         UserActivationRequest latestActivationRequest = userActivationRequestRepository
-                .findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(accessedUserId)
+                .findFirstByUserEntraIdAndRequestIdOrderByVersionDesc(UUID.fromString(entraUserId), UUID.fromString(requestId))
                 .orElse(null);
 
         if (latestActivationRequest == null) {
-            return false;
-        }
-
-        ReactivationRequestStatus activationRequestLatestStatus = latestActivationRequest.getStatus();
-        if (ReactivationRequestStatus.APPROVED.equals(activationRequestLatestStatus)
-                || ReactivationRequestStatus.REJECTED.equals(activationRequestLatestStatus)) {
             return false;
         }
 

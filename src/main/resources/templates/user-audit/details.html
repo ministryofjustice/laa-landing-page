@@ -159,31 +159,6 @@
                         <div class="govuk-summary-card">
                             <div class="govuk-summary-card__title-wrapper">
                                 <h3 class="govuk-summary-card__title">SiLAS Audit Data</h3>
-                                <ul th:if="${canDisableUser or canEnableUser or cannotEnableUser or canDelegateEnableUser or canTrackDelegateEnableUser or canManageDelegateEnableUser}" class="govuk-summary-card__actions">
-                                    <li th:if="${canDisableUser and userIsEnabled}" class="govuk-summary-card__action">
-                                        <a class="govuk-link"
-                                           th:href="@{/admin/users/manage/{id}/deactivate(id=${user.userId}, referer='audit', profileId=${user.getActiveProfileId()})}">Deactivate user</a>
-                                    </li>
-                                    <li th:if="${canEnableUser and !userIsEnabled}" class="govuk-summary-card__action">
-                                        <a class="govuk-link"
-                                           th:href="@{/admin/users/manage/{id}/activate(id=${user.userId}, referer='audit', profileId=${user.getActiveProfileId()})}">Reactivate user</a>
-                                    </li>
-                                    <li th:if="${canDelegateEnableUser and !userIsEnabled}" class="govuk-summary-card__action">
-                                        <a class="govuk-link"
-                                           th:href="@{/admin/user/delegate-reactivate/{id}(id=${user.userId}, referer='audit', profileId=${user.getActiveProfileId()})}">Reactivate user</a>
-                                    </li>
-                                    <li th:if="${canTrackDelegateEnableUser and !userIsEnabled}" class="govuk-summary-card__action">
-                                        <a class="govuk-link"
-                                           th:href="@{/admin/user/delegate-reactivate/track/{id}(id=${user.userId}, referer='audit', profileId=${user.getActiveProfileId()})}">Track request</a>
-                                        </li>
-                                    <li th:if="${canManageDelegateEnableUser and !userIsEnabled}" class="govuk-summary-card__action">
-                                        <a class="govuk-link"
-                                           th:href="@{/admin/user/delegate-reactivate/track/{id}(id=${user.userId}, referer='audit', profileId=${user.getActiveProfileId()})}">Manage request</a>
-                                    </li>
-                                    <li th:if="${cannotEnableUser and !canDelegateEnableUser and !userIsEnabled}" class="govuk-summary-card__action">
-                                        <span>You cannot activate this user</span>
-                                    </li>
-                                </ul>
                             </div>
                             <div class="govuk-summary-card__content">
                                 <dl class="govuk-summary-list">
@@ -222,6 +197,30 @@
                                                     Awaiting Verification
                                                 </strong>
                                             </th:block>
+                                        </dd>
+                                        <dd class="govuk-summary-list__actions">
+                                            <a th:if="${canDisableUser and userIsEnabled}" class="govuk-link govuk-summary-card__action"
+                                               th:href="@{/admin/users/manage/{id}/deactivate(id=${user.userId}, referer='audit', profileId=${user.getActiveProfileId()})}">Deactivate user</a>
+                                            <a th:if="${canEnableUser and !userIsEnabled}" class="govuk-link govuk-summary-card__action"
+                                               th:href="@{/admin/users/manage/{id}/activate(id=${user.userId}, referer='audit', profileId=${user.getActiveProfileId()})}">Reactivate user</a>
+                                            <a th:if="${canDelegateEnableUser and !userIsEnabled}" class="govuk-link govuk-summary-card__action"
+                                               th:href="@{/admin/user/delegate-reactivate/{id}(id=${user.userId}, referer='audit', profileId=${user.getActiveProfileId()})}">Reactivate user</a>
+                                            <span th:if="${cannotEnableUser and !canDelegateEnableUser and !userIsEnabled and !canTrackDelegateEnableUser and !canManageDelegateEnableUser}">
+                                                    You cannot activate this user
+                                                </span>
+                                        </dd>
+                                    </div>
+                                    <div class="govuk-summary-list__row" th:if="${canTrackDelegateEnableUser or canManageDelegateEnableUser}">
+                                        <dt class="govuk-summary-list__key">Reactivation Request Status</dt>
+                                        <dd class="govuk-summary-list__value">
+                                            <strong class="govuk-tag govuk-tag--yellow" th:if="${reactivationRequestStatus != null and reactivationRequestStatus.name() == 'IN_REVIEW'}">In review</strong>
+                                            <strong class="govuk-tag govuk-tag--blue" th:if="${reactivationRequestStatus != null and reactivationRequestStatus.name() == 'INFORMATION_REQUIRED'}">Information required</strong>
+                                        </dd>
+                                        <dd class="govuk-summary-list__actions">
+                                            <a class="govuk-link govuk-summary-card__action" th:if="${canTrackDelegateEnableUser and !userIsEnabled}"
+                                               th:href="@{/admin/user/delegate-reactivate/track/{id}(id=${user.userId}, referer='audit', profileId=${user.getActiveProfileId()}, requestId=${requestId})}">Track request</a>
+                                            <a class="govuk-link govuk-summary-card__action" th:if="${canManageDelegateEnableUser and !userIsEnabled}"
+                                               th:href="@{/admin/user/delegate-reactivate/track/{id}(id=${user.userId}, referer='audit', profileId=${user.getActiveProfileId()}, requestId=${requestId})}">Manage request</a>
                                         </dd>
                                     </div>
                                 </dl>

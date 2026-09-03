@@ -307,12 +307,13 @@ public class UserActivationController {
     }
 
     @GetMapping("/user/delegate-reactivate/track/{id}")
-    @PreAuthorize("@accessControlService.canTrackDelegateEnableUser(#id)")
+    @PreAuthorize("@accessControlService.canTrackDelegateEnableUser(#id, #requestId)")
     public String trackDelegateReactivateUserRequestsGet(@PathVariable String id,
                                                          HttpSession session,
                                                          Model model,
                                                          @RequestParam(required = false) String profileId,
                                                          @RequestParam String referer,
+                                                         @RequestParam String requestId,
                                                          RedirectAttributes redirectAttributes) {
         log.debug("Tracking delegate reactivate requests for userId: {}, profileId: {}", id, profileId);
 
@@ -322,7 +323,7 @@ public class UserActivationController {
         }
 
         final EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
-        Optional<UserActivationRequest> request = userReactivationRequestService.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(id);
+        Optional<UserActivationRequest> request = userReactivationRequestService.findFirstByUserEntraIdAndRequestIdOrderByVersionDesc(id, requestId);
 
         if (!userService.isValidUserProfileId(id, profileId)) {
             log.info("Invalid access to track reactivate page for profileId: {} for userId: {}", profileId, id);
@@ -330,14 +331,8 @@ public class UserActivationController {
         }
 
         if (request.isEmpty()) {
-            log.info("No delegate activation request found to track for user id: {}", id);
+            log.info("No delegate activation request found to track for user id: {}, request id: {}", id, requestId);
             redirectAttributes.addFlashAttribute("errorMessage", "There is no open delegate activation request");
-            return "redirect:" + getCancelPathFromReferer(referer, id, profileId);
-        } else if (ReactivationRequestStatus.APPROVED.equals(request.get().getStatus())) {
-            log.info("Delegate activation request already APPROVED for userId: {}", id);
-            redirectAttributes.addFlashAttribute("errorMessage", "There is no open delegate activation request");
-            request.ifPresent(userActivationRequest -> redirectAttributes
-                    .addFlashAttribute("requestId", userActivationRequest.getId().toString()));
             return "redirect:" + getCancelPathFromReferer(referer, id, profileId);
         }
 
@@ -347,8 +342,11 @@ public class UserActivationController {
             model.addAttribute("delegateReactivateUserCommentForm", form);
         }
 
-        boolean canActionDelegateEnableUser = accessControlService.canManageDelegateEnableUser(id);
+        boolean isRequestClosed = ReactivationRequestStatus.APPROVED.equals(request.get().getStatus())
+                || ReactivationRequestStatus.REJECTED.equals(request.get().getStatus());
+        boolean canActionDelegateEnableUser = !isRequestClosed && accessControlService.canManageDelegateEnableUser(id);
 
+        model.addAttribute("isRequestClosed", isRequestClosed);
         model.addAttribute("canActionDelegateEnableUser", canActionDelegateEnableUser);
         model.addAttribute("user", user);
         model.addAttribute("profileId", profileId);
@@ -358,7 +356,7 @@ public class UserActivationController {
         model.addAttribute("requestCurrentStatus", request.get().getStatus());
 
         List<UserActivationRequestSummaryDto> latestRequestHistoryForUser
-                = userReactivationRequestService.getLatestRequestHistoryForUserId(id);
+                = userReactivationRequestService.getRequestHistoryForUserIdAndRequestId(id, requestId);
         model.addAttribute("reactivationRequests", latestRequestHistoryForUser);
 
         String cancelPath = "list".equals(referer)
@@ -371,7 +369,7 @@ public class UserActivationController {
     }
 
     @PostMapping("/user/delegate-reactivate/track/{id}")
-    @PreAuthorize("@accessControlService.canTrackDelegateEnableUser(#id)")
+    @PreAuthorize("@accessControlService.canTrackDelegateEnableUser(#id, #requestId)")
     public String trackDelegateReactivateUserRequestsPost(
             @PathVariable String id,
             @RequestParam(required = false) String profileId,
@@ -428,6 +426,7 @@ public class UserActivationController {
                                                           Model model,
                                                           @RequestParam(required = false) String profileId,
                                                           @RequestParam String referer,
+                                                          @RequestParam String requestId,
                                                           RedirectAttributes redirectAttributes) {
         log.info("Rendering rejection form for userId: {}, profileId: {}", id, profileId);
 
@@ -442,12 +441,15 @@ public class UserActivationController {
         }
 
         EntraUserDto user = userService.getEntraUserById(id).orElseThrow();
-        Optional<UserActivationRequest> request = userReactivationRequestService.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(id);
+        Optional<UserActivationRequest> request = userReactivationRequestService.findFirstByUserEntraIdAndRequestIdOrderByVersionDesc(id, requestId);
 
         if (request.isEmpty()) {
             log.info("No delegate activation request found to reject for userId: {}", id);
             redirectAttributes.addFlashAttribute("errorMessage", "There is no open delegate activation request");
             return "redirect:" + getCancelPathFromReferer(referer, id, profileId);
+        } else if (!request.get().getRequestId().equals(UUID.fromString(requestId))) {
+            log.info("Rendering rejection form for requestId: {}, userId: {}", requestId, id);
+            throw new ResponseStatusException(HttpStatusCode.valueOf(400));
         } else if (ReactivationRequestStatus.APPROVED.equals(request.get().getStatus()) || ReactivationRequestStatus.REJECTED.equals(request.get().getStatus())) {
             log.info("Delegate activation request for userId: {} is already in status: {}", id, request.get().getStatus());
             redirectAttributes.addFlashAttribute("errorMessage", "There is no open delegate activation request");
@@ -462,13 +464,14 @@ public class UserActivationController {
         }
 
         model.addAttribute("user", user);
+        model.addAttribute("id", id);
         model.addAttribute("profileId", profileId);
         model.addAttribute("requestId", request.get().getRequestId().toString());
         model.addAttribute("referer", referer);
         model.addAttribute("cancelPath", getCancelPathFromReferer(referer, id, profileId));
 
         List<UserActivationRequestSummaryDto> latestRequestHistoryForUser
-                = userReactivationRequestService.getLatestRequestHistoryForUserId(id);
+                = userReactivationRequestService.getRequestHistoryForUserIdAndRequestId(id, requestId);
         model.addAttribute("reactivationRequests", latestRequestHistoryForUser);
 
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Delegate Reactivate User");
@@ -656,6 +659,8 @@ public class UserActivationController {
             return String.format("/admin/users/manage/%s", userProfileId);
         } else if ("audit".equals(referer)) {
             return String.format("/admin/users/audit/%s", entraUserId);
+        } else if ("list".equals(referer)) {
+            return "/admin/users/reactivation-requests";
         } else {
             return "/home";
         }
