@@ -672,7 +672,7 @@ class UserControllerTest {
 
     @Test
     void manageUser_shouldSetSilasUserTypeToProviderByDefault() {
-        assertSilasUserType(false, false, null, "Provider User");
+        assertSilasUserType(false, false, null, "Provider");
     }
 
     private void assertSilasUserType(boolean internalUser, boolean multiFirmUser,
