@@ -12,7 +12,7 @@
 <body>
 <nav aria-label="Breadcrumb" class="govuk-breadcrumbs" id="breadcrumbs">
     <a class="govuk-back-link govuk-!-margin-bottom-3"
-       th:href="@{/admin/users/manage/{id}(id=${profileId})}">
+       th:href="@{/admin/user/delegate-reactivate/track/{id}(id=${id}, referer=${referer}, profileId=${profileId}, requestId=${requestId})}">
         Back </a>
 </nav>
 <main class="govuk-main-wrapper" id="main-content">
@@ -43,7 +43,7 @@
             they can ask their provider admin to submit a new reactivation request.</p>
 
             <form method="post"
-                  th:action="@{/admin/user/delegate-reactivate/reject/{id}(id=${user.id}, profileId=${profileId}, requestId=${requestId})}"
+                  th:action="@{/admin/user/delegate-reactivate/reject/{id}(id=${id}, profileId=${profileId}, referer=${referer}, requestId=${requestId})}"
                   th:object="${delegateReactivateUserCommentForm}">
 
                 <!-- Comments Field -->

@@ -159,11 +159,12 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
             EntraUser providerAdmin = firmUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
             UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
-            createReactivateRequest(externalUser.getId(), activeProfile.getId(), providerAdmin.getEntraOid(), ReactivationRoleType.PROVIDER_ADMIN);
+            UUID requestId = createReactivateRequest(externalUser.getId(), activeProfile.getId(), providerAdmin.getEntraOid(), ReactivationRoleType.PROVIDER_ADMIN);
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/track/" + externalUser.getId())
                             .param("profileId", activeProfile.getId().toString())
                             .param("referer", "manage")
+                            .param("requestId", String.valueOf(requestId))
                             .with(userOauth2Login(providerAdmin)))
                     .andExpect(status().isOk())
                     .andExpect(view().name("delegate-reactivate-user-tracking"))
@@ -176,11 +177,12 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
             EntraUser eum2 = internalWithExternalOnlyUserManagers.getLast();
             EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
             UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
-            createReactivateRequest(externalUser.getId(), activeProfile.getId(), eum1.getEntraOid(), ReactivationRoleType.LAA_OST);
+            UUID requestId = createReactivateRequest(externalUser.getId(), activeProfile.getId(), eum1.getEntraOid(), ReactivationRoleType.LAA_OST);
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/track/" + externalUser.getId())
                             .param("profileId", activeProfile.getId().toString())
                             .param("referer", "manage")
+                            .param("requestId", String.valueOf(requestId))
                             .with(userOauth2Login(eum2)))
                     .andExpect(status().isOk())
                     .andExpect(view().name("delegate-reactivate-user-tracking"))
@@ -193,11 +195,12 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
             EntraUser eum = internalWithExternalOnlyUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
             UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
-            createReactivateRequest(externalUser.getId(), activeProfile.getId(), eus.getEntraOid(), ReactivationRoleType.LAA_SUPPORT);
+            UUID requestId = createReactivateRequest(externalUser.getId(), activeProfile.getId(), eus.getEntraOid(), ReactivationRoleType.LAA_SUPPORT);
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/track/" + externalUser.getId())
                             .param("profileId", activeProfile.getId().toString())
                             .param("referer", "manage")
+                            .param("requestId", String.valueOf(requestId))
                             .with(userOauth2Login(eum)))
                     .andExpect(status().isOk())
                     .andExpect(view().name("delegate-reactivate-user-tracking"))
@@ -209,10 +212,11 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
             EntraUser providerAdmin = firmUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm1);
             UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
-            createReactivateRequest(externalUser.getId(), activeProfile.getId(), providerAdmin.getEntraOid(), ReactivationRoleType.PROVIDER_ADMIN);
+            UUID requestId = createReactivateRequest(externalUser.getId(), activeProfile.getId(), providerAdmin.getEntraOid(), ReactivationRoleType.PROVIDER_ADMIN);
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/track/" + externalUser.getId())
                             .param("profileId", activeProfile.getId().toString())
+                            .param("requestId", String.valueOf(requestId))
                             .param("referer", "manage")
                             .with(userOauth2Login(providerAdmin)))
                     .andExpect(status().isForbidden());
@@ -226,10 +230,11 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
             entraUserRepository.saveAndFlush(externalUser);
 
             UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
-            createReactivateRequest(externalUser.getId(), activeProfile.getId(), providerAdmin.getEntraOid(), ReactivationRoleType.PROVIDER_ADMIN);
+            UUID requestId = createReactivateRequest(externalUser.getId(), activeProfile.getId(), providerAdmin.getEntraOid(), ReactivationRoleType.PROVIDER_ADMIN);
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/track/" + externalUser.getId())
                             .param("profileId", activeProfile.getId().toString())
+                            .param("requestId", String.valueOf(requestId))
                             .param("referer", "manage")
                             .with(userOauth2Login(providerAdmin)))
                     .andExpect(status().isForbidden());
@@ -333,11 +338,12 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
             EntraUser eum = internalWithExternalOnlyUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
             UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
-            createReactivateRequest(externalUser.getId(), activeProfile.getId(), providerAdmin.getEntraOid(), ReactivationRoleType.PROVIDER_ADMIN);
+            UUID requestId = createReactivateRequest(externalUser.getId(), activeProfile.getId(), providerAdmin.getEntraOid(), ReactivationRoleType.PROVIDER_ADMIN);
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/track/" + externalUser.getId())
                             .param("profileId", activeProfile.getId().toString())
                             .param("referer", "manage")
+                            .param("requestId", String.valueOf(requestId))
                             .with(userOauth2Login(eum)))
                     .andExpect(status().isForbidden());
         }
@@ -348,11 +354,12 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
             EntraUser eum2 = internalWithExternalOnlyUserManagers.getLast();
             EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
             UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
-            createReactivateRequest(externalUser.getId(), activeProfile.getId(), eum1.getEntraOid(), ReactivationRoleType.LAA_OST);
+            UUID requestId = createReactivateRequest(externalUser.getId(), activeProfile.getId(), eum1.getEntraOid(), ReactivationRoleType.LAA_OST);
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/track/" + externalUser.getId())
                             .param("profileId", activeProfile.getId().toString())
                             .param("referer", "manage")
+                            .param("requestId", String.valueOf(requestId))
                             .with(userOauth2Login(eum2)))
                     .andExpect(status().isOk())
                     .andExpect(view().name("delegate-reactivate-user-tracking"))
@@ -365,10 +372,11 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
             EntraUser eum = internalWithExternalOnlyUserManagers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
             UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
-            createReactivateRequest(externalUser.getId(), activeProfile.getId(), eus.getEntraOid(), ReactivationRoleType.LAA_SUPPORT);
+            UUID requestId = createReactivateRequest(externalUser.getId(), activeProfile.getId(), eus.getEntraOid(), ReactivationRoleType.LAA_SUPPORT);
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/track/" + externalUser.getId())
                             .param("profileId", activeProfile.getId().toString())
+                            .param("requestId", String.valueOf(requestId))
                             .param("referer", "manage")
                             .with(userOauth2Login(eum)))
                     .andExpect(status().isOk())
@@ -386,10 +394,11 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
             EntraUser eus = externalUserSupportUsers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
             UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
-            createReactivateRequest(externalUser.getId(), activeProfile.getId(), providerAdmin.getEntraOid(), ReactivationRoleType.PROVIDER_ADMIN);
+            UUID requestId = createReactivateRequest(externalUser.getId(), activeProfile.getId(), providerAdmin.getEntraOid(), ReactivationRoleType.PROVIDER_ADMIN);
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/track/" + externalUser.getId())
                             .param("profileId", activeProfile.getId().toString())
+                            .param("requestId", String.valueOf(requestId))
                             .param("referer", "manage")
                             .with(userOauth2Login(eus)))
                     .andExpect(status().isForbidden());
@@ -401,10 +410,11 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
             EntraUser eus = externalUserSupportUsers.getFirst();
             EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
             UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
-            createReactivateRequest(externalUser.getId(), activeProfile.getId(), eum.getEntraOid(), ReactivationRoleType.LAA_OST);
+            UUID requestId = createReactivateRequest(externalUser.getId(), activeProfile.getId(), eum.getEntraOid(), ReactivationRoleType.LAA_OST);
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/track/" + externalUser.getId())
                             .param("profileId", activeProfile.getId().toString())
+                            .param("requestId", String.valueOf(requestId))
                             .param("referer", "manage")
                             .with(userOauth2Login(eus)))
                     .andExpect(status().isOk())
@@ -418,11 +428,12 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
             EntraUser eus2 = externalUserSupportUsers.getLast();
             EntraUser externalUser = getEntraUserWith(DisableType.LAA, testFirm2);
             UserProfile activeProfile = externalUser.getUserProfiles().stream().filter(UserProfile::isActiveProfile).findFirst().orElseThrow();
-            createReactivateRequest(externalUser.getId(), activeProfile.getId(), eus1.getEntraOid(), ReactivationRoleType.LAA_SUPPORT);
+            UUID requestId = createReactivateRequest(externalUser.getId(), activeProfile.getId(), eus1.getEntraOid(), ReactivationRoleType.LAA_SUPPORT);
 
             mockMvc.perform(get("/admin/user/delegate-reactivate/track/" + externalUser.getId())
                             .param("profileId", activeProfile.getId().toString())
                             .param("referer", "manage")
+                            .param("requestId", String.valueOf(requestId))
                             .with(userOauth2Login(eus2)))
                     .andExpect(status().isOk())
                     .andExpect(view().name("delegate-reactivate-user-tracking"))
@@ -684,7 +695,7 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
                 .orElseThrow();
     }
 
-    private void createReactivateRequest(UUID userId, UUID userProfileId,
+    private UUID createReactivateRequest(UUID userId, UUID userProfileId,
                                          String actorOid, ReactivationRoleType actorRoleType) {
         UserActivationRequest requestByEum = UserActivationRequest
                 .builder()
@@ -699,6 +710,7 @@ class UserActivationTrackingIntegrationTest extends RoleBasedAccessIntegrationTe
                 .createdAt(Instant.now())
                 .build();
         userActivationRequestRepository.saveAndFlush(requestByEum);
+        return requestByEum.getRequestId();
     }
 
 }

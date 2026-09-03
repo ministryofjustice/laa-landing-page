@@ -221,7 +221,7 @@
                 <tr class="govuk-table__row" th:each="request : ${requests}">
                     <td class="govuk-table__cell">
                         <a class="govuk-link"
-                           th:href="@{/admin/user/delegate-reactivate/track/{id}(id=${request.userId()}, profileId=${request.userProfileId()}, referer='list')}"
+                           th:href="@{/admin/user/delegate-reactivate/track/{id}(id=${request.userId()}, profileId=${request.userProfileId()}, requestId=${request.requestId()}, referer='list')}"
                            th:text="${request.userName()}"></a>
                     </td>
                     <td class="govuk-table__cell" th:text="${request.userEmail()}"></td>

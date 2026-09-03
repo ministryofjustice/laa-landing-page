@@ -416,8 +416,11 @@ public class UserController {
                 || userActivationRequest.get().getStatus() == ReactivationRequestStatus.REJECTED);
         boolean canManageDelegateEnableUser = isActiveDelegateRequestPresent && accessControlService.canManageDelegateEnableUser(user.getEntraUser().getId());
         model.addAttribute("canManageDelegateEnableUser", isActiveDelegateRequestPresent && canManageDelegateEnableUser);
-        boolean canTrackDelegateRequest = isActiveDelegateRequestPresent && !canManageDelegateEnableUser && accessControlService.canTrackDelegateEnableUser(user.getEntraUser().getId());
+        String latestRequestId = isActiveDelegateRequestPresent ? String.valueOf(userActivationRequest.get().getRequestId()) : null;
+        boolean canTrackDelegateRequest = isActiveDelegateRequestPresent && !canManageDelegateEnableUser
+                && accessControlService.canTrackDelegateEnableUser(user.getEntraUser().getId(), latestRequestId);
         model.addAttribute("canTrackDelegateEnableUser", canTrackDelegateRequest);
+        model.addAttribute("requestId", latestRequestId);
         model.addAttribute("reactivationRequestStatus", isActiveDelegateRequestPresent
                 ? userActivationRequest.get().getStatus() : null);
         AccessControlService.EnablementFlags enablementFlags = disableUserFeatureEnabled
