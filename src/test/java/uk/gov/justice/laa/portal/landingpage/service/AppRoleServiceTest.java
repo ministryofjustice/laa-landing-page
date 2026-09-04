@@ -887,6 +887,26 @@ class AppRoleServiceTest {
     }
 
     @Test
+    void testCreateRole_WithBlankRoleIdentifier_ThrowsException() {
+        // Arrange
+        UUID appId = UUID.randomUUID();
+
+        RoleCreationDto dto = RoleCreationDto.builder()
+                .name("Test Role")
+                .description("Test Description")
+                .parentAppId(appId)
+                .userTypeRestriction(List.of(UserType.INTERNAL))
+                .legacySync(true)
+                .roleIdentifier("   ") // blank/whitespace identifier
+                .build();
+
+        // Act & Assert
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> appRoleService.createRole(dto));
+        assertEquals("Role identifier is required", exception.getMessage());
+    }
+
+    @Test
     void testCreateRole_WithroleIdentifierAndLegacySyncFalse_CreatesSuccessfully() {
         // Arrange
         UUID appId = UUID.randomUUID();
@@ -973,6 +993,48 @@ class AppRoleServiceTest {
         // Act & Assert
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> appRoleService.createRole(dto));
         assertThat(ex.getMessage()).contains("already exists for this application");
+    }
+
+    @Test
+    void testIsRoleIdentifierExistsInApp_ReturnsTrueWhenDuplicatePresent() {
+        // Arrange
+        UUID appId = UUID.randomUUID();
+        App parentApp = App.builder().id(appId).name("Parent App").build();
+        AppRole existing = AppRole.builder()
+                .id(UUID.randomUUID())
+                .roleIdentifier("DUP001")
+                .app(parentApp)
+                .userTypeRestriction(new UserType[]{UserType.INTERNAL})
+                .build();
+
+        when(appRoleRepository.findAll()).thenReturn(List.of(existing));
+
+        // Act
+        boolean exists = appRoleService.isRoleIdentifierExistsInApp("DUP001", appId, List.of(UserType.INTERNAL));
+
+        // Assert
+        assertTrue(exists);
+    }
+
+    @Test
+    void testIsRoleIdentifierExistsInApp_ReturnsFalseWhenNoDuplicate() {
+        // Arrange
+        UUID appId = UUID.randomUUID();
+        App parentApp = App.builder().id(appId).name("Parent App").build();
+        AppRole existing = AppRole.builder()
+                .id(UUID.randomUUID())
+                .roleIdentifier("OTHER")
+                .app(parentApp)
+                .userTypeRestriction(new UserType[]{UserType.EXTERNAL})
+                .build();
+
+        when(appRoleRepository.findAll()).thenReturn(List.of(existing));
+
+        // Act
+        boolean exists = appRoleService.isRoleIdentifierExistsInApp("DUP001", appId, List.of(UserType.INTERNAL));
+
+        // Assert
+        assertFalse(exists);
     }
 
     @Test
