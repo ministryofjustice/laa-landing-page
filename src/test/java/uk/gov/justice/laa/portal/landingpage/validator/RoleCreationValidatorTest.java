@@ -68,7 +68,7 @@ class RoleCreationValidatorTest {
         // Assert
         assertThat(violations.isEmpty()).isFalse();
         assertThat(violations)
-                .anyMatch(v -> v.getMessage().equals("Role identifier is required."));
+                .anyMatch(v -> v.getMessage().equals("Role identifier is required"));
     }
 
     @Test
@@ -89,7 +89,7 @@ class RoleCreationValidatorTest {
         // Assert
         assertThat(violations.isEmpty()).isFalse();
         assertThat(violations)
-                .anyMatch(v -> v.getMessage().equals("Role identifier is required."));
+                .anyMatch(v -> v.getMessage().equals("Role identifier is required"));
     }
 
     @Test
@@ -110,7 +110,7 @@ class RoleCreationValidatorTest {
         // Assert
         assertThat(violations.isEmpty()).isFalse();
         assertThat(violations)
-                .anyMatch(v -> v.getMessage().equals("Role identifier is required."));
+                .anyMatch(v -> v.getMessage().equals("Role identifier is required"));
     }
 
     @Test

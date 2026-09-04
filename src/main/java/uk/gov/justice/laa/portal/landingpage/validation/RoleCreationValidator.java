@@ -11,10 +11,9 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import java.util.UUID;
 
 /**
- * Custom validator for RoleCreationDto that enforces basic role identifier and metadata validation.
- *
- * Uniqueness of the Role Identifier is enforced in the AppRoleService to keep repository access out
- * of the constraint validator and to keep validation responsibilities clearly separated.
+ * Custom validator for RoleCreationDto that enforces cross-field metadata rules.
+ * - Ensures a parent app is selected (parentAppId is present)
+ * - Prevents applying firm type restrictions to roles that are internal-only
  */
 @Slf4j
 @Component
@@ -24,15 +23,6 @@ public class RoleCreationValidator implements ConstraintValidator<ValidRoleCreat
     public boolean isValid(RoleCreationDto dto, ConstraintValidatorContext ctx) {
         boolean valid = true;
         ctx.disableDefaultConstraintViolation();
-
-        String roleIdentifier = dto.getRoleIdentifier();
-        if (roleIdentifier == null || roleIdentifier.trim().isEmpty()) {
-            ctx.buildConstraintViolationWithTemplate("Role identifier is required.")
-                   .addPropertyNode("roleIdentifier")
-                   .addConstraintViolation();
-            valid = false;
-            log.warn("Validation failed: role identifier is missing");
-        }
 
         UUID parentAppId = dto.getParentAppId();
         if (parentAppId == null) {

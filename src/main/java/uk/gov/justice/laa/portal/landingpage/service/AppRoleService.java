@@ -338,6 +338,20 @@ public class AppRoleService {
             });
     }
 
+    public boolean isRoleIdentifierExistsInApp(String roleIdentifier, UUID parentAppId, List<UserType> userTypes) {
+        if (roleIdentifier == null || roleIdentifier.trim().isEmpty()) {
+            return false;
+        }
+
+        String candidate = roleIdentifier.trim();
+
+        return appRoleRepository.findAll().stream()
+            .filter(role -> role.getApp() != null && role.getApp().getId().equals(parentAppId))
+            .filter(role -> role.getUserTypeRestriction() != null)
+            .filter(role -> userTypes != null && userTypes.stream().anyMatch(userType -> java.util.Arrays.stream(role.getUserTypeRestriction()).anyMatch(existing -> existing == userType)))
+            .anyMatch(existing -> candidate.equalsIgnoreCase(existing.getRoleIdentifier() == null ? "" : existing.getRoleIdentifier().trim()));
+    }
+
     private boolean setAuthzRoleFlag(String roleName, String parentAppName) {
         return parentAppName.equalsIgnoreCase("Manage your users");
     }

@@ -898,6 +898,16 @@ public class AdminController {
             }
         }
 
+        // Validate role identifier uniqueness
+        if (roleCreationDto.getParentAppId() != null && roleCreationDto.getRoleIdentifier() != null) {
+            List<UserType> userTypes = roleCreationDto.getUserTypeRestriction() == null ? java.util.List.of() :
+                    roleCreationDto.getUserTypeRestriction();
+            if (appRoleService.isRoleIdentifierExistsInApp(roleCreationDto.getRoleIdentifier(), roleCreationDto.getParentAppId(), userTypes)) {
+                bindingResult.rejectValue("roleIdentifier", "role.identifier.exists",
+                    "A role with this identifier already exists in the selected application for the chosen user type");
+            }
+        }
+
         if (bindingResult.hasErrors()) {
             model.addAttribute("apps", appService.getAllLaaApps());
             model.addAttribute("userTypes", UserType.values());
@@ -935,7 +945,7 @@ public class AdminController {
             session.removeAttribute("roleCreationDto");
         } catch (Exception e) {
             log.error("Error creating role: {}", e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("errorMessage",
+            redirectAttributes.addFlashAttribute("appRolesErrorMessage",
                 "Failed to create role: " + e.getMessage());
             return "redirect:/admin/silas-administration?tab=roles";
         }

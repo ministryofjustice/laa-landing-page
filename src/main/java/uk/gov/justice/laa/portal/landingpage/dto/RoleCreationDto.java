@@ -34,6 +34,7 @@ public class RoleCreationDto implements Serializable {
     @Size(min = 1, max = 255, message = "Description must be between 1 and 255 characters")
     private String description;
 
+    @NotBlank(message = "Role identifier is required")
     @Size(min = 1, max = 255, message = "Role identifier must be between 1 and 255 characters")
     private String roleIdentifier;
 

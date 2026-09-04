@@ -70,7 +70,7 @@
                     </label>
 
                     <div th:if="${isLegacySyncRole}" class="govuk-hint">
-                        This role is managed by Legacy Sync. The Role Identifier cannot be changed.
+                        This is a Legacy Sync role. The Role Identifier cannot be changed.
                     </div>
 
                     <div th:if="${#fields.hasErrors('roleIdentifier')}"
