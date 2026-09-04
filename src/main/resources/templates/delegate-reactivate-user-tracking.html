@@ -61,7 +61,7 @@
             </div>
 
             <form method="post"
-                      th:if="${!isRequestClosed}"
+                th:if="${!isRequestClosed}"
                   th:action="@{/admin/user/delegate-reactivate/track/{id}(id=${user.id}, profileId=${profileId}, referer=${referer}, requestId=${requestId})}"
                   th:object="${delegateReactivateUserCommentForm}">
 

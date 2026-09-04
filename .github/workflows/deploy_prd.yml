@@ -214,6 +214,7 @@ jobs:
           rm deployments/* 2> /dev/null || true
           cat deployments/templates/prometheus.yml | envsubst '$NAMESPACE,$ALERT_SEVERITY,$ENV_NAME,$RDS_DB_IDENTIFIER,$RDS_LOW_FREEABLE_MEMORY_TRIGGER,$ALERT_ALWAYS_ON_ENV' > deployments/prometheus.yml
           cat deployments/templates/grafanadashboard.yml | envsubst '$NAMESPACE,$ENV_NAME,$RDS_DB_IDENTIFIER' > deployments/grafanadashboard.yml
+          cat deployments/templates/rds-backup-check-cron.yml | envsubst '$NAMESPACE,$ENV_NAME,$RDS_DB_IDENTIFIER' > deployments/rds-backup-check-cron.yml
         env:
           NAMESPACE: ${{ secrets.KUBE_NAMESPACE }}
           ALERT_SEVERITY: ${{ secrets.KUBE_NAMESPACE }}
