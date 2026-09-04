@@ -30,6 +30,8 @@ public class AuditPage {
 
     private final Locator nameOrEmailSearchInput;
     private final Locator searchButton;
+    private final Locator toggleFiltersButton;
+    private final Locator applyFiltersButton;
 
     private final Locator silasRoleFilter;
     private final Locator appAccessFilter;
@@ -102,12 +104,14 @@ public class AuditPage {
 
         // Name/Email Search
         this.nameOrEmailSearchInput = page.locator("#search");
-        this.searchButton = page.locator("button.govuk-button.govuk-button--secondary");
+        this.searchButton = page.locator("button.govuk-button[type='submit']:has-text('Search')");
+        this.toggleFiltersButton = page.locator("#toggle-filters-btn");
+        this.applyFiltersButton = page.locator("#filter-panel button[type='submit']:has-text('Apply filters')");
 
         // Filters
-        this.silasRoleFilter = page.locator("#silasRoleFilter");
-        this.appAccessFilter = page.locator("#appAccessFilter");
-        this.userTypeFilter = page.locator("#userTypeFilter");
+        this.silasRoleFilter = page.locator("#silasRole");
+        this.appAccessFilter = page.locator("#selectedAppId");
+        this.userTypeFilter = page.locator("#selectedUserType");
 
         // Sort Buttons
         this.nameSortButton = page.locator("button.sort-button[data-sort='name']");
@@ -220,25 +224,49 @@ public class AuditPage {
     }
 
     public void populateFirmField(String firmName) {
+        openFiltersPanel();
         firmSearchInput.fill("");
         firmSearchInput.fill(firmName);
     }
 
+    public void searchByFirmCode(String firmCode) {
+        log.info("Searching by firm code: {}", firmCode);
+        nameOrEmailSearchInput.fill(firmCode);
+    }
+
     public void filterBySilasRole(String role) {
         log.info("Filtering by SiLAS role: {}", role);
+        openFiltersPanel();
         silasRoleFilter.selectOption(role);
-        page.waitForLoadState(LoadState.NETWORKIDLE);
+        applyFilters();
     }
 
     public void filterByAppAccess(String appId) {
         log.info("Filtering by app access ID: {}", appId);
+        openFiltersPanel();
         appAccessFilter.selectOption(appId);
-        page.waitForLoadState(LoadState.NETWORKIDLE);
+        applyFilters();
     }
 
     public void filterByUserType(String userType) {
         log.info("Filtering by user type: {}", userType);
-        userTypeFilter.selectOption(userType);
+        openFiltersPanel();
+
+        Locator userTypeCheckbox = page.locator("#userType-" + userType);
+        userTypeCheckbox.check();
+        assertThat(userTypeFilter).hasValue(userType);
+        applyFilters();
+    }
+
+    private void openFiltersPanel() {
+        if (!"true".equals(toggleFiltersButton.getAttribute("aria-expanded"))) {
+            toggleFiltersButton.click();
+        }
+        assertThat(silasRoleFilter).isVisible();
+    }
+
+    private void applyFilters() {
+        applyFiltersButton.click();
         page.waitForLoadState(LoadState.NETWORKIDLE);
     }
 

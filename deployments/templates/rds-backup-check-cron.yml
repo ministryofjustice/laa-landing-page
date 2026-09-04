@@ -1,0 +1,124 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rds-backup-check-config
+  namespace: ${NAMESPACE}
+data:
+  check.py: |
+    import datetime
+    import json
+    import os
+    import urllib.request
+
+    import boto3
+
+    db_identifier = os.environ["RDS_DB_IDENTIFIER"]
+    slack_webhook_url = os.environ["SLACK_WEBHOOK_URL"]
+    env_name = os.environ["ENV_NAME"]
+    max_age_hours = 24
+
+    rds = boto3.client("rds", region_name="eu-west-2")
+    snapshots = rds.describe_db_snapshots(
+        DBInstanceIdentifier=db_identifier,
+        SnapshotType="automated",
+    )["DBSnapshots"]
+
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    if not snapshots:
+        latest_time = None
+        age_hours = None
+    else:
+        latest = max(snapshots, key=lambda s: s["SnapshotCreateTime"])
+        latest_time = latest["SnapshotCreateTime"]
+        age_hours = (now - latest_time).total_seconds() / 3600
+
+    if latest_time:
+        print(f"Latest automated snapshot for {db_identifier}: {latest_time.isoformat()} ({age_hours:.1f}h old)")
+    else:
+        print(f"No automated snapshots found for {db_identifier}")
+
+    if age_hours is None or age_hours > max_age_hours:
+        age_text = f"{age_hours:.1f}h ago (latest: {latest_time.isoformat()})" if latest_time else "no automated snapshot found at all"
+        payload = {
+            "blocks": [
+                {"type": "header", "text": {"type": "plain_text", "text": f"RDS Backup Check: {env_name} Environment"}},
+                {"type": "section", "text": {"type": "mrkdwn", "text": f":rotating_light: No automated RDS snapshot for `{db_identifier}` within the last {max_age_hours}h. Latest snapshot: {age_text}"}},
+                {"type": "section", "text": {"type": "mrkdwn", "text": "Check the RDS console (Automated backups tab) or the rds-backup-check CronJob pod logs."}},
+            ]
+        }
+        req = urllib.request.Request(
+            slack_webhook_url,
+            data=json.dumps(payload).encode(),
+            headers={"Content-Type": "application/json"},
+        )
+        urllib.request.urlopen(req, timeout=10)
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: rds-backup-check
+  namespace: ${NAMESPACE}
+spec:
+  schedule: "0 8 * * *" # Daily at 08:00 UTC - well clear of the RDS backup window
+  timeZone: Europe/London
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 86400
+      backoffLimit: 0
+      activeDeadlineSeconds: 300
+      template:
+        spec:
+          serviceAccountName: "irsa-laa-landing-page-${ENV_NAME}-rds-backup-check"
+          securityContext:
+            runAsUser: 10000
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+          automountServiceAccountToken: false # IRSA injects its own token volume; the default k8s API token isn't needed
+          containers:
+            - name: rds-backup-check
+              image: public.ecr.aws/lambda/python:3.12 # ships boto3 pre-installed; entrypoint overridden below
+              imagePullPolicy: Always
+              resources:
+                limits:
+                  cpu: 250m
+                  memory: 256Mi
+              env:
+                - name: RDS_DB_IDENTIFIER
+                  value: "${RDS_DB_IDENTIFIER}"
+                - name: ENV_NAME
+                  value: "${ENV_NAME}"
+                - name: PYTHONDONTWRITEBYTECODE
+                  value: "1"
+                - name: SLACK_WEBHOOK_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: slack-alert-webhook-secret
+                      key: webhook_url
+              volumeMounts:
+                - name: config
+                  mountPath: /etc/config
+                - name: tmp
+                  mountPath: /tmp
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+                seccompProfile:
+                  type: RuntimeDefault
+              command:
+                - python3
+                - /etc/config/check.py
+          volumes:
+            - name: config
+              configMap:
+                name: rds-backup-check-config
+            - name: tmp
+              emptyDir: {}
+          restartPolicy: Never
