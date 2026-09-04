@@ -93,6 +93,7 @@ dependencies {
     implementation 'com.azure:azure-identity'
     implementation 'com.microsoft.graph:microsoft-graph:6.2.0'
     implementation 'software.amazon.awssdk:sqs:2.30.0'
+    implementation 'software.amazon.awssdk:ssm:2.30.0'
     implementation 'software.amazon.awssdk:sts:2.30.0'
 
     // Resiliency, Execution and Observability
