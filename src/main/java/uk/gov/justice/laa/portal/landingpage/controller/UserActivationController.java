@@ -576,16 +576,18 @@ public class UserActivationController {
 
         var pageMode = userReactivationRequestService.getPageMode(authentication);
 
-        // Stamp the default status into the URL once so the default is explicit and user-clearable.
+        // Stamp the mode-specific default status into the URL once so it is explicit and user-clearable.
         if (!defaultStatusApplied && (selectedRequestStatuses == null || selectedRequestStatuses.isEmpty())) {
-            log.debug("Applying default status filter IN_REVIEW for redirect.");
             UriComponentsBuilder builder = UriComponentsBuilder.fromPath("/admin/users/reactivation-requests")
                     .queryParam("size", size)
                     .queryParam("page", page)
                     .queryParam("sort", sort)
                     .queryParam("direction", direction)
-                    .queryParam("defaultStatusApplied", true)
-                    .queryParam("selectedRequestStatuses", ReactivationRequestStatus.IN_REVIEW.name());
+                    .queryParam("defaultStatusApplied", true);
+
+            if (pageMode.isManageMode()) {
+                builder.queryParam("selectedRequestStatuses", ReactivationRequestStatus.IN_REVIEW.name());
+            }
 
             if (showFirmAdmins) {
                 builder.queryParam("showFirmAdmins", true);
