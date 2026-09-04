@@ -40,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
@@ -59,6 +60,8 @@ class ClaimEnrichmentServiceTest {
     private static final String APP_NAME = "Test App";
     private static final String EXTERNAL_ROLE = "USER_ROLE";
     private static final String INTERNAL_ROLE = "INTERNAL";
+    private static final String EXTERNAL_ROLE_IDENTIFIER = "EXTERNAL_ROLE_IDENTIFIER";
+    private static final String INTERNAL_ROLE_IDENTIFIER = "INTERNAL_ROLE_IDENTIFIER";
     private static final UUID OFFICE_ID_1 = UUID.randomUUID();
     private static final UUID OFFICE_ID_2 = UUID.randomUUID();
     private static final UUID FIRM_ID = UUID.randomUUID();
@@ -134,6 +137,7 @@ class ClaimEnrichmentServiceTest {
         AppRole appRole = AppRole.builder()
                 .app(app)
                 .name(EXTERNAL_ROLE)
+                .roleIdentifier(EXTERNAL_ROLE_IDENTIFIER)
                 .build();
 
         UserProfile userProfile = UserProfile.builder()
@@ -156,7 +160,7 @@ class ClaimEnrichmentServiceTest {
     void enrichClaim_Success_When_UnrestrictedOfficeAccess_is_false() {
         // Arrange
         UserProfile profile1 = UserProfile.builder().activeProfile(true)
-                .appRoles(Set.of(AppRole.builder().name(EXTERNAL_ROLE).app(app).build()))
+                .appRoles(Set.of(AppRole.builder().roleIdentifier(EXTERNAL_ROLE_IDENTIFIER).app(app).build()))
                 .legacyUserId(LEGACY_USER_ID)
                 .firm(firm)
                 .unrestrictedOfficeAccess(false)
@@ -187,10 +191,48 @@ class ClaimEnrichmentServiceTest {
         assertNotNull(claims);
         assertEquals(LEGACY_USER_ID.toString().toUpperCase(), claims.get("USER_NAME"));
         assertEquals(USER_EMAIL, claims.get("USER_EMAIL"));
-        assertEquals(List.of(EXTERNAL_ROLE), claims.get("LAA_APP_ROLES"));
+        assertEquals(List.of(EXTERNAL_ROLE_IDENTIFIER), claims.get("LAA_APP_ROLES"));
         assertEquals(List.of(), claims.get("LAA_ACCOUNTS"));
         
         verify(officeRepository, times(0)).findOfficeByFirm_IdIn(List.of(FIRM_ID));
+    }
+
+    @Test
+    void enrichClaim_WhenRoleIdentifierMissing_ThenDoesNotSendDisplayNameAsRole() {
+        // Arrange
+        String displayName = "Assess Caseworker (NSM)";
+        UserProfile profile1 = UserProfile.builder().activeProfile(true)
+                .appRoles(Set.of(AppRole.builder()
+                        .name(displayName)
+                        .roleIdentifier(null)
+                        .app(app)
+                        .build()))
+                .legacyUserId(LEGACY_USER_ID)
+                .firm(firm)
+                .unrestrictedOfficeAccess(false)
+                .build();
+        entraUser.setUserProfiles(Set.of(profile1));
+
+        when(entraUserRepository.findByEntraOid(USER_ENTRA_ID)).thenReturn(Optional.of(entraUser));
+        when(appRepository.findByEntraAppId(anyString())).thenReturn(Optional.of(app));
+
+        // Act
+        ClaimEnrichmentResponse response = claimEnrichmentService.enrichClaim(request);
+
+        // Assert
+        assertNotNull(response);
+        assertNotNull(response.getData());
+        assertTrue(response.isSuccess());
+
+        ClaimEnrichmentResponse.ResponseAction action = response.getData().getActions().get(0);
+        Map<String, Object> claims = action.getClaims();
+        assertNotNull(claims);
+
+        Object laaAppRoles = claims.get("LAA_APP_ROLES");
+        if (laaAppRoles != null) {
+            // Ensure the display name is NOT present in the roles list (service should use roleIdentifier, not name)
+            assertFalse(((List<?>) laaAppRoles).contains(displayName));
+        }
     }
 
     @Test
@@ -221,7 +263,7 @@ class ClaimEnrichmentServiceTest {
         assertNotNull(claims);
         assertEquals(LEGACY_USER_ID.toString().toUpperCase(), claims.get("USER_NAME"));
         assertEquals(USER_EMAIL, claims.get("USER_EMAIL"));
-        assertEquals(List.of(EXTERNAL_ROLE), claims.get("LAA_APP_ROLES"));
+        assertEquals(List.of(EXTERNAL_ROLE_IDENTIFIER), claims.get("LAA_APP_ROLES"));
         assertEquals(List.of(office1.getCode(), office2.getCode()), claims.get("LAA_ACCOUNTS"));
 
         verify(officeRepository).findOfficeByFirm_IdIn(List.of(FIRM_ID));
@@ -248,13 +290,13 @@ class ClaimEnrichmentServiceTest {
                 .build();
 
         UserProfile profile1 = UserProfile.builder().activeProfile(true)
-                .appRoles(Set.of(AppRole.builder().name(EXTERNAL_ROLE).app(app).build()))
+                .appRoles(Set.of(AppRole.builder().roleIdentifier(EXTERNAL_ROLE_IDENTIFIER).app(app).build()))
                 .legacyUserId(LEGACY_USER_ID)
                 .firm(firm)
                 .unrestrictedOfficeAccess(true)
                 .build();
         UserProfile profile2 = UserProfile.builder()
-                .appRoles(Set.of(AppRole.builder().name(EXTERNAL_ROLE).app(app).build()))
+                .appRoles(Set.of(AppRole.builder().roleIdentifier(EXTERNAL_ROLE_IDENTIFIER).app(app).build()))
                 .legacyUserId(LEGACY_USER_ID)
                 .firm(firm2)
                 .unrestrictedOfficeAccess(true)
@@ -285,7 +327,7 @@ class ClaimEnrichmentServiceTest {
         assertNotNull(claims);
         assertEquals(LEGACY_USER_ID.toString().toUpperCase(), claims.get("USER_NAME"));
         assertEquals(USER_EMAIL, claims.get("USER_EMAIL"));
-        assertEquals(List.of(EXTERNAL_ROLE), claims.get("LAA_APP_ROLES"));
+        assertEquals(List.of(EXTERNAL_ROLE_IDENTIFIER), claims.get("LAA_APP_ROLES"));
         assertThat(((List<String>) claims.get("LAA_ACCOUNTS")).contains(office1.getCode()));
         assertThat(((List<String>) claims.get("LAA_ACCOUNTS")).contains(office2.getCode()));
         assertThat(((List<String>) claims.get("LAA_ACCOUNTS")).contains(office3.getCode()));
@@ -296,7 +338,7 @@ class ClaimEnrichmentServiceTest {
     @Test
     void enrichClaim_InternalUser_UsesCcmsUsernameFromUda() {
         AppRole internalLegacyRole = AppRole.builder()
-                .name(INTERNAL_ROLE)
+                .roleIdentifier(INTERNAL_ROLE_IDENTIFIER)
                 .app(app)
                 .build();
 
@@ -391,7 +433,7 @@ class ClaimEnrichmentServiceTest {
         assertNotNull(response.getData());
         assertEquals(LEGACY_USER_ID.toString().toUpperCase(), claims.get("USER_NAME"));
         assertEquals(USER_EMAIL, claims.get("USER_EMAIL"));
-        assertEquals(List.of(EXTERNAL_ROLE), claims.get("LAA_APP_ROLES"));
+        assertEquals(List.of(EXTERNAL_ROLE_IDENTIFIER), claims.get("LAA_APP_ROLES"));
         assertEquals(List.of(office1.getCode(), office2.getCode()), claims.get("LAA_ACCOUNTS"));
 
         verify(officeRepository).findOfficeByFirm_IdIn(List.of(FIRM_ID));

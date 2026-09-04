@@ -365,9 +365,9 @@
                     <thead class="govuk-table__head">
                     <tr class="govuk-table__row">
                         <th scope="col" class="govuk-table__header" style="width: 25%;">Role name</th>
+                        <th scope="col" class="govuk-table__header" style="width: 20%;">Role Identifier</th>
                         <th scope="col" class="govuk-table__header" style="width: 25%;">Description</th>
-                        <th scope="col" class="govuk-table__header" style="width: 20%;">CCMS Code</th>
-                        <th scope="col" class="govuk-table__header" style="width: 10%;">Legacy Sync</th>
+                        <th scope="col" class="govuk-table__header" style="width: 10%;">Legacy (CCMS) Sync</th>
                         <th scope="col" class="govuk-table__header" style="width: 10%;" th:text="${uiLabels.userType}">User type</th>
                         <th scope="col" class="govuk-table__header" style="width: 10%;">Order</th>
                         <th scope="col" class="govuk-table__header" style="width: 10%;"></th>
@@ -376,8 +376,10 @@
                     <tbody class="govuk-table__body">
                     <tr class="govuk-table__row" th:each="role : ${roles}">
                         <td class="govuk-table__cell" th:text="${role.name}" style="word-break: break-word;">Default Role Name</td>
+                        <td class="govuk-table__cell"
+                            th:text="${#strings.isEmpty(role.roleIdentifier) ? role.name : role.roleIdentifier}"
+                            style="word-break: break-word;"></td>
                         <td class="govuk-table__cell" th:text="${role.description}" style="word-break: break-word;">Default Role Description</td>
-                        <td class="govuk-table__cell" th:text="${role.ccmsCode}" style="word-break: break-word;"></td>
                         <td class="govuk-table__cell" th:text="${role.legacySync}">No</td>
                         <td class="govuk-table__cell" th:text="${role.userTypeRestriction}">User Type</td>
                         <td class="govuk-table__cell" th:text="${role.ordinal}">0</td>

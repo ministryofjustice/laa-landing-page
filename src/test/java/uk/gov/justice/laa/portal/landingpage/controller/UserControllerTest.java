@@ -5598,11 +5598,11 @@ class UserControllerTest {
 
         AppRoleDto normalRole1 = new AppRoleDto();
         normalRole1.setId(UUID.randomUUID().toString());
-        normalRole1.setCcmsCode("NORMAL_ROLE_1");
+        normalRole1.setRoleIdentifier("NORMAL_ROLE_1");
 
         AppRoleDto normalRole2 = new AppRoleDto();
         normalRole2.setId(UUID.randomUUID().toString());
-        normalRole2.setCcmsCode("NORMAL_ROLE_2");
+        normalRole2.setRoleIdentifier("NORMAL_ROLE_2");
 
         final List<AppRoleDto> roles = List.of(normalRole1, normalRole2);
         MockHttpSession testSession = new MockHttpSession();
@@ -5647,18 +5647,18 @@ class UserControllerTest {
 
         AppRoleDto ccmsRole1 = new AppRoleDto();
         ccmsRole1.setId(UUID.randomUUID().toString());
-        ccmsRole1.setCcmsCode("XXCCMS_FIRM_ADMIN_1"); // CCMS role code
+        ccmsRole1.setRoleIdentifier("XXCCMS_FIRM_ADMIN_1"); // CCMS role identifier
 
         AppRoleDto ccmsRole2 = new AppRoleDto();
         ccmsRole2.setId(UUID.randomUUID().toString());
-        ccmsRole2.setCcmsCode("XXCCMS_FIRM_ADMIN_2"); // CCMS role code
+        ccmsRole2.setRoleIdentifier("XXCCMS_FIRM_ADMIN_2"); // CCMS role identifier
 
         AppRoleViewModel ccmsRoleViewModel1 = new AppRoleViewModel();
-        ccmsRoleViewModel1.setCcmsCode(ccmsRole1.getCcmsCode());
+        ccmsRoleViewModel1.setRoleIdentifier(ccmsRole1.getRoleIdentifier());
         ccmsRoleViewModel1.setId(ccmsRole1.getId());
 
         AppRoleViewModel ccmsRoleViewModel2 = new AppRoleViewModel();
-        ccmsRoleViewModel2.setCcmsCode(ccmsRole2.getCcmsCode());
+        ccmsRoleViewModel2.setRoleIdentifier(ccmsRole2.getRoleIdentifier());
         ccmsRoleViewModel2.setId(ccmsRole2.getId());
 
         final List<AppRoleDto> roles = List.of(ccmsRole1, ccmsRole2);
@@ -5711,41 +5711,41 @@ class UserControllerTest {
         // Create roles for different CCMS sections
         AppRoleDto providerRole = new AppRoleDto();
         providerRole.setId(UUID.randomUUID().toString());
-        providerRole.setCcmsCode("XXCCMS_FIRM_ADMIN");
+        providerRole.setRoleIdentifier("XXCCMS_FIRM_ADMIN");
         providerRole.setApp(ccmsApp);
 
         AppRoleViewModel providerRoleViewModel = new AppRoleViewModel();
-        providerRoleViewModel.setCcmsCode(providerRole.getCcmsCode());
+        providerRoleViewModel.setRoleIdentifier(providerRole.getRoleIdentifier());
         providerRoleViewModel.setId(providerRole.getId());
         providerRoleViewModel.setAppName(ccmsApp.getName());
 
         AppRoleDto chambersRole = new AppRoleDto();
         chambersRole.setId(UUID.randomUUID().toString());
-        chambersRole.setCcmsCode("XXCCMS_CHAMBERS_ADMIN");
+        chambersRole.setRoleIdentifier("XXCCMS_CHAMBERS_ADMIN");
         chambersRole.setApp(ccmsApp);
 
         AppRoleViewModel chambersRoleViewModel = new AppRoleViewModel();
-        chambersRoleViewModel.setCcmsCode(chambersRole.getCcmsCode());
+        chambersRoleViewModel.setRoleIdentifier(chambersRole.getRoleIdentifier());
         chambersRoleViewModel.setId(chambersRole.getId());
         chambersRoleViewModel.setAppName(ccmsApp.getName());
 
         AppRoleDto advocateRole = new AppRoleDto();
         advocateRole.setId(UUID.randomUUID().toString());
-        advocateRole.setCcmsCode("XXCCMS_ADVOCATE");
+        advocateRole.setRoleIdentifier("XXCCMS_ADVOCATE");
         advocateRole.setApp(ccmsApp);
 
         AppRoleViewModel advocateRoleViewModel = new AppRoleViewModel();
-        advocateRoleViewModel.setCcmsCode(advocateRole.getCcmsCode());
+        advocateRoleViewModel.setRoleIdentifier(advocateRole.getRoleIdentifier());
         advocateRoleViewModel.setId(advocateRole.getId());
         advocateRoleViewModel.setAppName(ccmsApp.getName());
 
         AppRoleDto otherRole = new AppRoleDto();
         otherRole.setId(UUID.randomUUID().toString());
-        otherRole.setCcmsCode("XXCCMS_UNKNOWN_TYPE");
+        otherRole.setRoleIdentifier("XXCCMS_UNKNOWN_TYPE");
         otherRole.setApp(ccmsApp);
 
         AppRoleViewModel otherRoleViewModel = new AppRoleViewModel();
-        otherRoleViewModel.setCcmsCode(otherRole.getCcmsCode());
+        otherRoleViewModel.setRoleIdentifier(otherRole.getRoleIdentifier());
         otherRoleViewModel.setId(otherRole.getId());
         otherRoleViewModel.setAppName(ccmsApp.getName());
 
@@ -5794,11 +5794,11 @@ class UserControllerTest {
 
         AppRoleDto regularRole1 = new AppRoleDto();
         regularRole1.setId(UUID.randomUUID().toString());
-        regularRole1.setCcmsCode("REGULAR_ROLE1");
+        regularRole1.setRoleIdentifier("REGULAR_ROLE1");
 
         AppRoleDto regularRole2 = new AppRoleDto();
         regularRole2.setId(UUID.randomUUID().toString());
-        regularRole2.setCcmsCode("REGULAR_ROLE2");
+        regularRole2.setRoleIdentifier("REGULAR_ROLE2");
 
         final List<AppRoleDto> roles = List.of(regularRole1, regularRole2);
         MockHttpSession testSession = new MockHttpSession();
@@ -5835,11 +5835,11 @@ class UserControllerTest {
 
         AppRoleDto regularRole1 = new AppRoleDto();
         regularRole1.setId(UUID.randomUUID().toString());
-        regularRole1.setCcmsCode("REQUESTS TO TRANSFER CCMS CASES_VIEWER_EXTERN_1");
+        regularRole1.setRoleIdentifier("REQUESTS TO TRANSFER CCMS CASES_VIEWER_EXTERN_1");
 
         AppRoleDto regularRole2 = new AppRoleDto();
         regularRole2.setId(UUID.randomUUID().toString());
-        regularRole2.setCcmsCode("REQUESTS TO TRANSFER CCMS CASES_VIEWER_EXTERN_2");
+        regularRole2.setRoleIdentifier("REQUESTS TO TRANSFER CCMS CASES_VIEWER_EXTERN_2");
 
         final List<AppRoleDto> roles = List.of(regularRole1, regularRole2);
         MockHttpSession testSession = new MockHttpSession();
@@ -5876,19 +5876,19 @@ class UserControllerTest {
 
         AppRoleDto ccmsRole = new AppRoleDto();
         ccmsRole.setId(UUID.randomUUID().toString());
-        ccmsRole.setCcmsCode("XXCCMS_FIRM_ADMIN");
+        ccmsRole.setRoleIdentifier("XXCCMS_FIRM_ADMIN");
 
         AppRoleViewModel ccmsRoleViewModel = new AppRoleViewModel();
         ccmsRoleViewModel.setId(ccmsRole.getId());
-        ccmsRoleViewModel.setCcmsCode(ccmsRole.getCcmsCode());
+        ccmsRoleViewModel.setRoleIdentifier(ccmsRole.getRoleIdentifier());
 
         AppRoleDto regularRole = new AppRoleDto();
         regularRole.setId(UUID.randomUUID().toString());
-        regularRole.setCcmsCode("REGULAR_ROLE");
+        regularRole.setRoleIdentifier("REGULAR_ROLE");
 
         AppRoleViewModel roleViewModel = new AppRoleViewModel();
         roleViewModel.setId(regularRole.getId());
-        roleViewModel.setCcmsCode(regularRole.getCcmsCode());
+        roleViewModel.setRoleIdentifier(regularRole.getRoleIdentifier());
 
         final List<AppRoleDto> roles = List.of(ccmsRole, regularRole);
         MockHttpSession testSession = new MockHttpSession();
@@ -5944,11 +5944,11 @@ class UserControllerTest {
 
         AppRoleDto normalRole1 = new AppRoleDto();
         normalRole1.setId(UUID.randomUUID().toString());
-        normalRole1.setCcmsCode("NORMAL_ROLE1");
+        normalRole1.setRoleIdentifier("NORMAL_ROLE1");
 
         AppRoleDto normalRole2 = new AppRoleDto();
         normalRole2.setId(UUID.randomUUID().toString());
-        normalRole2.setCcmsCode("NORMAL_ROLE2");
+        normalRole2.setRoleIdentifier("NORMAL_ROLE2");
 
         final List<AppRoleDto> roles = List.of(normalRole1, normalRole2);
         MockHttpSession testSession = new MockHttpSession();
@@ -5993,18 +5993,18 @@ class UserControllerTest {
 
         AppRoleDto ccmsRole1 = new AppRoleDto();
         ccmsRole1.setId(UUID.randomUUID().toString());
-        ccmsRole1.setCcmsCode("XXCCMS_OFFICE_ADMIN_1");
+        ccmsRole1.setRoleIdentifier("XXCCMS_OFFICE_ADMIN_1");
 
         AppRoleDto ccmsRole2 = new AppRoleDto();
         ccmsRole2.setId(UUID.randomUUID().toString());
-        ccmsRole2.setCcmsCode("XXCCMS_OFFICE_ADMIN_2");
+        ccmsRole2.setRoleIdentifier("XXCCMS_OFFICE_ADMIN_2");
 
         AppRoleViewModel ccmsRoleViewModel1 = new AppRoleViewModel();
-        ccmsRoleViewModel1.setCcmsCode(ccmsRole1.getCcmsCode());
+        ccmsRoleViewModel1.setRoleIdentifier(ccmsRole1.getRoleIdentifier());
         ccmsRoleViewModel1.setId(ccmsRole1.getId());
 
         AppRoleViewModel ccmsRoleViewModel2 = new AppRoleViewModel();
-        ccmsRoleViewModel2.setCcmsCode(ccmsRole2.getCcmsCode());
+        ccmsRoleViewModel2.setRoleIdentifier(ccmsRole2.getRoleIdentifier());
         ccmsRoleViewModel2.setId(ccmsRole2.getId());
 
         final List<AppRoleDto> roles = List.of(ccmsRole1, ccmsRole2);
@@ -6055,61 +6055,61 @@ class UserControllerTest {
         // Create comprehensive CCMS roles for testing organization
         AppRoleDto firmRole = new AppRoleDto();
         firmRole.setId(UUID.randomUUID().toString());
-        firmRole.setCcmsCode("XXCCMS_FIRM_USER");
+        firmRole.setRoleIdentifier("XXCCMS_FIRM_USER");
         firmRole.setApp(ccmsApp);
 
         AppRoleViewModel firmRoleViewModel = new AppRoleViewModel();
-        firmRoleViewModel.setCcmsCode(firmRole.getCcmsCode());
+        firmRoleViewModel.setRoleIdentifier(firmRole.getRoleIdentifier());
         firmRoleViewModel.setId(firmRole.getId());
         firmRoleViewModel.setAppName(ccmsApp.getName());
 
         AppRoleDto officeRole = new AppRoleDto();
         officeRole.setId(UUID.randomUUID().toString());
-        officeRole.setCcmsCode("XXCCMS_OFFICE_MANAGER");
+        officeRole.setRoleIdentifier("XXCCMS_OFFICE_MANAGER");
         officeRole.setApp(ccmsApp);
 
         AppRoleViewModel officeRoleViewModel = new AppRoleViewModel();
-        officeRoleViewModel.setCcmsCode(officeRole.getCcmsCode());
+        officeRoleViewModel.setRoleIdentifier(officeRole.getRoleIdentifier());
         officeRoleViewModel.setId(officeRole.getId());
         officeRoleViewModel.setAppName(ccmsApp.getName());
 
         AppRoleDto crossOfficeRole = new AppRoleDto();
         crossOfficeRole.setId(UUID.randomUUID().toString());
-        crossOfficeRole.setCcmsCode("XXCCMS_CROSS_OFFICE");
+        crossOfficeRole.setRoleIdentifier("XXCCMS_CROSS_OFFICE");
         crossOfficeRole.setApp(ccmsApp);
 
         AppRoleViewModel crossOfficeRoleViewModel = new AppRoleViewModel();
-        crossOfficeRoleViewModel.setCcmsCode(crossOfficeRole.getCcmsCode());
+        crossOfficeRoleViewModel.setRoleIdentifier(crossOfficeRole.getRoleIdentifier());
         crossOfficeRoleViewModel.setId(crossOfficeRole.getId());
         crossOfficeRoleViewModel.setAppName(ccmsApp.getName());
 
         AppRoleDto chambersRole = new AppRoleDto();
         chambersRole.setId(UUID.randomUUID().toString());
-        chambersRole.setCcmsCode("XXCCMS_CHAMBERS_USER");
+        chambersRole.setRoleIdentifier("XXCCMS_CHAMBERS_USER");
         chambersRole.setApp(ccmsApp);
 
         AppRoleViewModel chambersRoleViewModel = new AppRoleViewModel();
-        chambersRoleViewModel.setCcmsCode(chambersRole.getCcmsCode());
+        chambersRoleViewModel.setRoleIdentifier(chambersRole.getRoleIdentifier());
         chambersRoleViewModel.setId(chambersRole.getId());
         chambersRoleViewModel.setAppName(ccmsApp.getName());
 
         AppRoleDto counselRole = new AppRoleDto();
         counselRole.setId(UUID.randomUUID().toString());
-        counselRole.setCcmsCode("XXCCMS_COUNSEL");
+        counselRole.setRoleIdentifier("XXCCMS_COUNSEL");
         counselRole.setApp(ccmsApp);
 
         AppRoleViewModel counselRoleViewModel = new AppRoleViewModel();
-        counselRoleViewModel.setCcmsCode(counselRole.getCcmsCode());
+        counselRoleViewModel.setRoleIdentifier(counselRole.getRoleIdentifier());
         counselRoleViewModel.setId(counselRole.getId());
         counselRoleViewModel.setAppName(ccmsApp.getName());
 
         AppRoleDto advocateRole = new AppRoleDto();
         advocateRole.setId(UUID.randomUUID().toString());
-        advocateRole.setCcmsCode("XXCCMS_ADVOCATE");
+        advocateRole.setRoleIdentifier("XXCCMS_ADVOCATE");
         advocateRole.setApp(ccmsApp);
 
         AppRoleViewModel advocateRoleViewModel = new AppRoleViewModel();
-        advocateRoleViewModel.setCcmsCode(advocateRole.getCcmsCode());
+        advocateRoleViewModel.setRoleIdentifier(advocateRole.getRoleIdentifier());
         advocateRoleViewModel.setId(advocateRole.getId());
         advocateRoleViewModel.setAppName(ccmsApp.getName());
 
@@ -6164,11 +6164,11 @@ class UserControllerTest {
 
         AppRoleDto regularRole1 = new AppRoleDto();
         regularRole1.setId(UUID.randomUUID().toString());
-        regularRole1.setCcmsCode("REGULAR_ROLE1");
+        regularRole1.setRoleIdentifier("REGULAR_ROLE1");
 
         AppRoleDto regularRole2 = new AppRoleDto();
         regularRole2.setId(UUID.randomUUID().toString());
-        regularRole2.setCcmsCode("REGULAR_ROLE2");
+        regularRole2.setRoleIdentifier("REGULAR_ROLE2");
 
         final List<AppRoleDto> roles = List.of(regularRole1, regularRole2);
         MockHttpSession testSession = new MockHttpSession();
@@ -6257,18 +6257,18 @@ class UserControllerTest {
 
         AppRoleDto ccmsRole1 = new AppRoleDto();
         ccmsRole1.setId(UUID.randomUUID().toString());
-        ccmsRole1.setCcmsCode("XXCCMS_CASE_MANAGER_1");
+        ccmsRole1.setRoleIdentifier("XXCCMS_CASE_MANAGER_1");
 
         AppRoleDto ccmsRole2 = new AppRoleDto();
         ccmsRole2.setId(UUID.randomUUID().toString());
-        ccmsRole2.setCcmsCode("XXCCMS_CASE_MANAGER_2");
+        ccmsRole2.setRoleIdentifier("XXCCMS_CASE_MANAGER_2");
 
         AppRoleViewModel ccmsRoleViewModel1 = new AppRoleViewModel();
-        ccmsRoleViewModel1.setCcmsCode(ccmsRole1.getCcmsCode());
+        ccmsRoleViewModel1.setRoleIdentifier(ccmsRole1.getRoleIdentifier());
         ccmsRoleViewModel1.setId(ccmsRole1.getId());
 
         AppRoleViewModel ccmsRoleViewModel2 = new AppRoleViewModel();
-        ccmsRoleViewModel2.setCcmsCode(ccmsRole2.getCcmsCode());
+        ccmsRoleViewModel2.setRoleIdentifier(ccmsRole2.getRoleIdentifier());
         ccmsRoleViewModel2.setId(ccmsRole2.getId());
 
         final List<AppRoleDto> roles = List.of(ccmsRole1, ccmsRole2);
@@ -7221,7 +7221,7 @@ class UserControllerTest {
         AppRoleDto role = new AppRoleDto();
         role.setId(id);
         role.setName(name);
-        role.setCcmsCode(ccmsCode);
+        role.setRoleIdentifier(ccmsCode);
         role.setUserTypeRestriction(new UserType[] { UserType.EXTERNAL });
         return role;
     }

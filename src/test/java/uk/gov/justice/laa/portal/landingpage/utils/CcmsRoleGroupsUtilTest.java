@@ -35,7 +35,7 @@ public class CcmsRoleGroupsUtilTest {
         assertThat(result).containsKey(CcmsRoleGroupsUtil.PROVIDER_SECTION);
         assertThat(result.get(CcmsRoleGroupsUtil.PROVIDER_SECTION)).hasSize(6);
         assertThat(result.get(CcmsRoleGroupsUtil.PROVIDER_SECTION))
-            .extracting(AppRoleViewModel::getCcmsCode)
+            .extracting(AppRoleViewModel::getRoleIdentifier)
             .containsExactlyInAnyOrder(
                 "XXCCMS_FIRM_ADMIN", 
                 "XXCCMS_OFFICE_MANAGER", 
@@ -62,7 +62,7 @@ public class CcmsRoleGroupsUtilTest {
         assertThat(result).containsKey(CcmsRoleGroupsUtil.CHAMBERS_SECTION);
         assertThat(result.get(CcmsRoleGroupsUtil.CHAMBERS_SECTION)).hasSize(3);
         assertThat(result.get(CcmsRoleGroupsUtil.CHAMBERS_SECTION))
-            .extracting(AppRoleViewModel::getCcmsCode)
+            .extracting(AppRoleViewModel::getRoleIdentifier)
             .containsExactlyInAnyOrder(
                 "XXCCMS_CHAMBERS_ADMIN", 
                 "XXCCMS_CHAMBERS_USER", 
@@ -85,7 +85,7 @@ public class CcmsRoleGroupsUtilTest {
         assertThat(result).containsKey(CcmsRoleGroupsUtil.ADVOCATE_SECTION);
         assertThat(result.get(CcmsRoleGroupsUtil.ADVOCATE_SECTION)).hasSize(2);
         assertThat(result.get(CcmsRoleGroupsUtil.ADVOCATE_SECTION))
-            .extracting(AppRoleViewModel::getCcmsCode)
+            .extracting(AppRoleViewModel::getRoleIdentifier)
             .containsExactlyInAnyOrder("XXCCMS_ADVOCATE", "XXCCMS_ADVOCATE_ADMIN");
     }
 
@@ -105,7 +105,7 @@ public class CcmsRoleGroupsUtilTest {
         assertThat(result).containsKey(CcmsRoleGroupsUtil.OTHER_SECTION);
         assertThat(result.get(CcmsRoleGroupsUtil.OTHER_SECTION)).hasSize(3);
         assertThat(result.get(CcmsRoleGroupsUtil.OTHER_SECTION))
-            .extracting(AppRoleViewModel::getCcmsCode)
+            .extracting(AppRoleViewModel::getRoleIdentifier)
             .containsExactlyInAnyOrder(
                 "XXCCMS_UNKNOWN_ROLE", 
                 "XXCCMS_SPECIAL_ACCESS", 
@@ -167,7 +167,7 @@ public class CcmsRoleGroupsUtilTest {
     }
 
     @Test
-    void organizeCcmsRolesBySection_shouldHandleRolesWithNullCcmsCode() {
+    void organizeCcmsRolesBySection_shouldHandleRolesWithNullRoleIdentifier() {
         // Given
         List<AppRoleViewModel> ccmsRoles = List.of(
             createAppRoleViewModel("role1", "XXCCMS_FIRM_ADMIN"),
@@ -181,7 +181,7 @@ public class CcmsRoleGroupsUtilTest {
         // Then
         assertThat(result.get(CcmsRoleGroupsUtil.PROVIDER_SECTION)).hasSize(1);
         assertThat(result.get(CcmsRoleGroupsUtil.ADVOCATE_SECTION)).hasSize(1);
-        assertThat(result.get(CcmsRoleGroupsUtil.OTHER_SECTION)).hasSize(1); // Role with null ccmsCode goes to Other
+        assertThat(result.get(CcmsRoleGroupsUtil.OTHER_SECTION)).hasSize(1); // Role with null roleIdentifier goes to Other
     }
 
     @Test
@@ -340,10 +340,10 @@ public class CcmsRoleGroupsUtilTest {
     /**
      * Helper method to create AppRoleDto for testing
      */
-    private AppRoleViewModel createAppRoleViewModel(String id, String ccmsCode) {
+    private AppRoleViewModel createAppRoleViewModel(String id, String roleIdentifier) {
         AppRoleViewModel role = new AppRoleViewModel();
         role.setId(id);
-        role.setCcmsCode(ccmsCode);
+        role.setRoleIdentifier(roleIdentifier);
         role.setName("Test Role " + id);
         role.setDescription("Test description for role " + id);
         return role;

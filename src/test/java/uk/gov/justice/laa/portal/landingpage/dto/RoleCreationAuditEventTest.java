@@ -18,7 +18,7 @@ class RoleCreationAuditEventTest {
         String roleId = UUID.randomUUID().toString();
         String parentAppName = "Test Application";
         String description = "Test role description";
-        String ccmsCode = "TEST123";
+        String roleIdentifier = "TEST123";
         String userTypeRestriction = "INTERNAL, EXTERNAL";
 
         CurrentUserDto currentUserDto = new CurrentUserDto();
@@ -30,7 +30,9 @@ class RoleCreationAuditEventTest {
 
         // Act
         RoleCreationAuditEvent event = new RoleCreationAuditEvent(
-                roleName, parentAppName, description, ccmsCode, userTypeRestriction, currentUserDto, userProfileId, entraOid
+                roleName, parentAppName, description, roleIdentifier, userTypeRestriction, currentUserDto,
+                userProfileId,
+                entraOid
         );
 
         // Assert
@@ -44,13 +46,13 @@ class RoleCreationAuditEventTest {
         assertThat(auditDescription).contains("for app " + parentAppName);
         assertThat(auditDescription).contains("Name: " + roleName);
         assertThat(auditDescription).contains("Description: " + description);
-        assertThat(auditDescription).contains("CCMS Code: " + ccmsCode);
+        assertThat(auditDescription).contains("Role Identifier: " + roleIdentifier);
         assertThat(auditDescription).contains("User Type Restriction: " + userTypeRestriction);
         assertThat(event.getCreatedDate()).isNotNull();
     }
 
     @Test
-    void testAuditEventWithNullCcmsCode() {
+    void testAuditEventWithNullroleIdentifier() {
         // Arrange
         UUID userId = UUID.randomUUID();
         String userName = "Test Admin";
@@ -58,7 +60,7 @@ class RoleCreationAuditEventTest {
         String roleId = UUID.randomUUID().toString();
         String parentAppName = "Test Application";
         String description = "Test role description";
-        String ccmsCode = null;
+        String roleIdentifier = null;
         String userTypeRestriction = "INTERNAL";
 
         CurrentUserDto currentUserDto = new CurrentUserDto();
@@ -70,7 +72,7 @@ class RoleCreationAuditEventTest {
 
         // Act
         RoleCreationAuditEvent event = new RoleCreationAuditEvent(
-                roleName, parentAppName, description, ccmsCode, userTypeRestriction, currentUserDto, userProfileId, entraOid
+                roleName, parentAppName, description, roleIdentifier, userTypeRestriction, currentUserDto, userProfileId, entraOid
         );
 
         // Assert
@@ -79,7 +81,7 @@ class RoleCreationAuditEventTest {
         assertThat(auditDescription).contains("user profile id: " + userProfileId);
         assertThat(auditDescription).contains("for app " + parentAppName);
         assertThat(auditDescription).contains("Name: " + roleName);
-        assertThat(auditDescription).contains("CCMS Code: N/A");
+        assertThat(auditDescription).contains("Role Identifier: N/A");
         assertThat(auditDescription).contains("User Type Restriction: " + userTypeRestriction);
     }
 
@@ -92,7 +94,7 @@ class RoleCreationAuditEventTest {
         String roleId = UUID.randomUUID().toString();
         String parentAppName = "Admin Portal";
         String description = "Administrator role";
-        String ccmsCode = "ADMIN001";
+        String roleIdentifier = "ADMIN001";
         String userTypeRestriction = "";
 
         CurrentUserDto currentUserDto = new CurrentUserDto();
@@ -104,7 +106,7 @@ class RoleCreationAuditEventTest {
 
         // Act
         RoleCreationAuditEvent event = new RoleCreationAuditEvent(
-                roleName, parentAppName, description, ccmsCode, userTypeRestriction, currentUserDto, userProfileId, entraOid
+                roleName, parentAppName, description, roleIdentifier, userTypeRestriction, currentUserDto, userProfileId, entraOid
         );
 
         // Assert
@@ -113,7 +115,7 @@ class RoleCreationAuditEventTest {
         assertThat(auditDescription).contains("New app role created by user entra oid: " + entraOid);
         assertThat(auditDescription).contains("user profile id: " + userProfileId);
         assertThat(auditDescription).contains("Name: " + roleName);
-        assertThat(auditDescription).contains("CCMS Code: " + ccmsCode);
+        assertThat(auditDescription).contains("Role Identifier: " + roleIdentifier);
         assertThat(auditDescription).contains("User Type Restriction: ");
     }
 
@@ -126,7 +128,7 @@ class RoleCreationAuditEventTest {
         String roleId = UUID.randomUUID().toString();
         String parentAppName = "Very Long Application Name That Might Be Used In Production";
         String description = "This is a very long description that might contain multiple sentences and detailed information about what this role is supposed to do in the system.";
-        String ccmsCode = "VERYLONGCCMSCODE123456789";
+        String roleIdentifier = "VERYLONGroleIdentifier123456789";
         String userTypeRestriction = "INTERNAL, EXTERNAL, CONTRACTOR, ADMIN";
 
         CurrentUserDto currentUserDto = new CurrentUserDto();
@@ -138,7 +140,7 @@ class RoleCreationAuditEventTest {
 
         // Act
         RoleCreationAuditEvent event = new RoleCreationAuditEvent(
-                roleName, parentAppName, description, ccmsCode, userTypeRestriction, currentUserDto, userProfileId, entraOid
+                roleName, parentAppName, description, roleIdentifier, userTypeRestriction, currentUserDto, userProfileId, entraOid
         );
 
         // Assert
@@ -152,7 +154,7 @@ class RoleCreationAuditEventTest {
         assertThat(auditDescription).contains(roleName);
         assertThat(auditDescription).contains(parentAppName);
         assertThat(auditDescription).contains(description);
-        assertThat(auditDescription).contains(ccmsCode);
+        assertThat(auditDescription).contains(roleIdentifier);
         assertThat(auditDescription).contains(userTypeRestriction);
     }
 
@@ -165,7 +167,7 @@ class RoleCreationAuditEventTest {
         String roleId = UUID.randomUUID().toString();
         String parentAppName = "App & Service (Test)";
         String description = "Description with quotes \"test\" and symbols: !@#$%^&*()";
-        String ccmsCode = "TEST-123_ABC";
+        String roleIdentifier = "TEST-123_ABC";
         String userTypeRestriction = "INTERNAL";
 
         CurrentUserDto currentUserDto = new CurrentUserDto();
@@ -177,7 +179,7 @@ class RoleCreationAuditEventTest {
 
         // Act
         RoleCreationAuditEvent event = new RoleCreationAuditEvent(
-                roleName, parentAppName, description, ccmsCode, userTypeRestriction, currentUserDto, userProfileId, entraOid
+                roleName, parentAppName, description, roleIdentifier, userTypeRestriction, currentUserDto, userProfileId, entraOid
         );
 
         // Assert
@@ -186,6 +188,6 @@ class RoleCreationAuditEventTest {
         assertThat(auditDescription).contains(roleName);
         assertThat(auditDescription).contains(parentAppName);
         assertThat(auditDescription).contains(description);
-        assertThat(auditDescription).contains(ccmsCode);
+        assertThat(auditDescription).contains(roleIdentifier);
     }
 }

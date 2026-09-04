@@ -379,11 +379,13 @@ public class AdminController {
             appRoleDetailsForm = AppRoleDetailsForm.builder()
                     .appRoleId(appRoleDto.getId())
                     .name(appRoleDto.getName())
+                    .roleIdentifier(appRoleDto.getRoleIdentifier())
                     .description(appRoleDto.getDescription())
                     .build();
         }
 
         model.addAttribute("appRoleDetailsForm", appRoleDetailsForm);
+        model.addAttribute("isLegacySyncRole", appRoleDto.isLegacySync());
         session.setAttribute("appRoleDetailsForm", appRoleDetailsForm);
 
         return "silas-administration/edit-role-details";
@@ -396,9 +398,18 @@ public class AdminController {
                                          BindingResult result,
                                          Model model,
                                          HttpSession session) {
+
+        AppRoleDto appRoleDto = findAppRoleDtoOrThrow(roleId);
+
+        if (appRoleDto.isLegacySync()) {
+            appRoleDetailsForm.setRoleIdentifier(appRoleDto.getRoleIdentifier());
+        }
+
         if (result.hasErrors()) {
-            model.addAttribute("appRole", findAppRoleDtoOrThrow(roleId));
+            model.addAttribute("appRole", appRoleDto);
+            model.addAttribute("isLegacySyncRole", appRoleDto.isLegacySync());
             model.addAttribute("errorMessage", buildErrorMessages(result));
+
             return "silas-administration/edit-role-details";
         }
 
@@ -407,7 +418,9 @@ public class AdminController {
 
         model.addAttribute(ModelAttributes.PAGE_TITLE, SILAS_ADMINISTRATION_TITLE);
 
-        return String.format("redirect:/admin/silas-administration/role/%s/check-answers", roleId);
+        return String.format(
+                "redirect:/admin/silas-administration/role/%s/check-answers",
+                roleId);
     }
 
     @GetMapping("/silas-administration/role/{roleId}/check-answers")
@@ -428,6 +441,7 @@ public class AdminController {
 
         model.addAttribute("appRole", roleDto);
         model.addAttribute("appRoleDetailsForm", roleDetailsForm);
+        model.addAttribute("isLegacySyncRole", roleDto.isLegacySync());
 
         model.addAttribute(ModelAttributes.PAGE_TITLE, SILAS_ADMINISTRATION_TITLE);
 
@@ -451,9 +465,11 @@ public class AdminController {
 
         AppRoleDto roleDto = findAppRoleDtoOrThrow(roleId);
         String appRoleName = roleDto.getName();
+        String appRoleIdentifier = roleDto.getRoleIdentifier();
         String appRoleDescription = roleDto.getDescription();
 
         roleDto.setName(roleDetailsForm.getName());
+        roleDto.setRoleIdentifier(roleDetailsForm.getRoleIdentifier());
         roleDto.setDescription(roleDetailsForm.getDescription());
 
         AppRole updatedAppRole = appRoleService.save(roleDto);
@@ -462,7 +478,9 @@ public class AdminController {
         CurrentUserDto currentUserDto = loginService.getCurrentUser(authentication);
         UserProfile currentUserProfile = loginService.getCurrentProfile(authentication);
         UpdateAppRoleDetailsAuditEvent updateAppRoleDetailsAuditEvent = new UpdateAppRoleDetailsAuditEvent(currentUserDto,
-                currentUserProfile.getId(), updatedAppRole.getName(), appRoleName, updatedAppRole.getDescription(), appRoleDescription);
+                currentUserProfile.getId(), updatedAppRole.getName(), appRoleName,
+                updatedAppRole.getRoleIdentifier(), appRoleIdentifier, updatedAppRole.getDescription(),
+                appRoleDescription);
         eventService.logEvent(updateAppRoleDetailsAuditEvent);
 
         model.addAttribute("appRole", roleDto);
@@ -881,6 +899,16 @@ public class AdminController {
             }
         }
 
+        // Validate role identifier uniqueness
+        if (roleCreationDto.getParentAppId() != null && roleCreationDto.getRoleIdentifier() != null) {
+            List<UserType> userTypes = roleCreationDto.getUserTypeRestriction() == null ? java.util.List.of() :
+                    roleCreationDto.getUserTypeRestriction();
+            if (appRoleService.isRoleIdentifierExistsInApp(roleCreationDto.getRoleIdentifier(), roleCreationDto.getParentAppId(), userTypes)) {
+                bindingResult.rejectValue("roleIdentifier", "role.identifier.exists",
+                    "A role with this identifier already exists in the selected application for the chosen user type");
+            }
+        }
+
         if (bindingResult.hasErrors()) {
             model.addAttribute("apps", appService.getAllLaaApps());
             model.addAttribute("userTypes", UserType.values());
@@ -918,7 +946,7 @@ public class AdminController {
             session.removeAttribute("roleCreationDto");
         } catch (Exception e) {
             log.error("Error creating role: {}", e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("errorMessage",
+            redirectAttributes.addFlashAttribute("appRolesErrorMessage",
                 "Failed to create role: " + e.getMessage());
             return "redirect:/admin/silas-administration?tab=roles";
         }

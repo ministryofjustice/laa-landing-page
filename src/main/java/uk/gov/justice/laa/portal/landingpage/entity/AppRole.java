@@ -55,10 +55,10 @@ public class AppRole extends BaseEntity {
     @Column(name = "ordinal", nullable = false, unique = false)
     private int ordinal;
 
-    @Column(name = "ccms_code", nullable = true, length = 30, unique = true)
-    @Size(min = 1, max = 30, message = "Application role CCMS Code must be between 1 and 30 characters")
-    @Pattern(regexp = "^(?!\\s*$).+", message = "Application role CCMS Code cannot be empty or contain only whitespace")
-    private String ccmsCode;
+    @Column(name = "role_identifier", nullable = false, length = 255)
+    @Size(min = 1, max = 255, message = "Application role Role Identifier must be between 1 and 255 characters")
+    @Pattern(regexp = "^(?!\\s*$).+", message = "Application role Role Identifier cannot be empty or contain only whitespace")
+    private String roleIdentifier;
 
     @Column(name = "legacy_sync", nullable = false)
     @ColumnDefault("false")
