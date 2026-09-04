@@ -4,6 +4,7 @@ import lombok.Getter;
 
 @Getter
 public enum ReactivationRequestPageMode {
+    NONE("No access to requests", false),
     TRACK("Track reactivation requests", false),
     MANAGE("Manage reactivation requests", true);
 
