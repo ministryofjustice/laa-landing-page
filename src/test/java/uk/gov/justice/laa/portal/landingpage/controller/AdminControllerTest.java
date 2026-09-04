@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.Mock;
@@ -1350,6 +1351,38 @@ class AdminControllerTest {
     }
 
     @Test
+    void testProcessRoleCreation_WithDuplicateRoleIdentifier_ShowsValidationError() {
+        // Arrange
+        MockHttpSession session = new MockHttpSession();
+        UUID appId = UUID.randomUUID();
+        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
+                .name("Role Name")
+                .description("Valid Description")
+                .parentAppId(appId)
+                .roleIdentifier("ROLE_01")
+                .userTypeRestriction(List.of(UserType.INTERNAL))
+                .build();
+
+        BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
+        List<AppDto> apps = createMockApps();
+
+        when(appRoleService.isRoleNameExistsInApp("Role Name", appId)).thenReturn(false);
+        when(appRoleService.isRoleIdentifierExistsInApp(eq("ROLE_01"), eq(appId), anyList())).thenReturn(true);
+        when(appService.getAllLaaApps()).thenReturn(apps);
+
+        // Act
+        String result = adminController.processRoleCreation(roleCreationDto, bindingResult, model, session);
+
+        // Assert
+        assertEquals("silas-administration/create-role", result);
+        assertThat(bindingResult.hasErrors()).isTrue();
+        assertThat(bindingResult.getFieldError("roleIdentifier")).isNotNull();
+        assertThat(model.getAttribute("apps")).isEqualTo(apps);
+        assertThat(model.getAttribute("userTypes")).isEqualTo(UserType.values());
+        assertThat(model.getAttribute("firmTypes")).isEqualTo(FirmType.values());
+    }
+
+    @Test
     void testProcessRoleCreation_WithBindingErrors_ReturnsToForm() {
         // Arrange
         MockHttpSession session = new MockHttpSession();
@@ -1402,73 +1435,6 @@ class AdminControllerTest {
         // Assert
         assertEquals("redirect:/admin/silas-administration/roles/create/check-your-answers", result);
         assertThat(session.getAttribute("roleCreationDto")).isEqualTo(enrichedDto);
-    }
-
-    @Test
-    void testProcessRoleCreation_WithLegacySyncTrueAndNoroleIdentifier_ValidationFails() {
-        // Arrange
-        UUID appId = UUID.randomUUID();
-        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
-                .name("Test Role")
-                .description("Test Description")
-                .parentAppId(appId)
-                .userTypeRestriction(List.of(UserType.INTERNAL))
-                .legacySync(true)
-                .roleIdentifier(null)  // Missing CCMS code when legacy sync is true
-                .build();
-
-        BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
-
-        when(appRoleService.isRoleNameExistsInApp("Test Role", appId)).thenReturn(false);
-        // The validator should add the error
-        bindingResult.rejectValue("roleIdentifier", "role.roleIdentifier.required.when.legacy.sync",
-                "Enter a CCMS code for roles that sync with CCMS.");
-        List<AppDto> apps = createMockApps();
-        when(appService.getAllLaaApps()).thenReturn(apps);
-
-        // Act
-        MockHttpSession session = new MockHttpSession();
-        String result = adminController.processRoleCreation(roleCreationDto, bindingResult, model, session);
-
-        // Assert
-        assertEquals("silas-administration/create-role", result);
-        assertThat(bindingResult.hasErrors()).isTrue();
-        assertThat(bindingResult.hasFieldErrors("roleIdentifier")).isTrue();
-        assertThat(model.getAttribute("apps")).isEqualTo(apps);
-    }
-
-    @Test
-    void testProcessRoleCreation_WithroleIdentifierAndLegacySyncFalse_ValidationFails() {
-        // Arrange
-        UUID appId = UUID.randomUUID();
-        RoleCreationDto roleCreationDto = RoleCreationDto.builder()
-                .name("Test Role")
-                .description("Test Description")
-                .parentAppId(appId)
-                .userTypeRestriction(List.of(UserType.INTERNAL))
-                .legacySync(false)  // Legacy sync is false
-                .roleIdentifier("CCMS001")  // But CCMS code is provided
-                .build();
-
-        BindingResult bindingResult = new BeanPropertyBindingResult(roleCreationDto, "roleCreationDto");
-
-        when(appRoleService.isRoleNameExistsInApp("Test Role", appId)).thenReturn(false);
-        // The validator should add the error
-        bindingResult.rejectValue("legacySync", "role.legacy.sync.required.when.ccms.code",
-                "This role must have legacy sync enabled when a CCMS code is provided.");
-
-        List<AppDto> apps = createMockApps();
-        when(appService.getAllLaaApps()).thenReturn(apps);
-
-        // Act
-        MockHttpSession session = new MockHttpSession();
-        String result = adminController.processRoleCreation(roleCreationDto, bindingResult, model, session);
-
-        // Assert
-        assertEquals("silas-administration/create-role", result);
-        assertThat(bindingResult.hasErrors()).isTrue();
-        assertThat(bindingResult.hasFieldErrors("legacySync")).isTrue();
-        assertThat(model.getAttribute("apps")).isEqualTo(apps);
     }
 
     @Test

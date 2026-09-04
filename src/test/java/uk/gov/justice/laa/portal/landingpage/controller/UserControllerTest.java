@@ -5647,11 +5647,11 @@ class UserControllerTest {
 
         AppRoleDto ccmsRole1 = new AppRoleDto();
         ccmsRole1.setId(UUID.randomUUID().toString());
-        ccmsRole1.setRoleIdentifier("XXCCMS_FIRM_ADMIN_1"); // CCMS role code
+        ccmsRole1.setRoleIdentifier("XXCCMS_FIRM_ADMIN_1"); // CCMS role identifier
 
         AppRoleDto ccmsRole2 = new AppRoleDto();
         ccmsRole2.setId(UUID.randomUUID().toString());
-        ccmsRole2.setRoleIdentifier("XXCCMS_FIRM_ADMIN_2"); // CCMS role code
+        ccmsRole2.setRoleIdentifier("XXCCMS_FIRM_ADMIN_2"); // CCMS role identifier
 
         AppRoleViewModel ccmsRoleViewModel1 = new AppRoleViewModel();
         ccmsRoleViewModel1.setRoleIdentifier(ccmsRole1.getRoleIdentifier());
