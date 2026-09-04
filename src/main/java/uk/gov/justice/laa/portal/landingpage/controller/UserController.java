@@ -397,11 +397,6 @@ public class UserController {
         model.addAttribute("canGrantUserAccess", canGrantUserAccess);
         model.addAttribute("canEditUserRoleAssignments", canEditUserRoleAssignments);
 
-        // Check if current user can reassign firms (External User Admin permission + target is external user)
-        boolean canReassignFirm = externalUser
-                && accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_FIRM);
-        model.addAttribute("canReassignFirm", canReassignFirm);
-
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
         final boolean canDeleteUser = accessControlService.canDeleteUser(id);
         model.addAttribute("canDeleteUser", canDeleteUser);
@@ -443,6 +438,12 @@ public class UserController {
         model.addAttribute("canConvertUserToMultiFirm", canConvertToMultiFirm);
         model.addAttribute("userActivated", isInternalUser
                 || user.getEntraUser().getInvitationStatus() == InvitationStatus.VERIFICATION_SUCCESS);
+
+        // Check if current user can reassign firms (External User Admin permission + target is external user)
+        boolean canReassignFirm = externalUser
+                && !userHasActiveReactivationRequest
+                && accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_FIRM);
+        model.addAttribute("canReassignFirm", canReassignFirm);
 
 
         // Multi-firm user information
@@ -3269,6 +3270,13 @@ public class UserController {
             }
 
             UserProfileDto user = optionalUser.get();
+
+            boolean userHasActiveReactivationRequest = !user.getEntraUser().isEnabled()
+                    && userReactivationRequestService.hasOpenReactivationRequest(UUID.fromString(user.getEntraUser().getId()));
+            if (userHasActiveReactivationRequest) {
+                log.warn("User {} has an active reactivation request, can not reassign firm.", user.getEntraUser().getId());
+                throw new ResponseStatusException(HttpStatusCode.valueOf(403));
+            }
 
             if (user.getUserType() != UserType.EXTERNAL) {
                 log.warn("Attempted to reassign internal user: {}", id);
