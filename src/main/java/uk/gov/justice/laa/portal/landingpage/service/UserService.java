@@ -2545,6 +2545,14 @@ public class UserService {
 
         UserProfile userProfile = optionalProfile.get();
 
+        boolean userHasActiveReactivationRequest = !userProfile.getEntraUser().isEnabled()
+                && userReactivationRequestService.hasOpenReactivationRequest(userProfile.getEntraUser().getId());
+        if (userHasActiveReactivationRequest) {
+            logger.warn("User {} has an active reactivation request, can not reassign firm.", userProfile.getEntraUser().getId());
+            throw new IllegalArgumentException("There is an open reactivation request, reassigning firm is not allowed: "
+                    + userProfile.getEntraUser().getId());
+        }
+
         // Verify this is an external user
         if (userProfile.getUserType() != UserType.EXTERNAL) {
             throw new IllegalStateException("Only external users can be reassigned to different firms");
