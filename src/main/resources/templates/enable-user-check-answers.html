@@ -68,7 +68,8 @@
                                 <span th:text="${delegateReactivateUserCommentForm.comment}"></span>
                             </dd>
                             <dd class="govuk-summary-list__actions">
-                                <a th:href="${cancelPath}" class="govuk-link">
+                                <a th:href="@{/admin/users/manage/{id}/activate-comments(id=${user.id}, referer=${referer}, profileId=${profileId})}"
+                                   class="govuk-link">
                                     Change
                                     <span class="govuk-visually-hidden"> first name</span>
                                 </a>
