@@ -13,7 +13,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -701,9 +700,10 @@ public class UserActivationControllerTest {
     class DisplayReactivationRequestsTests {
 
         @Test
-        @DisplayName("Should build URL and redirect when default status is not applied")
-        void shouldRedirectWithDefaultStatus() {
+        @DisplayName("Should redirect without a status filter for track mode")
+        void shouldRedirectWithoutStatusFilterForTrackMode() {
             ReactivationRequestPageMode pageMode = mock(ReactivationRequestPageMode.class);
+            when(pageMode.isManageMode()).thenReturn(false);
             when(userReactivationRequestService.getPageMode(authentication)).thenReturn(pageMode);
 
             String viewName = userActivationController
@@ -714,9 +714,24 @@ public class UserActivationControllerTest {
             assertThat(viewName).contains("size=10");
             assertThat(viewName).contains("page=1");
             assertThat(viewName).contains("defaultStatusApplied=true");
-            assertThat(viewName).contains("selectedRequestStatuses=IN_REVIEW");
+            assertThat(viewName).doesNotContain("selectedRequestStatuses");
             assertThat(viewName).contains("showMultiFirmUsers=true");
             assertThat(viewName).contains("search=testSearch");
+        }
+
+        @Test
+        @DisplayName("Should redirect with an In Review status filter for manage mode")
+        void shouldRedirectWithInReviewStatusFilterForManageMode() {
+            ReactivationRequestPageMode pageMode = mock(ReactivationRequestPageMode.class);
+            when(pageMode.isManageMode()).thenReturn(true);
+            when(userReactivationRequestService.getPageMode(authentication)).thenReturn(pageMode);
+
+            String viewName = userActivationController
+                    .displayReactivationRequests(10, 1, "dateSubmitted", "desc",
+                            "", null, false, false, false, false, model, authentication);
+
+            assertThat(viewName).contains("defaultStatusApplied=true");
+            assertThat(viewName).contains("selectedRequestStatuses=IN_REVIEW");
         }
 
         @Test
