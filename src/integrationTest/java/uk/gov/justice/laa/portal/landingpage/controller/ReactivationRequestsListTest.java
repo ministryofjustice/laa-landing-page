@@ -165,7 +165,7 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
     }
 
     @Test
-    public void testExternalUserSupportGetsManageHeadingAndDefaultInReviewFilter() throws Exception {
+    public void testExternalUserSupportGetsTrackHeadingAndDefaultInReviewFilter() throws Exception {
         EntraUser externalUserSupport = externalUserSupportUsers.getFirst();
 
         mockMvc.perform(get("/admin/users/reactivation-requests")
@@ -179,8 +179,8 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
                         .with(userOauth2Login(externalUserSupport)))
                 .andExpect(status().isOk())
                 .andExpect(view().name("reactivation-requests"))
-                .andExpect(model().attribute("pageHeading", "Manage reactivation requests"))
-                .andExpect(model().attribute("manageMode", true))
+                .andExpect(model().attribute("pageHeading", "Track reactivation requests"))
+                .andExpect(model().attribute("manageMode", false))
                 .andReturn();
 
         @SuppressWarnings("unchecked")
