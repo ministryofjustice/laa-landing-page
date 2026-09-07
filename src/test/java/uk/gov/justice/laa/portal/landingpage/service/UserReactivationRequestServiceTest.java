@@ -601,8 +601,6 @@ class UserReactivationRequestServiceTest {
             @Test
             @DisplayName("Should return empty list when history query yields no records")
             void shouldReturnEmptyListWhenHistoryIsEmpty() {
-                UserActivationRequest latestRequest = mock(UserActivationRequest.class);
-
                 when(userActivationRequestRepository.findRequestHistoryByRequestId(UUID.fromString(REQUEST_ID_STR)))
                         .thenReturn(Collections.emptyList());
 
@@ -614,8 +612,6 @@ class UserReactivationRequestServiceTest {
             @Test
             @DisplayName("Should return history when records are found")
             void shouldReturnHistoryListWhenFound() {
-                UserActivationRequest latestRequest = mock(UserActivationRequest.class);
-
                 UserActivationRequestSummaryDto dto = mock(UserActivationRequestSummaryDto.class);
 
                 when(userActivationRequestRepository.findRequestHistoryByRequestId(UUID.fromString(REQUEST_ID_STR))).thenReturn(List.of(dto));
@@ -750,13 +746,13 @@ class UserReactivationRequestServiceTest {
         class PageModeTests {
 
             @Test
-            @DisplayName("Should return MANAGE mode when current user is null")
+            @DisplayName("Should return NONE mode when current user is null")
             void shouldReturnManageWhenUserIsNull() {
                 when(loginService.getCurrentEntraUser(authentication)).thenReturn(null);
 
                 ReactivationRequestPageMode pageMode = service.getPageMode(authentication);
 
-                assertThat(pageMode).isEqualTo(ReactivationRequestPageMode.MANAGE);
+                assertThat(pageMode).isEqualTo(ReactivationRequestPageMode.NONE);
             }
 
             @Test
@@ -808,7 +804,7 @@ class UserReactivationRequestServiceTest {
 
                 ReactivationRequestsPageData result = service.getPage(authentication, "", null, false, false, false, 1, 10, "requestId", "asc");
 
-                assertThat(result.pageMode()).isEqualTo(ReactivationRequestPageMode.MANAGE);
+                assertThat(result.pageMode()).isEqualTo(ReactivationRequestPageMode.NONE);
                 assertThat(result.paginatedRequests().getRequests()).isEmpty();
                 assertThat(result.paginatedRequests().getTotalRequests()).isEqualTo(0);
             }
