@@ -602,8 +602,8 @@ public class UserService {
 
     @Transactional
     public void rejectOpenActivationRequestsOnUserDelete(UUID entraId, String userProfileId, boolean enabled, DeleteUserReason deleteUserReason, String actorId) {
-        // Reject reactivation request if there is an open request
-        if (!enabled && userReactivationRequestService.hasOpenReactivationRequest(entraId)) {
+        // Reject any open reactivation request regardless of the user's current enabled state
+        if (userReactivationRequestService.hasOpenReactivationRequest(entraId)) {
             Optional<UserActivationRequest> latestUserActivationRequest =
                     userReactivationRequestService.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(String.valueOf(entraId));
             if (latestUserActivationRequest.isPresent()) {

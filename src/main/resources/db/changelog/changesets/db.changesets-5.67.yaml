@@ -1,0 +1,30 @@
+databaseChangeLog:
+  - changeSet:
+      id: 20260907-01-user-act-req-fk-set-null-on-profile-delete
+      author: copilot
+      comment: >
+        Allow deleting a user_profile that still has user_activation_request rows referencing it.
+        user_profile_id was already made nullable in db.changesets-5.65.yaml and user_entra_id is
+        now the durable lookup key, so switching the FK from RESTRICT to SET NULL is safe.
+      changes:
+        - dropForeignKeyConstraint:
+            baseTableName: user_activation_request
+            constraintName: fk_user_act_req_user_profile_id
+        - addForeignKeyConstraint:
+            baseTableName: user_activation_request
+            baseColumnNames: user_profile_id
+            referencedTableName: user_profile
+            referencedColumnNames: id
+            constraintName: fk_user_act_req_user_profile_id
+            onDelete: SET NULL
+      rollback:
+        - dropForeignKeyConstraint:
+            baseTableName: user_activation_request
+            constraintName: fk_user_act_req_user_profile_id
+        - addForeignKeyConstraint:
+            baseTableName: user_activation_request
+            baseColumnNames: user_profile_id
+            referencedTableName: user_profile
+            referencedColumnNames: id
+            constraintName: fk_user_act_req_user_profile_id
+            onDelete: RESTRICT

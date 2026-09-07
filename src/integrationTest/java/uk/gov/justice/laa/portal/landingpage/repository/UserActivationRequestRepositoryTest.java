@@ -1,5 +1,12 @@
 package uk.gov.justice.laa.portal.landingpage.repository;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -12,6 +19,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.ReactivationRoleType;
@@ -19,14 +27,6 @@ import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
-
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
 class UserActivationRequestRepositoryTest extends BaseRepositoryTest {
@@ -278,6 +278,39 @@ class UserActivationRequestRepositoryTest extends BaseRepositoryTest {
             assertThat(page.getContent()).hasSize(2);
             assertThat(page.getTotalElements()).isEqualTo(3);
             assertThat(page.getTotalPages()).isEqualTo(2);
+        }
+    }
+
+    @Nested
+    @DisplayName("Tests for user_profile deletion FK behaviour")
+    class UserProfileDeletionForeignKeyTests {
+
+        @Test
+        @DisplayName("Deleting a user_profile referenced by an open user_activation_request no longer throws and nulls the FK")
+        void deletingUserProfile_withOpenReactivationRequest_succeedsAndNullsUserProfileId() {
+            // Arrange
+            EntraUser entraUser = buildEntraUser("act-req-fk-test", "act-req-fk-test@email.com", "First", "Last");
+            entraUser = entraUserRepository.saveAndFlush(entraUser);
+            UserProfile userProfile = buildLaaUserProfile(entraUser, UserType.EXTERNAL);
+            Firm firm = buildFirm("Firm FK Test", "Firm Code FK");
+            firmRepository.saveAndFlush(firm);
+            userProfile.setFirm(firm);
+            userProfileRepository.saveAndFlush(userProfile);
+
+            UserActivationRequest openRequest = createAndPersistRequest(entraUser, userProfile, UUID.randomUUID(), 1,
+                    Instant.now(), ReactivationRequestStatus.IN_REVIEW);
+            final UUID openRequestId = openRequest.getId();
+
+            // Act - deleting the referenced profile must not throw a FK constraint violation
+            userProfileRepository.delete(userProfile);
+            userProfileRepository.flush();
+
+            // Assert - the FK is nulled (ON DELETE SET NULL) rather than blocking the delete
+            entityManager.clear();
+            UserActivationRequest reloaded = repository.findById(openRequestId).orElseThrow();
+            assertThat(reloaded.getUserProfileId()).isNull();
+            assertThat(reloaded.getUserEntraId()).isEqualTo(entraUser.getId());
+            assertThat(userProfileRepository.findById(userProfile.getId())).isEmpty();
         }
     }
 }

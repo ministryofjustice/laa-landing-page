@@ -481,6 +481,62 @@ class UserServiceTest {
     }
 
     @Test
+    void deleteExternalUser_successPath_rejectsOpenReactivationRequestsEvenWhenUserEnabled() {
+        // Arrange
+        UUID entraId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        String actorId = UUID.randomUUID().toString();
+
+        EntraUser entraUser = EntraUser.builder()
+                .id(entraId)
+                .email("user@example.com")
+                .entraOid(entraId.toString())
+                .enabled(true)
+                .build();
+
+        AppRole role1 = AppRole.builder().name("Role1").build();
+
+        UserProfile profile = UserProfile.builder()
+                .id(profileId)
+                .activeProfile(true)
+                .userType(UserType.EXTERNAL)
+                .entraUser(entraUser)
+                .appRoles(new HashSet<>(Set.of(role1)))
+                .build();
+        entraUser.setUserProfiles(new HashSet<>(Set.of(profile)));
+
+        EntraUserDto entraUserDto = new MapperConfig().modelMapper().map(entraUser, EntraUserDto.class);
+
+        EntraUser actorUser = EntraUser.builder()
+                .id(UUID.randomUUID())
+                .entraOid(actorId)
+                .firstName("Actor")
+                .lastName("User")
+                .build();
+
+        when(mockUserProfileRepository.findById(profileId)).thenReturn(Optional.of(profile));
+        when(mockUserProfileRepository.findAllByEntraUser(entraUser)).thenReturn(List.of(profile));
+        when(mockEntraUserRepository.findByEntraOid(actorId)).thenReturn(Optional.of(actorUser));
+        when(mockUserAccountStatusAuditRepository.save(any(UserAccountStatusAudit.class))).thenAnswer(i -> i.getArgument(0));
+        when(mockUserAccountStatusAuditRepository.findByEntraUser(entraUser)).thenReturn(Collections.emptyList());
+        when(techServicesClient.disableUser(any(EntraUserDto.class), anyString())).thenReturn(TechServicesApiResponse.success(null));
+        when(userReactivationRequestService.hasOpenReactivationRequest(entraId)).thenReturn(true);
+
+        UserActivationRequest openReactivationRequest = UserActivationRequest.builder().requestId(UUID.randomUUID())
+                .userProfileId(profileId).status(ReactivationRequestStatus.IN_REVIEW).build();
+        when(userReactivationRequestService.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(String.valueOf(entraId))).thenReturn(Optional.of(openReactivationRequest));
+
+        // Act
+        var result = userService.deleteExternalUser(profileId.toString(), null, actorId);
+
+        // Assert - reactivation request must be rejected even though the user is currently enabled
+        verify(userReactivationRequestService).rejectReactivationRequest(String.valueOf(openReactivationRequest.getRequestId()),
+                String.valueOf(entraId), String.valueOf(profileId), "Unknown", actorId);
+        assertThat(result).isNotNull();
+        assertEquals(result.getDeletedUserEntraOid(), entraId.toString());
+    }
+
+    @Test
     void deleteExternalUser_techServicesFailure_bubblesExceptionAndNoDbDeletes() {
         // Arrange
         UUID entraId = UUID.randomUUID();
