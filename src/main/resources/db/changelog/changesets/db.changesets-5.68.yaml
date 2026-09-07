@@ -1,0 +1,20 @@
+databaseChangeLog:
+  - changeSet:
+      id: drop-fk-user-act-req-user-profile-id
+      author: suresh kavali
+      preConditions:
+        - onFail: MARK_RAN
+          foreignKeyConstraintExists:
+            foreignKeyTableName: user_activation_request
+            foreignKeyName: fk_user_act_req_user_profile_id
+      changes:
+        - dropForeignKeyConstraint:
+            baseTableName: user_activation_request
+            constraintName: fk_user_act_req_user_profile_id
+      rollback:
+        - addForeignKeyConstraint:
+            baseTableName: user_activation_request
+            baseColumnNames: user_profile_id
+            constraintName: fk_user_act_req_user_profile_id
+            referencedTableName: user_profile
+            referencedColumnNames: id
