@@ -323,7 +323,7 @@ public class UserReactivationRequestService {
                 : List.copyOf(selectedStatuses);
 
         List<ReactivationRequestListItem> requests = filterAndSortRequests(
-                buildRequests(currentUser, pageMode),
+                buildRequests(currentUser),
                 normalizeSearch(search),
                 effectiveStatuses,
                 showFirmAdmins,
@@ -346,26 +346,33 @@ public class UserReactivationRequestService {
 
     private ReactivationRequestPageMode resolvePageMode(EntraUser currentUser) {
         if (currentUser == null) {
-            log.debug("No current user provided; defaulting page mode to MANAGE");
-            return ReactivationRequestPageMode.MANAGE;
+            log.debug("No current user provided; defaulting page mode to NONE");
+            return ReactivationRequestPageMode.NONE;
         }
 
-        boolean isManageRole = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_MANAGER.getRoleName())
-            || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_SUPPORT.getRoleName())
-                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())
-                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_VIEWER.getRoleName())
+        boolean isManageRole = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_ADMIN.getRoleName())
                 || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.GLOBAL_ADMIN.getRoleName())
                 || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.SECURITY_RESPONSE.getRoleName());
+
+        boolean isTrackRole = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_MANAGER.getRoleName())
+                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_SUPPORT.getRoleName())
+                || AccessControlService.userHasAuthzRole(currentUser, AuthzRole.EXTERNAL_USER_VIEWER.getRoleName());
 
         boolean isProviderAdminOnly = AccessControlService.userHasAuthzRole(currentUser, AuthzRole.FIRM_USER_MANAGER.getRoleName())
                 && !isManageRole;
 
-        ReactivationRequestPageMode resolvedMode = isProviderAdminOnly ? ReactivationRequestPageMode.TRACK : ReactivationRequestPageMode.MANAGE;
+        ReactivationRequestPageMode resolvedMode = ReactivationRequestPageMode.NONE;
+        if (isManageRole) {
+            resolvedMode = ReactivationRequestPageMode.MANAGE;
+        } else if (isTrackRole || isProviderAdminOnly) {
+            resolvedMode = ReactivationRequestPageMode.TRACK;
+        }
+
         log.debug("Resolved page mode: {} for user: {}", resolvedMode, currentUser.getId());
         return resolvedMode;
     }
 
-    private List<ReactivationRequestListItem> buildRequests(EntraUser currentUser, ReactivationRequestPageMode pageMode) {
+    private List<ReactivationRequestListItem> buildRequests(EntraUser currentUser) {
         List<UserActivationRequest> latestRequests = userActivationRequestRepository.findAllLatestRequests();
 
         if (latestRequests.isEmpty()) {
