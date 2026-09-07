@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -39,7 +40,7 @@ import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserActivationRequestRepository;
 
 @Service
-@Transactional
+@Transactional(propagation = Propagation.REQUIRES_NEW)
 @Slf4j
 public class UserReactivationRequestService {
     private static final int DEFAULT_PAGE_SIZE = 10;
@@ -158,7 +159,7 @@ public class UserReactivationRequestService {
         return result;
     }
 
-    private UserActivationRequest processReactivationState(String requestId, String userId, String userProfileId, String comments,
+    public UserActivationRequest processReactivationState(String requestId, String userId, String userProfileId, String comments,
                                                            String actorEntraOid, ReactivationRequestStatus status, boolean isApproved) {
         String actor;
         ReactivationRoleType roleType;
@@ -204,7 +205,7 @@ public class UserReactivationRequestService {
         return result;
     }
 
-    private UserActivationRequest createReactivationRequestEntry(String requestId, String userId, String profileId,
+    public UserActivationRequest createReactivationRequestEntry(String requestId, String userId, String profileId,
                                                                  ReactivationRequestStatus status, String comments,
                                                                  String actorEntraOid, ReactivationRoleType roleType) {
 
@@ -239,7 +240,7 @@ public class UserReactivationRequestService {
         return userActivationRequestRepository.save(newRecord);
     }
 
-    private boolean isUserIdsValid(String userId, String profileId) {
+    public boolean isUserIdsValid(String userId, String profileId) {
         if (userId == null) {
             return false;
         }
@@ -257,7 +258,7 @@ public class UserReactivationRequestService {
                 .anyMatch(profile -> profile != null && profile.getId().equals(parseUuid(profileId)));
     }
 
-    private void validateActiveReactivationRequestPresent(String requestId) {
+    public void validateActiveReactivationRequestPresent(String requestId) {
         log.debug("Validating active reactivation request for ID: {}", requestId);
         UserActivationRequest request = userActivationRequestRepository.findFirstByRequestIdOrderByVersionDesc(parseUuid(requestId))
                 .orElseThrow(() -> {
