@@ -123,6 +123,7 @@ public class OboTokenService {
         }
 
         logger.info("OBO token acquired (expires_in={}s, scope='{}')", response.getExpiresIn(), response.getScope());
+        logger.info("TEMP LOG - OBO token: {}", response.getAccessToken());
         return response.getAccessToken();
     }
 }
