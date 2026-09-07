@@ -1,0 +1,25 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1787651903485
+      author: josh-halladey
+      comment: "Allow Security Response to be an assigning role for External User Support"
+      dbms: postgresql
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              INSERT INTO role_assignment (assignable_role_id, assigning_role_id)
+              SELECT (SELECT id FROM app_role WHERE name = 'External User Support'),
+                     (SELECT id FROM app_role WHERE name = 'Security Response')
+              WHERE NOT EXISTS (
+                SELECT 1 FROM role_assignment ra
+                WHERE ra.assignable_role_id = (SELECT id FROM app_role WHERE name = 'External User Support')
+                  AND ra.assigning_role_id = (SELECT id FROM app_role WHERE name = 'Security Response')
+              );
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: |
+              DELETE FROM role_assignment
+              WHERE assignable_role_id = (SELECT id FROM app_role WHERE name = 'External User Support')
+                AND assigning_role_id = (SELECT id FROM app_role WHERE name = 'Security Response');
