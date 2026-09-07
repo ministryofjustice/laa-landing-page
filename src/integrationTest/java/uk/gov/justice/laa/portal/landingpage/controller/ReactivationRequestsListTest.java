@@ -49,7 +49,7 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
         mockMvc.perform(get("/admin/users/reactivation-requests")
                         .with(userOauth2Login(providerAdmin)))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/admin/users/reactivation-requests?size=10&page=1&sort=dateSubmitted&direction=desc&defaultStatusApplied=true&selectedRequestStatuses=IN_REVIEW"));
+                .andExpect(redirectedUrl("/admin/users/reactivation-requests?size=10&page=1&sort=dateSubmitted&direction=desc&defaultStatusApplied=true"));
 
         mockMvc.perform(get("/admin/users/reactivation-requests")
                         .param("defaultStatusApplied", "true")
