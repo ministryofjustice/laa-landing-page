@@ -459,7 +459,7 @@ class UserServiceTest {
 
         UserActivationRequest openReactivationRequest = UserActivationRequest.builder().requestId(UUID.randomUUID())
                 .userProfileId(profileId).status(ReactivationRequestStatus.INFORMATION_REQUIRED).build();
-        when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(String.valueOf(profileId))).thenReturn(Optional.of(openReactivationRequest));
+        when(userReactivationRequestService.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(String.valueOf(entraId))).thenReturn(Optional.of(openReactivationRequest));
 
         // Act
         var result = userService.deleteExternalUser(profileId.toString(), null, actorId);
@@ -473,7 +473,7 @@ class UserServiceTest {
         verify(mockUserProfileRepository, times(1)).deleteAll(any());
         verify(mockEntraUserRepository, times(1)).delete(entraUser);
         verify(userReactivationRequestService, times(1)).hasOpenReactivationRequest(entraId);
-        verify(userReactivationRequestService).findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(String.valueOf(profileId));
+        verify(userReactivationRequestService).findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(String.valueOf(entraId));
         verify(userReactivationRequestService).rejectReactivationRequest(String.valueOf(openReactivationRequest.getRequestId()),
                 String.valueOf(entraId), String.valueOf(profileId), "Unknown", actorId);
         assertThat(result).isNotNull();
@@ -6170,7 +6170,7 @@ class UserServiceTest {
 
             UserActivationRequest openReactivationRequest = UserActivationRequest.builder().requestId(UUID.randomUUID())
                     .userProfileId(userProfileId).status(ReactivationRequestStatus.IN_REVIEW).build();
-            when(userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(String.valueOf(userProfileId)))
+            when(userReactivationRequestService.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(String.valueOf(entraUserId)))
                     .thenReturn(Optional.of(openReactivationRequest));
 
             // When
@@ -9393,7 +9393,7 @@ class UserServiceTest {
             assertThat(result.getEntraStatus()).isEqualTo("ACTIVE");
             assertThat(result.getCreatedBy()).isEqualTo("admin@example.com");
             assertThat(result.getDisabledBy()).isEqualTo("null");
-            assertThat(result.getProfiles()).isEmpty();
+            assertThat(result.getProfiles()).isNotEmpty();
 
             verify(mockEntraUserRepository).findById(profileId);
         }
@@ -9440,7 +9440,7 @@ class UserServiceTest {
 
             // Then
             assertThat(result).isNotNull();
-            assertThat(result.getProfiles()).isEmpty();
+            assertThat(result.getProfiles()).isNotEmpty();
             assertThat(result.getEmail())
                     .isEqualTo(user.getEmail());
 
@@ -9476,9 +9476,9 @@ class UserServiceTest {
 
             assertThat(result.getEntraStatus()).isEqualTo("ACTIVE");
             assertThat(result.getProfiles())
-                    .isEmpty();
+                    .isNotEmpty();
             assertThat(result.getTotalProfiles())
-                    .isEqualTo(0);
+                    .isEqualTo(1);
             assertThat(result.getTotalProfilePages())
                     .isEqualTo(0);
             assertThat(result.getCurrentProfilePage())
@@ -9534,7 +9534,7 @@ class UserServiceTest {
 
             // Then
             assertThat(result).isNotNull();
-            assertThat(result.getProfiles()).isEmpty();
+            assertThat(result.getProfiles()).isNotEmpty();
             assertThat(result.getEmail())
                     .isEqualTo(user.getEmail());
 
@@ -9570,9 +9570,9 @@ class UserServiceTest {
 
             assertThat(result.getEntraStatus()).isEqualTo("UNKNOWN");
             assertThat(result.getProfiles())
-                    .isEmpty();
+                    .isNotEmpty();
             assertThat(result.getTotalProfiles())
-                    .isEqualTo(0);
+                    .isEqualTo(1);
             assertThat(result.getTotalProfilePages())
                     .isEqualTo(0);
             assertThat(result.getCurrentProfilePage())

@@ -2,12 +2,13 @@ package uk.gov.justice.laa.portal.landingpage.controller;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.ResultMatcher;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
-
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 public class RoleBasedAccessViewUserTest extends RoleBasedAccessIntegrationTest {
 
@@ -198,6 +199,30 @@ public class RoleBasedAccessViewUserTest extends RoleBasedAccessIntegrationTest 
                 .findFirst()
                 .orElseThrow();
         testCanAccessUser(loggedInUser, accessedUserSameFirm, status().isOk());
+    }
+
+    @Test
+    public void testFirmUserManagerSeesProviderTypeForExternalUserWithoutProviderAdminRole() throws Exception {
+        EntraUser loggedInUser = firmUserManagers.getFirst();
+        Firm loggedInUserFirm = loggedInUser.getUserProfiles().stream()
+                .findFirst()
+                .orElseThrow()
+                .getFirm();
+        EntraUser accessedUser = externalUsersNoRoles.stream()
+                .filter(user -> user.getUserProfiles().stream()
+                        .findFirst()
+                        .orElseThrow()
+                        .getFirm()
+                        .getId()
+                        .equals(loggedInUserFirm.getId()))
+                .findFirst()
+                .orElseThrow();
+        UserProfile accessedUserProfile = accessedUser.getUserProfiles().stream().findFirst().orElseThrow();
+
+        this.mockMvc.perform(get("/admin/users/manage/" + accessedUserProfile.getId())
+                        .with(userOauth2Login(loggedInUser)))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("silasUserType", "Provider"));
     }
 
     @Test

@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +23,7 @@ import uk.gov.justice.laa.portal.landingpage.dto.UserActivationRequestSummaryDto
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
+import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.FIRM_USER_MANAGER;
 import uk.gov.justice.laa.portal.landingpage.entity.DisableType;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -35,8 +37,6 @@ import uk.gov.justice.laa.portal.landingpage.exception.UserNotFoundException;
 import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserActivationRequestRepository;
-
-import static uk.gov.justice.laa.portal.landingpage.entity.AuthzRole.FIRM_USER_MANAGER;
 
 @Service
 public class AccessControlService {
@@ -260,8 +260,8 @@ public class AccessControlService {
         return computeEnablementState(entraUserId).canDelegate();
     }
 
-    public boolean canTrackDelegateEnableUser(String entraUserId) {
-        if (entraUserId == null || entraUserId.isBlank()) {
+    public boolean canTrackDelegateEnableUser(String entraUserId, String requestId) {
+        if (StringUtils.isBlank(entraUserId) || StringUtils.isBlank(requestId)) {
             return false;
         }
 
@@ -290,26 +290,15 @@ public class AccessControlService {
         }
 
         EntraUser accessedUser = entraUserRepository.findById(accessedUserId).orElse(null);
-        if (accessedUser == null || accessedUser.isEnabled()) {
-            return false;
-        }
-
-        UserProfile accessedUserProfile = getActiveProfile(accessedUser).orElse(null);
-        if (accessedUserProfile == null) {
+        if (accessedUser == null) {
             return false;
         }
 
         UserActivationRequest latestActivationRequest = userActivationRequestRepository
-                .findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedUserProfile.getId())
+                .findFirstByUserEntraIdAndRequestIdOrderByVersionDesc(UUID.fromString(entraUserId), UUID.fromString(requestId))
                 .orElse(null);
 
         if (latestActivationRequest == null) {
-            return false;
-        }
-
-        ReactivationRequestStatus activationRequestLatestStatus = latestActivationRequest.getStatus();
-        if (ReactivationRequestStatus.APPROVED.equals(activationRequestLatestStatus)
-                || ReactivationRequestStatus.REJECTED.equals(activationRequestLatestStatus)) {
             return false;
         }
 
@@ -338,15 +327,16 @@ public class AccessControlService {
                 return false;
             }
 
+            UserProfile accessedUserProfile = getActiveProfile(accessedUser).orElse(null);
             Firm actorFirm = actorUserProfile.getFirm();
-            Firm targetFirm = accessedUserProfile.getFirm();
+            Firm targetFirm = accessedUserProfile == null ? null : accessedUserProfile.getFirm();
 
             return actorFirm != null && targetFirm != null && actorFirm.getId().equals(targetFirm.getId());
         }
 
         if (ReactivationRoleType.LAA_OST.equals(actorRoleType) || ReactivationRoleType.LAA_SUPPORT.equals(actorRoleType)) {
-            // EUM and EUS each only track requests originally raised by their own role type
-            return actorRoleType.equals(firstRequestInitiatorRole);
+            return ReactivationRoleType.LAA_OST.equals(firstRequestInitiatorRole)
+                    || ReactivationRoleType.LAA_SUPPORT.equals(firstRequestInitiatorRole);
         }
 
         return ReactivationRoleType.LAA.equals(actorRoleType)
@@ -405,13 +395,8 @@ public class AccessControlService {
             return false;
         }
 
-        UserProfile accessedUserProfile = getActiveProfile(accessedUser).orElse(null);
-        if (accessedUserProfile == null) {
-            return false;
-        }
-
         UserActivationRequest latestActivationRequest = userActivationRequestRepository
-                .findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(accessedUserProfile.getId())
+                .findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(accessedUser.getId())
                 .orElse(null);
 
         if (latestActivationRequest == null) {

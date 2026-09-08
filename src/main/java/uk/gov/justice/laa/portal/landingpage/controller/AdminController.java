@@ -74,7 +74,8 @@ import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 @Controller
 @RequiredArgsConstructor
 @RequestMapping("/admin")
-@PreAuthorize("@accessControlService.userHasAuthzRole(authentication, T(uk.gov.justice.laa.portal.landingpage.entity.AuthzRole).SILAS_ADMINISTRATION.roleName)")
+@PreAuthorize("@accessControlService.userHasAuthzRole(authentication, T(uk.gov.justice.laa.portal.landingpage.entity.AuthzRole).SILAS_ADMINISTRATION.roleName) "
+    + "OR @accessControlService.userHasAuthzRole(authentication, T(uk.gov.justice.laa.portal.landingpage.entity.AuthzRole).EXTERNAL_USER_SUPPORT.roleName)")
 public class AdminController {
     private final ModelMapper modelMapper;
 

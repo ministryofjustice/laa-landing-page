@@ -31,11 +31,12 @@
 
         <th:block th:replace="~{shared-components/search-filter :: searchFilter(
             formAction=@{/admin/users/reactivation-requests(defaultStatusApplied=${defaultStatusApplied})},
-            searchHint='You can search by request ID, user profile ID, actor name, actor Entra OID, or comments.',
+            searchHint='You can search by user name or email.',
             filterContent=~{:: #request-filter-checkboxes},
             activeFiltersContent=~{:: #request-active-filters},
             searchHeading='Search reactivation requests',
-            formAriaLabel='Search and filter reactivation requests'
+            formAriaLabel='Search and filter reactivation requests',
+            filterDefaultClosed=${true}
         )}">
             <div id="request-filter-checkboxes">
                 <div style="display: flex; gap: 0;">
@@ -219,10 +220,9 @@
                 </tr>
                 <tr class="govuk-table__row" th:each="request : ${requests}">
                     <td class="govuk-table__cell">
-                        <a class="govuk-link" th:if="${request.userProfileId() != null}"
-                           th:href="@{/admin/users/manage/{id}(id=${request.userProfileId()})}"
+                        <a class="govuk-link"
+                           th:href="@{/admin/user/delegate-reactivate/track/{id}(id=${request.userId()}, profileId=${request.userProfileId()}, requestId=${request.requestId()}, referer='list')}"
                            th:text="${request.userName()}"></a>
-                        <span th:if="${request.userProfileId() == null}" th:text="${request.userName()}"></span>
                     </td>
                     <td class="govuk-table__cell" th:text="${request.userEmail()}"></td>
                     <td class="govuk-table__cell" th:text="${#temporals.format(request.dateSubmitted(), 'd MMMM yyyy')}"></td>

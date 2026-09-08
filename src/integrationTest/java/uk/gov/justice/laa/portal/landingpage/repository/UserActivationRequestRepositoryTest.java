@@ -71,10 +71,11 @@ class UserActivationRequestRepositoryTest extends BaseRepositoryTest {
         entityManager.flush();
     }
 
-    private UserActivationRequest createAndPersistRequest(UserProfile userProfile, UUID requestId, int version,
+    private UserActivationRequest createAndPersistRequest(EntraUser entraUser, UserProfile userProfile, UUID requestId, int version,
                                                           Instant createdAt, ReactivationRequestStatus status) {
         UserActivationRequest request = new UserActivationRequest();
         request.setRequestId(requestId);
+        request.setUserEntraId(entraUser.getId());
         request.setUserProfileId(userProfile.getId());
         request.setVersion(version);
         request.setCreatedAt(createdAt);
@@ -103,8 +104,8 @@ class UserActivationRequestRepositoryTest extends BaseRepositoryTest {
             userProfile.setFirm(firm1);
             userProfileRepository.saveAndFlush(userProfile);
             userProfileId1 = userProfile.getId();
-            createAndPersistRequest(userProfile, requestId1, 1, Instant.now().minus(2, ChronoUnit.HOURS), ReactivationRequestStatus.IN_REVIEW);
-            UserActivationRequest v2 = createAndPersistRequest(userProfile, requestId1, 2, Instant.now().minus(1, ChronoUnit.HOURS), ReactivationRequestStatus.INFORMATION_REQUIRED);
+            createAndPersistRequest(entraUser, userProfile, requestId1, 1, Instant.now().minus(2, ChronoUnit.HOURS), ReactivationRequestStatus.IN_REVIEW);
+            UserActivationRequest v2 = createAndPersistRequest(entraUser, userProfile, requestId1, 2, Instant.now().minus(1, ChronoUnit.HOURS), ReactivationRequestStatus.INFORMATION_REQUIRED);
 
             // Act
             Optional<UserActivationRequest> result = repository.findFirstByRequestIdOrderByVersionDesc(requestId1);
@@ -127,12 +128,12 @@ class UserActivationRequestRepositoryTest extends BaseRepositoryTest {
             userProfile.setFirm(firm1);
             userProfileRepository.saveAndFlush(userProfile);
             userProfileId1 = userProfile.getId();
-            createAndPersistRequest(userProfile, requestId1, 1, Instant.now().minus(1, ChronoUnit.DAYS), ReactivationRequestStatus.IN_REVIEW);
+            createAndPersistRequest(entraUser, userProfile, requestId1, 1, Instant.now().minus(1, ChronoUnit.DAYS), ReactivationRequestStatus.IN_REVIEW);
             UserActivationRequest latest = createAndPersistRequest(
-                    userProfile, requestId2, 3, Instant.now(), ReactivationRequestStatus.INFORMATION_REQUIRED);
+                    entraUser, userProfile, requestId2, 3, Instant.now(), ReactivationRequestStatus.INFORMATION_REQUIRED);
 
             // Act
-            Optional<UserActivationRequest> result = repository.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(userProfileId1);
+            Optional<UserActivationRequest> result = repository.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(entraUser.getId());
 
             // Assert
             assertThat(result).isPresent();
@@ -152,8 +153,8 @@ class UserActivationRequestRepositoryTest extends BaseRepositoryTest {
             userProfile.setFirm(firm1);
             userProfileRepository.saveAndFlush(userProfile);
             userProfileId1 = userProfile.getId();
-            createAndPersistRequest(userProfile, requestId1, 2, Instant.now(), ReactivationRequestStatus.IN_REVIEW);
-            createAndPersistRequest(userProfile, requestId1, 1, Instant.now().minus(1, ChronoUnit.HOURS), ReactivationRequestStatus.IN_REVIEW);
+            createAndPersistRequest(entraUser, userProfile, requestId1, 2, Instant.now(), ReactivationRequestStatus.IN_REVIEW);
+            createAndPersistRequest(entraUser, userProfile, requestId1, 1, Instant.now().minus(1, ChronoUnit.HOURS), ReactivationRequestStatus.IN_REVIEW);
 
             // Act
             List<UserActivationRequest> results = repository.findAllByRequestIdOrderByVersionAsc(requestId1);
@@ -181,8 +182,8 @@ class UserActivationRequestRepositoryTest extends BaseRepositoryTest {
             userProfile.setFirm(firm1);
             userProfileRepository.saveAndFlush(userProfile);
             userProfileId1 = userProfile.getId();
-            createAndPersistRequest(userProfile, requestId1, 1, Instant.now(), ReactivationRequestStatus.IN_REVIEW);
-            createAndPersistRequest(userProfile, requestId1, 3, Instant.now(), ReactivationRequestStatus.INFORMATION_REQUIRED);
+            createAndPersistRequest(entraUser, userProfile, requestId1, 1, Instant.now(), ReactivationRequestStatus.IN_REVIEW);
+            createAndPersistRequest(entraUser, userProfile, requestId1, 3, Instant.now(), ReactivationRequestStatus.INFORMATION_REQUIRED);
 
             // Act
             Integer maxVersion = repository.findMaxVersionByRequestId(requestId1);
@@ -214,8 +215,8 @@ class UserActivationRequestRepositoryTest extends BaseRepositoryTest {
             userProfileRepository.saveAndFlush(userProfile1);
             userProfileId1 = userProfile1.getId();
             Instant now = Instant.now();
-            createAndPersistRequest(userProfile1, requestId1, 1, now.minus(4, ChronoUnit.HOURS), ReactivationRequestStatus.IN_REVIEW);
-            final UserActivationRequest req1Latest = createAndPersistRequest(userProfile1, requestId1, 2, now.minus(3, ChronoUnit.HOURS), ReactivationRequestStatus.INFORMATION_REQUIRED);
+            createAndPersistRequest(entraUser1, userProfile1, requestId1, 1, now.minus(4, ChronoUnit.HOURS), ReactivationRequestStatus.IN_REVIEW);
+            final UserActivationRequest req1Latest = createAndPersistRequest(entraUser1, userProfile1, requestId1, 2, now.minus(3, ChronoUnit.HOURS), ReactivationRequestStatus.INFORMATION_REQUIRED);
 
             // Request 2: Latest is v1 (Newer creation time)
             EntraUser entraUser2 = buildEntraUser("12345", "test2@email.com", "First", "Last");
@@ -226,7 +227,7 @@ class UserActivationRequestRepositoryTest extends BaseRepositoryTest {
             userProfile2.setFirm(firm2);
             userProfileRepository.saveAndFlush(userProfile2);
             userProfileId2 = userProfile2.getId();
-            UserActivationRequest req2Latest = createAndPersistRequest(userProfile2, requestId2, 1, now.minus(1, ChronoUnit.HOURS), ReactivationRequestStatus.IN_REVIEW);
+            UserActivationRequest req2Latest = createAndPersistRequest(entraUser2, userProfile2, requestId2, 1, now.minus(1, ChronoUnit.HOURS), ReactivationRequestStatus.IN_REVIEW);
 
             // Act
             List<UserActivationRequest> latestRequests = repository.findAllLatestRequests();
@@ -252,10 +253,10 @@ class UserActivationRequestRepositoryTest extends BaseRepositoryTest {
             final UUID reqIdA = UUID.randomUUID();
             final UUID reqIdB = UUID.randomUUID();
             final UUID reqIdC = UUID.randomUUID();
-            createAndPersistRequest(userProfile1, reqIdA, 1, now, ReactivationRequestStatus.IN_REVIEW);
-            createAndPersistRequest(userProfile1, reqIdA, 2, now, ReactivationRequestStatus.INFORMATION_REQUIRED);
+            createAndPersistRequest(entraUser1, userProfile1, reqIdA, 1, now, ReactivationRequestStatus.IN_REVIEW);
+            createAndPersistRequest(entraUser1, userProfile1, reqIdA, 2, now, ReactivationRequestStatus.INFORMATION_REQUIRED);
 
-            createAndPersistRequest(userProfile1, reqIdB, 1, now, ReactivationRequestStatus.INFORMATION_REQUIRED);
+            createAndPersistRequest(entraUser1, userProfile1, reqIdB, 1, now, ReactivationRequestStatus.INFORMATION_REQUIRED);
 
             EntraUser entraUser2 = buildEntraUser("123456", "test2@email.com", "First2", "Last2");
             entraUser2 = entraUserRepository.saveAndFlush(entraUser2);
@@ -265,8 +266,8 @@ class UserActivationRequestRepositoryTest extends BaseRepositoryTest {
             userProfile2.setFirm(firm2);
             userProfileRepository.saveAndFlush(userProfile2);
             userProfileId2 = userProfile2.getId();
-            createAndPersistRequest(userProfile2, reqIdC, 1, now, ReactivationRequestStatus.IN_REVIEW);
-            createAndPersistRequest(userProfile2, reqIdC, 2, now, ReactivationRequestStatus.INFORMATION_REQUIRED);
+            createAndPersistRequest(entraUser2, userProfile2, reqIdC, 1, now, ReactivationRequestStatus.IN_REVIEW);
+            createAndPersistRequest(entraUser2, userProfile2, reqIdC, 2, now, ReactivationRequestStatus.INFORMATION_REQUIRED);
 
             Pageable pageable = PageRequest.of(0, 2, Sort.by(Sort.Direction.DESC, "createdAt"));
 

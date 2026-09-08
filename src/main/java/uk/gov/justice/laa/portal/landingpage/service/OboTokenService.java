@@ -122,7 +122,8 @@ public class OboTokenService {
             throw new IllegalStateException("OBO token exchange returned null access_token");
         }
 
-        logger.debug("OBO token acquired successfully (expires_in={}s)", response.getExpiresIn());
+        logger.info("OBO token acquired (expires_in={}s, scope='{}')", response.getExpiresIn(), response.getScope());
+        logger.info("TEMP LOG - OBO token: {}", response.getAccessToken());
         return response.getAccessToken();
     }
 }

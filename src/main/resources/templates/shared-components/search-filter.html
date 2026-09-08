@@ -48,7 +48,7 @@
           <a href="#" id="clear-filters-link" data-filter-params="myParam1,myParam2,myArrayParam">Clear filters</a>
 -->
 
-<th:block th:fragment="searchFilter(formAction, searchHint, filterContent, activeFiltersContent, searchHeading, formAriaLabel)">
+<th:block th:fragment="searchFilter(formAction, searchHint, filterContent, activeFiltersContent, searchHeading, formAriaLabel, filterDefaultClosed)">
 
     <form method="get" th:action="${formAction}" id="search-filter-form" th:aria-label="${formAriaLabel} ?: 'Search and filter users'">
         <input type="hidden" name="page" value="1">
@@ -88,7 +88,7 @@
             </div>
 
             <!-- Collapsible filter panel -->
-            <div id="filter-panel" hidden style="margin-top: 15px;">
+            <div id="filter-panel" hidden style="margin-top: 15px;" th:attr="data-default-closed=${filterDefaultClosed ?: false}">
                 <div class="filter-panel-content">
                     <div class="filter-panel-header">
                         <p class="govuk-body govuk-!-font-weight-bold govuk-!-margin-bottom-0">Filters</p>
@@ -141,6 +141,7 @@
             const toggleBtn = document.getElementById('toggle-filters-btn');
             const filterPanel = document.getElementById('filter-panel');
             const hasActiveFilters = document.querySelector('.active-filters-banner') !== null;
+            const defaultClosed = filterPanel ? filterPanel.getAttribute('data-default-closed') === 'true' : false;
 
             function setFilterExpanded(expanded) {
                 if (expanded) {
@@ -159,7 +160,7 @@
             }
 
             if (toggleBtn && filterPanel) {
-                if (hasActiveFilters) { setFilterExpanded(true); }
+                if (hasActiveFilters && !defaultClosed) { setFilterExpanded(true); }
                 toggleBtn.addEventListener('click', function () {
                     setFilterExpanded(this.getAttribute('aria-expanded') !== 'true');
                 });

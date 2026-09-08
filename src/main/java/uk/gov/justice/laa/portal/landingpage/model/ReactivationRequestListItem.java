@@ -7,6 +7,7 @@ import java.util.UUID;
 public record ReactivationRequestListItem(
         UUID id,
         UUID requestId,
+        UUID userId,
         UUID userProfileId,
         Integer version,
         ReactivationRequestStatus requestStatus,

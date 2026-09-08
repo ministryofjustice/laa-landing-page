@@ -25,6 +25,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -604,7 +605,7 @@ public class UserService {
         // Reject reactivation request if there is an open request
         if (!enabled && userReactivationRequestService.hasOpenReactivationRequest(entraId)) {
             Optional<UserActivationRequest> latestUserActivationRequest =
-                    userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(userProfileId);
+                    userReactivationRequestService.findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(String.valueOf(entraId));
             if (latestUserActivationRequest.isPresent()) {
                 UserActivationRequest request = latestUserActivationRequest.get();
                 String deletionReasonStr = deleteUserReason == null ? "Unknown"
@@ -2410,6 +2411,8 @@ public class UserService {
                 ? new ArrayList<>(entraUser.getUserProfiles())
                 : Collections.emptyList();
 
+        List<AuditProfileDto> profileDtos = allProfiles.stream().map(this::mapToAuditProfileDto).toList();
+
         //check if user is pending
         boolean hasPending = allProfiles.isEmpty() || allProfiles.stream()
                 .anyMatch(profile -> profile.getUserProfileStatus() == UserProfileStatus.PENDING);
@@ -2439,7 +2442,7 @@ public class UserService {
                 .activationStatus(entraUser.getInvitationStatus() != null ? entraUser.getInvitationStatus().name() : null)
                 .entraStatus(entraUser.getUserStatus() != null ? entraUser.getUserStatus().name()
                         : "UNKNOWN")
-                .profiles(Collections.emptyList()).totalProfiles(0).totalProfilePages(0)
+                .profiles(profileDtos).totalProfiles(profileDtos.size()).totalProfilePages(0)
                 .currentProfilePage(1).hasNoProfile(true)
                 .entraOid(entraUser.getEntraOid())
                 .accountStatusHistory(accountStatusHistory)
@@ -2541,6 +2544,14 @@ public class UserService {
         }
 
         UserProfile userProfile = optionalProfile.get();
+
+        boolean userHasActiveReactivationRequest = !userProfile.getEntraUser().isEnabled()
+                && userReactivationRequestService.hasOpenReactivationRequest(userProfile.getEntraUser().getId());
+        if (userHasActiveReactivationRequest) {
+            logger.warn("User {} has an active reactivation request, can not reassign firm.", userProfile.getEntraUser().getId());
+            throw new IllegalArgumentException("There is an open reactivation request, reassigning firm is not allowed: "
+                    + userProfile.getEntraUser().getId());
+        }
 
         // Verify this is an external user
         if (userProfile.getUserType() != UserType.EXTERNAL) {
@@ -2753,6 +2764,7 @@ public class UserService {
 
     public boolean isValidUserProfileId(String id, String profileId) {
         EntraUser entraUser = entraUserRepository.findById(UUID.fromString(id)).orElseThrow();
-        return entraUser.getUserProfiles().stream().anyMatch(up -> up.getId().toString().equals(profileId));
+        return (StringUtils.isEmpty(profileId) && entraUser.getUserProfiles().isEmpty())
+                || entraUser.getUserProfiles().stream().anyMatch(up -> up.getId().toString().equals(profileId));
     }
 }

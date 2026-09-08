@@ -42,16 +42,17 @@ import uk.gov.justice.laa.portal.landingpage.dto.AuditUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.CurrentUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserAttemptAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.DeleteUserSuccessAuditEvent;
-import uk.gov.justice.laa.portal.landingpage.dto.EntraUserDto;
 import uk.gov.justice.laa.portal.landingpage.dto.FirmDto;
 import uk.gov.justice.laa.portal.landingpage.dto.PaginatedAuditUsers;
 import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import static uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus.VERIFICATION_SUCCESS;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
 import uk.gov.justice.laa.portal.landingpage.forms.UserTypeForm;
 import uk.gov.justice.laa.portal.landingpage.model.DeletedUser;
+import uk.gov.justice.laa.portal.landingpage.model.ReactivationRequestStatus;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.service.AccessControlService;
 import uk.gov.justice.laa.portal.landingpage.service.AuditExportService;
@@ -62,6 +63,7 @@ import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.TechServicesClient;
 import uk.gov.justice.laa.portal.landingpage.service.UserAccountStatusService;
+import uk.gov.justice.laa.portal.landingpage.service.UserReactivationRequestService;
 import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.GetUserResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
@@ -86,6 +88,7 @@ public class AuditController {
     private final UserAccountStatusService userAccountStatusService;
     private final ExternalUserPollingService externalUserPollingService;
     private final EntraUserRepository entraUserRepository;
+    private final UserReactivationRequestService userReactivationRequestService;
 
     @Value("${feature.flag.disable.user}")
     private boolean disableUserFeatureEnabled;
@@ -252,14 +255,30 @@ public class AuditController {
         AccessControlService.EnablementFlags enablementFlags = disableUserFeatureEnabled
                 ? accessControlService.getEnablementFlags(userDetail.getUserId())
                 : new AccessControlService.EnablementFlags(false, false, false);
-        boolean canEnableUser = enablementFlags.canEnable();
+        UserActivationRequest userActivationRequest = userReactivationRequestService
+                .findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(userDetail.getUserId())
+                .orElse(null);
+        boolean isActiveDelegateRequestPresent = userActivationRequest != null
+                && !(userActivationRequest.getStatus() == ReactivationRequestStatus.APPROVED
+                || userActivationRequest.getStatus() == ReactivationRequestStatus.REJECTED);
+        boolean canEnableUser = !isActiveDelegateRequestPresent && enablementFlags.canEnable();
         boolean cannotEnableUser = enablementFlags.blockedByHierarchy();
-        boolean canDelegateEnableUser = enablementFlags.canDelegate();
+        boolean canDelegateEnableUser = !isActiveDelegateRequestPresent && enablementFlags.canDelegate();
+        boolean canManageDelegateRequest = isActiveDelegateRequestPresent && accessControlService.canManageDelegateEnableUser(userDetail.getUserId());
+        model.addAttribute("canManageDelegateEnableUser", canManageDelegateRequest);
+        String latestRequestId = isActiveDelegateRequestPresent ? String.valueOf(userActivationRequest.getRequestId()) : null;
+        ReactivationRequestStatus latestRequestStatus = isActiveDelegateRequestPresent ? userActivationRequest.getStatus() : null;
+        boolean canTrackDelegateRequest = isActiveDelegateRequestPresent && !canManageDelegateRequest
+                && accessControlService.canTrackDelegateEnableUser(userDetail.getUserId(), latestRequestId);
+        model.addAttribute("canTrackDelegateEnableUser", canTrackDelegateRequest);
+
 
         // Add attributes to model
         model.addAttribute("user", userDetail);
         model.addAttribute("silasStatus", userService.determineStatusBadgeForAuditUser(userDetail).name());
+        model.addAttribute("reactivationRequestStatus", latestRequestStatus);
         model.addAttribute("profileId", userId); // Add profile ID for pagination links
+        model.addAttribute("requestId", latestRequestId);
         model.addAttribute("profilePage", profilePage);
         model.addAttribute("profileSize", profileSize);
         model.addAttribute("canDisableUser", disableUserFeatureEnabled && canDisableUser);

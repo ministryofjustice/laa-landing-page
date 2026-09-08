@@ -1,10 +1,23 @@
 package uk.gov.justice.laa.portal.landingpage.controller;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
 import org.jetbrains.annotations.NotNull;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,6 +44,12 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.constants.ModelAttributes;
 import uk.gov.justice.laa.portal.landingpage.dto.AppDto;
 import uk.gov.justice.laa.portal.landingpage.dto.AppRoleDto;
@@ -46,7 +65,6 @@ import uk.gov.justice.laa.portal.landingpage.dto.UpdateUserAuditEvent;
 import uk.gov.justice.laa.portal.landingpage.dto.UserProfileDto;
 import uk.gov.justice.laa.portal.landingpage.dto.UserSearchCriteria;
 import uk.gov.justice.laa.portal.landingpage.entity.AppType;
-import uk.gov.justice.laa.portal.landingpage.entity.AuthzRole;
 import uk.gov.justice.laa.portal.landingpage.entity.DeleteUserReason;
 import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
@@ -83,6 +101,7 @@ import uk.gov.justice.laa.portal.landingpage.service.AppRoleService;
 import uk.gov.justice.laa.portal.landingpage.service.AppService;
 import uk.gov.justice.laa.portal.landingpage.service.EmailValidationService;
 import uk.gov.justice.laa.portal.landingpage.service.EventService;
+import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
 import uk.gov.justice.laa.portal.landingpage.service.FirmService;
 import uk.gov.justice.laa.portal.landingpage.service.LoginService;
 import uk.gov.justice.laa.portal.landingpage.service.NotificationService;
@@ -94,34 +113,14 @@ import uk.gov.justice.laa.portal.landingpage.service.UserService;
 import uk.gov.justice.laa.portal.landingpage.techservices.SendUserVerificationEmailResponse;
 import uk.gov.justice.laa.portal.landingpage.techservices.TechServicesApiResponse;
 import uk.gov.justice.laa.portal.landingpage.utils.CcmsRoleGroupsUtil;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
+import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getSetFromHttpSession;
 import uk.gov.justice.laa.portal.landingpage.utils.RolesUtils;
 import uk.gov.justice.laa.portal.landingpage.utils.UserUtils;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.AppRoleViewModel;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.DeleteUserReasonViewModel;
 import uk.gov.justice.laa.portal.landingpage.viewmodel.DisableUserReasonViewModel;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import static uk.gov.justice.laa.portal.landingpage.service.FirmComparatorByRelevance.relevance;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getListFromHttpSession;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getObjectFromHttpSession;
-import static uk.gov.justice.laa.portal.landingpage.utils.RestUtils.getSetFromHttpSession;
 
 /**
  * User Controller
@@ -397,11 +396,6 @@ public class UserController {
         model.addAttribute("canGrantUserAccess", canGrantUserAccess);
         model.addAttribute("canEditUserRoleAssignments", canEditUserRoleAssignments);
 
-        // Check if current user can reassign firms (External User Admin permission + target is external user)
-        boolean canReassignFirm = externalUser
-                && accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_FIRM);
-        model.addAttribute("canReassignFirm", canReassignFirm);
-
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Manage user - " + user.getFullName());
         final boolean canDeleteUser = accessControlService.canDeleteUser(id);
         model.addAttribute("canDeleteUser", canDeleteUser);
@@ -409,14 +403,18 @@ public class UserController {
         final boolean canDisableUser = disableUserFeatureEnabled
                 && accessControlService.canDisableUser(user.getEntraUser().getId());
         model.addAttribute("canDisableUser", canDisableUser);
-        Optional<UserActivationRequest> userActivationRequest = userReactivationRequestService.findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(id);
+        Optional<UserActivationRequest> userActivationRequest = userReactivationRequestService
+                .findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(user.getEntraUser().getId());
         boolean isActiveDelegateRequestPresent = userActivationRequest.isPresent()
                 && !(userActivationRequest.get().getStatus() == ReactivationRequestStatus.APPROVED
                 || userActivationRequest.get().getStatus() == ReactivationRequestStatus.REJECTED);
         boolean canManageDelegateEnableUser = isActiveDelegateRequestPresent && accessControlService.canManageDelegateEnableUser(user.getEntraUser().getId());
         model.addAttribute("canManageDelegateEnableUser", isActiveDelegateRequestPresent && canManageDelegateEnableUser);
-        boolean canTrackDelegateRequest = isActiveDelegateRequestPresent && !canManageDelegateEnableUser && accessControlService.canTrackDelegateEnableUser(user.getEntraUser().getId());
+        String latestRequestId = isActiveDelegateRequestPresent ? String.valueOf(userActivationRequest.get().getRequestId()) : null;
+        boolean canTrackDelegateRequest = isActiveDelegateRequestPresent && !canManageDelegateEnableUser
+                && accessControlService.canTrackDelegateEnableUser(user.getEntraUser().getId(), latestRequestId);
         model.addAttribute("canTrackDelegateEnableUser", canTrackDelegateRequest);
+        model.addAttribute("requestId", latestRequestId);
         model.addAttribute("reactivationRequestStatus", isActiveDelegateRequestPresent
                 ? userActivationRequest.get().getStatus() : null);
         AccessControlService.EnablementFlags enablementFlags = disableUserFeatureEnabled
@@ -440,6 +438,12 @@ public class UserController {
         model.addAttribute("userActivated", isInternalUser
                 || user.getEntraUser().getInvitationStatus() == InvitationStatus.VERIFICATION_SUCCESS);
 
+        // Check if current user can reassign firms (External User Admin permission + target is external user)
+        boolean canReassignFirm = externalUser
+                && !userHasActiveReactivationRequest
+                && accessControlService.authenticatedUserHasPermission(Permission.EDIT_USER_FIRM);
+        model.addAttribute("canReassignFirm", canReassignFirm);
+
 
         // Multi-firm user information
         boolean isMultiFirmUser = user.getEntraUser() != null && user.getEntraUser().isMultiFirmUser();
@@ -447,11 +451,9 @@ public class UserController {
         model.addAttribute("isMultiFirmUser", isMultiFirmUser);
         model.addAttribute("canViewAllFirmsOfMultiFirmUser", accessControlService.canViewAllFirmsOfMultiFirmUser());
 
-        boolean isProviderAdmin = user != null
-                && accessControlService.userHasAuthzRole(authentication,
-                AuthzRole.FIRM_USER_MANAGER.getRoleName());
+        boolean isProviderAdmin = user.getAppRoles() != null && RolesUtils.isProvideAdmin(user.getAppRoles());
         model.addAttribute("silasUserType",
-                isInternalUser ? "Internal" : isMultiFirmUser ? "3rd Party" : isProviderAdmin ? "Firm Admin" : "Provider");
+            isInternalUser ? "Internal" : isMultiFirmUser ? "3rd Party" : isProviderAdmin ? "Provider Admin" : "Provider");
 
         // Check if this profile belongs to the logged-in user
         boolean isOwnProfile = editorUserProfile.getId().equals(user.getId());
@@ -1362,21 +1364,21 @@ public class UserController {
                 .sorted()
                 .toList();
 
+        List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
+                .orElse(List.of());
         @SuppressWarnings("unchecked")
         Map<Integer, List<String>> selectedAppRole = (Map<Integer, List<String>>) session
                 .getAttribute("editUserAllSelectedRoles");
-        if (Objects.isNull(selectedAppRole)) {
+        if (!selectedApps.isEmpty()) {
+            editableApps.forEach(app -> {
+                app.setSelected(selectedApps.contains(app.getId()));
+            });
+            flagEditableApps(id, editableApps);
+        } else if (selectedAppRole == null) {
             // Add selected attribute to available apps based on user assigned apps
             editableApps.forEach(app -> {
                 app.setSelected(userAssignedApps.stream()
                         .anyMatch(userApp -> userApp.getId().equals(app.getId())));
-            });
-            flagEditableApps(id, editableApps);
-        } else {
-            List<String> selectedApps = getListFromHttpSession(session, "selectedApps", String.class)
-                    .orElse(List.of());
-            editableApps.forEach(app -> {
-                app.setSelected(selectedApps.contains(app.getId()));
             });
             flagEditableApps(id, editableApps);
         }
@@ -1384,7 +1386,8 @@ public class UserController {
         session.removeAttribute("roleSelectableAppIndexes");
         model.addAttribute("user", user);
         model.addAttribute("apps", editableApps);
-        model.addAttribute("groupedApps", appService.buildGroupedApps(editableApps));
+        model.addAttribute("groupedApps", appService.buildGroupedApps(editableApps.stream()
+                .filter(app -> !app.isHiddenFromSelection()).toList()));
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user services - " + user.getFullName());
         if (errorMessage != null) {
             model.addAttribute("errorMessage", errorMessage);
@@ -3265,6 +3268,13 @@ public class UserController {
             }
 
             UserProfileDto user = optionalUser.get();
+
+            boolean userHasActiveReactivationRequest = !user.getEntraUser().isEnabled()
+                    && userReactivationRequestService.hasOpenReactivationRequest(UUID.fromString(user.getEntraUser().getId()));
+            if (userHasActiveReactivationRequest) {
+                log.warn("User {} has an active reactivation request, can not reassign firm.", user.getEntraUser().getId());
+                throw new ResponseStatusException(HttpStatusCode.valueOf(403));
+            }
 
             if (user.getUserType() != UserType.EXTERNAL) {
                 log.warn("Attempted to reassign internal user: {}", id);

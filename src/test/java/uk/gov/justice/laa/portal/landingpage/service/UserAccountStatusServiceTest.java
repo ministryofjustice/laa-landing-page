@@ -72,6 +72,9 @@ public class UserAccountStatusServiceTest {
     @Mock
     private UserEnablementPolicy userEnablementPolicy;
 
+    @Mock
+    private UserReactivationRequestService userReactivationRequestService;
+
     @InjectMocks
     private UserAccountStatusService userAccountStatusService;
 
@@ -85,7 +88,8 @@ public class UserAccountStatusServiceTest {
                 techServicesClient,
                 userService,
                 userProfileRepository, eventService,
-                disableTypeResolver, userEnablementPolicy);
+                disableTypeResolver, userEnablementPolicy,
+                userReactivationRequestService);
         org.mockito.Mockito.lenient().when(disableTypeResolver.resolve(any())).thenReturn(DisableType.NONE);
     }
 

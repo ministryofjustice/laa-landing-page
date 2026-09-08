@@ -140,9 +140,19 @@ spec:
             - name: POSTGRES_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: rds-postgresql-instance-output
+                  name: rds-postgresql-instance-app-output
                   key: database_username
             - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rds-postgresql-instance-app-output
+                  key: database_password
+            - name: LIQUIBASE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: rds-postgresql-instance-output
+                  key: database_username
+            - name: LIQUIBASE_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: rds-postgresql-instance-output

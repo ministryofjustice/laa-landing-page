@@ -22,7 +22,7 @@ public interface UserActivationRequestRepository extends JpaRepository<UserActiv
 
     Optional<UserActivationRequest> findFirstByRequestIdOrderByVersionAsc(UUID requestId);
 
-    Optional<UserActivationRequest> findFirstByUserProfileIdOrderByCreatedAtDescVersionDesc(UUID userProfileId);
+    Optional<UserActivationRequest> findFirstByUserEntraIdOrderByCreatedAtDescVersionDesc(UUID userId);
 
     @Query("""
                 SELECT u FROM UserActivationRequest u
@@ -95,5 +95,7 @@ public interface UserActivationRequestRepository extends JpaRepository<UserActiv
             ORDER BY u.version ASC
             """)
     List<UserActivationRequestSummaryDto> findRequestHistoryByRequestId(@Param("requestId") UUID requestId);
+
+    Optional<UserActivationRequest> findFirstByUserEntraIdAndRequestIdOrderByVersionDesc(UUID userEntraId, UUID requestId);
 
 }
