@@ -109,6 +109,7 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
 
         var result = mockMvc.perform(get("/admin/users/reactivation-requests")
                         .param("defaultStatusApplied", "true")
+                        .param("selectedRequestStatuses", "IN_REVIEW")
                         .with(userOauth2Login(externalUserAdmin)))
                 .andExpect(status().isOk())
                 .andExpect(view().name("reactivation-requests"))
