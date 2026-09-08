@@ -49,11 +49,10 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
         mockMvc.perform(get("/admin/users/reactivation-requests")
                         .with(userOauth2Login(providerAdmin)))
                 .andExpect(status().is3xxRedirection())
-                                .andExpect(redirectedUrl("/admin/users/reactivation-requests?size=10&page=1&sort=dateSubmitted&direction=desc&defaultStatusApplied=true&selectedRequestStatuses=IN_REVIEW"));
+                .andExpect(redirectedUrl("/admin/users/reactivation-requests?size=10&page=1&sort=dateSubmitted&direction=desc&defaultStatusApplied=true"));
 
         mockMvc.perform(get("/admin/users/reactivation-requests")
                         .param("defaultStatusApplied", "true")
-                        .param("selectedRequestStatuses", "IN_REVIEW")
                         .with(userOauth2Login(providerAdmin)))
                 .andExpect(status().isOk())
                 .andExpect(view().name("reactivation-requests"))
@@ -100,13 +99,13 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
     }
 
     @Test
-        public void testExternalUserAdminGetsManageHeadingAndAllStatusesByDefault() throws Exception {
+    public void testExternalUserAdminGetsManageHeadingAndDefaultInReviewFilter() throws Exception {
         EntraUser externalUserAdmin = externalUserAdmins.getFirst();
 
         mockMvc.perform(get("/admin/users/reactivation-requests")
                         .with(userOauth2Login(externalUserAdmin)))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/admin/users/reactivation-requests?size=10&page=1&sort=dateSubmitted&direction=desc&defaultStatusApplied=true"));
+                .andExpect(redirectedUrl("/admin/users/reactivation-requests?size=10&page=1&sort=dateSubmitted&direction=desc&defaultStatusApplied=true&selectedRequestStatuses=IN_REVIEW"));
 
         var result = mockMvc.perform(get("/admin/users/reactivation-requests")
                         .param("defaultStatusApplied", "true")
@@ -123,7 +122,7 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
         List<ReactivationRequestStatus> statuses =
                 (List<ReactivationRequestStatus>) result.getModelAndView().getModel().get("selectedRequestStatuses");
 
-        assertThat(statuses).isEmpty();
+        assertThat(statuses).containsExactly(ReactivationRequestStatus.IN_REVIEW);
     }
 
     @Test
@@ -164,17 +163,16 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
     }
 
     @Test
-    public void testExternalUserSupportGetsTrackHeadingAndDefaultInReviewFilter() throws Exception {
+    public void testExternalUserSupportGetsTrackHeadingAndNoDefaultFilter() throws Exception {
         EntraUser externalUserSupport = externalUserSupportUsers.getFirst();
 
         mockMvc.perform(get("/admin/users/reactivation-requests")
                         .with(userOauth2Login(externalUserSupport)))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/admin/users/reactivation-requests?size=10&page=1&sort=dateSubmitted&direction=desc&defaultStatusApplied=true&selectedRequestStatuses=IN_REVIEW"));
+                .andExpect(redirectedUrl("/admin/users/reactivation-requests?size=10&page=1&sort=dateSubmitted&direction=desc&defaultStatusApplied=true"));
 
         var result = mockMvc.perform(get("/admin/users/reactivation-requests")
                         .param("defaultStatusApplied", "true")
-                        .param("selectedRequestStatuses", "IN_REVIEW")
                         .with(userOauth2Login(externalUserSupport)))
                 .andExpect(status().isOk())
                 .andExpect(view().name("reactivation-requests"))
@@ -186,7 +184,7 @@ public class ReactivationRequestsListTest extends RoleBasedAccessIntegrationTest
         List<ReactivationRequestStatus> statuses =
                 (List<ReactivationRequestStatus>) result.getModelAndView().getModel().get("selectedRequestStatuses");
 
-        assertThat(statuses).containsExactly(ReactivationRequestStatus.IN_REVIEW);
+        assertThat(statuses).isEmpty();
     }
 
     @Test
