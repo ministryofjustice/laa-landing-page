@@ -700,7 +700,7 @@ public class UserActivationControllerTest {
     class DisplayReactivationRequestsTests {
 
         @Test
-        @DisplayName("Should redirect without a status filter for track mode")
+        @DisplayName("Should default track mode to the In review status filter")
         void shouldRedirectWithoutStatusFilterForTrackMode() {
             ReactivationRequestPageMode pageMode = mock(ReactivationRequestPageMode.class);
             when(pageMode.isManageMode()).thenReturn(false);
@@ -714,14 +714,14 @@ public class UserActivationControllerTest {
             assertThat(viewName).contains("size=10");
             assertThat(viewName).contains("page=1");
             assertThat(viewName).contains("defaultStatusApplied=true");
-            assertThat(viewName).doesNotContain("selectedRequestStatuses");
+            assertThat(viewName).contains("selectedRequestStatuses=IN_REVIEW");
             assertThat(viewName).contains("showMultiFirmUsers=true");
             assertThat(viewName).contains("search=testSearch");
         }
 
         @Test
-        @DisplayName("Should redirect with an In Review status filter for manage mode")
-        void shouldRedirectWithInReviewStatusFilterForManageMode() {
+        @DisplayName("Should redirect without a status filter for manage mode")
+        void shouldRedirectWithoutStatusFilterForManageMode() {
             ReactivationRequestPageMode pageMode = mock(ReactivationRequestPageMode.class);
             when(pageMode.isManageMode()).thenReturn(true);
             when(userReactivationRequestService.getPageMode(authentication)).thenReturn(pageMode);
@@ -731,7 +731,7 @@ public class UserActivationControllerTest {
                             "", null, false, false, false, false, model, authentication);
 
             assertThat(viewName).contains("defaultStatusApplied=true");
-            assertThat(viewName).contains("selectedRequestStatuses=IN_REVIEW");
+            assertThat(viewName).doesNotContain("selectedRequestStatuses");
         }
 
         @Test
