@@ -27,6 +27,10 @@ permissions:
 
 jobs:
   vulnerability-scan:
+    # Skip for Dependabot PRs - SNYK_TOKEN is not available to Dependabot, and a
+    # GitHub Actions version bump is out of scope for this scan. Scheduled and
+    # push runs still cover main.
+    if: ${{ github.actor != 'dependabot[bot]' }}
     runs-on: ubuntu-latest
     env:
       MY_GITHUB_ACTOR: ${{ secrets.MY_GITHUB_ACTOR }}

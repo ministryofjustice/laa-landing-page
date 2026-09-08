@@ -29,6 +29,9 @@ on:
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
+    # Skip for Dependabot PRs - security-events upload is not permitted for Dependabot;
+    # scheduled runs still cover main.
+    if: ${{ github.actor != 'dependabot[bot]' }}
     # Runner size impacts CodeQL analysis time. To learn more, please see:
     #   - https://gh.io/recommended-hardware-resources-for-running-codeql
     #   - https://gh.io/supported-runners-and-hardware-resources

@@ -10,6 +10,8 @@ permissions:
 jobs:
   lint:
     name: Run Checkstyle
+    # Skip for Dependabot PRs - they only bump GitHub Actions versions, never Java source.
+    if: ${{ github.actor != 'dependabot[bot]' }}
     runs-on: ubuntu-latest
 
     steps:
