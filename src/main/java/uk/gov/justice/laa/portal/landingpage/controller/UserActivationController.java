@@ -585,7 +585,7 @@ public class UserActivationController {
                     .queryParam("direction", direction)
                     .queryParam("defaultStatusApplied", true);
 
-            if (pageMode.isManageMode()) {
+            if (!pageMode.isManageMode()) {
                 builder.queryParam("selectedRequestStatuses", ReactivationRequestStatus.IN_REVIEW.name());
             }
 
