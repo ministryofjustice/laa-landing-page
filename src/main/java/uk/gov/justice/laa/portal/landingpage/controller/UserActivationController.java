@@ -576,7 +576,7 @@ public class UserActivationController {
 
         var pageMode = userReactivationRequestService.getPageMode(authentication);
 
-        // Stamp the mode-specific default status into the URL once so it is explicit and user-clearable.
+        // Default filters are mode-specific: track mode starts on In review, while manage mode shows all requests.
         if (!defaultStatusApplied && (selectedRequestStatuses == null || selectedRequestStatuses.isEmpty())) {
             UriComponentsBuilder builder = UriComponentsBuilder.fromPath("/admin/users/reactivation-requests")
                     .queryParam("size", size)
