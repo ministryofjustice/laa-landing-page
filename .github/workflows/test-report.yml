@@ -13,6 +13,9 @@ permissions:
 jobs:
   test:
     name: Run Tests
+    # Skip for Dependabot PRs - action-version bumps don't touch app code, and the
+    # coverage/PR-comment steps need secrets and write permissions Dependabot lacks.
+    if: ${{ github.actor != 'dependabot[bot]' }}
     runs-on: ubuntu-latest
 
     steps:
