@@ -576,7 +576,7 @@ public class UserActivationController {
 
         var pageMode = userReactivationRequestService.getPageMode(authentication);
 
-        // Default filters are mode-specific: track mode starts on In review, while manage mode shows all requests.
+        // Default filters are mode-specific: manage mode starts on In review, while track mode shows all requests.
         if (!defaultStatusApplied && (selectedRequestStatuses == null || selectedRequestStatuses.isEmpty())) {
             UriComponentsBuilder builder = UriComponentsBuilder.fromPath("/admin/users/reactivation-requests")
                     .queryParam("size", size)
@@ -585,7 +585,7 @@ public class UserActivationController {
                     .queryParam("direction", direction)
                     .queryParam("defaultStatusApplied", true);
 
-            if (!pageMode.isManageMode()) {
+            if (pageMode.isManageMode()) {
                 builder.queryParam("selectedRequestStatuses", ReactivationRequestStatus.IN_REVIEW.name());
             }
 
