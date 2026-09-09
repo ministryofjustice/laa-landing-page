@@ -61,6 +61,23 @@
                     </dd>
                 </div>
 
+                <!-- New App Role Identifier -->
+                <div class="govuk-summary-list__row">
+                    <dt class="govuk-summary-list__key">
+                        New App Role Name
+                    </dt>
+                    <dd class="govuk-summary-list__value" th:text="${appRoleDetailsForm.name}">
+                        New App Role Name
+                    </dd>
+                    <dd class="govuk-summary-list__actions">
+                        <a class="govuk-link"
+                           th:if="${!isLegacySyncRole}"
+                           th:href="@{'/admin/silas-administration/role/' + ${appRole.id}}">
+                            Change<span class="govuk-visually-hidden"></span>
+                        </a>
+                    </dd>
+                </div>
+
                 <!-- Current App Role Identifier -->
                 <div class="govuk-summary-list__row">
                     <dt class="govuk-summary-list__key">
@@ -74,7 +91,7 @@
                     </dd>
                 </div>
 
-                <!-- New App Role Name -->
+                <!-- New App Role Identifier -->
                 <div class="govuk-summary-list__row">
                     <dt class="govuk-summary-list__key">
                         New App Role Identifier

@@ -8,11 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import uk.gov.justice.laa.portal.landingpage.dto.RoleCreationDto;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
-import java.util.UUID;
-
 /**
  * Custom validator for RoleCreationDto that enforces cross-field metadata rules.
- * - Ensures a parent app is selected (parentAppId is present)
  * - Prevents applying firm type restrictions to roles that are internal-only
  */
 @Slf4j
@@ -23,15 +20,6 @@ public class RoleCreationValidator implements ConstraintValidator<ValidRoleCreat
     public boolean isValid(RoleCreationDto dto, ConstraintValidatorContext ctx) {
         boolean valid = true;
         ctx.disableDefaultConstraintViolation();
-
-        UUID parentAppId = dto.getParentAppId();
-        if (parentAppId == null) {
-            ctx.buildConstraintViolationWithTemplate("Parent app is required.")
-               .addPropertyNode("parentAppId")
-                .addConstraintViolation();
-            valid = false;
-            log.warn("Validation failed: parent app is missing");
-        }
 
         boolean isInternalOnly = dto.getUserTypeRestriction() != null
                 && !dto.getUserTypeRestriction().isEmpty()

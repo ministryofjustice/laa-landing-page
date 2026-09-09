@@ -3,8 +3,9 @@ databaseChangeLog:
       id: 20260828-1-role-identifier-migration
       author: josh-halladey
       dbms: postgresql
-      comment: "Rename CCMS Code to Role Identifier and backfill missing identifiers from the role name. Add new 
-      index enforcing roleIdentifier unique to application and user type"
+      comment: "Rename CCMS Code to Role Identifier and backfill missing identifiers
+        from the role name. Update the unique index to use role_identifier."
+
       changes:
         - sql:
             dbms: postgresql
@@ -19,20 +20,29 @@ databaseChangeLog:
             splitStatements: true
             stripComments: true
             sql: |
-      
               UPDATE app_role
               SET role_identifier = name
               WHERE role_identifier IS NULL OR TRIM(role_identifier) = '';
-
 
         - sql:
             dbms: postgresql
             splitStatements: true
             stripComments: true
             sql: |
+              DROP INDEX IF EXISTS app_role_app_id_ccms_code_user_type_idx;
+
               CREATE UNIQUE INDEX ux_app_role_appid_roleidentifier_usertype
-                ON app_role (app_id, role_identifier, (user_type_restriction[1]));
+                ON app_role (app_id, role_identifier, user_type_restriction);
+        
+
       rollback:
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              DROP INDEX IF EXISTS ux_app_role_appid_roleidentifier_usertype;
+
         - sql:
             dbms: postgresql
             splitStatements: true
@@ -55,4 +65,6 @@ databaseChangeLog:
             splitStatements: true
             stripComments: true
             sql: |
-              DROP INDEX IF EXISTS ux_app_role_appid_roleidentifier_usertype;
+              CREATE UNIQUE INDEX app_role_app_id_ccms_code_user_type_idx
+                ON app_role (app_id, ccms_code, user_type_restriction)
+                WHERE ccms_code IS NOT NULL;

@@ -235,11 +235,8 @@ public class AppRoleService {
             ? dto.getFirmTypeRestriction().toArray(new FirmType[0])
             : null;
 
-        // Convert empty CCMS code to null to avoid unique constraint violations
-        String roleIdentifier = dto.getRoleIdentifier();
-        if (roleIdentifier != null && roleIdentifier.trim().isEmpty()) {
-            roleIdentifier = null;
-        }
+        // Trim role identifier to avoid leading/trailing whitespace issues
+        String roleIdentifier = dto.getRoleIdentifier() == null ? null : dto.getRoleIdentifier().trim();
 
         AppRole appRole = AppRole.builder()
                 .name(dto.getName())

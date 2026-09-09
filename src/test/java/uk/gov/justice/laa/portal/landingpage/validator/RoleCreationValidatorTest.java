@@ -12,11 +12,9 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import uk.gov.justice.laa.portal.landingpage.dto.RoleCreationDto;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
-import uk.gov.justice.laa.portal.landingpage.repository.AppRoleRepository;
 import uk.gov.justice.laa.portal.landingpage.validation.ValidationMessages;
 
 /**
