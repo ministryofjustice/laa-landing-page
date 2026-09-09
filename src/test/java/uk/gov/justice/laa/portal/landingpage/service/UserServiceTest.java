@@ -7071,8 +7071,8 @@ class UserServiceTest {
             // When
             PaginatedAuditUsers result = userService.getAuditUsers(
                     null, null, null, null, null,
-                    2, 10, "name", "asc", false, null
-            , null, null, null);
+                    2, 10, "name", "asc", false, null,
+                  null, null, null);
 
             // Then
             assertThat(result).isNotNull();
