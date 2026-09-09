@@ -84,6 +84,10 @@ class DemoDataPopulatorTest {
         ReflectionTestUtils.setField(demoDataPopulator, "appPuiName", "PUI");
         ReflectionTestUtils.setField(demoDataPopulator, "appSubmitCrimeFormName", "Submit a crime form");
         ReflectionTestUtils.setField(demoDataPopulator, "ccmsAccountLinkName", "CCMS case transfer requests");
+        ReflectionTestUtils.setField(demoDataPopulator, "appPuiDetails",
+            "pui_oid//PUI security group//pui-security-group-oid");
+        ReflectionTestUtils.setField(demoDataPopulator, "appSubmitCrimeFormDetails",
+            "submit_crime_form_oid//Submit crime form security group//submit-crime-form-security-group-oid");
         ReflectionTestUtils.setField(demoDataPopulator, "appCrimeApplyDetails",
                 "crime_apply_oid//APPREG-USER-Access-LAAD-Apply-Criminal-Legal-Aid//6466b2ed-1103-4588-9c28-561ec9dafa5d");
         ReflectionTestUtils.setField(demoDataPopulator, "appCivilApplyDetails",
@@ -94,6 +98,7 @@ class DemoDataPopulatorTest {
         // Enable demo data population by default
         ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
         ReflectionTestUtils.setField(demoDataPopulator, "enableDistributedDbLocking", true);
+        ReflectionTestUtils.setField(demoDataPopulator, "distributedDbLockingPeriod", 30);
 
     }
 
