@@ -1386,7 +1386,8 @@ public class UserController {
         session.removeAttribute("roleSelectableAppIndexes");
         model.addAttribute("user", user);
         model.addAttribute("apps", editableApps);
-        model.addAttribute("groupedApps", appService.buildGroupedApps(editableApps));
+        model.addAttribute("groupedApps", appService.buildGroupedApps(editableApps.stream()
+                .filter(app -> !app.isHiddenFromSelection()).toList()));
         model.addAttribute(ModelAttributes.PAGE_TITLE, "Edit user services - " + user.getFullName());
         if (errorMessage != null) {
             model.addAttribute("errorMessage", errorMessage);
