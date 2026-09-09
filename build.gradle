@@ -95,6 +95,7 @@ dependencies {
     implementation 'software.amazon.awssdk:sqs:2.30.0'
     implementation 'software.amazon.awssdk:ssm:2.30.0'
     implementation 'software.amazon.awssdk:sts:2.30.0'
+    implementation 'io.getunleash:unleash-client-java:9.2.0'
 
     // Resiliency, Execution and Observability
     implementation 'org.springframework.retry:spring-retry:2.0.11'

@@ -224,6 +224,12 @@ spec:
               value: "${USER_DATA_API_DEBUG_ENABLED}"
             - name: USER_DATA_API_USER_REQUEST_TOKEN_ENABLED
               value: "${USER_DATA_API_USER_REQUEST_TOKEN_ENABLED}"
+            - name: UNLEASH_ENABLED
+              value: "${UNLEASH_ENABLED}"
+            - name: UNLEASH_URL
+              value: "${UNLEASH_URL}"
+            - name: UNLEASH_API_KEY
+              value: "${UNLEASH_API_KEY}"
             - name: SENTRY_ENVIRONMENT
               value: "${SENTRY_ENVIRONMENT}"
             - name: SENTRY_ENABLED

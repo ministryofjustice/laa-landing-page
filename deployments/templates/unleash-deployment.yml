@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unleash
+  labels:
+    app: unleash
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: unleash
+  template:
+    metadata:
+      labels:
+        app: unleash
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      automountServiceAccountToken: false
+      containers:
+        - name: unleash
+          image: unleashorg/unleash-server:6
+          imagePullPolicy: Always
+          securityContext:
+            runAsUser: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+          ports:
+            - containerPort: 4242
+          env:
+            - name: DATABASE_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: unleash-rds-output
+                  key: rds_instance_address
+            - name: DATABASE_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: unleash-rds-output
+                  key: database_name
+            - name: DATABASE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: unleash-rds-output
+                  key: database_username
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: unleash-rds-output
+                  key: database_password
+            - name: DATABASE_SSL
+              value: "true"
+            - name: AUTH_TYPE
+              value: "open-source"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4242
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4242
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 5
