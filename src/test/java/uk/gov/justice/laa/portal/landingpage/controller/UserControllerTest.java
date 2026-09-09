@@ -7712,8 +7712,6 @@ class UserControllerTest {
                         || anno.value().equals("@accessControlService.canEditUser(#id)")
                         || anno.value().equals("@accessControlService.canGrantUserAccess(#id)")
                         || anno.value().equals(
-                                "@accessControlService.canGrantUserAccess(#id) && @accessControlService.canRemoveAppRoles(#id)")
-                        || anno.value().equals(
                                 "@accessControlService.canGrantUserAccess(#userId) && @accessControlService.canRemoveAppRoles(#userId)")
                         || anno.value().equals(
                                 "@accessControlService.canAssignAppRoles(#id) || @accessControlService.canRemoveAppRoles(#id) || @accessControlService.canEditUser(#id)"))
