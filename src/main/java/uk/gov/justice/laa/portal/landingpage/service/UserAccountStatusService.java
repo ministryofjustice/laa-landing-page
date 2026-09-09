@@ -128,7 +128,9 @@ public class UserAccountStatusService {
             // Perform disable
             disabledUser.setDisabledBy(disabledById);
             disabledUser.setEnabled(false);
+            // Update Silas Status for the user
             userService.refreshAndUpdatedUserProfilesStatus(false, disabledUser.getInvitationStatus(), disabledUser.getUserProfiles());
+            userService.refreshAndUpdatedAccountStatus(disabledUser);
             disabledUser.setDisableType(disableType);
             entraUserRepository.saveAndFlush(disabledUser);
 
@@ -201,6 +203,7 @@ public class UserAccountStatusService {
             // Perform disable
             entraUser.setEnabled(false);
             userService.refreshAndUpdatedUserProfilesStatus(false, entraUser.getInvitationStatus(), entraUser.getUserProfiles());
+            userService.refreshAndUpdatedAccountStatus(entraUser);
             entraUser.setDisabledBy(disabledById);
             entraUser.setDisableType(bulkDisableType);
             entraUserRepository.saveAndFlush(entraUser);
@@ -267,13 +270,14 @@ public class UserAccountStatusService {
             enabledUser.setDisabledBy(null);
             enabledUser.setEnabled(true);
             userService.refreshAndUpdatedUserProfilesStatus(true, enabledUser.getInvitationStatus(), enabledUser.getUserProfiles());
+            userService.refreshAndUpdatedAccountStatus(enabledUser);
             enabledUser.setDisableType(null);
             entraUserRepository.saveAndFlush(enabledUser);
 
             // Add audit entry
             UserAccountStatusAudit userAccountStatusAudit = UserAccountStatusAudit.builder()
                     .entraUser(enabledUser)
-                    .statusChange(UserAccountStatus.ACTIVATED)
+                    .statusChange(UserAccountStatus.ACTIVE)
                     .statusChangedBy(enabledByUser.getFirstName() + " " + enabledByUser.getLastName())
                     .statusChangedDate(LocalDateTime.now())
                     .comments(comments)

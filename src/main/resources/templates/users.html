@@ -123,33 +123,80 @@
                                             </div>
                                         </fieldset>
                                     </div>
-                                    <!-- User Status -->
+                                    <!-- Profile Status -->
                                     <div style="flex: 1;">
                                         <fieldset class="govuk-fieldset">
-                                            <legend class="govuk-fieldset__legend govuk-fieldset__legend--s">User Status</legend>
+                                            <legend class="govuk-fieldset__legend govuk-fieldset__legend--s">Profile Status</legend>
                                             <div class="govuk-checkboxes govuk-checkboxes--small" data-module="govuk-checkboxes">
                                                 <div class="govuk-checkboxes__item">
-                                                    <input class="govuk-checkboxes__input" id="status-NO_ROLES_ASSIGNED"
-                                                        name="selectedStatuses" type="checkbox" value="NO_ROLES_ASSIGNED"
-                                                        th:checked="${selectedStatuses != null and selectedStatuses.contains(T(uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus).NO_ROLES_ASSIGNED)}">
-                                                    <label class="govuk-label govuk-checkboxes__label" for="status-NO_ROLES_ASSIGNED">
-                                                        No roles assigned
+                                                    <input class="govuk-checkboxes__input" id="ps-status-ACTIVATION_REQUIRED"
+                                                        name="selectedProfileStatuses" type="checkbox" value="ACTIVATION_REQUIRED"
+                                                        th:checked="${selectedProfileStatuses != null and selectedProfileStatuses.contains(T(uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus).ACTIVATION_REQUIRED)}">
+                                                    <label class="govuk-label govuk-checkboxes__label" for="ps-status-ACTIVATION_REQUIRED"
+                                                        th:value="${T(uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus).ACTIVATION_REQUIRED.getValue()}">
+                                                        Activation required
                                                     </label>
                                                 </div>
                                                 <div class="govuk-checkboxes__item">
-                                                    <input class="govuk-checkboxes__input" id="status-ACTIVATION_PENDING"
-                                                        name="selectedStatuses" type="checkbox" value="ACTIVATION_PENDING"
-                                                        th:checked="${selectedStatuses != null and selectedStatuses.contains(T(uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus).ACTIVATION_PENDING)}">
-                                                    <label class="govuk-label govuk-checkboxes__label" for="status-ACTIVATION_PENDING">
-                                                        Activation pending
+                                                    <input class="govuk-checkboxes__input" id="ps-status-NO_ACCESS_ASSIGNED"
+                                                        name="selectedProfileStatuses" type="checkbox" value="NO_ACCESS_ASSIGNED"
+                                                        th:checked="${selectedProfileStatuses != null and selectedProfileStatuses.contains(T(uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus).NO_ACCESS_ASSIGNED)}">
+                                                    <label class="govuk-label govuk-checkboxes__label" for="ps-status-NO_ACCESS_ASSIGNED"
+                                                        th:value="${T(uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus).NO_ACCESS_ASSIGNED.getValue()}">
+                                                        No access assigned
                                                     </label>
                                                 </div>
                                                 <div class="govuk-checkboxes__item">
-                                                    <input class="govuk-checkboxes__input" id="status-COMPLETE"
-                                                        name="selectedStatuses" type="checkbox" value="COMPLETE"
-                                                        th:checked="${selectedStatuses != null and selectedStatuses.contains(T(uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus).COMPLETE)}">
-                                                    <label class="govuk-label govuk-checkboxes__label" for="status-COMPLETE">
+                                                    <input class="govuk-checkboxes__input" id="ps-status-NO_FIRMS_LINKED"
+                                                           name="selectedProfileStatuses" type="checkbox" value="NO_FIRMS_LINKED"
+                                                           th:checked="${selectedProfileStatuses != null and selectedProfileStatuses.contains(T(uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus).NO_FIRMS_LINKED)}">
+                                                    <label class="govuk-label govuk-checkboxes__label" for="ps-status-NO_FIRMS_LINKED"
+                                                           th:value="${T(uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus).NO_FIRMS_LINKED.getValue()}">
+                                                        No firms linked
+                                                    </label>
+                                                </div>
+                                                <div class="govuk-checkboxes__item">
+                                                    <input class="govuk-checkboxes__input" id="ps-status-COMPLETE"
+                                                        name="selectedProfileStatuses" type="checkbox" value="COMPLETE"
+                                                        th:checked="${selectedProfileStatuses != null and selectedProfileStatuses.contains(T(uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus).COMPLETE)}">
+                                                    <label class="govuk-label govuk-checkboxes__label" for="ps-status-COMPLETE"
+                                                        th:value="${T(uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus).COMPLETE.getValue()}">
                                                         Complete
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </fieldset>
+                                    </div>
+                                    <!-- SiLAS Account Status -->
+                                    <div style="flex: 1;">
+                                        <fieldset class="govuk-fieldset">
+                                            <legend class="govuk-fieldset__legend govuk-fieldset__legend--s">SiLAS Account Status</legend>
+                                            <div class="govuk-checkboxes govuk-checkboxes--small" data-module="govuk-checkboxes">
+                                                <div class="govuk-checkboxes__item">
+                                                    <input class="govuk-checkboxes__input" id="sa-status-ACTIVATION_REQUIRED"
+                                                           name="selectedSilasAccStatuses" type="checkbox" value="ACTIVATION_REQUIRED"
+                                                           th:checked="${selectedSilasAccStatuses != null and selectedSilasAccStatuses.contains(T(uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus).ACTIVATION_REQUIRED)}">
+                                                    <label class="govuk-label govuk-checkboxes__label" for="sa-status-ACTIVATION_REQUIRED"
+                                                           th:value="${T(uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus).ACTIVATION_REQUIRED.getValue()}">
+                                                        Activation required
+                                                    </label>
+                                                </div>
+                                                <div class="govuk-checkboxes__item">
+                                                    <input class="govuk-checkboxes__input" id="sa-status-DEACTIVATED"
+                                                           name="selectedSilasAccStatuses" type="checkbox" value="DEACTIVATED"
+                                                           th:checked="${selectedSilasAccStatuses != null and selectedSilasAccStatuses.contains(T(uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus).DEACTIVATED)}">
+                                                    <label class="govuk-label govuk-checkboxes__label" for="sa-status-DEACTIVATED"
+                                                           th:value="${T(uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus).DEACTIVATED.getValue()}">
+                                                        Deactivated
+                                                    </label>
+                                                </div>
+                                                <div class="govuk-checkboxes__item">
+                                                    <input class="govuk-checkboxes__input" id="sa-status-ACTIVATED"
+                                                           name="selectedSilasAccStatuses" type="checkbox" value="ACTIVE"
+                                                           th:checked="${selectedSilasAccStatuses != null and selectedSilasAccStatuses.contains(T(uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus).ACTIVE)}">
+                                                    <label class="govuk-label govuk-checkboxes__label" for="sa-status-ACTIVATED"
+                                                           th:value="${T(uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus).ACTIVE.getValue()}">
+                                                        Active
                                                     </label>
                                                 </div>
                                             </div>
@@ -160,7 +207,7 @@
 
                             <!-- Active filters banner - passed to shared component -->
                             <div id="users-active-filters">
-                                <div th:if="${showFirmAdmins or showMultiFirmUsers or showProviderUsers or (selectedStatuses != null and !selectedStatuses.isEmpty())}"
+                                <div th:if="${showFirmAdmins or showMultiFirmUsers or showProviderUsers or (selectedProfileStatuses != null and !selectedProfileStatuses.isEmpty()) or (selectedSilasAccStatuses != null and !selectedSilasAccStatuses.isEmpty())}"
                                      class="active-filters-banner govuk-!-margin-top-2 govuk-!-margin-bottom-3" aria-label="Active filters">
                                     <span class="govuk-body govuk-!-font-weight-bold govuk-!-margin-right-2 filter-tag-label">Filters</span>
                                     <span th:if="${showProviderUsers}" class="filter-tag">
@@ -175,15 +222,22 @@
                                         <a href="#" data-remove-filter="showMultiFirmUsers" class="filter-tag__remove" aria-label="Remove 3rd Party filter">&#x2715;</a>
                                         <span>3rd Party</span>
                                     </span>
-                                    <th:block th:each="status : ${selectedStatuses}">
+                                    <th:block th:each="status : ${selectedProfileStatuses}">
                                         <span class="filter-tag">
-                                            <a href="#" data-remove-array-param="selectedStatuses" th:attr="data-remove-array-value=${status.name()}" class="filter-tag__remove"
+                                            <a href="#" data-remove-array-param="selectedProfileStatuses" th:attr="data-remove-array-value=${status.name()}" class="filter-tag__remove"
+                                               th:aria-label="'Remove ' + ${status.value} + ' filter'">&#x2715;</a>
+                                            <span th:text="${status.value}"></span>
+                                        </span>
+                                    </th:block>
+                                    <th:block th:each="status : ${selectedSilasAccStatuses}">
+                                        <span class="filter-tag">
+                                            <a href="#" data-remove-array-param="selectedSilasAccStatuses" th:attr="data-remove-array-value=${status.name()}" class="filter-tag__remove"
                                                th:aria-label="'Remove ' + ${status.value} + ' filter'">&#x2715;</a>
                                             <span th:text="${status.value}"></span>
                                         </span>
                                     </th:block>
                                     <a href="#" id="clear-filters-link" class="govuk-link filter-tag-clear-link"
-                                       data-filter-params="showFirmAdmins,showMultiFirmUsers,showProviderUsers,selectedStatuses,firmSearch,selectedFirmId">Clear filters</a>
+                                       data-filter-params="showFirmAdmins,showMultiFirmUsers,showProviderUsers,selectedProfileStatuses,selectedSilasAccStatuses,firmSearch,selectedFirmId">Clear filters</a>
                                 </div>
                             </div>
                         </th:block>
@@ -209,8 +263,11 @@
                                 if (this.dataset.showFirmAdmins === 'true') sp.set('showFirmAdmins', 'true');
                                 if (this.dataset.showMultiFirmUsers === 'true') sp.set('showMultiFirmUsers', 'true');
                                 if (this.dataset.showProviderUsers === 'true') sp.set('showProviderUsers', 'true');
-                                if (this.dataset.selectedStatuses) {
-                                    this.dataset.selectedStatuses.split(',').filter(s => s).forEach(s => sp.append('selectedStatuses', s));
+                                if (this.dataset.selectedProfileStatuses) {
+                                    this.dataset.selectedProfileStatuses.split(',').filter(s => s).forEach(s => sp.append('selectedProfileStatuses', s));
+                                }
+                                if (this.dataset.selectedSilasAccStatuses) {
+                                    this.dataset.selectedSilasAccStatuses.split(',').filter(s => s).forEach(s => sp.append('selectedSilasAccStatuses', s));
                                 }
 
                                 window.location.href = url.toString();
@@ -229,7 +286,7 @@
                                 th:aria-sort="${sort == 'firstName' ? (direction == 'asc' ? 'ascending' : 'descending') : 'none'}"
                                 style="width: 20%; min-width: 120px;">
                                 <button type="button" class="sort-button" data-sort="firstName"
-                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'firstName' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-show-multi-firm-users=${showMultiFirmUsers}, data-show-provider-users=${showProviderUsers}, data-selected-statuses=${selectedStatuses != null ? #strings.listJoin(selectedStatuses, ',') : ''}">
+                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'firstName' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-show-multi-firm-users=${showMultiFirmUsers}, data-show-provider-users=${showProviderUsers}, data-selected-profile-statuses=${selectedProfileStatuses != null ? #strings.listJoin(selectedProfileStatuses, ',') : ''}, data-selected-silas-acc-statuses=${selectedSilasAccStatuses != null ? #strings.listJoin(selectedSilasAccStatuses, ',') : ''}">
                                     Name
                                     <img th:if="${sort == 'firstName' and direction == 'asc'}"
                                         th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
@@ -243,7 +300,7 @@
                                 th:aria-sort="${sort == 'firmName' ? direction : 'none'}"
                                 style="width: 20%; min-width: 120px;">
                                 <button type="button" class="sort-button" data-sort="firmName"
-                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'firmName' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-show-multi-firm-users=${showMultiFirmUsers}, data-show-provider-users=${showProviderUsers}, data-selected-statuses=${selectedStatuses != null ? #strings.listJoin(selectedStatuses, ',') : ''}">
+                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'firmName' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-show-multi-firm-users=${showMultiFirmUsers}, data-show-provider-users=${showProviderUsers}, data-selected-profile-statuses=${selectedProfileStatuses != null ? #strings.listJoin(selectedProfileStatuses, ',') : ''}, data-selected-silas-acc-statuses=${selectedSilasAccStatuses != null ? #strings.listJoin(selectedSilasAccStatuses, ',') : ''}">
                                     Firm
                                     <img th:if="${sort == 'firmName' and direction == 'asc'}"
                                         th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
@@ -257,7 +314,7 @@
                                 th:aria-sort="${sort == 'email' ? direction : 'none'}"
                                 style="width: 30%; min-width: 200px;">
                                 <button type="button" class="sort-button" data-sort="email"
-                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'email' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-show-multi-firm-users=${showMultiFirmUsers}, data-show-provider-users=${showProviderUsers}, data-selected-statuses=${selectedStatuses != null ? #strings.listJoin(selectedStatuses, ',') : ''}">
+                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'email' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-show-multi-firm-users=${showMultiFirmUsers}, data-show-provider-users=${showProviderUsers}, data-selected-profile-statuses=${selectedProfileStatuses != null ? #strings.listJoin(selectedProfileStatuses, ',') : ''}, data-selected-silas-acc-statuses=${selectedSilasAccStatuses != null ? #strings.listJoin(selectedSilasAccStatuses, ',') : ''}">
                                     Email
                                     <img th:if="${sort == 'email' and direction == 'asc'}"
                                         th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
@@ -271,7 +328,7 @@
                                 th:aria-sort="${sort == 'userType' ? direction : 'none'}"
                                 style="width: 15%; min-width: 110px;">
                                 <button type="button" class="sort-button" data-sort="userType"
-                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'userType' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-show-multi-firm-users=${showMultiFirmUsers}, data-show-provider-users=${showProviderUsers}, data-selected-statuses=${selectedStatuses != null ? #strings.listJoin(selectedStatuses, ',') : ''}">
+                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'userType' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-show-multi-firm-users=${showMultiFirmUsers}, data-show-provider-users=${showProviderUsers}, data-selected-profile-statuses=${selectedProfileStatuses != null ? #strings.listJoin(selectedProfileStatuses, ',') : ''}, data-selected-silas-acc-statuses=${selectedSilasAccStatuses != null ? #strings.listJoin(selectedSilasAccStatuses, ',') : ''}">
                                     <span th:text="${uiLabels.userType}">User Type</span>
                                     <img th:if="${sort == 'userType' and direction == 'asc'}"
                                         th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
@@ -282,17 +339,31 @@
                                 </button>
                             </th>
                             <th scope="col" class="govuk-table__header govuk-!-width-one-quarter"
-                                th:aria-sort="${sort == 'userStatus' ? direction : 'none'}"
+                                th:aria-sort="${sort == 'userProfileStatus' ? direction : 'none'}"
                                 style="width: 15%; min-width: 90px;">
-                                <button type="button" class="sort-button" data-sort="userStatus"
-                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'userStatus' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-show-multi-firm-users=${showMultiFirmUsers}, data-show-provider-users=${showProviderUsers}, data-selected-statuses=${selectedStatuses != null ? #strings.listJoin(selectedStatuses, ',') : ''}">
-                                    User Status
-                                    <img th:if="${sort == 'userStatus' and direction == 'asc'}"
+                                <button type="button" class="sort-button" data-sort="userProfileStatus"
+                                    th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'userProfileStatus' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-show-multi-firm-users=${showMultiFirmUsers}, data-show-provider-users=${showProviderUsers}, data-selected-profile-statuses=${selectedProfileStatuses != null ? #strings.listJoin(selectedProfileStatuses, ',') : ''}, data-selected-silas-acc-statuses=${selectedSilasAccStatuses != null ? #strings.listJoin(selectedSilasAccStatuses, ',') : ''}">
+                                    Profile Status
+                                    <img th:if="${sort == 'userProfileStatus' and direction == 'asc'}"
                                         th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
-                                    <img th:if="${sort == 'userStatus' and direction == 'desc'}"
+                                    <img th:if="${sort == 'userProfileStatus' and direction == 'desc'}"
                                         th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
-                                    <img th:if="${sort != 'userStatus'}" th:src="@{/assets/images/sort-none.svg}"
+                                    <img th:if="${sort != 'userProfileStatus'}" th:src="@{/assets/images/sort-none.svg}"
                                         width="22" height="22" alt="">
+                                </button>
+                            </th>
+                            <th scope="col" class="govuk-table__header govuk-!-width-one-quarter"
+                                th:aria-sort="${sort == 'silasAccountStatus' ? direction : 'none'}"
+                                style="width: 15%; min-width: 90px;">
+                                <button type="button" class="sort-button" data-sort="silasAccountStatus"
+                                        th:attr="data-size=${requestedPageSize ?: 10}, data-page=1, data-search=${search}, data-direction=${sort == 'silasAccountStatus' and direction == 'asc' ? 'desc' : 'asc'}, data-usertype=${usertype}, data-show-firm-admins=${showFirmAdmins}, data-show-multi-firm-users=${showMultiFirmUsers}, data-show-provider-users=${showProviderUsers}, data-selected-profile-statuses=${selectedProfileStatuses != null ? #strings.listJoin(selectedProfileStatuses, ',') : ''}, data-selected-silas-acc-statuses=${selectedSilasAccStatuses != null ? #strings.listJoin(selectedSilasAccStatuses, ',') : ''}">
+                                    SiLAS Account Status
+                                    <img th:if="${sort == 'silasAccountStatus' and direction == 'asc'}"
+                                         th:src="@{/assets/images/sort-asc.svg}" width="22" height="22" alt="Sorted ascending">
+                                    <img th:if="${sort == 'silasAccountStatus' and direction == 'desc'}"
+                                         th:src="@{/assets/images/sort-desc.svg}" width="22" height="22" alt="Sorted descending">
+                                    <img th:if="${sort != 'silasAccountStatus'}" th:src="@{/assets/images/sort-none.svg}"
+                                         width="22" height="22" alt="">
                                 </button>
                             </th>
                         </tr>
@@ -320,9 +391,9 @@
                                 </span>
                             </td>
                             <td class="govuk-table__cell">
-                                <th:block th:if="${user.silasStatus().name() == 'INCOMPLETE'}">
+                                <th:block th:if="${user.silasStatus().name() == 'NO_FIRMS_LINKED'}">
                                     <span class="govuk-tag govuk-tag--red">
-                                        Incomplete
+                                        No firms linked
                                     </span>
                                 </th:block>
                                 <th:block th:if="${user.silasStatus().name() == 'COMPLETE'}">
@@ -330,18 +401,38 @@
                                         Complete
                                     </span>
                                 </th:block>
-                                <th:block th:if="${user.silasStatus().name() == 'ACTIVATION_PENDING'}">
+                                <th:block th:if="${user.silasStatus().name() == 'ACTIVATION_REQUIRED'}">
                                     <span class="govuk-tag govuk-tag--blue">
-                                        Activation Pending
+                                        Activation Required
                                     </span>
                                 </th:block>
-                                <th:block th:if="${user.silasStatus().name() == 'NO_ROLES_ASSIGNED'}">
+                                <th:block th:if="${user.silasStatus().name() == 'NO_ACCESS_ASSIGNED'}">
                                     <span class="govuk-tag govuk-tag--orange">
-                                        No roles assigned
+                                        No access assigned
                                     </span>
                                 </th:block>
                                 <th:block th:if="${user.silasStatus().name() == 'UNKNOWN'}">
                                     <span class="govuk-tag govuk-tag--grey">Unknown</span>
+                                </th:block>
+                            </td>
+                            <td class="govuk-table__cell">
+                                <th:block th:if="${user.silasAccountStatus().name() == 'ACTIVE'}">
+                                    <span class="govuk-tag govuk-tag--green">
+                                        Active
+                                    </span>
+                                </th:block>
+                                <th:block th:if="${user.silasAccountStatus().name() == 'DEACTIVATED'}">
+                                    <span class="govuk-tag govuk-tag--red">
+                                        Deactivated
+                                    </span>
+                                </th:block>
+                                <th:block th:if="${user.silasAccountStatus().name() == 'ACTIVATION_REQUIRED'}">
+                                    <span class="govuk-tag govuk-tag--blue">
+                                        Activation Required
+                                    </span>
+                                </th:block>
+                                <th:block th:if="${user.silasAccountStatus().name() == 'UNKNOWN'}">
+                                    <span class="govuk-tag govuk-tag--orange">Unknown</span>
                                 </th:block>
                             </td>
                         </tr>
@@ -361,7 +452,8 @@
             showFirmAdmins=${showFirmAdmins},
             showMultiFirmUsers=${showMultiFirmUsers},
             showProviderUsers=${showProviderUsers},
-            selectedStatuses=${selectedStatuses},
+            selectedProfileStatuses=${selectedProfileStatuses},
+            selectedSilasAccStatuses=${selectedSilasAccStatuses},
             selectedUserTypes=${null},
             selectedRequestStatuses=${null},
             defaultStatusApplied=${null}

@@ -56,8 +56,8 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
     @Query(value = """
                         SELECT new uk.gov.justice.laa.portal.landingpage.dto.UserSearchResultsDto(ups.id, ups.activeProfile,
                                         ups.userType, ups.legacyUserId,  ups.userProfileStatus, ups.silasStatus, u.multiFirmUser, u.firstName,
-                                        u.lastName, CONCAT(u.firstName, ' ', u.lastName), u.email, u.userStatus, f.name,
-                                                    u.invitationStatus, u.enabled,
+                                        u.lastName, CONCAT(u.firstName, ' ', u.lastName), u.email, u.silasAccountStatus,
+                                                    f.name, u.invitationStatus, u.enabled,
                                                     CASE WHEN EXISTS (SELECT 1 FROM ups.appRoles) THEN TRUE ELSE FALSE END)
                                 FROM UserProfile ups
                                     JOIN ups.entraUser u
@@ -85,7 +85,8 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                                     AND (ar2.name = 'External User Manager' OR ar2.name = 'Firm User Manager')
                                 ))
                         )
-                        AND (:#{#criteria.hasSelectedStatuses()} = false OR ups.silasStatus IN :#{#criteria.selectedStatuses})
+                        AND (:#{#criteria.hasSelectedProfileStatuses()} = false OR ups.silasStatus IN :#{#criteria.selectedProfileStatuses})
+                        AND (:#{#criteria.hasSelectedSilasAccStatuses()} = false OR u.silasAccountStatus IN :#{#criteria.selectedSilasAccStatuses})
             """,
             countQuery = """
                         SELECT COUNT(ups) FROM UserProfile ups
@@ -115,7 +116,8 @@ public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> 
                                     AND (ar2.name = 'External User Manager' OR ar2.name = 'Firm User Manager')
                                 ))
                         )
-                        AND (:#{#criteria.hasSelectedStatuses()} = false OR ups.silasStatus IN :#{#criteria.selectedStatuses})
+                        AND (:#{#criteria.hasSelectedProfileStatuses()} = false OR ups.silasStatus IN :#{#criteria.selectedProfileStatuses})
+                        AND (:#{#criteria.hasSelectedSilasAccStatuses()} = false OR u.silasAccountStatus IN :#{#criteria.selectedSilasAccStatuses})
             """)
     Page<UserSearchResultsDto> findBySearchParams(@Param("criteria") UserSearchCriteria criteria, Pageable pageable);
 

@@ -4,12 +4,11 @@ import lombok.Getter;
 
 @Getter
 public enum UserProfileSilasStatus {
-    INCOMPLETE(1, "Incomplete"),
-    ACTIVATION_PENDING(2, "Activation pending"),
-    DISABLED(3, "Disabled"),
-    NO_ROLES_ASSIGNED(4, "No roles assigned"),
-    COMPLETE(5, "Complete"),
-    UNKNOWN(6, "Unknown");
+    ACTIVATION_REQUIRED(1, "Activation required"),
+    NO_ACCESS_ASSIGNED(2, "No access assigned"),
+    NO_FIRMS_LINKED(3, "No firms linked"),
+    COMPLETE(4, "Complete"),
+    UNKNOWN(5, "Unknown");
 
     private final int sortOrder;
     private final String value;

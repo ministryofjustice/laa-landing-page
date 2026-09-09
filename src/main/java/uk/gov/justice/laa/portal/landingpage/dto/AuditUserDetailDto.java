@@ -76,7 +76,7 @@ public class AuditUserDetailDto implements Serializable {
      */
     private String disabledBy;
     /**
-     * Entra status from EntraUser.userStatus enum
+     * Entra status from EntraUser.silasAccountStatus enum
      */
     private String entraStatus;
 
@@ -198,6 +198,11 @@ public class AuditUserDetailDto implements Serializable {
          * Whether this is the active profile
          */
         private boolean activeProfile;
+
+        /**
+         * User profile status
+         */
+        private String profileStatus;
 
         public Map<String, List<String>> getRolesGroupByAppName() {
             return roles.stream()

@@ -311,6 +311,7 @@
                                 <th scope="col" class="govuk-table__header">Office restrictions</th>
                                 <th scope="col" class="govuk-table__header">Services</th>
                                 <th scope="col" class="govuk-table__header" th:text="${uiLabels.status}">Status</th>
+                                <th scope="col" class="govuk-table__header">Profile status</th>
                             </tr>
                         </thead>
                         <tbody class="govuk-table__body">
@@ -335,6 +336,12 @@
                                 <td class="govuk-table__cell">
                                     <span class="moj-badge moj-badge--green" th:if="${profile.activeProfile}">Active</span>
                                     <span class="moj-badge" th:unless="${profile.activeProfile}">Inactive</span>
+                                </td>
+                                <td class="govuk-table__cell">
+                                    <span class="moj-badge moj-badge--green" th:if="${profile.getProfileStatus() == 'COMPLETE'}">COMPLETE</span>
+                                    <span class="moj-badge moj-badge--blue" th:if="${profile.getProfileStatus() == 'ACTIVATION_REQUIRED'}">ACTIVATION REQUIRED</span>
+                                    <span class="moj-badge moj-badge--orange" th:if="${profile.getProfileStatus() == 'NO_ACCESS_ASSIGNED'}">NO_ACCESS_ASSIGNED</span>
+                                    <span class="moj-badge moj-badge--grey" th:if="${profile.getProfileStatus() == 'UNKNOWN'}">UNKNOWN</span>
                                 </td>
                             </tr>
                         </tbody>

@@ -39,7 +39,7 @@ import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.repository.EntraUserRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
@@ -700,7 +700,7 @@ class DataProviderServiceIntegrationTest {
             .entraOid(UUID.randomUUID().toString())
             .firstName("Test")
             .lastName("User")
-            .userStatus(UserStatus.ACTIVE)
+            .silasAccountStatus(SilasAccountStatus.ACTIVE)
             .createdDate(LocalDateTime.now())
             .createdBy("Test")
             .build();

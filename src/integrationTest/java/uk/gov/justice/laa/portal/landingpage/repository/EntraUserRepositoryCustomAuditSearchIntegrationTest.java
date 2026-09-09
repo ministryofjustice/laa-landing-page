@@ -492,10 +492,10 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
         // Given
         createTestUserWithLoginAndInvitation("No", "Profiles", "no.profile@example.com", InvitationStatus.INVITE_SENT);
         EntraUser testUser = createTestUserWithLoginAndInvitation("User", "Profile_no_roles", "no.roles@example.com", InvitationStatus.VERIFICATION_SUCCESS);
-        createAndAddUserProfile(testUser, testFirm1, UserType.EXTERNAL, null, UserProfileSilasStatus.INCOMPLETE, true);
+        createAndAddUserProfile(testUser, testFirm1, UserType.EXTERNAL, null, UserProfileSilasStatus.NO_ACCESS_ASSIGNED, true);
         testUser = createTestUserWithLoginAndInvitation("MutiFirm", "One_Profile_no_roles", "one.profile.roles@example.com", InvitationStatus.VERIFICATION_SUCCESS);
         createAndAddUserProfile(testUser, testFirm1, UserType.EXTERNAL, null, UserProfileSilasStatus.COMPLETE, true);
-        createAndAddUserProfile(testUser, testFirm2, UserType.EXTERNAL, externalUserAdminRole, UserProfileSilasStatus.INCOMPLETE, false);
+        createAndAddUserProfile(testUser, testFirm2, UserType.EXTERNAL, externalUserAdminRole, UserProfileSilasStatus.NO_ACCESS_ASSIGNED, false);
         createTestUser("Jane", "Smith", "jane.smith@example.com", testFirm2, UserType.EXTERNAL, externalUserAdminRole);
 
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("STATUS_RANK"));
@@ -514,10 +514,10 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
         // Given
         createTestUserWithLoginAndInvitation("No", "Profiles", "no.profile@example.com", InvitationStatus.INVITE_SENT);
         EntraUser testUser = createTestUserWithLoginAndInvitation("User", "Profile_no_roles", "no.roles@example.com", InvitationStatus.VERIFICATION_SUCCESS);
-        createAndAddUserProfile(testUser, testFirm1, UserType.EXTERNAL, null, UserProfileSilasStatus.INCOMPLETE, true);
+        createAndAddUserProfile(testUser, testFirm1, UserType.EXTERNAL, null, UserProfileSilasStatus.NO_ACCESS_ASSIGNED, true);
         testUser = createTestUserWithLoginAndInvitation("MutiFirm", "One_Profile_no_roles", "one.profile.roles@example.com", InvitationStatus.VERIFICATION_SUCCESS);
         createAndAddUserProfile(testUser, testFirm1, UserType.EXTERNAL, null, UserProfileSilasStatus.COMPLETE, true);
-        createAndAddUserProfile(testUser, testFirm2, UserType.EXTERNAL, externalUserAdminRole, UserProfileSilasStatus.INCOMPLETE, false);
+        createAndAddUserProfile(testUser, testFirm2, UserType.EXTERNAL, externalUserAdminRole, UserProfileSilasStatus.NO_ACCESS_ASSIGNED, false);
         createTestUser("Jane", "Smith", "jane.smith@example.com", testFirm2, UserType.EXTERNAL, externalUserAdminRole);
 
         PageRequest pageRequest = PageRequest.of(0, 10, Sort.by("STATUS_RANK").descending());

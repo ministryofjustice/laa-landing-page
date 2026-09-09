@@ -2,6 +2,7 @@ package uk.gov.justice.laa.portal.landingpage.dto;
 
 import lombok.Getter;
 import lombok.Setter;
+import uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.forms.FirmSearchForm;
@@ -22,7 +23,8 @@ public class UserSearchCriteria implements Serializable {
     private boolean showFirmAdmins;
     private boolean showMultiFirmUsers;
     private boolean showProviderUsers;
-    private List<UserProfileSilasStatus> selectedStatuses = new ArrayList<>();
+    private List<UserProfileSilasStatus> selectedProfileStatuses = new ArrayList<>();
+    private List<SilasAccountStatus> selectedSilasAccStatuses = new ArrayList<>();
 
     public UserSearchCriteria() {
     }
@@ -38,18 +40,24 @@ public class UserSearchCriteria implements Serializable {
 
     public UserSearchCriteria(String searchTerm, FirmSearchForm firmSearch, UserType userType,
                               boolean showFirmAdmins, boolean showMultiFirmUsers,
-                              boolean showProviderUsers, List<UserProfileSilasStatus> selectedStatuses) {
+                              boolean showProviderUsers, List<UserProfileSilasStatus> selectedProfileStatuses,
+                              List<SilasAccountStatus> selectedSilasAccStatuses) {
         this.searchTerm = searchTerm;
         this.firmSearch = firmSearch;
         this.userType = userType;
         this.showFirmAdmins = showFirmAdmins;
         this.showMultiFirmUsers = showMultiFirmUsers;
         this.showProviderUsers = showProviderUsers;
-        this.selectedStatuses = selectedStatuses != null ? selectedStatuses : new ArrayList<>();
+        this.selectedProfileStatuses = selectedProfileStatuses != null ? selectedProfileStatuses : new ArrayList<>();
+        this.selectedSilasAccStatuses = selectedSilasAccStatuses != null ? selectedSilasAccStatuses : new ArrayList<>();
     }
 
-    public boolean hasSelectedStatuses() {
-        return selectedStatuses != null && !selectedStatuses.isEmpty();
+    public boolean hasSelectedProfileStatuses() {
+        return selectedProfileStatuses != null && !selectedProfileStatuses.isEmpty();
+    }
+
+    public boolean hasSelectedSilasAccStatuses() {
+        return selectedSilasAccStatuses != null && !selectedSilasAccStatuses.isEmpty();
     }
 
     @Override
@@ -61,7 +69,8 @@ public class UserSearchCriteria implements Serializable {
                 + ", showFirmAdmins=" + showFirmAdmins
                 + ", showMultiFirmUsers=" + showMultiFirmUsers
                 + ", showProviderUsers=" + showProviderUsers
-                + ", selectedStatuses=" + selectedStatuses
+                + ", selectedProfileStatuses=" + selectedProfileStatuses
+                + ", selectedSilasAccStatuses=" + selectedSilasAccStatuses
                 + '}';
     }
 }

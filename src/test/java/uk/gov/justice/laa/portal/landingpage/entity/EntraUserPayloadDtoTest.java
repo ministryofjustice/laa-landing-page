@@ -23,7 +23,7 @@ public class EntraUserPayloadDtoTest extends BaseEntityTest {
         assertThat(entraUser.getEmail()).isEqualTo("test@email.com");
         assertThat(entraUser.getFirstName()).isEqualTo("FirstName");
         assertThat(entraUser.getLastName()).isEqualTo("LastName");
-        assertThat(entraUser.getUserStatus()).isEqualTo(UserStatus.ACTIVE);
+        assertThat(entraUser.getSilasAccountStatus()).isEqualTo(SilasAccountStatus.ACTIVE);
         assertThat(entraUser.getEmail()).isEqualTo("test@email.com");
         assertThat(entraUser.getCreatedBy()).isEqualTo("test");
         assertThat(entraUser.getCreatedDate()).isNotNull();
@@ -206,7 +206,7 @@ public class EntraUserPayloadDtoTest extends BaseEntityTest {
     @Test
     public void testEntraUserFalseInvitationAccepted() {
         EntraUser entraUser = buildTestEntraUser();
-        update(entraUser, eu -> eu.setUserStatus(UserStatus.AWAITING_USER_APPROVAL));
+        update(entraUser, eu -> eu.setSilasAccountStatus(SilasAccountStatus.ACTIVATION_REQUIRED));
 
         Set<ConstraintViolation<EntraUser>> violations = validator.validate(entraUser);
 
@@ -214,7 +214,7 @@ public class EntraUserPayloadDtoTest extends BaseEntityTest {
         assertThat(entraUser.getEmail()).isEqualTo("test@email.com");
         assertThat(entraUser.getFirstName()).isEqualTo("FirstName");
         assertThat(entraUser.getLastName()).isEqualTo("LastName");
-        assertThat(entraUser.getUserStatus()).isEqualTo(UserStatus.AWAITING_USER_APPROVAL);
+        assertThat(entraUser.getSilasAccountStatus()).isEqualTo(SilasAccountStatus.ACTIVATION_REQUIRED);
         assertThat(entraUser.getEmail()).isEqualTo("test@email.com");
         assertThat(entraUser.getCreatedBy()).isEqualTo("test");
         assertThat(entraUser.getCreatedDate()).isNotNull();
@@ -223,20 +223,20 @@ public class EntraUserPayloadDtoTest extends BaseEntityTest {
     @Test
     public void testEntraUserNullUserStatus() {
         EntraUser entraUser = buildTestEntraUser();
-        update(entraUser, eu -> eu.setUserStatus(null));
+        update(entraUser, eu -> eu.setSilasAccountStatus(null));
 
         Set<ConstraintViolation<EntraUser>> violations = validator.validate(entraUser);
 
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
         assertThat(violations.iterator().next().getMessage()).isEqualTo("User status must be provided");
-        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("userStatus");
+        assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("silasAccountStatus");
     }
 
     @Test
     public void testEntraUserInvalidUserStatus() {
         assertThrows(IllegalArgumentException.class, () -> EntraUser.builder()
-                .userStatus(UserStatus.valueOf("INVALID"))
+                .silasAccountStatus(SilasAccountStatus.valueOf("INVALID"))
                 .createdDate(LocalDateTime.now()).createdBy("test").build());
     }
 

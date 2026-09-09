@@ -112,7 +112,7 @@ public class ExternalUserPollingIntegrationTest extends BaseIntegrationTest {
 
         List<UserAccountStatusAudit> audits = userAccountStatusAuditRepository.findByEntraUser(updatedUser);
         assertThat(audits).anySatisfy(audit -> {
-            assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ACTIVATED);
+            assertThat(audit.getStatusChange()).isEqualTo(UserAccountStatus.ACTIVE);
             assertThat(audit.getStatusChangedBy()).isEqualTo("External user sync");
         });
     }

@@ -96,13 +96,13 @@ import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.Office;
 import uk.gov.justice.laa.portal.landingpage.entity.Permission;
+import uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserAccountStatusAudit;
 import uk.gov.justice.laa.portal.landingpage.entity.UserActivationRequest;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileSilasStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 import uk.gov.justice.laa.portal.landingpage.exception.OfficeAssignmentException;
 import uk.gov.justice.laa.portal.landingpage.exception.TechServicesClientException;
@@ -1119,7 +1119,7 @@ class UserServiceTest {
     @Test
     void testFindUserTypeByUsername() {
         // Arrange
-        EntraUser entraUser = EntraUser.builder().firstName("Test1").userStatus(UserStatus.ACTIVE).build();
+        EntraUser entraUser = EntraUser.builder().firstName("Test1").silasAccountStatus(SilasAccountStatus.ACTIVE).build();
         UserProfile userProfile = UserProfile.builder().activeProfile(true).entraUser(entraUser)
                 .userType(UserType.EXTERNAL).userProfileStatus(UserProfileStatus.COMPLETE).build();
         entraUser.setUserProfiles(Set.of(userProfile));
@@ -1136,7 +1136,7 @@ class UserServiceTest {
     @Test
     void testFindUserTypeByUsernameMultiProfile() {
         // Arrange
-        EntraUser entraUser = EntraUser.builder().firstName("Test1").userStatus(UserStatus.ACTIVE).build();
+        EntraUser entraUser = EntraUser.builder().firstName("Test1").silasAccountStatus(SilasAccountStatus.ACTIVE).build();
         UserProfile userProfile1 = UserProfile.builder().activeProfile(true).entraUser(entraUser)
                 .userType(UserType.EXTERNAL).userProfileStatus(UserProfileStatus.COMPLETE).build();
         UserProfile userProfile2 = UserProfile.builder().activeProfile(true).entraUser(entraUser)
@@ -1167,7 +1167,7 @@ class UserServiceTest {
     @Test
     void testGetUserAuthorities() {
         // Arrange
-        EntraUser entraUser = EntraUser.builder().firstName("Test1").userStatus(UserStatus.ACTIVE).build();
+        EntraUser entraUser = EntraUser.builder().firstName("Test1").silasAccountStatus(SilasAccountStatus.ACTIVE).build();
         Permission userPermission = Permission.VIEW_EXTERNAL_USER;
         AppRole appRole = AppRole.builder().authzRole(true).permissions(Set.of(userPermission)).build();
         UserProfile userProfile = UserProfile.builder().appRoles(Set.of(appRole)).activeProfile(true)
@@ -1196,7 +1196,7 @@ class UserServiceTest {
     @Test
     void testFindUserByUserEntraUserId() {
         // Arrange
-        EntraUser entraUser = EntraUser.builder().entraOid("entra-oid").firstName("Test1").userStatus(UserStatus.ACTIVE)
+        EntraUser entraUser = EntraUser.builder().entraOid("entra-oid").firstName("Test1").silasAccountStatus(SilasAccountStatus.ACTIVE)
                 .build();
         when(mockEntraUserRepository.findByEntraOid(anyString())).thenReturn(Optional.of(entraUser));
         // Act
@@ -3538,7 +3538,7 @@ class UserServiceTest {
 
             // Assert
             EntraUser capturedUser = userCaptor.getValue();
-            assertThat(capturedUser.getUserStatus()).isEqualTo(UserStatus.ACTIVE);
+            assertThat(capturedUser.getSilasAccountStatus()).isEqualTo(SilasAccountStatus.ACTIVE);
         }
 
         @Test
@@ -3831,7 +3831,7 @@ class UserServiceTest {
             // Arrange
             EntraUser entraUser = EntraUser.builder()
                     .firstName("Test")
-                    .userStatus(UserStatus.DEACTIVE) // Use DEACTIVE instead of INACTIVE
+                    .silasAccountStatus(SilasAccountStatus.DEACTIVATED) // Use DEACTIVE instead of INACTIVE
                     .userProfiles(Set.of(UserProfile.builder()
                             .userType(UserType.EXTERNAL)
                             .build()))
@@ -4441,7 +4441,7 @@ class UserServiceTest {
 
         UserSearchResultsDto userSearchResultsDto = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
                 UUID.randomUUID(), UserProfileStatus.COMPLETE, UserProfileSilasStatus.COMPLETE, false, "Test", "User", "Test User",
-                "test@example.com", UserStatus.ACTIVE, "Test Firm", InvitationStatus.INVITE_SENT, true, true);
+                "test@example.com", SilasAccountStatus.ACTIVE, "Test Firm", InvitationStatus.INVITE_SENT, true, true);
 
         Page<UserSearchResultsDto> userSearchResultsPage = new PageImpl<>(
                 List.of(userSearchResultsDto),
@@ -4545,7 +4545,7 @@ class UserServiceTest {
 
         UserSearchResultsDto userSearchResultsDto = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
                 UUID.randomUUID(), UserProfileStatus.COMPLETE, UserProfileSilasStatus.COMPLETE, false, "Test", "Name", "Test User",
-                "test@example.com", UserStatus.ACTIVE, "Test Firm",  InvitationStatus.INVITE_SENT, true, true);
+                "test@example.com", SilasAccountStatus.ACTIVE, "Test Firm",  InvitationStatus.INVITE_SENT, true, true);
 
         Page<UserSearchResultsDto> userProfilePage = new PageImpl<>(
                 List.of(userSearchResultsDto),
@@ -5866,7 +5866,7 @@ class UserServiceTest {
                     { "email", "ASC" },
                     { "firmName", "DESC" },
                     { "userType", "ASC" },
-                    { "userStatus", "DESC" }
+                    { "silasAccountStatus", "DESC" }
             };
 
             for (String[] config : sortConfigs) {
@@ -5934,7 +5934,7 @@ class UserServiceTest {
             for (int i = 0; i < count; i++) {
                 UserSearchResultsDto result = new UserSearchResultsDto(UUID.randomUUID(), true, UserType.EXTERNAL,
                         UUID.randomUUID(), UserProfileStatus.COMPLETE, UserProfileSilasStatus.COMPLETE, false, "User" + i, "Test" + i, "Test User",
-                        "user" + i + "@example.com", UserStatus.ACTIVE, "Firm" + i,  InvitationStatus.INVITE_SENT, true, true);
+                        "user" + i + "@example.com", SilasAccountStatus.ACTIVE, "Firm" + i,  InvitationStatus.INVITE_SENT, true, true);
 
                 searchResults.add(result);
             }
@@ -6557,7 +6557,7 @@ class UserServiceTest {
                     .firstName("John")
                     .lastName("Doe")
                     .email("john.doe@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .multiFirmUser(false)
                     .build();
@@ -6568,7 +6568,7 @@ class UserServiceTest {
                     .lastName("Smith")
                     .email("jason.smith@example.com")
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .build();
 
@@ -6577,7 +6577,7 @@ class UserServiceTest {
                     .firstName("Jane")
                     .lastName("Doe")
                     .email("jane.doe@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .multiFirmUser(false)
                     .build();
@@ -6682,7 +6682,7 @@ class UserServiceTest {
                     .firstName("John")
                     .lastName("Doe")
                     .email("john.doe@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .multiFirmUser(false)
                     .build();
@@ -6745,7 +6745,7 @@ class UserServiceTest {
                     .lastName("Smith")
                     .email("jane.smith@example.com")
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .build();
 
@@ -6801,7 +6801,7 @@ class UserServiceTest {
                     .firstName("Admin")
                     .lastName("User")
                     .email("admin@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .multiFirmUser(false)
                     .build();
@@ -6873,7 +6873,7 @@ class UserServiceTest {
                     .firstName("Multi")
                     .lastName("Firm")
                     .email("multi@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(true)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .build();
@@ -6964,7 +6964,7 @@ class UserServiceTest {
                     .firstName("Internal")
                     .lastName("Staff")
                     .email("internal@justice.gov.uk")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .multiFirmUser(false)
                     .build();
@@ -7020,7 +7020,7 @@ class UserServiceTest {
                         .firstName("User" + i)
                         .lastName("Test")
                         .email("user" + i + "@example.com")
-                        .userStatus(UserStatus.ACTIVE)
+                        .silasAccountStatus(SilasAccountStatus.ACTIVE)
                         .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                         .multiFirmUser(false)
                         .build();
@@ -7093,7 +7093,7 @@ class UserServiceTest {
                     .firstName("NoProfile")
                     .lastName("User")
                     .email("noprofile@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .userProfiles(new HashSet<>())
                     .invitationStatus(InvitationStatus.AWAITING_VERIFICATION)
@@ -7122,7 +7122,7 @@ class UserServiceTest {
             assertThat(result.getUsers()).hasSize(1);
             assertThat(result.getUsers().get(0).getUserType()).isEqualTo("External");
             assertThat(result.getUsers().get(0).getFirmAssociation()).isEqualTo("Unknown");
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.INCOMPLETE);
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.NO_ACCESS_ASSIGNED);
         }
 
         @Test
@@ -7135,7 +7135,7 @@ class UserServiceTest {
                     .firstName("Disabled")
                     .lastName("User")
                     .email("disabled@example.com")
-                    .userStatus(UserStatus.DEACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.DEACTIVATED)
                     .enabled(false)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
@@ -7180,7 +7180,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.NO_ROLES_ASSIGNED);
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.NO_ACCESS_ASSIGNED);
         }
 
         @Test
@@ -7193,7 +7193,7 @@ class UserServiceTest {
                     .firstName("Disabled")
                     .lastName("User")
                     .email("disabled@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .enabled(true)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
@@ -7239,7 +7239,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.NO_ROLES_ASSIGNED);
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.NO_ACCESS_ASSIGNED);
         }
 
         @Test
@@ -7252,7 +7252,7 @@ class UserServiceTest {
                     .firstName("Disabled")
                     .lastName("User")
                     .email("disabled@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .enabled(true)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.VERIFICATION_FAILED)
@@ -7297,7 +7297,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.INCOMPLETE);
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.NO_ACCESS_ASSIGNED);
         }
 
         @Test
@@ -7310,7 +7310,7 @@ class UserServiceTest {
                     .firstName("Disabled")
                     .lastName("User")
                     .email("disabled@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .enabled(true)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
@@ -7355,7 +7355,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.NO_ROLES_ASSIGNED);
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.NO_ACCESS_ASSIGNED);
         }
 
         @Test
@@ -7368,7 +7368,7 @@ class UserServiceTest {
                     .firstName("Disabled")
                     .lastName("User")
                     .email("disabled@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .enabled(true)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.VERIFICATION_FAILED)
@@ -7415,7 +7415,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.ACTIVATION_PENDING);
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.NO_ACCESS_ASSIGNED);
         }
 
         @Test
@@ -7428,7 +7428,7 @@ class UserServiceTest {
                     .firstName("Disabled")
                     .lastName("User")
                     .email("disabled@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .enabled(true)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.INVITE_SENT)
@@ -7473,7 +7473,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.INCOMPLETE);
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.NO_ACCESS_ASSIGNED);
         }
 
         @Test
@@ -7486,7 +7486,7 @@ class UserServiceTest {
                     .firstName("Pending")
                     .lastName("User")
                     .email("pending@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .build();
@@ -7530,7 +7530,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.NO_ROLES_ASSIGNED);
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.NO_ACCESS_ASSIGNED);
         }
 
         @Test
@@ -7543,7 +7543,7 @@ class UserServiceTest {
                     .firstName("Pending")
                     .lastName("User")
                     .email("pending@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.AWAITING_MFA)
                     .build();
@@ -7586,7 +7586,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.ACTIVATION_PENDING);
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.ACTIVATION_REQUIRED);
         }
 
         @Test
@@ -7599,7 +7599,7 @@ class UserServiceTest {
                     .firstName("Pending")
                     .lastName("User")
                     .email("pending@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.AWAITING_VERIFICATION)
                     .build();
@@ -7643,7 +7643,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.INCOMPLETE);
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.NO_ACCESS_ASSIGNED);
         }
 
         @Test
@@ -7681,7 +7681,7 @@ class UserServiceTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getUsers()).hasSize(1);
-            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.INCOMPLETE);
+            assertThat(result.getUsers().get(0).getAccountStatus()).isEqualTo(UserProfileSilasStatus.NO_ACCESS_ASSIGNED);
             assertThat(result.getUsers().get(0).getEntraStatus()).isEqualTo("UNKNOWN");
         }
 
@@ -7723,7 +7723,7 @@ class UserServiceTest {
                     .firstName("Alice")
                     .lastName("Aardvark")
                     .email("alice@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .multiFirmUser(false)
                     .build();
@@ -7733,7 +7733,7 @@ class UserServiceTest {
                     .firstName("Zack")
                     .lastName("Zebra")
                     .email("zack@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .multiFirmUser(false)
                     .build();
@@ -7795,7 +7795,7 @@ class UserServiceTest {
                     .firstName("NullProfiles")
                     .lastName("User")
                     .email("nullprofiles@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .userProfiles(null) // Explicitly null
@@ -7835,7 +7835,7 @@ class UserServiceTest {
                     .firstName("Test")
                     .lastName("User")
                     .email("test@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .userProfiles(new HashSet<>())
@@ -7894,7 +7894,7 @@ class UserServiceTest {
                     .firstName("Test")
                     .lastName("User")
                     .email("test@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .userProfiles(new HashSet<>())
@@ -7931,7 +7931,7 @@ class UserServiceTest {
                     .firstName("John")
                     .lastName("Smith")
                     .email("john.smith@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .userProfiles(new HashSet<>())
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
@@ -7976,7 +7976,7 @@ class UserServiceTest {
                     .firstName("John")
                     .lastName("Smith")
                     .email("john.smith@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(true)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .userProfiles(new HashSet<>())
@@ -8024,7 +8024,7 @@ class UserServiceTest {
                     .firstName("John")
                     .lastName("Smith")
                     .email("john.smith@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .userProfiles(new HashSet<>())
@@ -8073,7 +8073,7 @@ class UserServiceTest {
                     .firstName("John")
                     .lastName("Smith")
                     .email("john.smith@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .userProfiles(new HashSet<>())
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
@@ -8132,7 +8132,7 @@ class UserServiceTest {
                     .firstName("Test")
                     .lastName("User")
                     .email("test@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .userProfiles(new HashSet<>())
@@ -8179,7 +8179,7 @@ class UserServiceTest {
                     .firstName("Test")
                     .lastName("User")
                     .email("test@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                     .userProfiles(new HashSet<>())
@@ -8228,7 +8228,7 @@ class UserServiceTest {
                     .firstName(firstName)
                     .lastName(lastName)
                     .email(email)
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .invitationStatus(invitationStatus)
                     .userProfiles(new HashSet<>())
@@ -8455,7 +8455,7 @@ class UserServiceTest {
                     .firstName("John")
                     .lastName("Doe")
                     .email("john.doe@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .userProfiles(Set.of(profile))
                     .createdBy("admin@example.com")
@@ -8551,7 +8551,7 @@ class UserServiceTest {
                     .firstName("John")
                     .lastName("Doe")
                     .email("john.doe@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .userProfiles(Set.of(profile))
                     .createdBy("admin@example.com")
@@ -8625,7 +8625,7 @@ class UserServiceTest {
                     .firstName("John")
                     .lastName("Doe")
                     .email("john.doe@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .createdBy("admin@example.com")
                     .build();
@@ -8763,7 +8763,7 @@ class UserServiceTest {
                     .firstName("Jane")
                     .lastName("Smith")
                     .email("jane.smith@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(true)
                     .userProfiles(Set.of(profile1, profile2))
                     .build();
@@ -8902,7 +8902,7 @@ class UserServiceTest {
                     .firstName("Test")
                     .lastName("User")
                     .email("test@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .userProfiles(Set.of(profile))
                     .build();
@@ -8954,7 +8954,7 @@ class UserServiceTest {
                     .firstName("Test")
                     .lastName("User")
                     .email("test@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .userProfiles(Set.of(profile))
                     .build();
@@ -9027,7 +9027,7 @@ class UserServiceTest {
                     .firstName("Test")
                     .lastName("User")
                     .email("test@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .userProfiles(Set.of(profile))
                     .build();
@@ -9080,7 +9080,7 @@ class UserServiceTest {
                     .firstName("John")
                     .lastName("Doe")
                     .multiFirmUser(true)
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .build();
 
             UserProfile profile1 = UserProfile.builder()
@@ -9139,7 +9139,7 @@ class UserServiceTest {
                     .firstName("John")
                     .lastName("Doe")
                     .multiFirmUser(true)
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .build();
 
             UserProfile profile1 = UserProfile.builder()
@@ -9206,7 +9206,7 @@ class UserServiceTest {
                 .lastName("Doe")
                 .enabled(true)
                 .multiFirmUser(false)
-                .userStatus(UserStatus.ACTIVE)
+                .silasAccountStatus(SilasAccountStatus.ACTIVE)
                 .createdDate(LocalDateTime.now().minusDays(30))
                 .createdBy("ADMIN")
                 .build();
@@ -9277,7 +9277,7 @@ class UserServiceTest {
 
         UserAccountStatusAudit audit2 = UserAccountStatusAudit.builder()
                 .statusChangedDate(now)
-                .statusChange(UserAccountStatus.ACTIVATED)
+                .statusChange(UserAccountStatus.ACTIVE)
                 .statusChangedBy("Jane Smith")
                 .disableUserReason(null)
                 .build();
@@ -9358,7 +9358,7 @@ class UserServiceTest {
                     .firstName("John")
                     .lastName("Doe")
                     .email("john.doe@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .createdBy("admin@example.com")
                     .build();
@@ -9426,7 +9426,7 @@ class UserServiceTest {
                     .firstName("Test")
                     .lastName("User")
                     .email("test@example.com")
-                    .userStatus(UserStatus.ACTIVE)
+                    .silasAccountStatus(SilasAccountStatus.ACTIVE)
                     .multiFirmUser(false)
                     .userProfiles(Set.of(profile))
                     .build();
@@ -9627,9 +9627,9 @@ class UserServiceTest {
                     .thenReturn(projectionPage);
 
             // Mock full user fetching
-            EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", UserStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
-            EntraUser user2 = createUserWithStatus(userId2, "Jane", "Smith", UserStatus.DEACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
-            EntraUser user3 = createUserWithStatus(userId3, "Bob", "Jones", UserStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
+            EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", SilasAccountStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
+            EntraUser user2 = createUserWithStatus(userId2, "Jane", "Smith", SilasAccountStatus.DEACTIVATED, InvitationStatus.VERIFICATION_SUCCESS);
+            EntraUser user3 = createUserWithStatus(userId3, "Bob", "Jones", SilasAccountStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user1, user2, user3));
@@ -9676,9 +9676,9 @@ class UserServiceTest {
                     anyString(), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), eq(null), any(PageRequest.class)))
                     .thenReturn(mockPage);
 
-            EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", UserStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
-            EntraUser user2 = createUserWithStatus(userId2, "Jane", "Smith", UserStatus.DEACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
-            EntraUser user3 = createUserWithStatus(userId3, "Bob", "Jones", UserStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
+            EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", SilasAccountStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
+            EntraUser user2 = createUserWithStatus(userId2, "Jane", "Smith", SilasAccountStatus.DEACTIVATED, InvitationStatus.VERIFICATION_SUCCESS);
+            EntraUser user3 = createUserWithStatus(userId3, "Bob", "Jones", SilasAccountStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user1, user2, user3));
@@ -9746,9 +9746,9 @@ class UserServiceTest {
                     .thenReturn(projectionPage);
 
             // Return users in different order to test sorting preservation
-            EntraUser user3 = createUserWithStatus(id3, "Bob", "Jones", UserStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
-            EntraUser user1 = createUserWithStatus(id1, "John", "Doe", UserStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
-            EntraUser user2 = createUserWithStatus(id2, "Jane", "Smith", UserStatus.DEACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
+            EntraUser user3 = createUserWithStatus(id3, "Bob", "Jones", SilasAccountStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
+            EntraUser user1 = createUserWithStatus(id1, "John", "Doe", SilasAccountStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
+            EntraUser user2 = createUserWithStatus(id2, "Jane", "Smith", SilasAccountStatus.DEACTIVATED, InvitationStatus.VERIFICATION_SUCCESS);
 
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user3, user1, user2)); // Different order
@@ -9784,7 +9784,7 @@ class UserServiceTest {
                     eq(appId), eq(null), eq(null), eq(null),  eq(null), any(Pageable.class)))
                     .thenReturn(projectionPage);
 
-            EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", UserStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
+            EntraUser user1 = createUserWithStatus(userId1, "John", "Doe", SilasAccountStatus.ACTIVE, InvitationStatus.VERIFICATION_SUCCESS);
             when(mockEntraUserRepository.findUsersWithProfilesAndRoles(any(Set.class)))
                     .thenReturn(List.of(user1));
 
@@ -9800,13 +9800,13 @@ class UserServiceTest {
                     eq(appId), eq(null), eq(null), eq(null), eq(null), any(Pageable.class));
         }
 
-        private EntraUser createUserWithStatus(UUID id, String firstName, String lastName, UserStatus status, InvitationStatus invitationStatus) {
+        private EntraUser createUserWithStatus(UUID id, String firstName, String lastName, SilasAccountStatus status, InvitationStatus invitationStatus) {
             return EntraUser.builder()
                     .id(id)
                     .firstName(firstName)
                     .lastName(lastName)
                     .email(firstName.toLowerCase() + "." + lastName.toLowerCase() + "@example.com")
-                    .userStatus(status)
+                    .silasAccountStatus(status)
                     .userProfiles(new HashSet<>())
                     .invitationStatus(invitationStatus)
                     .build();
@@ -10406,7 +10406,7 @@ class UserServiceTest {
                 .firstName("Jane")
                 .lastName("Smith")
                 .email("jane.smith@example.com")
-                .userStatus(UserStatus.ACTIVE)
+                .silasAccountStatus(SilasAccountStatus.ACTIVE)
                 .invitationStatus(InvitationStatus.VERIFICATION_SUCCESS)
                 .multiFirmUser(true)
                 .build();

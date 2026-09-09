@@ -20,9 +20,9 @@ import uk.gov.justice.laa.portal.landingpage.entity.EntraUser;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
 import uk.gov.justice.laa.portal.landingpage.entity.FirmType;
 import uk.gov.justice.laa.portal.landingpage.entity.InvitationStatus;
+import uk.gov.justice.laa.portal.landingpage.entity.SilasAccountStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfile;
 import uk.gov.justice.laa.portal.landingpage.entity.UserProfileStatus;
-import uk.gov.justice.laa.portal.landingpage.entity.UserStatus;
 import uk.gov.justice.laa.portal.landingpage.entity.UserType;
 
 import static org.assertj.core.api.Assertions.tuple;
@@ -128,7 +128,7 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
         Firm firm = buildFirm("Firm1", "Firm Code 1");
         firm = repository.saveAndFlush(firm);
         EntraUser entraUser = buildEntraUser(generateEntraId(), "role.counts@test.com", "First", "Last");
-        entraUser.setUserStatus(UserStatus.ACTIVE);
+        entraUser.setSilasAccountStatus(SilasAccountStatus.ACTIVE);
         entraUser = entraUserRepository.saveAndFlush(entraUser);
 
         UserProfile userProfile = buildLaaUserProfile(entraUser, UserType.EXTERNAL);
@@ -321,7 +321,7 @@ public class FirmRepositoryTest extends BaseRepositoryTest {
 
     private void createExternalUserProfileInFirmWithRoles(Firm firm, String email, Set<AppRole> roles) {
         EntraUser entraUser = buildEntraUser(generateEntraId(), email, "First", "Last");
-        entraUser.setUserStatus(UserStatus.ACTIVE);
+        entraUser.setSilasAccountStatus(SilasAccountStatus.ACTIVE);
         entraUser = entraUserRepository.saveAndFlush(entraUser);
 
         UserProfile userProfile = buildLaaUserProfile(entraUser, UserType.EXTERNAL);

@@ -94,7 +94,7 @@ public class AuditUserDto implements Serializable {
     private String createdBy;
 
     /**
-     * Entra status from EntraUser.userStatus enum
+     * Entra status from EntraUser.silasAccountStatus enum
      */
     private String entraStatus;
 
