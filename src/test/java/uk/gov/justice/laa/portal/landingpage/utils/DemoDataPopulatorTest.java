@@ -1,16 +1,28 @@
 package uk.gov.justice.laa.portal.landingpage.utils;
 
-import com.microsoft.graph.models.User;
+import java.util.Set;
+
 import org.assertj.core.api.Assertions;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.test.util.ReflectionTestUtils;
+
+import com.microsoft.graph.models.User;
+
 import uk.gov.justice.laa.portal.landingpage.entity.App;
 import uk.gov.justice.laa.portal.landingpage.entity.AppRole;
 import uk.gov.justice.laa.portal.landingpage.entity.Firm;
@@ -22,17 +34,6 @@ import uk.gov.justice.laa.portal.landingpage.repository.FirmRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.OfficeRepository;
 import uk.gov.justice.laa.portal.landingpage.repository.UserProfileRepository;
 import uk.gov.justice.laa.portal.landingpage.service.DistributedLockService;
-
-import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class DemoDataPopulatorTest {
@@ -94,7 +95,7 @@ class DemoDataPopulatorTest {
                 "civil_apply_oid//AppReg-User-Access-LAAD-Apply-Civil-Legal-Aid//3e3003ee-2183-4058-8279-4a557daba8c8");
         ReflectionTestUtils.setField(demoDataPopulator, "ccmsAccountLinkDetails",
                 "ccms_account_link_oid//APPREG-User-Access-LAAD-CCMS transfer requests//8a9f8798-a581-4b75-b22b-ef1c32ca12ba");
-        
+
         // Enable demo data population by default
         ReflectionTestUtils.setField(demoDataPopulator, "populateDummyData", true);
         ReflectionTestUtils.setField(demoDataPopulator, "enableDistributedDbLocking", true);
