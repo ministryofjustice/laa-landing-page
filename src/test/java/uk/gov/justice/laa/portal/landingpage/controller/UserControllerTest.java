@@ -908,22 +908,17 @@ class UserControllerTest {
         when(userService.getDeleteUserReasons(true))
                 .thenReturn(List.of(deleteReason));
 
+        RedirectAttributes redirectAttributes = mock(RedirectAttributes.class);
         String view = userController.deleteExternalUser(
                 userProfileId,
                 reasonId,
                 authentication,
                 session,
-                model);
+                model, redirectAttributes);
 
-        assertThat(view)
-                .isEqualTo(
-                        "redirect:/admin/users/manage/"
-                                + userProfileId
-                                + "/delete/check-answer");
-
-        verify(session)
-                .setAttribute("deleteReasonId",
-                        UUID.fromString(reasonId));
+        assertThat(view).isEqualTo("redirect:/admin/users/manage/{id}/delete/check-answer");
+        verify(redirectAttributes).addAttribute("id", userProfileId);
+        verify(session).setAttribute("deleteReasonId", UUID.fromString(reasonId));
     }
 
     @Test

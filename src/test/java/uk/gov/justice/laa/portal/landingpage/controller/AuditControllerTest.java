@@ -1010,9 +1010,11 @@ class AuditControllerTest {
         when(userService.getDeleteUserReasons(true)).thenReturn(List.of(deleteReason));
 
         HttpSession session = mock(HttpSession.class);
-        String viewName = auditController.deleteUserAudit(entraUserId, reasonId, session, model);
+        RedirectAttributes redirectAttributes = mock(RedirectAttributes.class);
+        String viewName = auditController.deleteUserAudit(entraUserId, reasonId, session, model, redirectAttributes);
 
-        assertThat(viewName).isEqualTo("redirect:/admin/users/audit/entra/" + entraUserId + "/delete/check-answer");
+        assertThat(viewName).isEqualTo("redirect:/admin/users/audit/entra/{id}/delete/check-answer");
+        verify(redirectAttributes).addAttribute("id", entraUserId);
         verify(session).setAttribute("deleteReasonId", UUID.fromString(reasonId));
     }
 
@@ -1030,7 +1032,7 @@ class AuditControllerTest {
         when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId))).thenReturn(userDetail);
         when(userService.getDeleteUserReasons(true)).thenReturn(List.of(deleteReason));
 
-        String viewName = auditController.deleteUserAuditCheckAnswer(entraUserId, session, model);
+        String viewName = auditController.deleteUserAuditCheckAnswer(entraUserId, session, model, mock(RedirectAttributes.class));
 
         assertThat(viewName).isEqualTo("user-audit/delete-user-check-answer");
         assertThat(model.getAttribute("user")).isEqualTo(userDetail);
@@ -1048,9 +1050,11 @@ class AuditControllerTest {
         when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId)))
                 .thenReturn(userDetail);
 
-        String viewName = auditController.deleteUserAuditCheckAnswer(entraUserId, session, model);
+        RedirectAttributes redirectAttributes = mock(RedirectAttributes.class);
+        String viewName = auditController.deleteUserAuditCheckAnswer(entraUserId, session, model, redirectAttributes);
 
-        assertThat(viewName).isEqualTo("redirect:/admin/users/audit/entra/" + entraUserId + "/delete");
+        assertThat(viewName).isEqualTo("redirect:/admin/users/audit/entra/{id}/delete");
+        verify(redirectAttributes).addAttribute("id", entraUserId);
     }
 
     @Test
@@ -1077,7 +1081,7 @@ class AuditControllerTest {
         when(userService.getUserProfilesByEntraUserId(UUID.fromString(entraUserId))).thenReturn(Collections.emptyList());
         when(userService.deleteEntraUserWithoutProfile(anyString(), any(UUID.class), any(UUID.class))).thenReturn(deletedUser);
 
-        String viewName = auditController.confirmDeleteUserAudit(entraUserId, mockAuthentication, session, model);
+        String viewName = auditController.confirmDeleteUserAudit(entraUserId, mockAuthentication, session, model, mock(RedirectAttributes.class));
 
         assertThat(viewName).isEqualTo("user-audit/delete-user-success");
         verify(session).removeAttribute("deleteReasonId");
@@ -1094,9 +1098,12 @@ class AuditControllerTest {
         AuditUserDetailDto userDetail = AuditUserDetailDto.builder().fullName("Charlie Wilson").build();
         when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId))).thenReturn(userDetail);
 
-        String viewName = auditController.confirmDeleteUserAudit(entraUserId, mockAuthentication, session, model);
+        RedirectAttributes redirectAttributes = mock(RedirectAttributes.class);
+        String viewName = auditController.confirmDeleteUserAudit(entraUserId, mockAuthentication, session, model, redirectAttributes);
 
-        assertThat(viewName).isEqualTo("redirect:/admin/users/audit/entra/" + entraUserId + "/delete");
+        assertThat(viewName).isEqualTo("redirect:/admin/users/audit/entra/{id}/delete");
+
+        verify(redirectAttributes).addAttribute("id", entraUserId);
         verify(userService, never()).deleteEntraUserWithoutProfile(anyString(), any(), any());
     }
 
@@ -1120,7 +1127,7 @@ class AuditControllerTest {
         when(userService.getUserProfilesByEntraUserId(UUID.fromString(entraUserId))).thenReturn(Collections.emptyList());
         when(userService.deleteEntraUserWithoutProfile(anyString(), any(UUID.class), any(UUID.class))).thenThrow(new RuntimeException("Failed to delete user"));
 
-        String viewName = auditController.confirmDeleteUserAudit(entraUserId, mockAuthentication, session, model);
+        String viewName = auditController.confirmDeleteUserAudit(entraUserId, mockAuthentication, session, model, mock(RedirectAttributes.class));
 
         assertThat(viewName).isEqualTo("user-audit/delete-user-check-answer");
         assertThat(model.getAttribute("globalErrorMessage")).isEqualTo("User delete failed, please try again later");
@@ -1133,7 +1140,8 @@ class AuditControllerTest {
         String entraUserId = UUID.randomUUID().toString();
         AuditUserDetailDto userDetail = AuditUserDetailDto.builder().fullName("Charlie Wilson").build();
         when(userService.getAuditUserDetailByEntraId(UUID.fromString(entraUserId))).thenReturn(userDetail);
-        String viewName = auditController.deleteUserAudit(entraUserId, null, mock(HttpSession.class), model);
+        String viewName = auditController.deleteUserAudit(entraUserId, null, mock(HttpSession.class), model,
+                mock(RedirectAttributes.class));
 
         assertThat(viewName).isEqualTo("user-audit/delete-user-reason");
         assertThat(model.getAttribute("fieldErrorMessage")).isEqualTo("Please select a reason.");

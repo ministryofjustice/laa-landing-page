@@ -410,7 +410,7 @@ public class AuditController {
             @PathVariable String id,
             @RequestParam(value = "reasonId", required = false) String reasonId,
             HttpSession session,
-            Model model) {
+            Model model, RedirectAttributes redirectAttributes) {
 
         log.debug("AuditController.deleteUserAudit - entraUserId: '{}', reasonId: '{}'", id, reasonId);
 
@@ -453,19 +453,20 @@ public class AuditController {
 
         session.setAttribute("deleteReasonId", deleteReasonId);
 
-        return "redirect:/admin/users/audit/entra/" + id + "/delete/check-answer";
+        redirectAttributes.addAttribute("id", id);
+        return "redirect:/admin/users/audit/entra/{id}/delete/check-answer";
     }
 
     @GetMapping("/users/audit/entra/{id}/delete/check-answer")
     @PreAuthorize("@accessControlService.canDeleteAuditUser(#id)")
     public String deleteUserAuditCheckAnswer(@PathVariable String id, HttpSession session,
-            Model model) {
+                                             Model model, RedirectAttributes redirectAttributes) {
 
         AuditUserDetailDto userDetail = userService.getAuditUserDetailByEntraId(UUID.fromString(id));
         UUID deleteReasonId = (UUID) session.getAttribute("deleteReasonId");
-
+        redirectAttributes.addAttribute("id", id);
         if (deleteReasonId == null) {
-            return "redirect:/admin/users/audit/entra/" + id + "/delete";
+            return "redirect:/admin/users/audit/entra/{id}/delete";
         }
 
         DeleteUserReason deleteReason =
@@ -486,13 +487,14 @@ public class AuditController {
     @PostMapping("/users/audit/entra/{id}/delete/confirm")
     @PreAuthorize("@accessControlService.canDeleteAuditUser(#id)")
     public String confirmDeleteUserAudit(@PathVariable String id, Authentication authentication,
-                                         HttpSession session, Model model) {
+                                         HttpSession session, Model model, RedirectAttributes redirectAttributes) {
 
         AuditUserDetailDto userDetail = userService.getAuditUserDetailByEntraId(UUID.fromString(id));
         UUID deleteReasonId = (UUID) session.getAttribute("deleteReasonId");
 
+        redirectAttributes.addAttribute("id", id);
         if (deleteReasonId == null) {
-            return "redirect:/admin/users/audit/entra/" + id + "/delete";
+            return "redirect:/admin/users/audit/entra/{id}/delete";
         }
 
         DeleteUserReason matchedReason =

@@ -517,7 +517,7 @@ public class UserController {
             @RequestParam(value = "reasonId", required = false) String reasonId,
             Authentication authentication,
             HttpSession session,
-            Model model) {
+            Model model, RedirectAttributes redirectAttributes) {
         Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
         if (optionalUser.isEmpty()) {
             throw new RuntimeException("User not found.");
@@ -557,7 +557,8 @@ public class UserController {
         }
         session.setAttribute("deleteReasonId", deleteReasonId);
 
-        return "redirect:/admin/users/manage/" + id + "/delete/check-answer";
+        redirectAttributes.addAttribute("id", id);
+        return "redirect:/admin/users/manage/{id}/delete/check-answer";
     }
 
     @GetMapping("/users/manage/{id}/delete/check-answer")
