@@ -74,11 +74,11 @@ public class EntraUserRepositoryCustomAuditSearchIntegrationTest extends BaseRep
                 .securityGroupOid("test-audit-security-group-oid").appType(AppType.LAA).url("http://localhost:8080/lassie").build();
         testApp = appRepository.save(testApp);
 
-        globalAdminRole = AppRole.builder().name("Test Global Admin").description("Test Global Administrator").ordinal(0)
+        globalAdminRole = AppRole.builder().name("Test Global Admin").roleIdentifier("GlobalAdmin").description("Test Global Administrator").ordinal(0)
                 .legacySync(false).authzRole(true).app(testApp).build();
         globalAdminRole = appRoleRepository.save(globalAdminRole);
 
-        externalUserAdminRole = AppRole.builder().name("Test External User Admin").description("Test External User Administrator")
+        externalUserAdminRole = AppRole.builder().name("Test External User Admin").roleIdentifier("ExternalUserAdmin").description("Test External User Administrator")
                 .ordinal(1).legacySync(false).authzRole(true).app(testApp).build();
         externalUserAdminRole = appRoleRepository.save(externalUserAdminRole);
     }
