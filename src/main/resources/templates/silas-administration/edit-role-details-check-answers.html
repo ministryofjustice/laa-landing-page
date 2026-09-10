@@ -73,7 +73,9 @@
                         <a class="govuk-link"
                            th:if="${!isLegacySyncRole}"
                            th:href="@{'/admin/silas-administration/role/' + ${appRole.id}}">
-                            Change<span class="govuk-visually-hidden"></span>
+                            Change<span class="govuk-visually-hidden">
+                            app role name
+                        </span>
                         </a>
                     </dd>
                 </div>
@@ -103,7 +105,8 @@
                         <a class="govuk-link"
                            th:if="${!isLegacySyncRole}"
                            th:href="@{'/admin/silas-administration/role/' + ${appRole.id}}">
-                            Change<span class="govuk-visually-hidden"></span>
+                            Change<span class="govuk-visually-hidden">
+                            app role name</span>
                         </a>
                     </dd>
                 </div>

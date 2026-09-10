@@ -19,7 +19,6 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -56,8 +55,8 @@ public class AppRole extends BaseEntity {
     private int ordinal;
 
     @Column(name = "role_identifier", nullable = false, length = 255)
+    @NotBlank(message = "Application role Role Identifier must be provided")
     @Size(min = 1, max = 255, message = "Application role Role Identifier must be between 1 and 255 characters")
-    @Pattern(regexp = "^(?!\\s*$).+", message = "Application role Role Identifier cannot be empty or contain only whitespace")
     private String roleIdentifier;
 
     @Column(name = "legacy_sync", nullable = false)

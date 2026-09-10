@@ -71,7 +71,7 @@ public class AppRoleTest extends BaseEntityTest {
 
         Set<ConstraintViolation<AppRole>> violations = validator.validate(appRole);
 
-        assertThat(violations).isEmpty();
+        assertThat(violations).isNotEmpty();
     }
 
     @Test
@@ -86,7 +86,7 @@ public class AppRoleTest extends BaseEntityTest {
         Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
         assertThat(messages).hasSameElementsAs(Set.of(
             "Application role Role Identifier must be between 1 and 255 characters",
-            "Application role Role Identifier cannot be empty or contain only whitespace"));
+            "Application role Role Identifier must be provided"));
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("roleIdentifier");
     }
 
@@ -100,7 +100,7 @@ public class AppRoleTest extends BaseEntityTest {
         assertThat(violations).isNotEmpty();
         assertThat(violations).hasSize(1);
         Set<String> messages = violations.stream().map(ConstraintViolation::getMessage).collect(Collectors.toSet());
-        assertThat(messages).hasSameElementsAs(Set.of("Application role Role Identifier cannot be empty or contain only whitespace"));
+        assertThat(messages).hasSameElementsAs(Set.of("Application role Role Identifier must be provided"));
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("roleIdentifier");
     }
 

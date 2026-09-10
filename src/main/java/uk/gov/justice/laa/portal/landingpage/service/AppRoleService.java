@@ -216,7 +216,7 @@ public class AppRoleService {
 
     @Transactional
     public void createRole(RoleCreationDto dto) {
-        validateLegacySyncAndCcmsCode(dto);
+        validateRoleIdentifierRequired(dto);
         validateUniqueRoleIdentifier(dto);
         validateInternalUserFirmTypeRestriction(dto);
 
@@ -303,11 +303,9 @@ public class AppRoleService {
 
     /**
      * Validates the universal Role Identifier used for SiLAS and downstream integrations.
-     *
-     * The legacy CCMS code is retained as a compatibility alias and is still persisted in the same field,
-     * but all roles are now required to have a Role Identifier.
+     * All roles are now required to have a Role Identifier..
      */
-    private void validateLegacySyncAndCcmsCode(RoleCreationDto dto) {
+    private void validateRoleIdentifierRequired(RoleCreationDto dto) {
         String roleIdentifier = dto.getRoleIdentifier();
         if (roleIdentifier == null || roleIdentifier.trim().isEmpty()) {
             throw new IllegalArgumentException("Role identifier is required");
