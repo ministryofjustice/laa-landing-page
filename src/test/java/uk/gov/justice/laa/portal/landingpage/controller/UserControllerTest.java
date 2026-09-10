@@ -938,7 +938,7 @@ class UserControllerTest {
         when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(profile));
         when(userService.getDeleteUserReasons(true)).thenReturn(List.of(deleteReason));
 
-        String view = userController.deleteUserCheckAnswer(userProfileId, authentication, session, model);
+        String view = userController.deleteUserCheckAnswer(userProfileId, authentication, session, model, mock(RedirectAttributes.class));
 
         assertThat(view).isEqualTo("delete-user-check-answer");
         assertThat(model.getAttribute("deleteReason")).isEqualTo(deleteReason);
@@ -955,9 +955,11 @@ class UserControllerTest {
 
         when(userService.getUserProfileById(userProfileId)).thenReturn(Optional.of(profile));
 
-        String view = userController.deleteUserCheckAnswer(userProfileId, authentication, session, model);
+        RedirectAttributes redirectAttributes = mock(RedirectAttributes.class);
+        String view = userController.deleteUserCheckAnswer(userProfileId, authentication, session, model, redirectAttributes);
 
-        assertThat(view).isEqualTo("redirect:/admin/users/manage/" + userProfileId + "/delete");
+        assertThat(view).isEqualTo("redirect:/admin/users/manage/{id}/delete");
+        verify(redirectAttributes).addAttribute("id", userProfileId);
     }
 
     @Test
@@ -984,7 +986,7 @@ class UserControllerTest {
         when(userService.getDeleteUserReasons(true)).thenReturn(List.of(deleteReason));
         when(userService.deleteExternalUser(anyString(), any(UUID.class), anyString())).thenReturn(deletedUser);
 
-        String view = userController.confirmDeleteExternalUser(userProfileId, authentication, session, model);
+        String view = userController.confirmDeleteExternalUser(userProfileId, authentication, session, model, mock(RedirectAttributes.class));
 
         assertThat(view).isEqualTo("delete-user-success");
         verify(session).removeAttribute("deleteReasonId");
@@ -1020,7 +1022,7 @@ class UserControllerTest {
                 anyString()))
                 .thenThrow(new RuntimeException("Tech Services unavailable"));
 
-        String view = userController.confirmDeleteExternalUser(userProfileId, authentication, session, model);
+        String view = userController.confirmDeleteExternalUser(userProfileId, authentication, session, model, mock(RedirectAttributes.class));
 
         assertThat(view).isEqualTo("delete-user-check-answer");
         verify(eventService).logEvent(any(DeleteUserAttemptAuditEvent.class));

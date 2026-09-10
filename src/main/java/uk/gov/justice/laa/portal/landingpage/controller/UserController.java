@@ -564,7 +564,7 @@ public class UserController {
     @GetMapping("/users/manage/{id}/delete/check-answer")
     @PreAuthorize("@accessControlService.canDeleteUser(#id)")
     public String deleteUserCheckAnswer(@PathVariable String id, Authentication authentication,
-                                        HttpSession session, Model model) {
+                                        HttpSession session, Model model, RedirectAttributes redirectAttributes) {
 
         Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
         if (optionalUser.isEmpty()) {
@@ -572,8 +572,9 @@ public class UserController {
         }
         UUID deleteReasonId = (UUID) session.getAttribute("deleteReasonId");
 
+        redirectAttributes.addAttribute("id", id);
         if (deleteReasonId == null) {
-            return "redirect:/admin/users/manage/" + id + "/delete";
+            return "redirect:/admin/users/manage/{id}/delete";
         }
 
         UserProfile currentProfile = loginService.getCurrentProfile(authentication);
@@ -593,7 +594,7 @@ public class UserController {
     @PostMapping("/users/manage/{id}/delete/confirm")
     @PreAuthorize("@accessControlService.canDeleteUser(#id)")
     public String confirmDeleteExternalUser(@PathVariable String id, Authentication authentication,
-                                            HttpSession session, Model model) {
+                                            HttpSession session, Model model, RedirectAttributes redirectAttributes) {
 
         Optional<UserProfileDto> optionalUser = userService.getUserProfileById(id);
 
@@ -601,8 +602,9 @@ public class UserController {
             throw new RuntimeException("User not found.");
         }
         UUID deleteReasonId = (UUID) session.getAttribute("deleteReasonId");
+        redirectAttributes.addAttribute("id", id);
         if (deleteReasonId == null) {
-            return "redirect:/admin/users/manage/" + id + "/delete";
+            return "redirect:/admin/users/manage/{id}/delete";
         }
         UserProfile currentProfile = loginService.getCurrentProfile(authentication);
         boolean isInternalUser = currentProfile != null && currentProfile.getUserType() == UserType.INTERNAL;
