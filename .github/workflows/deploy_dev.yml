@@ -94,6 +94,9 @@ jobs:
           cat deployments/templates/deployment.yml | envsubst > deployments/deployment.yml
           cat deployments/templates/service.yml | envsubst > deployments/service.yml
           cat deployments/templates/servicemonitor.yml | envsubst > deployments/servicemonitor.yml
+          cat deployments/templates/unleash-deployment.yml | envsubst > deployments/unleash-deployment.yml
+          cat deployments/templates/unleash-service.yml | envsubst > deployments/unleash-service.yml
+          envsubst '$NAMESPACE,$INGRESS_CLASS_NAME,$UNLEASH_HOST' < deployments/templates/unleash-ingress.yml > deployments/unleash-ingress.yml
         env:
           SENTRY_SAMPLE_RATE: ${{ vars.SENTRY_SAMPLE_RATE }}
           BASE_URL_HOMEPAGE: ${{ secrets.BASE_URL_HOMEPAGE }}
@@ -154,6 +157,10 @@ jobs:
           USER_DATA_API_CALLS_ENABLED: ${{ vars.USER_DATA_API_CALLS_ENABLED || 'false' }}
           USER_DATA_API_DEBUG_ENABLED: ${{ vars.USER_DATA_API_DEBUG_ENABLED || 'false' }}
           USER_DATA_API_USER_REQUEST_TOKEN_ENABLED: ${{ vars.USER_DATA_API_USER_REQUEST_TOKEN_ENABLED || 'false' }}
+          UNLEASH_ENABLED: ${{ vars.UNLEASH_ENABLED || 'false' }}
+          UNLEASH_URL: ${{ vars.UNLEASH_URL || 'NONE' }}
+          UNLEASH_API_KEY: ${{ secrets.UNLEASH_API_KEY || 'NONE' }}
+          UNLEASH_HOST: ${{ vars.UNLEASH_HOST || 'NONE' }}
           SENTRY_ENVIRONMENT: ${{ vars.ENV_NAME }}
           SENTRY_ENABLED: ${{ vars.SENTRY_ENABLED }}
           CCMS_APP_ENTRA_OBJECT_ID: ${{ secrets.CCMS_APP_ENTRA_OBJECT_ID || 'NONE' }}
