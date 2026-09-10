@@ -55,7 +55,7 @@ spec:
                   name: unleash-rds-output
                   key: database_password
             - name: DATABASE_SSL
-              value: "true"
+              value: '{"rejectUnauthorized":false}'
             - name: AUTH_TYPE
               value: "open-source"
           volumeMounts:
