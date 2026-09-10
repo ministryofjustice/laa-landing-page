@@ -2944,7 +2944,7 @@ public class UserController {
      * Grant Access Flow - Remove an app role from user
      */
     @GetMapping("/users/grant-access/{userId}/remove-app-role/{appId}/{roleName}")
-    @PreAuthorize("@accessControlService.canGrantUserAccess(#id) && @accessControlService.canRemoveAppRoles(#id)")
+    @PreAuthorize("@accessControlService.canGrantUserAccess(#userId) && @accessControlService.canRemoveAppRoles(#userId)")
     public String removeAppRole(@PathVariable String userId, @PathVariable String appId, @PathVariable String roleName,
             Authentication authentication) {
         try {

@@ -1,0 +1,35 @@
+databaseChangeLog:
+  - changeSet:
+      id: 20260909-1-grant-external-user-support-role-removal
+      author: paul.snowdon
+      dbms: postgresql
+      comment: "Allow External User Support to remove roles from external users"
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: true
+            stripComments: true
+            sql: |
+              INSERT INTO role_permission (app_role_id, permission)
+              SELECT app_role.id, 'REMOVE_EXTERNAL_USER_ROLES'
+              FROM app_role
+              WHERE app_role.name = 'External User Support'
+                AND app_role.app_id = (SELECT id FROM app WHERE name = 'Manage your users')
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM role_permission
+                  WHERE app_role_id = app_role.id
+                    AND permission = 'REMOVE_EXTERNAL_USER_ROLES'
+                );
+      rollback:
+        - sql:
+            dbms: postgresql
+            sql: |
+              DELETE FROM role_permission
+              WHERE app_role_id IN (
+                  SELECT app_role.id
+                  FROM app_role
+                  WHERE app_role.name = 'External User Support'
+                    AND app_role.app_id = (SELECT id FROM app WHERE name = 'Manage your users')
+              )
+                AND permission = 'REMOVE_EXTERNAL_USER_ROLES';
