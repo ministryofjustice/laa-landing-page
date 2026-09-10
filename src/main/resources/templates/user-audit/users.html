@@ -1075,10 +1075,7 @@
                         <tbody class="govuk-table__body">
                             <tr class="govuk-table__row" th:each="user : ${users}">
                                 <td class="govuk-table__cell">
-                                    <a class="govuk-link" th:if="${user.userId != null}"
-                                        th:href="@{/admin/users/audit/{id}(id=${user.userId})}"
-                                        th:text="${user.name}"></a>
-                                    <a class="govuk-link" th:if="${user.userId == null && user.entraUserId != null}"
+                                    <a class="govuk-link" th:if="${user.entraUserId != null}"
                                         th:href="@{/admin/users/audit/{id}(id=${user.entraUserId}, isEntraId=true)}"
                                         th:text="${user.name}"></a>
                                     <span th:if="${user.userId == null && user.entraUserId == null}" th:text="${user.name}"></span>
